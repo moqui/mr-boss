@@ -1,9 +1,10 @@
-// Admin access (impl-admin §2, P1; design-admin §1.1, §13): who may open Admin, the menu, providers and launcher (the reader,
-// the administrator and an instance administrator), Home's one render (qvt), each group's capabilities from its permissions and
+// Admin access (impl-admin §2, P1, P2; design-admin §1.1, §7, §13): who may open Admin, the menu, providers and launcher (the
+// reader, the administrator and an instance administrator), each group's capabilities from its permissions and
 // the area authorizations, Admin › System refused to the Admin administrator and opened to ADMIN with the developer tool links
 // each by its own grant, the seals mr-boss and the framework add (a privileged group's membership and a sealed grant through a
 // direct entity call) beside the refused raw security mutators, and the organization scope of a record (another organization's
-// identity refused, a shared identity shown only by the organization in scope). One feature per rule, each case of it a line of
+// identity refused, a shared identity shown only by the organization in scope), and the settings index a BOSS user without Admin
+// opens alone (P2, F46). Home's one render (qvt) is AdminRegistries'. One feature per rule, each case of it a line of
 // its problems, with artifact authorization enabled. The framework's seal checks are the framework's (eca_tests.rs). The access
 // and isolation walk is the acceptance AdminFoundationWalk. A later phase adds a case only for an access rule it adds, and its
 // providers to the menu feature.
@@ -106,10 +107,11 @@ feature(
                 const message = asUser(user, () => refusal(context + "get#SharedContext", {}))
                 if (message !== "") problems.push(`${user} is refused the context: ${message}`)
             }
-            // a PASS public account (Customer Service's Support demo contact) holds no BOSS group
+            // a PASS public account (Customer Service's Support demo contact) holds no BOSS group; another app's user, a BOSS
+            // user, gets the settings index's context alone (P2, below)
             for (const user of ["customerservice.read", "sheldon.acme", "dana@joesdist.example.com"]) {
                 for (const [service, parameters] of [
-                    [context + "get#SharedContext", {}],
+                    ...(user === "customerservice.read" ? [] : [[context + "get#SharedContext", {}]]),
                     [context + "check#Record", {recordType: "organization", recordId: ids.organizationId}],
                     [context + "get#Choices", {choice: "organizations"}],
                     [context + "get#AppAccess", {}],
@@ -133,13 +135,17 @@ feature(
     }
 )
 
-// the menu of design §1.2 built so far: Home every Admin user's, Operations the reader's, the operations operator's and the
-// administrator's, Agents and Developer tools the administrator's, System ADMIN's alone
+// the menu of design §1.2 built so far: Home and Settings every Admin user's, Operations the reader's, the operations operator's
+// and the administrator's, Agents and Developer tools the administrator's, System ADMIN's alone
 feature("the Admin menu and keys follow the areas' groups and System's own grant; the launcher shows it to its users only", {
     when() {
         const rows = [
-            {user: users.reader, menu: ["Home", "Operations"], keys: ["g a", "g o"]},
-            {user: users.admin, menu: ["Home", "Operations", "Agents", "Developer"], keys: ["g a", "g o", "g n", "g d"]}
+            {user: users.reader, menu: ["Home", "Settings", "Operations"], keys: ["g a", "g o"]},
+            {
+                user: users.admin,
+                menu: ["Home", "Settings", "Operations", "Agents", "Developer"],
+                keys: ["g a", "g o", "g n", "g d"]
+            }
         ]
         const problems = []
         const shells = {}
@@ -155,7 +161,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
         }
         // an instance administrator's menu has System (its keys are left out: ADMIN's launcher holds every app)
         const systemMenu = shell(users.system, true).names
-        if (JSON.stringify(systemMenu) !== JSON.stringify(["Home", "Operations", "Agents", "System", "Developer"]))
+        if (JSON.stringify(systemMenu) !== JSON.stringify(["Home", "Settings", "Operations", "Agents", "System", "Developer"]))
             problems.push(`ADMIN's menu is ${systemMenu}`)
         // the launcher: the reader has Admin and no business app; another app's user has no Admin
         const readerApps = shells[users.reader].apps
@@ -168,23 +174,6 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
     },
     then({problems}) {
         problems.join("\n") == ""
-    }
-})
-
-feature("Home shows the shortcuts the reader opens and the setup and health frame not configured", {
-    when() {
-        return {home: asUser(users.reader, () => lib.page("Home"))}
-    },
-    then({home}) {
-        home.status == 200
-        home.errors == []
-        home.output.includes("Needs attention")
-        home.output.includes("Setup checks")
-        home.output.includes("Sign-in failures")
-        home.output.includes("Not configured")
-        home.output.includes("Monitoring")
-        !home.output.includes("Developer tools")
-        !home.output.includes("Setup and health summaries are shown to administrative readers.")
     }
 })
 
@@ -428,3 +417,42 @@ feature(
         }
     }
 )
+
+// P2 (impl-admin F46; design §7, §13): BOSS_USERS' non-inheritable ALLOW on SettingsHome alone. A warehouse manager in no Admin
+// group opens the settings index (its one render, html) with Warehouse's entry, gets the context of the index alone, and is
+// refused the root, Home, Health, the Settings area's other paths and every other Admin service; the grant inherits to nothing
+// below or beside it (F34).
+feature("a BOSS user without Admin opens the settings index alone", {
+    when() {
+        const user = lib.outsiders.warehouseManager
+        const problems = []
+        const index = asUser(user, () => lib.page("Settings/SettingsHome", {}, "html"))
+        if (index.status != 200 || index.errors.length) problems.push(`the index: ${index.status} ${index.errors}`)
+        if (!index.output.includes("Warehouse settings")) problems.push("the index lacks Warehouse settings")
+        if (index.output.includes("Accounting settings")) problems.push("the index shows Accounting settings")
+        for (const path of ["Home", "Operations/Health", "Operations/Monitoring"]) {
+            const got = screenRefusal(user, path)
+            if (!unauthorized(got)) problems.push(`the manager opens ${path}: ${got || "opened"}`)
+        }
+        const shared = asUser(user, () => invoke(context + "get#SharedContext", {}))
+        if (shared.capabilities?.read !== false || shared.capabilities?.settingsIndex !== true)
+            problems.push(`the manager's context: ${JSON.stringify(shared.capabilities)}`)
+        if (JSON.stringify(Object.keys(shared.sharedLinks || {})) !== JSON.stringify(["Settings/SettingsHome"]))
+            problems.push(`the manager's links: ${Object.keys(shared.sharedLinks || {})}`)
+        for (const [service, parameters] of [
+            [context + "get#Choices", {choice: "organizations"}],
+            [context + "check#Record", {recordType: "organization", recordId: ids.organizationId}],
+            ["ironstone.admin.RegistryServices.get#Readiness", {}],
+            ["ironstone.admin.RegistryServices.find#ToolLinks", {}]
+        ]) {
+            const message = asUser(user, () => refusal(service, parameters))
+            if (!refused(message)) problems.push(`the manager gets ${service}: ${message || "accepted"}`)
+        }
+        // the launcher still has no Admin for them
+        if (shell(user, false).apps.includes("Admin")) problems.push("the manager's launcher has Admin")
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

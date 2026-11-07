@@ -34,6 +34,12 @@ const users = {
     shared: "shared.staff",
     system: "john.doe"
 }
+// BOSS users in no Admin group: a warehouse manager, to whom the settings index alone is granted (P2, impl-admin F46), and a
+// finance reader, who reads Accounting's readiness in Accounting
+const outsiders = {
+    warehouseManager: "warehouse.manager",
+    financeReader: "finance.read"
+}
 
 // Run action as username, with artifact authorization enabled or not, then sign in again as the user before.
 function asUser(username, action, enabled = true) {
@@ -106,4 +112,4 @@ function shell(user, menuOnly = false) {
     })
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell})
+;({ids, users, outsiders, asUser, system, refusal, invoke, page, shell})

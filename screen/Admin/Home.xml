@@ -13,23 +13,40 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Admin Home (design-admin §3 Home; style-guide §3.1 Landing): the Monitor / Manage / Configure shortcuts of the areas the user
-    opens (Monitoring, Agents, System, Developer tools; one primary), then for an administrative reader (ADMIN_OVERVIEW_VIEW) the
-    frame of Needs attention (Attention), Setup checks (SetupChecks) and Health (HealthCards), each "Not configured" until P2's
-    ironstone.admin.RegistryServices.get#Overview and get#Readiness fill them, never zero. A user without the read sees the
-    shortcuts and why the summaries are not shown. -->
+    opens (Health, the primary, Monitoring, Settings, Agents, System, Developer tools), then for an administrative reader
+    (ADMIN_OVERVIEW_VIEW) Needs attention (Attention: the failing and warning checks of every provider the reader may read, worst
+    first, with the owner's fix link when the reader opens it), Setup checks (SetupChecks: Admin's own first-run checks by group)
+    and Health's cards (HealthCards: failed job runs, unresolved transports, backup coverage, sign-in failures), from
+    ironstone.admin.RegistryServices.get#Overview and get#Readiness. A provider that could not be checked is named; a summary that
+    cannot be read leaves the others. No Fix all. A user without the read sees the shortcuts and why the summaries are not
+    shown. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <actions>
         <set field="can" from="admin.capabilities"/>
-        <set field="anyShortcut" from="can.operations || can.agents || can.system || can.developer"/>
+        <if condition="can.overview">
+            <service-call name="ironstone.admin.RegistryServices.get#Overview" out-map="overview" transaction="force-new" ignore-error="true"/>
+            <set field="overviewFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="setup" transaction="force-new" ignore-error="true"
+                    in-map="{ownerApp:'Admin'}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="attention" from="overview?.attention || []"/>
+        <set field="setupChecks" from="(setup?.checks || []).filter(row =&gt; row.providerKey.startsWith('admin.'))"/>
+        <set field="card" from="Object.fromEntries((overview?.cards || []).map(row =&gt; [row.key, row]))"/>
+        <set field="failedText" from="(overview?.failedProviders || []).join(', ')"/>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
             <container style="col"><label text="Admin" type="h5"/></container>
         </container>
-        <container style="row q-gutter-sm q-mb-md" condition="anyShortcut">
-            <link url="${sharedLinks['Operations/Monitoring']}" text="Monitoring" link-type="anchor-button" btn-type="primary"
-                    icon="sym_o_monitor_heart" condition="can.operations"/>
+        <container style="row q-gutter-sm q-mb-md">
+            <link url="${sharedLinks['Operations/Health']}" text="Health" link-type="anchor-button" btn-type="primary"
+                    icon="sym_o_health_and_safety" condition="can.operations"/>
+            <link url="${sharedLinks['Operations/Monitoring']}" text="Monitoring" link-type="anchor-button" icon="sym_o_monitor_heart"
+                    condition="can.operations"/>
+            <link url="${sharedLinks['Settings/SettingsHome']}" text="Settings" link-type="anchor-button" icon="sym_o_settings"/>
             <link url="${sharedLinks['Agents/Home']}" text="Agents" link-type="anchor-button" icon="sym_o_smart_toy"
                     condition="can.agents"/>
             <link url="${sharedLinks['System']}" text="System" link-type="anchor-button" icon="sym_o_devices"
@@ -39,26 +56,84 @@ along with this software (see the LICENSE.md file). If not, see
         </container>
         <section name="Summaries" condition="can.overview">
             <widgets>
+                <label type="p" style="text-negative" condition="overviewFailure" text="${overviewFailure}"/>
+                <label type="p" style="text-warning" condition="failedText" text="Could not be checked: ${failedText}"/>
                 <container-box>
                     <box-header title="Needs attention"/>
-                    <box-body>
-                        <label text="Not configured" type="p" style="m-muted"/>
-                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="Attention" list="attention" skip-form="true" paginate="false">
+                            <field name="providerTitle"><default-field title="Source"><display/></default-field></field>
+                            <field name="message">
+                                <default-field title="Summary"><display text="${message}${subject != 'Instance' ? ' (' + subject + ')' : ''}"/></default-field>
+                            </field>
+                            <field name="stateName">
+                                <default-field title="Severity">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateName)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateName})}]]></text>
+                                        <text type="html">${stateName}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="checkedText"><default-field title="Checked"><display/></default-field></field>
+                            <field name="fixUrl">
+                                <default-field title="">
+                                    <link url="${fixUrl}" url-type="plain" text="Fix" link-type="anchor" condition="fixUrl"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="providerTitle"/><field-ref name="message"/></column>
+                                <column><field-ref name="stateName"/><field-ref name="fixUrl"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!attention.length &amp;&amp; !overviewFailure"
+                                text="Nothing needs attention."/>
+                    </box-body-nopad>
                 </container-box>
                 <container-box>
                     <box-header title="Setup checks"/>
-                    <box-body>
-                        <label text="Not configured" type="p" style="m-muted"/>
-                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="SetupChecks" list="setupChecks" skip-form="true" paginate="false">
+                            <field name="groupName"><default-field title="Area"><display/></default-field></field>
+                            <field name="title"><default-field title="Check"><display/></default-field></field>
+                            <field name="stateName">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateName)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateName})}]]></text>
+                                        <text type="html">${stateName}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="message"><default-field title="Explanation"><display/></default-field></field>
+                            <field name="checkedText"><default-field title="Checked"><display/></default-field></field>
+                            <field name="fixUrl">
+                                <default-field title="">
+                                    <link url="${fixUrl}" url-type="plain" text="Fix" link-type="anchor" condition="fixUrl"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="message"/></column>
+                                <column><field-ref name="stateName"/><field-ref name="fixUrl"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!setupChecks.length" text="No setup check could be read."/>
+                    </box-body-nopad>
                 </container-box>
                 <container-box>
                     <box-header title="Health"/>
                     <box-body>
                         <dashboard min-width="160">
-                            <number-card title="Failed or late jobs" value="Not configured" icon="sym_o_event_busy" size="sm"/>
-                            <number-card title="Unresolved transports" value="Not configured" icon="sym_o_sync_problem" size="sm"/>
-                            <number-card title="Backup coverage" value="Not configured" icon="sym_o_backup" size="sm"/>
-                            <number-card title="Sign-in failures" value="Not configured" icon="sym_o_lock_person" size="sm"/>
+                            <number-card title="Failed job runs" value="${card.failedJobs?.value ?? 'Unavailable'}" icon="sym_o_event_busy"
+                                    size="sm" link="${card.failedJobs?.url || ''}"/>
+                            <number-card title="Unresolved transports" value="${card.transports?.value ?? 'Unavailable'}"
+                                    icon="sym_o_sync_problem" size="sm" link="${card.transports?.url || ''}"/>
+                            <number-card title="Backup coverage" value="${card.backup?.value ?? 'Unavailable'}" icon="sym_o_backup"
+                                    size="sm" link="${card.backup?.url || ''}"/>
+                            <number-card title="Sign-in failures" value="${card.signIn?.value ?? 'Unavailable'}" icon="sym_o_lock_person"
+                                    size="sm" link="${card.signIn?.url || ''}"/>
                         </dashboard>
                     </box-body>
                 </container-box>

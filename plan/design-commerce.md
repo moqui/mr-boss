@@ -353,9 +353,11 @@ to it and does not write them (X16, R-COM-05).
 **Readiness and recovery registration.** `C.check#StoreReadiness` is a registered Admin §14
 readiness provider (stable key, owner Commerce, freshness and fix link), and
 `I.retry#StoreMessages` is a registered operational recovery action that keeps the original
-message identity (Z9, R-COM-13). Admin has not built those registries, so until it does the
-readiness service is StoreDetail's Readiness and the Shop app's PASS readiness, and retry is
-IntegrationDetail's action (Nov 5, impl-commerce F23). Readiness refuses a payment gateway outside the store
+message identity (Z9, R-COM-13). Admin P2 registers the readiness provider (`commerce.storeReadiness`,
+impl-admin P2, Nov 7): a Commerce reader (COMMERCE_VIEW in the store's organization) gets each store's findings
+on Admin Health, and an administrative reader the summary the PASS readiness answers (the checks by name, no
+messages), for the stores of the organizations it administers, with StoreDetail as the fix link only for those who
+open it. Until Admin's recovery registry (its P13), retry is IntegrationDetail's action (Nov 5, impl-commerce F23). Readiness refuses a payment gateway outside the store
 organization's enabled `PaymentGatewayOrganization` rows (Z4) and a store whose shipping is bound
 to the local rate gateway with no local rate rule (§8).
 

@@ -2466,4 +2466,146 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_REPORT_TOOLS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- Admin P2 (impl-admin P2, §4, F9, F16, F21, F22, F44, F46; design-admin §3, §7, §10, §14, §14.2): the registries' kinds, Admin's
+        own readiness providers, the settings index's grant to every BOSS user and the readiness exposure. Each owner's
+        registrations follow in a block of its own. -->
+    <moqui.basic.EnumerationType enumTypeId="AdminHealthGroup" description="Admin Health group"/>
+    <moqui.basic.Enumeration enumId="AdmHgIdentity" enumTypeId="AdminHealthGroup" description="Identity" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="AdmHgBusiness" enumTypeId="AdminHealthGroup" description="Business setup" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="AdmHgTransport" enumTypeId="AdminHealthGroup" description="Transport" sequenceNum="3"/>
+    <moqui.basic.Enumeration enumId="AdmHgStorage" enumTypeId="AdminHealthGroup" description="Storage and backup" sequenceNum="4"/>
+    <moqui.basic.Enumeration enumId="AdmHgObservability" enumTypeId="AdminHealthGroup" description="Observability" sequenceNum="5"/>
+    <moqui.basic.EnumerationType enumTypeId="AdminRegistryScope" description="Admin registration scope"/>
+    <moqui.basic.Enumeration enumId="AdmScInstance" enumTypeId="AdminRegistryScope" description="Instance" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="AdmScOrganization" enumTypeId="AdminRegistryScope" description="Organization" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="AdmScStore" enumTypeId="AdminRegistryScope" description="Store" sequenceNum="3"/>
+    <moqui.basic.Enumeration enumId="AdmScFacility" enumTypeId="AdminRegistryScope" description="Facility" sequenceNum="4"/>
+    <moqui.basic.EnumerationType enumTypeId="AdminSettingsGroup" description="Admin settings index group"/>
+    <moqui.basic.Enumeration enumId="AdmSgCompany" enumTypeId="AdminSettingsGroup" description="Company" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="AdmSgApplications" enumTypeId="AdminSettingsGroup" description="Applications" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="AdmSgInstance" enumTypeId="AdminSettingsGroup" description="Instance" sequenceNum="3"/>
+    <moqui.basic.EnumerationType enumTypeId="AdminRefreshSource" description="Admin refresh source kind"/>
+    <moqui.basic.Enumeration enumId="AdmRsIndex" enumTypeId="AdminRefreshSource" description="Index" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="AdmRsFeed" enumTypeId="AdminRefreshSource" description="Feed" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="AdmRsProjection" enumTypeId="AdminRefreshSource" description="Projection" sequenceNum="3"/>
+    <!-- Admin's own readiness providers (design §3's first-release checks), each a function of RegistryServices behind
+        check#AdminSetup, for an administrative reader; the backup check has the freshness facet of its last finished run -->
+    <ironstone.admin.ReadinessProvider providerKey="admin.mailServer" version="1" ownerApp="Admin" title="Outgoing mail"
+            healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.basic.email.EmailServer" sequenceNum="10"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.backup" version="1" ownerApp="Admin" title="Database backup"
+            healthGroupEnumId="AdmHgStorage" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/ServiceJob/Jobs/ServiceJobDetail?jobName=backup_EmbeddedDatabase_daily"
+            expectedFrequencyMinutes="1440" maxLagMinutes="2880" sequenceNum="20"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.reportMail" version="1" ownerApp="Admin" title="Report mail"
+            healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.basic.email.EmailTemplate" sequenceNum="30"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.reportAlertTopic" version="1" ownerApp="Admin" title="Report alerts"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.security.user.NotificationTopic" sequenceNum="40"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.adminFactors" version="1" ownerApp="Admin" title="Administrator factors"
+            healthGroupEnumId="AdmHgIdentity" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/Security/UserAccount" sequenceNum="50"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.jobRuns" version="1" ownerApp="Admin" title="Job runs"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/ServiceJob/JobRuns" sequenceNum="60"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.cluster" version="1" ownerApp="Admin" title="Cluster"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/Operations/Monitoring" sequenceNum="70"/>
+    <ironstone.admin.ReadinessProvider providerKey="admin.telemetry" version="1" ownerApp="Admin" title="Telemetry"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="monitor/Sources" sequenceNum="80"/>
+    <!-- The Constitution's source diagnostics (impl-admin P2): the framework's document for the instance and Mantle's for each
+        organization, read as the viewer (get#Constitution needs a signed-in user, get#OrganizationConstitution a member or an
+        editor of the organization) -->
+    <ironstone.admin.ReadinessProvider providerKey="constitution.global" version="1" ownerApp="Admin" title="Instance Constitution"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScInstance" serviceName="org.moqui.admin.ConstitutionServices.get#Constitution"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/Constitution" sequenceNum="140"/>
+    <ironstone.admin.ReadinessProvider providerKey="constitution.organization" version="1" ownerApp="Admin" title="Organization Constitution"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.party.ConstitutionServices.get#OrganizationConstitution" requiredPermission="ADMIN_OVERVIEW_VIEW"
+            sequenceNum="150"/>
+    <!-- The settings index alone for every BOSS user (impl-admin F46; design §7, §13): a non-inheritable ALLOW on SettingsHome,
+        the root's context (which answers such a user the index's link and nothing else) and find#Settings, which lists only
+        the entries whose destination the user opens. The Admin root and every other Admin screen and service still refuse
+        them (impl-admin F34: an inheritable grant here would open what is below it). -->
+    <artifactGroups artifactGroupId="BOSS_ADM_SETTINGS_INDEX" description="Admin settings index for BOSS users">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/SettingsHome.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="ironstone.admin.ContextServices.get#SharedContext" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <artifacts artifactName="ironstone.admin.RegistryServices.find#Settings" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_ADM_SETTINGS_INDEX_USERS" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Assist (design §1.2, §14): the readiness checks as a read tool for the Assistant and MCP, run with the user's own
+        permissions; Health's "What is failing?" prompt is in the Admin root's shell-providers -->
+    <moqui.agent.AgentToolExposure toolName="admin_get_readiness" serviceName="ironstone.admin.RegistryServices.get#Readiness"
+            title="Setup and health readiness"
+            description="get#Readiness: the setup and health checks the user may read (mail, backup, report delivery, administrator factors, job runs, cluster, telemetry, accounting setup, catalog quality, store readiness, the Constitution), each with its state (ready, warning, failed, unavailable), message, organization or store and the owner's fix link; narrow by providerKey, ownerApp, organizationPartyId or state. A provider that could not be checked is named in failedProviders."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <!-- Accounting's registrations (owner contract, impl-admin F16; design-accounting): its setup readiness for finance readers,
+        called as the viewer, and its settings landing -->
+    <ironstone.admin.ReadinessProvider providerKey="accounting.setup" version="1" ownerApp="Accounting" title="Accounting setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization" serviceName="mantle.ledger.SetupServices.get#Readiness"
+            requiredPermission="ACCOUNTING_VIEW" fixPath="Accounting/Settings/Setup" sequenceNum="110"/>
+    <ironstone.admin.SettingsEntry settingsKey="accounting.settings" version="1" ownerApp="Accounting" title="Accounting settings"
+            description="Preferences, posting defaults, payment terms, currencies, payment methods, collection, documents and matching"
+            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/Settings"
+            configuredBy="Finance administrator" providerKey="accounting.setup" sequenceNum="10"/>
+    <!-- Products' registrations (owner contract, impl-admin F16; design-products): catalog quality (CatalogChecks) for catalog
+        readers, and its settings landing -->
+    <ironstone.admin.ReadinessProvider providerKey="products.catalogChecks" version="1" ownerApp="Products" title="Catalog quality"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.product.CatalogCheckServices.validate#Catalog" requiredPermission="PRODUCT_CATALOG_VIEW"
+            fixPath="Products/CatalogChecks" sequenceNum="120"/>
+    <ironstone.admin.SettingsEntry settingsKey="products.settings" version="1" ownerApp="Products" title="Catalog settings"
+            description="Variants, pricing and identification types" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" screenPath="Products/Settings/Index" configuredBy="Catalog administrator"
+            providerKey="products.catalogChecks" sequenceNum="40"/>
+    <!-- Commerce's registrations (owner contract, impl-commerce §7, impl-admin F27; design-commerce): store readiness, its
+        findings for a Commerce reader and its summary for an administrative reader, and its checkout settings -->
+    <ironstone.admin.ReadinessProvider providerKey="commerce.storeReadiness" version="1" ownerApp="Commerce" title="Store readiness"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScStore" serviceName="mantle.product.StoreAdminServices.check#StoreReadiness"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" sequenceNum="130"/>
+    <ironstone.admin.SettingsEntry settingsKey="commerce.checkout" version="1" ownerApp="Commerce" title="Checkout settings"
+            description="Checkout, carriers, payment methods and tax authorities of the stores" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScStore" screenPath="Commerce/Settings/CheckoutSettings" configuredBy="Store manager"
+            providerKey="commerce.storeReadiness" sequenceNum="30"/>
+    <!-- Customer Service's settings landing (owner contract; design-customer-service) -->
+    <ironstone.admin.SettingsEntry settingsKey="customerService.settings" version="1" ownerApp="Customer Service"
+            title="Customer service settings"
+            description="Queues, teams, assignment rules, service levels, case types and templates, saved replies, channel routing, return policies and knowledge sources"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/SettingsHome"
+            configuredBy="Customer service administrator or manager" sequenceNum="20"/>
+    <!-- Purchasing's settings landing (owner contract; design-purchasing) -->
+    <ironstone.admin.SettingsEntry settingsKey="purchasing.settings" version="1" ownerApp="Purchasing" title="Purchasing settings"
+            description="Purchase policy, approval policies and supplier scorecards" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" screenPath="Purchasing/Settings/SettingsHome" configuredBy="Purchase administrator"
+            sequenceNum="50"/>
+    <!-- Warehouse's settings landing (owner contract; design-warehouse) -->
+    <ironstone.admin.SettingsEntry settingsKey="warehouse.settings" version="1" ownerApp="Warehouse" title="Warehouse settings"
+            description="Stock policies, reservation policies and asset pools" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScFacility" screenPath="Warehouse/Settings/Index" configuredBy="Warehouse manager" sequenceNum="60"/>
+    <!-- Manufacturing's settings landing (owner contract, impl-admin F21: its ProductionSettings; design-manufacturing) -->
+    <ironstone.admin.SettingsEntry settingsKey="manufacturing.settings" version="1" ownerApp="Manufacturing"
+            title="Production settings" description="Production settings and reason codes" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" screenPath="Manufacturing/Settings/ProductionSettings"
+            configuredBy="Production or resource administrator" sequenceNum="70"/>
+    <!-- Projects' settings landing (owner contract; design-projects) -->
+    <ironstone.admin.SettingsEntry settingsKey="projects.settings" version="1" ownerApp="Projects" title="Projects settings"
+            description="Work item types, workflows, labels, templates, time, billing, code and intake" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/Index" configuredBy="Projects managers" sequenceNum="80"/>
+    <!-- Comms' entry (owner contract, impl-admin F44): Consent, for contact admins; Comms' own Settings are personal, and its
+        shared templates, sending profiles and suppressions are its later work -->
+    <ironstone.admin.SettingsEntry settingsKey="comms.consent" version="1" ownerApp="Comms" title="Consent and subscriptions"
+            description="Whether contacts may be solicited, their list subscriptions and the history behind them"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScInstance" screenPath="Comms/Consent/List"
+            viewPermission="CONTACT_ADMIN" configuredBy="Contact admins" sequenceNum="90"/>
+    <!-- Voice (BasicComms System › Voice, VoiceAdmin): the phone system, in the Tools System app -->
+    <ironstone.admin.SettingsEntry settingsKey="voice.system" version="1" ownerApp="Voice" title="Voice"
+            description="Trunks, numbers, caller IDs, ring groups, IVR menus and queues" settingsGroupEnumId="AdmSgInstance"
+            scopeEnumId="AdmScInstance" screenPath="system/Voice" viewPermission="VoiceAdmin" configuredBy="Phone system administrator"
+            sequenceNum="100"/>
 </entity-facade-xml>
