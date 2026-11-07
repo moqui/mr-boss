@@ -1079,6 +1079,55 @@ identity and session parts).
   - BossSetupData and BossUsersDemoData: P4's block is appended at the end of BossSetupData; BossUsersDemoData unchanged;
   - the acceptance AdminUsersUsable to run when asked.
 
+**Review Nov 7 (P4).**
+- Checked: session revocation (by visit, own or with ADMIN_IDENTITY_MANAGE, a visit of another account refused and counted,
+  the current one kept; cluster publish; `hasLoggedOut` for sessions no row names yet); the refresh and notws closing an
+  account disabled for good or past its end date, not a tarpit lock; revoke#AccountAccess's kinds against F42's list (sessions,
+  login, device and token keys, app passwords, SSH keys, SIP `dropDevice`, triggers with their cron jobs, open agent runs);
+  `run_job`'s refusal recorded; no self-lockout (revoke#AccountAccess refuses the caller, revoke#Sessions keeps the current
+  session); every BOSS path to the framework's revoke services (UserDetail revokeAccess and revokeSession, Sessions'
+  bulk revoke) checks the account as an Admin record with `accountWide` first, Commons Account names `ec.user.userId`, and no
+  REST or Assist exposure reaches them (all `allow-remote="false"`; only `admin_find_users`, Mantle-scoped, is exposed);
+  visit ids are sequenced but every key is checked against its owner; Mantle scope, the account-wide rule, reset#Password
+  (a change-only reset password, no password set), store#Account's fields, grant proposals (registered bundles only by
+  store#Membership's delegation rules; no ADMIN, sealed or privileged grant), dated memberships; Login as.
+- Fixes:
+  - **R1 (high)** An identity operator could take over an administrator in its organization: store#Account changed the email
+    or username of any non-shared identity in scope, an ADMIN or BOSS_ADMIN_ADMIN member included, and reset#Authentication then
+    mailed the reset password to the new address; factor and lock resets and the framework's session and access revocation
+    likewise reached accounts holding more than the caller. Now the framework's `Identity.js` `heldBeyond(userId)` (a
+    privileged group the caller is not in, or a sealed permission through a current group the caller lacks) refuses
+    revoke#AccountAccess and another user's revoke#Sessions (counted), Mantle's store#Account and factor and lock resets
+    (`IDENTITY_PRIVILEGED`; get#Account's `canChangeAccount` false with the reason), and BOSS's Login as check reuses it.
+    Password reset requests stay allowed (they go to the account's own address). mr-moqui 1aafb9e3, mr-mantle fd496ef8,
+    mr-boss (the review commit).
+  - **R2 (high)** store#OrganizationMembership related any person to an organization in scope, so an operator could pull a
+    site identity (an account of no internal organization: a customer, an administrator of no organization) wholly into its
+    scope and then change its email and reset it. A person with an account and no internal organization now needs
+    `ADMIN_IDENTITY_GLOBAL` (`IDENTITY_GLOBAL`); a person of another organization stays shared, so its account-wide changes
+    still need it. mr-mantle fd496ef8.
+  - **R3 (medium, F-P4-11)** "Log as note" filed Chatter on UserAccount and UserGroup, which had only their entity filters in
+    get#RecordLinkInfo, so any user an app root lends entity authorization (any BOSS user in its screens) could read and add
+    them. Now an account's notes are an ADMIN_IDENTITY_VIEW holder's within Mantle's identity scope, a group's an
+    ADMIN_ACCESS_VIEW holder's. mr-mantle fd496ef8 (CommunicationServices), LogNote's text in mr-boss.
+  - Docs: Attack-Surface, design-admin §4.1.
+- Tests (Debug, `--nobuild`): AdminSessions (the sealed holder's access and session refused), AdminAccessServices, RecentAuth,
+  SipDevice 21 of 21; StaffIdentity (2 features added, R1–R3), PartyServices, PartyAccounts 20 of 20 (the R1/R2 feature fails
+  without the fix); AdminUsers, AdminGroups, AdminAccess, AdminRegistries, CommonsSettings, AdminClientFixtures 25 of 25;
+  AdminUsersWalk 1 of 1 (3.0 s); cargo moqui-core `user::`, `service::jobs`, `script::runtime::ec_extra` 113 of 113 (no Rust
+  changed in review); `moqui lint --screens` 132 flagged sites, as before; Prettier on the changed JavaScript. Specs stay lean
+  (AdminSessions 0.04 s, StaffIdentity 0.9 s, AdminUsers 0.3 s); AdminClientFixtures 0.02 s.
+- For the lead:
+  - F-P4-1 left for the user: Mantle cannot read BOSS's "unrestricted" (BOSS reads the `MANTLE_ACTIVE_ORG` filter on its own
+    root grant as every organization, while Mantle's meaning of that filter set is the active organization or the user's own),
+    and BOSS_ADMIN_ADMIN does not hold `ADMIN_IDENTITY_GLOBAL`, so reusing it would not help. The clean choices are a new
+    unsealed framework permission (say `ADMIN_IDENTITY_ALL_ORGS`) that Mantle honours and BossSetupData grants
+    BOSS_ADMIN_ADMIN, or BOSS's Admin scope narrowing to Mantle's for identities;
+  - store#OrganizationMembership still lets an operator relate another organization's staff to its own (as the spec's
+    covering agent), which makes that identity readable (find#Users, get#Account, sessions, history) though still shared for
+    changes; whether adding an existing account of another organization needs `ADMIN_IDENTITY_GLOBAL` too is a design call;
+  - Login as is audited by a log line only (F-P4-5), and F64 still reaches the identity operator through grant proposals.
+
 ### P5 — Invitations
 
 Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invitation email); ADM-LIFECYCLE (invitations).

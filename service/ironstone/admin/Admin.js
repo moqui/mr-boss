@@ -400,24 +400,9 @@ function checkRecord(p) {
 function loginAsCheck(record) {
     if (!ec.user.hasPermission("ADMIN_LOGIN_AS")) denied("PERMISSION_DENIED", "ADMIN_LOGIN_AS is required")
     if (record.recordId === ec.user.userId) denied("LOGIN_AS", "Choose another user to sign in as")
-    const privileged = new Set(Array.from(UserSecurityChecks.privilegedGroups()))
-    const sealed = new Set(Array.from(UserSecurityChecks.sealedPermissions()))
-    const groupIds = Array.from(
-        find("moqui.security.UserGroupMember")
-            .condition("userId", record.recordId)
-            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
-            .list()
-    ).map(row => row.userGroupId)
-    const sealedHeld = Array.from(
-        find("moqui.security.UserGroupPermission")
-            .condition("userGroupId", "in", groupIds.concat(["_NA_"]))
-            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
-            .list()
-    )
-        .map(row => row.userPermissionId)
-        .filter(id => sealed.has(id))
-    if (groupIds.some(id => privileged.has(id) && !ec.user.isInGroup(id)) || sealedHeld.some(id => !ec.user.hasPermission(id)))
-        denied("LOGIN_AS", record.label + " holds access you do not: signing in as them is refused")
+    // the framework's bounded-delegation rule for an account-wide action on another user (Identity.js heldBeyond)
+    const held = ec.resource.script("component://framework/service/org/moqui/admin/Identity.js").heldBeyond(record.recordId)
+    if (held) denied("LOGIN_AS", record.label + " holds access you do not: signing in as them is refused")
 }
 
 // ===== palette =====
