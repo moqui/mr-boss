@@ -81,6 +81,8 @@ feature("they receive part of the sealant with one unit rejected and a lot, then
         dialog.getByRole("button", {name: "Finish receipt", exact: true}).click()
         confirmAction(page)
         waitForText(page, "Delivered")
+        // the dialog closes after the answer shows: its "Finish receipt" button leaves the page a moment later
+        page.waitFor(() => !(document.body.innerText || "").includes("Finish receipt"))
         page.text().includes("The remainder is closed")
         page.text().includes("Damaged")
         !page.text().includes("Finish receipt")
