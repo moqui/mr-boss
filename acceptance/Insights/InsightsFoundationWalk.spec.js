@@ -46,15 +46,16 @@ feature("insights.reader opens Home but not the report builder, its dataset scre
         const home = asUser(users.reader, () => lib.page("Home", {}, "html"))
         if (!opened(home) || !home.output.includes("No dashboards or reports are shared with you yet."))
             problems.push(`the reader's Home: ${home.status} ${home.errors}`)
+        // Report builder › Explore is every Insights user's since P2; the dataset screens (P3) the author's and steward's
         for (const path of [
-            "ReportBuilder",
             "ReportBuilder/Datasets",
             "ReportBuilder/DatasetDetail",
+            "ReportBuilder/DatasetFields",
             "ReportBuilder/DatasetView",
-            "ReportBuilder/Datasets/createDataDocument",
-            "ReportBuilder/DatasetDetail/updateDataDocument"
+            "ReportBuilder/Datasets/createDataset",
+            "ReportBuilder/DatasetDetail/admitDataset"
         ]) {
-            const rendered = asUser(users.reader, () => lib.page(path, {dataDocumentId: "BOSS_DEMO_PRODUCTS"}, "html"))
+            const rendered = asUser(users.reader, () => lib.page(path, {datasetId: "boss-service-clocks"}, "html"))
             if (opened(rendered)) problems.push(`the reader opens ${path}`)
         }
         return {problems}

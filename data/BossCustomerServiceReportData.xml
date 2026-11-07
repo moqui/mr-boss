@@ -16,8 +16,10 @@ along with this software (see the LICENSE.md file). If not, see
     review L6; impl-customer-service P14): the case clocks of Mantle's SlaServices (CaseSlaEpisode, P4) as the DataDocument
     BossServiceClock, indexed by the BossServiceClocks feed as each clock is written, which report/boss-service-clocks.json
     (by the clock's start) and report/boss-service-breaches.json (by its breach) read, and the SLA-breach alert template
-    report/boss-service-sla-breach.json over the breaches. The dataset reads every organization's clocks, so until Insights'
-    admission applies the organization filter it is granted to ADMIN only, as Mantle's sales datasets are (F-P14-3). -->
+    report/boss-service-sla-breach.json over the breaches. The clocks carry their organization (organizationPartyId), on which
+    Mantle's organization row filter scopes both datasets (Insights P3); Insights admitted them (data/BossSetupData.xml, Insights
+    P3) and they are read by Customer Service's managers and administrators and the Insights groups, each viewer their own
+    organizations' clocks (F-P14-3). -->
 <entity-facade-xml type="seed-initial">
     <dataDocuments dataDocumentId="BossServiceClock" indexName="boss_service" documentName="Service Clock"
             primaryEntityName="mantle.request.support.CaseSlaEpisode" documentTitle="${requestId}:${clockEnumId}">

@@ -165,7 +165,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 7 (§6 F1–F31) |
 | P1 Foundation | BOSS | the Insights root and menu | built and reviewed Nov 7, merged |
 | P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | built and reviewed Nov 7, merged |
-| P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | — |
+| P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | built Nov 7 |
 | P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | — |
 | P5 Home and attention | BOSS | Home | — |
 | P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | — |
@@ -565,6 +565,104 @@ index's freshness).
   index; the Sales dashboard shows `insights.reader` ORG_ZIZI_RETAIL's orders and the ORG_ZIZI_SERVICES reader only
   theirs; a rebuild shows its lag on the dataset; the CSV holds the same rows.
 
+**Built Nov 7 (P3).** mr-moqui d8302df5, mr-mantle 816dc6fd, mr-boss (this commit) (branch `ins/p3`).
+- **The framework** (mr-moqui `crates/moqui-report/src/business.rs`, `docs/tools/Monitoring.md` "Business datasets"):
+  - admission is a record, `moqui.report.BusinessDataset` (admitted, retired, steward, last build and count, last field change,
+    version), and an engine rule: a dataset whose definition says `signal: "business"` is read only once admitted, except by its
+    steward, who holds the dataset's update artifact (`ADMIN` all, through `REPORT_DATASETS_ADMIN`); a reader is refused "dataset …
+    is not admitted" (F-P3-1);
+  - `find#BusinessDatasets` (the datasets the viewer reads, and a steward's waiting ones, each with its checks and state: admitted,
+    review, retired, unavailable), `validate#BusinessDataset`, `create#BusinessDataset` (a registered feed's document, a registered
+    policy, owned by the steward, in review), `store#BusinessDataset` (title, time field, policy and parameters of a saved dataset,
+    which return it to review; steward; admit, refused while a check fails; retire; `expectedVersion`), `index#BusinessDataset`
+    (`index#DataFeedDocuments` for the dataset's feed and document only, F15, under the dataset's update artifact),
+    `store#BusinessDatasetFields` (plain paths only; unique names; removing or renaming a field any definition over the dataset
+    names refused with their names; a stale version refused; the index then stale until rebuilt) and
+    `store#BusinessDatasetConditions` (a field of the document, an operator of the list, no post-query expression);
+  - scope policies are `ReportScopePolicy` enumerations (`enumCode` the service, F-P3-3): the framework's `ReportUserGroups`
+    (`get#UserGroupRowFilter`) and Mantle's `MantleOrganization`; a `rowFilterService` is called with the dataset's id and its
+    `rowFilterParameters` beside `userId` (F5, §4), a registered policy without a grant of its own (F-P3-2). The filter is in the
+    dataset's resolution, so rows, suggestions, value counts, aggregates, panel exports and playlists all carry it, and a fixed
+    variable, `ignoreVariables` or a direct `/moqui/reports` query cannot widen an admitted dataset (the P2 review's three gaps).
+- **Mantle** (816dc6fd): `PartyServices.get#OrganizationRowFilter` (F11; the viewer's organizations by
+  `get#PartyOrganizationInfo`, the active one when set, every one or the active one for a system administrator, nothing for a
+  viewer of none; another `userId` refused) on the field the dataset names; `mantle-sales-orders` and `mantle-sales-items` bound to
+  it on `vendorPartyId` (the field the documents already carry, so no reindex, F-P3-8); `mantle-inventory` (MantleInventoryAsset,
+  `ownerPartyId`, receivedDate) with its filter from the start; the sales invoice and inventory documents granted to `ADMIN` (F9);
+  StoreCheckout's ProductStore alias and a `productStore` relationship on PortalPaymentAttempt (F30).
+- **The BOSS datasets** (F10, F30): `organizationPartyId` added to BossStoreCheckout and BossStorePaymentAttempt (through
+  `productStore`) and BossStoreFeedBuild (through `store`); the five datasets bound to the organization filter, with an
+  organization lookup; admitted by setup (BossSetupData's BusinessDataset rows). Mantle's sales datasets and the inventory dataset
+  wait for the steward (the "usable when").
+- **Access** (`data/BossSetupData.xml`, appended but for BOSS_INS_LEGACY narrowed to Reports and ScheduledReports):
+  `BOSS_INS_DATASETS` (the eight business datasets' artifacts and `org\.moqui\.report\.dataset\.insights-.*`: view for the reader,
+  author, distributor and flow editor, all for the steward; the administrator none) and the documents' DataDocumentUserGroup rows
+  for those groups; the owners' report groups (owner contracts): `BOSS_COM_DATASETS` and the store documents for Commerce's
+  managers and administrators, `BOSS_CS_DATASETS` and the clock document for Customer Service's managers and administrators;
+  `BOSS_INS_DATASET_READ` (`find#BusinessDatasets`, author and steward) and `BOSS_INS_DATASET_STEWARD` (the six steward operations),
+  ALWAYS past BOSS_INS_REPORT_ENGINE; the screens' areas `BOSS_INS_DATASET_SCREENS` (Datasets, DatasetView: the author and
+  steward) and `BOSS_INS_DATASET_STEWARDSHIP` (DatasetDetail, DatasetFields: the steward), each denying the root user group and the
+  administrator, a non-inheritable ALWAYS with its transitions named, as BOSS_INS_AUTHORING.
+- **Readiness** (F50, F53): a ReadinessProvider `insights.dataset.<id>` (instance scope, `INSIGHTS_VIEW`, every 1,440 minutes,
+  fix path DatasetDetail) and a RefreshOperation `insights.dataset.<id>.index` (`INSIGHTS_DATASET_EDIT`, index source) per business
+  dataset, over `ironstone.insights.DatasetServices.check#DatasetReadiness` (admitted and passing is ready, review a warning naming
+  what fails; the watermark the last build; a dataset the viewer neither reads nor stewards refused, so omitted) and
+  `refresh#DatasetIndex` (the dataset is the registration's source; `index#BusinessDataset` as the viewer, so the dataset's update
+  artifact guards it). Registry.js's `request#Refresh` passes the registration's `refreshKey` to the owner's service (F-P3-5).
+  `BOSS_INS_READINESS` grants `get#Readiness` and `request#Refresh` to the author, steward and administrator; the providers are
+  instance-scoped, so no organization scope is needed for a user without the Admin root (F53).
+- **Screens** (replacing the copied builder, F20; each over `ironstone.insights.DatasetServices` and `Datasets.js`):
+  `ReportBuilder/Datasets` (DatasetFind, DatasetList with state chips and the admitted, needs review, unavailable and retired
+  views, CreateDataset for the steward: a registered feed's document and a registered policy, named `insights-<name>`, F-P3-4);
+  `ReportBuilder/DatasetDetail` (record header with Admit as the primary while in review, else Rebuild index; More: Fields and
+  conditions, Preview rows, Retire; DatasetValidation, Index (feed, last build, lag), EditDataDocument and DatasetScope in one
+  form, read only for a shipped dataset; DatasetUses); `ReportBuilder/DatasetFields` (FieldList, AddField, AddCondition,
+  ConditionList through the guarded services); `ReportBuilder/DatasetView` (DatasetOptions, DataViewList of each row's title and
+  fields, ExportDocuments through `export#Dataset`, the scoped export adapter: CSV or JSON to 10,000 rows, `audit#Export`). The
+  copied FieldList and the raw DataDocument transitions are removed; Reports keeps its copy of the old ViewReport section until P4.
+- **Specs.**
+  - framework `BusinessDatasets` (5 features, 0.4 s: one feed's document indexed for its steward and refused to a reader;
+    admission refused for an unregistered feed, an unbuilt index and an unbound filter and the reader refused before; the row
+    filter on rows, a forged query, value counts and a panel's CSV; a field a panel uses not removed, a stale version and an
+    expression path refused, the index then stale).
+  - Mantle `test/party/OrganizationRowFilter` (4 features, 0.7 s: two organizations and a child, the active one alone, nothing for
+    a user of none, everything for a system administrator, another user and an expression field refused).
+  - BOSS `InsightsDatasets` (5 features, 0.6 s: admitted by the steward, not by a reader or author, unreadable before; the
+    ORG_ZIZI_SERVICES reader reads only its own sales row and the Retail reader only Retail's, a forged filter and the value counts
+    too; DatasetView's one qvt render as the author and the CSV of the same rows, the reader refused the export; readiness and the
+    refresh through Admin's registries, the author refused). `InsightsAccess` follows the areas (the capabilities `datasets` and
+    `stewardship`; Datasets refused to a reader, DatasetDetail to the author and the administrator, opened to the steward; the
+    administrator's engine deny checked from the copied Reports); `InsightsDashboards`' unreadable panel now says not admitted.
+  - Acceptance, written and not run: `acceptance/Insights/InsightsDatasetsUsable` (5 features, the "usable when");
+    AppStructure, TuiRender and InsightsFoundationWalk updated to the new screens and parameters, not run.
+- **Tests run** (Debug, `--nobuild`, this worktree): cargo `clippy -p moqui-report --all-targets -D warnings` clean, `cargo test -p
+  moqui-report` 77 of 77, moqui-host `--test it report_` 9 of 9 (3 ignored); framework BusinessDatasets 5 of 5; tools 39 of 39 (tools
+  8.5 s of 3 s on Debug, DataViews' "Edit DB View" 4.75 s, not P3's); Mantle OrganizationRowFilter and SalesReports 8 of 8,
+  SalesReportStoreScope's setup fails on Debug with "Maximum call stack size exceeded" in an OrderHeader EECA (F37, F-P3-9); BOSS
+  InsightsDatasets, InsightsAccess, InsightsDashboards, AdminRegistries, CommerceAccess, CustomerServiceAccess and CommerceReports
+  54 of 54 (mr-boss 27.1 s feature time). The four screens rendered once by hand in qvt, tui and html with a create, a condition
+  and a field posted (a throwaway spec, not kept). `moqui lint --screens`: 132 sites, as before, none in Insights. Prettier clean
+  on the new and changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- **Budget shares**: framework server 0.4 s (BusinessDatasets); mr-mantle 0.7 s (OrganizationRowFilter); mr-boss server 0.6 s
+  (InsightsDatasets) and InsightsAccess about the same (3.0 s), Debug.
+- Inventories: ss-inventory's SimpleReport builder rows (EditReport, FieldList, FindReport, ViewReport) implemented in the dataset
+  screens; QuickViewReport waits for P4. No usl-inventory row (the services are new).
+- Design edits: design-insights §5 Datasets, DatasetDetail, DatasetFields, DatasetView (as built), §17 item 6 (field and use
+  classes); design-commerce §1.4 and design-customer-service §1 (the datasets' scope and readers, owner contracts).
+- Findings (provisional, for the lead to number): F-P3-1 to F-P3-10 in §6. Decisions: §4 rows of Nov 7 (P3).
+- For the lead:
+  - budget shares as above: framework 0.4 s, mr-mantle 0.7 s, mr-boss 0.6 s server; no client change;
+  - Registry.js now passes `refreshKey` to a refresh owner's service (Admin's code, F-P3-5); Admin P3 appends to BossSetupData too,
+    and P3's block is one append at the end;
+  - InsightsDashboardsUsable (acceptance, P2) copies Store operations, which needs `mantle-sales-orders` admitted (F41): run it after
+    InsightsDatasetsUsable, or admit the sales datasets on the instance first;
+  - an existing instance must rebuild the three Commerce indexes for the new `organizationPartyId` (Rebuild index on each, or the
+    feeds), and load ReportSetupData and MonitoringSalesSecurityData for the policy registry (Monitoring.md "Upgrading");
+  - DatasetScope's permitted fields and uses and classification are not built (design §17 item 6); readers see every field of an
+    admitted dataset's document, rows scoped;
+  - never grant an Insights group `org.moqui.report.dataset.*` or a DataDocument-by-id or `index:` dataset artifact: those resolve
+    without the admission rule and the row filter (F-P3-6).
+
 ### P4 — Report catalog and metrics
 
 Design §6.1, Reports and SavedReports, §6.2 for the built owners, §4 MeasureMeaning and PanelDetail's measure and
@@ -804,6 +902,12 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Nov 7, 2026 | The organization in scope is a fixed dashboard variable (`organizationPartyId`) until P3's row filter carries it | P2, design §4 Dashboard ("user variables never replace a scope predicate"); F43 |
 | Nov 7, 2026 | A dashboard is shared with one of the owner's own groups or kept private, through `share#Dashboard` | P2, design §4 ShareDashboard; F42 |
 | Nov 7, 2026 | The demo reader with financial read is in Accounting's `BOSS_ACCOUNTING_READ` (`ACCOUNTING_VIEW`, `PRODUCT_COST_VIEW`, `CUSTOMER_CREDIT_VIEW`), the owner's group, not an Insights one | P1 (design §13.3's confidential-field scenario) |
+| Nov 7, 2026 | Admission is a framework record (`moqui.report.BusinessDataset`) and an engine rule: a dataset of signal `business` is read only once admitted, or by its steward (the dataset's update artifact) | P3, F-P3-1; design §5 changed |
+| Nov 7, 2026 | A registered `rowFilterService` is a `ReportScopePolicy` enumeration and runs without a grant of the viewer's; the framework ships `ReportUserGroups`, Mantle `MantleOrganization` | P3, F-P3-2, F-P3-3 |
+| Nov 7, 2026 | BOSS's five datasets are admitted by setup; Mantle's sales datasets and the inventory dataset wait for the steward's Admit | P3; the "usable when" scenario; the demo shows the sales panels not available until admitted |
+| Nov 7, 2026 | The owners' report groups that read their datasets: Commerce's store managers and administrators, Customer Service's managers and administrators; store-scoped operators keep Commerce's own Reports | P3, owner contracts (design-commerce §1.4, design-customer-service §1) |
+| Nov 7, 2026 | A steward's dataset is named `insights-<name>`, whose artifacts setup grants by pattern | P3, F-P3-4 |
+| Nov 7, 2026 | One readiness provider (instance scope, `INSIGHTS_VIEW`, omitted when unreadable) and one index refresh (`INSIGHTS_DATASET_EDIT` and the dataset's update artifact) per business dataset; Admin's two registry services granted to the author, steward and administrator | P3, impl-admin F50, F53 |
 
 ## 5. Open questions
 
@@ -814,7 +918,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1 and F39–F47 in P2 the same day.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2 and the provisional F-P3-1 to F-P3-10 in P3 the same day.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -865,6 +969,16 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F45 | P2: an area that denies the root user group and allows the authors cannot use ALLOW (DENY wins over ALLOW at the same artifact, authz.rs), and an inheritable ALWAYS on a screen passes every deny below it, the engine's included | The editors' area is ALWAYS for the author and steward, as Commerce's areas (F45), not inheritable, with the authoring transitions named (review R3), so the engine's denies hold under it |
 | F46 | P2: design §2's `Insights/Panels/PanelDetail` would make Panels a parent whose widgets must render the child | PanelDetail is the hidden root route `Insights/PanelDetail`; design §2 changed |
 | F47 | P2: design §1.2 puts Explore at `ReportBuilder/Explore`, but ReportBuilder was the copied builder denied to the root user group (F20) | `BOSS_INS_LEGACY` names the copied children; ReportBuilder opens on Explore for every Insights user |
+| F-P3-1 | P3: the framework kept no admission state, and shipped datasets are read-only definitions, so "admitted" could not be written on them | `moqui.report.BusinessDataset` keyed by dataset id and the engine rule on signal `business` (§4); setup admits BOSS's own |
+| F-P3-2 | P3: a `rowFilterService` ran with the viewer's authorization, and no Insights group holds Mantle's service (BOSS_INS_REPORT_ENGINE's model grants operations, not policies) | A registered policy is the engine's own reviewed code and runs without the viewer's grant; an unregistered one keeps the viewer's call |
+| F-P3-3 | P3: "a registered rowFilterService" had no registry, and a framework spec cannot define a service outside a component's service directory | `ReportScopePolicy` enumerations; the framework's `ReportUserGroups` policy, which its spec uses |
+| F-P3-4 | P3: `index#BusinessDataset` and reading are guarded by the dataset's own artifact, which no group holds for a dataset a steward creates | Created datasets are `insights-<name>` and BossSetupData grants that pattern (steward all, readers view) |
+| F-P3-5 | P3: `request#Refresh` passes the owner's service no registration key, so one service for several dataset indexes cannot tell which | Registry.js passes `refreshKey` (reserved from the scope parameters); refresh#DatasetIndex reads the registration's source |
+| F-P3-6 | P3: a DataDocument-by-id dataset (`org.moqui.report.dataset.MantleSalesOrderPart`) and an `index:` alias resolve without the dataset definition, so without the admission rule and its row filter | No Insights group holds those artifacts (ADMIN alone, through REPORT_DATASETS_ADMIN); noted for the lead and in BossSetupData |
+| F-P3-7 | P3: grants in the owners' report data files cannot name BOSS groups, which BossSetupData defines and loads later | The owners' document grants are in BossSetupData's P3 block |
+| F-P3-8 | P3: Mantle's sales documents already carry the organization (`vendorPartyId`), Commerce's three only the store | The sales filter names `vendorPartyId` (no reindex); Commerce's documents gain `organizationPartyId` through the store (an existing instance rebuilds their indexes) |
+| F-P3-9 | P3: on Debug, mr-mantle SalesReportStoreScope's setup fails with "Maximum call stack size exceeded" in an OrderHeader EECA (as F37) | Not P3's; it passes on the release binary per earlier waves |
+| F-P3-10 | P3: with Mantle's sales datasets waiting for the steward, P2's InsightsDashboardsUsable (acceptance) cannot copy Store operations on a fresh instance (F41) | Run InsightsDatasetsUsable first, or admit on the instance; the regression walk's panel stays "Not available" |
 
 ## 7. Later
 

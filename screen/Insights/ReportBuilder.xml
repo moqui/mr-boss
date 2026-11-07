@@ -14,11 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Report builder" default-menu-index="5" menu-image="sym_o_edit" menu-image-type="icon">
-    <!-- Explore (P2) for every Insights user; the copied builder's Datasets, DatasetDetail and DatasetView stay the Insights
-        administrator's and ADMIN's (BOSS_INS_LEGACY) until P3 replaces them -->
+    <!-- Explore (P2) for every Insights user; Datasets and the hidden DatasetView (P3) for authors and stewards, the hidden
+        DatasetDetail and DatasetFields for stewards (BOSS_INS_DATASET_SCREENS, BOSS_INS_DATASET_STEWARDSHIP), replacing the copied
+        SimpleReport builder (impl-insights F20) -->
     <subscreens default-item="Explore"/>
-    <pre-actions>
-        <set field="excludeFilter" value="(moqui\\.).*"/>
-    </pre-actions>
     <widgets><subscreens-panel id="SimpleReportPanel" type="tab"/></widgets>
 </screen>

@@ -6,6 +6,10 @@
     "documentType": "BossServiceClock",
     "timeField": "startDate",
     "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
     "fieldDefaults": {
       "clockEnumId": {
         "enumTypeId": "SlaClock"

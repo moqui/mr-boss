@@ -6,6 +6,10 @@
     "documentType": "BossStoreFeedBuild",
     "timeField": "startedDate",
     "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
     "fieldDefaults": {
       "productStoreId": {
         "lookup": {
@@ -23,6 +27,13 @@
       },
       "buildStatusEnumId": {
         "enumTypeId": "StoreFeedBuildStatus"
+      },
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
       }
     }
   }

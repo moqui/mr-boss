@@ -3,7 +3,8 @@
 // permissions and the copied screens' area, the report engine's artifacts by capability (a reader cannot save, an author cannot
 // save a dataset, the steward can; scheduling the distributor's; the root's inheritable grant opening no mutating operation from
 // an Insights screen; telemetry and Tools' Dashboards no Insights group's), and the
-// copied builder and its raw entity transitions refused to the ordinary groups. One feature per rule, each case of it a line of
+// copied screens refused to the ordinary groups. P3 replaces the copied builder: Datasets the author's and steward's, DatasetDetail
+// the steward's, both refused to a reader and the administrator. One feature per rule, each case of it a line of
 // its problems, with artifact authorization enabled. P2 adds the dashboard and panel editors (the author's, refused to a reader),
 // every ReportServices operation denied to the root user group and the administrator unless granted (a reader still reads from an
 // Insights screen) and its menu entries. The access and isolation walk is the acceptance InsightsFoundationWalk. A
@@ -143,13 +144,16 @@ const capabilityNames = [
     "flowEdit",
     "settingsView",
     "settingsEdit",
-    "legacy"
+    "legacy",
+    "datasets",
+    "stewardship"
 ]
-// design §1.1's table; the copied screens (legacy) are the administrator's and ADMIN's
+// design §1.1's table; the copied screens (legacy) are the administrator's and ADMIN's; P3's dataset screens the author's and the
+// steward's (datasets), DatasetDetail the steward's (stewardship)
 const capabilityUsers = [
     {user: users.reader, granted: ["view"]},
-    {user: users.author, granted: ["view", "author"]},
-    {user: users.steward, granted: ["view", "datasetView", "datasetEdit"]},
+    {user: users.author, granted: ["view", "author", "datasets"]},
+    {user: users.steward, granted: ["view", "datasetView", "datasetEdit", "datasets", "stewardship"]},
     {user: users.distributor, granted: ["view", "schedule", "distribute"]},
     {user: users.flow, granted: ["view", "flowEdit"]},
     {user: users.admin, granted: ["view", "settingsView", "settingsEdit", "legacy"]},
@@ -263,7 +267,7 @@ feature(
             // and from a copied screen, whose grant is the administrator's ALLOW, not an ALWAYS that would pass the denies
             expect(
                 "the administrator saves a dashboard from the copied report builder",
-                under("Insights/ReportBuilder/Datasets.xml", users.admin, reports + "save#Definition", dashboard),
+                under("Insights/Reports.xml", users.admin, reports + "save#Definition", dashboard),
                 "is not authorized"
             )
             // P2: every operation is denied to the root user group unless granted, and the reading grants pass that deny
@@ -300,40 +304,36 @@ feature(
     }
 )
 
-feature(
-    "the copied report builder and the editors are refused to the ordinary groups; the builder opens to the administrator, the editors to the author",
-    {
-        when() {
-            const problems = []
-            for (const path of ["ReportBuilder/Datasets", "Reports", "ScheduledReports"]) {
-                const message = screenRefusal(users.reader, path)
-                if (!unauthorized(message) || !message.includes("AT_XML_SCREEN"))
-                    problems.push(`the reader opens ${path}: ${message || "opened"}`)
-            }
-            const transition = screenRefusal(users.author, "ReportBuilder/DatasetDetail/FieldList/createDataDocumentCondition", {
-                dataDocumentId: "BOSS_DEMO_PRODUCTS",
-                fieldNameAlias: "productId",
-                operator: "equals",
-                fieldValue: "INS_SPEC"
-            })
-            if (!unauthorized(transition)) problems.push(`the author posts a DataDocumentCondition: ${transition || "accepted"}`)
-            const opened = screenRefusal(users.admin, "ReportBuilder/Datasets")
-            if (opened !== "") problems.push(`the administrator is refused the report builder: ${opened}`)
-            // P2: the dashboard editor is the author's (BOSS_INS_AUTHORING), refused to a reader and the administrator
-            for (const user of [users.reader, users.admin]) {
-                const editor = screenRefusal(user, "DashboardEditor", {definitionId: "boss-commerce-store-operations"})
-                if (!unauthorized(editor)) problems.push(`${user} opens DashboardEditor: ${editor || "opened"}`)
-            }
-            const authored = screenRefusal(users.author, "DashboardEditor", {definitionId: "boss-commerce-store-operations"})
-            if (authored !== "") problems.push(`the author is refused DashboardEditor: ${authored}`)
-            const conditions = system(() =>
-                ec.entity.find("moqui.entity.document.DataDocumentCondition").condition("fieldValue", "INS_SPEC").count()
-            )
-            if (conditions !== 0) problems.push(`conditions stored: ${conditions}`)
-            return {problems}
-        },
-        then({problems}) {
-            problems.join("\n") == ""
+feature("the copied screens, the dataset screens and the editors are refused to the ordinary groups; each opens to its group", {
+    when() {
+        const problems = []
+        for (const path of ["Reports", "ScheduledReports", "ReportBuilder/Datasets"]) {
+            const message = screenRefusal(users.reader, path)
+            if (!unauthorized(message) || !message.includes("AT_XML_SCREEN"))
+                problems.push(`the reader opens ${path}: ${message || "opened"}`)
         }
+        const opened = screenRefusal(users.admin, "Reports")
+        if (opened !== "") problems.push(`the administrator is refused the copied Reports: ${opened}`)
+        // P3: the dataset list the author's, DatasetDetail the steward's, the administrator refused both (F20's raw entity
+        // transitions are gone with the copied builder)
+        const authorList = screenRefusal(users.author, "ReportBuilder/Datasets")
+        if (authorList !== "") problems.push(`the author is refused Datasets: ${authorList}`)
+        for (const user of [users.author, users.admin]) {
+            const detail = screenRefusal(user, "ReportBuilder/DatasetDetail", {datasetId: "boss-service-clocks"})
+            if (!unauthorized(detail)) problems.push(`${user} opens DatasetDetail: ${detail || "opened"}`)
+        }
+        const stewarded = screenRefusal(users.steward, "ReportBuilder/DatasetDetail", {datasetId: "boss-service-clocks"})
+        if (stewarded !== "") problems.push(`the steward is refused DatasetDetail: ${stewarded}`)
+        // P2: the dashboard editor is the author's (BOSS_INS_AUTHORING), refused to a reader and the administrator
+        for (const user of [users.reader, users.admin]) {
+            const editor = screenRefusal(user, "DashboardEditor", {definitionId: "boss-commerce-store-operations"})
+            if (!unauthorized(editor)) problems.push(`${user} opens DashboardEditor: ${editor || "opened"}`)
+        }
+        const authored = screenRefusal(users.author, "DashboardEditor", {definitionId: "boss-commerce-store-operations"})
+        if (authored !== "") problems.push(`the author is refused DashboardEditor: ${authored}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
     }
-)
+})

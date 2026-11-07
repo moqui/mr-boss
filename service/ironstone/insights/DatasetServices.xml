@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights' business datasets (design-insights §5, impl-insights P3; Datasets.js): the report builder's dataset screens and the
+    datasets' readiness and refresh registrations (impl-admin F50, F53). Each calls the framework's business dataset services as the
+    viewer, so the engine checks the dataset's own artifact and its row filter scopes every row; the INSIGHTS_* permissions decide
+    what is offered, never which rows. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Datasets" allow-remote="false">
+        <description>The business datasets an author or steward may read, and the steward's waiting for review, with their state,
+            scope, feed, index and last build as text, narrowed by state (admitted, review, retired, unavailable) and text. Refuses a
+            user without Insights authoring or stewardship (INSIGHTS_DATASETS_UNAVAILABLE).</description>
+        <in-parameters><parameter name="status"/><parameter name="text"/></in-parameters>
+        <out-parameters>
+            <parameter name="datasets" type="List"/>
+            <parameter name="canCreate" type="Boolean"/>
+            <parameter name="canSteward" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('datasets', context)"/>
+            <set field="datasets" from="found.datasets"/>
+            <set field="canCreate" from="found.canCreate"/>
+            <set field="canSteward" from="found.canSteward"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Dataset" allow-remote="false">
+        <description>One dataset for its steward: its source, scope, admission checks, index, fields, conditions and the definitions
+            that use it, with the registered scope policies. Refuses a user without INSIGHTS_DATASET_VIEW
+            (INSIGHTS_DATASET_VIEW_REQUIRED) and a dataset they neither read nor steward (RECORD_UNAVAILABLE).</description>
+        <in-parameters><parameter name="datasetId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="dataset" type="Map"/>
+            <parameter name="fields" type="List"/>
+            <parameter name="conditions" type="List"/>
+            <parameter name="uses" type="List"/>
+            <parameter name="policies" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('dataset', context)"/>
+            <set field="dataset" from="found.dataset"/>
+            <set field="fields" from="found.fields"/>
+            <set field="conditions" from="found.conditions"/>
+            <set field="uses" from="found.uses"/>
+            <set field="policies" from="found.policies"/>
+        </actions>
+    </service>
+    <service verb="get" noun="DatasetChoices" allow-remote="false">
+        <description>What a new dataset may be made over: the documents of registered data feeds (no telemetry index) and the
+            registered scope policies. Refuses a user without INSIGHTS_DATASET_EDIT (INSIGHTS_DATASET_EDIT_REQUIRED).</description>
+        <out-parameters><parameter name="documents" type="List"/><parameter name="policies" type="List"/></out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('choices', context)"/>
+            <set field="documents" from="found.documents"/>
+            <set field="policies" from="found.policies"/>
+        </actions>
+    </service>
+    <service verb="create" noun="Dataset" allow-remote="false">
+        <description>The steward's new dataset, named insights-(name), over a registered feed's document with a registered scope
+            policy and the field that carries its organization, waiting for review (the engine's create#BusinessDataset). Refuses a
+            user without INSIGHTS_DATASET_EDIT and what the engine refuses (an unregistered source or policy).</description>
+        <in-parameters>
+            <parameter name="name" required="true"/><parameter name="title"/><parameter name="dataDocumentId" required="true"/>
+            <parameter name="timeField"/><parameter name="scopePolicyId" required="true"/><parameter name="organizationField"/>
+        </in-parameters>
+        <out-parameters><parameter name="datasetId"/></out-parameters>
+        <actions>
+            <set field="datasetId" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('create', context).datasetId"/>
+        </actions>
+    </service>
+    <service verb="get" noun="DatasetView" allow-remote="false">
+        <description>A page of an admitted dataset's rows as the viewer reads them, scoped by its row filter, each with its title and
+            its fields as text. Refuses a user without Insights authoring or stewardship and a dataset that is not readable
+            (DATASET_UNREADABLE) or not available (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="datasetId" required="true"/><parameter name="from"/><parameter name="thru"/>
+            <parameter name="queryString"/><parameter name="pageIndex" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="dataset" type="Map"/>
+            <parameter name="documentList" type="List"/>
+            <parameter name="documentListCount" type="Integer"/>
+            <parameter name="documentListPageIndex" type="Integer"/>
+            <parameter name="documentListPageSize" type="Integer"/>
+            <parameter name="documentListPageMaxIndex" type="Integer"/>
+            <parameter name="documentListPageRangeLow" type="Integer"/>
+            <parameter name="documentListPageRangeHigh" type="Integer"/>
+            <parameter name="totalText"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('view', context)"/>
+            <set field="dataset" from="found.dataset"/>
+            <set field="documentList" from="found.documentList"/>
+            <set field="documentListCount" from="found.documentListCount"/>
+            <set field="documentListPageIndex" from="found.documentListPageIndex"/>
+            <set field="documentListPageSize" from="found.documentListPageSize"/>
+            <set field="documentListPageMaxIndex" from="found.documentListPageMaxIndex"/>
+            <set field="documentListPageRangeLow" from="found.documentListPageRangeLow"/>
+            <set field="documentListPageRangeHigh" from="found.documentListPageRangeHigh"/>
+            <set field="totalText" from="found.totalText"/>
+        </actions>
+    </service>
+    <service verb="export" noun="Dataset" allow-remote="false">
+        <description>The scoped export of an admitted dataset (design §5 ExportDocuments): the rows the viewer reads, through the
+            engine's query with the dataset's row filter, up to the server's cap (10,000; 1,000 by default), as CSV or JSON, recorded
+            through audit#Export. No raw DataDocument export.</description>
+        <in-parameters>
+            <parameter name="datasetId" required="true"/><parameter name="from"/><parameter name="thru"/>
+            <parameter name="queryString"/><parameter name="format"/><parameter name="prettyPrint"/>
+            <parameter name="requestedRowLimit" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="content"/><parameter name="contentType"/><parameter name="filename"/>
+            <parameter name="rowCount" type="Integer"/><parameter name="capped" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('exportDataset', context)"/>
+            <set field="content" from="found.content"/>
+            <set field="contentType" from="found.contentType"/>
+            <set field="filename" from="found.filename"/>
+            <set field="rowCount" from="found.rowCount"/>
+            <set field="capped" from="found.capped"/>
+        </actions>
+    </service>
+    <service verb="check" noun="DatasetReadiness" allow-remote="false">
+        <description>The readiness contract of a dataset's provider (Admin's ReadinessProvider insights.dataset.(id)): admitted with
+            its checks passing is ready, waiting for review or retired a warning naming what fails, a missing source unavailable;
+            the watermark is the index's last build. A dataset the viewer neither reads nor stewards is refused
+            (RECORD_UNAVAILABLE), so the registry leaves it out.</description>
+        <in-parameters><parameter name="providerKey" required="true"/></in-parameters>
+        <out-parameters><parameter name="checks" type="List"/></out-parameters>
+        <actions>
+            <set field="checks" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('readiness', context).checks"/>
+        </actions>
+    </service>
+    <service verb="refresh" noun="DatasetIndex" allow-remote="false">
+        <description>A dataset's index rebuild requested through Admin's request#Refresh (RefreshOperation insights.dataset.(id).index):
+            the dataset is the registration's source, never a name from the request, and index#BusinessDataset runs as the viewer, so
+            the dataset's own update artifact guards it. Refuses an unknown or another app's registration (REFRESH_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="refreshKey" required="true"/><parameter name="operationKey"/><parameter name="reason"/>
+        </in-parameters>
+        <out-parameters><parameter name="documentsIndexed" type="Long"/></out-parameters>
+        <actions>
+            <set field="documentsIndexed" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Datasets.js').execute('refresh', context).documentsIndexed"/>
+        </actions>
+    </service>
+</services>

@@ -6,6 +6,10 @@
     "documentType": "BossStorePaymentAttempt",
     "timeField": "createdDate",
     "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
     "fieldDefaults": {
       "productStoreId": {
         "lookup": {
@@ -16,6 +20,13 @@
       },
       "purposeEnumId": {
         "enumTypeId": "PaymentAttemptPurpose"
+      },
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
       }
     }
   }

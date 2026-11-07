@@ -19,9 +19,11 @@ along with this software (see the LICENSE.md file). If not, see
     report/boss-commerce-payment-attempts.json read, with Mantle's sales orders dataset (mantle-sales-orders), in the Store
     operations dashboard (report/boss-commerce-store-operations.json) and the alert templates for checkout failures
     (boss-commerce-checkout-failures) and long-unresolved payment attempts (boss-commerce-payment-unresolved). Feed build
-    failures (P14, BossStoreFeedBuild below) and intake error spikes (P13) come with their records. The datasets read every organization's records,
-    so until Insights' admission applies the store scope they are granted to ADMIN only, as Customer Service's and Mantle's
-    sales datasets are; Commerce's own Reports screens read through the store-scoped services. -->
+    failures (P14, BossStoreFeedBuild below) and intake error spikes (P13) come with their records. Each document carries its
+    store's organization (organizationPartyId), on which Mantle's organization row filter scopes the datasets (Insights P3,
+    impl-insights F30); Insights admitted them (data/BossSetupData.xml, Insights P3) and they are read by Commerce's store
+    managers and administrators and the Insights groups (the grants there), each viewer their own organizations' rows.
+    Commerce's own Reports screens read through the store-scoped services. -->
 <entity-facade-xml type="seed-initial">
     <dataDocuments dataDocumentId="BossStoreCheckout" indexName="boss_commerce" documentName="Store Checkout"
             primaryEntityName="mantle.order.StoreCheckout" documentTitle="${checkoutId}">
@@ -40,6 +42,8 @@ along with this software (see the LICENSE.md file). If not, see
         <fields fieldSeqId="13" fieldPath="frozenDate"/>
         <fields fieldSeqId="14" fieldPath="placedDate"/>
         <fields fieldSeqId="15" fieldPath="completedDate"/>
+        <!-- the store's organization, which scopes the dataset (impl-insights P3, F30) -->
+        <fields fieldSeqId="16" fieldPath="productStore:organizationPartyId"/>
     </dataDocuments>
     <dataDocuments dataDocumentId="BossStorePaymentAttempt" indexName="boss_commerce" documentName="Store Payment Attempt"
             primaryEntityName="mantle.account.payment.PortalPaymentAttempt" documentTitle="${paymentId}">
@@ -55,6 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
         <fields fieldSeqId="10" fieldPath="createdDate"/>
         <fields fieldSeqId="11" fieldPath="settledDate"/>
         <fields fieldSeqId="12" fieldPath="lastCheckDate"/>
+        <fields fieldSeqId="13" fieldPath="productStore:organizationPartyId"/>
     </dataDocuments>
     <moqui.entity.feed.DataFeed dataFeedId="BossCommerceOperations" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
             feedName="Commerce store operations" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
@@ -66,8 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="ADMIN"/>
     <!-- impl-commerce P14: the stores' product feed builds (mantle.product.store.ProductStoreFeedBuild, metadata only, never the
         artifact) as BossStoreFeedBuild, indexed by its own feed as each build is written, which
-        report/boss-commerce-feed-builds.json reads and the alert template boss-commerce-feed-build-failures fires on; ADMIN
-        only, as the datasets above -->
+        report/boss-commerce-feed-builds.json reads and the alert template boss-commerce-feed-build-failures fires on; granted
+        as the datasets above -->
     <dataDocuments dataDocumentId="BossStoreFeedBuild" indexName="boss_commerce" documentName="Store Feed Build"
             primaryEntityName="mantle.product.store.ProductStoreFeedBuild" documentTitle="${feedBuildId}">
         <fields fieldSeqId="01" fieldPath="feedBuildId"/>
@@ -84,6 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
         <fields fieldSeqId="12" fieldPath="skipCount"/>
         <fields fieldSeqId="13" fieldPath="errorCount"/>
         <fields fieldSeqId="14" fieldPath="failureCode"/>
+        <fields fieldSeqId="15" fieldPath="store:organizationPartyId"/>
     </dataDocuments>
     <moqui.entity.feed.DataFeed dataFeedId="BossCommerceFeedBuilds" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
             feedName="Commerce store feed builds" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"

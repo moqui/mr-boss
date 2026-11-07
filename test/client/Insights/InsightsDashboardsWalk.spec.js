@@ -1,7 +1,7 @@
 // Insights' golden path in the live client (impl-insights P2, the app's one regression walk): an author opens a dashboard shared
 // with the Insights users from Dashboards, saves a copy in Insights' mounted editor (DashboardEditor), adds a library panel to it
-// and saves a version, then opens the copy in Insights' Dashboard, where the library panel over a dataset not yet admitted (P3)
-// says it is not available. Every step stays under /qapps/Insights. The dashboard and the panel are InsightsClientFixtures'.
+// and saves a version, then opens the copy in Insights' Dashboard, where the library panel over a dataset waiting for the steward's
+// admission (P3) says it is not available. Every step stays under /qapps/Insights. The dashboard and the panel are InsightsClientFixtures'.
 // Each run makes a copy of its own. The "usable when" scenario is the acceptance InsightsDashboardsUsable.
 let author
 spec({
