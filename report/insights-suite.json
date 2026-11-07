@@ -1,0 +1,61 @@
+{
+  "id": "insights-suite",
+  "type": "dashboard",
+  "title": "Suite overview",
+  "body": {
+    "description": "A small suite dashboard over the admitted business datasets: orders and order value by currency, the open case backlog and store checkouts. Each viewer sees their own organizations' rows.",
+    "folder": "Insights",
+    "variables": [
+      {
+        "name": "organizationPartyId",
+        "label": "Organization",
+        "kind": "custom",
+        "field": "organizationPartyId",
+        "hide": true
+      },
+      {
+        "name": "vendorPartyId",
+        "label": "Selling organization",
+        "kind": "custom",
+        "field": "vendorPartyId",
+        "datasetId": "mantle-sales-orders",
+        "hide": true
+      }
+    ],
+    "panels": {
+      "orders": {
+        "panelRef": "insights-suite-orders",
+        "title": "Orders by currency"
+      },
+      "orderValue": {
+        "panelRef": "insights-suite-order-value",
+        "title": "Order value by currency"
+      },
+      "serviceBacklog": {
+        "panelRef": "insights-suite-service-backlog",
+        "title": "Open cases by organization"
+      },
+      "checkouts": {
+        "panelRef": "insights-suite-checkouts",
+        "title": "Store checkouts by state"
+      }
+    },
+    "layout": {
+      "type": "autoGrid",
+      "items": [
+        {
+          "panelId": "orders"
+        },
+        {
+          "panelId": "orderValue"
+        },
+        {
+          "panelId": "serviceBacklog"
+        },
+        {
+          "panelId": "checkouts"
+        }
+      ]
+    }
+  }
+}

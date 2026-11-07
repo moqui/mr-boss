@@ -164,6 +164,25 @@ Chatter and RecordFiles remain hidden app-root mounts of the Commons shared defi
 
 **Source.** Research §§1–2,15; Commons Today; all domain Home designs. **Needs:** INS-01, INS-02, INS-09, INS-10.
 
+**As built (impl-insights P5, Nov 7, 2026).**
+- `ironstone.insights.AttentionProvider` (mr-boss's registry entity file) holds key, owner, label, the owner's count service and
+  its fixed parameters, the count's path in its answer (and an overdue part), the organization parameter it honors or the scope
+  it keeps, and the worklist's route and filter. Providers that share an owner's Home summary share one call per board.
+  `get#Attention` shows a provider only when its route opens to the viewer and they hold its permission; an owner's refusal or a
+  null count leaves it out, and any other failure is a card that names its owner. The counts are grouped by owner and never
+  totalled.
+- The built apps register only the Home cards whose count is their list's own query (impl-insights F29), 26 of them.
+  Monitor's Business operations dashboard is a source through `get#OperationFailures`, which runs the dashboard's own rollbacks
+  query as the viewer over the last day and opens Monitor's Operations under Monitor's grants.
+- ManagementPanels shows at most six panels of the user's chosen dashboard, else of the shipped `insights-suite` ("Suite
+  overview"): orders and order value by currency (`Sales.Orders`, `Sales.OrderValue`), open cases by organization
+  (`CustomerService.Backlog`) and store checkouts by state, as library panels. Each panel is a `report-embed` rendered as the
+  viewer, kept to the organization in scope by the dashboard's `organizationPartyId` and `vendorPartyId` variables.
+- Invoiced revenue waits for an admitted invoice dataset (F-P5-2).
+- Arrange (`store#HomeLayout`) saves the organization, the dashboard and its panels in `InsightsHome`.
+- Favorites are the framework's starred and recent dashboards.
+- The first-use state shows while the user has no stars, recents, pins or saved arrangement.
+
 ## 4. Dashboards and panels
 
 ### 4.1 One framework model

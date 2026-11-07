@@ -12,27 +12,217 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights Home (design-insights §3 Home; style-guide §3.1 Landing), its frame until P5: the management scope from get#Context
-    (HomeContext, read only: the organizations whose results the user sees), and the first-use state, which offers nothing yet:
-    the shipped dashboards and the report catalog arrive with P2 and P4, favorites, pinned reports and the attention board with
-    P4 and P5. It shows no sample numbers (design §1.2). A user with no Insights read (the root group alone) is told why. -->
+<!-- Insights Home (design-insights §3 Home; impl-insights P5; style-guide §3.1 Landing): the management landing.
+    HomeContext: the organization in scope (one of the user's, get#Context) and the period; FavoritesAndRecents: the user's
+    starred and recent dashboards they still read; ManagementPanels: at most six panels of the dashboard the user chose (Arrange,
+    the InsightsHome preference), else of the shipped suite dashboard (report/insights-suite.json), each a report-embed rendered
+    as the viewer and kept to the organization in scope; Attention: the registered providers' counts as the viewer
+    (RegistryServices.get#Attention), grouped by owner, each opening its owner's worklist with the filter that produced it, a
+    failed count named on its own card, never added into a total; PinnedReports: the catalog entries the user pinned in Reports.
+    The first-use state offers the suite dashboard, Dashboards and Reports, and no sample numbers. DigestPreview comes with the
+    management digest. A user with no Insights read (the root group alone) is told why Home shows nothing. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+
+    <parameter name="organizationPartyId"/>
+    <parameter name="from"/>
+
+    <!-- Arrange: the saved organization, dashboard and panels (store#HomeLayout, the InsightsHome preference only); the panels are
+        the shown dashboard's, so choosing another dashboard starts with all of its panels -->
+    <transition name="storeLayout" method="post">
+        <actions>
+            <set field="panelIds" from="orderedPanelIds == null || orderedPanelIds === '' ? [] : (typeof orderedPanelIds === 'string'
+                    ? orderedPanelIds.split(',') : Array.from(orderedPanelIds))"/>
+            <service-call name="ironstone.insights.RegistryServices.store#HomeLayout"
+                    in-map="{organizationPartyId:(organizationPartyId || null), dashboardDefinitionId:(dashboardDefinitionId || null),
+                        orderedPanelIds:(dashboardDefinitionId === currentDashboardId ? panelIds : []),
+                        expectedRevision:expectedRevision}"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
     <actions>
         <set field="can" from="insights.capabilities"/>
-        <set field="scopeText" from="insights.allOrganizations ? 'Every organization' : Array.from(insights.organizations || []).map(row => row.label).join(', ')"/>
+        <if condition="can.view">
+            <service-call name="ironstone.insights.RegistryServices.get#Home" out-map="home" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null)}"/>
+            <set field="homeFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="ironstone.insights.RegistryServices.get#Attention" out-map="attention" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:(home?.organizationPartyId || null)}"/>
+            <set field="attentionFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="scopeOptions" from="home?.organizations || insights.organizations || []"/>
+        <set field="organizationPartyId" from="home?.organizationPartyId || null"/>
+        <set field="scopeText" from="organizationPartyId ? (scopeOptions.find(row =&gt; row.value === organizationPartyId)?.label || organizationPartyId)
+                : insights.allOrganizations ? 'Every organization' : scopeOptions.map(row =&gt; row.label).join(', ')"/>
+        <set field="from" from="from || home?.from || 'now-30d'"/>
+        <set field="periodOptions" from="[{value:'now-7d', label:'Last 7 days'}, {value:'now-30d', label:'Last 30 days'},
+                {value:'now-90d', label:'Last 90 days'}, {value:'now-1y', label:'Last year'}]"/>
+        <set field="periodText" from="periodOptions.find(row =&gt; row.value === from)?.label || from"/>
+        <set field="favorites" from="home?.favorites || []"/>
+        <set field="pinnedReports" from="home?.pinnedReports || []"/>
+        <set field="homePanels" from="home?.panels || []"/>
+        <set field="homeDashboard" from="home?.dashboard || {}"/>
+        <set field="scopeVariables" from="home?.scopeVariables || {}"/>
+        <set field="unavailableText" from="(home?.unavailableOwners || []).length ? 'Not available now: ' + home.unavailableOwners.join(', ')
+                + '. Their pinned reports show again when they answer.' : ''"/>
+        <!-- each owner's cards, with the scope its counts honor and a note of a count that failed -->
+        <set field="attentionGroups" from="Array.from(attention?.groups || []).map(group =&gt; Object.assign({}, group, {
+                scopeText: Array.from(new Set(group.cards.map(card =&gt; card.scopeText).filter(Boolean))).join('; '),
+                failedText: group.cards.filter(card =&gt; card.state === 'failed').map(card =&gt; card.title + ': ' + card.message).join('. '),
+                cards: group.cards.map(card =&gt; Object.assign({}, card, {valueText: card.overdueText ? card.countText + ' · ' +
+                    card.overdueText : card.countText}))}))"/>
+        <set field="layoutValues" from="{organizationPartyId:home?.organizationPartyId, dashboardDefinitionId:homeDashboard.definitionId,
+                currentDashboardId:homeDashboard.definitionId, orderedPanelIds:homePanels.map(panel =&gt; panel.panelId),
+                expectedRevision:home?.revision}"/>
     </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm">
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col"><label text="Insights" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${sharedLinks['Dashboards']}" text="Open a dashboard" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_dashboard" condition="can.view"/>
+                <link url="${insights.reportLinks.definition}" text="New dashboard" link-type="anchor-button" icon="sym_o_add"
+                        condition="can.author &amp;&amp; insights.reportLinks.definition"/>
+                <container-dialog id="ArrangeHome" button-text="Arrange" condition="home">
+                    <label text="Choose the organization Home opens in, the dashboard whose panels it shows and up to six of them. This changes what Home shows you, not what anyone may read." type="p" style="m-muted"/>
+                    <form-single name="ArrangeHomeForm" transition="storeLayout" map="layoutValues">
+                        <field name="currentDashboardId"><default-field><hidden/></default-field></field>
+                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                        <field name="organizationPartyId"><default-field title="Organization">
+                            <drop-down allow-empty="true"><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="dashboardDefinitionId"><default-field title="Dashboard" tooltip="Choosing another dashboard shows all of its panels; arrange again to choose among them.">
+                            <drop-down><list-options list="home.dashboardOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="orderedPanelIds"><default-field title="Panels">
+                            <drop-down allow-multiple="true"><list-options list="home.panelOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="save"><default-field><submit text="Save Home"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
         </container>
-        <label text="Scope: ${scopeText || 'No organization'}" type="p" style="m-muted"/>
-        <container-box condition="can.view">
-            <box-header title="Dashboards and reports"/>
+
+        <!-- HomeContext: the organization in scope and the period of the panels -->
+        <form-single name="HomeContext" transition=".">
+            <field name="organizationPartyId"><default-field title="Organization">
+                <drop-down allow-empty="${insights.allOrganizations || scopeOptions.length > 1}"><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+            </default-field></field>
+            <field name="from"><default-field title="Period">
+                <drop-down><list-options list="periodOptions" key="${value}" text="${label}"/></drop-down>
+            </default-field></field>
+            <field name="apply"><default-field><submit text="Apply"/></default-field></field>
+            <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="from"/><field-ref name="apply"/></field-row></field-layout>
+        </form-single>
+        <label text="Scope: ${scopeText || 'No organization'} · ${periodText}. Currencies are shown apart." type="p" style="m-muted"/>
+
+        <label text="Dashboards and reports are shown to Insights readers." type="p" style="m-muted" condition="!can.view"/>
+        <label text="Home could not be read just now. ${homeFailure}" type="p" style="text-negative" condition="can.view &amp;&amp; homeFailure"/>
+
+        <container-box condition="home?.firstUse">
+            <box-header title="Getting started"/>
             <box-body>
-                <label text="No dashboards or reports are shared with you yet." type="p"/>
+                <label text="Home shows the suite overview below and the work waiting in the apps you use. Star dashboards in Dashboards and pin reports in Reports to keep them here." type="p"/>
+                <container style="row q-gutter-sm">
+                    <link url="${sharedLinks['Dashboards']}" text="Browse dashboards" link-type="anchor" icon="sym_o_dashboard"/>
+                    <link url="${sharedLinks['Reports']}" text="Find a report" link-type="anchor" icon="sym_o_summarize"/>
+                </container>
             </box-body>
         </container-box>
-        <label text="Dashboards and reports are shown to Insights readers." type="p" style="m-muted" condition="!can.view"/>
+
+        <!-- Attention: each owner's counts, opening the worklist that produced them -->
+        <container-box condition="can.view">
+            <box-header title="Needs attention"/>
+            <box-body>
+                <label text="Work waiting in the apps you use${attention?.asOfText ? ', as of ' + attention.asOfText : ''}. Counts are not added together: the same work can be in more than one list." type="p" style="m-muted"/>
+                <label text="The attention board could not be read just now." type="p" style="text-negative" condition="attentionFailure"/>
+                <label text="Nothing is waiting in the apps you use." type="p" condition="!attentionFailure &amp;&amp; !attentionGroups.length"/>
+                <section-iterate name="AttentionGroups" list="attentionGroups" entry="group">
+                    <widgets>
+                        <label text="${group.ownerName}" type="h6"/>
+                        <label text="${group.scopeText}" type="p" style="text-caption m-muted" condition="group.scopeText"/>
+                        <dashboard min-width="170">
+                            <section-iterate name="AttentionCards" list="group.cards" entry="card">
+                                <widgets>
+                                    <number-card title="${card.title}" value="${card.valueText}" size="sm" link="${card.url || ''}"/>
+                                </widgets>
+                            </section-iterate>
+                        </dashboard>
+                        <label text="${group.failedText}" type="p" style="text-caption text-warning" condition="group.failedText"/>
+                    </widgets>
+                </section-iterate>
+            </box-body>
+        </container-box>
+
+        <!-- ManagementPanels: the chosen dashboard's panels, each rendered as the viewer in the organization in scope -->
+        <container-box condition="can.view &amp;&amp; home">
+            <box-header title="${homeDashboard.title || 'Management panels'}"/>
+            <box-toolbar>
+                <link url="${homeDashboard.url}" url-type="plain" text="Open dashboard" link-type="anchor" condition="homeDashboard.url"/>
+            </box-toolbar>
+            <box-body>
+                <label text="${homeDashboard.message}" type="p" style="m-muted" condition="homeDashboard.message"/>
+                <section-iterate name="ManagementPanels" list="homePanels" entry="panel">
+                    <widgets>
+                        <report-embed definition-id="${homeDashboard.definitionId}" panel-id="${panel.panelId}" from="${from}" thru="now"
+                                variables="scopeVariables"/>
+                    </widgets>
+                </section-iterate>
+            </box-body>
+        </container-box>
+
+        <container style="row q-col-gutter-md">
+            <!-- FavoritesAndRecents -->
+            <container style="col-12 col-md-6">
+                <container-box condition="can.view &amp;&amp; home">
+                    <box-header title="Starred and recent dashboards"/>
+                    <box-body>
+                        <label text="Dashboards you star or open show here." type="p" style="m-muted" condition="!favorites.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="FavoritesAndRecents" list="favorites" skip-form="true" paginate="false" condition="favorites.length">
+                            <field name="title"><default-field title="Dashboard"><link url="${url}" url-type="plain" text="${title}" link-type="anchor"/></default-field></field>
+                            <field name="kind"><default-field title="Why"><display/></default-field></field>
+                            <field name="folder"><default-field title="Folder"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="kind"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </container>
+            <!-- PinnedReports -->
+            <container style="col-12 col-md-6">
+                <container-box condition="can.view &amp;&amp; home">
+                    <box-header title="Pinned reports"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Reports']}" text="All reports" link-type="anchor"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Pin reports in Reports to keep them here." type="p" style="m-muted" condition="!pinnedReports.length"/>
+                        <label text="${unavailableText}" type="p" style="text-caption text-warning" condition="unavailableText"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="PinnedReports" list="pinnedReports" skip-form="true" paginate="false" condition="pinnedReports.length">
+                            <field name="title">
+                                <conditional-field condition="url" title="Report"><link url="${url}" url-type="plain" text="${title}" link-type="anchor"/></conditional-field>
+                                <default-field title="Report"><display text="${title}"/></default-field>
+                            </field>
+                            <field name="ownerName"><default-field title="App"><display/></default-field></field>
+                            <field name="description"><default-field title="What it answers"><display text="${description}${opensFrom ? ' (' + opensFrom + ')' : ''}"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="ownerName"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </container>
+        </container>
     </widgets>
 </screen>

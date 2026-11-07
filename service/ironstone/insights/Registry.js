@@ -851,6 +851,315 @@ function searchRecords(p) {
     }
 }
 
+// ===== Home and attention (impl-insights P5; design-insights §3 Home) =====
+const suiteDashboardId = "insights-suite"
+const homePanelLimit = 6
+const attentionProviders = () => registered("ironstone.insights.AttentionProvider", "providerKey", ["countService"])
+const json = text => lib.json(text, null)
+const preferenceIds = key => {
+    const stored = json(ec.user.getPreference(key))
+    return Array.isArray(stored) ? stored.map(String) : []
+}
+// The value at a path of an owner's answer (counters.draftCount; queueRows[operation=receiving].lateCount): found false when
+// a step is missing, so a misnamed field is a failure, never a quiet omission.
+function valueAt(answer, path) {
+    let value = answer
+    for (const step of String(path).split(".")) {
+        const match = /^([^[\]]+)(?:\[([^=\]]+)=([^\]]*)\])?$/.exec(step.trim())
+        if (!match || value == null || typeof value !== "object" || !(match[1] in value)) return {found: false}
+        value = value[match[1]]
+        if (match[2]) {
+            const row = Array.from(value || []).find(item => item != null && String(item[match[2]]) === match[3])
+            if (!row) return {found: false}
+            value = row
+        }
+    }
+    return {found: true, value}
+}
+// A count of an owner's answer, the paths of its field added: null when the owner gives the viewer no count (any part null).
+function countAt(answer, field) {
+    let total = 0
+    for (const path of String(field).split("+")) {
+        const at = valueAt(answer, path)
+        if (!at.found) throw new Error("its answer has no " + path.trim())
+        if (at.value == null || at.value === "") return null
+        const number = Number(String(at.value))
+        if (!Number.isFinite(number)) throw new Error(path.trim() + " is not a count")
+        total += number
+    }
+    return total
+}
+const countText = count => ec.l10n.format(toDecimal(String(count)), "#,##0")
+
+// get#Attention: each registered provider as the viewer (design §3): one whose route does not open to the viewer, whose
+// permission they lack, whose owner refuses them or answers them no count is left out, naming nothing; one whose count fails
+// is named on its own card and the others go on. Providers sharing a count call (an owner's Home summary) share one call. The
+// counts are grouped by owner and never added into a total: the same work can be in more than one worklist.
+function attention(p) {
+    viewer()
+    const context = insights.execute("context", {appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
+    const organizationPartyId = context.organizationPartyId || null
+    const grants = insights.grants()
+    const answers = new Map()
+    const callOf = provider => {
+        const parameters = Object.assign({}, json(provider.countParameters) || {})
+        if (provider.organizationParameter && organizationPartyId)
+            parameters[provider.organizationParameter] = organizationPartyId
+        const key = provider.countService + "|" + JSON.stringify(parameters)
+        if (!answers.has(key)) {
+            try {
+                answers.set(key, {answer: ownerCall(provider.countService, parameters)})
+            } catch (error) {
+                answers.set(key, {error: String(error.message)})
+            }
+        }
+        return answers.get(key)
+    }
+    const groups = []
+    for (const provider of attentionProviders()) {
+        if (!blank(p.ownerApp) && provider.ownerApp !== p.ownerApp) continue
+        try {
+            if (blank(provider.routePath) || !admin.destinationOpens(grants, provider.routePath)) continue
+            if (provider.requiredPermission && !lib.access.has(provider.requiredPermission)) continue
+        } catch (error) {
+            ec.logger.error("Insights attention provider " + provider.providerKey + " was not checked: " + error.message)
+            continue
+        }
+        const ownerName = ownerNames[provider.ownerApp] || provider.ownerApp
+        const card = {
+            providerKey: provider.providerKey,
+            ownerApp: provider.ownerApp,
+            ownerName,
+            title: provider.title,
+            description: provider.description || "",
+            scopeText: provider.organizationParameter && organizationPartyId ? "" : provider.organizationScope || "",
+            url: null,
+            state: "available",
+            count: null,
+            countText: "",
+            overdueCount: null,
+            overdueText: "",
+            message: ""
+        }
+        const call = callOf(provider)
+        if (call.error != null && refusalText.test(call.error)) continue
+        try {
+            if (call.error != null) throw new Error(call.error)
+            const count = countAt(call.answer, provider.countField)
+            if (count == null) continue
+            const overdue = blank(provider.overdueField) ? null : countAt(call.answer, provider.overdueField)
+            const query = String(provider.routeParameters || "")
+                .split("&")
+                .filter(Boolean)
+            if (provider.organizationParameter && organizationPartyId)
+                query.push(encodeURIComponent(provider.organizationParameter) + "=" + encodeURIComponent(organizationPartyId))
+            const queryText = query.join("&")
+            Object.assign(card, {
+                count,
+                countText: countText(count),
+                overdueCount: overdue,
+                overdueText: overdue ? countText(overdue) + " overdue" : "",
+                url: "/qapps/" + provider.routePath + (queryText ? "?" + queryText : "")
+            })
+        } catch (error) {
+            ec.logger.error("Insights attention provider " + provider.providerKey + " failed: " + error.message)
+            Object.assign(card, {
+                state: "failed",
+                countText: "Unavailable",
+                message: ownerName + " did not answer this count just now"
+            })
+        }
+        let group = groups.find(row => row.ownerApp === provider.ownerApp)
+        if (!group) groups.push((group = {ownerApp: provider.ownerApp, ownerName, cards: []}))
+        group.cards.push(card)
+    }
+    const now = new Date()
+    return {groups, organizationPartyId, asOf: now.getTime(), asOfText: ec.l10n.format(now, "yyyy-MM-dd HH:mm")}
+}
+
+// get#OperationFailures: Monitor's Business operations dashboard as an attention source (impl-insights F19): the runs its
+// "Rollbacks and retries by operation" panel counts, over the last day, read from the shipped dashboard and run as the viewer,
+// so Monitor's own grants (the dashboard and the telemetry dataset) decide.
+function countOperationFailures(p) {
+    viewer()
+    const definition = engine(R + "get#Definition", {definitionId: "monitor-operations"}).definition
+    const source = (definition.body?.panels?.failed?.queries || [])[0]
+    if (!source) throw new Error("Monitor's Business operations dashboard has no rollbacks panel")
+    const metric = Array.from(source.aggregations || []).filter(item => (item.role || "metric") === "metric")
+    const out = engine(R + "run#Query", {
+        query: {
+            from: p.from || "now-24h",
+            thru: "now",
+            queries: [{datasetId: source.datasetId, queryString: source.queryString, aggregations: metric}]
+        }
+    })
+    // the engine answers a refused or failed query as an error notice and no frames, never as a zero
+    const failed = Array.from(out.notices || []).find(notice => notice.level === "error")
+    if (failed) {
+        if (/not authorized/.test(String(failed.message)))
+            denied("OPERATIONS_UNAVAILABLE", "Monitor's business operations are not available to you")
+        throw new Error("Monitor's business operations query failed: " + failed.message)
+    }
+    let count = 0
+    for (const frame of Array.from(out.frames || []))
+        for (const field of Array.from(frame.fields || []))
+            if (metric.some(item => item.id === field.name))
+                for (const value of Array.from(field.values || [])) count += Number(String(value ?? 0)) || 0
+    return {count}
+}
+
+// The pinned catalog entries the viewer reads, in their order (design §3 PinnedReports): only the pinned entries are checked,
+// each through its owner's catalogue or its route.
+function pinnedReports(pins) {
+    if (!pins.length) return {reports: [], unavailableOwners: []}
+    const read = reader()
+    const entries = catalogEntries()
+    const reports = []
+    for (const entryId of pins) {
+        const entry = entries.find(row => row.entryId === entryId)
+        if (!entry || !read.reads(entry)) continue
+        reports.push({
+            entryId,
+            title: entry.title,
+            ownerName: ownerNames[entry.ownerApp] || entry.ownerApp,
+            description: entry.description || "",
+            url: entry.routePath ? "/qapps/" + entry.routePath : null,
+            opensFrom: entry.routePath ? "" : "Opens from a record"
+        })
+    }
+    return {reports, unavailableOwners: Array.from(read.unavailable).sort()}
+}
+// The organization scope of a dashboard placed on Home, as its variables: the chosen organization, else the viewer's
+// organizations; none for the administrator in every organization. The suite's sales panels name it vendorPartyId.
+function scopeVariables(context) {
+    const scope = context.organizationPartyId || (context.allOrganizations ? null : context.organizationPartyIds)
+    if (scope == null) return {}
+    const value = Array.isArray(scope) ? (scope.length ? scope : ["_NA_"]) : scope
+    return {organizationPartyId: value, vendorPartyId: value}
+}
+// get#Home: the viewer's landing (design §3): the management scope, their starred and recent dashboards, the dashboard whose
+// panels Home shows (their own choice, else the shipped suite dashboard) with the panels in their order, their pinned reports
+// and whether this is their first use. Every definition is read as the viewer; one they no longer read is left out, and a
+// chosen dashboard they cannot read is said so. Attention is get#Attention's, so a slow or failing owner never holds Home.
+function getHome(p) {
+    const userScope = viewer()
+    const preference = home()
+    let context
+    try {
+        context = insights.execute("context", {
+            appRoot: "Insights",
+            organizationPartyId: p.organizationPartyId || preference.organizationPartyId || null
+        })
+    } catch (error) {
+        if (!blank(p.organizationPartyId)) throw error
+        // a saved organization no longer the viewer's falls back to their default scope
+        context = insights.execute("context", {appRoot: "Insights"})
+    }
+    const dashboards = Array.from(engine(R + "list#Definitions", {definitionType: "dashboard"}).definitions || []).filter(
+        definition => definition.component !== "tools"
+    )
+    const byId = new Map(dashboards.map(definition => [definition.id, definition]))
+    const link = definition => "/qapps/Insights/Dashboard?definitionId=" + encodeURIComponent(definition.id)
+    const stars = preferenceIds("REPORT_STARRED")
+    const recent = preferenceIds("REPORT_RECENT")
+    const favorites = []
+    for (const [kind, ids] of [
+        ["Starred", stars],
+        ["Recent", recent]
+    ])
+        for (const id of ids) {
+            const definition = byId.get(id)
+            if (!definition || favorites.some(row => row.definitionId === id)) continue
+            favorites.push({
+                definitionId: id,
+                title: definition.title || id,
+                kind,
+                folder: definition.body?.folder || "",
+                shipped: !!definition.readOnly,
+                url: link(definition)
+            })
+        }
+    const dashboardId = preference.dashboardDefinitionId || suiteDashboardId
+    const dashboard = {definitionId: dashboardId, title: "", available: false, message: "", url: null}
+    let panelOptions = []
+    try {
+        const definition = engine(R + "get#Definition", {definitionId: dashboardId}).definition
+        if (definition.type !== "dashboard") throw new Error("not a dashboard")
+        const panels = definition.body?.panels || {}
+        const layoutIds = Array.from(definition.body?.layout?.items || []).map(item => item.panelId)
+        const keys = layoutIds.filter(id => id in panels).concat(Object.keys(panels).filter(id => !layoutIds.includes(id)))
+        panelOptions = keys.map(panelId => ({value: panelId, label: panels[panelId]?.title || panelId}))
+        Object.assign(dashboard, {title: definition.title || dashboardId, available: true, url: link(definition)})
+    } catch (error) {
+        ec.logger.warn("Insights Home dashboard " + dashboardId + " is not available: " + error.message)
+        dashboard.message =
+            dashboardId === suiteDashboardId
+                ? "The suite dashboard is not available to you"
+                : "Your chosen dashboard is not available to you; choose another with Arrange"
+    }
+    const chosen = preference.orderedPanelIds.filter(id => panelOptions.some(option => option.value === id))
+    const panelIds = (chosen.length ? chosen : panelOptions.map(option => option.value)).slice(0, homePanelLimit)
+    const pinned = pinnedReports(preference.pinnedReportIds)
+    return {
+        organizationPartyId: context.organizationPartyId || null,
+        organizations: context.organizations,
+        allOrganizations: context.allOrganizations,
+        scopeVariables: scopeVariables(context),
+        from: context.defaults.from,
+        thru: context.defaults.thru,
+        capabilities: userScope.capabilities,
+        favorites,
+        dashboard,
+        panels: panelIds
+            .map(panelId => panelOptions.find(option => option.value === panelId))
+            .map(option => ({
+                panelId: option.value,
+                title: option.label
+            })),
+        panelOptions,
+        dashboardOptions: dashboards
+            .map(definition => ({value: definition.id, label: definition.title || definition.id}))
+            .sort((a, b) => a.label.localeCompare(b.label)),
+        pinnedReports: pinned.reports,
+        unavailableOwners: pinned.unavailableOwners,
+        firstUse: !stars.length && !recent.length && !preference.pinnedReportIds.length && preference.revision === 0,
+        revision: preference.revision
+    }
+}
+// store#HomeLayout: the viewer's arrangement in the InsightsHome preference (design §3): the organization in scope (one of
+// theirs), the dashboard whose panels Home shows (one they read; none: the suite dashboard) and at most six of its panels in
+// order. It changes references and order only, never what a source shows; pins are kept.
+function storeHomeLayout(p) {
+    viewer()
+    const preference = home()
+    if (!blank(p.expectedRevision) && Number(p.expectedRevision) !== preference.revision)
+        denied("HOME_CHANGED", "Your Home changed since you read it; reload and try again")
+    const organizationPartyId = blank(p.organizationPartyId) ? null : String(p.organizationPartyId)
+    if (organizationPartyId) insights.execute("context", {appRoot: "Insights", organizationPartyId})
+    const dashboardId = blank(p.dashboardDefinitionId) ? null : String(p.dashboardDefinitionId)
+    let panelIds = Array.from(p.orderedPanelIds || [])
+        .map(String)
+        .filter(Boolean)
+    if (panelIds.length > homePanelLimit) denied("HOME_PANELS_LIMIT", "Home shows at most " + homePanelLimit + " panels")
+    if (dashboardId || panelIds.length) {
+        let definition
+        try {
+            definition = engine(R + "get#Definition", {definitionId: dashboardId || suiteDashboardId}).definition
+        } catch (_) {
+            denied("DASHBOARD_UNAVAILABLE", "Dashboard " + (dashboardId || suiteDashboardId) + " is not available")
+        }
+        if (definition.type !== "dashboard") denied("DASHBOARD_REQUIRED", "Choose a dashboard")
+        const missing = panelIds.find(id => !(id in (definition.body?.panels || {})))
+        if (missing) denied("PANEL_UNAVAILABLE", "Panel " + missing + " is not on " + (definition.title || definition.id))
+    }
+    preference.organizationPartyId = organizationPartyId
+    preference.dashboardDefinitionId = dashboardId
+    preference.orderedPanelIds = panelIds
+    preference.revision += 1
+    ec.user.setPreference(homeKey, JSON.stringify(preference))
+    return {revision: preference.revision}
+}
+
 const operations = {
     findReports,
     storeReportPins,
@@ -863,7 +1172,11 @@ const operations = {
     storePanelTarget,
     findSavedReports,
     copySavedReport,
-    searchRecords
+    searchRecords,
+    attention,
+    countOperationFailures,
+    getHome,
+    storeHomeLayout
 }
 ;({
     home,

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     group BOSS_INSIGHTS and the administrator group BOSS_INSIGHTS_ADMIN open it (data/BossSetupData.xml), as ADMIN does; the root
     grant opens navigation only, and each screen and service checks its own permission (ironstone.insights.ContextServices.get#Context
     resolves the organizations, capabilities, safe defaults and links for every subscreen) while the report engine checks its own
-    artifacts. The menu of design §1.2 grows by phase: P1 builds Home (a frame until P5); P2 the dashboards (Dashboards, Library
+    artifacts. The menu of design §1.2 grows by phase: P1 builds Home's frame and P5 its panels, attention board and pins; P2 the dashboards (Dashboards, Library
     panels, Wall display, with Dashboard, DashboardEditor and PanelDetail hidden) and Report builder › Explore, each a mount of the
     framework's report screens (INS-04) whose links the reportLinks map here sends to Insights' own screens; Reports, Delivery and
     alerts, Business flows and Settings come with the phases that build their entries; P3 the business datasets under Report builder

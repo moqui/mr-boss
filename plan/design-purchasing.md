@@ -964,6 +964,11 @@ A match operator applies matches, through `mantle.account.InvoiceMatchServices.a
 PurchaseHistory and SupplierStatement are `ironstone.insights.ReportCatalogEntry` rows (`Purchasing.*`) read by their routes'
 screen authorization; no Purchasing metric is registered yet.
 
+**Insights attention (impl-insights P5, Nov 7, 2026; F29).** Home's Draft orders, Approved not sent, Unacknowledged orders, Late
+receipts, Held bills and Quotes expiring (`BuyerServices.get#Home` counters) are `ironstone.insights.AttentionProvider` rows
+(`Purchasing.*`) opening the cards' views; Approvals waiting counts unread notifications, not the Approvals list, and is not
+registered until one query serves both.
+
 Register these measures and canonical report routes with [Insights](design-insights.md#6-report-catalog-and-domain-metrics),
 including source basis, denominators, organization/supplier scope, currency/UOM and freshness.
 The framework reporting engine now supplies panels, pivot transformations and exploration; each

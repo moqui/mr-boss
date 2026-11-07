@@ -272,6 +272,11 @@ cases and returns (X7).
 Sales' `Sales.Orders` metric cut by store, never redefined. The shipped Store operations dashboard's orders panel names that
 metric and excludes recurring base orders in its query (impl-insights F-P4-3).
 
+**Insights attention (impl-insights P5, Nov 7, 2026; F29).** Home's To approve, Payment holds, Placements waiting and Open carts
+(`StoreOperationsServices.get#StoreWorkSummary`, the user's stores) and Integration errors (`get#ChannelHealth`, for
+`COMMERCE_CHANNEL_OPERATE`) are `ironstone.insights.AttentionProvider` rows (`Commerce.*`) opening the orders list and carts with
+the cards' filters; To fulfill and Unpaid count differently from their lists and are not registered.
+
 The Reports area is designed here beside Home, because Home's cards and period strip open its
 reports with the same store and period filters; in the menu it sits before Settings.
 

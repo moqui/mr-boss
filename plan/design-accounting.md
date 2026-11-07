@@ -1932,6 +1932,11 @@ Warehouse mounts, by its route; SalesAnalysis is the one Sales-owned entry `Sale
 and read through this catalogue until Sales is built. The invoiced revenue metric is `Accounting.InvoicedRevenue` over
 `SalesReportServices.get#SalesInvoiceSummary`.
 
+**Insights attention (impl-insights P5, Nov 7, 2026; F29).** Draft and posted entries (`AccountingServices.find#Records`), bills
+awaiting approval (for `INVOICE_APPROVE`) and on hold (`InvoiceServices.find#Payables`) and production runs awaiting cost close
+(`ProductionCostServices.find#CostCloseQueue`) are `ironstone.insights.AttentionProvider` rows (`Accounting.*`), each the list's
+own find, for the organization in Insights' scope.
+
 These canonical reports register with [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).
 Insights uses their authorized service results and drill targets, preserving organization, fiscal
 period, posting basis and currency; an eventually consistent search aggregation is not a replacement
