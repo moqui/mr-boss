@@ -83,7 +83,8 @@ function ownerCall(serviceName, parameters) {
 
 // ===== scope =====
 // The organizations a readiness read covers: the one asked for, refused unless the viewer administers it, else every one the
-// viewer administers (an Admin user's scope; for another caller their own organizations).
+// viewer administers (an Admin user's scope; none for a caller without the Admin root, whose organization providers answer
+// nothing).
 function organizationsOf(userScope, organizationPartyId) {
     if (organizationPartyId) {
         if (
@@ -668,6 +669,9 @@ function readiness(p) {
         }
         if (!found.length) continue
         const presented = found.map(row => present(provider, row, context))
+        // a provider that failed for one organization or store is named too, beside its unavailable row
+        if (!failedProviders.includes(provider.title) && presented.some(row => row.reasonCode === "PROVIDER_FAILED"))
+            failedProviders.push(provider.title)
         checks.push(...presented)
         answered.push({
             providerKey: provider.providerKey,
