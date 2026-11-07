@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     as ADMIN does; the root grant opens navigation only, and each screen and service checks its own permission
     (ironstone.admin.ContextServices.get#SharedContext resolves the organizations the user administers, the capabilities and the
     links for every subscreen). Its areas, in the menu order of design §1.2 by their menu-index: 1 Home; 2 Users (Users,
-    UserDetail and Sessions in P4, the identity operator's and the administrator's, BOSS_ADM_USERS); 3 Access (Groups and
+    UserDetail and Sessions in P4, Invitations and InviteStaff in P5, the identity operator's and the administrator's, BOSS_ADM_USERS); 3 Access (Groups and
     GroupDetail in P3, the access administrator's and the administrator's, BOSS_ADM_ACCESS); 5 Settings (the settings
     index in P2, every Admin user's; BOSS users without Admin are granted its SettingsHome alone, impl-admin F46); 8 Operations
     (Health in P2, Monitoring in P1, the jobs with their phase); 11 Agents; 12 System, the framework's Tools System screens for ADMIN alone
@@ -47,7 +47,7 @@ along with this software (see the LICENSE.md file). If not, see
     </subscreens>
 
     <!-- palette types, quick create, Today sources, notification topics and Assist prompts grow with the phases that build their
-        records (design §1.2): users, groups, connections and jobs in the palette; Invite users in quick create (P5) -->
+        records (design §1.2): users, groups, connections and jobs in the palette; Invite users in quick create and the palette's actions (P5) -->
     <shell-providers>
         <!-- P2: Health's prompt (design §1.2), answered from the readiness tool admin_get_readiness with the user's own permissions -->
         <assist-prompt label="What is failing?" text="What is failing, and who fixes it?" screen="Admin/Operations/Health" sequence="10"/>
@@ -62,6 +62,10 @@ along with this software (see the LICENSE.md file). If not, see
                 requires-record="true" sequence="40"/>
         <!-- P3, P4: groups and users in the palette (search#Records: groups for an ADMIN_ACCESS_VIEW holder, the staff of the
             organizations administered for an ADMIN_IDENTITY_VIEW holder), each opening GroupDetail or UserDetail -->
+        <!-- P5: Invite users in quick create and the palette's actions (design §1.2), each opening InviteStaff, which the Users
+            area's grant opens to the identity operator and the administrator; invite#User checks ADMIN_IDENTITY_MANAGE -->
+        <quick-create kind="adminInviteUsers" label="Invite users" icon="sym_o_person_add" screen="Admin/Users/InviteStaff" sequence="80"/>
+        <palette-action label="Invite users" icon="sym_o_person_add" screen="Admin/Users/InviteStaff" sequence="50"/>
         <palette-source group="Admin" label="Admin users and groups" icon="sym_o_group" service="ironstone.admin.ContextServices.search#Records"
                 sequence="60"/>
         <keymap scope="admin">

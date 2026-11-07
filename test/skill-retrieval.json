@@ -14,6 +14,9 @@
         {"query": "group these failures by cause", "page": "/qapps/Commerce/Integrations/IntegrationDetail", "expect": ["channel-retry"]},
         {"query": "why did the marketplace orders fail to import", "expect": ["channel-retry"]},
         {"query": "should I retry the failed channel messages", "expect": ["channel-retry"]},
-        {"query": "what does a quarantined conflict on the integration mean", "expect": ["channel-retry"]}
+        {"query": "what does a quarantined conflict on the integration mean", "expect": ["channel-retry"]},
+        {"query": "add a new user account for our new buyer", "expect": ["invite-staff"]},
+        {"query": "invite Maria to the Retail organization as a purchasing buyer", "expect": ["invite-staff"]},
+        {"query": "resend Tom's invitation, he lost the email", "page": "/qapps/Admin/Users/Invitations", "expect": ["invite-staff"]}
     ]
 }

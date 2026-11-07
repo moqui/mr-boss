@@ -263,6 +263,9 @@ const linkPaths = [
     "Users/Users",
     "Users/UserDetail",
     "Users/Sessions",
+    // P5: invitations
+    "Users/Invitations",
+    "Users/InviteStaff",
     "Settings/SettingsHome",
     "Agents/Home",
     "System",
@@ -566,6 +569,21 @@ const choiceSources = {
             .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()) || option.value === selected)
             .sort((a, b) => a.sequence - b.sequence || a.label.localeCompare(b.label))
             .map(({value, label}) => ({value, label}))
+    },
+    // P5: the bundles an invitation may propose (InviteStaff): those of bundles but a privileged group or one granting a sealed
+    // permission, which mantle.party.IdentityServices.invite#User refuses whoever sends it
+    invitationBundles: (userScope, term, selected) => {
+        const privileged = new Set(Array.from(UserSecurityChecks.privilegedGroups()))
+        const sealed = new Set(Array.from(UserSecurityChecks.sealedPermissions()))
+        const now = Number(String(ec.user.nowTimestamp))
+        const sealedGroups = new Set(
+            rows("moqui.security.UserGroupPermission")
+                .filter(row => sealed.has(row.userPermissionId) && (row.thruDate == null || Number(String(row.thruDate)) > now))
+                .map(row => row.userGroupId)
+        )
+        return choiceSources
+            .bundles(userScope, term, selected)
+            .filter(option => option.value !== "ADMIN" && !privileged.has(option.value) && !sealedGroups.has(option.value))
     },
     // the internal organizations the user administers (theirs, or every one for the administrator)
     organizations: (userScope, term, selected) => {

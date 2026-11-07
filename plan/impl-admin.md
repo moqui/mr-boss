@@ -262,7 +262,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | built and reviewed Nov 7, merged |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | built and reviewed Nov 7, merged |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | built and reviewed Nov 7, merged |
-| P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | — |
+| P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | built Nov 7 |
 | P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | — |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | — |
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | — |
@@ -1174,6 +1174,98 @@ Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invita
   one, and opens Commons with `BOSS_USERS` and the Purchasing group; the resent invitation's first link no longer works;
   a PASS account holding the invited address cannot redeem it for internal access without the token.
 
+**Built Nov 7 (P5).**
+- Mantle:
+  - `entity/IdentityEntities.xml`: `mantle.party.UserInvitation` (address, a new person's name or the party, the organization and
+    relationship, the grant proposal as bundle ids, note, status, token hash with a unique index, expiry, sends, `mailSent`,
+    `linkShownDate`, accepted and revoked times, the pending factor, inviter, operation key with a unique index; status, expiry,
+    sent, link-shown, accepted and revoked dates audit-logged, never the hash). `data/PartyInvitationData.xml` (seed, named to load
+    after MantleSetupData): StatusType `UserInvitation` (`UinvPending`, `UinvAccepted`, `UinvRevoked`; `UinvExpired` read from the
+    expiry), EmailTemplate `MANTLE_STAFF_INVITATION` of `EMT_ACCOUNT_INVITE` (F8) with `template/party/StaffInvitation.xml`, and
+    the `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` filters of UserInvitation by its organization.
+  - `IdentityServices.xml` (appended) over a module of its own, `Invitations.js`: `invite#User`, `find#Invitations`,
+    `resend#Invitation`, `revoke#Invitation`, `reveal#InvitationLink` (added), `check#InvitationToken`, `get#InvitationSummary`,
+    `accept#Invitation`, `confirm#InvitationFactor` (added). The inviter's side checks `ADMIN_IDENTITY_MANAGE` (`_VIEW` to read)
+    and the organization through Identity.js's `scope()`, called by name (for the merge with the scope rework: `scopedInvitation`,
+    `inviteUser`, `findInvitations`; `find#Invitations` also reads with authorization as the caller has it, so the UserInvitation
+    filters apply under the Users area's grant), and the proposal as the caller through `check#GrantProposal`; the token holder's
+    side is `anonymous-view`/`anonymous-all` and checks the token first. Tokens: 43 characters of `[A-Za-z0-9_-]`, kept as
+    `singleUseCodeHash`. Mail: sent when the template's server has an SMTP host, with `createEmailMessage` false; otherwise
+    `linkPending`, and `reveal#InvitationLink` makes the token at the moment it is shown, once, to whoever issued it, within
+    fifteen minutes (F-P5-5). Acceptance: the signed-in account with the invited address, else a new account
+    (`create#PartyUserAccount`; `ACCOUNT_EXISTS` when an account has the address), the inviter's authority rechecked from the
+    records, then the relationship and memberships written with authorization on and, for a bundle group requiring a factor, an
+    authenticator factor to confirm (F-P5-2, F-P5-9); one transaction.
+- BOSS:
+  - `MoquiConf.xml`: token route `i` (`screen/AcceptInvitation.xml`, `check#InvitationToken`) and the `invitation-accept` rate limit
+    (ten posts a minute under `/i/`).
+  - `screen/AcceptInvitation.xml`: Invitation, Account (`stage=account`), Factor and Done by the summary's step; one message for
+    every spent or unknown token; its forms are qvt markup posting under the route (F-P5-1).
+  - `Admin/Users/Invitations.xml` (InvitationFind, InvitationList with Resend and Revoke, the link shown once with a copy button,
+    F-P5-7) and `Admin/Users/InviteStaff.xml` (menu-include false); Users' tab Invitations (index 2) and Users' Invite users link;
+    `Admin.xml` quick create `adminInviteUsers` and palette action Invite users, both InviteStaff. `Admin.js`: links
+    `Users/Invitations`, `Users/InviteStaff`; the `invitationBundles` choice (bundles less privileged and sealed groups).
+  - `skill/invite-staff.md` (F-P5-6); `test/skill-retrieval.json` three cases (recall@3 17 of 17).
+  - No new `ironstone` service, so the client deny pattern (BOSS_PROJECTS_INTERNAL) is unchanged; no BossSetupData,
+    BossUsersDemoData or MantleSetupData change (the Users area's grant opens the new screens).
+- Specs: Mantle `test/party/StaffInvitation` (7 features, 1.0 s: no mail server, the link once and no row or audit row with the
+  token; no ADMIN, sealed group or other organization, the email's link; one account in the invitation's organization with its
+  bundles whatever the request says, single use; a resend invalidates the first token, revoked, expired and wrong-account refused;
+  an existing account linked after it signs in, a proposal changed to name ADMIN refused with nothing written; the factor step);
+  BOSS `test/Admin/AdminInvitations` (2 features, 0.3 s: InviteStaff with no mail server and Invitations' copy-only link shown once;
+  AcceptInvitation's qvt render of the account step under the route and the revoked token's page), `AdminAccess` (Invite users in
+  quick create for the identity operator and the administrator, not the reader). Acceptance, written and not run:
+  `acceptance/Admin/AdminInvitationsUsable` (3 features, the "usable when").
+- Tests run (release binary, `--nobuild`): StaffInvitation, StaffIdentity, PartyServices 22 of 22 (mr-mantle 1.7 s); AdminInvitations,
+  AdminUsers, AdminAccess, AdminGroups, ProjectsAccess 21 of 21 (mr-boss 8.0 s, AdminAccess's menu feature among them);
+  `moqui test mr-boss --skills` 17 of 17; `moqui lint --screens` 132 flagged sites, as before, no TUI-text warning of P5's. Not run:
+  `./moq test-apps`, the acceptance suite.
+- Inventories: no ss-inventory or usl-inventory row names an invitation form or a baseline service P5 calls (the new services are
+  Mantle's own); Implemented in unchanged.
+- Design edits: design-admin §1.2 (the skill), §4.1 Invitations, §4 Invitations and AcceptInvitation (as built), §16 (the
+  template), §17.2 (the two added services).
+- Findings (provisional, numbered by the lead):
+  - **F-P5-1** (framework) A form-single on a token route's screen posts to `/<transition>`: its URL is built from the screen
+    tree's root, the route's screen, with an empty web base (render.rs `web::base_url`, never set for a token route), so it leaves
+    the route. AcceptInvitation writes its three forms as qvt `m-form` markup with the route's `basePath`. A framework fix: the
+    token route's dispatch sets the base to `/<name>/<token>`, after which they can be form-singles again.
+  - **F-P5-2** The framework checks only as the current user (no run-as), and the invitee holds no permission, so acceptance
+    cannot call `check#GrantProposal`, `apply#GrantProposal` or P4's `store#OrganizationMembership` (each needs the caller's
+    `ADMIN_IDENTITY_MANAGE` and scope). Invitations.js rechecks the inviter from the records (account usable, permission through
+    current groups with ADMIN holding all, organization through `get#PartyInternalOrgIds`, each bundle registered and delegable by
+    them, never privileged or sealed) and writes the relationship and memberships itself with authorization on. A
+    `check#GrantProposal` taking an actor would remove the copy of the delegation rule.
+  - **F-P5-3** The token route's own page reads "This link has expired or was not found", and a resent token matches no hash, so
+    `check#InvitationToken` lets every well-formed token through (`open` in routeContext) and the page says "This invitation is
+    no longer valid" for spent and unknown tokens alike.
+  - **F-P5-4** (framework) Request telemetry records `url.path` unredacted (http.rs), so every token route's token (`/i`, `/s`, `/u`,
+    `/cal`, `/r`, `/call`) reaches traces; the sign-in step's `returnTo` carries the path too. Redacting the token segment of a
+    token route's path is the framework's.
+  - **F-P5-5** Session attributes are stored (HttpSession.attributes), so Git access's pattern (a secret in a session attribute until
+    the next render) would store the link; `reveal#InvitationLink` makes the token at the render that shows it instead.
+  - **F-P5-6** A component's skill file cannot replace a framework skill of the same name (the sync leaves out a later file;
+    `overrides` is for site rows), so `create-user-account` stays beside `invite-staff`, which takes its terms. A component-level
+    override is the framework's.
+  - **F-P5-7** XML widgets have no copy control for plain text (`markdown copy` copies Markdown and the URL becomes a link): the link
+    is a read-only `q-input` with a copy button in qvt markup.
+  - **F-P5-8** Inviting the address of a site identity (an account of no internal organization) and its owner accepting brings that
+    identity wholly into the operator's scope, which P4's R2 asks `ADMIN_IDENTITY_GLOBAL` for when an operator relates it directly.
+    Here the owner consents by signing in with the token; whether inviting such an address also needs it is the review's call.
+  - **F-P5-9** Sign-in never completes for an account in a factor-requiring group without a factor (F41), so the acceptance makes an
+    authenticator factor the token holder confirms within a day; an unconfirmed factor still validates at sign-in once scanned.
+  - **F-P5-10** (framework docs) Attack-Surface's token-route table needs the `i` row and the `invitation-accept` rate limit.
+- Decisions (§4 rows added): the link made at its showing; every well-formed token through the route; acceptance's own writes after
+  rechecking the inviter; no privileged or sealed group in an invitation; the factor made at acceptance.
+- For the lead:
+  - budget shares: mr-mantle about 1.0 s (StaffInvitation); mr-boss about 0.3 s (AdminInvitations; AdminAccess unchanged in
+    cost); no budget raised;
+  - framework asks: F-P5-1 (token-route base URL), F-P5-2 (an actor for check#GrantProposal), F-P5-4 (token paths in telemetry),
+    F-P5-6 (component skill override), F-P5-10 (Attack-Surface);
+  - the scope rework: Invitations.js calls `identityLib.scope()` in the four places above and reads the inviter's organizations
+    through `get#PartyInternalOrgIds`; the UserInvitation filters are appended EntityFilter rows of the two Mantle sets;
+  - BossSetupData, BossUsersDemoData and MantleSetupData unchanged;
+  - the acceptance AdminInvitationsUsable to run when asked.
+
 ### P6 — Lifecycle and offboarding
 
 Design §4.1 Offboarding, UserDetail's LifecycleActions, LifecycleOperations and LifecycleDetail, §14 lifecycle
@@ -1529,6 +1621,10 @@ the owner's design.
 | Nov 7, 2026 | A grant proposal is checked and applied by the framework's `AccessServices.check#GrantProposal` and `apply#GrantProposal`, by `store#Membership`'s delegation rules for the actor, for an access administrator or an identity operator | P4, §4's grant proposal row, F73; design §17.2 changed |
 | Nov 7, 2026 | The Users area opens to the identity operator and the administrator; group memberships on UserDetail change only for an `ADMIN_ACCESS_MANAGE` holder | P4, F74 |
 | Nov 7, 2026 | The session refresh, the notification socket's check and job runs stop an account disabled for good or past its end date, not a tarpit lock | P4, F71 |
+| Nov 7, 2026 | The acceptance link of an invitation the instance cannot mail is made at the render that shows it (`reveal#InvitationLink`, once, to its issuer, within fifteen minutes), so no session or row holds it | P5, F-P5-5 |
+| Nov 7, 2026 | The `i` route lets every well-formed token through and AcceptInvitation says "This invitation is no longer valid" for a spent or unknown one | P5, F-P5-3 |
+| Nov 7, 2026 | Acceptance rechecks the inviter's authority from the records and writes the organization relationship and memberships itself, with authorization on; an invitation never carries a privileged group or a group granting a sealed permission | P5, F-P5-2; design §4.1 changed |
+| Nov 7, 2026 | When a bundle's group requires a factor and the account has none, the acceptance makes an authenticator factor its holder confirms within a day | P5, F-P5-9; design §4 AcceptInvitation changed |
 
 ## 5. Open questions
 
