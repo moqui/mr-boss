@@ -1044,12 +1044,16 @@ function pinnedReports(pins) {
     return {reports, unavailableOwners: Array.from(read.unavailable).sort()}
 }
 // The organization scope of a dashboard placed on Home, as its variables: the chosen organization, else the viewer's
-// organizations; none for the administrator in every organization. The suite's sales panels name it vendorPartyId.
-function scopeVariables(context) {
+// organizations; none for the administrator in every organization. A vendorPartyId variable over Mantle's sales datasets (the
+// suite's sales panels) names the selling organization and takes the same scope, as Insights' Dashboard fixes it (F-P5-6).
+function scopeVariables(context, definition) {
     const scope = context.organizationPartyId || (context.allOrganizations ? null : context.organizationPartyIds)
     if (scope == null) return {}
     const value = Array.isArray(scope) ? (scope.length ? scope : ["_NA_"]) : scope
-    return {organizationPartyId: value, vendorPartyId: value}
+    const seller = Array.from(definition?.body?.variables || []).some(
+        variable => variable.name === "vendorPartyId" && String(variable.datasetId || "").startsWith("mantle-sales")
+    )
+    return seller ? {organizationPartyId: value, vendorPartyId: value} : {organizationPartyId: value}
 }
 // get#Home: the viewer's landing (design §3): the management scope, their starred and recent dashboards, the dashboard whose
 // panels Home shows (their own choice, else the shipped suite dashboard) with the panels in their order, their pinned reports
@@ -1096,6 +1100,7 @@ function getHome(p) {
     const dashboardId = preference.dashboardDefinitionId || suiteDashboardId
     const dashboard = {definitionId: dashboardId, title: "", available: false, message: "", url: null}
     let panelOptions = []
+    let shown = null
     try {
         const definition = engine(R + "get#Definition", {definitionId: dashboardId}).definition
         if (definition.type !== "dashboard") throw new Error("not a dashboard")
@@ -1104,6 +1109,7 @@ function getHome(p) {
         const keys = layoutIds.filter(id => id in panels).concat(Object.keys(panels).filter(id => !layoutIds.includes(id)))
         panelOptions = keys.map(panelId => ({value: panelId, label: panels[panelId]?.title || panelId}))
         Object.assign(dashboard, {title: definition.title || dashboardId, available: true, url: link(definition)})
+        shown = definition
     } catch (error) {
         ec.logger.warn("Insights Home dashboard " + dashboardId + " is not available: " + error.message)
         dashboard.message =
@@ -1118,7 +1124,7 @@ function getHome(p) {
         organizationPartyId: context.organizationPartyId || null,
         organizations: context.organizations,
         allOrganizations: context.allOrganizations,
-        scopeVariables: scopeVariables(context),
+        scopeVariables: scopeVariables(context, shown),
         from: context.defaults.from,
         thru: context.defaults.thru,
         capabilities: userScope.capabilities,

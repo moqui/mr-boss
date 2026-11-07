@@ -16,8 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     screen (Tools Dashboards/Dashboard.xml) with its transitions here, so its time form, variables, panel export, inspect,
     duplicate and remove run under Insights and its links open Insights' screens (the root's reportLinks; no alert rules until
     P8). BusinessContext: the organization in scope from get#Context (a requested one only when it is the user's) is fixed as the
-    dashboard's organizationPartyId variable (with none chosen, the user's organizations), so a viewer's var-organizationPartyId
-    never replaces it; the range defaults to
+    dashboard's organizationPartyId variable (with none chosen, the user's organizations), and as its vendorPartyId variable when
+    that one is over Mantle's sales datasets (the selling organization, F-P5-6), so a viewer's var-* never replaces them; the range defaults to
     Insights' (get#Context) and currencies stay apart. ShareDashboard: the owner, an author, shares the dashboard with one of
     their groups or makes it private (DashboardServices.share#Dashboard). MeasureMeaning (P4): each panel's registered measure,
     its version, grain, basis, denominator, exclusions and the comparison rules (RegistryServices.find#PanelMeasures; the
@@ -40,7 +40,13 @@ along with this software (see the LICENSE.md file). If not, see
             organization); a user of no organization is fixed to none (_NA_ matches no record), never to every one -->
         <set field="scopeOrganization" from="organizationPartyId || (businessContext.allOrganizations ? null :
                 (businessContext.organizationPartyIds.length ? businessContext.organizationPartyIds : ['_NA_']))"/>
-        <set field="reportFixedVariables" from="scopeOrganization ? {organizationPartyId:scopeOrganization} : {}"/>
+        <!-- the dashboard, read as the viewer: a vendorPartyId variable over Mantle's sales datasets names the selling
+            organization, so it is fixed to the same scope (impl-insights F-P5-6); one over another dataset (a supplier) is not -->
+        <service-call name="org.moqui.report.ReportServices.get#Definition" in-map="{definitionId:definitionId}" out-map="found"/>
+        <set field="sellerVariable" from="Array.from(found.definition?.body?.variables || []).some(variable =&gt;
+                variable.name === 'vendorPartyId' &amp;&amp; String(variable.datasetId || '').startsWith('mantle-sales'))"/>
+        <set field="reportFixedVariables" from="scopeOrganization ? Object.assign({organizationPartyId:scopeOrganization},
+                sellerVariable ? {vendorPartyId:scopeOrganization} : {}) : {}"/>
     </always-actions>
 
     <transition-include name="edit" location="component://tools/screen/Dashboards/Dashboard.xml"/>
@@ -60,7 +66,6 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="thru" from="thru || businessContext.defaults.thru"/>
         <set field="organizationOptions" from="businessContext.organizations"/>
         <!-- ShareDashboard: the owner's own dashboard, for an author -->
-        <service-call name="org.moqui.report.ReportServices.get#Definition" in-map="{definitionId:definitionId}" out-map="found"/>
         <set field="shareable" from="businessContext.capabilities.author &amp;&amp; found.definition.type === 'dashboard' &amp;&amp;
                 !found.definition.readOnly &amp;&amp; found.definition.ownerId === ec.user.userId"/>
         <set field="expectedVersion" from="found.definition.version"/>
