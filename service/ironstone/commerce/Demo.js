@@ -78,7 +78,11 @@ function ensureSite(site) {
         {app: "shop", pathPrefix: site.shopPath, enabled: "Y", targetId: site.productStoreId}
     )
     if (site.forum)
-        createOnce("mantle.public.PublicSiteApp", {siteId, appMountId: "forum"}, {app: "forum", pathPrefix: "/forum", enabled: "Y"})
+        createOnce(
+            "mantle.public.PublicSiteApp",
+            {siteId, appMountId: "forum"},
+            {app: "forum", pathPrefix: "/forum", enabled: "Y"}
+        )
 }
 
 // P4: ZIZI_SHOP's returns policy page, published, and its main menu linking the page and a published product

@@ -171,7 +171,8 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
         digitalSite.state == "disabled"
         digitalSite.hosts == ["digital.zizi.localhost"]
         // P15 (Shop F107): its Forum, whose members' category the monthly membership opens
-        digitalSite.mounts == ["account:", "billing:ORG_ZIZI_SERVICES", "forum:", "shop:BOSS_COM_DIGITAL", "support:ORG_ZIZI_SERVICES"]
+        digitalSite.mounts ==
+            ["account:", "billing:ORG_ZIZI_SERVICES", "forum:", "shop:BOSS_COM_DIGITAL", "support:ORG_ZIZI_SERVICES"]
         members.publicationState == "published"
         members.visibility == "category"
         members.qualifyingSources == "subscription,manual"
