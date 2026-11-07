@@ -354,6 +354,11 @@ function registration(metricId) {
         denied("METRIC_UNAVAILABLE", "Measure " + metricId + " is not available")
     return metric
 }
+// A panel set up for another version of its measure is told so.
+const versionNote = (panelVersion, version) =>
+    panelVersion != null && panelVersion !== version
+        ? "This panel was set up for version " + panelVersion + " of the measure; it is now version " + version
+        : ""
 // The panel of a definition the viewer reads: a library panel's body, or a dashboard's by-value panel by its key.
 function panelOf(definition, panelId) {
     if (definition.type === "panel") return definition.body || {}
@@ -414,20 +419,15 @@ function metric(p) {
     }
     if (blank(metricId)) denied("METRIC_REQUIRED", "Choose a measure or a panel")
     const descriptor = describe(registration(metricId))
-    const versionChanged = !!panel && panel.metricVersion != null && panel.metricVersion !== descriptor.version
+    const versionMessage = panel ? versionNote(panel.metricVersion, descriptor.version) : ""
     return {
         available: true,
         source: "registration",
         metric: descriptor,
         rules: descriptor.rules,
         panel,
-        versionChanged,
-        versionMessage: versionChanged
-            ? "This panel was set up for version " +
-              panel.metricVersion +
-              " of the measure; it is now version " +
-              descriptor.version
-            : "",
+        versionChanged: !!versionMessage,
+        versionMessage,
         comparison: panel ? comparison(p.value, panel.target, p.targetActual) : null
     }
 }
@@ -451,8 +451,10 @@ function panelMeasures(p) {
         if (!metricId) continue
         const panelTitle = found.title || panelId
         try {
-            const answer = metric({definitionId: p.definitionId, panelId})
-            const m = answer.metric
+            // the panel already read: its registration only, not the definition again per panel
+            const m = describe(registration(metricId))
+            const panelVersion = found.business.metricVersion == null ? null : Number(found.business.metricVersion)
+            const versionMessage = versionNote(panelVersion, m.version)
             measures.push({
                 panelId,
                 panelTitle,
@@ -466,7 +468,7 @@ function panelMeasures(p) {
                 rulesText: m.rules.join(" "),
                 source: [m.serviceName, m.datasetIds.join(", ")].filter(Boolean).join("; "),
                 freshness: m.freshness,
-                message: answer.versionMessage || ""
+                message: versionMessage
             })
         } catch (error) {
             measures.push({
