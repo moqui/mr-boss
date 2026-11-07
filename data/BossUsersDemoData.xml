@@ -952,4 +952,147 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_SERVICES" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_SERVICES" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_MANAGER" userId="BOSS_COM_SERVICES" fromDate="0"/>
+    <!-- Admin (impl-admin P1): a user per group of design-admin §1.1, each in BOSS_USERS, the root user group BOSS_ADMIN and their
+        capability group, an agent of Ziziwork Retail only, none in ADMIN: admin.reader, .identity (the identity operator delegated
+        for ORG_ZIZI_RETAIL only), .access, .configure, .integrations, .operations, .data, .audit, .privacy and .backup;
+        admin.admin is in BOSS_ADMIN_ADMIN alone. shared.staff is a staff identity of both Ziziwork Retail and Ziziwork Services
+        (design §15.3's delegated administration: a Retail operator manages its Retail membership, not the whole account), in
+        BOSS_USERS alone. admin.delegate holds ADMIN_ACCESS_VIEW and the sealed ADMIN_ACCESS_MANAGE through a custom group,
+        BOSS_ADMIN_DEMO_DELEGATE, and is not in the privileged BOSS_ADMIN_ACCESS (§15.3's escalation through grants: they cannot
+        add anyone to it, nor grant ADMIN_BACKUP_DOWNLOAD). Loading data skips the seals, as a data load does. -->
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_DEMO_DELEGATE" description="Delegated access administrators (demo)"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DEMO_DELEGATE" userPermissionId="ADMIN_ACCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DEMO_DELEGATE" userPermissionId="ADMIN_ACCESS_MANAGE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_READER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_READER" firstName="Admin" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_READER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_READER" username="admin.reader"
+            userFullName="Admin Reader" partyId="BOSS_ADM_READER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_READ" userId="BOSS_ADM_READER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_IDENTITY" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_IDENTITY" firstName="Admin" lastName="Identity operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_IDENTITY_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_IDENTITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_IDENTITY" username="admin.identity"
+            userFullName="Admin Identity operator" partyId="BOSS_ADM_IDENTITY"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_IDENTITY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_IDENTITY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_IDENTITY" userId="BOSS_ADM_IDENTITY" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_ACCESS" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_ACCESS" firstName="Admin" lastName="Access administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_ACCESS_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_ACCESS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_ACCESS" username="admin.access"
+            userFullName="Admin Access administrator" partyId="BOSS_ADM_ACCESS"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_ACCESS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_ACCESS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_ACCESS" userId="BOSS_ADM_ACCESS" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_CONFIGURE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_CONFIGURE" firstName="Admin" lastName="Configuration administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_CONFIGURE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_CONFIGURE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_CONFIGURE" username="admin.configure"
+            userFullName="Admin Configuration administrator" partyId="BOSS_ADM_CONFIGURE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_CONFIGURE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_CONFIGURE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_CONFIGURE" userId="BOSS_ADM_CONFIGURE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_INTEGRATIONS" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_INTEGRATIONS" firstName="Admin" lastName="Integration administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_INTEGRATIONS_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_INTEGRATIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_INTEGRATIONS" username="admin.integrations"
+            userFullName="Admin Integration administrator" partyId="BOSS_ADM_INTEGRATIONS"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_INTEGRATIONS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_INTEGRATIONS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_INTEGRATIONS" userId="BOSS_ADM_INTEGRATIONS" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_OPERATIONS" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_OPERATIONS" firstName="Admin" lastName="Operations operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_OPERATIONS_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_OPERATIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_OPERATIONS" username="admin.operations"
+            userFullName="Admin Operations operator" partyId="BOSS_ADM_OPERATIONS"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_OPERATIONS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_OPERATIONS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_OPERATIONS" userId="BOSS_ADM_OPERATIONS" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_DATA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_DATA" firstName="Admin" lastName="Data operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_DATA_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_DATA" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_DATA" username="admin.data"
+            userFullName="Admin Data operator" partyId="BOSS_ADM_DATA"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_DATA" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_DATA" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_DATA" userId="BOSS_ADM_DATA" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_AUDIT" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_AUDIT" firstName="Admin" lastName="Audit reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_AUDIT_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_AUDIT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_AUDIT" username="admin.audit"
+            userFullName="Admin Audit reader" partyId="BOSS_ADM_AUDIT"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_AUDIT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_AUDIT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_AUDIT" userId="BOSS_ADM_AUDIT" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_PRIVACY" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_PRIVACY" firstName="Admin" lastName="Privacy administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_PRIVACY_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_PRIVACY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_PRIVACY" username="admin.privacy"
+            userFullName="Admin Privacy administrator" partyId="BOSS_ADM_PRIVACY"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_PRIVACY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_PRIVACY" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_PRIVACY" userId="BOSS_ADM_PRIVACY" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_BACKUP" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_BACKUP" firstName="Admin" lastName="Backup operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_BACKUP_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_BACKUP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_BACKUP" username="admin.backup"
+            userFullName="Admin Backup operator" partyId="BOSS_ADM_BACKUP"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_BACKUP" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_BACKUP" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_BACKUP" userId="BOSS_ADM_BACKUP" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_ADMIN" firstName="Admin" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_ADMIN" username="admin.admin"
+            userFullName="Admin Administrator" partyId="BOSS_ADM_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_ADMIN" userId="BOSS_ADM_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_DELEGATE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_DELEGATE" firstName="Admin" lastName="Delegated access administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_DELEGATE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_DELEGATE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_DELEGATE" username="admin.delegate"
+            userFullName="Admin Delegated access administrator" partyId="BOSS_ADM_DELEGATE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_DELEGATE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN" userId="BOSS_ADM_DELEGATE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_DEMO_DELEGATE" userId="BOSS_ADM_DELEGATE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_ADM_SHARED" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_ADM_SHARED" firstName="Staff" lastName="Shared"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_SHARED_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_SHARED" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_SHARED_ORG2" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_ADM_SHARED" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_ADM_SHARED" username="shared.staff"
+            userFullName="Staff Shared" partyId="BOSS_ADM_SHARED"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_ADM_SHARED" fromDate="0"/>
+    <!-- Customer Service's Privacy team holds the privacy administrators' group (impl-customer-service F80, owner contract): its
+        member customerservice.admin is in BOSS_ADMIN_PRIVACY, which grants nothing until PrivacyServices (impl-admin §7) -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_PRIVACY" userId="BOSS_CS_ADMIN" fromDate="0"/>
 </entity-facade-xml>

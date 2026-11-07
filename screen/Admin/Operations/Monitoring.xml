@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Monitoring (design-admin §10 Monitoring): the landing that opens the framework's operational tools under their own grants,
+    not a second incident or alert application. MonitoringDestinations lists Monitor's and Dashboards' destinations the user's
+    own groups open (ironstone.admin.ContextServices.get#AppAccess), and for those who open Monitor the telemetry sources
+    (org.moqui.monitor.MonitorServices.get#SourceStatus, which checks the telemetry dataset's own grant) and the open incidents
+    (list#Incidents, MONITOR_INCIDENT), each opening Monitor; a summary that cannot be read is left out and the others still
+    show. MONITOR_APP, MONITOR_INCIDENT, MONITOR_RECOVER and MONITOR_REPLAY stay independent: an Admin grant opens none. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Monitoring" menu-image="sym_o_monitoring" menu-image-type="icon">
+    <actions>
+        <service-call name="ironstone.admin.ContextServices.get#AppAccess" in-map="{appRoot:appRoot}" out-map="appAccess"/>
+        <set field="apps" from="appAccess.apps || {}"/>
+        <set field="destinations" from="[
+                {name: 'Overview', purpose: 'Service health, throughput and errors', app: 'monitor', url: '/qapps/monitor'},
+                {name: 'Operations', purpose: 'Business operations and their outcomes', app: 'monitor', url: '/qapps/monitor/Operations'},
+                {name: 'Traces', purpose: 'Requests and jobs as traces', app: 'monitor', url: '/qapps/monitor/Traces'},
+                {name: 'Logs', purpose: 'Logs by service, level and trace', app: 'monitor', url: '/qapps/monitor/Logs'},
+                {name: 'Errors', purpose: 'Errors grouped by cause', app: 'monitor', url: '/qapps/monitor/Errors'},
+                {name: 'Sources', purpose: 'Telemetry sources and their keys', app: 'monitor', url: '/qapps/monitor/Sources'},
+                {name: 'Checks', purpose: 'Synthetic checks and scrape targets', app: 'monitor', url: '/qapps/monitor/Checks'},
+                {name: 'Releases', purpose: 'Releases and their regressions', app: 'monitor', url: '/qapps/monitor/Releases'},
+                {name: 'Incidents', purpose: 'Incidents, their causes and timeline', app: 'monitor', url: '/qapps/monitor/Incidents'},
+                {name: 'Recovery', purpose: 'Recovery actions and their approval', app: 'monitor', url: '/qapps/monitor/Recovery'},
+                {name: 'Dashboards', purpose: 'Dashboards and reports', app: 'dashboards', url: '/qapps/dashboards'},
+                {name: 'Alerts', purpose: 'Alert rules, contact points and silences', app: 'dashboards', url: '/qapps/dashboards/Alerts'}
+            ].filter(destination =&gt; apps[destination.app])"/>
+        <if condition="apps.monitor">
+            <service-call name="org.moqui.monitor.MonitorServices.get#SourceStatus" out-map="status" transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="org.moqui.monitor.MonitorServices.list#Incidents" out-map="incidentsFound" transaction="force-new"
+                    ignore-error="true" in-map="{statusId:'open'}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="sources" from="status?.sources || null"/>
+        <set field="incidents" from="incidentsFound?.incidents ? Array.from(incidentsFound.incidents).slice(0, 10) : null"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Monitoring tools"/>
+            <box-body-nopad>
+                <form-list name="MonitoringDestinations" list="destinations" skip-form="true" paginate="false">
+                    <field name="name">
+                        <default-field title="Tool">
+                            <link url="${url}" url-type="plain" text="${name}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/></column>
+                        <column><field-ref name="purpose"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!destinations.length"
+                        text="Monitor and Dashboards are open to their own users; an instance administrator grants them."/>
+            </box-body-nopad>
+        </container-box>
+        <section name="SourcesSection" condition="sources"><widgets>
+            <container-box>
+                <box-header title="Telemetry sources"/>
+                <box-body-nopad>
+                    <form-list name="TelemetrySources" list="sources" skip-form="true" paginate="false">
+                        <field name="service"><default-field title="Source"><display/></default-field></field>
+                        <field name="instance"><default-field title="Instance"><display/></default-field></field>
+                        <field name="status"><default-field title="State"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="service"/><field-ref name="instance"/></column>
+                            <column><field-ref name="status"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+        <section name="IncidentsSection" condition="incidents"><widgets>
+            <container-box>
+                <box-header title="Open incidents"/>
+                <box-body-nopad>
+                    <form-list name="OpenIncidents" list="incidents" skip-form="true" paginate="false">
+                        <field name="title">
+                            <default-field title="Incident">
+                                <link url="/qapps/monitor/IncidentDetail" url-type="plain" text="${title || incidentId}" link-type="anchor"
+                                        parameter-map="{incidentId:incidentId}"/>
+                            </default-field>
+                        </field>
+                        <field name="serviceName"><default-field title="Service"><display/></default-field></field>
+                        <field name="severity"><default-field title="Severity"><display/></default-field></field>
+                        <field name="statusId"><default-field title="State"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="title"/><field-ref name="serviceName"/></column>
+                            <column><field-ref name="severity"/><field-ref name="statusId"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!incidents.length" text="No open incident."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

@@ -55,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
             <row-col md="4" sm="6"><container-box><box-header title="People and notifications"/><box-body>
                 <label type="p" text="Put people in the Projects groups (team, managers, clients) in Admin, and choose your notifications in Commons." style="m-muted"/>
                 <container style="row q-gutter-sm">
-                    <link url="/qapps/Admin/Users" url-type="plain" text="Users and groups" icon="sym_o_group"/>
+                    <link url="/qapps/Admin/Home" url-type="plain" text="Admin" icon="sym_o_admin_panel_settings"/>
                     <link url="/qapps/Commons/Settings/Notifications" url-type="plain" text="Notification settings" icon="sym_o_notifications"/>
                 </container>
             </box-body></container-box></row-col>

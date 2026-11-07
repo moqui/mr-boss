@@ -12,10 +12,59 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Admin landing page (initial-design.md); design-admin.md designs it. -->
+<!-- Admin Home (design-admin §3 Home; style-guide §3.1 Landing): the Monitor / Manage / Configure shortcuts of the areas the user
+    opens (Monitoring, Agents, System, Developer tools; one primary), then for an administrative reader (ADMIN_OVERVIEW_VIEW) the
+    frame of Needs attention (Attention), Setup checks (SetupChecks) and Health (HealthCards), each "Not configured" until P2's
+    ironstone.admin.RegistryServices.get#Overview and get#Readiness fill them, never zero. A user without the read sees the
+    shortcuts and why the summaries are not shown. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <actions>
+        <set field="can" from="admin.capabilities"/>
+        <set field="anyShortcut" from="can.operations || can.agents || can.system || can.developer"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Admin landing page for system admins." type="p"/>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Admin" type="h5"/></container>
+        </container>
+        <container style="row q-gutter-sm q-mb-md" condition="anyShortcut">
+            <link url="${sharedLinks['Operations/Monitoring']}" text="Monitoring" link-type="anchor-button" btn-type="primary"
+                    icon="sym_o_monitor_heart" condition="can.operations"/>
+            <link url="${sharedLinks['Agents/Home']}" text="Agents" link-type="anchor-button" icon="sym_o_smart_toy"
+                    condition="can.agents"/>
+            <link url="${sharedLinks['System']}" text="System" link-type="anchor-button" icon="sym_o_devices"
+                    condition="can.system"/>
+            <link url="${sharedLinks['Developer/Home']}" text="Developer tools" link-type="anchor-button" icon="sym_o_construction"
+                    condition="can.developer"/>
+        </container>
+        <section name="Summaries" condition="can.overview">
+            <widgets>
+                <container-box>
+                    <box-header title="Needs attention"/>
+                    <box-body>
+                        <label text="Not configured" type="p" style="m-muted"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Setup checks"/>
+                    <box-body>
+                        <label text="Not configured" type="p" style="m-muted"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Health"/>
+                    <box-body>
+                        <dashboard min-width="160">
+                            <number-card title="Failed or late jobs" value="Not configured" icon="sym_o_event_busy" size="sm"/>
+                            <number-card title="Unresolved transports" value="Not configured" icon="sym_o_sync_problem" size="sm"/>
+                            <number-card title="Backup coverage" value="Not configured" icon="sym_o_backup" size="sm"/>
+                            <number-card title="Sign-in failures" value="Not configured" icon="sym_o_lock_person" size="sm"/>
+                        </dashboard>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="Setup and health summaries are shown to administrative readers." type="p" style="m-muted"
+                condition="!can.overview"/>
     </widgets>
 </screen>

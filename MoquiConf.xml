@@ -27,6 +27,17 @@
             </web-protection>
         </webapp>
     </webapp-list>
+    <!-- Admin's privileged groups (design-admin §1.1; impl-admin P1, §4): only a member changes the membership of the access
+        administrators, the backup operators and the Admin administrators. Added to the framework's list as elements, never by
+        repeating the privileged-groups attribute, which would replace it; the Admin seals (ADMIN_IDENTITY_GLOBAL,
+        ADMIN_ACCESS_MANAGE, ADMIN_BACKUP_DOWNLOAD) are the framework's own. -->
+    <user-facade>
+        <authz>
+            <privileged-group name="BOSS_ADMIN_ACCESS"/>
+            <privileged-group name="BOSS_ADMIN_BACKUP"/>
+            <privileged-group name="BOSS_ADMIN_ADMIN"/>
+        </authz>
+    </user-facade>
     <screen-facade>
         <!-- the IronStone apps, each a root under the apps screen mounted by its own name, so a design path such as
             Commons/Tasks is the URL /qapps/Commons/Tasks -->

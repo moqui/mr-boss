@@ -12,9 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Admin: root of the app for system admins (initial-design.md app table); its sections follow
-    design-admin.md when that file is written. Not yet implemented: its BOSS_ADMIN grant in data/BossSetupData.xml
-    is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Admin (design-admin §1): the root of the app for system administrators and people delegated an administrative
+    responsibility. The root user group BOSS_ADMIN and the administrator group BOSS_ADMIN_ADMIN open it (data/BossSetupData.xml),
+    as ADMIN does; the root grant opens navigation only, and each screen and service checks its own permission
+    (ironstone.admin.ContextServices.get#SharedContext resolves the organizations the user administers, the capabilities and the
+    links for every subscreen). Its areas, in the menu order of design §1.2 by their menu-index: 1 Home; 8 Operations (Monitoring
+    in P1, Health and the jobs with their phases); 11 Agents; 12 System, the framework's Tools System screens for ADMIN alone
+    (impl-admin F2: BOSS_ADMIN and BOSS_ADMIN_ADMIN are denied System.xml, so Tools' SYSTEM_APP grant decides); 13 Developer
+    tools. Operations is the reader's, the operations operator's and the administrator's; Agents and Developer tools the
+    administrator's (BOSS_ADM_<Area>). The other areas of design §1.2 (Users, Access, Security, Settings, Integrations, Mail and
+    protocols, Data, Audit and privacy) are added by the phases that build them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Admin" menu-image="sym_o_admin_panel_settings" menu-image-type="icon">
 
@@ -22,6 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Admin"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.admin.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="admin"/>
+        <set field="sharedLinks" from="admin.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -29,7 +38,22 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- design §13 System: the Tools System screens (Security, ServiceJob, SystemMessage, Localization, AuditLog, Print,
+            Constitution, Llm and the rest), adding no grant: Tools' SYSTEM_APP authorization (ADMIN's) opens them -->
+        <subscreens-item name="System" location="component://tools/screen/System.xml" menu-title="System" menu-index="12"/>
     </subscreens>
+
+    <!-- palette types, quick create, Today sources, notification topics and Assist prompts grow with the phases that build their
+        records (design §1.2): users, groups, connections and jobs in the palette; Invite users in quick create (P5) -->
+    <shell-providers>
+        <keymap scope="admin">
+            <key keys="g a" label="Admin home" screen="Admin/Home"/>
+            <key keys="g o" label="Monitoring" screen="Admin/Operations/Monitoring"/>
+            <key keys="g n" label="Agents" screen="Admin/Agents/Home"/>
+            <key keys="g y" label="System" screen="Admin/System"/>
+            <key keys="g d" label="Developer tools" screen="Admin/Developer/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="admin-panel" type="popup"/></widgets>
 </screen>

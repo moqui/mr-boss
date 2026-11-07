@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AgentsHome (design-admin §13 AgentsHome): the links to the framework's agent and model administration (Tools System › Llm),
+    which keeps AgentAdmin and its own runtime, content and gateway checks; Admin owns no agent configuration screen. For a holder
+    of AgentAdmin, the effective configuration and today's totals (org.moqui.agent.AgentAdminServices.get#EffectiveConfig and
+    get#DashboardTotals, which answer nothing to anyone else); each destination opens under Admin › System for a user System
+    opens to, and the three administration screens the framework lacks (impl-admin F19: the agent editor, A2A tasks, the
+    gateway key) show as not available until it builds them. The Constitution link comes with P7's Settings › Constitution. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agents" menu-image="sym_o_smart_toy" menu-image-type="icon">
+    <actions>
+        <set field="can" from="admin.capabilities"/>
+        <if condition="can.agentAdmin">
+            <service-call name="org.moqui.agent.AgentAdminServices.get#EffectiveConfig" out-map="config" transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="org.moqui.agent.AgentAdminServices.get#DashboardTotals" out-map="totals" transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="summary" from="{
+                models: config?.modelList == null ? '—' : String(Array.from(config.modelList).length),
+                endpoints: config?.endpointList == null ? '—' : String(Array.from(config.endpointList).length),
+                problems: config?.problemList == null ? '—' : String(Array.from(config.problemList).length),
+                callsToday: totals?.today?.callCount == null ? '—' : String(totals.today.callCount),
+                runsWaiting: totals?.runsWaiting == null ? '—' : String(totals.runsWaiting),
+                runsFailed: totals?.runsFailedToday == null ? '—' : String(totals.runsFailedToday)}"/>
+        <set field="llmBase" from="sharedLinks['System'] + '/Llm/'"/>
+        <set field="open" from="can.agentAdmin &amp;&amp; can.system"/>
+        <set field="agentLinks" from="[
+                {name: 'Models and endpoints', purpose: 'Models, endpoints and feature bindings', path: 'Models'},
+                {name: 'Tools and policies', purpose: 'Tool exposure, approval and policies', path: 'Tools'},
+                {name: 'Skills', purpose: 'Procedure skills', path: 'Skills'},
+                {name: 'Lessons', purpose: 'Lessons agents keep', path: 'Lessons'},
+                {name: 'Runs', purpose: 'Agent runs and their steps', path: 'Runs'},
+                {name: 'Approvals', purpose: 'Tool calls waiting for approval', path: 'Approvals'},
+                {name: 'Triggers', purpose: 'What starts an agent run', path: 'Triggers'},
+                {name: 'Remote agents', purpose: 'Remote MCP and A2A servers', path: 'Remote'},
+                {name: 'Gateway', purpose: 'The model gateway and its clients', path: 'Gateway'},
+                {name: 'Calls and usage', purpose: 'Model calls, tokens and cost', path: 'Usage'},
+                {name: 'Agent definitions', purpose: 'Surfaces, instructions, run-as user and cost limits', path: null},
+                {name: 'A2A tasks', purpose: 'Tasks other agents sent', path: null},
+                {name: 'Gateway client keys', purpose: 'A client key, shown once', path: null}
+            ].map(entry =&gt; Object.assign(entry, {
+                url: entry.path &amp;&amp; open ? llmBase + entry.path : '',
+                stateText: !entry.path ? 'Not available' : open ? '' : 'Opens in System for instance administrators'}))"/>
+    </actions>
+    <widgets>
+        <section name="Summary" condition="can.agentAdmin">
+            <widgets>
+                <container-box>
+                    <box-header title="In effect"/>
+                    <box-body>
+                        <dashboard min-width="160">
+                            <number-card title="Models" value="${summary.models}" icon="sym_o_neurology" size="sm"/>
+                            <number-card title="Endpoints" value="${summary.endpoints}" icon="sym_o_hub" size="sm"/>
+                            <number-card title="Configuration problems" value="${summary.problems}" icon="sym_o_report" size="sm"/>
+                            <number-card title="Calls today" value="${summary.callsToday}" icon="sym_o_call_made" size="sm"/>
+                            <number-card title="Runs waiting" value="${summary.runsWaiting}" icon="sym_o_hourglass_top" size="sm"/>
+                            <number-card title="Runs failed today" value="${summary.runsFailed}" icon="sym_o_error" size="sm"/>
+                        </dashboard>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="Agent and model administration needs the AgentAdmin permission." type="p" style="m-muted"
+                condition="!can.agentAdmin"/>
+        <container-box>
+            <box-header title="Agent administration"/>
+            <box-body-nopad>
+                <form-list name="AgentAdminLinks" list="agentLinks" skip-form="true" paginate="false">
+                    <field name="name">
+                        <default-field title="Destination">
+                            <link url="${url}" url-type="plain" text="${name}" link-type="anchor" condition="url"/>
+                            <label text="${name}" condition="!url"/>
+                        </default-field>
+                    </field>
+                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/><field-ref name="purpose"/></column>
+                        <column><field-ref name="stateText"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -12,11 +12,14 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Organizations section of IronStone Admin (initial-design.md app table); design-admin.md decides
-    its screens. -->
+<!-- The Agents area of IronStone Admin (design-admin §1.2, §13 AgentsHome): AgentsHome, the links to the framework's agent and
+    model administration, which keeps AgentAdmin and its own checks. For the administrator (BOSS_ADM_AGENTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Organizations" default-menu-index="3" menu-image="sym_o_domain" menu-image-type="icon">
+        default-menu-title="Agents" default-menu-index="11" menu-image="sym_o_smart_toy" menu-image-type="icon">
+    <subscreens default-item="Home" always-use-full-path="true">
+        <subscreens-item name="Home" location="component://mr-boss/screen/Admin/Agents/AgentsHome.xml" menu-title="Agents" menu-index="1"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Organizations and settings." type="p"/>
+        <subscreens-panel id="AdminAgentsPanel" type="tab"/>
     </widgets>
 </screen>

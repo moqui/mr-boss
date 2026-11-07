@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Admin's registries (impl-admin §2, P1; design-admin §13, §14): what Admin brings together from other owners without becoming
+    their editor. P1 starts it with the developer tool links; P2 adds readiness, refresh and the settings index. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="ToolLinks" allow-remote="false">
+        <description>The framework's advanced tools the user may open (DeveloperHome, design §13): each with its purpose, its app
+            and the permission its screen checks, checked with the app's own grant (Tools, or System for an instance
+            administrator, under Admin › System) and that permission; the others are left out. The tools keep their own checks
+            when opened. Refuses a user without Admin (ADMIN_UNAVAILABLE).</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="links" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/admin/Admin.js"/>
+            <set field="found" from="ec.resource.script(module).execute('toolLinks', context)"/>
+            <set field="links" from="found.links"/>
+        </actions>
+    </service>
+</services>
