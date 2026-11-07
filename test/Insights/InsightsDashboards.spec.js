@@ -1,7 +1,7 @@
 // Insights dashboards (impl-insights P2; design-insights §4 Dashboard, DashboardEditor, ShareDashboard): the framework report
 // screens mounted under Insights (INS-04). Dashboard's one qvt render: the organization in scope fixed over a forged variable,
-// its links (appLinks) under Insights, a library panel over a dataset the author may not read said to be not available (the
-// datasets wait for P3's admission), and Share for the owner; a panel inspect keeps the scope. The mounted editor copies and
+// its links (appLinks) under Insights, a library panel over a dataset the author may not read said to be not available (Mantle's
+// sales orders wait for the steward's admission, P3), and Share for the owner; a panel inspect keeps the scope. The mounted editor copies and
 // saves under Insights, keeps the group over a posted one and takes only its own types. Sharing: the owner shares with their
 // own group and makes the dashboard private again; another group, a reader and a shipped dashboard are refused. The access
 // rules of the editors and the engine are InsightsAccess's; the golden walk is the client InsightsDashboardsWalk; the "usable
@@ -144,8 +144,8 @@ feature(
             board.output.includes("/Insights/ReportBuilder/Explore")
             !board.output.includes("/dashboards/Definition")
             !board.output.includes("/dashboards/AlertRule")
-            // the library panel over sales orders: refused by the dataset's own grant, shown as such
-            board.output.includes("org.moqui.report.dataset.mantle-sales-orders")
+            // the library panel over sales orders: refused until the steward admits the dataset (P3), shown as such
+            board.output.includes("mantle-sales-orders is not admitted")
             board.output.includes("Spec board")
             inspect.errors == []
             inspect.output.includes(ids.organizationId)

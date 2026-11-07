@@ -1,6 +1,7 @@
 // The data of the Insights golden walk (test/client/Insights/InsightsDashboardsWalk), made on the --serve server before the walk:
 // a dashboard and a library panel, ADMIN's, shared with the Insights users (BOSS_INSIGHTS). The panel's dataset (Mantle's sales
-// orders) is not readable by the Insights groups until P3 admits it, so the walk's author sees it as not available.
+// orders) is not readable by the Insights groups until a steward admits it (P3; the demo data leaves it waiting for review), so
+// the walk's author sees it as not available.
 // Run: ./moq test mr-boss --spec InsightsClientFixtures
 const reports = "org.moqui.report.ReportServices."
 

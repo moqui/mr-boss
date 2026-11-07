@@ -17,6 +17,7 @@ Per-form inventory of the mr-marble component, for tracking form-level feature p
 - **Implemented in** for [design-manufacturing.md](design-manufacturing.md) was filled phase by phase during the Manufacturing build and checked on Nov 4, 2026 at its end (impl-manufacturing.md P17): every one of the 23 Manufacturing forms, and each other section's form with a Manufacturing **Designed in** path, names the Manufacturing screen (and form or section) that carries it.
 - **Implemented in** for [design-purchasing.md](design-purchasing.md) was filled phase by phase during the Purchasing build and completed on Nov 4, 2026 at its end (impl-purchasing.md P17): every form with a Purchasing **Designed in** path now names the Purchasing screen (and form) that carries it, or `—` with what Purchasing does instead and the phase.
 - **Implemented in** for [design-commerce.md](design-commerce.md) was filled phase by phase during the Commerce build and checked on Nov 7, 2026 at its end (impl-commerce.md P15): every form with a Commerce **Designed in** path names the Commerce screen (and form or section) that carries it; a shared screen goes by its Commerce mount. [design-shop.md](../../mr-pass/plan/design-shop.md)'s pages are new public screens with no staff form of their own to carry (impl-shop F59), so no row names Shop.
+- **Implemented in** for [design-insights.md](design-insights.md) is filled phase by phase during the Insights build: on Nov 7, 2026 (impl-insights.md P3) the SimpleReport builder rows (EditReport, FieldList, FindReport, ViewReport) name the dataset screen and form that carries each; QuickViewReport waits for P4 and the MyAccount scheduled finds for P7.
 
 Products P1 (Oct 28): the shell, guarded read list and minimal product/category record routes are built. Catalog
 form-parity cells remain blank until their full P2/P3 editors are implemented; these foundation screens do not claim
@@ -881,15 +882,15 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditReport | EditDataDocument | Insights/ReportBuilder/DatasetDetail |  |
-| FieldList | AddCondition | Insights/ReportBuilder/DatasetFields |  |
-| FieldList | ConditionList | Insights/ReportBuilder/DatasetFields |  |
-| FieldList | FieldList | Insights/ReportBuilder/DatasetFields |  |
-| FindReport | CreateDataDocument | Insights/ReportBuilder/Datasets |  |
-| FindReport | DataDocumentList | Insights/ReportBuilder/Datasets |  |
+| EditReport | EditDataDocument | Insights/ReportBuilder/DatasetDetail | Insights/ReportBuilder/DatasetDetail (EditDataDocument) |
+| FieldList | AddCondition | Insights/ReportBuilder/DatasetFields | Insights/ReportBuilder/DatasetFields (AddConditionForm) |
+| FieldList | ConditionList | Insights/ReportBuilder/DatasetFields | Insights/ReportBuilder/DatasetFields (ConditionList) |
+| FieldList | FieldList | Insights/ReportBuilder/DatasetFields | Insights/ReportBuilder/DatasetFields (FieldList, AddFieldForm) |
+| FindReport | CreateDataDocument | Insights/ReportBuilder/Datasets | Insights/ReportBuilder/Datasets (CreateDatasetForm) |
+| FindReport | DataDocumentList | Insights/ReportBuilder/Datasets | Insights/ReportBuilder/Datasets (DatasetFind, DatasetList) |
 | QuickViewReport | DataDocumentList | Insights/Reports; Insights/SavedReports |  |
-| ViewReport | ExportDocuments | Insights/ReportBuilder/DatasetView |  |
-| ViewReport | DataViewList | Insights/ReportBuilder/DatasetView |  |
+| ViewReport | ExportDocuments | Insights/ReportBuilder/DatasetView | Insights/ReportBuilder/DatasetView (ExportDocumentsForm) |
+| ViewReport | DataViewList | Insights/ReportBuilder/DatasetView | Insights/ReportBuilder/DatasetView (DatasetOptions, DataViewList) |
 
 ## Supplier (4 forms)
 

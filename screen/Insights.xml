@@ -19,9 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     artifacts. The menu of design §1.2 grows by phase: P1 builds Home (a frame until P5); P2 the dashboards (Dashboards, Library
     panels, Wall display, with Dashboard, DashboardEditor and PanelDetail hidden) and Report builder › Explore, each a mount of the
     framework's report screens (INS-04) whose links the reportLinks map here sends to Insights' own screens; Reports, Delivery and
-    alerts, Business flows and Settings come with the phases that build their entries. Until P3, P4 and P7 replace them, the
-    copied report builder (ReportBuilder's Datasets, DatasetDetail, DatasetView), Reports and ScheduledReports screens stay open
-    only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies them to the root user group). -->
+    alerts, Business flows and Settings come with the phases that build their entries; P3 the business datasets under Report builder
+    (Datasets, DatasetDetail, DatasetFields, DatasetView). Until P4 and P7 replace them, the copied Reports and ScheduledReports
+    screens stay open only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies them to the root user group). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 

@@ -180,11 +180,11 @@ const demoRecords = {
     "Comms/Consent": { text: "Alex Rivera" },
     "Comms/Consent/List": { text: "Alex Rivera" },
     "Comms/Consent/Contact": { parameters: { partyId: "BOSS_DEMO_CON_ALEX" }, text: "alex.rivera@example.com" },
-    "Insights/ReportBuilder/Datasets": { text: "BOSS_DEMO_PRODUCTS" },
-    "Insights/ReportBuilder/DatasetDetail": { parameters: { dataDocumentId: "BOSS_DEMO_PRODUCTS" }, text: "Products" },
-    "Insights/ReportBuilder/DatasetDetail/FieldList": { parameters: { dataDocumentId: "BOSS_DEMO_PRODUCTS" }, text: "productName" },
-    // filtered to the one product: the unfiltered list is a page of every product, in no set order
-    "Insights/ReportBuilder/DatasetView": { parameters: { dataDocumentId: "BOSS_DEMO_PRODUCTS", productId: "DEMO_1_1" }, text: "Demo Product One-One" },
+    // Insights P3: the business datasets (Customer Service's clocks, admitted by setup)
+    "Insights/ReportBuilder/Datasets": { text: "Service clocks" },
+    "Insights/ReportBuilder/DatasetDetail": { parameters: { datasetId: "boss-service-clocks" }, text: "Admission checks" },
+    "Insights/ReportBuilder/DatasetFields": { parameters: { datasetId: "boss-service-clocks" }, text: "clockEnumId" },
+    "Insights/ReportBuilder/DatasetView": { parameters: { datasetId: "boss-service-clocks", from: "now-10y" }, text: "Service clocks" },
     "Insights/ScheduledReports": { text: "Open tasks by priority" },
     "Insights/ScheduledReports/ScheduledReportDetail": { parameters: { screenScheduledId: "BOSS_DEMO_MY_TASKS" }, text: "Open tasks" },
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list

@@ -686,8 +686,8 @@ function readiness(p) {
 
 // ===== refresh =====
 // request#Refresh: a registered refresh operation by its key, refused without its own permission; the owner's service is called
-// as the viewer with the organization (refused outside the viewer's scope), the operation key, the reason and only the scope
-// parameters the registration names. A failure of the owner's service is its safe result, not an error of the page.
+// as the viewer with the organization (refused outside the viewer's scope), the registration's key, the operation key, the reason
+// and only the scope parameters the registration names. A failure of the owner's service is its safe result, not an error of the page.
 function requestRefresh(p) {
     const userScope = admin.scope()
     const operation = registered("ironstone.admin.RefreshOperation", "refreshKey", {refreshKey: p.refreshKey || "_NA_"})[0]
@@ -699,7 +699,7 @@ function requestRefresh(p) {
     // organization, operation key and reason never pass as scope parameters, whatever a registration lists
     const organizationPartyId = p.organizationPartyId || scopeParameters.organizationPartyId || null
     if (organizationPartyId) organizationsOf(userScope, organizationPartyId)
-    const reserved = ["organizationPartyId", "operationKey", "reason"]
+    const reserved = ["organizationPartyId", "operationKey", "reason", "refreshKey"]
     const allowed = String(operation.scopeParameters || "")
         .split(",")
         .map(name => name.trim())
@@ -708,6 +708,8 @@ function requestRefresh(p) {
         allowed.filter(name => scopeParameters[name] != null).map(name => [name, scopeParameters[name]])
     )
     if (organizationPartyId) parameters.organizationPartyId = organizationPartyId
+    // the registration's key, so an owner with one service for several sources reads which (Insights' dataset indexes, F50)
+    parameters.refreshKey = operation.refreshKey
     if (p.operationKey) parameters.operationKey = p.operationKey
     if (p.reason) parameters.reason = String(p.reason).slice(0, 255)
     const result = {refreshKey: operation.refreshKey, title: operation.title, completedText: ""}

@@ -47,7 +47,9 @@ Role shorthand used below: **A** service agent; **M** service manager; **D** ord
 and case-summary procedure skills (CX-ASSIST). Comms gets a create-case action from a mail, chat
 message or voicemail, and `call-context` answers with the caller's open cases; mail intake stays the
 existing `createRequest` action. A shipped service dataset with an SLA-breach alert template
-(CX-OPS-REPORTS) joins the §7 reports. There is no Sync or device contribution (CS-STACK).
+(CX-OPS-REPORTS) joins the §7 reports; its clocks and breaches datasets are scoped by Mantle's organization row filter on
+the clock's organization, admitted by Insights (impl-insights P3, owner contract) and read by Customer Service's managers and
+administrators and the Insights groups, each their own organizations' clocks. There is no Sync or device contribution (CS-STACK).
 
 **Interaction contract.** XML forms are the default. Saved finds, select-columns, date-periods, accessible statuses and list/board switching follow the style guide. Every board move has an equivalent row action and confirms the same transition; bulk operations report success or a named failure per case, preserving successful independent items. Browser keyboard shortcuts supplement visible controls. Terminal users get searchable lists, numbered actions, plain-text conversation and explicit confirmations; they never need drag/drop, hover or rich-text composition. Phone layouts stack the case sidebar beneath facts and retain an explicit Send button. Stock receipt and quality actions mount the Warehouse handheld forms, with scan/manual-entry equivalence and no offline posting.
 
