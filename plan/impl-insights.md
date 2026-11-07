@@ -166,7 +166,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | BOSS | the Insights root and menu | built and reviewed Nov 7, merged |
 | P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | built and reviewed Nov 7, merged |
 | P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | built and reviewed Nov 7, merged |
-| P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | built Nov 7 |
+| P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | built and reviewed Nov 7, merged |
 | P5 Home and attention | BOSS | Home | — |
 | P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | — |
 | P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | — |
@@ -780,11 +780,11 @@ target; INS-02, INS-05.
   adapter, readiness provider) and `ironstone.insights.MetricRegistration` (metric id, version, owner, service, datasets, catalog
   entry, grain, record key, date and status basis, aggregation, numerator, denominator, unit policy, additive and non-additive
   dimensions, allowed dimensions, filters, exclusions, drill, scope, freshness, an optional permission). A panel names its
-  measure in its body (`business: {metricId, metricVersion, target}`); a dataset body may carry its own descriptor (F-P4-1).
+  measure in its body (`business: {metricId, metricVersion, target}`); a dataset body may carry its own descriptor (F59).
 - **The entries** (BossSetupData, an owner block each; 53): Customer Service's six through its `get#ReportCatalogue`, Commerce's
   four through its own, Accounting's statements (balance sheet, income, cash flow, retained earnings, ratios), aging, partner
   ledger, reconciliation, trial balance, general ledger, posted amounts, budget variance and stock transactions through
-  `get#Catalog` by `reportId` (F17, F-P4-2) and inventory valuation by its route; `Sales.SalesAnalysis`, one entry, Sales', opening
+  `get#Catalog` by `reportId` (F17, F60) and inventory valuation by its route; `Sales.SalesAnalysis`, one entry, Sales', opening
   `Accounting/Reports/SalesAnalysis` and read through Accounting's catalogue (F18); Warehouse's stock at date, operations history and
   count variance; Manufacturing's eight with operation performance (OEE); Projects' seven; Products' catalog checks, price history,
   cost history and cost roll-up; Purchasing's scorecards, spend, commitments, procurement tracker, purchase history and supplier
@@ -803,7 +803,7 @@ target; INS-02, INS-05.
   `get#ReportLink` (the owner route with the contract's parameters only), `get#Metric` (by id or by panel, a dashboard's panel placed
   by reference read through its library panel; version change; the target comparison: a missing or zero target unavailable, gap and
   ratio in decimals), `find#Metrics`, `find#PanelMeasures` (MeasureMeaning), `store#PanelMeasure` and `store#PanelTarget` (design §4's
-  typed input; a money target names one currency and the panel must be filtered to it, F-P4-4), `find#SavedReports` (definitions,
+  typed input; a money target names one currency and the panel must be filtered to it, F62), `find#SavedReports` (definitions,
   saved finds and pins apart) and `copy#SavedReport` (SaveAs through `save#Definition` as the author, private or an own group).
   `ContextServices.search#Records` is the palette's dashboards and saved reports. Insights.js exports `grants` and lists Reports and
   SavedReports among the shared links; its legacy area reads ScheduledReports.
@@ -814,11 +814,11 @@ target; INS-02, INS-05.
   framework editor, its `storeMeasure` and `storeTarget` named in BOSS_INS_AUTHORING (an appended artifact row); the root's palette
   source. Menu: Home, Dashboards, Library panels, Wall display, Report builder, Reports, Saved reports (then Scheduled reports for the
   administrator and ADMIN).
-- **Access.** BOSS_INS_LEGACY narrowed to ScheduledReports (F-P4-7); everything else appended. No new grant: RegistryServices is in
+- **Access.** BOSS_INS_LEGACY narrowed to ScheduledReports (F65); everything else appended. No new grant: RegistryServices is in
   the root's `ironstone\.insights\..*` pattern, the owners' catalogue services check their own app, and PanelDetail's two
   transitions are the authors'.
 - **Commerce's Store operations dashboard** (owner contract): its orders panel names `Sales.Orders` and excludes recurring base
-  orders by a negated filter (F-P4-3).
+  orders by a negated filter (F61).
 - **Demo** (BossUsersDemoData, appended): `insights.servicemanager` (an Insights reader and Customer Service manager) and
   `insights.warehouse` (an Insights reader and Warehouse user), for the catalog's "usable when".
 - **Specs.** BOSS `InsightsCatalog` (5 features, 0.66 s, each under 0.2 s: the reader, the service manager, the warehouse reader and
@@ -844,18 +844,18 @@ target; INS-02, INS-05.
   §6.1 (the records and where descriptors live), §6 Reports and SavedReports (as built); the owners' registration lines:
   design-customer-service §7, design-commerce §3, design-accounting §13, design-warehouse §14, design-manufacturing §9,
   design-projects §11, design-products §1.3, design-purchasing §11.
-- Findings (provisional, for the lead to number): F-P4-1 to F-P4-7 in §6. Decisions: §4 rows of Nov 7 (P4).
+- Findings (provisional, for the lead to number): F59 to F65 in §6. Decisions: §4 rows of Nov 7 (P4).
 - For the lead:
   - the budget: mr-boss's share is InsightsCatalog's 0.66 s server;
-  - ~~an existing instance must delete BOSS_INS_LEGACY's earlier pattern rows~~ (review R2: the seed reloads them as plain names, F-P4-7);
-  - Mantle's `mantle-sales` dashboard counts orders without excluding recurring base orders (F-P4-3): a Mantle fix;
+  - ~~an existing instance must delete BOSS_INS_LEGACY's earlier pattern rows~~ (review R2: the seed reloads them as plain names, F65);
+  - Mantle's `mantle-sales` dashboard counts orders without excluding recurring base orders (F61): a Mantle fix;
   - BossSetupData's P4 block is one append at the end, and AdminEntities.xml's Insights block too (its header comment names it);
   - the catalog's readiness (`readinessProviderKey`) and schedule (`scheduleAdapter`) fields are unused until P10 and P7.
 
 **Review Nov 7 (P4).** Fresh review of mr-boss c7a56dd2..9b074415; fixes 1ebf36ac, cf178a69, 876a0d6d (branch `ins/p4`).
 - Checked and kept: an entry is read only through its owner's catalogue as the viewer or its route's screen authorization
   (a probe: `catalog.reader` does not see Products' cost history or cost roll-up, `catalog.cost.read` does; a Projects team member
-  does not see Profitability or Utilization), so no restricted report's name reaches someone who cannot open it; F-P4-5's wider
+  does not see Profitability or Utilization), so no restricted report's name reaches someone who cannot open it; F63's wider
   routes (CountVariance, Manufacturing's cost reports) only name reports the user can open, accepted. No report runs on a catalog
   read; `get#ReportOptions` calls only the entry's own options service; `get#ReportLink` builds the seeded route with the
   contract's parameters, URL-encoded, so no arbitrary route. `store#ReportPins` writes only the caller's `InsightsHome`.
@@ -871,12 +871,12 @@ target; INS-02, INS-05.
     (a count) needed a currency and a panel filtered to one. `Sales.Orders` is now a count (no currency) and `Sales.OrderValue`
     the value in each order's currency (Commerce's OnlineSales names both); the spec's money target uses the value and checks a
     count target without a currency (1ebf36ac). Nine metrics.
-  - **R2** (medium, access) F-P4-7: the seed reloads BOSS_INS_LEGACY's P1, P2 and P3 pattern rows with `nameIsPattern="N"`; no
+  - **R2** (medium, access) F65: the seed reloads BOSS_INS_LEGACY's P1, P2 and P3 pattern rows with `nameIsPattern="N"`; no
     screen location equals those names, so an existing instance no longer denies Reports (or, from P1's row, Dashboards and
     ReportBuilder) and needs no manual delete (cf178a69).
   - **R3** (low, efficiency) MeasureMeaning described each panel's registration instead of reading the dashboard again per panel
     through `get#Metric` (876a0d6d).
-- Recorded: F-P4-3's Mantle fix covers the `mantle-sales` dashboard's items panels as well as its orders panel (both over datasets
+- Recorded: F61's Mantle fix covers the `mantle-sales` dashboard's items panels as well as its orders panel (both over datasets
   that keep recurring base orders); Mantle adds the negated `orderPurposeEnumId` filter to each, as Commerce's panel has.
   ProjectsAccess's one failure (`DatasetServices.refresh#DatasetIndex` outside the client deny pattern) is P3's and already fixed
   on master (`refresh` in the verb rows); it passes after the merge.
@@ -1096,9 +1096,9 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Nov 7, 2026 | The owners' report groups that read their datasets: Commerce's store managers and administrators, Customer Service's managers and administrators; store-scoped operators keep Commerce's own Reports | P3, owner contracts (design-commerce §1.4, design-customer-service §1) |
 | Nov 7, 2026 | A steward's dataset is named `insights-<name>`, whose artifacts setup grants by pattern | P3, F51 |
 | Nov 7, 2026 | One readiness provider (instance scope, `INSIGHTS_VIEW`, omitted when unreadable) and one index refresh (`INSIGHTS_DATASET_EDIT` and the dataset's update artifact) per business dataset; Admin's two registry services granted to the author, steward and administrator | P3, impl-admin F50, F53 |
-| Nov 7, 2026 | The catalog and metric registrations are `ironstone.insights.ReportCatalogEntry` and `MetricRegistration` in mr-boss's registry entity file (Admin P2's); a panel names its metric and target in its body (`business`), and a dataset body may carry its own descriptor | P4, the §4 row on registries; F-P4-1; design §6.1 changed |
-| Nov 7, 2026 | An entry with an owner's catalogue service is read by it (called as the viewer with the route's app as `appRoot`, once per call); without one, by whether its route opens to the viewer's own groups (Admin.js `destinationOpens`); SalesAnalysis is read through Accounting's catalogue, its route's | P4, F17, F-P4-2, F-P4-5 |
-| Nov 7, 2026 | A money target names one currency and is refused unless every query of the panel is filtered to that currency; a measure target shares the measure's unit and aggregation | P4, F-P4-4; design §4 PanelDetail changed |
+| Nov 7, 2026 | The catalog and metric registrations are `ironstone.insights.ReportCatalogEntry` and `MetricRegistration` in mr-boss's registry entity file (Admin P2's); a panel names its metric and target in its body (`business`), and a dataset body may carry its own descriptor | P4, the §4 row on registries; F59; design §6.1 changed |
+| Nov 7, 2026 | An entry with an owner's catalogue service is read by it (called as the viewer with the route's app as `appRoot`, once per call); without one, by whether its route opens to the viewer's own groups (Admin.js `destinationOpens`); SalesAnalysis is read through Accounting's catalogue, its route's | P4, F17, F60, F63 |
+| Nov 7, 2026 | A money target names one currency and is refused unless every query of the panel is filtered to that currency; a measure target shares the measure's unit and aggregation | P4, F62; design §4 PanelDetail changed |
 | Nov 7, 2026 | SaveAs copies a definition through `save#Definition` as the author (one save with the chosen group) rather than `copy#Definition` (which keeps the source's group, F42); a saved find has no SaveAs in Insights | P4; design §6 SavedReports changed |
 
 ## 5. Open questions
@@ -1110,7 +1110,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3 and F-P4-1 to F-P4-7 in P4 the same day.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3 and F59 to F65 in P4 the same day.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1172,13 +1172,13 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F56 | P3: on Debug, mr-mantle SalesReportStoreScope's setup fails with "Maximum call stack size exceeded" in an OrderHeader EECA (as F37) | Not P3's; it passes on the release binary per earlier waves |
 | F57 | P3: with Mantle's sales datasets waiting for the steward, P2's InsightsDashboardsUsable (acceptance) cannot copy Store operations on a fresh instance (F41) | Run InsightsDatasetsUsable first, or admit on the instance; the regression walk's panel stays "Not available" |
 | F58 | P3 (review): a steward's field change edits the shared DataDocument, so a plain, non-secret field added to one dataset appears in every admitted dataset over that document after a rebuild, without review; `stewardUserId` is a label only | Open: until design §17 item 6's field classes exist the steward role is the guard; a document's datasets returning to review on any field change is the proposed fix (P10 or the framework's next report work) |
-| F-P4-1 | P4: Mantle's shipped sales and inventory datasets are Mantle's files, read only from BOSS, so a metric descriptor cannot be written on their definitions | The metric is a `MetricRegistration` naming the datasets; a dataset body's own `business` descriptor is read when present (none shipped) |
-| F-P4-2 | P4: Accounting's `get#Catalog` refuses another `appRoot` ("Accounting context is not available") and lists no inventory valuation (its Inventory area's) | The catalog read passes the route's app as `appRoot`; inventory valuation is read by its route |
-| F-P4-3 | P4: the Store operations orders panel (Commerce's) and Mantle's `mantle-sales` dashboard counted orders over `mantle-sales-orders` without excluding recurring base orders (X5) | Commerce's panel gains a negated `orderPurposeEnumId` filter and names `Sales.Orders`; Mantle's dashboard is Mantle's to fix: the same filter on its orders and items panels (review) |
-| F-P4-4 | P4: a panel has no unit or currency of its own, so "a target in the same unit" had nothing to compare | The panel's currency is the `currencyUomId` equality filter on every query; without it the panel shows every currency apart and takes no money target (TARGET_CURRENCY_MIXED) |
-| F-P4-5 | P4: a route's screen authorization can be wider than its owner's index: Warehouse's CountVariance opens to every Warehouse user (its index shows it to count reviewers and adjusters, whose service decides), Manufacturing's cost reports to every Manufacturing user (money only with financial read) | Kept (§4: route authorization where there is no catalogue service); an owner that wants a narrower catalog registers a catalogue service |
-| F-P4-6 | P4: under the shared release binary over a worktree runtime, a service file that does not parse loses its services silently ("no service named …"), with nothing in the test log | Found by a probe spec (a wrapped `from` attribute); a framework note: name a service file's registration failure in the log or the refusal |
-| F-P4-7 | P4: BOSS_INS_LEGACY's artifact is a pattern row whose name is its key, so narrowing it adds a row and leaves the old one on an existing instance (P3's narrowing too) | The seed narrows to ScheduledReports and reloads the earlier rows (P1, P2, P3) with `nameIsPattern="N"`, which match no screen (review R2) |
+| F59 | P4: Mantle's shipped sales and inventory datasets are Mantle's files, read only from BOSS, so a metric descriptor cannot be written on their definitions | The metric is a `MetricRegistration` naming the datasets; a dataset body's own `business` descriptor is read when present (none shipped) |
+| F60 | P4: Accounting's `get#Catalog` refuses another `appRoot` ("Accounting context is not available") and lists no inventory valuation (its Inventory area's) | The catalog read passes the route's app as `appRoot`; inventory valuation is read by its route |
+| F61 | P4: the Store operations orders panel (Commerce's) and Mantle's `mantle-sales` dashboard counted orders over `mantle-sales-orders` without excluding recurring base orders (X5) | Commerce's panel gains a negated `orderPurposeEnumId` filter and names `Sales.Orders`; Mantle's dashboard is Mantle's to fix: the same filter on its orders and items panels (review). Done (mr-mantle c7f2e989): MantleSalesOrderPart carries `orderHeader:orderPurposeEnumId`, without which the orders panels' negated filter excluded nothing, and `mantle-sales`' three panels filter; an existing instance rebuilds `mantle_sales` |
+| F62 | P4: a panel has no unit or currency of its own, so "a target in the same unit" had nothing to compare | The panel's currency is the `currencyUomId` equality filter on every query; without it the panel shows every currency apart and takes no money target (TARGET_CURRENCY_MIXED) |
+| F63 | P4: a route's screen authorization can be wider than its owner's index: Warehouse's CountVariance opens to every Warehouse user (its index shows it to count reviewers and adjusters, whose service decides), Manufacturing's cost reports to every Manufacturing user (money only with financial read) | Kept (§4: route authorization where there is no catalogue service); an owner that wants a narrower catalog registers a catalogue service |
+| F64 | P4: under the shared release binary over a worktree runtime, a service file that does not parse loses its services silently ("no service named …"), with nothing in the test log | Found by a probe spec (a wrapped `from` attribute); a framework note: name a service file's registration failure in the log or the refusal |
+| F65 | P4: BOSS_INS_LEGACY's artifact is a pattern row whose name is its key, so narrowing it adds a row and leaves the old one on an existing instance (P3's narrowing too) | The seed narrows to ScheduledReports and reloads the earlier rows (P1, P2, P3) with `nameIsPattern="N"`, which match no screen (review R2) |
 
 ## 7. Later
 
