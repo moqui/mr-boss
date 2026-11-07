@@ -12,63 +12,172 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
+<!-- Insights › Reports (design-insights §6 Reports; impl-insights P4; style-guide §3.12): the report catalog, every report of the
+    built apps the user reads, pinned first, then by purpose (ironstone.insights.RegistryServices.find#Reports over the owners'
+    ReportCatalogEntry registrations: each owner's catalogue service as the user, else whether the route opens to the user's
+    groups). ReportFind filters by text, owner, purpose and pinned; ReportCatalog explains each report and opens its owner's
+    canonical route (Open is primary), with Pin and Unpin (store#ReportPins, the InsightsHome preference only); ReportContext
+    supplies the report's shared parameters (get#ReportOptions; the organization checked against the user's) and opens the
+    route with them (get#ReportLink). No report runs here, and an entry grants nothing: the owner's route checks its own access.
+    Schedule waits for P7's admitted schedule adapters. P4 replaced the legacy saved-report picker this screen held (F20); saved
+    work is SavedReports. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Saved reports" default-menu-index="6" menu-image="sym_o_saved_search" menu-image-type="icon">
+        default-menu-title="Reports" default-menu-index="6" menu-image="sym_o_summarize" menu-image-type="icon">
 
-    <parameter name="dataDocumentId"/>
+    <parameter name="text"/>
+    <parameter name="ownerApp"/>
+    <parameter name="purpose"/>
+    <parameter name="pinnedOnly"/>
+    <parameter name="entryId"/>
+    <parameter name="organizationPartyId"/>
 
-    <transition-include name="DocumentExport.json" location="component://tools/screen/Tools/Data/Export.xml"/>
+    <transition name="pin" method="post">
+        <service-call name="ironstone.insights.RegistryServices.store#ReportPins"
+                in-map="{entryId:entryId, pinned:pinned, expectedRevision:expectedRevision}"/>
+        <default-response url="."><parameter name="text"/><parameter name="ownerApp"/><parameter name="purpose"/>
+            <parameter name="pinnedOnly"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="openReport">
+        <service-call name="ironstone.insights.RegistryServices.get#ReportLink" out-map="link"
+                in-map="{entryId:entryId, organizationPartyId:organizationPartyId, fromDate:fromDate, thruDate:thruDate,
+                    timePeriodId:timePeriodId}"/>
+        <default-response url="${link.url}" url-type="plain"/>
+        <error-response url="."><parameter name="entryId"/></error-response>
+    </transition>
 
+    <actions>
+        <service-call name="ironstone.insights.RegistryServices.find#Reports" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{text:(text || null), ownerApp:(ownerApp || null), purpose:(purpose || null),
+                    pinnedOnly:(pinnedOnly === 'true')}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="reports" from="found?.reports || []"/>
+        <set field="ownerOptions" from="found?.ownerOptions || []"/>
+        <set field="purposeOptions" from="found?.purposeOptions || []"/>
+        <set field="pinRevision" from="found?.pinRevision ?? 0"/>
+        <set field="unavailableText" from="(found?.unavailableOwners || []).length ? 'Not available now: ' +
+                found.unavailableOwners.join(', ') + '. Their reports are left out until they answer again.' : ''"/>
+        <set field="filtered" from="!!(text || ownerApp || purpose || pinnedOnly === 'true')"/>
+        <set field="findValues" from="{text:text, ownerApp:ownerApp, purpose:purpose, pinnedOnly:pinnedOnly}"/>
+        <!-- ReportContext: the chosen report's shared parameters, read only when one is chosen -->
+        <if condition="entryId">
+            <service-call name="ironstone.insights.RegistryServices.get#ReportOptions" out-map="options" transaction="force-new"
+                    ignore-error="true" in-map="{entryId:entryId, organizationPartyId:(organizationPartyId || null)}"/>
+            <set field="optionsFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="optionFields" from="Object.fromEntries(Array.from(options?.fields || []).map(field =&gt; [field.name, field]))"/>
+            <set field="contextValues" from="{entryId:entryId,
+                    organizationPartyId:optionFields.organizationPartyId?.value, fromDate:optionFields.fromDate?.value,
+                    thruDate:optionFields.thruDate?.value, timePeriodId:optionFields.timePeriodId?.value}"/>
+            <set field="organizationChoices" from="optionFields.organizationPartyId?.options || []"/>
+            <set field="periodChoices" from="optionFields.timePeriodId?.options || []"/>
+        </if>
+    </actions>
     <widgets>
-        <container-dialog id="SelectReportDialog" button-text="Select a Report">
-            <form-list name="DataDocumentList" list="dataDocumentList" skip-form="true" skip-header="true">
-                <entity-find entity-name="moqui.entity.document.DataDocumentAndUserGroup">
-                    <econdition field-name="userGroupId" operator="in" from="ec.user.getUserGroupIdSet()"/>
-                    <select-field field-name="dataDocumentId"/>
-                    <order-by field-name="documentName"/>
-                </entity-find>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Reports" type="h5"/>
+                <label text="Each report opens in the app that owns it, with that app's own access." type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="ReportFind" transition="." map="findValues">
+            <field name="text"><default-field title="Find a report"><text-line size="24"/></default-field></field>
+            <field name="ownerApp">
+                <default-field title="App">
+                    <drop-down allow-empty="true"><list-options list="ownerOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="purpose">
+                <default-field title="Purpose">
+                    <drop-down allow-empty="true"><list-options list="purposeOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="pinnedOnly">
+                <default-field title=""><check><option key="true" text="Pinned only"/></check></default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="text"/>
+                    <field-ref name="ownerApp"/>
+                    <field-ref name="purpose"/>
+                    <field-ref name="pinnedOnly"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <label type="p" style="text-warning" condition="unavailableText" text="${unavailableText}"/>
 
-                <field name="documentName"><default-field>
-                    <link url="." text="${documentName}" link-type="anchor"/></default-field></field>
-            </form-list>
-        </container-dialog>
-        <!-- the copied ViewReport section, kept here with this screen until P4 replaces it (P3 replaced the copied DatasetView) -->
-        <section name="ViewReportSection" condition="dataDocumentId"><actions>
-            <entity-find entity-name="moqui.entity.document.DataDocumentUserGroup" list="ddugList">
-                <econdition field-name="dataDocumentId"/>
-                <econdition field-name="userGroupId" operator="in" from="ec.user.getUserGroupIdSet()"/>
-            </entity-find>
-            <if condition="!ddugList?.length"><return error="true" message=""/></if>
+        <section name="ReportContextSection" condition="entryId">
+            <widgets>
+                <container-box>
+                    <box-header title="Open ${options?.title || 'the report'}"/>
+                    <box-body>
+                        <label type="p" style="text-negative" condition="optionsFailure" text="${optionsFailure}"/>
+                        <form-single name="ReportContext" transition="openReport" map="contextValues" condition="options">
+                            <field name="entryId"><default-field><hidden/></default-field></field>
+                            <field name="organizationPartyId" hide="!optionFields.organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down allow-empty="true"><list-options list="organizationChoices" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="timePeriodId" hide="!optionFields.timePeriodId">
+                                <default-field title="Fiscal period" tooltip="The organization's own fiscal periods; empty, the report's default">
+                                    <drop-down allow-empty="true"><list-options list="periodChoices" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate" hide="!optionFields.fromDate">
+                                <default-field title="From"><date-time type="date"/></default-field>
+                            </field>
+                            <field name="thruDate" hide="!optionFields.thruDate">
+                                <default-field title="Through"><date-time type="date"/></default-field>
+                            </field>
+                            <field name="openButton"><default-field title="Open"><submit/></default-field></field>
+                        </form-single>
+                        <link url="." text="Close" link-type="anchor" parameter-map="findValues"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
 
-            <set field="entityName" from="'DataDocument.' + dataDocumentId"/>
-            <set field="aenDef" from="ec.entity.getEntityDefinition(entityName)"/>
-            <if condition="aenDef == null"><message error="true">Could not find Report ${dataDocumentId}</message><return/></if>
-        </actions><widgets>
-            <container-dialog id="ExportJsonDialog" button-text="Download JSON">
-                <form-single name="ExportDocuments" transition="DocumentExport.json">
-                    <field name="dataDocumentId"><default-field><hidden/></default-field></field>
-                    <field name="fromUpdateStamp"><default-field><date-time/></default-field></field>
-                    <field name="thruUpdateStamp"><default-field><date-time/></default-field></field>
-                    <field name="prettyPrint"><default-field title=""><check><option key="true" text="Pretty Print JSON?"/></check></default-field></field>
-
-                    <field name="submitButton"><default-field title="Download"><submit/></default-field></field>
-                </form-single>
-            </container-dialog>
-
-            <section name="ReportCondView" condition="(ddugList?.length > 0)"><widgets>
-                <form-list name="DataViewList" list="entityValueList" skip-form="true" dynamic="true" header-dialog="true"
-                        show-csv-button="true" show-xlsx-button="true" show-page-size="true" saved-finds="true">
-                    <entity-find entity-name="${entityName}" list="entityValueList" cache="false" use-clone="true">
-                        <search-form-inputs/></entity-find>
-                    <field name="dataDocumentId"><header-field><hidden/></header-field></field>
-                    <auto-fields-entity entity-name="${entityName}" field-type="find-display"/>
-                    <field name="findButton"><header-field title="Find"><submit/></header-field></field>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ReportCatalog" list="reports" skip-form="true" paginate="false">
+                    <row-actions>
+                        <set field="pinParameters" from="{entryId:entryId, pinned:(!pinned).toString(), expectedRevision:pinRevision,
+                                text:text, ownerApp:ownerApp, purpose:purpose, pinnedOnly:pinnedOnly}"/>
+                    </row-actions>
+                    <field name="title">
+                        <default-field title="Report">
+                            <link url="${url}" url-type="plain" text="${title}" link-type="anchor" condition="url"/>
+                            <display text="${url ? '' : title}"/>
+                        </default-field>
+                    </field>
+                    <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                    <field name="description"><default-field title="What it answers"><display/></default-field></field>
+                    <field name="basis"><default-field title="Basis"><display text="${basis}${opensFrom ? ' · ' + opensFrom : ''}"/></default-field></field>
+                    <field name="formats"><default-field title="Export"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="." text="Options" link-type="anchor" condition="hasOptions === true"
+                                    parameter-map="{entryId:entryId, text:text, ownerApp:ownerApp, purpose:purpose, pinnedOnly:pinnedOnly}"/>
+                            <link url="pin" text="${pinned ? 'Unpin' : 'Pin'}" link-type="hidden-form" icon="sym_o_push_pin"
+                                    parameter-map="pinParameters"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="ownerName"/></column>
+                        <column><field-ref name="basis"/><field-ref name="actions"/></column>
+                    </columns>
                 </form-list>
-            </widgets><fail-widgets>
-                <label text="You are not in a group allowed to see Report ${dataDocumentId}" type="h5"/>
-            </fail-widgets></section>
-        </widgets><fail-widgets>
-            <label text="Please select a report" type="h5"/>
-        </fail-widgets></section>
+                <label type="p" style="q-pa-md m-muted" condition="!reports.length &amp;&amp; filtered" text="No report matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!reports.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No app's reports are open to you. Each app's managers decide who reads its reports."/>
+            </box-body-nopad>
+        </container-box>
     </widgets>
 </screen>

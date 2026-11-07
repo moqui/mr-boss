@@ -45,9 +45,26 @@
                   "count"
                 ]
               }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "orderPurposeEnumId",
+                    "op": "eq",
+                    "value": "OrpRecurringTemplate"
+                  }
+                },
+                "negated": true,
+                "label": "Not a recurring base order"
+              }
             ]
           }
-        ]
+        ],
+        "business": {
+          "metricId": "Sales.Orders",
+          "metricVersion": 1
+        }
       },
       "checkouts": {
         "title": "Checkouts by state and day",

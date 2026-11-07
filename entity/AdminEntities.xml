@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Admin's registries (impl-admin §4, P2, F32; design-admin §14): mr-boss's own records, rare in BOSS, whose data model is
     Mantle's. Each is a trusted component definition seeded by its owner in its own setup data, never a service or index name
     an administrator types: ironstone.admin.RegistryServices reads them, and a row naming a missing service or permission is
-    logged by name when read and left out, the others still answering. Insights P4 adds its records to this file. -->
+    logged by name when read and left out, the others still answering. Insights P4 added its records (ReportCatalogEntry,
+    MetricRegistration) at the end. -->
 <entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-3.xsd">
     <entity entity-name="ReadinessProvider" package="ironstone.admin" use="configuration">
         <description>A readiness provider (design §14): a nonmutating check its owner calculates, which Admin's Home and Health
@@ -102,5 +103,83 @@ along with this software (see the LICENSE.md file). If not, see
             <key-map field-name="viewPermission" related="userPermissionId"/></relationship>
         <relationship type="one" related="ironstone.admin.ReadinessProvider" short-alias="provider" fk-name="ADM_SETTINGS_PROVIDER">
             <key-map field-name="providerKey"/></relationship>
+    </entity>
+    <!-- Insights' registries (impl-insights §4, P4; design-insights §6.1, §6.2): the report catalog and the metric registrations
+        of the domain report services, BOSS seed records each owner fills in its own block of BossSetupData. They hold navigation
+        and meaning only: whether a viewer reads an entry is its owner's catalogue service where one is registered, else the
+        route's own screen authorization; a metric's formula, scope and private-field projection stay its owner's service or
+        dataset. ironstone.insights.RegistryServices reads them; a row naming a missing service is logged by name and left out. -->
+    <entity entity-name="ReportCatalogEntry" package="ironstone.insights" use="configuration">
+        <description>A report in Insights' catalog (design §6.1): one entry per report, owned by one app (review Z10); another
+            app that shows the report mounts the owner's route. The entry grants nothing.</description>
+        <field name="entryId" type="id-long" is-pk="true"><description>Stable: the owner app, a dot and the report
+            (CustomerService.ServiceLevelCompliance); pins and saved references keep it</description></field>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"><description>The one owner of the report (Sales, Accounting, ...)</description></field>
+        <field name="title" type="text-medium"/>
+        <field name="description" type="text-long"><description>What it answers, in the owner's words</description></field>
+        <field name="purpose" type="text-short"><description>The business purpose it is grouped by (Service, Sales, Finance,
+            Inventory, Production, Projects, Catalog, Purchasing)</description></field>
+        <field name="basis" type="text-medium"><description>Its date or status basis, as the owner states it</description></field>
+        <field name="routePath" type="text-medium"><description>The canonical owner route, a path under /qapps; empty for a
+            report opened from a record (Customer Service's CaseAnalytics)</description></field>
+        <field name="definitionId" type="id-long"><description>Or the report engine definition it opens</description></field>
+        <field name="parameterContract" type="text-medium"><description>The shared parameters the route takes from Insights
+            (comma separated: organizationPartyId, fromDate, thruDate, timePeriodId); any other is never passed</description></field>
+        <field name="sourceReference" type="text-medium"><description>The owner's service or dataset that answers it</description></field>
+        <field name="metricIds" type="text-medium"><description>The registered metrics it shows (comma separated)</description></field>
+        <field name="catalogueService" type="text-medium"><description>The owner's catalogue service, called as the viewer, which
+            decides whether the viewer reads the entry; empty: the route's screen authorization decides</description></field>
+        <field name="catalogueKey" type="text-medium"><description>The report's id in the catalogue service's answer (its
+            entryId, or Accounting's reportId, F17)</description></field>
+        <field name="optionsService" type="text-medium"><description>The owner's service that answers the report's own options
+            (get#ReportOptions); never a report run</description></field>
+        <field name="exportFormats" type="text-short"><description>The owner's exports (CSV); the route offers them</description></field>
+        <field name="scheduleAdapter" type="text-medium"><description>An admitted schedule adapter (P7); without one the entry
+            offers no schedule</description></field>
+        <field name="readinessProviderKey" type="id-long"><description>The readiness provider of its source, if any (P10's
+            DataReadiness)</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+    </entity>
+
+    <entity entity-name="MetricRegistration" package="ironstone.insights" use="configuration">
+        <description>A registered business metric (design §6.1, §6.2; review X11): the versioned descriptor of a measure its
+            one owner defines in a domain report service or an admitted dataset. A panel names it in its body
+            (business.metricId and metricVersion); a dataset definition may carry its own descriptor (body.business). The
+            comparison rules of design §6.3 are its unit, aggregation and exclusion fields.</description>
+        <field name="metricId" type="id-long" is-pk="true"><description>The owner, a dot and the measure (Sales.Orders)</description></field>
+        <field name="version" type="number-integer"><description>Raised when its meaning changes; a panel naming an older
+            version is told</description></field>
+        <field name="ownerApp" type="text-short"/>
+        <field name="title" type="text-medium"/>
+        <field name="description" type="text-long"/>
+        <field name="serviceName" type="text-medium"><description>The registered domain report service that computes it</description></field>
+        <field name="datasetIds" type="text-medium"><description>The admitted datasets that carry it (comma separated)</description></field>
+        <field name="catalogEntryId" type="id-long"><description>The owner's report that shows it, if any</description></field>
+        <field name="grain" type="text-medium"><description>The record it counts or sums (order part, clock, asset)</description></field>
+        <field name="recordKey" type="text-medium"/>
+        <field name="dateBasis" type="text-medium"/>
+        <field name="statusBasis" type="text-medium"/>
+        <field name="aggregation" type="text-short"><description>count, sum, ratio or snapshot: a ratio is recomputed from its
+            numerator and denominator, a snapshot never summed across dates</description></field>
+        <field name="numerator" type="text-medium"/>
+        <field name="denominator" type="text-medium"/>
+        <field name="unitPolicy" type="text-short"><description>currency (native currencies apart, never summed across
+            currencies), quantity (by product unit), percent, hours or count</description></field>
+        <field name="additiveDimensions" type="text-medium"/>
+        <field name="nonAdditiveDimensions" type="text-medium"/>
+        <field name="allowedDimensions" type="text-medium"/>
+        <field name="supportedFilters" type="text-medium"/>
+        <field name="exclusions" type="text-long"/>
+        <field name="drillContract" type="text-medium"/>
+        <field name="scopePolicy" type="text-medium"/>
+        <field name="freshness" type="text-medium"/>
+        <field name="requiredPermission" type="id-long"><description>A permission needed to read the descriptor, when its
+            meaning itself is restricted; the owner's service checks its data again</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+        <relationship type="one-nofk" related="ironstone.insights.ReportCatalogEntry" short-alias="catalogEntry">
+            <key-map field-name="catalogEntryId" related="entryId"/></relationship>
     </entity>
 </entities>

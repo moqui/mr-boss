@@ -511,6 +511,11 @@ with the Insights catalog as their one owner: ServiceLevelCompliance, ResponseTi
 SatisfactionResults, CaseAnalytics and ReturnAnalysis. Insights lists and schedules them under this
 app's authorization and adds no second calculation.
 
+As built (impl-insights P4, Nov 7, 2026): the six are `ironstone.insights.ReportCatalogEntry` rows (`CustomerService.*`) whose
+read is this app's `get#ReportCatalogue`; the metrics `CustomerService.Backlog` (open cases as of a time, a snapshot) over
+`get#CaseVolumes` and `CustomerService.ServiceLevelCompliance` (met over decided and open past due, cancelled apart) over
+`get#SlaCompliance` are `MetricRegistration` rows, each naming the clock dataset.
+
 ### Reports
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

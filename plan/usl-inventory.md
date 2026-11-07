@@ -46,6 +46,13 @@ contextual mounts. Proposed framework/BOSS extensions and framework report, iden
 services remain in the designs, outside this Mantle inventory. Existing Designed in mappings
 and every Implemented in cell are preserved; catalog links alone do not claim service calls.
 
+**Insights P4 (Nov 7, 2026):** the report services of design-insights §6.2 that Insights registers as metric sources
+(ironstone.insights.MetricRegistration `serviceName`: `get#SalesOrderSummary`, `get#SalesInvoiceSummary`,
+`get#InventoryProjectedInfo`, `get#InventoryAtDate`, `get#Utilization`, `get#OperationPerformanceReport`) and the services its
+catalog entries name (`sourceReference`) are registrations, not calls: no Insights screen calls them yet, so their
+**Implemented in** is unchanged (design §6.2: a registration does not promote a capability). The Insights paths of their
+**Designed in** cells say `Insights/Panels/PanelDetail`, which was built as `Insights/PanelDetail` (impl-insights F46).
+
 **Design review fixes (Nov 1, 2026):** after [review-suite-apps.md](review-suite-apps.md),
 renamed paths are replaced in place (`Marketing/Audiences/Import` → `AudienceImport`,
 `Consent/Contact` → `Consent/ConsentDetail`, `PASS:Marketing/Preferences` →

@@ -2106,6 +2106,11 @@ line waits for Sales.
 
 ## 11. Reports
 
+**Insights registration (impl-insights P4, Nov 7, 2026).** Portfolio, Profitability, Progress, Sprints, Time, Utilization and
+WorkItems are `ironstone.insights.ReportCatalogEntry` rows (`Projects.*`) read by their routes' screen authorization
+(Profitability and Utilization the managers'); `Projects.Utilization` (hours logged over capacity, recomputed from its
+parts) is a `MetricRegistration` over `ProjectReportServices.get#Utilization`.
+
 Each report is the report archetype (style-guide §3.12): parameters in the URL so a report is bookmarkable and can
 be a saved find, number cards, a chart through `m-chart` with its table behind it, CSV and XLSX, and `html-print`.
 Cross-project dashboards beyond these use [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).

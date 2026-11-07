@@ -20,8 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     panels, Wall display, with Dashboard, DashboardEditor and PanelDetail hidden) and Report builder › Explore, each a mount of the
     framework's report screens (INS-04) whose links the reportLinks map here sends to Insights' own screens; Reports, Delivery and
     alerts, Business flows and Settings come with the phases that build their entries; P3 the business datasets under Report builder
-    (Datasets, DatasetDetail, DatasetFields, DatasetView). Until P4 and P7 replace them, the copied Reports and ScheduledReports
-    screens stay open only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies them to the root user group). -->
+    (Datasets, DatasetDetail, DatasetFields, DatasetView); P4 Reports (the report catalog) and Saved reports. Until P7 replaces it,
+    the copied ScheduledReports screen stays open only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies
+    it to the root user group). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 
@@ -45,9 +46,11 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- palette types (dashboards, saved reports, flow maps), quick create (Dashboard, Analysis, Schedule by capability), the Assist
-        prompts and response action arrive with their records and screens (design §1.2: P2, P4, P7, P9, P10) -->
+    <!-- the palette's dashboards and saved reports (P4, design §1.2); flow maps, quick create (Dashboard, Analysis, Schedule by
+        capability), the Assist prompts and response action arrive with their records and screens (P7, P9, P10) -->
     <shell-providers>
+        <palette-source group="Insights" label="Dashboards and saved reports" icon="sym_o_insights"
+                service="ironstone.insights.ContextServices.search#Records" sequence="62"/>
         <!-- g s: g i is Comms' global Inbox key, which a scope key would shadow under Insights -->
         <keymap scope="insights">
             <key keys="g s" label="Insights home" screen="Insights/Home"/>

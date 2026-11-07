@@ -1925,6 +1925,13 @@ BudgetVariance's committed column reads BudgetCommitment.
 
 ## 13. Reports
 
+**Insights registration (impl-insights P4, Nov 7, 2026).** The statements, aging, partner ledger, reconciliation, trial balance,
+general ledger, posted summary, budget variance and stock transactions are `ironstone.insights.ReportCatalogEntry` rows
+(`Accounting.*`) read through `ReportServices.get#Catalog` by `reportId` (impl-insights F17); inventory valuation, which
+Warehouse mounts, by its route; SalesAnalysis is the one Sales-owned entry `Sales.SalesAnalysis`, opening this app's report
+and read through this catalogue until Sales is built. The invoiced revenue metric is `Accounting.InvoicedRevenue` over
+`SalesReportServices.get#SalesInvoiceSummary`.
+
 These canonical reports register with [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).
 Insights uses their authorized service results and drill targets, preserving organization, fiscal
 period, posting basis and currency; an eventually consistent search aggregation is not a replacement
