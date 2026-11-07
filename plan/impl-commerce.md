@@ -3178,7 +3178,7 @@ in the writers, screens or Reporting.js); the Built note.
     through the Forum's staff services (`store#Category`, `set#CategoryAccess`: members of the category, published,
     subscription and manual grants qualifying) with the monthly membership's paid access bound to it
     (`store#SubscriptionBinding`), from a data file of its own, `BossZZCommerceForumDemoData.xml`
-    (`DemoServices.load#CommerceForumDemo`; F-P15-2); a database loaded before has its site binding moved while no
+    (`DemoServices.load#CommerceForumDemo`; F171); a database loaded before has its site binding moved while no
     subscriber's grant names it.
   - CommerceSpecLib (appended): `sweepScreens` (the files under the root and each shared screen an area mounts with its
     tabs, 118 screens), `sweepParameters` and `sweepParametersOf` (the demo's records).
@@ -3192,8 +3192,8 @@ in the writers, screens or Reporting.js); the Built note.
   - mr-pass: ShopReviews (2), ShopAccount (3), pass.
 - Acceptance (written here; each run once): CommerceTui (2 features, 6.2 s: 118 screens in tui as model documents with
   no error node, as commerce.admin with authorization on; the demo has no store cart, contract, feed or store return, so
-  those four detail screens render their "not available" state, F-P15-4), CommerceServerStatic (1 feature, 16.2 s: none
-  marked; 10 clean, 2 stays, 102 with violations, F-P15-3), CommerceIsolationWalk (4 features, 3.4 s: design §12.2's
+  those four detail screens render their "not available" state, F173), CommerceServerStatic (1 feature, 16.2 s: none
+  marked; 10 clean, 2 stays, 102 with violations, F172), CommerceIsolationWalk (4 features, 3.4 s: design §12.2's
   review, below). Changed and run: CommerceFoundationWalk (5 of 5: the Forum mount and the members' category),
   CommerceReviewsScenario (3 of 3: revisions passed), mr-pass ShopFixtures and ShopSubscriptionScenarios (7 of 7: the
   buyer, a site member, gets the members' category and reads it, which they could not before).
@@ -3228,26 +3228,26 @@ in the writers, screens or Reporting.js); the Built note.
     (no route fixtures, §2); the isolation walk calls services as the screens do (artifact authorization off for the call,
     the service's own checks answering) and renders screens with it on.
 - Findings (provisional):
-  - **F-P15-1** The DownloadFirstRequestReview SECA queues the request after the commit, on a worker: a spec waits for it.
+  - **F170** The DownloadFirstRequestReview SECA queues the request after the commit, on a worker: a spec waits for it.
     CommerceReviews' selection keys carried `NaN` revisions and passed only because a missing revision was accepted (F102).
-  - **F-P15-2** The Forum's writes lock the operator's account row (`lockActor`), which a data load's transaction holds once
+  - **F171** The Forum's writes lock the operator's account row (`lockActor`), which a data load's transaction holds once
     it signs the demo administrator in, so a demo step in a transaction of its own waits on it until the statement
     timeout; the Forum demo runs in its own data file's transaction.
-  - **F-P15-3** The server-static report: no Commerce screen is marked; 10 of 114 are clean (ChannelImport, PriceLists,
+  - **F172** The server-static report: no Commerce screen is marked; 10 of 114 are clean (ChannelImport, PriceLists,
     StoreCategoriesTui, LogNote, CategoryDetail's FeatureDefaults, Identifiers and Summary, InventoryAvailability's Policy
     and Projection, PageDetail's PageText), 2 stay, 102 have violations; its wrapped-ec render fails with "not a function"
     on Stores/Stores and StoreDetail/General (both render in html, qvt and tui).
-  - **F-P15-4** The demo has no store cart, recurring contract, feed or return of a store order, so the sweeps render those
+  - **F173** The demo has no store cart, recurring contract, feed or return of a store order, so the sweeps render those
     detail screens on their "not available" state unless an earlier walk of the run made one.
-  - **F-P15-5** Product360's tabs outside Commerce's context (Costs, Suppliers, PurchaseHistory, …) are still addressable
+  - **F174** Product360's tabs outside Commerce's context (Costs, Suppliers, PurchaseHistory, …) are still addressable
     under Commerce; their conditions keep them empty (the walk checks no cost or supplier price shows).
-  - **F-P15-6** F165 and F103 are checked as their claim and lock, not with two threads; F148 reads at most 20 pages of the
+  - **F175** F165 and F103 are checked as their claim and lock, not with two threads; F148 reads at most 20 pages of the
     batch size (2,000 contracts at the default) before giving up.
 - Remaining for Commerce (the lead's Remaining-Work): §7 (gift cards and store credit, click and collect, the design's
   later scope, other apps' registrations and mounts, video help, EDI over SPS); F97 (the review request's not-before
   date), F142 (Insights' catalogue registration), F151, F157, F159, F161, F163 (Later); Shop F108 (the renewal email's
-  action link) and F115 (an Authorize.Net sandbox check before production); F-P15-3's marking of Commerce screens
-  server-static; F-P15-4's demo cart, contract, feed and return if the sweeps should render them on records.
+  action link) and F115 (an Authorize.Net sandbox check before production); F172's marking of Commerce screens
+  server-static; F173's demo cart, contract, feed and return if the sweeps should render them on records.
 
 **Review Nov 6 (P15)** (`git diff $(git merge-base master com/p15)..com/p15` in mr-mantle, mr-pass and mr-boss).
 - Checked: get#StoreSummary field by field (each section reads through get#Store, get#StoreSites, check#StoreReadiness and
@@ -3267,7 +3267,7 @@ in the writers, screens or Reporting.js); the Built note.
   refusals as the Built note lists. Inventories: 14 Implemented-in service names checked against the Mantle service files, all
   present; design §2's Impl column checked against the screen files.
 - Fixes:
-  - R1 (medium, F-P15-3): Stores/Stores and StoreDetail/General failed the server-static full check with "not a function":
+  - R1 (medium, F172): Stores/Stores and StoreDetail/General failed the server-static full check with "not a function":
     their locale drop-downs called `ec.l10n.getAvailableLocales()` in the widget, and the wrapped `ec` of the full check has
     only l10n's localize and format members. The locales are now read in the screens' actions (`localeOptions`); both screens
     now finish the full check with ordinary violations and no render error (html and tui unchanged; CommerceStores passes).
@@ -3288,12 +3288,12 @@ in the writers, screens or Reporting.js); the Built note.
   CommerceReviews, CommerceStores, CommerceChannels, CommerceFeeds, CommerceRecovery, CommerceSubscriptions 26 of 26; mr-pass
   ShopReviews, ShopAccount 5 of 5; acceptance CommerceIsolationWalk 4 of 4 (changed). CommerceServerStatic not rerun.
 - For the lead:
-  - F-P15-3's framework part: the full check's wrapped `ec` (crates/moqui-core/src/script/runtime.rs `WRAPPED_EC`) denies and
+  - F172's framework part: the full check's wrapped `ec` (crates/moqui-core/src/script/runtime.rs `WRAPPED_EC`) denies and
     records an area outside l10n, user and resource, but a member missing from an allowed area (`ec.l10n.getAvailableLocales`)
     is `undefined`, so the expression fails with "not a function" and the render stops instead of a `wrapped-ec` violation
     being recorded. Navigation, SearchContent, Shared/Pages and Shared/PageRoute call it the same way inside dialogs the check
     did not reach; they are left as they are.
-  - The Built note's F-P15-3 line ("its wrapped-ec render fails ... on Stores/Stores and StoreDetail/General") is fixed by R1.
+  - The Built note's F172 line ("its wrapped-ec render fails ... on Stores/Stores and StoreDetail/General") is fixed by R1.
   - F124's page: a waiting topic whose own box and decline box are both checked is declined and then turned on (a granted
     consent, the address verified); a list so checked is declined. Worth a look when the page is next touched.
   - CommerceIsolationWalk makes a theme draft of BOSS_COM_DIGITAL on every run, and the draft is kept.
@@ -3518,6 +3518,14 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F167 | P13 review: a binding's customer may be any Customer-role party not private to another user, not only the organization's own | Done in P15: the store organization's own or shared (`_NA_`) customer, not internal, not disabled. Spec: StoreChannels |
 | F168 | P13 review: a replay of a failed original is kept as a duplicate with no order, and still has none after the original is retried | Done in P15: when the original's order is made, its matching replays answer it. Spec: StoreChannels |
 | F169 | P13 review: `importText`'s 2 MiB limit counts characters, the upload path bytes | Done in P15: the pasted text's UTF-8 bytes. Spec: StoreChannels |
+| F170 | P15: the download review-request trigger queues after commit on a worker, so specs wait for it | Accepted |
+| F171 | P15: Forum writes lock the operator's account row, which a data load's transaction already holds once it signs the demo administrator in; the Forum demo step is its own data file | Accepted |
+| F172 | P15: the server-static sweep: 10 of 114 Commerce screens clean, none marked; Stores and StoreDetail/General failed its wrapped render ("not a function") | The two fixed in the review (R1: the locale list in actions); marking screens server-static later; framework: a missing member of the wrapped `ec`'s areas should be a recorded violation, not undefined |
+| F173 | P15: the demo has no store cart, recurring contract, feed or store return, so the sweeps show those detail screens "not available" | Later (demo records) |
+| F174 | P15: Product360's Costs, Suppliers and PurchaseHistory tabs are reachable by URL under Commerce; their conditions keep them empty (the isolation walk checks it) | Accepted |
+| F175 | P15: F165 and F103 are checked as a claim and a lock, not with concurrent threads | Accepted |
+| F176 | P15 review: with a waiting topic's own box and its decline box both checked, it is declined then turned on | Accepted |
+| F177 | P15 review: CommerceIsolationWalk makes a BOSS_COM_DIGITAL theme draft each run and never removes it | Later |
 
 ## 7. Later
 
