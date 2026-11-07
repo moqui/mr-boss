@@ -32,6 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
+        <!-- the locale choices are read here, not in the widget (server-static: a widget sees only part of ec) -->
+        <set field="localeOptions" from="ec.l10n.getAvailableLocales()"/>
         <set field="routeValues" from="recordFound ? {sitePageId:sitePageId, title:sitePage.title, routePath:sitePage.routePath, locale:(sitePage.locale || ''),
                 pageRole:(sitePage.pageRole || ''), templateKey:(sitePage.templateKey || ''), seoTitle:(sitePage.seoTitle || ''),
                 seoDescription:(sitePage.seoDescription || ''), socialImageUrl:(sitePage.socialImageUrl || ''),
@@ -63,7 +65,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="locale">
                         <conditional-field condition="canEdit" title="Locale" tooltip="Empty: every locale without a page of its own">
                             <drop-down allow-empty="true">
-                                <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                <list-options list="localeOptions" key="${locale}" text="${name}"/>
                             </drop-down>
                         </conditional-field>
                         <default-field title="Locale"><display/></default-field>

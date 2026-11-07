@@ -37,6 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
+        <!-- the locale choices are read here, not in the widget (server-static: a widget sees only part of ec) -->
+        <set field="localeOptions" from="ec.l10n.getAvailableLocales()"/>
         <if condition="recordFound">
             <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
                     in-map="{productStoreId:productStoreId, include:['content']}"/>
@@ -129,7 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="locale">
                                 <default-field title="Language" tooltip="Empty serves every language">
                                     <drop-down allow-empty="true">
-                                        <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                        <list-options list="localeOptions" key="${locale}" text="${name}"/>
                                     </drop-down>
                                 </default-field>
                             </field>
