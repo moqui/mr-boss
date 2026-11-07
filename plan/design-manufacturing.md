@@ -1179,6 +1179,11 @@ As built (impl-insights P4, Nov 7, 2026): the eight reports are `ironstone.insig
 read by their routes' screen authorization (no catalogue service); `Manufacturing.Oee` (availability × performance ×
 quality, recomputed from its parts) is a `MetricRegistration` over `ProductionReportServices.get#OperationPerformanceReport`.
 
+Insights attention (impl-insights P5, Nov 7, 2026; F29): Home's Open, In progress and Late work orders (`HomeServices.get#Home`,
+the selected plant, else every plant of the user's organizations) are `ironstone.insights.AttentionProvider` rows
+(`Manufacturing.*`) opening WorkOrders › Find with the cards' filters and the plant counted (`facilityId`). Home's own cards open
+Find without the plant, so with a plant selected their list is wider than their count (impl-insights F-P5-7).
+
 **Source.** research §9–§10; ERPNext Manufacturing workspace.
 
 **Needs.** M1, M10.

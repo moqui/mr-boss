@@ -182,4 +182,41 @@ along with this software (see the LICENSE.md file). If not, see
         <relationship type="one-nofk" related="ironstone.insights.ReportCatalogEntry" short-alias="catalogEntry">
             <key-map field-name="catalogEntryId" related="entryId"/></relationship>
     </entity>
+    <!-- Insights' attention providers (impl-insights §4, P5; design-insights §3 Home, review Z9): each built app's Home work
+        counts whose count is the query of the worklist they open (impl-insights F29), and Monitor's Business operations dashboard
+        (F19), BOSS seed records each owner fills in its own block of BossSetupData. A registration grants nothing: get#Attention
+        shows a provider only when its route opens to the viewer (and the viewer holds its permission, when it names one), calls
+        its count service as the viewer, and leaves it out when the owner answers no count for the viewer; a count that fails is
+        named on its own card. Configuration rows with no organization, so the view-entity pattern of impl-admin §4 does not
+        apply. -->
+    <entity entity-name="AttentionProvider" package="ironstone.insights" use="configuration">
+        <description>A count of work waiting in one app's worklist (design §3 Attention): the owner's count service, called as
+            the viewer, answers the count by the same query as the worklist the route opens with its filter.</description>
+        <field name="providerKey" type="id-long" is-pk="true"><description>Stable: the owner app, a dot and the worklist
+            (Purchasing.DraftOrders)</description></field>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"><description>The app that owns the worklist and its query</description></field>
+        <field name="title" type="text-medium"><description>The card's label, the owner's own (Draft orders)</description></field>
+        <field name="description" type="text-long"><description>What the count holds, in the owner's words</description></field>
+        <field name="countService" type="text-medium"><description>The owner's service whose answer holds the count, called as
+            the viewer; several providers may share one call</description></field>
+        <field name="countParameters" type="text-medium"><description>Fixed parameters of the count call, as a JSON map
+            ({"appRoot":"Purchasing"})</description></field>
+        <field name="countField" type="text-medium"><description>The count's path in the answer (counters.draftCount;
+            queueRows[operation=receiving].waitingCount; paths joined by + are added); a null value means the owner gives the
+            viewer no count, and the provider is left out</description></field>
+        <field name="overdueField" type="text-medium"><description>The path of the overdue part of the count, if the owner
+            answers one</description></field>
+        <field name="organizationParameter" type="text-short"><description>The parameter, of the count call and the route,
+            that takes the organization in Insights' scope (organizationPartyId); empty: the owner's own scope</description></field>
+        <field name="organizationScope" type="text-medium"><description>The scope the count honors, as the card says it (Your
+            active organization; The selected plant)</description></field>
+        <field name="routePath" type="text-medium"><description>The worklist's canonical owner route, a path under /qapps</description></field>
+        <field name="routeParameters" type="text-medium"><description>The worklist's filter, as a query string
+            (view=draft); a value {path} is the count's answer at that path, left out when it has none (facilityId={plantId})</description></field>
+        <field name="requiredPermission" type="id-long"><description>A permission the worklist needs beyond its route (the
+            owner's card shows only to its holders)</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+    </entity>
 </entities>

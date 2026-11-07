@@ -1,0 +1,53 @@
+{
+  "id": "insights-suite-service-backlog",
+  "type": "panel",
+  "title": "Open cases by organization",
+  "body": {
+    "title": "Open cases by organization",
+    "visualization": "table",
+    "queries": [
+      {
+        "datasetId": "boss-service-clocks",
+        "ignoreVariables": [
+          "vendorPartyId"
+        ],
+        "queryString": "clockEnumId:SlcResolution AND (stateEnumId:SlsRunning OR stateEnumId:SlsPaused)",
+        "aggregations": [
+          {
+            "id": "organization",
+            "type": "terms",
+            "role": "split-rows",
+            "params": {
+              "field": "organizationPartyId",
+              "size": 20
+            }
+          },
+          {
+            "id": "cases",
+            "type": "cardinality",
+            "role": "metric",
+            "params": {
+              "field": "requestId"
+            }
+          }
+        ],
+        "transformations": [
+          {
+            "type": "organize",
+            "hide": [
+              "count"
+            ]
+          }
+        ]
+      }
+    ],
+    "description": "Cases whose resolution clock is running or paused now, opened in the last five years.",
+    "time": {
+      "from": "now-5y"
+    },
+    "business": {
+      "metricId": "CustomerService.Backlog",
+      "metricVersion": 1
+    }
+  }
+}

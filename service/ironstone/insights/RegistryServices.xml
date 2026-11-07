@@ -269,4 +269,118 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="userGroupId" from="found.userGroupId"/>
         </actions>
     </service>
+    <!-- Home and attention (impl-insights P5; design-insights §3 Home): the viewer's landing and the attention board over the
+        registered providers (ironstone.insights.AttentionProvider), each called as the viewer -->
+    <service verb="get" noun="Home" allow-remote="false">
+        <description>The user's Insights Home (design §3): the organization in scope (the requested one only when it is the
+            user's, else the saved one, else their default) and the dashboard variables that keep the panels to it, the default
+            range, their starred and recent dashboards they still read, the dashboard whose panels Home shows (their InsightsHome
+            choice, else the shipped suite dashboard) with at most six panels in their order, the dashboards and panels they may
+            arrange, their pinned reports they still read (the owners whose catalogue failed named apart) and whether this is
+            their first use. Attention is get#Attention's. Refuses a user without Insights read (INSIGHTS_VIEW_REQUIRED) and an
+            organization not theirs (ORGANIZATION_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="allOrganizations" type="Boolean"/>
+            <parameter name="scopeVariables" type="Map"/>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="favorites" type="List"/>
+            <parameter name="dashboard" type="Map"/>
+            <parameter name="panels" type="List"/>
+            <parameter name="panelOptions" type="List"/>
+            <parameter name="dashboardOptions" type="List"/>
+            <parameter name="pinnedReports" type="List"/>
+            <parameter name="unavailableOwners" type="List"/>
+            <parameter name="firstUse" type="Boolean"/>
+            <parameter name="revision" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('getHome', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="allOrganizations" from="found.allOrganizations"/>
+            <set field="scopeVariables" from="found.scopeVariables"/>
+            <set field="from" from="found.from"/>
+            <set field="thru" from="found.thru"/>
+            <set field="capabilities" from="found.capabilities"/>
+            <set field="favorites" from="found.favorites"/>
+            <set field="dashboard" from="found.dashboard"/>
+            <set field="panels" from="found.panels"/>
+            <set field="panelOptions" from="found.panelOptions"/>
+            <set field="dashboardOptions" from="found.dashboardOptions"/>
+            <set field="pinnedReports" from="found.pinnedReports"/>
+            <set field="unavailableOwners" from="found.unavailableOwners"/>
+            <set field="firstUse" from="found.firstUse"/>
+            <set field="revision" from="found.revision"/>
+        </actions>
+    </service>
+    <service verb="store" noun="HomeLayout" allow-remote="false">
+        <description>The user's Home arrangement in their InsightsHome preference: the organization in scope, the dashboard
+            whose panels Home shows (empty: the suite dashboard) and at most six of its panels in order. Edits the preference
+            only; pins are kept. Refuses a stale expectedRevision (HOME_CHANGED), an organization not the user's
+            (ORGANIZATION_UNAVAILABLE), a dashboard the user does not read (DASHBOARD_UNAVAILABLE) or that is not a dashboard
+            (DASHBOARD_REQUIRED), a panel not on it (PANEL_UNAVAILABLE) and more than six panels (HOME_PANELS_LIMIT).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="dashboardDefinitionId"/>
+            <parameter name="orderedPanelIds" type="List"/>
+            <parameter name="expectedRevision" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="revision" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('storeHomeLayout', context)"/>
+            <set field="revision" from="found.revision"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Attention" allow-remote="false">
+        <description>The attention board (design §3 Attention): each registered provider the user may read, its count from its
+            owner's count service called as the user (the query of the worklist it opens), with the overdue part where the owner
+            answers one and the worklist's route with its filter (and the organization in scope, for a provider that honors it),
+            grouped by owner, never added into a total. A provider whose route does not open to the user, whose permission they
+            lack, whose owner refuses them or answers them no count is left out; one whose count fails is a card saying so, and
+            the others still answer. Filtered by ownerApp. Refuses a user without Insights read (INSIGHTS_VIEW_REQUIRED) and an
+            organization not theirs (ORGANIZATION_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="ownerApp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="groups" type="List"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="asOf" type="Long"/>
+            <parameter name="asOfText"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('attention', context)"/>
+            <set field="groups" from="found.groups"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="asOf" from="found.asOf"/>
+            <set field="asOfText" from="found.asOfText"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OperationFailures" allow-remote="false">
+        <description>Monitor's Business operations dashboard as an attention source (impl-insights F19): the operation runs
+            rolled back or set to retry over the last day (from: a relative start), counted by the shipped dashboard's own
+            "Rollbacks and retries by operation" query, run as the user, so Monitor's grants (the dashboard and the telemetry
+            dataset) decide. Refuses a user without Insights read (INSIGHTS_VIEW_REQUIRED); the report engine refuses one
+            without the dataset.</description>
+        <in-parameters>
+            <parameter name="from"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="count" type="Long"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('countOperationFailures', context)"/>
+            <set field="count" from="found.count"/>
+        </actions>
+    </service>
 </services>

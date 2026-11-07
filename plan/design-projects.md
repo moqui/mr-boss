@@ -2111,6 +2111,10 @@ WorkItems are `ironstone.insights.ReportCatalogEntry` rows (`Projects.*`) read b
 (Profitability and Utilization the managers'); `Projects.Utilization` (hours logged over capacity, recomputed from its
 parts) is a `MetricRegistration` over `ProjectReportServices.get#Utilization`.
 
+**Insights attention (impl-insights P5, Nov 7, 2026; F29).** Home's Reviews waiting, Approve time and Allocation requests
+(`ProjectServices.get#ProjectsHome` counts, null and so left out for a user they are not for) are
+`ironstone.insights.AttentionProvider` rows (`Projects.*`); Unbilled is an amount, not a count, and is not registered.
+
 Each report is the report archetype (style-guide §3.12): parameters in the URL so a report is bookmarkable and can
 be a saved find, number cards, a chart through `m-chart` with its table behind it, CSV and XLSX, and `html-print`.
 Cross-project dashboards beyond these use [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).

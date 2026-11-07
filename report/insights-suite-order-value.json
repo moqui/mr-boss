@@ -1,0 +1,62 @@
+{
+  "id": "insights-suite-order-value",
+  "type": "panel",
+  "title": "Order value by currency",
+  "body": {
+    "title": "Order value by currency",
+    "visualization": "table",
+    "queries": [
+      {
+        "datasetId": "mantle-sales-orders",
+        "ignoreVariables": [
+          "organizationPartyId"
+        ],
+        "aggregations": [
+          {
+            "id": "currency",
+            "type": "terms",
+            "role": "split-rows",
+            "params": {
+              "field": "currencyUomId",
+              "size": 20
+            }
+          },
+          {
+            "id": "value",
+            "type": "sum",
+            "role": "metric",
+            "params": {
+              "field": "partTotal"
+            }
+          }
+        ],
+        "transformations": [
+          {
+            "type": "organize",
+            "hide": [
+              "count"
+            ]
+          }
+        ],
+        "filters": [
+          {
+            "query": {
+              "field": {
+                "name": "orderPurposeEnumId",
+                "op": "eq",
+                "value": "OrpRecurringTemplate"
+              }
+            },
+            "negated": true,
+            "label": "Not a recurring base order"
+          }
+        ]
+      }
+    ],
+    "description": "The value of placed sales orders in each order's own currency, never added across currencies.",
+    "business": {
+      "metricId": "Sales.OrderValue",
+      "metricVersion": 1
+    }
+  }
+}

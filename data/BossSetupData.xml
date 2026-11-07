@@ -3849,4 +3849,184 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="component://mr-boss/screen/Insights/(Reports|ScheduledReports)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
     </artifactGroups>
+    <!-- Insights P5 (impl-insights P5, §4; design-insights §3 Home): the attention providers, each built app's Home counts whose
+        count is the query of the worklist it opens (impl-insights F29; owner contracts, each in its owner's design), and Monitor's
+        Business operations dashboard (F19). get#Attention calls each as the viewer and shows it only when its route opens to them;
+        a registration grants nothing. Customer Service's queue cards, Commerce's To fulfill and Unpaid, Purchasing's Approvals
+        waiting and Projects' Unbilled do not match a worklist's query and wait for their owners (F29). -->
+    <!-- Commerce (owner contract, design-commerce §3, impl-commerce §7): Home's store work counts, one call for all stores the
+        user works in (mantle.order.StoreOperationsServices.get#StoreWorkSummary); integration errors are Channel health's -->
+    <ironstone.insights.AttentionProvider providerKey="Commerce.ToApprove" version="1" ownerApp="Commerce" title="To approve"
+            description="Placed store orders waiting for approval."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.toApprove"
+            routePath="Commerce/Orders/Orders" routeParameters="statusId=OrderPlaced"
+            organizationScope="The stores you work in" sequenceNum="10"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.PaymentHolds" version="1" ownerApp="Commerce" title="Payment holds"
+            description="Store orders held for payment."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.paymentHolds"
+            routePath="Commerce/Orders/Orders" routeParameters="attention=paymentHold"
+            organizationScope="The stores you work in" sequenceNum="20"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.PlacementsWaiting" version="1" ownerApp="Commerce" title="Placements waiting"
+            description="Checkouts whose order placement has not finished."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.stuckPlacements"
+            routePath="Commerce/Orders/Orders" routeParameters="attention=stuck"
+            organizationScope="The stores you work in" sequenceNum="30"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.OpenCarts" version="1" ownerApp="Commerce" title="Open carts"
+            description="Carts customers have not checked out."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.openCarts"
+            routePath="Commerce/Orders/Carts"
+            organizationScope="The stores you work in" sequenceNum="40"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.IntegrationErrors" version="1" ownerApp="Commerce" title="Integration errors"
+            description="Channel messages in error and failing feeds over the last 30 days."
+            countService="mantle.product.StoreChannelServices.get#ChannelHealth"
+            countField="totals.attention"
+            routePath="Commerce/Reports/ChannelHealth"
+            organizationScope="The stores you work in" requiredPermission="COMMERCE_CHANNEL_OPERATE" sequenceNum="50"/>
+    <!-- Accounting (owner contract, design-accounting §13): the journal entries list's and the bills list's own finds, and the cost
+        close queue, each for the organization in Insights' scope -->
+    <ironstone.insights.AttentionProvider providerKey="Accounting.DraftEntries" version="1" ownerApp="Accounting" title="Draft entries"
+            description="Journal entries not yet posted."
+            countService="mantle.ledger.AccountingServices.find#Records" countParameters='{"kind":"journals","isPosted":"N","pageSize":1}'
+            countField="recordCount"
+            routePath="Accounting/GeneralLedger/JournalEntries" routeParameters="isPosted=N" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="110"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.PostedEntries" version="1" ownerApp="Accounting" title="Posted entries"
+            description="Journal entries posted to the ledger."
+            countService="mantle.ledger.AccountingServices.find#Records" countParameters='{"kind":"journals","isPosted":"Y","pageSize":1}'
+            countField="recordCount"
+            routePath="Accounting/GeneralLedger/JournalEntries" routeParameters="isPosted=Y" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="120"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.BillsAwaitingApproval" version="1" ownerApp="Accounting" title="Bills awaiting approval"
+            description="Supplier bills received and waiting for approval."
+            countService="mantle.account.InvoiceServices.find#Payables" countParameters='{"queue":"review","pageSize":1}'
+            countField="recordsCount"
+            routePath="Accounting/Payables/Bills" routeParameters="queue=review" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" requiredPermission="INVOICE_APPROVE" sequenceNum="130"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.BillsOnHold" version="1" ownerApp="Accounting" title="Bills on hold"
+            description="Supplier bills with an open hold."
+            countService="mantle.account.InvoiceServices.find#Payables" countParameters='{"queue":"held","pageSize":1}'
+            countField="recordsCount"
+            routePath="Accounting/Payables/Bills" routeParameters="queue=held" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="140"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.CostClose" version="1" ownerApp="Accounting" title="Production runs awaiting cost close"
+            description="Production runs waiting for their cost close, and closed runs with later cost events."
+            countService="ironstone.accounting.ProductionCostServices.find#CostCloseQueue"
+            countField="queueCount"
+            routePath="Accounting/Inventory/ProductionCostClose" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="150"/>
+    <!-- Products (owner contract, design-products §1.3): the catalog summary Products Home counts, each the list it opens -->
+    <ironstone.insights.AttentionProvider providerKey="Products.ActiveSkus" version="1" ownerApp="Products" title="Active SKUs"
+            description="Products that are sold and not ended."
+            countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
+            countField="summary.active"
+            routePath="Products/Products" routeParameters="list=activeSkus"
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="210"/>
+    <ironstone.insights.AttentionProvider providerKey="Products.Variants" version="1" ownerApp="Products" title="Variants"
+            description="Variant products of a virtual product."
+            countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
+            countField="summary.variants"
+            routePath="Products/Products" routeParameters="list=variants"
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="220"/>
+    <ironstone.insights.AttentionProvider providerKey="Products.EndingSoon" version="1" ownerApp="Products" title="Ending in 30 days"
+            description="Products whose sales end within 30 days."
+            countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
+            countField="summary.discontinuingSoon"
+            routePath="Products/Products" routeParameters="list=discontinuingSoon"
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="230"/>
+    <!-- Purchasing (owner contract, design-purchasing §11): the buyer's Home counters, one call, each the view it opens; Approvals
+        waiting counts unread notifications, not the Approvals list, so it is not registered (impl-insights F29) -->
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.DraftOrders" version="1" ownerApp="Purchasing" title="Draft orders"
+            description="Purchase orders not yet submitted for approval."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.draftCount"
+            routePath="Purchasing/Orders/PurchaseOrders" routeParameters="view=draft"
+            organizationScope="The organizations you buy for" sequenceNum="310"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.ApprovedNotSent" version="1" ownerApp="Purchasing" title="Approved, not sent"
+            description="Approved purchase orders not yet sent to the supplier."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.unsentCount"
+            routePath="Purchasing/Orders/PurchaseOrders" routeParameters="view=unsent"
+            organizationScope="The organizations you buy for" sequenceNum="320"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.Unacknowledged" version="1" ownerApp="Purchasing" title="Unacknowledged orders"
+            description="Sent purchase orders the supplier has not acknowledged."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.unacknowledgedCount"
+            routePath="Purchasing/Orders/Acknowledgements" routeParameters="view=unacknowledged"
+            organizationScope="The organizations you buy for" sequenceNum="330"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.LateReceipts" version="1" ownerApp="Purchasing" title="Late receipts"
+            description="Purchase order lines past their expected receipt."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.lateCount"
+            routePath="Purchasing/Receiving/Receipts" routeParameters="view=late"
+            organizationScope="The organizations you buy for" sequenceNum="340"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.HeldBills" version="1" ownerApp="Purchasing" title="Held bills"
+            description="Supplier bills held by a match exception."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.heldCount"
+            routePath="Purchasing/Bills/MatchExceptions" routeParameters="view=held"
+            organizationScope="The organizations you buy for" sequenceNum="350"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.QuotesExpiring" version="1" ownerApp="Purchasing" title="Quotes expiring"
+            description="Supplier quotes about to expire."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.quoteExpiringCount"
+            routePath="Purchasing/Sourcing/Quotes" routeParameters="view=expiring"
+            organizationScope="The organizations you buy for" sequenceNum="360"/>
+    <!-- Manufacturing (owner contract, design-manufacturing §9): the work order counts of the selected plant -->
+    <ironstone.insights.AttentionProvider providerKey="Manufacturing.OpenOrders" version="1" ownerApp="Manufacturing" title="Open work orders"
+            description="Work orders not yet complete."
+            countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
+            countField="summary.openCount"
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="410"/>
+    <ironstone.insights.AttentionProvider providerKey="Manufacturing.InProgress" version="1" ownerApp="Manufacturing" title="Work orders in progress"
+            description="Work orders started on the floor."
+            countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
+            countField="summary.inProgressCount"
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="statusId=WeInProgress&amp;facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="420"/>
+    <ironstone.insights.AttentionProvider providerKey="Manufacturing.Late" version="1" ownerApp="Manufacturing" title="Late work orders"
+            description="Work orders past their estimated completion."
+            countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
+            countField="summary.lateCount"
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="late=Y&amp;facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="430"/>
+    <!-- Projects (owner contract, design-projects §11): the counts of Projects Home that are counts (Unbilled is an amount); each
+        is null for a user it is not for, and then left out -->
+    <ironstone.insights.AttentionProvider providerKey="Projects.ReviewsWaiting" version="1" ownerApp="Projects" title="Reviews waiting"
+            description="Merge requests waiting for your review."
+            countService="ironstone.projects.ProjectServices.get#ProjectsHome"
+            countField="home.counts.reviewsWaiting"
+            routePath="Projects/Code/MergeRequests" routeParameters="list=waiting"
+            organizationScope="The projects you see" sequenceNum="510"/>
+    <ironstone.insights.AttentionProvider providerKey="Projects.ApproveTime" version="1" ownerApp="Projects" title="Time to approve"
+            description="Submitted timesheets you approve."
+            countService="ironstone.projects.ProjectServices.get#ProjectsHome"
+            countField="home.counts.timesheetsToApprove"
+            routePath="Projects/Time/Timesheets" routeParameters="list=toApprove"
+            organizationScope="The projects you see" sequenceNum="520"/>
+    <ironstone.insights.AttentionProvider providerKey="Projects.AllocationRequests" version="1" ownerApp="Projects" title="Allocation requests"
+            description="Requested allocations of the projects you see."
+            countService="ironstone.projects.ProjectServices.get#ProjectsHome"
+            countField="home.counts.allocationRequests"
+            routePath="Projects/Resources/Allocations" routeParameters="list=requested"
+            organizationScope="The projects you see" sequenceNum="530"/>
+    <!-- Warehouse (owner contract, design-warehouse §14): the receiving queue of the selected facility, overdue its late receipts -->
+    <ironstone.insights.AttentionProvider providerKey="Warehouse.Receiving" version="1" ownerApp="Warehouse" title="Receiving"
+            description="Purchase receipts waiting at the dock, late ones counted apart."
+            countService="ironstone.warehouse.HomeServices.get#Home" countParameters='{"appRoot":"Warehouse"}'
+            countField="queueRows[operation=receiving].waitingCount+queueRows[operation=receiving].lateCount" overdueField="queueRows[operation=receiving].lateCount"
+            routePath="Warehouse/Receiving/Receipts" routeParameters="facilityId={facilityId}"
+            organizationScope="Your selected facility" sequenceNum="610"/>
+    <!-- Monitor's Business operations dashboard (impl-insights F19): operation runs rolled back or set to retry over the last day,
+        by the dashboard's own query, opening Monitor's Operations under Monitor's own grants -->
+    <ironstone.insights.AttentionProvider providerKey="Monitor.OperationFailures" version="1" ownerApp="Monitor" title="Operations rolled back"
+            description="Business operation runs rolled back or set to retry in the last day."
+            countService="ironstone.insights.RegistryServices.get#OperationFailures"
+            countField="count"
+            routePath="monitor/Operations"
+            organizationScope="Every organization" sequenceNum="910"/>
 </entity-facade-xml>

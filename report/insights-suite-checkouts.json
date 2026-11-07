@@ -1,0 +1,45 @@
+{
+  "id": "insights-suite-checkouts",
+  "type": "panel",
+  "title": "Store checkouts by state",
+  "body": {
+    "title": "Store checkouts by state",
+    "visualization": "table",
+    "queries": [
+      {
+        "datasetId": "boss-commerce-checkouts",
+        "ignoreVariables": [
+          "vendorPartyId"
+        ],
+        "aggregations": [
+          {
+            "id": "status",
+            "type": "terms",
+            "role": "split-rows",
+            "params": {
+              "field": "statusId",
+              "size": 10
+            }
+          },
+          {
+            "id": "checkouts",
+            "type": "cardinality",
+            "role": "metric",
+            "params": {
+              "field": "checkoutId"
+            }
+          }
+        ],
+        "transformations": [
+          {
+            "type": "organize",
+            "hide": [
+              "count"
+            ]
+          }
+        ]
+      }
+    ],
+    "description": "Store checkouts started in the range, by their state."
+  }
+}

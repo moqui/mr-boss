@@ -1,5 +1,5 @@
 // Insights access (impl-insights §2, P1; design-insights §1.1, §1.2): who may open Insights and the context they get (another
-// organization refused), the menu, providers and launcher per group, Home's one render (qvt), each group's capabilities from its
+// organization refused), the menu, providers and launcher per group (Home's one render is InsightsHome's), each group's capabilities from its
 // permissions and the copied screens' area, the report engine's artifacts by capability (a reader cannot save, an author cannot
 // save a dataset, the steward can; scheduling the distributor's; the root's inheritable grant opening no mutating operation from
 // an Insights screen; telemetry and Tools' Dashboards no Insights group's), and the
@@ -115,22 +115,6 @@ feature("the Insights menu and keys follow the groups; the launcher shows Insigh
     },
     then({problems}) {
         problems.join("\n") == ""
-    }
-})
-
-feature("Home shows the reader's scope and the first-use state, with no placeholder", {
-    when() {
-        return {home: asUser(users.reader, () => lib.page("Home"))}
-    },
-    then({home}) {
-        home.status == 200
-        home.errors == []
-        home.output.includes("Scope: ")
-        home.output.includes("Ziziwork Retail")
-        !home.output.includes("Ziziwork Services")
-        home.output.includes("No dashboards or reports are shared with you yet.")
-        !home.output.includes("Dashboards and reports are shown to Insights readers.")
-        !home.output.includes("Placeholder")
     }
 })
 

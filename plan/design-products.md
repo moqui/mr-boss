@@ -151,6 +151,10 @@ As built (impl-insights P4, Nov 7, 2026): CatalogChecks, PriceHistory, CostHisto
 `ironstone.insights.ReportCatalogEntry` rows (`Products.*`), read by their routes' screen authorization (the cost screens'
 grants hide the cost reports from others); no Products metric is registered yet.
 
+Insights attention (impl-insights P5, Nov 7, 2026; F29): Home's Active SKUs, Variants and Ending in 30 days
+(`CatalogServices.get#CatalogSummary`) are `ironstone.insights.AttentionProvider` rows (`Products.*`) opening Products with the
+cards' lists.
+
 ## 2. Screens
 
 Paths are the built BOSS routes (impl-products P0–P14); a detail's tab is listed only when it is
