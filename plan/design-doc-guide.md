@@ -58,6 +58,25 @@ These public designs do not replace the staff-facing BOSS Commerce or Marketing 
 are prefixed `PASS:` to distinguish the component. Proposed services stay in the design until
 they exist; future publishing baselines are not marked implemented or fully designed in advance.
 
+### UI review and refinement phase
+
+The document families describe successive kinds of work: `research-*.md` records references and options,
+`design-*.md` specifies behavior, `impl-*.md` records construction, and **`ui-review-*.md`** records review and
+refinement of implemented user experiences. Use the same area suffix as the design and implementation files;
+the first is [ui-review-drawers-commons.md](ui-review-drawers-commons.md). Later apps get their own review files.
+
+A UI review file is the active plan and running record for its area. It includes the current screen/mount inventory
+and ownership, complete activities (actor, starting state, objective, steps, expected result and recovery), general
+refinement criteria, coverage status, numbered findings, bounded batch notes and verification evidence. Map every
+screen, dialog, hidden helper and custom render variant to an activity or supporting inspection. Keep proposed but
+unmounted design surfaces in a separate reconciliation table. Begin coverage as pending; source inspection, available
+tests and previous implementation results do not establish a completed user journey.
+
+Follow the framework's [UI review guide](../../../../docs/dev/UI-Review.md) and application/testing practices.
+Review through the consuming app's mount, put shared fixes in their owning component, and link changes in decided
+behavior back to the design and implementation records. Keep app-specific findings in the review file and reusable
+patterns in the shared guide. A review plan does not authorize building missing features or running acceptance suites.
+
 ## 2. Level of detail
 
 - **Screens and forms are the unit.** Every screen of every app is in its file's screen table.

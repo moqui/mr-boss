@@ -13,6 +13,11 @@ dashboards and Explore, admitted datasets, the report catalog and metrics, and H
 ([design](plan/design-insights.md), [impl-insights](plan/impl-insights.md)). They are built in one order, and the
 rest of each is next.
 
+UI review and refinement plans use `plan/ui-review-*.md`, starting with
+[drawers, Commons and Comms](plan/ui-review-drawers-commons.md): screen coverage, complete user processes,
+refinement criteria, findings and verification. The [document guide](plan/design-doc-guide.md#ui-review-and-refinement-phase)
+defines the convention.
+
 Tests are in two suites ([Build-Test](../../../docs/Build-Test.md)). The regression suite, `test/` and `test/client/`,
 checks rules and one golden-path client walk per app, within the budget in `test/budget`: run the specs you touch with
 `./moq test mr-boss --spec <name>` while working, and `./moq test-apps` before a commit. The acceptance suite,
