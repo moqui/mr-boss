@@ -30,7 +30,7 @@ feature("an editor uploads a real CSV part and receives the durable import locat
 feature("an editor maps a file, reviews valid and invalid rows, applies and resumes without a duplicate write", {
     expect() {
         const p = browser.newPage({user: "catalog.edit", viewport: {width: 1280, height: 1100}, timeout: 30})
-        p.allowProblems(/userPhoto\?userId=|net::ERR_INTERNET_DISCONNECTED.*fonts\.googleapis\.com/)
+        p.allowProblems(/userPhoto\?userId=/)
         p.goto("/qapps/Products/ProductImport").status == 200
         p.waitFor(() => !!document.querySelector("#CatalogImportUpload"))
         p.fill(
