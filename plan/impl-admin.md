@@ -1,6 +1,8 @@
 # IronStone BOSS — Admin implementation
 
-Nov 7, 2026 — plan, before Admin starts. P0 partly done: F1–F33 found while writing and reviewing it, from the code as
+Nov 7, 2026 — gate 1 built: P1–P7 with Insights P1–P5 in the one build order of §1 (stage 1), each phase reviewed by a fresh
+agent and its fixes committed apart, merged in waves with the full suites after each (the Wave lines under the phases)
+and the gate's suites under P7. Next: stage 3 (P8–P14) beside Insights' stage 2. Nov 7, 2026 — plan, before Admin starts. P0 partly done: F1–F33 found while writing and reviewing it, from the code as
 Commerce, Customer Service and the framework's Constitution (mr-moqui 07a315d4) left it (§6). Admin and Insights are the
 next two apps built, after Commerce, in one build order (§1); Insights' phases are in
 [impl-insights.md](impl-insights.md). The parts of design-admin that wait on People, Maintenance, Sales and Marketing,
@@ -1797,6 +1799,18 @@ Design §7 Organizations, OrganizationDetail and Constitution (its maps note wai
     organization context and running the filtered find: fine for a handful, worth one batched call if an instance has many;
   - Admin.js `scope()` (`ownerIds`: filterOrgIds kept to the user's organizations) and Mantle's filtered find can differ for a delegate
     with child organizations; the palette's organizations and the Constitution screen's scopes use the former, the services the latter.
+
+- **Gate 1 suites (Nov 7, on master after Admin P1–P7, Insights P1–P5, the framework follow-ups and every review merged,
+  the release binary rebuilt; nothing else running):** `./moq test-framework`: every spec feature passed; cargo failed
+  only F38's known test (failing on master before this build); the framework's server specs 10.8 of 12 s, tools 2.6 of
+  3 s, basic-comms 5.0 of 8 s; webroot's client specs 46.9 of 44 s, over its budget on a quiet run too (it was 45.9 s in
+  Wave 1, before any Admin or Insights change reached webroot; Insights P2 added one browser case), so the budget is the
+  user's call and not raised here. Standalone mr-mantle 1,934 passed, 2 failed (the baseline WorkTimeEntries and
+  WorkTimesheets), 11 skipped. `mail_capture_sends=true ./moq test-apps` 3,394 server and 19 client features passed, none
+  failed; feature time mr-mantle 353.0 of 393 s, mr-boss 206.2 of 264 s server and 54.9 of 57 s client, mr-pass 14.4 of
+  20 s, within every budget, so none raised. `moqui lint --screens` 132 sites, as before. The acceptance tests each
+  phase wrote are not run (two were changed and run alone in review: AdminInvitationsUsable, InsightsHomeUsable with
+  InsightsDatasetsUsable); `./moq accept mr-boss` is owed for them when asked.
 
 ### P8 — Instance settings, localization and reference data
 
