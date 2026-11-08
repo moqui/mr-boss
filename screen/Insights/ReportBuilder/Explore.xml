@@ -17,9 +17,11 @@ along with this software (see the LICENSE.md file). If not, see
     artifact; P3 admits the business datasets), field suggestions and value counts are scoped by the same query path, and adding a
     panel opens Insights › Dashboard and Compare opens Split (the root's reportLinks). Saving a search or adding a panel is
     offered to authors only (the engine refuses the others); readers open saved searches. Trace, user, visit and log context
-    links are Tools' and Monitor's telemetry fields, which no Insights group reads. -->
+    links are Tools' and Monitor's telemetry fields, which no Insights group reads. A viewer who reads no dataset (the Insights
+    administrator, who reads no business data) is told so, not given Tools' log dataset and its refusal (impl-insights F74). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Explore" default-menu-index="1">
+    <parameter name="datasetId"/><parameter name="savedSearchId"/>
 
     <transition-include name="remember" location="component://tools/screen/Dashboards/Explore.xml"/>
     <transition-include name="trace" location="component://tools/screen/Dashboards/Explore.xml"/>
@@ -31,6 +33,19 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="addPanel" location="component://tools/screen/Dashboards/Explore.xml"/>
     <transition-include name="split" location="component://tools/screen/Dashboards/Explore.xml"/>
 
-    <actions><set field="from" from="from || insights.defaults.from"/></actions>
-    <widgets><include-screen location="component://tools/screen/Dashboards/Explore.xml" share-scope="true"/></widgets>
+    <actions>
+        <set field="from" from="from || insights.defaults.from"/>
+        <if condition="!datasetId &amp;&amp; !savedSearchId">
+            <service-call name="org.moqui.report.ReportServices.list#Datasets" out-map="readable"/>
+            <set field="noDataset" from="Array.from(readable?.datasets || []).length === 0"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="ExploreDatasets" condition="!noDataset">
+            <widgets><include-screen location="component://tools/screen/Dashboards/Explore.xml" share-scope="true"/></widgets>
+            <fail-widgets>
+                <label type="p" style="m-muted" text="No dataset is admitted for you to read. Insights readers and authors explore the datasets a steward admits."/>
+            </fail-widgets>
+        </section>
+    </widgets>
 </screen>

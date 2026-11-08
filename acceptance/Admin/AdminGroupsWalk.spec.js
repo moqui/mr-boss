@@ -29,17 +29,26 @@ const audits = fieldName =>
         ).filter(row => String(row.pkSecondaryValue) === memberId)
     )
 
+// The last feature's factor and ADMIN's requireAuthcFactor, put back: every later spec signs in as john.doe with a password.
+const restoreFactors = () =>
+    system(() => {
+        ec.entity.find("moqui.security.UserAuthcFactor").condition("factorId", factorId).deleteAll()
+        const admin = ec.entity.find("moqui.security.UserGroup").condition("userGroupId", "ADMIN").one()
+        if (admin.requireAuthcFactor !== "N") {
+            admin.set("requireAuthcFactor", "N")
+            admin.update()
+        }
+    })
+
 spec({
     cleanupSpec() {
         ec.message.clearErrors()
-        login("john.doe")
-        system(() => {
+        // the factor state first: while john.doe holds a factor or ADMIN requires one, his password login is refused
+        restoreFactors()
+        system(() =>
             ec.entity.find("moqui.security.UserGroupMember").condition({userGroupId: bundleId, userId: memberId}).deleteAll()
-            ec.entity.find("moqui.security.UserAuthcFactor").condition("factorId", factorId).deleteAll()
-            const admin = ec.entity.find("moqui.security.UserGroup").condition("userGroupId", "ADMIN").one()
-            admin.set("requireAuthcFactor", "N")
-            admin.update()
-        })
+        )
+        login("john.doe")
         ec.artifactExecution.enableAuthz()
     }
 })
@@ -96,6 +105,10 @@ feature(
 
 feature("a permitted change shows before and after in the audit log and holds on the member's next request", {
     when() {
+        // the first feature's membership runs until tomorrow; this change starts from none
+        system(() =>
+            ec.entity.find("moqui.security.UserGroupMember").condition({userGroupId: bundleId, userId: memberId}).deleteAll()
+        )
         const before = asUser(memberUsername, () => ec.user.hasPermission("PURCHASE_ORDER_EDIT"))
         const added = asUser(users.access, () =>
             invoke(access + "store#Membership", {userGroupId: bundleId, userId: memberId, reason: "Second cover"})
@@ -142,7 +155,11 @@ feature("removing the last factor-meeting member of ADMIN is refused with the re
             )
             factor.create()
         })
-        return asUser(users.system, () => {
+        // john.doe now holds a factor, so a password login (asUser) is refused: sign in as one who passed the second factor
+        const wasDisabled = ec.artifactExecution.authzDisabled()
+        try {
+            ec.user.internalLoginUser(users.system)
+            ec.artifactExecution.enableAuthz()
             const revision = invoke(access + "get#Group", {userGroupId: "ADMIN"}).group.revision
             const factor = invoke(access + "store#Group", {
                 userGroupId: "ADMIN",
@@ -160,7 +177,12 @@ feature("removing the last factor-meeting member of ADMIN is refused with the re
                 expectedRevision: membership.revision
             })
             return {factor, removed}
-        })
+        } finally {
+            ec.message.clearErrors()
+            restoreFactors()
+            if (wasDisabled) ec.artifactExecution.disableAuthz()
+            login(users.system)
+        }
     },
     then({factor, removed}) {
         factor.applied == true

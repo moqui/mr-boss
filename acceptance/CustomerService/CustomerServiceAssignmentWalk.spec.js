@@ -72,6 +72,16 @@ spec({
                 timeZone: "America/Chicago"
             })
         ).calendarId
+        // around the clock: a calendar with no working hours. The agents otherwise work on the team's hours (Customer Service
+        // P4's demo, weekdays), so a walk run in the evening or at a weekend would find neither agent in hours.
+        state.allDayId = system(() =>
+            invoke("create#mantle.work.calendar.Calendar", {
+                calendarName: "Walk: around the clock",
+                ownerPartyId: ids.organizationId,
+                calendarKindEnumId: "CalkResource",
+                timeZone: "America/Chicago"
+            })
+        ).calendarId
         asMantle(users.admin, () =>
             invoke("mantle.work.CalendarServices.store#WorkingHours", {
                 calendarId: state.calendarId,
@@ -85,6 +95,14 @@ spec({
     cleanupSpec() {
         capture.reset()
         ec.message.clearErrors()
+        // the agents back on the team's hours
+        for (const partyId of ["BOSS_CS_AGENT", "BOSS_CS_AGENT_WH"])
+            post(users.manager, "Settings/AgentTeams/saveParticipation", {
+                organizationPartyId: ids.organizationId,
+                teamPartyId: ids.supportTeamId,
+                partyId,
+                calendarId: ""
+            })
         login("john.doe")
         ec.artifactExecution.enableAuthz()
     }
@@ -101,6 +119,13 @@ feature("round robin between two agents skips the one outside their hours; two i
             respectSchedule: "Y",
             sequenceNum: "10"
         })
+        post(users.manager, "Settings/AgentTeams/saveParticipation", {
+            organizationPartyId: ids.organizationId,
+            teamPartyId: ids.supportTeamId,
+            partyId: "BOSS_CS_AGENT",
+            assignmentEligible: "Y",
+            calendarId: state.allDayId
+        })
         const participation = post(users.manager, "Settings/AgentTeams/saveParticipation", {
             organizationPartyId: ids.organizationId,
             teamPartyId: ids.supportTeamId,
@@ -109,13 +134,13 @@ feature("round robin between two agents skips the one outside their hours; two i
             calendarId: state.calendarId
         })
         const outside = [newCase(state.queue), newCase(state.queue)].map(assigneeOf)
-        // back in hours (no calendar of their own: around the clock), two intakes at once
+        // back in hours (around the clock), two intakes at once
         post(users.manager, "Settings/AgentTeams/saveParticipation", {
             organizationPartyId: ids.organizationId,
             teamPartyId: ids.supportTeamId,
             partyId: "BOSS_CS_AGENT_WH",
             assignmentEligible: "Y",
-            calendarId: ""
+            calendarId: state.allDayId
         })
         const parallelIds = parallel(
             2,

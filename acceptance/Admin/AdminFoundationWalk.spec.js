@@ -133,10 +133,15 @@ feature(
                     if (!/ADMIN_UNAVAILABLE|is not authorized/.test(message))
                         problems.push(`${user} gets ${service}: ${message || "accepted"}`)
                 }
-                const rows = asUser(
-                    user,
-                    () => lib.invoke("ironstone.admin.ContextServices.search#Records", {text: "Ziziwork"}).rows || []
-                )
+                // the palette source is refused outright (the root's services are not granted to them) or answers no rows
+                const rows = asUser(user, () => {
+                    try {
+                        return lib.invoke("ironstone.admin.ContextServices.search#Records", {text: "Ziziwork"}).rows || []
+                    } catch (error) {
+                        if (/ADMIN_UNAVAILABLE|is not authorized/.test(String(error.message))) return []
+                        throw error
+                    }
+                })
                 if (rows.length) problems.push(`${user}'s palette has Admin rows`)
             }
             return {problems}

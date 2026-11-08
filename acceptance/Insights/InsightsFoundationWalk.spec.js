@@ -44,7 +44,12 @@ feature("insights.reader opens Home but not the report builder, its dataset scre
     when() {
         const problems = []
         const home = asUser(users.reader, () => lib.page("Home", {}, "html"))
-        if (!opened(home) || !home.output.includes("No dashboards or reports are shared with you yet."))
+        // P5's Home: the reader reads it (not the "shown to Insights readers" notice), with no dashboard of their own yet
+        if (
+            !opened(home) ||
+            home.output.includes("Dashboards and reports are shown to Insights readers.") ||
+            !home.output.includes("Dashboards you star or open show here.")
+        )
             problems.push(`the reader's Home: ${home.status} ${home.errors}`)
         // Report builder › Explore is every Insights user's since P2; the dataset screens (P3) the author's and steward's
         for (const path of [
