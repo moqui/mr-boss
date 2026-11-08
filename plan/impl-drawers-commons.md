@@ -1,7 +1,7 @@
 # IronStone BOSS — Header, drawers, Commons & Comms implementation
 
 Oct 18, 2026 — plan; Step 0 done (the review corrections are in design-drawers-commons.md); Oct 19 — M0–M11 built,
-save point (what is left in §8)
+save point (what is left in §8); Nov 8 — remaining items addendum (§9)
 
 How [design-drawers-commons.md](design-drawers-commons.md) gets built: the review of that design against mr-moqui and
 Mantle as they stand (findings R1–R27, each with the resolution now written into the design), the rules every step
@@ -17,7 +17,8 @@ mr-moqui `plans/Remaining-Work.md`, `docs/data/Revision-Management.md`, `docs/de
 the code as of Oct 18, 2026. Code paths are under `mr-moqui-base/` unless they name a component.
 
 Sections: [1 scope](#1-scope-and-order) · [2 step 0](#2-step-0) · [3 review](#3-review-findings-and-resolutions) ·
-[4 rules](#4-ground-rules) · [5 milestones](#5-milestones) · [6 later](#6-later) · [7 verification](#7-verification)
+[4 rules](#4-ground-rules) · [5 milestones](#5-milestones) · [6 later](#6-later) · [7 verification](#7-verification) ·
+[9 remaining](#9-addendum-nov-8-2026-remaining-items)
 
 ---
 
@@ -845,3 +846,19 @@ plans/Remaining-Work.md.
       once), Schedules' seats filter at 390 px, and avatar photos per user.
 - Later, as §6 lists: Calls (§14), the Assist drawer (Phase 13), office-file previews, the chat link preview's picture
   (an image proxy), PDF fonts and cmaps (a license review), and the rest of §6.
+
+## 9. Addendum, Nov 8, 2026: remaining items
+
+- **Golden-path regression walks for Commons and Comms.** The testing skill asks for one golden-path client walk per
+  app in the regression suite, kept current; BOSS's `test/client/suite.js` has none for Commons or Comms. Add one
+  each, in `test/client/Commons/` and `test/client/Comms/`:
+  - Commons: start a workday and create in context (sign in, Commons Home, the palette to a record, quick-create a
+    task there with its record shown, open the result), the path of
+    [ui-review-drawers-commons.md](ui-review-drawers-commons.md) DC-01 and DC-03.
+  - Comms: receive, answer and file mail (a captured message in the Inbox, a reply with an attachment, filing the
+    thread on a record), the path of its DC-16.
+  - Each needs fixtures, as no Commons or Comms client fixture spec exists yet (the suite loads Accounting, Insights
+    and Admin fixtures), and stays under the 15-second spec limit.
+  - The client budget in `test/budget` (client = 57) is raised by each walk's measured share only with the user's
+    agreement.
+  - The UI review leaves these walks out of its own scope; it found the gap while mapping existing coverage.
