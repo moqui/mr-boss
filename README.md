@@ -20,3 +20,9 @@ checks rules and one golden-path client walk per app, within the budget in `test
 per mode: `./moq accept mr-boss`, run on a schedule, before a release, or when asked. In both, specs are grouped in
 subdirectories named for the `screen/` directory of the app they cover (`Accounting`, `Products`, `Projects`, ...);
 specs that cover the whole suite stay at the top.
+
+## License and Contributing
+
+[CC0 1.0 Universal with a Grant of Patent License](LICENSE.md). To contribute code, sign
+[AUTHORS.md](AUTHORS.md) in a commit from the account that submits the pull request; its Contributing
+section has the details.
