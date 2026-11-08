@@ -2,7 +2,8 @@
 
 Nov 7, 2026 — gate 1 built: P1–P5 with Admin P1–P7 in the one build order (impl-admin §1, stage 1), each phase reviewed
 by a fresh agent and merged in waves with the full suites after each; the gate's suites are under P5. Next: stage 2
-(P6–P10). Nov 7, 2026 — plan, before Insights starts. P0 partly done: F1–F25 found while writing it, from the code as Commerce,
+(P6–P10).
+Nov 7, 2026 — plan, before Insights starts. P0 partly done: F1–F25 found while writing it, from the code as Commerce,
 Customer Service and the framework's report engine left it (§6). Insights and Admin are the next two apps built, after
 Commerce, in one build order kept in [impl-admin.md](impl-admin.md) §1. The parts of design-insights that wait on
 People, Maintenance, Sales and Marketing, which are not built, are left out of this build (§4, §7). The plan's open
