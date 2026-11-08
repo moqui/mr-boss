@@ -27,6 +27,13 @@ const browser = (key, userId) => {
     })
     make("moqui.server.HttpSession", {sessionId: key + "_S", userId, visitId: key})
 }
+const sharedEmail = "shared.staff@ziziwork.example.com"
+const setEmail = emailAddress =>
+    system(() => {
+        const account = ec.entity.find("moqui.security.UserAccount").condition("userId", ids.sharedUserId).one()
+        account.set("emailAddress", emailAddress)
+        account.update()
+    })
 
 spec({
     setupSpec() {
@@ -41,10 +48,13 @@ spec({
         browser(visits.retail, ids.retailUserId)
         browser(visits.other, ids.sharedUserId)
         browser(visits.own, ids.sharedUserId)
+        // a reset is mailed to the account's address, which the demo shared identity has none of (Identity.js refuses NO_EMAIL)
+        setEmail(sharedEmail)
     },
     cleanupSpec() {
         ec.message.clearErrors()
         login("john.doe")
+        setEmail(null)
         system(() => {
             ec.entity.find("moqui.security.UserAuthcFactor").condition("factorId", factorId).deleteAll()
             for (const key of Object.values(visits)) {
@@ -75,7 +85,10 @@ feature(
                     accountWide: true
                 }),
                 services: page("Users/UserDetail", {userId: ids.otherUserId}),
-                find: invoke(identity + "find#Users", {}).userList.map(row => row.userId)
+                // by username: an unfiltered find is a page of 50 of Retail's staff, by name
+                find: ["shared.staff", "commerce.manager", "commerce.services"].flatMap(text =>
+                    invoke(identity + "find#Users", {text}).userList.map(row => row.userId)
+                )
             }))
         },
         then({detail, reset, factor, revoke, services, find}) {
@@ -96,12 +109,19 @@ feature("a session the operator revokes is gone at once, and Commons Account sig
             page("Users/UserDetail/revokeSession", {userId: ids.retailUserId, sessionKey: visits.retail}, "html")
         )
         // shared.staff in Commons Account: its other browser (visits.other) signed out, never another user's
-        const commons = asUser(users.shared, () =>
-            ec.screen
+        // the setup's factor means shared.staff signs in with a second factor, not a password alone (asUser's login)
+        let commons
+        try {
+            ec.user.internalLoginUser(users.shared)
+            ec.artifactExecution.enableAuthz()
+            commons = ec.screen
                 .makeTest()
                 .rootScreen("component://mr-boss/screen/Commons.xml")
                 .render("Settings/Account/signOutSession", {sessionKey: visits.other}, "post")
-        )
+        } finally {
+            ec.message.clearErrors()
+            login("john.doe")
+        }
         return {revoked, commons}
     },
     then({revoked, commons}) {

@@ -1813,6 +1813,32 @@ Design §7 Organizations, OrganizationDetail and Constitution (its maps note wai
   phase wrote are not run (two were changed and run alone in review: AdminInvitationsUsable, InsightsHomeUsable with
   InsightsDatasetsUsable); `./moq accept mr-boss` is owed for them when asked.
 
+- **Acceptance (Nov 7, after gate 1):** `mail_capture_sends=true ./moq accept mr-boss` on master (branch `adm/accept`), the
+  first run of the acceptance tests the Admin and Insights phases wrote: server 517 features, 68 passed, 52 failed, 397
+  skipped, 105 setup or cleanup failures; client 172, 170 passed, 2 failed. The cascade: AdminGroupsWalk's last feature
+  gave john.doe a TOTP factor and set ADMIN's `requireAuthcFactor` and then signed in again with a password, which a
+  factor refuses, so its cleanup (also a password login first) never put them back and every later spec's
+  `login("john.doe")` failed with "a second factor is required"; the walk now signs in by `internalLoginUser` (as one who
+  passed the factor) and restores the factor state in a `finally` and in a cleanup that restores before it logs in. With
+  that, the rest were spec bugs, none a product bug but Insights F74: AdminGroupsWalk's second feature began with the
+  first's membership still current (ended tomorrow by design), so it now starts from none; AdminFoundationWalk took the
+  palette source's outright refusal for a failure (refused or no rows now both pass); AdminUsersUsable signed shared.staff
+  in by password after giving it a factor (now `internalLoginUser`), found its users in an unfiltered page of 50 by name
+  (now by username) and reset a demo identity with no email address (Identity.js NO_EMAIL; the spec gives it one and
+  takes it back); AppStructure's placeholder floor 39 to 30 (Admin's Home, Users, Settings, Data, Integrations and
+  Organizations, Insights' Home, Settings and FlowMap replaced); InsightsFoundationWalk read P1's Home empty text, which
+  P5 replaced, and found insights.admin's Report builder failing (F74, fixed); InsightsDashboardsUsable expected no
+  "No data" anywhere though P3 admitted the Commerce panels' datasets (now the orders panel alone, which says not
+  available), could not save its copy because the served demo leaves `mantle-sales-orders` waiting for review (F41: the
+  steward now admits it in the walk) and filled "Copy title" for "Title" (exact label). Two were time of day, not this
+  build: CustomerServiceAssignmentWalk's agents work on the team's weekday hours (CS P4), so on a Saturday evening neither
+  was in hours (the walk now gives them an around-the-clock calendar and puts them back), and CustomerServiceOrdersWalk
+  computed StockAtDate's day under two users' zones, a day apart after 18:00 Chicago (now once). ManufacturingScheduleWalk's
+  drag (the dialog still fading in when its buttons were counted) failed once and passed on both reruns, unchanged.
+  Fixed in mr-boss on `adm/accept` (one commit, "Admin and Insights acceptance: ..."). Final: server 517 of 517 passed,
+  client 172 of 172; the regression InsightsAccess and InsightsDashboards pass; `mail_capture_sends=true ./moq
+  test-apps` 3,394 server and 19 client features passed; `moqui lint --screens` flags nothing in Insights.
+
 ### P8 — Instance settings, localization and reference data
 
 Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.

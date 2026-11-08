@@ -300,6 +300,10 @@ feature("the copied screens, the dataset screens and the editors are refused to 
         }
         const opened = screenRefusal(users.admin, "ScheduledReports")
         if (opened !== "") problems.push(`the administrator is refused the copied ScheduledReports: ${opened}`)
+        // F74: the administrator reads no dataset, so Explore says so instead of Tools' log dataset and its refusal
+        const explore = asUser(users.admin, () => lib.page("ReportBuilder/Explore", {}, "html"))
+        if (explore.status !== 200 || explore.errors.length || !explore.output.includes("No dataset is admitted for you to read"))
+            problems.push(`the administrator's Explore: ${explore.status} ${explore.errors.join(" | ")}`)
         // P3: the dataset list the author's, DatasetDetail the steward's, the administrator refused both (F20's raw entity
         // transitions are gone with the copied builder)
         const authorList = screenRefusal(users.author, "ReportBuilder/Datasets")

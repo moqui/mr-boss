@@ -178,22 +178,24 @@ feature("InventoryAvailability of a product whose projection is not ready says u
 feature("StockAtDate answers the quantity at a past cut-off for ZIRET_WH; another organization's facility is refused", {
     when() {
         const service = "ironstone.customerservice.AvailabilityServices.get#StockAtDate"
+        // the day once, in the spec's own zone: in the evening the agent's zone may already be on the next day
+        const asOfDate = dayBefore()
         const report = asUser(users.agent, () =>
-            invoke(service, {asOfDate: dayBefore(), facilityId: "ZIRET_WH", productId: ids.filterProductId})
+            invoke(service, {asOfDate, facilityId: "ZIRET_WH", productId: ids.filterProductId})
         )
-        const outside = asUser(users.agent, () => refusal(service, {asOfDate: dayBefore(), facilityId: "ZIRET_NOT_SERVING"}))
+        const outside = asUser(users.agent, () => refusal(service, {asOfDate, facilityId: "ZIRET_NOT_SERVING"}))
         const places = html(users.agent, "Availability/StockAtDate/Places", {
-            asOfDate: dayBefore(),
+            asOfDate,
             facilityId: "ZIRET_WH",
             productId: ids.filterProductId
         })
         const filterRow = Array.from(report.stockRows || []).find(
             row => row.facilityId === "ZIRET_WH" && row.productId === ids.filterProductId
         )
-        return {report, filterRow, outside, places}
+        return {asOfDate, report, filterRow, outside, places}
     },
-    then({report, filterRow, outside, places}) {
-        report.asOfDay == dayBefore()
+    then({asOfDate, report, filterRow, outside, places}) {
+        report.asOfDay == asOfDate
         filterRow != null
         filterRow.closingText != ""
         outside.includes("FACILITY_UNAVAILABLE")
