@@ -785,7 +785,7 @@ Source research for this plan does not advance live coverage to inspected or exe
 | PR-01 — Workday navigation | exercised | primary paths exercised: manager/member Home, counter→find, Code palette, Today, app drawer and Assist; personal progress corrected to2done/9open; provider/deleted-source and additional geometry variants unverified | pr01-home-progress-after.jpg; pr01-palette-assist.txt; pr01-today-projects.txt; PR-UI-003,035 |
 | PR-02 — Create/clone/template | exercised | primary paths exercised: quick create/duplicate recovery, all wizard steps and draft resume, clone/template reuse and subproject context persisted; phone wizard remains deferred with constrained variants | pr02-wizard-review-after.jpg; planning-tui-results.json; PR-UI-002 |
 | PR-03 — Health/team/lifecycle | exercised | primary paths exercised: health/description, role add/end and separate-member revocation, lifecycle throughClosed/Re-open, empty deletion and readable status output; nonempty delete control absent, stale-edit variants unverified | planning-tui-primary-completion.txt; pr03-status-report.jpg; PR-UI-013,014,022 |
-| PR-04 — Docs/files/conversation | exercised | named continuations observed: database/Git save/history/review, actual revision/download bytes, two-staff mention→notification→same project and follow/reload/unfollow; rich-editor pending/failed-save variants unverified | pr04-db-docs-history.jpg; pr04-git-docs-history.jpg; pr04-mention-recipient.jpg; pr04-mention-return.txt |
+| PR-04 — Docs/files/conversation | exercised | named continuations observed: database save/history/review, Git save/history/publication and fetched revision, actual download bytes, two-staff mention→notification→same project and follow/reload/unfollow; rich-editor pending/failed-save variants unverified | pr04-db-docs-history.jpg; pr04-git-docs-history.jpg; pr04-mention-recipient.jpg; pr04-mention-return.txt |
 | PR-05 — Work views/find | exercised | primary paths exercised: find/sort/saved columns, views, assignee board grouping, peek→full→Back, bulk cancel/apply, subtree move/restore and cycle refusal; CSV/XLSX and global/fixed reset corrected; forced pagination/hidden-descendant variants unverified | planning-export-live.json; pr05-board-peek.jpg; pr05-peek-full-back.txt; PR-UI-019,031,033 |
 | PR-06 — Work item delivery | exercised | primary paths exercised: facts/type, assignment, labels, sub-item/relation, recurrence, clone/move/request conversion and Commons same-ID read; Owner remains displayed separately from editable Assignee; other boundary refusals unverified | pr06-edited-facts.jpg; pr25-commons-task-continuity.txt; planning-tui-primary-completion.txt |
 | PR-07 — Sprint | exercised | named capacity continuation observed; rank/edit/start/scope history/complete/carry-over and printable report persisted; actual browser drag and keyboard move both persisted/restored; extra optimistic-refusal/narrow-chart variants unverified | pr07-browser-drag-after.jpg; pr07-sprint-report.jpg; planning-tui-primary-completion.txt; SprintWalk |
@@ -804,7 +804,7 @@ Source research for this plan does not advance live coverage to inspected or exe
 | PR-20 — Budget/estimate/rates | exercised | named client continuation observed: budget/order, estimate refusal/reason/revision/approval, captured mail and inspected HTML; rate add/edit/Which/end and payroll70→71→70 versus manager-hidden pay paired; extra overlap/stale-decision variants unverified | time-terminal-results.md; pr20-estimate-document.jpg; financial-estimate-capture.json; PR-UI-016; BillingWalk |
 | PR-21 — Invoice work | exercised | primary paths exercised: manual-rate invoice100102187.50/source100104/unbilled0, approval/send/client read, current PDF and immutable-file presence; milestone100153250/captured PDF/order links; legacy multi/no-schedule date fallback and extra cancel/expense variants unverified | pr21-calendar-date-after.jpg; pr21-invoice-pdf-current.png; financial-milestone-invoice-capture.json; PR-UI-017,024,025; BillingWalk; MilestoneBillingWalk |
 | PR-22 — Reports | exercised | primary paths exercised: all7 reports, scope/grouping/drill-through and reconciled totals, actual CSV/XLSX contents and supported print delegation; additional graphical/zero-denominator/failed-export variants unverified | time-terminal-results.md; time-tui-debug-session.txt; PR-UI-011,020 |
-| PR-23 — Settings | exercised | primary paths exercised: Code inheritance/override, templates, type/icon, workflow-name consumer, label merge, Time policy/work types and Intake category selector; repeated browser rows retain identity; originals restored; Projects request-category consumer absent by design | code-settings-final.json; pr23-label-dialog.jpg; pr23-time-policy-restored.txt; PR-UI-030,036 |
+| PR-23 — Settings | exercised | primary paths exercised: Code inheritance/override, templates, type/icon, workflow-name consumer, label merge, Time policy/work types and Intake category selector; repeated browser rows retain identity; static browser Offer/Stop corrected and originals restored; Projects request-category consumer absent by design | code-settings-final.json; pr23-label-dialog.jpg; pr037-time-restored.jpg; PR-UI-030,036,037 |
 | PR-24 — Restricted client | exercised | primary paths exercised: client file listing/direct bytes protected, ACME Hours1.5h without people/pay/comments, cross-client/internal-Time refusal, estimate/Sent invoice decisions, shared read-only repository then direct refusal after restoringN; further client request variants unverified | pr-ui-001-client-after.jpg; pr24-client-hours.jpg; pr24-client-code-readonly.jpg; pr24-client-code-revoked.txt; PR-UI-001 |
 | PR-25 — Access/integration | exercised | primary boundary samples exercised: narrow roles/otherorg/revoked member, Commons same-task handoff, internal-only/client-only Hours pair, real embedded terminal keyboard in both themes, Standard notices and outputs, Manufacturing shared move; real zoom deferred by user and other unsampled variants unverified | pr25-commons-task-continuity.jpg; pr25-internal-client-hours-refused.txt; pr25-embedded-terminal-light.jpg; ProjectsServerStatic; ProjectsTui |
 
@@ -864,6 +864,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-035 / observed / P2 | PR-01: personal progress | Projects Home, manager browser | Header My open9 disagreed with progress5done/17open; direct aggregation included nonproject/ended or otherwise out-of-context assignments | pr01-home-progress-before/after.txt; WorkProjectHub before/after | Mantle Home counters and BOSS context | Count recent Complete/Closed work on the same current/visible/non-template project assignment base, consume both counters in BOSS | Owner7/7 and consumer3/3; actual header9/progress2done9open after restart; unavailable counters keep progress absent |
 
 | PR-UI-036 / observed / P2 | PR-23/24: saved flags | Material project Client access, then Time policy | Checking repository sharing from initialN showed Settings saved but revertedN; merged form model retained non-optionN alongside selectedY | code-shared-tui-checks.txt; pr24-client-code-readonly.jpg; pr23-time-policy-restored.txt | Framework QVT generator | Filter initial check arrays to actual option keys, matching existing standalone/static renderers | Exact generator1/1 and mounted form1/1 pass; actual sharingN→Y/reload/read-onlyclientrepo→N/directdenial, second TimepolicyY→N→Y and validweekdaymulti preserved; framework8c558b44 |
+
+| PR-UI-037 / observed / P2 | PR-23: static work-type actions | Material Settings/Time, John ADMIN, light1920×1080 | Every Offer/Stop offering action was disabled although other authorized controls and native terminal actions worked; nested section links lacked row availability keys | pr23-time-policy-before.txt; pr037-focused-results.md; pr037-time-consumer.jpg; pr037-time-restored.jpg | Framework server-static row projection | Traverse supported containers and action-free sections with native conditions and original assembled identities; preserve denied rows and fail-closed unsupported action scopes | Existing exact control failed before, then statics38/38 and core Clippy pass; actual General Office Offer→reload9→QuickTime choice→Stop→reload8; sibling merged WorkItemTypes Research→QuickCreate→restore6 passes; framework89391fd2; final full gates pending |
 
 ### Static leads
 
@@ -1297,10 +1299,10 @@ same ID/type/project, John Owner and Joe Assignee. Owner has no offered edit con
 Actual sprint print reconciled committed1h/added2h/completed0h/carried3h across2items; both standalone and project-fixed grouped time
 print retained Joe/Oct12–18/2.5h.
 
-**Final verification started.** Source corrections are locally committed in their owning repositories. The final
-maximal release build passed in4m48s; cargo lint and cargo lint-min passed. Only then the deferred full gates began: application
-451specs/4workers, followed by framework and the required full webroot acceptance. Results remain pending here until
-the processes finish. No regression budget has been raised.
+**Final verification started (pre-PR-UI-037 snapshot).** Source corrections through PR-UI-036 were locally committed
+in their owning repositories. The maximal release build passed in4m48s; cargo lint and cargo lint-min passed. Only
+then the deferred full gates began: application451specs/4workers, followed by framework and the required full webroot
+acceptance. Completed results and the later renderer followup are recorded below. No regression budget has been raised.
 
 **Cleanup checkpoint.** The isolated review HTTP/SSH/SMTP and webhook listeners are stopped. A temporary maintenance
 component (inside the real owned runtime component directory, never through a source symlink) ended27 active issued
@@ -1313,13 +1315,13 @@ is back in light mode, board preferences and viewport override are reset. The di
 redacted ignored evidence remain available for inspection. No push was performed.
 
 
-**Application final gate — passed.** `CARGO_BUILD_JOBS=4 ./moq test-apps --nobuild` completed successfully on
-the final release binary. Server3420/3420 features across451specs passed with zero skipped in221.16s wall. Serial
+**Application gate — passed, pre-PR-UI-037 snapshot.** `CARGO_BUILD_JOBS=4 ./moq test-apps --nobuild` completed successfully on
+that release binary. Server3420/3420 features across451specs passed with zero skipped in221.16s wall. Serial
 feature time: Mantle388.2/393s, BOSS234.9/264s, Marble0.1/5s and PASS15.6/20s. Client30/30 features across16specs
 passed with zero skipped in140.36s including served fixtures. BOSS client65.1s exceeds its57s target but remains
 within the existing1.5× gate tolerance (85.5s); the runner reported an advisory and exited0. No budget was raised,
-and no duplicate journey was added to eliminate the warning. Framework verification and webroot acceptance remain
-running/pending; application success does not substitute for them.
+and no duplicate journey was added to eliminate the warning. This run predates PR-UI-037; final gates will be repeated
+on the rebuilt release containing that correction.
 
 Local source commits before this evidence-only checkpoint (oldest first; no pushes):
 
@@ -1328,3 +1330,30 @@ Local source commits before this evidence-only checkpoint (oldest first; no push
 - BOSS: `6d566f29`, `aa72afd9`, `3cfdc273`, `d0952cde`, `05f1fce7`, `2ea31374`, `54006f92`, `6d100070`, `a98780db`, `5bc1663c`, `1cc74657`, `8ff471bd`, `3118b5f2`, `902eeb87`, `eb2d5450`, `43dd06d7`, `8c2d1dda`, `e94ba9cb`, `55abe0e4`.
 
 - Mantle: `df7c770e`, `0a4e1a4d`, `2c6a26e0`, `06141ca9`, `ffddc349`, `25fcdaa2`.
+
+**Final-gate correction — generated expectations.** The initial framework gate failed exactly two Core tests:
+`golden_tui` and `the_qvt_fixture_screens_become_templates_that_compile`. Their expected outputs had not been updated
+with the already-tested PR-UI-026 metadata slot and PR-UI-036 checkbox fixture. Independent inspection confirmed
+only eight indentation-only generated blank lines in three TUI outputs and the three authored checkbox models/widgets
+in the static fields fixture. Commit `3979b0d6` synchronizes those four generated expectations; both exact test
+families pass without UPDATE_GOLDEN. No production behavior, assertions or budgets changed in this correction.
+The initial framework run otherwise passed shell orchestration, server420/420, demo10/10, offline webroot418/418,
+offline dev-aide48/48 and served149/149 features. Its failed Cargo gate remains recorded as failed, not relabeled.
+
+**Requested acceptance — passed.** All eleven named Projects specs passed,63/63 features with zero skips:
+SprintWalk5, TimelineWalk8, ReleaseWalk6, RequestWalk6, CodeReviewWalk6, TimeWalk6, ResourceWalk4, BillingWalk6,
+MilestoneBillingWalk8, ProjectsServerStatic and ProjectsTui8 combined. Their retained JUnit is indexed in
+`final-acceptance-index.json`. The final release support repeat passed8/8 in44.81s. The required full webroot
+acceptance, following the earlier ThemeLayout acceptance change, passed3/3 in5.50s. No BOSS acceptance spec changed.
+
+**Batch 24 — static nested-row availability.** Final browser audit exposed PR-UI-037 after the initial full gates
+had started: Time settings' authorized Offer/Stop controls remained disabled in server-static QVT while their native
+terminal equivalents worked. Framework `89391fd2` projects controls through supported containers and action-free
+sections, preserving assembled ancestry, native conditions, denied rows and transition authority. Sections needing
+new action scopes, nested forms and iterations remain fail-closed. Coordinator and time/billing peer independently
+reviewed the correction. The existing exact feature failed before on its missing template key, then all38 existing
+statics tests passed; core Clippy and the debug build passed. Actual General Office Offer→reload9→QuickTime choice
+and Stop→reload8 pass. Sibling merged WorkItemTypes Research→QuickCreate choice→restore6 also passes; this is a
+separate merged-renderer consumer, not a claim of a second affected static screen. Both original configurations were
+restored, all remaining browser tabs closed, and the restarted review listeners stopped. No new TUI keys were created.
+A second incremental maximal release build and both full regression gates are pending for this final source revision.
