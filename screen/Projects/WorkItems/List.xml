@@ -525,8 +525,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <default-field title="Est."><display format="#,##0.##"/></default-field></field>
                 <field name="remainingWorkTime" align="right"><header-field title="Rem." show-order-by="true"/>
                     <default-field title="Rem."><display format="#,##0.##"/></default-field></field>
-                <field name="actualWorkTime" align="right" hide="clientUser"><header-field title="${clientUser ? '' : 'Act.'}" show-order-by="true"/>
-                    <default-field title="${clientUser ? '' : 'Act.'}"><display format="#,##0.##"/></default-field></field>
+                <field name="actualWorkTime" align="right" hide="clientUser"><header-field title="${clientUser ? '' : ec.l10n.localize('Act')}" show-order-by="true"/>
+                    <default-field title="${clientUser ? '' : ec.l10n.localize('Act')}"><display format="#,##0.##"/></default-field></field>
                 <!-- the roll-ups of the tree (its branch totals), and the time changed -->
                 <field name="totalEstimatedText" align="right"><default-field title="Total est."><display/></default-field></field>
                 <field name="totalRemainingText" align="right"><default-field title="Total rem."><display/></default-field></field>

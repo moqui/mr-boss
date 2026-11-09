@@ -133,7 +133,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <container-dialog id="EditFacilityDialog"
                                     button-text="Edit facility"
-                                    title="Edit ${facility.facilityName}"
+                                    title="${ec.l10n.localize('Edit')} ${facility.facilityName}"
                                     icon="sym_o_edit"
                                     width="760"
                                     type="primary"

@@ -143,7 +143,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container-dialog id="EditMethod_${paymentMethodId}"
                                     button-text="Edit"
                                     icon="sym_o_edit"
-                                    title="Edit ${description || paymentMethodId}">
+                                    title="${ec.l10n.localize('Edit')} ${description || paymentMethodId}">
                                 <form-single name="EditMethod" transition="save" extends="NewMethod">
                                     <field name="paymentMethodId" from="paymentMethodId">
                                         <default-field>

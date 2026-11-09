@@ -135,7 +135,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container-dialog id="EditAccountDialog"
                                         button-text="Edit account"
                                         icon="sym_o_edit"
-                                        title="Edit ${accountName}">
+                                        title="${ec.l10n.localize('Edit')} ${accountName}">
                                     <form-single name="AccountHeader" transition="save" map="record">
                                         <field name="recordId" from="recordId">
                                             <default-field>

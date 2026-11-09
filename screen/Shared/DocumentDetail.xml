@@ -107,7 +107,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                             <section name="EditDocument" condition="canEdit">
                                 <widgets>
-                                    <container-dialog id="EditDocumentDialog" button-text="Edit document" type="primary" icon="sym_o_edit" title="Edit ${document.filename || 'document'}" width="960">
+                                    <container-dialog id="EditDocumentDialog" button-text="Edit document" type="primary" icon="sym_o_edit" title="${ec.l10n.localize('Edit')} ${document.filename || 'document'}" width="960">
                                         <form-single name="ProductContentMetadata" transition="save" map="documentForm">
                                             <field name="recordKind">
                                                 <default-field>

@@ -291,7 +291,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container-dialog id="EditDraftDialog"
                                         button-text="Edit draft"
                                         icon="sym_o_edit"
-                                        title="Edit ${entryName}"
+                                        title="${ec.l10n.localize('Edit')} ${entryName}"
                                         condition="isDraft">
                                     <form-single name="DraftHeader" transition="save" map="record">
                                         <field name="recordId" from="recordId">

@@ -207,7 +207,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                     <container style="col-12 col-md m-record-title">
                         <container style="row items-center q-gutter-x-sm">
-                            <label text="Order ${orderId}" type="h5"/>
+                            <label text="${ec.l10n.localize('Order')} ${orderId}" type="h5"/>
                             <label text="${ord.customerName}" type="span" style="text-subtitle1 m-muted"/>
                         </container>
                         <label text="${ord.estimateText}" type="div" style="text-caption m-muted" condition="ord.estimateText"/>
@@ -276,7 +276,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
                     <field name="description"><default-field title="Description">
                         <label text="${description}" type="div"/>
-                        <label text="${projectText ? 'Project: ' + projectText : ''}" type="div" style="text-caption m-muted" condition="projectText"/>
+                        <label text="${projectText ? ec.l10n.localize('Project') + ': ' + projectText : ''}" type="div" style="text-caption m-muted" condition="projectText"/>
                         <label text="${sharedText}${billedText ? ' · ' + billedText : ''}" type="div" style="text-caption m-muted" condition="sharedText"/></default-field></field>
                     <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
                     <field name="unitText" align="right"><default-field title="Price"><label text="${unitText}" type="span" style="text-no-wrap"/></default-field></field>

@@ -229,7 +229,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                             <label type="p" text="The notes as saved are published, or a draft from the done work items when none are saved." style="text-caption m-muted"/>
                         </container-dialog>
-                        <container-dialog id="ReleaseEditDialog" button-text="Edit" icon="sym_o_edit" width="520" title="Edit ${release.workEffortName}" condition="canUpdate">
+                        <container-dialog id="ReleaseEditDialog" button-text="Edit" icon="sym_o_edit" width="520" title="${ec.l10n.localize('Edit')} ${release.workEffortName}" condition="canUpdate">
                             <form-single name="ReleaseForm" transition="savePlanItem" focus-field="workEffortName">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="workEffortName" from="release.workEffortName"><default-field title="Version"><text-line size="20"/></default-field></field>

@@ -74,7 +74,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <section-iterate name="ServiceHeldOrders" list="customerDetail.heldOrders" entry="heldOrder">
                                     <widgets>
-                                        <link url="${heldOrder.url}" url-type="plain" text="Order ${heldOrder.orderId}"
+                                        <link url="${heldOrder.url}" url-type="plain" text="${ec.l10n.localize('Order')} ${heldOrder.orderId}"
                                                 link-type="anchor"/>
                                     </widgets>
                                 </section-iterate>
