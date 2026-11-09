@@ -820,6 +820,7 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-004 / mounted reproduction / P2 | PR-07: completion summary and quick-add | Backlog; real mounted component with deferred responses | An older sprint summary replaced a newly opened dialog; successful quick-add erased a newer title | planning-before-sprint-summary / quick-add evidence; ProjectsPlanningResponses | BOSS Projects | Bind replies to their original dialog/visit and acknowledge only submitted text | Focused regressions pass, including leave/return and unmount; live drag/browser variants remain |
 | PR-UI-005 / mounted reproduction / P2 | PR-08: dependencies; shared Manufacturing timeline | Timeline and ProductionSchedule resource mode | Late replies closed/replaced newer dialogs; later move/override edits were discarded; dependency drag retained window handlers after unmount | planning-before-dependency-drag evidence; ProjectsPlanningResponses | BOSS shared timeline | Bind replies to dialog/input/visit, invalidate old previews, rotate consumed operation keys and remove drag handlers on teardown | Focused actual-component checks cover Projects and Manufacturing preview/apply/override compatibility; live Manufacturing retest remains |
 | PR-UI-006 / source-confirmed content / P2 | PR-12: public intake confirmation | RequestIntake success panel | Always promised an email/reply path despite disabled confirmation or no intake account | source/contract comparison; RequestWalk | BOSS public intake | Say replies are possible if an email is received, without promising delivery | Server RequestWalk passes; public browser/local-mail variants remain |
+| PR-UI-007 / mounted reproduction / P2 | PR-14: review threads/drafts and restricted read state | MergeRequestDetail/Changes; mounted deferred-response fixture, browser dark 1920×1080 | Acknowledgment erased newer drafts or navigated a replacement MR; open read-only view falsely said merged/closed; line comment action was unavailable by keyboard | ProjectsDiffState; pr14-diff-keyboard-dark.jpg | BOSS Code | Capture MR/view/lifecycle and submitted text; retain newer drafts; use actual open state; expose named line-comment actions on focus | Focused test passes; actual Tab → named action → Enter → typed comment persisted, shown in Unified and Side by side |
 
 ### Static leads
 
@@ -922,6 +923,21 @@ preview/apply/override paths were exercised in the mounted fixture; an actual Ma
 still owed. No wire shapes, routes or service parameters changed. Full gates remain pending until the end.
 
 Batch 1 committed in BOSS as `6d566f29` (Protect client request files and repair project entry flows).
+
+**Batch 3 — merge-request response ownership and keyboard review.** The code/settings worker corrected the actual
+Changes component and added offline **regression** `ProjectsDiffState`; the time/resources worker independently
+reviewed it with no blockers. Baseline reproduced newer-comment loss and false read-only wording. Final **2/2
+pass**, zero skips, 1.6 s feature time; positive unchanged acknowledgments and canceled-review behavior are included
+so suppressing all responses cannot pass. Existing authorized `CodeReviewWalk` passed **6/6**, zero skips, on an
+independent database; it proves service/transition outcomes, not transport or visual interaction.
+
+The actual remote terminal created disposable repository `review-code-tui` linked to IRON and MR `100051`; a tiny
+local fixture pushed main and review-code-feature over real loopback Git HTTP as Joe. Coordinator then opened the
+same MR in the browser in dark mode, compared one-file/one-commit counts with displayed old/new content, tabbed from
+Viewed to the visible named line-comment action, pressed Enter, typed and posted a comment, and saw the saved thread
+in Unified and Side by side. Terminal reply/decision/merge continuation remains explicit. Repository browsing and
+download TUI defects are separate findings under investigation, not covered by this correction. No service/API or
+route changes. Full gates remain pending until the end. Batch 2 committed as `aa72afd9`.
 
 ### Completion
 

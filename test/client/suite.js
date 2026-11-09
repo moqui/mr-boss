@@ -2,6 +2,7 @@
 suite(
     [
         "ProjectsPlanningResponses",
+        "ProjectsDiffState",
         "AccountingReceivablesWalk",
         "ProductsWalk",
         "WarehouseReceivingWalk",

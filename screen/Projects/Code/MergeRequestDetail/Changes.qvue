@@ -43,7 +43,7 @@ along with this software (see the LICENSE.md file). If not, see
             <q-btn-toggle v-model="layout" dense no-caps unelevated toggle-color="primary" size="sm" class="m-btn-tonal"
                     :options="[{label: t('Unified'), value: 'unified'}, {label: t('Side by side'), value: 'split'}]"></q-btn-toggle>
             <q-btn v-if="changes.canReview" unelevated no-caps color="primary" icon="sym_o_rate_review" :label="t('Submit review')" @click="openReview"></q-btn>
-            <q-chip v-else dense square class="m-tonal text-grey-8">{{t('Read only: merged or closed')}}</q-chip>
+            <q-chip v-else dense square class="m-tonal text-grey-8">{{changes.isOpen ? t('Read only') : t('Read only: merged or closed')}}</q-chip>
         </div>
 
         <div class="row no-wrap items-start">
@@ -70,7 +70,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <div v-if="!changes.fileList.length" class="q-pa-lg text-center m-muted">{{t('No changes: the source has nothing the target lacks.')}}</div>
                 <q-card v-for="file in files" :key="file.path" flat bordered class="q-mb-md" :id="fileDomId(file.path)">
                     <div class="row items-center no-wrap q-px-sm q-py-xs" :class="dark ? 'bg-grey-9' : 'bg-grey-2'" style="position: sticky; top: 50px; z-index: 2">
-                        <q-btn flat dense round size="sm" :icon="collapsed[file.path] ? 'sym_o_chevron_right' : 'sym_o_expand_more'" @click="toggleCollapsed(file.path)"></q-btn>
+                        <q-btn flat dense round size="sm" :icon="collapsed[file.path] ? 'sym_o_chevron_right' : 'sym_o_expand_more'"
+                                :aria-label="(collapsed[file.path] ? t('Expand') : t('Collapse')) + ' ' + file.path" :aria-expanded="!collapsed[file.path]" @click="toggleCollapsed(file.path)"></q-btn>
                         <span class="text-mono text-weight-medium ellipsis col" :title="file.path">{{file.oldPath && file.oldPath !== file.path ? file.oldPath + ' → ' : ''}}{{file.path}}</span>
                         <q-chip dense square class="q-my-none m-tonal text-grey-8">{{file.changeLabel}}</q-chip>
                         <span class="text-caption text-positive q-mx-xs">+{{file.insertions}}</span><span class="text-caption text-negative q-mr-sm">−{{file.deletions}}</span>
@@ -120,8 +121,9 @@ along with this software (see the LICENSE.md file). If not, see
                                         <tr v-else-if="row.kind === 'line' && layout === 'unified'" :class="lineClass(row.line)" @mouseenter="hoverKey = file.path + row.lineKey" @mouseleave="hoverKey = null">
                                             <td class="ln">{{row.line.oldNo != null ? row.line.oldNo : ''}}</td>
                                             <td class="ln" style="position: relative">
-                                                <q-btn v-if="changes.canComment && (touch || hoverKey === file.path + row.lineKey)" round unelevated dense size="xs" color="primary" icon="add"
-                                                        style="position: absolute; left: -10px; top: 0" :aria-label="t('Comment on this line')" @click="startComment(file, row.line)"></q-btn>
+                                                <q-btn v-if="changes.canComment" round unelevated dense size="xs" color="primary" icon="add"
+                                                        :style="commentStyle(file.path + row.lineKey)" :aria-label="t('Comment on this line')"
+                                                        @focus="focusKey = file.path + row.lineKey" @blur="focusKey = null" @click="startComment(file, row.line)"></q-btn>
                                                 {{row.line.newNo != null ? row.line.newNo : ''}}</td>
                                             <td class="sign">{{row.line.tag === 'insert' ? '+' : row.line.tag === 'delete' ? '−' : ' '}}</td>
                                             <td class="code">{{row.line.text}}</td>
@@ -129,14 +131,16 @@ along with this software (see the LICENSE.md file). If not, see
                                         <!-- a pair of lines, side by side -->
                                         <tr v-else-if="row.kind === 'line'" @mouseenter="hoverKey = file.path + row.key" @mouseleave="hoverKey = null">
                                             <td class="ln" :style="Object.assign({position: 'relative'}, sideStyle(row.left))">
-                                                <q-btn v-if="row.left && changes.canComment && (touch || hoverKey === file.path + row.key)" round unelevated dense size="xs" color="primary" icon="add"
-                                                        style="position: absolute; left: -10px; top: 0" :aria-label="t('Comment on this line')" @click="startComment(file, row.left)"></q-btn>
+                                                <q-btn v-if="row.left && changes.canComment" round unelevated dense size="xs" color="primary" icon="add"
+                                                        :style="commentStyle(file.path + row.key)" :aria-label="t('Comment on this line')"
+                                                        @focus="focusKey = file.path + row.key" @blur="focusKey = null" @click="startComment(file, row.left)"></q-btn>
                                                 {{row.left && row.left.oldNo != null ? row.left.oldNo : ''}}</td>
                                             <td class="sign" :style="sideStyle(row.left)">{{row.left && row.left.tag === 'delete' ? '−' : ' '}}</td>
                                             <td class="code" :style="Object.assign({width: '50%'}, sideStyle(row.left))">{{row.left ? row.left.text : ''}}</td>
                                             <td class="ln" :style="Object.assign({position: 'relative'}, sideStyle(row.right))">
-                                                <q-btn v-if="row.right && row.right !== row.left && changes.canComment && (touch || hoverKey === file.path + row.key)" round unelevated dense size="xs" color="primary" icon="add"
-                                                        style="position: absolute; left: -10px; top: 0" :aria-label="t('Comment on this line')" @click="startComment(file, row.right)"></q-btn>
+                                                <q-btn v-if="row.right && row.right !== row.left && changes.canComment" round unelevated dense size="xs" color="primary" icon="add"
+                                                        :style="commentStyle(file.path + row.key)" :aria-label="t('Comment on this line')"
+                                                        @focus="focusKey = file.path + row.key" @blur="focusKey = null" @click="startComment(file, row.right)"></q-btn>
                                                 {{row.right && row.right.newNo != null ? row.right.newNo : ''}}</td>
                                             <td class="sign" :style="sideStyle(row.right)">{{row.right && row.right.tag === 'insert' ? '+' : ' '}}</td>
                                             <td class="code" :style="Object.assign({width: '50%'}, sideStyle(row.right))">{{row.right ? row.right.text : ''}}</td>
@@ -212,7 +216,8 @@ module.exports = {
     name: 'BossMergeRequestChanges',
     data() {
         return {
-            loading: false, notFound: false, changes: null, seq: 0, layout: 'unified', viewed: {}, collapsed: {}, expanded: {}, hoverKey: null,
+            loading: false, notFound: false, changes: null, seq: 0, contextSeq: 0, disposed: false,
+            layout: 'unified', viewed: {}, collapsed: {}, expanded: {}, hoverKey: null, focusKey: null,
             composer: { key: null, path: null, oldLine: null, newLine: null, lineText: '', body: '' }, replyTo: null, replyBody: '', busy: false,
             review: { open: false, decision: 'comment', note: '', busy: false }, selectedPath: null, reviewAsked: false
         };
@@ -226,6 +231,7 @@ module.exports = {
         screenPath() { return this.$root.basePath + '/' + (this.cIndex >= 0 ? this.pathList.slice(0, this.cIndex + 1) : ['Projects', 'Code', 'MergeRequestDetail', 'Changes']).join('/'); },
         params() { return this.$root.currentParameters || {}; },
         mergeRequestId() { return this.params.mergeRequestId || null; },
+        contextKey() { return this.screenPath + '\n' + (this.mergeRequestId || ''); },
         storeKey() { return this.changes ? 'boss.mr.viewed.' + this.changes.mergeRequestId + '.' + (this.changes.headCommitId || '') : null; },
         decisionOptions() {
             const options = [{ label: this.t('Comment: feedback without a decision'), value: 'comment' }];
@@ -309,25 +315,37 @@ module.exports = {
     },
     watch: {
         layout(value) { try { localStorage.setItem('boss.mr.layout', value); } catch (err) { /* private mode */ } },
-        mergeRequestId() { this.load(); }
+        contextKey() {
+            this.contextSeq++;
+            this.changes = null; this.notFound = false; this.loading = false;
+            this.viewed = {}; this.collapsed = {}; this.expanded = {}; this.hoverKey = null; this.focusKey = null;
+            this.composer = { key: null, path: null, oldLine: null, newLine: null, lineText: '', body: '' };
+            this.replyTo = null; this.replyBody = ''; this.busy = false;
+            this.review = { open: false, decision: 'comment', note: '', busy: false };
+            this.selectedPath = null; this.reviewAsked = false;
+            this.load();
+        }
     },
     methods: {
         t(text) { return moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text; },
-        url(name) { return this.screenPath + '/' + name; },
-        request(name, params, method) {
-            return moqui.request(this.url(name), { method: method || 'GET', params: Object.assign({ mergeRequestId: this.mergeRequestId }, params || {}) }).then((result) => {
+        context() { return { key: this.contextKey, seq: this.contextSeq, path: this.screenPath, mergeRequestId: this.mergeRequestId }; },
+        isCurrent(context) { return !this.disposed && context.key === this.contextKey && context.seq === this.contextSeq; },
+        request(name, params, method, context) {
+            return moqui.request(context.path + '/' + name, { method: method || 'GET', params: Object.assign({}, params || {}, { mergeRequestId: context.mergeRequestId }) }).then((result) => {
+                if (!this.isCurrent(context)) return null;
                 const json = result.json || {};
                 if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos);
                 return json;
-            }, (err) => { moqui.handleAjaxError(err); throw err; });
+            }, (err) => { if (this.isCurrent(context)) moqui.handleAjaxError(err); throw err; });
         },
-        post(name, params) { return this.request(name, params, 'POST'); },
+        post(name, params, context) { return this.request(name, params, 'POST', context); },
         load() {
-            if (!this.mergeRequestId) { this.notFound = true; return; }
             const seq = ++this.seq;
+            const context = this.context();
+            if (!context.mergeRequestId) { this.loading = false; this.changes = null; this.notFound = true; return; }
             this.loading = true;
-            return moqui.request(this.url('changes'), { params: { mergeRequestId: this.mergeRequestId } }).then((result) => {
-                if (seq !== this.seq) return;
+            return moqui.request(context.path + '/changes', { params: { mergeRequestId: context.mergeRequestId } }).then((result) => {
+                if (seq !== this.seq || !this.isCurrent(context)) return;
                 const changes = (result.json || {}).changes;
                 this.loading = false;
                 if (!changes) { this.notFound = true; this.changes = null; return; }
@@ -335,7 +353,7 @@ module.exports = {
                 this.changes = changes;
                 this.readViewed();
                 if (!this.reviewAsked && String(this.params.review) === 'true' && changes.canReview) { this.reviewAsked = true; this.openReview(); }
-            }, () => { if (seq !== this.seq) return; this.loading = false; this.notFound = true; });
+            }, () => { if (seq !== this.seq || !this.isCurrent(context)) return; this.loading = false; this.changes = null; this.notFound = true; });
         },
         readViewed() {
             let map = {};
@@ -371,6 +389,7 @@ module.exports = {
         sideStyle(line) { return !line ? { background: 'rgba(127, 127, 127, .08)' } : line.tag === 'insert' ? { background: 'rgba(40, 167, 69, .12)' }
             : line.tag === 'delete' ? { background: 'rgba(220, 53, 69, .12)' } : {}; },
         threadClass(thread) { return (this.dark ? 'bg-grey-9' : 'bg-blue-grey-1') + (thread.resolved ? ' m-muted' : ''); },
+        commentStyle(key) { return { position: 'absolute', left: '-10px', top: 0, opacity: this.touch || this.hoverKey === key || this.focusKey === key ? 1 : 0 }; },
         composerOn(file, row) { return this.composer.key && this.composer.path === file.path && row.keys.includes(this.composer.key); },
         startComment(file, line) {
             this.replyTo = null;
@@ -381,14 +400,19 @@ module.exports = {
         sendComment() {
             const body = String(this.composer.body || '').trim();
             if (!body || this.busy) return;
+            const context = this.context();
+            const draft = this.composer;
+            const snapshot = Object.assign({}, draft);
             this.busy = true;
-            this.post('comment', { body, path: this.composer.path, oldLine: this.composer.oldLine == null ? '' : this.composer.oldLine,
-                newLine: this.composer.newLine == null ? '' : this.composer.newLine, lineText: this.composer.lineText }).then((json) => {
+            this.post('comment', { body, path: snapshot.path, oldLine: snapshot.oldLine == null ? '' : snapshot.oldLine,
+                newLine: snapshot.newLine == null ? '' : snapshot.newLine, lineText: snapshot.lineText }, context).then((json) => {
+                if (!this.isCurrent(context)) return;
                 this.busy = false;
                 if (!json.communicationEventId) return;
-                this.composer = { key: null, path: null, oldLine: null, newLine: null, lineText: '', body: '' };
+                if (this.composer === draft && Object.keys(snapshot).every((key) => this.composer[key] === snapshot[key]))
+                    this.composer = { key: null, path: null, oldLine: null, newLine: null, lineText: '', body: '' };
                 this.load();
-            }, () => { this.busy = false; });
+            }, () => { if (this.isCurrent(context)) this.busy = false; });
         },
         startReply(thread) {
             this.composer.key = null;
@@ -399,18 +423,22 @@ module.exports = {
         sendReply(thread) {
             const body = String(this.replyBody || '').trim();
             if (!body || this.busy) return;
+            const context = this.context();
+            const replyTo = this.replyTo;
+            const snapshot = this.replyBody;
             this.busy = true;
-            this.post('comment', { body, parentCommEventId: thread.communicationEventId }).then((json) => {
+            this.post('comment', { body, parentCommEventId: thread.communicationEventId }, context).then((json) => {
+                if (!this.isCurrent(context)) return;
                 this.busy = false;
                 if (!json.communicationEventId) return;
-                this.replyTo = null;
-                this.replyBody = '';
+                if (this.replyTo === replyTo && this.replyBody === snapshot) { this.replyTo = null; this.replyBody = ''; }
                 this.load();
-            }, () => { this.busy = false; });
+            }, () => { if (this.isCurrent(context)) this.busy = false; });
         },
         resolve(thread, resolved) {
-            this.post('resolveThread', { communicationEventId: thread.communicationEventId, resolved: resolved ? 'true' : 'false' }).then((json) => {
-                if (json.resolved == null) return;
+            const context = this.context();
+            this.post('resolveThread', { communicationEventId: thread.communicationEventId, resolved: resolved ? 'true' : 'false' }, context).then((json) => {
+                if (!this.isCurrent(context) || json.resolved == null) return;
                 thread.resolved = resolved;
                 if (resolved) this.expanded = Object.assign({}, this.expanded, { [thread.communicationEventId]: false });
             }, () => {});
@@ -421,14 +449,20 @@ module.exports = {
         },
         submitReview() {
             if (this.review.busy) return;
-            this.review.busy = true;
-            this.post('submitReview', { decision: this.review.decision, note: this.review.note || '' }).then((json) => {
-                this.review.busy = false;
-                if (!json.statusId) return;
-                this.review.open = false;
+            const context = this.context();
+            const draft = this.review;
+            const decision = draft.decision;
+            const note = draft.note;
+            draft.busy = true;
+            this.post('submitReview', { decision, note: note || '' }, context).then((json) => {
+                if (!this.isCurrent(context) || this.review !== draft) return;
+                draft.busy = false;
+                if (!json.statusId || !draft.open) return;
+                if (draft.decision !== decision || draft.note !== note) return;
+                draft.open = false;
                 // the header's status and the reviewers change: show the merge request again
-                if (this.$root.setUrl) this.$root.setUrl(this.$root.linkBasePath + '/Projects/Code/MergeRequestDetail?' + moqui.objToSearch({ mergeRequestId: this.mergeRequestId }));
-            }, () => { this.review.busy = false; });
+                if (this.$root.setUrl) this.$root.setUrl(this.$root.linkBasePath + '/Projects/Code/MergeRequestDetail?' + moqui.objToSearch({ mergeRequestId: context.mergeRequestId }));
+            }, () => { if (this.isCurrent(context) && this.review === draft) draft.busy = false; });
         },
         keyBindings() {
             const quiet = () => !this.review.open && !this.composer.key && !this.replyTo;
@@ -445,6 +479,6 @@ module.exports = {
         if (moqui.keymap && moqui.keymap.registerScope) this.keysOff = moqui.keymap.registerScope('mrChanges', this.keyBindings());
         this.load();
     },
-    beforeUnmount() { if (this.keysOff) this.keysOff(); }
+    beforeUnmount() { this.disposed = true; this.contextSeq++; this.seq++; if (this.keysOff) this.keysOff(); }
 };
 </script>
