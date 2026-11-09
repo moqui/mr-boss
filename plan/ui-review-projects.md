@@ -860,6 +860,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-035 / observed / P2 | PR-01: personal progress | Projects Home, manager browser | Header My open9 disagreed with progress5done/17open; direct aggregation included nonproject/ended or otherwise out-of-context assignments | pr01-home-progress-before/after.txt; WorkProjectHub before/after | Mantle Home counters and BOSS context | Count recent Complete/Closed work on the same current/visible/non-template project assignment base, consume both counters in BOSS | Owner7/7 and consumer3/3; actual header9/progress2done9open after restart; unavailable counters keep progress absent |
 
+| PR-UI-036 / observed / P2 | PR-23/24: saved flags | Material project Client access, then Time policy | Checking repository sharing from initialN showed Settings saved but revertedN; merged form model retained non-optionN alongside selectedY | code-shared-tui-checks.txt; pr24-client-code-readonly.jpg; pr23-time-policy-restored.txt | Framework QVT generator | Filter initial check arrays to actual option keys, matching existing standalone/static renderers | Exact generator1/1 and mounted form1/1 pass; actual sharingN→Y/reload/read-onlyclientrepo→N/directdenial, second TimepolicyY→N→Y and validweekdaymulti preserved; framework8c558b44 |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1256,3 +1258,22 @@ independently reviewed the four-file owner/consumer patch. Existing WorkProjectH
 ended/nonproject/hidden/template and old/future completion;7/7 pass. Existing Home renders assert the shared counter
 contract;3/3 pass. After the required normal service reload/restart, actual Home shows9open in both places and2recent
 done. Failed counters still leave progress absent and unrelated Home parts usable. Full gates pending at the end.
+
+
+**Batch 22 — save checkbox flags correctly.** Framework `8c558b44` removes initial values that are not options
+from merged QVT checkbox arrays, matching its existing standalone/static paths. Previously initialN plus selectedY
+submitted both values and a scalar flag savedN. Coordinator independently reviewed all five files, including only
+expected golden changes. Exact generator1/1 and mounted m-check/m-form feature1/1 pass; all-checked, validmulti,
+scalarY and unchecked absence are covered. Actual Material ACME sharing now savesY through reload; Sheldon reads
+acme-portal's README without administrative/write controls. RestoringN makes that same direct repository URL
+unavailable. A second Time-policy consumer savesY→N→Y through reload and preserves weekdays1–5; original values
+were restored. The full debug client spec had34functional passes but failed its15s budget at23.14s; no baseline
+cause or full-gate pass is claimed and no budget was raised. Final release gates will determine its disposition.
+
+**Batch 23 — the same reset contract in time and billing.** The WorkItems reset cause also reproduced in actual
+project Time and was identical in Invoices/Rates/Unbilled: omitted find keys are inherited by normal screen URLs.
+Four owning reset maps now explicitly empty active keys, preserving list, fixed project or Rates purpose. Coordinator
+review cleared the six-file followup; all assertions extend existing renders. Before controls failed as intended;
+TimeEntries7/7 and Billing6/6 pass together after correction. Actual project Time reset removes dates/person while
+retaining PRTIME01/listall; actual Invoice reset removes project/kind/date and restores4rows from the filtered2.
+Column/view preferences and shared URL behavior remain intact. Full suites remain pending until the final phase.

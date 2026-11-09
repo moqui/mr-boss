@@ -45,6 +45,11 @@ function errorOf(name, params) {
 const one = (entityName, fields) => sys(() => ec.entity.find(entityName).condition(fields).one())
 const dec = (value) => value == null ? null : String(toDecimal(value).setScale(2, "HALF_UP"))
 const entries = () => sys(() => Array.from(ec.entity.find("mantle.work.time.TimeEntry").condition("workEffortId", PROJECT).orderBy("fromDate").list()))
+const clearFindTarget = output => {
+    const href = output.match(/<m-link\b[^>]*href=["']([^"']+)["'][^>]*>Clear filters<\/m-link>/)?.[1]
+    return href == null ? null : Object.fromEntries((href.replace(/&amp;/g, "&").split("?")[1] || "").split("&").filter(Boolean)
+        .map(part => part.split("=").map(decodeURIComponent)))
+}
 
 spec({
     stepwise: true,
@@ -72,13 +77,16 @@ spec({
 feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header too; its draft invoice bills Joe's approved week, 40 h at 140 in a line, with the 10 entries behind it; Home's blocks", {
     when() {
         made.demoInvoiceId = sys(() => Array.from(ec.entity.find("mantle.work.effort.WorkEffortInvoice").condition("workEffortId", "SUPP").list())[0]?.invoiceId)
+        const invoice = one("mantle.account.invoice.Invoice", {invoiceId: made.demoInvoiceId})
+        const invoiceDay = ec.l10n.format(invoice.invoiceDate, "yyyy-MM-dd")
         return {
-            unbilled: render("apps/Projects/Billing/Unbilled", {}),
+            unbilled: render("apps/Projects/Billing/Unbilled", {rootWorkEffortId: "SUPP", clientPartyId: "BOSS_DEMO_BRIGHTWATER", list: "all"}),
             home: render("apps/Projects/Home", {}),
             header: sys(() => call("ironstone.projects.ProjectServices.get#ProjectHeader", { workEffortId: "SUPP" }).header),
-            invoices: render("apps/Projects/Billing/Invoices", {}),
+            invoices: render("apps/Projects/Billing/Invoices", {rootWorkEffortId: "SUPP", clientPartyId: "BOSS_DEMO_BRIGHTWATER", list: "drafts", kind: "client",
+                invoiceDate_period: "year", invoiceDate_poffset: "0", invoiceDate_pdate: invoiceDay, invoiceDate_from: invoiceDay, invoiceDate_thru: invoiceDay}),
             detail: render("apps/Projects/Billing/InvoiceDetail", { invoiceId: made.demoInvoiceId }),
-            invoice: one("mantle.account.invoice.Invoice", { invoiceId: made.demoInvoiceId }),
+            invoice,
             time: sys(() => call("mantle.account.InvoiceServices.get#InvoiceTimeDetail", { invoiceId: made.demoInvoiceId })),
             joeHome: as("joe.developer", () => render("apps/Projects/Home", {})),
             // the code demo's !1 (made only in a binary with git)
@@ -90,6 +98,8 @@ feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header t
         unbilled.status == 200 && !unbilled.broken
         unbilled.output.includes("IronStone support desk")
         unbilled.output.includes("Brightwater Dental Group")
+        const queueReset = clearFindTarget(unbilled.output)
+        queueReset?.list == "all" && !queueReset.rootWorkEffortId && !queueReset.clientPartyId
         home.status == 200 && !home.broken
         home.output.includes("Unbilled")
         // the manager charts with their tables (Reports)
@@ -103,6 +113,10 @@ feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header t
         /^\$[0-9,]+\.\d\d$/.test(header.unbilledText)
         invoices.output.includes(made.demoInvoiceId)
         invoices.output.includes("Drafts · ")
+        const invoiceReset = clearFindTarget(invoices.output)
+        const invoiceDateKeys = ["invoiceDate_period", "invoiceDate_poffset", "invoiceDate_pdate", "invoiceDate_from", "invoiceDate_thru"]
+        invoiceReset?.list == "drafts" && !invoiceReset.rootWorkEffortId && !invoiceReset.clientPartyId && !invoiceReset.kind
+        invoiceDateKeys.every(key => !invoiceReset[key])
         detail.status == 200 && !detail.broken
         detail.output.includes("$5,600.00")
         detail.output.includes("accounts@brightwater.example")
@@ -200,7 +214,8 @@ feature("a rate edited (amount and thru) and ended; ended rates are listed on as
         const afterEdit = one("mantle.humanres.rate.RateAmount", { rateAmountId: rate.rateAmountId })
         const ended = post("Billing/Rates/endRate", { rateAmountId: rate.rateAmountId })
         const list = render("apps/Projects/Billing/Rates", { rootWorkEffortId: PROJECT })
-        const withEnded = render("apps/Projects/Billing/Rates", { rootWorkEffortId: PROJECT, showEnded: "Y" })
+        const withEnded = render("apps/Projects/Billing/Rates", {rootWorkEffortId: PROJECT, showEnded: "Y", purpose: "RaprClient",
+            rateTypeEnumId: "RatpStandard", effectiveOn: "2027-07-10"})
         return { edited, afterEdit, ended, list, withEnded, endedRate: one("mantle.humanres.rate.RateAmount", { rateAmountId: rate.rateAmountId }) }
     },
     then({ edited, afterEdit, ended, list, withEnded, endedRate }) {
@@ -212,6 +227,8 @@ feature("a rate edited (amount and thru) and ended; ended rates are listed on as
         !list.output.includes("125.50")
         withEnded.output.includes("125.50")
         withEnded.output.includes("Ended")
+        const reset = clearFindTarget(withEnded.output)
+        reset?.purpose == "RaprClient" && !reset.rootWorkEffortId && !reset.showEnded && !reset.rateTypeEnumId && !reset.effectiveOn
     },
 })
 

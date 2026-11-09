@@ -90,6 +90,7 @@ along with this software (see the LICENSE.md file). If not, see
                 effectiveOn: effectiveOn || null, showEnded: showEnded === 'Y' ? 'Y' : null}
             Object.keys(find).forEach((key) => { if (find[key] == null) delete find[key] })
             filtered = Object.keys(find).length > 0
+            clearParams = Object.assign(Object.fromEntries(Object.keys(find).map((key) => [key, ''])), {purpose: purpose})
             purposeChips = [['RaprClient', 'Client billing', 'sym_o_request_quote'], ['RaprVendor', 'Worker pay', 'sym_o_badge']].map(([key, label, icon]) => ({key: key,
                 label: L(label) + ' · ' + (counts[key] ?? 0), icon: icon, on: key === purpose, params: Object.assign({}, find, {purpose: key})}))
             purposeLabel = purpose === 'RaprVendor' ? L('Worker pay') : L('Client billing')
@@ -200,7 +201,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </widgets></section-iterate>
             </container>
             <section name="ClearFilters" condition="filtered"><widgets>
-                <container style="q-mb-xs"><link url="." link-type="anchor" text="Clear filters" parameter-map="{purpose:purpose}"/></container>
+                <container style="q-mb-xs"><link url="." link-type="anchor" text="Clear filters" parameter-map="clearParams"/></container>
             </widgets></section>
 
             <container-box><box-header title="${purposeLabel} · ${rateRowsCount}"/><box-body-nopad>

@@ -91,6 +91,11 @@ const rowsOf = (who, parameters) =>
 const entry = id => sys(() => ec.entity.find("mantle.work.time.TimeEntry").condition("timeEntryId", id).one())
 const entryBy = comments =>
     sys(() => Array.from(ec.entity.find("mantle.work.time.TimeEntry").condition("comments", comments).list())[0])
+const clearFindTarget = output => {
+    const href = output.match(/<m-link\b[^>]*href=["']([^"']+)["'][^>]*>Clear filters<\/m-link>/)?.[1]
+    return href == null ? null : Object.fromEntries((href.replace(/&amp;/g, "&").split("?")[1] || "").split("&").filter(Boolean)
+        .map(part => part.split("=").map(decodeURIComponent)))
+}
 // the user's imports (an import id is the time it started, the spec's fixed clock here, and a random number)
 const importIds = userId =>
     sys(() =>
@@ -359,6 +364,8 @@ feature(
             const printHref = johnPage.output.match(/TeamTimesheet\?renderMode=html-print[^"' <>]*/)?.[0] || ""
             printHref.includes("entryDate_from=2027-01-11") && printHref.includes("entryDate_thru=2027-01-17") &&
                 printHref.includes("partyId=ORG_ZIZI_JD") && !printHref.includes("%7B%7D")
+            const reset = clearFindTarget(johnPage.output)
+            reset?.list == "all" && !reset.partyId && !reset.itemId && !reset.entryDate_from && !reset.entryDate_thru
             bobEdit.output.includes("not yours to change") && !bobEdit.output.includes("EntryForm")
         }
     }
@@ -543,7 +550,8 @@ feature(
     "ProjectDetail's Time tab renders the project's time with its totals; a work item's All time shows the time logged on it",
     {
         when() {
-            const tab = render("apps/Projects/Projects/ProjectDetail/Time", {workEffortId: PROJECT})
+            const tab = render("apps/Projects/Projects/ProjectDetail/Time", {workEffortId: PROJECT, list: "all", partyId: "ORG_ZIZI_JD",
+                entryDate_from: "2027-01-04", entryDate_thru: "2027-01-17"})
             const joeTab = as("joe.developer", () => render("apps/Projects/Projects/ProjectDetail/Time", {workEffortId: PROJECT}))
             const tui = render("apps/Projects/Projects/ProjectDetail/Time", {workEffortId: PROJECT}, "tui")
             const totals = sys(
@@ -584,6 +592,8 @@ feature(
             tab.status == 200 && !tab.broken && tab.errors == ""
             tab.output.includes("Time on the project") && tab.output.includes("By person") && tab.output.includes("Joe Developer")
             tab.output.includes("Imported ledger work") && tab.output.includes("Update rates")
+            const reset = clearFindTarget(tab.output)
+            reset?.workEffortId == PROJECT && reset.list == "all" && !reset.partyId && !reset.entryDate_from && !reset.entryDate_thru
             !joeTab.broken && joeTab.output.includes("Time on the project") && !joeTab.output.includes("Update rates")
             tui.status == 200 && tui.output.includes("Time on the project")
             // joe's 2 + 3 + 1.5 + 1.5 + the 1.5 h timer of the Friday, and bob's 1

@@ -66,6 +66,7 @@ along with this software (see the LICENSE.md file). If not, see
                 invoiceDate_from: ctx('invoiceDate_from'), invoiceDate_thru: ctx('invoiceDate_thru')}
             Object.keys(find).forEach((key) => { if (find[key] == null) delete find[key] })
             filtered = Object.keys(find).length > 0
+            clearParams = Object.assign(Object.fromEntries(Object.keys(find).map((key) => [key, ''])), {list: list})
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label) + (counts[key] == null ? '' : ' · ' + counts[key]), icon: icon, on: key === list,
                 params: Object.assign({}, find, {list: key})}))
             listLabel = L(lists.find((entry) => entry[0] === list)[1])
@@ -98,7 +99,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </widgets></section-iterate>
             </container>
             <section name="ClearFilters" condition="filtered"><widgets>
-                <container style="q-mb-xs"><link url="." link-type="anchor" text="Clear filters" parameter-map="{list:list}"/></container>
+                <container style="q-mb-xs"><link url="." link-type="anchor" text="Clear filters" parameter-map="clearParams"/></container>
             </widgets></section>
 
             <container-box><box-header title="${listLabel} · ${invoiceRowsCount}"/><box-body-nopad>

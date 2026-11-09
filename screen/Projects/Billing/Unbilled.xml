@@ -71,6 +71,7 @@ along with this software (see the LICENSE.md file). If not, see
             const find = {clientPartyId: clientPartyId || null, rootWorkEffortId: rootWorkEffortId || null}
             Object.keys(find).forEach((key) => { if (find[key] == null) delete find[key] })
             filtered = Object.keys(find).length > 0
+            clearParams = Object.assign(Object.fromEntries(Object.keys(find).map((key) => [key, ''])), {list: list})
             listChips = [['all', 'All unbilled', 'sym_o_request_quote'], ['ready', 'Ready to invoice', 'sym_o_task_alt'], ['milestones', 'Milestones due', 'sym_o_flag_check']].map(([key, label, icon]) => ({key: key,
                 label: L(label) + (key === 'milestones' ? ' · ' + Number(totals.milestoneDueCount || 0) : ''), icon: icon, on: key === list, params: Object.assign({}, find, {list: key})}))
             emptyText = filtered ? L('No unbilled time matches') : list === 'ready' ? L('No approved time waits to be invoiced') : L('All billable time is invoiced')
@@ -109,7 +110,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </widgets></section-iterate>
             </container>
             <section name="ClearFilters" condition="filtered"><widgets>
-                <container style="q-mb-xs"><link url="." link-type="anchor" text="Clear filters" parameter-map="{list:list}"/></container>
+                <container style="q-mb-xs"><link url="." link-type="anchor" text="Clear filters" parameter-map="clearParams"/></container>
             </widgets></section>
 
             <section name="MilestonesDue" condition="list == 'milestones'"><widgets>

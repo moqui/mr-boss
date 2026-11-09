@@ -143,7 +143,8 @@ along with this software (see the LICENSE.md file). If not, see
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label), icon: icon, on: key === list,
                 params: Object.assign({}, find, {list: key}, projectFixed ? {workEffortId: fixedProjectId} : {})}))
             listLabel = L(lists.find((entry) => entry[0] === list)[1])
-            clearParams = Object.assign({list: list}, projectFixed ? {workEffortId: fixedProjectId} : {})
+            clearParams = Object.assign(Object.fromEntries(Object.keys(find).map((key) => [key, ''])),
+                {list: list, pageIndex: '', formListFindId: ''}, projectFixed ? {workEffortId: fixedProjectId} : {})
             personOptions = ec.service.sync().name('ironstone.projects.TimeServices.get#TimePeople').parameters({partyId: partyId || null}).call()?.personOptions || []
             workTypeOptions = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').call()?.typeList || [])
                     .map((type) => ({key: type.enumId, text: type.label}))
