@@ -236,6 +236,9 @@ along with this software (see the LICENSE.md file). If not, see
                 due_pdate: ctx('due_pdate'), due_from: ctx('due_from'), due_thru: ctx('due_thru')}
             Object.keys(find).forEach((key) => { if (find[key] == null) delete find[key] })
             filtered = Object.keys(find).some((key) => key !== 'orderByField')
+            // A screen URL inherits its declared parameters; empty values explicitly remove this find from the reset link.
+            clearFindParams = Object.assign(Object.fromEntries(Object.keys(find).map((key) => [key, ''])),
+                {list: list, pageIndex: '', formListFindId: ''}, projectFixed ? {rootWorkEffortId: rootWorkEffortId} : {})
             const keepMap = Object.assign({list: list}, find, workItemRowsPageIndex ? {pageIndex: String(workItemRowsPageIndex)} : {})
             keepJson = JSON.stringify(keepMap)
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label) + ' · ' + (counts[key] || 0), icon: icon, on: key === list,
@@ -301,7 +304,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <section name="KeyMatch" condition="keyMatch"><widgets>
                     <link url="workItemDetail" link-type="anchor-button" btn-type="primary" text="Open ${keyMatch}" icon="sym_o_open_in_new" parameter-map="{workEffortId:keyMatch}"/>
                 </widgets></section>
-                <link url="." link-type="anchor" text="Clear filters" parameter-map="{list:list}"/>
+                <link url="." link-type="anchor" text="Clear filters" parameter-map="clearFindParams"/>
             </container>
         </widgets></section>
 
@@ -570,7 +573,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="q-pa-sm">
                     <label type="p" text="${emptyText}" style="m-muted q-mb-xs"/>
                     <section name="NoWorkItemsClear" condition="filtered"><widgets>
-                        <link url="." link-type="anchor" text="Clear filters" parameter-map="{list:list}"/>
+                        <link url="." link-type="anchor" text="Clear filters" parameter-map="clearFindParams"/>
                     </widgets></section>
                 </container>
             </widgets></section>

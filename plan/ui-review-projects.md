@@ -856,6 +856,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-032 / observed / P2 | PR-18/19: recent person time | PersonDetail/Time, narrow manager | Last four weeks included future Nov10/11/16 entries because the rolling query had no upper bound | time-tui-final-window-retest.txt | BOSS Person Time | Retain lower bound and end at the next viewer-local day boundary | Existing Resources4/4, DST-safe today/future controls; actual total28.52h/12rows→23.27h/8rows, current/historical kept and future days excluded after F5 |
 
+| PR-UI-033 / observed / P2 | PR-05: no-match recovery | WorkItems global/project-fixed, browser and terminal | Both Clear filters links inherited the active text/project filter and kept zero results | pr05-clear-filters-before/global-after/fixed-after.txt | BOSS WorkItems | Explicitly empty active find, page and saved-find URL parameters while preserving smart list and fixed project | Existing WorkItems10/10; actual global reset47rows and fixed PRPLAN02 reset5rows, correct context retained |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1232,3 +1234,13 @@ DST-safe test fixture; the same existing Person Time render uses today's final s
 control, with no extra render. Resources failed before then passed4/4. Actual narrow-manager Joe Time fell from
 28.52h/12rows to23.27h/8rows: current-day0.02 and historical0.25 remained, Nov10/11/16 entries disappeared, and F5
 retained the result. No entries were rewritten. Full suites remain pending.
+
+
+**Batch 20 — effective no-match reset.** Actual browser and native Clear filters kept the same no-match text.
+Shared URL construction intentionally inherits declared destination parameters, so the owning WorkItems reset now
+explicitly empties active find/page/saved-find values and retains the smart list and fixed project context. Null is
+not used because the existing URL API ignores it. Coordinator independently reviewed the two-file patch. The two
+existing global/fixed QVT renders reproduce the failure and pass10/10 after correction, with no new QVT render.
+Actual browser global reset drops text/project and restores47matching rows; embedded PRPLAN02 reset drops text and
+retains only its fixed project/list, restoring5matching rows. Shared URL semantics and unrelated consumers are intact.
+Full suites remain pending at the final phase.

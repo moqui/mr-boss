@@ -199,7 +199,8 @@ feature("the list renders in qvt with the chips and counts, the four views, the 
         const exported = {status: csv.status, errors: csv.errorMessages.join(" | "), output: String(csv.output || "")}
         ec.message.clearErrors()
         sys(() => call("update#mantle.work.effort.WorkEffort", {workEffortId: exportId, statusId: "WeCancelled"}))
-        return { list: render("apps/Projects/WorkItems", {}), project: render("apps/Projects/WorkItems", { rootWorkEffortId: "IRON", list: "all" }),
+        return { list: render("apps/Projects/WorkItems", {text: "IRON-3"}),
+            project: render("apps/Projects/Projects/ProjectDetail/WorkItems", {workEffortId: "IRON", text: "IRON-10", list: "all"}),
             joe: as("joe.developer", () => render("apps/Projects/WorkItems", { list: "all" })),
             menu: ec.screen.makeTest().rootScreen(webroot).render("menuData/apps/Projects/WorkItems", {}, null).output, exported }
     },
@@ -222,6 +223,16 @@ feature("the list renders in qvt with the chips and counts, the four views, the 
         list.output.includes("Move to project")
         project.output.includes("IRON-10")
         !project.output.includes("ACME-1")
+        // Clear the find in both existing renders; the embedded list keeps only its fixed project context.
+        const clearTargets = (output) => Array.from(output.matchAll(/<m-link\b[^>]*href=["']([^"']+)["'][^>]*>Clear filters<\/m-link>/g), (match) =>
+            Object.fromEntries((match[1].replace(/&amp;/g, "&").split("?")[1] || "").split("&").filter(Boolean)
+                .map((part) => part.split("=").map(decodeURIComponent))))
+        const globalClear = clearTargets(list.output)
+        const fixedClear = clearTargets(project.output)
+        globalClear.length > 0
+        fixedClear.length > 0
+        globalClear.every((parameters) => parameters.list == "open" && !parameters.text && !parameters.rootWorkEffortId)
+        fixedClear.every((parameters) => parameters.list == "all" && parameters.workEffortId == "IRON" && parameters.rootWorkEffortId == "IRON" && !parameters.text)
         joe.status == 200
         !joe.output.includes("HIRE-1")
         // the seeded saved finds of the Projects groups
