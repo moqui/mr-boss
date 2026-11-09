@@ -33,8 +33,8 @@ coverage or transfer its execution permissions.
   [crosscut design](design-crosscut.md) and [Commons design](design-drawers-commons.md): archetypes, shared records,
   calendar, knowledge, Chatter, approvals, files and shell contracts.
 - Current `screen/Projects.xml`, `screen/Projects/`, mounted `screen/Shared/` and `screen/Commons/` screens,
-  `screen/RequestIntake.xml`, `MoquiConf.xml`, `data/BossSetupData.xml`, `data/BossUsersDemoData.xml`,
-  `data/BossProjectsDemoData*.xml` and `service/ironstone/projects/`: current mounts and capabilities take precedence
+  `screen/RequestIntake.xml` and its `.qvue` / `.tui.json` templates, `MoquiConf.xml`, `data/BossSetupData.xml`,
+  `data/BossUsersDemoData.xml`, `data/BossProjectsDemoData*.xml` and `service/ironstone/projects/`: current mounts and capabilities take precedence
   over historical tables when deciding what can be exercised.
 - [Git hosting](../../../../docs/interfaces/Git-Hosting.md), [revision management](../../../../docs/data/Revision-Management.md)
   and the existing Projects specs: local code fixtures, resource storage, rule boundaries and available checks.
@@ -105,6 +105,7 @@ suite when execution is planned; a new fixture or automated walk must name its s
 | Two team members | `joe.developer` / `ORG_ZIZI_JD`, `bob.developer` / `ORG_ZIZI_BD`, `BOSS_PROJECT_TEAM`: assignment, code review, time and second-user observations |
 | Client manager and other client | `sheldon.acme` / `ORG_ACME_SA` on ACME, `gob.bluth` / `ORG_BLUTH_GOB` on BLUTH; `BOSS_PROJECT_CLIENT` without `BOSS_USERS`: positive shared access and cross-client refusal |
 | Limited internal roles | Prepare only missing fixtures: no-project staff, other-organization staff, narrow approver and project administrator (`BOSS_PROJECTS_ADMIN`); use ADMIN only for setup or an explicitly administrative action |
+| Git administrator | Separate `ADMIN` fixture for PR-13's mirror configuration/fetch, storage collect/check and repository export/import; use the developer/repository lead for ordinary operations and pair administrative success with non-admin refusal. `BOSS_PROJECTS_ADMIN` alone does not satisfy these checks |
 | Payroll-sensitive role | Narrow `PAYROLL_VIEW` / `PAYROLL_EDIT` fixture if worker pay is reviewed; `TIME_ENTRY_RATE` alone does not confer employee pay visibility. Pair the ordinary manager's restricted presentation with an authorized result |
 | Anonymous requester | Token-only session for `/r/<token>`, separate from every authenticated session; retain no live token in notes |
 
@@ -167,9 +168,9 @@ Missing SMTP/PDF/Git/SSH/browser capabilities remain explicit blocked or unverif
 IDs follow the waves. Establish permission pairs from the start, then complete the cross-route walk in Wave 7.
 Use database-backed Docs for PR-04's initial pass; revisit its Git-backed variant with Code in Wave 4 unless its
 prerequisites are established earlier. PR-09's tag/release continuation uses those Code fixtures; milestone billing and estimates continue in
-Wave 6, and client decisions in Wave 7. PR-07's capacity interpretation is revisited with PR-19. Keep those ledger
-rows partial until their continuations are observed. Do not collapse an upstream activity's remaining work into a
-later activity's pass.
+Wave 6, and client decisions in Wave 7. PR-07's capacity interpretation is revisited with PR-19. After initial execution,
+record those ledger rows with status `exercised`, outcome `partial`, and named outstanding continuations until those
+are observed. Do not collapse an upstream activity's remaining work into a later activity's pass.
 
 Each authorized batch follows observe → prioritize → refine → rerun affected activities → compare evidence → verify
 → update this record. Start with PR-01 and PR-02, establishing fixtures and measured browser/TUI baselines before
@@ -270,7 +271,8 @@ verify its actual resolved helper URL in the running app rather than inferring r
 | `PD/Requests` | `Projects/Requests/List.xml` | PR-11–12; project fixed and intake controls |
 | `PD/Docs`, `PD/KnowledgeTui` | `Commons/Knowledge.xml`, `Commons/KnowledgeTui.xml` | PR-04, 09; project space and linked pages |
 | `PD/Docs/Spaces`, `PD/Docs/SpaceDetail`, `PD/Docs/Review` | `Commons/Knowledge/Spaces.xml`, `Commons/Knowledge/SpaceDetail.xml`, `Commons/Knowledge/Review.xml` | PR-04; inherited children; inspect project return and actual access |
-| `PD/Time`, `PD/Time/EditEntry` | `Projects/Time/TimeEntries.xml`, `Projects/Time/TimeEntries/EditEntry.xml` | PR-16, 18; project fixed and inherited edit child |
+| `PD/Time`, `PD/Time/EditEntry` | `Projects/Time/TimeEntries.xml`, `Projects/Time/TimeEntries/EditEntry.xml` | PR-16, 18, 25; internal project-fixed time and inherited edit child; refused to clients |
+| `PD/ClientHours` | `Projects/Projects/ProjectDetail/ClientHours.xml` | PR-24–25; `BossSetupData.xml` supplies the `BOSS_PROJECT_CLIENT`-only Hours tab through `SubscreensItem`; distinct from internal Time, subject to project hours sharing |
 | `PD/Money/CreateInvoice` | `Projects/Billing/Unbilled/CreateInvoice.xml` | PR-21; selected project sources |
 | `Projects/Resources/PersonDetail/EditAllocation` | `Projects/Resources/Allocations/EditAllocation.xml` | PR-19; person context |
 | `Projects/Code/RepositoryDetail/MergeRequests` | `Projects/Code/MergeRequests.xml` | PR-14; repository fixed |
@@ -285,9 +287,11 @@ verify its actual resolved helper URL in the running app rather than inferring r
 | Project Calendar | `Commons/Calendar.qvue`; `Projects/Projects/ProjectDetail/Plan/CalendarTui.xml` read-only project-calendar twin | PR-08 | pending / — |
 | My time | `Projects/Time/MyTime.qvue`; `MyTimeTui.xml` supports entries, timer and decisions, not grid typing | PR-16–17 | pending / — |
 | Team planner | `Projects/Resources/TeamPlanner.qvue`; `TeamPlannerTui.xml` supports moves/decisions, with narrower request/staff controls | PR-19 | pending / — |
-| Merge request Changes | `Projects/Code/MergeRequestDetail/Changes.qvue`; `ChangesTui.xml` supports comment/resolve; full review and side-by-side differences separate | PR-14 | pending / — |
+| Merge request Changes | `Projects/Code/MergeRequestDetail/Changes.qvue`; `ChangesTui.xml` supports diff reading, comments, replies and resolve/reopen; browser-specific diff presentation separate | PR-14 | pending / — |
+| Merge request decisions | Parent `MergeRequestDetail.xml` supplies review/approve/request-changes, draft/ready, close/reopen and merge controls for browser and terminal inspection; template presence is not interaction evidence | PR-14 | pending / — |
 | Project Docs | `Commons/Knowledge.qvue` and hidden project `KnowledgeTui` mount; inspect save/history/review and browser delegation | PR-04, 09 | pending / — |
 | Both import progress screens | `Commons/Contacts/ImportProgress.qvue` and `.tui.json`; operation context and result/retry links | PR-10, 18 | pending / — |
+| Public request intake | `RequestIntake.qvue` is the submission form; `RequestIntake.tui.json` supplies a browser-delegation notice, not a terminal form | PR-12 | pending / — |
 | Project and work lists | Projects List status board/portfolio link; WorkItems List board groupings, due-date calendar, tree, quick-add, peek, selection and bulk controls | PR-01, 05–06 | pending / — |
 | Roadmap and Requests | Roadmap list/calendar; Requests list/status board and distinct staff/client create dialogs | PR-09, 11, 24 | pending / — |
 | Project creation and header | Wizard member/order/rate controls; Post update, Clone, Save as template; status confirmations | PR-02–03 | pending / — |
@@ -300,9 +304,10 @@ verify its actual resolved helper URL in the running app rather than inferring r
 | Reports and outputs | Chart/table/filter/drill-through; CSV/XLSX where offered; `StatusReport`, `EstimatePrint`, `SprintReport`, `TimesheetPrint`, `InvoicePrint` and report print views | PR-03, 07, 17, 20–22, 24 | pending / — |
 | Shell in Projects | Quick-create workItem/time/project, Code palette, record search, go-to keys, timer/review/time/request Today rows, approval and notification return, Assist context | PR-01, 06, 14, 16–17, 19, 25 | pending / — |
 
-There are five Projects-owned QVue files: Backlog, Timeline, MyTime, TeamPlanner and Changes. Calendar, Knowledge,
-import progress, Chatter and RecordFiles reuse existing components. Rich wrappers for Backlog, Timeline, Calendar,
-MyTime and TeamPlanner deliberately delegate plain qvt/html rendering to the browser component; distinguish that
+There are five QVue files under `screen/Projects/`: Backlog, Timeline, MyTime, TeamPlanner and Changes, plus the separate
+public intake component `screen/RequestIntake.qvue`. Calendar, Knowledge, import progress, Chatter and RecordFiles
+reuse existing components. Rich wrappers for Backlog, Timeline, Calendar, MyTime and TeamPlanner deliberately delegate
+plain qvt/html rendering to the browser component; distinguish that
 notice from the mounted Material experience and from supported terminal functionality.
 
 ### Design-to-code reconciliation
@@ -312,10 +317,10 @@ notice from the mounted Material experience and from supported terminal function
 | Separate Portfolio/Program, Board, phase, Budgets and Expenses routes | Design §2 deliberately uses Projects list/Timeline portfolio, WorkItems board, milestones with a start/gate, Money/Profitability and Money's expense summary. Expense capture is People's. Review those surfaces, not invented routes |
 | Project Docs, shared detail and progress routes | Current mounts reuse Commons Knowledge, Shared records and Commons import-progress templates; retain consuming-project context |
 | Project quick-create in a single QuickCreate screen | Root providers now send workItem/time to QuickCreate and project to QuickProject; review both |
-| RequestIntake called qvue in the design table | Current public screen is an XML widget form, with no companion QVue |
+| Public RequestIntake | XML wrapper serves `RequestIntake.qvue`; `RequestIntake.tui.json` delegates to the browser, and plain html/qvt shows a JavaScript-browser notice |
 | PASS Client portal and retirement of BOSS client mode | Planned impl-projects §9; current restricted BOSS client and `/r/<token>` remain review scope |
 | Historical terminal/read-only and “Later” notes | Several were superseded by P11 or later code. Current twins support the operations listed above; record genuine limitations per activity, not blanket parity or blanket absence |
-| Generic view-timeline, board WIP, timeline baselines, work-item custom fields, browser repository editing/code search, forks and vendor time-import presets | Deferred capabilities in impl-projects; no implementation obligation from this UI review |
+| Generic view-timeline, board WIP, timeline baselines, work-item custom fields, browser repository editing/repository-content search, forks and vendor time-import presets | Deferred capabilities in impl-projects; no implementation obligation from this review. Code palette repository/merge-request search is implemented and reviewed in PR-01 |
 
 ## 4. End-to-end activities
 
@@ -331,8 +336,8 @@ print/export output where offered. Unsupported variants remain explicit rather t
 
 - **Actor/start:** manager and team member with assigned work, review/approval items and saved finds; empty-work fixture.
 - **Objective/steps:** sign in → Projects Home → work/overdue/review/time/billing counters → filtered list → record →
-  Back; use palette record keys and Code search, Projects shortcuts, Today and notification links; open app drawer
-  and Assist beside the selected record.
+  Back; use palette record keys and Code palette repository/merge-request search, Projects shortcuts, Today and
+  notification links; open app drawer and Assist beside the selected record.
 - **Expected:** each role gets useful permitted work; counts, filters, record identity and current context agree;
   returning preserves the find; one failed source does not hide unrelated work.
 - **Recovery:** no matches, empty workday, deleted or inaccessible recent record, unavailable Code/Assist provider.
@@ -471,32 +476,44 @@ print/export output where offered. Unsupported variants remain explicit rather t
 
 - **Actor/start:** manager/triager and anonymous requester, disposable intake token, allowed file and local mail fixture.
 - **Objective/steps:** project intake and Settings/Intake → enable/configure → anonymous `/r/<token>` submit → inspect
-  confirmation → staff triage; separately deliver a local captured message through the configured intake rule and
-  follow its request/thread and explicitly sent reply. Do not assume resolution automatically sends the anonymous
-  requester a response. Rotate/revoke the disposable token and revisit it.
+  on-screen confirmation → staff triage; with an intake account and confirmation enabled, separately inspect the
+  captured confirmation email, then compare the disabled-confirmation case. Deliver a local message through the
+  configured intake rule and follow its request/thread and explicitly sent reply. Do not assume resolution
+  automatically sends the anonymous requester a response. Rotate and disable the disposable token and revisit it.
 - **Expected:** valid submission creates the intended request and permitted attachment once, public confirmation
-  exposes no internal data, and email routing/reply outcome is evidenced independently of configuration success.
-- **Recovery:** invalid/expired/revoked token, missing inputs, rejected file/type/size, rate limit/honeypot, unavailable
-  intake target and mail failure. Keep tokens, addresses and secrets out of retained evidence.
-- **Screens/modes:** Settings/Intake, project Requests intake controls, public RequestIntake, Shared/RequestDetail;
-  public browser light/dark/narrow/keyboard, staff TUI/Standard controls; no invented anonymous TUI flow.
+  exposes no internal data, and email confirmation/routing/reply outcomes are evidenced independently of configuration
+  success. A filled honeypot returns apparent success without creating a request; verify that no record was created.
+- **Recovery:** malformed/unknown, rotated or disabled token; unavailable project (missing, template, completed,
+  closed or cancelled); missing inputs, rejected file/type/size, rate limits and mail failure. Project
+  `WstIntakeToken` has no timed expiry; expiring queue capabilities belong to another workflow. With CAPTCHA enabled
+  and configured, check accepted/refused challenges and provider-load failure; leave unavailable provider cases
+  explicitly blocked/unverified without making external access a prerequisite for the local review. Keep tokens,
+  addresses and secrets out of retained evidence.
+- **Screens/modes:** Settings/Intake, project Requests intake controls, RequestIntake XML/QVue, Shared/RequestDetail;
+  public browser light/dark/narrow/keyboard, staff TUI/Standard controls; inspect the `RequestIntake.tui.json`
+  browser-delegation notice separately, with no anonymous terminal submission flow.
 
 ### PR-13 — Browse and maintain a project repository
 
-- **Actor/start:** developer and repository lead, verified local `iron`/`acme-portal` fixtures and disposable remote.
+- **Actor/start:** developer and repository lead, verified local `iron`/`acme-portal` fixtures and disposable remote;
+  separate Git administrator (`ADMIN`) for the administrative subcases.
 - **Objective/steps:** project Code → Repositories → RepositoryDetail Files/revision/path → raw file/archive → Commits
   and CommitDetail → Branches/Tags → compare → Activity; create/link/unlink a disposable repository, branch and tag;
-  inspect repository settings, mirror/storage/export/import and archive controls only where supported.
+  inspect repository settings/storage and archive/unarchive. As the Git administrator, configure/fetch a disposable
+  mirror and export/import a disposable repository through RepositoryDetail/Settings; verify non-admin refusal.
+  Storage collect/check actions also require `ADMIN`. Repository deletion belongs to Tools Git and is outside this review.
 - **Expected:** repository/project/revision context persists, downloaded content matches its revision, branch/tag and
   activity outcomes are real, and links back to work and release identify the same records.
 - **Recovery:** absent Git fixture, nonexistent revision/path, unavailable remote, denied branch/tag operation,
-  canceled archive/delete and revoked repository membership. Record unsupported capabilities explicitly.
+  canceled archive/unarchive, denied administrative operation and revoked repository membership. Record unavailable
+  capabilities explicitly.
 - **Screens/modes:** project Code, all RepositoryDetail children, Repositories, CommitDetail, Compare;
   browser/TUI/Standard, targeted narrow file tree and keyboard revision controls.
 
 ### PR-14 — Review and merge a change into delivered work
 
-- **Actor/start:** author and separate reviewer, disposable branch/commit, required-approval rule and controlled CI state.
+- **Actor/start:** author and separate reviewer, disposable branches/commits and merge requests for browser and terminal
+  mutations, required-approval rule and controlled CI state.
 - **Objective/steps:** work item Development → create branch → local fixture commit/push → Compare → create merge
   request → add reviewer → Overview/Commits/Changes → line comment/reply/resolve → submit review → merge → inspect
   target revision, linked work status and notification; continue PR-09's release/tag path.
@@ -505,12 +522,16 @@ print/export output where offered. Unsupported variants remain explicit rather t
 - **Recovery:** draft/close/reopen, changed-head invalidation, outdated thread, conflict, failed check, protected branch,
   stale diff load and canceled merge. A prepared fixture status is not proof of an external CI integration.
 - **Screens/modes:** Development, Compare, MergeRequests (global and repository mount), MergeRequestDetail and all
-  children, ChangesTui; browser and supported terminal comment/resolve operations, Standard exposed actions,
-  targeted keyboard diff navigation and zoom. Do not claim full terminal review parity.
+  children, ChangesTui; browser and Standard exposed actions, targeted keyboard diff navigation and zoom. In the
+  terminal, read the diff and comment/reply/resolve/reopen through ChangesTui; exercise the parent detail's review,
+  approve/request-changes, draft/ready, close/reopen and merge controls with the appropriate identities and disposable
+  records. Record actual outcomes separately from browser-specific side-by-side presentation; source availability
+  alone proves no terminal interaction.
 
 ### PR-15 — Manage Git access and repository controls
 
-- **Actor/start:** developer and narrow administrator/lead, disposable credential and local repository/remote.
+- **Actor/start:** developer and repository lead with the required repository rights, project manager for Settings/Code,
+  disposable credential and local repository/remote; keep PR-13's separate `ADMIN` fixture limited to its administrative subcases.
 - **Objective/steps:** Commons Account link → Projects GitAccess → add/remove SSH key and create/revoke token → return;
   verify permitted local clone/push where transport is available; edit disposable repository branch rule and webhook,
   inspect a controlled delivery and failure, then revoke access and repeat the denied operation.
@@ -626,8 +647,9 @@ print/export output where offered. Unsupported variants remain explicit rather t
 - **Actor/start:** Sheldon on ACME and Gob on BLUTH; shared/unshared work, outward/internal request files/messages,
   published/internal updates, approved/sent versus draft invoices and explicit Code/Hours sharing.
 - **Objective/steps:** client Home → own project/work/roadmap → request create/reply/file/cancel where permitted →
-  gate/estimate decision → sent invoice → shared repository and hours; follow an outward notification back to the
-  record. Manager changes sharing/membership; repeat read and direct resource request as the client.
+  gate/estimate decision → sent invoice → shared repository and the group-specific ClientHours (Hours) tab; follow an
+  outward notification back to the record. Manager changes sharing/membership; repeat read and direct resource request
+  as the client. Verify the internal Time tab and its EditEntry route are refused to the client.
 - **Expected:** only the client's shared part is returned, internal notes/files/rates/pay/person details stay absent,
   writes are limited to permitted client actions and cross-client access is refused. Verify attachment bytes and
   direct download authorization, not just the visible file list.
@@ -642,7 +664,8 @@ print/export output where offered. Unsupported variants remain explicit rather t
 - **Objective/steps:** pair allowed operations with forbidden records/roles through direct routes, palette/search,
   choices, drawers, shared panels, exports, print and files; revoke membership and retry; follow a Projects task,
   request, time approval and billing handoff through their existing consuming apps and back. Complete pending theme,
-  viewport, keyboard, TUI and Standard variants and retest affected shared consumers.
+  viewport, keyboard, TUI and Standard variants and retest affected shared consumers. Pair the client-only ClientHours
+  mount with internal Time access: internal users must not list/open ClientHours, and clients must not reach Time/EditEntry.
 - **Expected:** authority comes from services and record scope, not the entry path; all links identify the same work,
   stale sessions do not retain forbidden content and supported modes have actual outcomes.
 - **Recovery:** valid-parameter refusal, missing/deleted target, session/role change, stale response after navigation,
@@ -729,8 +752,10 @@ walk for Projects and place additional complete journeys, phone/access walks and
 
 **Pending** means not reviewed; **inspected** means source/render/visual inspection only; **exercised** means steps
 executed with an explicit pass/fail/partial result; **blocked** means a prerequisite prevents execution; **deferred**
-means deliberately postponed with a reason and follow-up. Exercised does not itself mean passed. Record recovery and
-mode gaps explicitly. Source research for this plan does not advance live coverage to inspected or exercised.
+means deliberately postponed with a reason and follow-up. Exercised does not itself mean passed. Use status
+`exercised` with outcome `partial` and named outstanding continuations for an activity partly executed. Blocked/deferred
+dispositions document unresolved coverage and never count as passed. Record recovery and mode gaps explicitly.
+Source research for this plan does not advance live coverage to inspected or exercised.
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
@@ -791,6 +816,12 @@ assert new runtime failures. Historical finding identifiers remain historical re
 inventory, shared mounts, activities, roles and verification map were prepared. No runtime was started, no browser
 or TUI activity executed, no tests run, and no product source changed. There are no review screenshots or pass claims.
 
+**Document review:** corrected the public intake templates and token/confirmation contract, terminal merge-review
+coverage, Git administrative roles, ClientHours mount, Code palette terminology and partial-coverage bookkeeping
+against current source. Rechecked document links, local inventory and activity references. This was a plan-only edit:
+no live UI finding IDs were allocated, no runtime was started or application tests run, and all live activity coverage
+remains pending.
+
 The proposed first execution batch is **PR-01 and PR-02**, plus setup/reproduction of the priority client-file lead.
 Record actual fixture identities/permissions and measured geometry, then use those fixtures in later waves. Keep a
 confirmed access defect ahead of visual refinements. A setup or reproduction attempt does not close PR-24.
@@ -807,9 +838,10 @@ For each later batch append:
 
 ### Completion
 
-Close an activity only with observed completion and relevant recovery outcomes, or an explicit blocked/deferred
-disposition. A render, source inspection or test pass alone does not prove usability. Close a wave when its mapped
-surfaces have outcomes, findings are corrected and retested or explicitly deferred, and checks required for the
+Mark an activity passed only with observed completion and relevant recovery outcomes. A blocked/deferred disposition
+may close its work for a bounded batch, but leaves coverage unresolved and never counts as passed. A render, source
+inspection or test pass alone does not prove usability. Close a wave when its mapped surfaces have outcomes,
+findings are corrected and retested or explicitly deferred, and checks required for the
 changes have passed. Report incomplete modes and prerequisites honestly; a bounded pass is not complete coverage
 of every possible role, device and integration.
 
@@ -819,7 +851,7 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
 
 ## 7. Decisions
 
-- **Planning boundary:** this task creates the review plan only. Execution, product corrections, commits and acceptance
+- **Planning boundary:** this task prepares and reviews the plan only. Execution, product corrections, commits and acceptance
   runs are not inferred from this file or from the previous review's permissions.
 - **Scope:** review current BOSS Projects, including Code, restricted clients and public request intake. No PASS Client
   migration, absent-feature implementation or full adjacent-app/desktop review.
@@ -828,7 +860,8 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
 - **Sequence:** seven waves and PR IDs follow delivery dependencies; first batch PR-01/02 establishes the baseline,
   with early client-file lead reproduction. Cross-wave gate/release/capacity continuations remain explicit.
 - **Status:** activity status lives only in §6; route/mode status in §3. Everything starts pending; existing tests and
-  the Commons review provide useful context, not a Projects pass.
+  the Commons review provide useful context, not a Projects pass. Partial execution is `exercised` with outcome
+  `partial` and named continuations; blocked/deferred coverage remains unresolved, never passed.
 - **Modes:** Material `/qapps` is the visual target. Standard gets brief functional or intentional fallback checks;
   terminal operations and limitations are inspected separately. Record actual viewport and zoom capability.
 - **Shared causes:** fix in the owning BOSS/Mantle/framework layer and retest a representative consumer; particularly
