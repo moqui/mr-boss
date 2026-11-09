@@ -153,12 +153,12 @@ along with this software (see the LICENSE.md file). If not, see
             <form-list name="TeamPlannerTuiPeople" list="personRows" skip-form="true" paginate="false">
                 <field name="name"><default-field title="Person"><link url="${url}" url-type="plain" text="${name}" link-type="anchor"/></default-field></field>
                 <field name="roleText"><default-field title="Role"><display/></default-field></field>
-                <field name="w0"><conditional-field condition="weekCount &gt; 0" title="${weekTitles[0]}"><display/></conditional-field><default-field><ignored/></default-field></field>
-                <field name="w1"><conditional-field condition="weekCount &gt; 1" title="${weekTitles[1]}"><display/></conditional-field><default-field><ignored/></default-field></field>
-                <field name="w2"><conditional-field condition="weekCount &gt; 2" title="${weekTitles[2]}"><display/></conditional-field><default-field><ignored/></default-field></field>
-                <field name="w3"><conditional-field condition="weekCount &gt; 3" title="${weekTitles[3]}"><display/></conditional-field><default-field><ignored/></default-field></field>
-                <field name="w4"><conditional-field condition="weekCount &gt; 4" title="${weekTitles[4]}"><display/></conditional-field><default-field><ignored/></default-field></field>
-                <field name="w5"><conditional-field condition="weekCount &gt; 5" title="${weekTitles[5]}"><display/></conditional-field><default-field><ignored/></default-field></field>
+                <field name="w0" hide="weekCount &lt; 1"><default-field title="${weekTitles[0]}"><display/></default-field></field>
+                <field name="w1" hide="weekCount &lt; 2"><default-field title="${weekTitles[1]}"><display/></default-field></field>
+                <field name="w2" hide="weekCount &lt; 3"><default-field title="${weekTitles[2]}"><display/></default-field></field>
+                <field name="w3" hide="weekCount &lt; 4"><default-field title="${weekTitles[3]}"><display/></default-field></field>
+                <field name="w4" hide="weekCount &lt; 5"><default-field title="${weekTitles[4]}"><display/></default-field></field>
+                <field name="w5" hide="weekCount &lt; 6"><default-field title="${weekTitles[5]}"><display/></default-field></field>
             </form-list>
             <label type="p" text="No one to plan" style="m-muted q-pa-sm q-mb-none" condition="!personRows.length"/>
         </box-body-nopad></container-box>

@@ -84,54 +84,80 @@ spec({
     },
 })
 
-feature("john.doe's team planner: Joe over-allocated this week on IRON, ACME and SUPP, Ana on her own hours, the placeholder to staff, and the plan to change", {
-    when() {
-        const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
-        const page = render("apps/Projects/Resources/TeamPlanner", {}, "qvue")
-        const plan = json("Resources/TeamPlanner/plan", { weeks: "8" }).json
-        const byProject = json("Resources/TeamPlanner/plan", { rootWorkEffortId: "ACME", weeks: "8" }).json
-        const bySkill = json("Resources/TeamPlanner/plan", { skillTypeEnumId: "BossSkUiDesign" }).json
-        const tui = render("apps/Projects/Resources/TeamPlannerTui", {})
-        return { today, page, plan, byProject, bySkill, tui }
-    },
-    then({ today, page, plan, byProject, bySkill, tui }) {
-        page.status == 200
-        page.output.includes("module.exports")
-        const planner = plan.planner
-        planner.fromDate == monday(today)
-        planner.weekList.length == 8
-        planner.canPlan == true
-        planner.canRequest == true
-        const joe = personOf(planner, "ORG_ZIZI_JD")
-        joe.weekList[0].allocated == 48
-        joe.weekList[0].over == true
-        joe.allocationList.length == 3
-        joe.allocationList.every((alloc) => alloc.canChange == true)
-        const ana = personOf(planner, "EX_PRJ_ANA")
-        ana.source == "available"
-        ana.weekList[0].base == 32
-        ana.weekList[0].allocated == 24
-        ana.weekList[0].over == false
-        ana.skillList[0].label == "UI design"
-        personOf(planner, "EX_JOHN_DOE").allocationList.some((alloc) => alloc.allocationPercent == 20)
-        // Bob's day of leave in week 3, and his requested hours on ACME
-        const bob = personOf(planner, "ORG_ZIZI_BD")
-        bob.weekList[3].leaveHours == 8
-        bob.weekList[3].requested == 8
-        planner.placeholderList.length == 1
-        planner.placeholderList[0].roleText == "UI Designer"
-        planner.placeholderList[0].statusId == "WealRequested"
-        planner.projectList.map((project) => project.workEffortId).sort().join(",") == "ACME,IRON,SUPP"
-        // the find: ACME's people (with those requested on it) and its placeholder; UI design: Ana and Bob
-        byProject.planner.personList.map((person) => person.partyId).sort().join(",") == "EX_JOHN_DOE,EX_PRJ_ANA,ORG_ZIZI_BD,ORG_ZIZI_JD"
-        byProject.planner.placeholderList.length == 1
-        bySkill.planner.personList.map((person) => person.partyId).sort().join(",") == "EX_PRJ_ANA,ORG_ZIZI_BD"
-        tui.status == 200
-        !tui.broken
-        tui.output.includes("Joe Developer")
-        tui.output.includes("48/40 !")
-    },
-})
+feature(
+    "john.doe's team planner: Joe over-allocated this week on IRON, ACME and SUPP, Ana on her own hours, the placeholder to staff, and the plan to change",
+    {
+        when() {
+            const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+            const page = render("apps/Projects/Resources/TeamPlanner", {}, "qvue")
+            const plan = json("Resources/TeamPlanner/plan", {weeks: "8"}).json
+            const byProject = json("Resources/TeamPlanner/plan", {rootWorkEffortId: "ACME", weeks: "8"}).json
+            const bySkill = json("Resources/TeamPlanner/plan", {skillTypeEnumId: "BossSkUiDesign"}).json
+            const tui = render("apps/Projects/Resources/TeamPlannerTui", {fromDate: plan.planner.fromDate, weeks: "2"}, "tui")
+            let people = null
+            const findPeople = value => {
+                if (!value || typeof value !== "object") return
+                if (String(value.id || "").endsWith("TeamPlannerTuiPeople") && Array.isArray(value.columns)) people = value
+                for (const entry of Object.values(value)) if (entry && typeof entry === "object") findPeople(entry)
+            }
+            findPeople(JSON.parse(tui.output))
+            const weekTitles = plan.planner.weekList
+                .slice(0, 2)
+                .map(week =>
+                    ec.l10n.format(ec.l10n.parseTimestamp(week.weekStart + " 12:00:00.000", "yyyy-MM-dd HH:mm:ss.SSS"), "MMM d")
+                )
+            return {today, page, plan, byProject, bySkill, tui, people, weekTitles}
+        },
+        then({today, page, plan, byProject, bySkill, tui, people, weekTitles}) {
+            page.status == 200
+            page.output.includes("module.exports")
+            const planner = plan.planner
+            planner.fromDate == monday(today)
+            planner.weekList.length == 8
+            planner.canPlan == true
+            planner.canRequest == true
+            const joe = personOf(planner, "ORG_ZIZI_JD")
+            joe.weekList[0].allocated == 48
+            joe.weekList[0].over == true
+            joe.allocationList.length == 3
+            joe.allocationList.every(alloc => alloc.canChange == true)
+            const ana = personOf(planner, "EX_PRJ_ANA")
+            ana.source == "available"
+            ana.weekList[0].base == 32
+            ana.weekList[0].allocated == 24
+            ana.weekList[0].over == false
+            ana.skillList[0].label == "UI design"
+            personOf(planner, "EX_JOHN_DOE").allocationList.some(alloc => alloc.allocationPercent == 20)
+            // Bob's day of leave in week 3, and his requested hours on ACME
+            const bob = personOf(planner, "ORG_ZIZI_BD")
+            bob.weekList[3].leaveHours == 8
+            bob.weekList[3].requested == 8
+            planner.placeholderList.length == 1
+            planner.placeholderList[0].roleText == "UI Designer"
+            planner.placeholderList[0].statusId == "WealRequested"
+            planner.projectList
+                .map(project => project.workEffortId)
+                .sort()
+                .join(",") == "ACME,IRON,SUPP"
+            // the find: ACME's people (with those requested on it) and its placeholder; UI design: Ana and Bob
+            byProject.planner.personList
+                .map(person => person.partyId)
+                .sort()
+                .join(",") == "EX_JOHN_DOE,EX_PRJ_ANA,ORG_ZIZI_BD,ORG_ZIZI_JD"
+            byProject.planner.placeholderList.length == 1
+            bySkill.planner.personList
+                .map(person => person.partyId)
+                .sort()
+                .join(",") == "EX_PRJ_ANA,ORG_ZIZI_BD"
+            tui.status == 200
+            !tui.broken
+            tui.output.includes("Joe Developer")
+            tui.output.includes("48/40 !")
+            people.columns.map(column => column.title) == ["Person", "Role"].concat(weekTitles)
+            people.rows.every(row => row.cells.length === 4)
+        }
+    }
+)
 
 feature("joe.developer sees the plan read only: no changes, no requests to decide, and a move refused", {
     when() {

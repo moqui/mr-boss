@@ -1139,3 +1139,10 @@ combined Billing checks7/7 passed. Actual browser and current downloaded one-pag
 invoice100102, with187.50 total and no employee pay. PDF rendering was visually inspected, with no clipping. The
 older immutable issued artifact was preserved. Fresh milestone100153 captured Invoice-100153.pdf locally; its
 no-schedule due fallback still includes time and is not claimed as canonical single-schedule coverage. Full gates pending.
+
+
+**Batch 12 — readable terminal staffing weeks.** TeamPlanner's field titles were authored only on conditional
+variants, so the terminal table displayed W0–W5 rather than actual dates. Titles now live on default fields and
+unused week columns are hidden. Coordinator and planning peer reviews cleared the two-file correction. The existing
+Resources render was extended in place, failed before and passed4/4 afterward; actual terminal two-week headers
+show their dates. No extra render journey or regression budget increase was added. Full gates pending.
