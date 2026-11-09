@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     service/ironstone/projects/PlanningServices.xml (the project's access: who sees it reads, its team plans, its managers turn sprints on).
     The terminal: BacklogTui beside this file, with Move and the sprint dialogs (impl-projects.md P11); dragging is the browser's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Backlog" default-menu-index="1" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_view_list" menu-image-type="icon">
+        default-menu-title="Backlog" default-menu-index="1" render-modes="vue,qvue,tui,html,qvt" server-static="vue,qvue" menu-image="sym_o_view_list" menu-image-type="icon">
 
     <parameter name="rootWorkEffortId"/>
 

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     linked to the project (WorkEffortRecord) for its team. The project is ProjectDetail's (projectTabId from its always-actions; one
     the user may not see is not available). The terminal: an agenda of the next weeks from the same service. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Calendar" default-menu-index="2" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_calendar_month" menu-image-type="icon">
+        default-menu-title="Calendar" default-menu-index="2" render-modes="vue,qvue,tui,html,qvt" server-static="vue,qvue" menu-image="sym_o_calendar_month" menu-image-type="icon">
 
     <parameter name="view"/>
     <parameter name="date"/>

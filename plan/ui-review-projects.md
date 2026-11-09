@@ -851,6 +851,9 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-031 / observed / P2 | PR-05: work exports | WorkItems CSV and XLSX, same saved find | Title/Status/Priority were blank in CSV; rich/editable cells did not yield clean scalar export values | planning-export-live.json; planning-tui-export-after.txt | BOSS WorkItems | Export-only scalar Type/Status/Priority/Due fields and explicit Title anchor; retain shared escaping and saved columns | Existing WorkItems10/10, quoted/comma title control and actual parsed five-row CSV/XLSX pass; export covers whole find, not selection |
 
+| PR-UI-030 / observed / P2 | PR-23: conditional settings actions | Remote terminal type and time-work-type rows | Sections inside table cells dropped Offer/Stop offering actions | code-tui-retest.json; core existing macro before/after | Framework ScreenTui/SRI | Capture the native section JSON value with its original guards/actions/fail and row context | Existing bounded two-row macro1/1 and actual Type/Time work-type consumers pass; choices appeared/disappeared and original settings restored; framework a90af8c3 |
+| PR-UI-034 / observed / P3 | PR-07/08/25: Standard fallback | Standard Backlog and project Calendar | Authored html/qvt delegation notices were unreachable because their render-mode whitelist returned404 | pr25-standard-backlog-after.txt; pr25-standard-calendar-after.txt | BOSS screen declarations | Allow the two already-authored notice modes; no new editing mode | Independent review clear; XML parse and actual Standard notices pass; Changes plain mode remains explicitly unsupported |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1202,3 +1205,19 @@ serialization control with a quoted/comma title; before9/10 and after10/10,3.9s 
 downloads of the same PRPLAN02 find parsed five rows with populated title/status/priority, no raw enum or duplicate
 editable values, and hidden Type respected. Export intentionally covers the full find rather than selected rows.
 Full suites remain pending until the remaining final recovery checks are closed.
+
+
+**Batch 17 — conditional terminal row actions.** Framework `a90af8c3` captures the existing native section render
+as a JSON value for a terminal cell, preserving its condition, action frame, fail branch and security error. Captured
+body output is removed before return, including on failure. Coordinator independently reviewed all five files. The
+existing two-row macro control failed before and passes0.06s with row-specific actions, no context leak, inline
+failure and an intact following cell. Actual WorkItemTypes Research Offer/Stop appeared in the correct row and its
+QuickCreate consumer; Time General Office Offer/Stop likewise appeared/disappeared in QuickTime. Icon and all
+preferences were restored. No app-specific workaround or regression sweep was introduced. Full gates pending.
+
+**Batch 18 — reachable Standard notices.** Actual Standard Timeline displayed its authored browser notice, while
+Backlog returned404 before reaching an equivalent existing notice. Backlog and project Calendar now allow html/qvt
+so those existing fallback messages can render. Code/settings independently reviewed the two attribute edits. XML
+parse and actual Standard Backlog and project Calendar notices pass after the normal restart; Material/terminal
+paths and services are unchanged. Changes has no authored plain fallback and remains an explicit unsupported mode,
+not a claim of full Standard diff presentation. No implementation-mirroring test was added for these two declarations.
