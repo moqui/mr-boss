@@ -491,7 +491,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <div class="col text-subtitle2">{{t('Changes from')}} {{diff.fromShort}} {{t('to')}} {{diff.toShort || t('the current version')}}</div>
                     <q-chip dense square class="m-tonal text-positive">+{{(diff.stats || {}).insertions || 0}}</q-chip>
                     <q-chip dense square class="m-tonal text-negative">−{{(diff.stats || {}).deletions || 0}}</q-chip>
-                    <q-btn flat dense round icon="close" size="sm" @click="diff.open = false"><q-tooltip>{{t('Close the compare')}}</q-tooltip></q-btn>
+                    <q-btn flat dense round icon="close" size="sm" :aria-label="t('Close the compare')" @click="diff.open = false"><q-tooltip>{{t('Close the compare')}}</q-tooltip></q-btn>
                 </div>
                 <q-linear-progress v-if="diff.loading" indeterminate color="primary" size="2px"></q-linear-progress>
                 <div v-else-if="diff.html" class="scroll rounded-borders" style="max-height:45vh" v-html="diff.html"></div>
@@ -524,7 +524,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <div class="row no-wrap items-center">
                             <q-btn v-if="version.previousVersionName" flat dense no-caps size="sm" color="primary" :label="t('Changes')" @click="compare(version.previousVersionName, version.versionName)"></q-btn>
                             <q-btn flat dense no-caps size="sm" color="primary" :label="t('Read')" @click="viewVersion(version)"></q-btn>
-                            <q-btn v-if="(history.canRestore && !version.isCurrent) || (history.canPublish && !version.isPublished)" flat dense round size="sm" icon="more_vert">
+                            <q-btn v-if="(history.canRestore && !version.isCurrent) || (history.canPublish && !version.isPublished)" flat dense round size="sm" icon="more_vert"
+                                    :aria-label="t('Version actions') + ' ' + (version.shortName || version.versionName)">
                                 <q-menu auto-close>
                                     <q-list dense style="min-width:200px">
                                         <q-item v-if="!version.isCurrent" clickable @click="compare(version.versionName, '')"><q-item-section>{{t('Compare with the current')}}</q-item-section></q-item>

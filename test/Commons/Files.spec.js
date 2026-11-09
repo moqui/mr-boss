@@ -397,6 +397,8 @@ feature("the drives: a new folder drive with members, its settings, a member add
         settingsPage.status == 200
         settingsPage.errorMessages.length == 0
         settingsPage.output.includes("Bob Developer")
+        // The Files parent's drive parameter stays a scalar selection, not the loaded settings record.
+        settingsPage.output.includes("/Files/Drives?drive=" + drive.driveId)
         // the drive's WebDAV folder on a device
         settingsPage.output.includes("On your devices")
         settingsPage.output.includes("/dav/files/john.doe/Spec%20drive/")
