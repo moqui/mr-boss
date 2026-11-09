@@ -301,7 +301,10 @@ feature(
                 joe: rowsOf("joe.developer"),
                 bob: rowsOf("bob.developer"),
                 john: rowsOf("john.doe"),
-                johnPage: render("apps/Projects/Time/TimeEntries", {list: "all", itemId: "TEW-1"}),
+                johnPage: render("apps/Projects/Time/TimeEntries", {
+                    list: "all", itemId: "TEW-1", partyId: "ORG_ZIZI_JD",
+                    entryDate_from: "2027-01-11", entryDate_thru: "2027-01-17"
+                }),
                 bobEdit: as("bob.developer", () => render("apps/Projects/Time/TimeEntries/EditEntry", {timeEntryId: made.open}))
             }
         },
@@ -353,7 +356,9 @@ feature(
                 john.rowList.every(row => "clientHourRate" in row)
             !johnPage.broken && johnPage.output.includes("Ledger rows first cut") && johnPage.output.includes("Worker rate")
             // the team timesheet print of the same find
-            johnPage.output.includes("TeamTimesheet?renderMode=html-print")
+            const printHref = johnPage.output.match(/TeamTimesheet\?renderMode=html-print[^"' <>]*/)?.[0] || ""
+            printHref.includes("entryDate_from=2027-01-11") && printHref.includes("entryDate_thru=2027-01-17") &&
+                printHref.includes("partyId=ORG_ZIZI_JD") && !printHref.includes("%7B%7D")
             bobEdit.output.includes("not yours to change") && !bobEdit.output.includes("EntryForm")
         }
     }

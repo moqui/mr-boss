@@ -136,7 +136,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the team timesheet (TeamTimesheet, design-projects.md §14): the same find, printed
             const printDates = {}
             if (dateFrom != null) printDates.entryDate_from = ec.l10n.format(dateFrom, 'yyyy-MM-dd')
-            if (dateThru != null) printDates.entryDate_thru = ec.l10n.format(new Date(Number(String(dateThru)) - 1), 'yyyy-MM-dd')
+            if (dateThru != null) printDates.entryDate_thru = ec.l10n.format(new Date((dateThru instanceof Date ? dateThru.getTime() : Number(String(dateThru))) - 1), 'yyyy-MM-dd')
             teamPrintUrl = '/apps/Projects/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(Object.assign({list: list}, find, printDates, projectFixed ? {workEffortId: fixedProjectId} : {}))
                     .filter(([key, value]) => value != null && value !== '' && key !== 'orderByField' && !key.startsWith('entryDate_p'))
                     .map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
