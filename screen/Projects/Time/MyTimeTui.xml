@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     reason, the total against the working hours, the running timer, then each day with its entries (from, to, work item, hours,
     comment) and its total. The terminal's changes (impl-projects.md P11), over the services of MyTime.qvue's transitions: the timer
     started on a work item or stopped (own week), Log time (an entry in full: item, day, hours, billable, work type, comment;
-    ironstone.projects.TimeServices.save#TimeEntry), an entry's Edit (TimeEntries' EditEntry dialog, which goes on to Time entries) and
+    ironstone.projects.TimeServices.save#TimeEntry), an entry's Edit (TimeEntries' EditEntry dialog, returning to this person and week) and
     Delete, and the week's Submit, Approve, Return and Reopen (decide#Week, which checks who may). Each change answers My time again
     on the same week. The grid's typing in cells, Add row and Copy last week's rows stay the browser's: Log time covers them; a work
     item opens WorkItemDetail. -->
@@ -28,8 +28,10 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="weekDate"/>
 
     <transition name="workItemDetail"><default-response url="../../WorkItems/WorkItemDetail"/></transition>
-    <!-- an entry's Edit: TimeEntries' dialog (it answers Time entries after a save) -->
-    <transition name="editEntry"><default-response url="../TimeEntries/EditEntry"/></transition>
+    <!-- Reuse the entry dialog and retain this week's context on its fixed MyTime return. -->
+    <transition name="editEntry"><default-response url="../TimeEntries/EditEntry">
+        <parameter name="timeEntryId"/><parameter name="myTimeWeek"/><parameter name="myTimePartyId"/>
+    </default-response></transition>
     <!-- the work items to log on: mine and recent, or by key or name (as MyTime's itemOptions) -->
     <transition name="itemOptions" method="get" read-only="true">
         <actions><script><![CDATA[
@@ -214,7 +216,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="comments"><default-field title="Comment"><display/></default-field></field>
                         <field name="actions"><conditional-field condition="changeable" title="">
                             <dynamic-dialog id="MyTimeTuiEditDialog" button-text="Edit" icon="sym_o_edit" transition="editEntry" width="640" title="Time entry ${timeEntryId}"
-                                    parameter-map="{timeEntryId:timeEntryId}"/>
+                                    parameter-map="{timeEntryId:timeEntryId, myTimeWeek:weekDate, myTimePartyId:partyId}"/>
                             <link url="deleteEntry" link-type="hidden-form-link" text="Delete" icon="sym_o_delete" confirmation="Delete this entry of ${hoursText} h?"
                                     parameter-map="{timeEntryId:timeEntryId, partyId:partyId, weekDate:weekDate}"/>
                         </conditional-field><default-field title=""><display text=" "/></default-field></field>

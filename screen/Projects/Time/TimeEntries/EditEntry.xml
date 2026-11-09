@@ -20,13 +20,15 @@ along with this software (see the LICENSE.md file). If not, see
     from the rates (store#TimeEntryRates), also on a submitted week's entry, never an invoiced one. The worker rate of an employee's
     time is the employee's pay: shown only with PAYROLL_VIEW and changed only with PAYROLL_EDIT (get#TimeEntryEdit's
     workerRateShown and workerRateEditable); without them the field is left out and not sent. Each change answers the list
-    again (in ProjectDetail's Time tab, with its project). -->
+    again (in ProjectDetail's Time tab, with its project), or MyTime's originating person and week. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time entry" default-menu-include="false">
 
     <parameter name="timeEntryId"/>
     <parameter name="itemId"/>
     <parameter name="partyId"/>
+    <parameter name="myTimeWeek"/>
+    <parameter name="myTimePartyId"/>
 
     <transition name="saveEntry">
         <actions>
@@ -35,6 +37,10 @@ along with this software (see the LICENSE.md file). If not, see
                     breakHours:(breakHours || null), billable:(billable || 'Y'), workTypeEnumId:(workTypeEnumId || null), comments:(comments || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(saveOut.message, 'success')</script></if>
         </actions>
+        <conditional-response url="//Projects/Time/MyTime">
+            <condition><expression>myTimeWeek &amp;&amp; !ec.message.hasError()</expression></condition>
+            <parameter name="weekDate" from="myTimeWeek"/><parameter name="partyId" from="myTimePartyId"/>
+        </conditional-response>
         <default-response url=".."><parameter name="workEffortId"/></default-response>
         <error-response url=".."><parameter name="workEffortId"/></error-response>
     </transition>
@@ -44,6 +50,10 @@ along with this software (see the LICENSE.md file). If not, see
                     vendorHourRate:vendorHourRate, reset:(reset == 'Y')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ratesOut.message, 'success')</script></if>
         </actions>
+        <conditional-response url="//Projects/Time/MyTime">
+            <condition><expression>myTimeWeek &amp;&amp; !ec.message.hasError()</expression></condition>
+            <parameter name="weekDate" from="myTimeWeek"/><parameter name="partyId" from="myTimePartyId"/>
+        </conditional-response>
         <default-response url=".."><parameter name="workEffortId"/></default-response>
         <error-response url=".."><parameter name="workEffortId"/></error-response>
     </transition>
@@ -52,6 +62,10 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.projects.TimeServices.delete#WeekEntry" out-map="deleteOut" in-map="{timeEntryId:timeEntryId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(deleteOut.message, 'success')</script></if>
         </actions>
+        <conditional-response url="//Projects/Time/MyTime">
+            <condition><expression>myTimeWeek &amp;&amp; !ec.message.hasError()</expression></condition>
+            <parameter name="weekDate" from="myTimeWeek"/><parameter name="partyId" from="myTimePartyId"/>
+        </conditional-response>
         <default-response url=".."><parameter name="workEffortId"/></default-response>
         <error-response url=".."><parameter name="workEffortId"/></error-response>
     </transition>
@@ -66,9 +80,10 @@ along with this software (see the LICENSE.md file). If not, see
             if (!edit) return
             entryValue = {timeEntryId: edit.timeEntryId, partyId: edit.partyId, entryItemId: edit.workEffortId, day: edit.day, fromTime: edit.fromTime,
                 thruTime: edit.thruTime, hours: edit.hours, breakHours: edit.breakHours, billable: edit.billable, workTypeEnumId: edit.workTypeEnumId,
-                comments: edit.comments, workEffortId: ec.context.get('projectTabId') || null}
+                comments: edit.comments, workEffortId: ec.context.get('projectTabId') || null,
+                myTimeWeek: myTimeWeek || null, myTimePartyId: myTimePartyId || null}
             ratesValue = {timeEntryId: edit.timeEntryId, clientHourRate: edit.clientHourRate, vendorHourRate: edit.vendorHourRate,
-                workEffortId: ec.context.get('projectTabId') || null}
+                workEffortId: ec.context.get('projectTabId') || null, myTimeWeek: myTimeWeek || null, myTimePartyId: myTimePartyId || null}
             personOptions = edit.personOptions
             workTypeOptions = edit.workTypeOptions
             itemOptionsInitial = edit.itemOptions
@@ -91,6 +106,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <form-single name="EntryForm" transition="saveEntry" map="entryValue" focus-field="hours">
                     <field name="timeEntryId"><default-field><hidden/></default-field></field>
                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                    <field name="myTimeWeek"><default-field><hidden/></default-field></field>
+                    <field name="myTimePartyId"><default-field><hidden/></default-field></field>
                     <field name="partyId"><conditional-field condition="edit.showPerson" title="Person">
                             <drop-down><list-options list="personOptions" key="${key}" text="${text}"/></drop-down></conditional-field>
                         <default-field><hidden/></default-field></field>
@@ -118,7 +135,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
                 <section name="EntryDelete" condition="!edit.isNew"><widgets>
                     <link url="deleteEntry" link-type="hidden-form-link" text="Delete this entry" icon="sym_o_delete" confirmation="Remove this time entry?"
-                            parameter-map="{timeEntryId:edit.timeEntryId, workEffortId:projectParam}"/>
+                            parameter-map="{timeEntryId:edit.timeEntryId, workEffortId:projectParam, myTimeWeek:myTimeWeek, myTimePartyId:myTimePartyId}"/>
                 </widgets></section>
             </widgets></section>
             <section name="EntryRates" condition="edit.canRates"><widgets>
@@ -128,6 +145,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <form-single name="RatesForm" transition="saveRates" map="ratesValue">
                         <field name="timeEntryId"><default-field><hidden/></default-field></field>
                         <field name="workEffortId"><default-field><hidden/></default-field></field>
+                        <field name="myTimeWeek"><default-field><hidden/></default-field></field>
+                        <field name="myTimePartyId"><default-field><hidden/></default-field></field>
                         <field name="clientHourRate"><default-field title="Client rate (an hour)"><text-line size="8" input-type="number"/></default-field></field>
                         <field name="vendorHourRate">
                             <conditional-field condition="edit.workerRateEditable" title="Worker rate (an hour)"><text-line size="8" input-type="number"/></conditional-field>
@@ -138,7 +157,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-layout><field-row><field-ref name="clientHourRate"/><field-ref name="vendorHourRate"/></field-row><field-ref name="submitButton"/></field-layout>
                     </form-single>
                     <link url="saveRates" link-type="hidden-form-link" text="Find again" icon="sym_o_currency_exchange"
-                            parameter-map="{timeEntryId:edit.timeEntryId, reset:'Y', workEffortId:projectParam}"/>
+                            parameter-map="{timeEntryId:edit.timeEntryId, reset:'Y', workEffortId:projectParam, myTimeWeek:myTimeWeek, myTimePartyId:myTimePartyId}"/>
                 </box-body></container-box>
             </widgets></section>
         </widgets></section>
