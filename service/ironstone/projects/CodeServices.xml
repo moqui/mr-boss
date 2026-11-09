@@ -1438,7 +1438,7 @@ along with this software (see the LICENSE.md file). If not, see
                     isOpen, isDraft: mr.statusId === 'GmrDraft', createdText: fmt(mr.createdDate), updatedText: fmt(mr.lastUpdatedDate),
                     mergedText: fmt(mr.mergedDate), closedText: fmt(mr.closedDate), headShortId: mr.headCommitId ? String(mr.headCommitId).substring(0, 10) : '',
                     mergeCommitShortId: mr.mergeCommitId ? String(mr.mergeCommitId).substring(0, 10) : '', deleteSourceBranch: mr.deleteSourceBranch === 'Y',
-                    mergeableLabel: {GmaMergeable: L('Able to merge'), GmaConflict: L('Conflicts'), GmaUnchecked: L('The target moved; checking'), GmaMerged: L('Merged')}[mr.mergeableEnumId] || ''}),
+                    mergeableLabel: {GmaMergeable: L('No merge conflicts'), GmaConflict: L('Conflicts'), GmaUnchecked: L('The target moved; checking'), GmaMerged: L('Merged')}[mr.mergeableEnumId] || ''}),
                 reviewerList, myReview, approvalCount: Number(got.approvalCount || 0), requiredApprovals, dismissStale: !!rules.dismissStaleApprovals,
                 approvalsText: requiredApprovals ? ec.resource.expand('${count} of ${required} approvals', '', {count: Number(got.approvalCount || 0), required: requiredApprovals})
                     : ec.resource.expand('${count} approvals, none required', '', {count: Number(got.approvalCount || 0)}),
