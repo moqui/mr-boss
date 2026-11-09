@@ -304,6 +304,7 @@ module.exports = {
     data() {
         return {
             loading: false, seq: 0, week: null, notAvailable: false, offset: 0, now: Date.now(), ticker: null,
+            requestPath: null, disposed: false, activeScope: null, scopeVersion: 0, cellSaves: {}, timerSave: null,
             edits: {}, itemOptions: [], addItem: null, timerItem: null, timerComment: '', dayIndex: 0,
             busy: { timer: false, entry: false, decide: false },
             entry: { open: false, isNew: true, timeEntryId: null, item: null, day: '', fromTime: '', thruTime: '', hours: '', breakHours: '', billable: 'Y', workTypeEnumId: null, comments: '' },
@@ -351,39 +352,61 @@ module.exports = {
     },
     methods: {
         t,
-        url(name) { return this.screenPath + '/' + name; },
+        url(name) { return (this.requestPath || this.screenPath) + '/' + name; },
+        scopeKey() { return (this.params.partyId || '') + '|' + (this.params.weekDate || ''); },
+        inScope(scope, version) { return !this.disposed && scope === this.scopeKey() && version === this.scopeVersion; },
+        forScope(callback) {
+            const scope = this.scopeKey(), version = this.scopeVersion;
+            return (...args) => { if (this.inScope(scope, version)) return callback(...args); };
+        },
         fmt(value) { const n = Number(value || 0); return (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 }); },
         request(name, params, method) {
+            const notify = this.forScope((json) => { if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos); });
+            const report = this.forScope((err) => moqui.handleAjaxError(err));
             return moqui.request(this.url(name), { method: method || 'GET', params: params || {} }).then((result) => {
                 const json = result.json || {};
-                if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos);
+                notify(json);
                 return json;
-            }, (err) => { moqui.handleAjaxError(err); throw err; });
+            }, (err) => { report(err); throw err; });
         },
         post(name, params) { return this.request(name, params, 'POST'); },
         load() {
-            const seq = ++this.seq;
+            if (this.disposed) return Promise.resolve();
+            const scope = this.scopeKey();
+            if (scope !== this.activeScope) {
+                this.activeScope = scope;
+                this.scopeVersion++;
+                this.week = null;
+                this.edits = {};
+                this.cellSaves = {};
+                this.timerSave = null;
+                this.entry.open = this.dayDialog.open = this.submit.open = this.decision.open = false;
+                this.busy = { timer: false, entry: false, decide: false };
+            }
+            const version = this.scopeVersion, seq = ++this.seq;
             this.loading = true;
             const params = {};
             if (this.params.partyId) params.partyId = this.params.partyId;
             if (this.params.weekDate) params.weekDate = this.params.weekDate;
             return moqui.request(this.url('week'), { params }).then((result) => {
-                if (seq !== this.seq) return;
+                if (seq !== this.seq || !this.inScope(scope, version)) return;
                 this.loading = false;
                 const json = result.json || {};
                 this.notAvailable = !!json.notAvailable;
                 const before = this.week ? this.week.weekStart : null;
+                const timerId = this.timer ? this.timer.timeEntryId : null;
+                const commentEdited = this.timer && this.timerComment !== (this.timer.comments || '');
                 this.week = json.week || null;
                 if (!this.week) return;
                 this.offset = (this.week.serverNow || Date.now()) - Date.now();
                 this.now = Date.now();
-                this.edits = {};
-                this.timerComment = this.week.timer ? (this.week.timer.comments || '') : '';
+                if (!commentEdited || !this.timer || this.timer.timeEntryId !== timerId)
+                    this.timerComment = this.timer ? (this.timer.comments || '') : '';
                 if (before !== this.week.weekStart) {
                     const today = this.week.dayList.findIndex((day) => day.isToday);
                     this.dayIndex = today >= 0 ? today : 0;
                 }
-            }, (err) => { if (seq !== this.seq) return; this.loading = false; moqui.handleAjaxError(err); });
+            }, (err) => { if (seq !== this.seq || !this.inScope(scope, version)) return; this.loading = false; moqui.handleAjaxError(err); });
         },
         // the URL holds the person and the week
         setParams(partyId, weekDate) {
@@ -413,16 +436,29 @@ module.exports = {
         },
         cellInput(row, day, event) { this.edits = Object.assign({}, this.edits, { [this.cellKey0(row, day)]: event.target.value }); },
         commitCell(row, day) {
+            if (this.disposed || !this.week) return Promise.resolve();
             const key = this.cellKey0(row, day);
             if (!(key in this.edits)) return Promise.resolve();
-            const text = String(this.edits[key]).trim().replace(',', '.');
-            const before = this.cellOf(row, day).hours || 0;
+            if (this.cellSaves[key]) return this.cellSaves[key].then(this.forScope(() => this.commitCell(row, day)));
+            const submitted = this.edits[key];
+            const text = String(submitted).trim().replace(',', '.');
+            const currentRow = this.week.rowList.find((one) => (one.workEffortId || '') === (row.workEffortId || '')) || row;
+            const before = this.cellOf(currentRow, day).hours || 0;
             const value = text === '' ? 0 : Number(text);
-            if (Number.isNaN(value)) { moqui.notifyMessages([{ type: 'warning', message: this.t('Hours are a number, such as 1.5') }]); const copy = Object.assign({}, this.edits); delete copy[key]; this.edits = copy; return Promise.resolve(); }
+            if (!Number.isFinite(value)) { moqui.notifyMessages([{ type: 'warning', message: this.t('Hours are a number, such as 1.5') }]); return Promise.resolve(); }
             if (Math.abs(value - before) < 0.001) { const copy = Object.assign({}, this.edits); delete copy[key]; this.edits = copy; return Promise.resolve(); }
             const params = { workEffortId: row.workEffortId || '', day: day.day, hours: String(value) };
             if (!this.week.isMine) params.partyId = this.week.partyId;
-            return this.post('saveCell', params).then(() => this.load(), () => this.load());
+            const pending = this.post('saveCell', params).then(this.forScope((json) => {
+                if (!Object.prototype.hasOwnProperty.call(json, 'hours')) return;
+                // Only this submitted snapshot was acknowledged; other cells and later typing remain drafts.
+                if (this.edits[key] === submitted) { const copy = Object.assign({}, this.edits); delete copy[key]; this.edits = copy; }
+                return this.load();
+            }), () => {}).finally(() => {
+                if (this.cellSaves[key] === pending) delete this.cellSaves[key];
+            });
+            this.cellSaves[key] = pending;
+            return pending;
         },
         cellKey(rowIndex, dayIndex, row, day, event) {
             const move = (r, d) => { const el = document.getElementById(this.cellId(r, d)); if (el) { el.focus(); return true; } return false; };
@@ -433,31 +469,37 @@ module.exports = {
         },
         rowName(workEffortId) { const row = this.week.rowList.find((one) => (one.workEffortId || null) === (workEffortId || null)); return row ? row.workEffortName : ''; },
         filterItems(value, update) {
-            moqui.request(this.url('itemOptions'), { params: { term: value || '' } }).then((result) => {
+            moqui.request(this.url('itemOptions'), { params: { term: value || '' } }).then(this.forScope((result) => {
                 update(() => { this.itemOptions = Array.isArray(result.json) ? result.json : []; });
-            }, () => update(() => { this.itemOptions = []; }));
+            }), this.forScope(() => update(() => { this.itemOptions = []; })));
         },
         // ===== rows =====
         addRow() {
             if (!this.addItem) return;
-            this.post('rows', { change: 'add', weekDate: this.week.weekStart, workEffortId: this.addItem.value }).then(() => { this.addItem = null; this.load(); }, () => {});
+            const item = this.addItem;
+            this.post('rows', { change: 'add', weekDate: this.week.weekStart, workEffortId: item.value }).then(this.forScope(() => { if (this.addItem === item) this.addItem = null; this.load(); }), () => {});
         },
-        removeRow(row) { this.post('rows', { change: 'remove', weekDate: this.week.weekStart, workEffortId: row.workEffortId }).then(() => this.load(), () => {}); },
-        copyRows() { this.post('rows', { change: 'copyLast', weekDate: this.week.weekStart }).then(() => this.load(), () => {}); },
+        removeRow(row) { this.post('rows', { change: 'remove', weekDate: this.week.weekStart, workEffortId: row.workEffortId }).then(this.forScope(() => this.load()), () => {}); },
+        copyRows() { this.post('rows', { change: 'copyLast', weekDate: this.week.weekStart }).then(this.forScope(() => this.load()), () => {}); },
         // ===== the timer =====
         startTimer(workEffortId) {
             if (!workEffortId) return;
             this.busy.timer = true;
-            this.post('startTimer', { workEffortId }).then(() => { this.busy.timer = false; this.timerItem = null; this.load(); }, () => { this.busy.timer = false; });
+            this.post('startTimer', { workEffortId }).then(this.forScope(() => { this.busy.timer = false; this.timerItem = null; this.load(); }), this.forScope(() => { this.busy.timer = false; }));
         },
         stopTimer() {
             this.busy.timer = true;
-            this.post('stopTimer', { timeEntryId: this.timer ? this.timer.timeEntryId : '' }).then(() => { this.busy.timer = false; this.load(); }, () => { this.busy.timer = false; this.load(); });
+            this.post('stopTimer', { timeEntryId: this.timer ? this.timer.timeEntryId : '' }).then(this.forScope(() => { this.busy.timer = false; this.load(); }), this.forScope(() => { this.busy.timer = false; this.load(); }));
         },
         saveTimerComment() {
-            if (!this.timer || (this.timer.comments || '') === this.timerComment) return;
-            this.timer.comments = this.timerComment;
-            this.post('updateTimer', { timeEntryId: this.timer.timeEntryId, comments: this.timerComment }).catch(() => {});
+            if (this.disposed || !this.timer || (this.timer.comments || '') === this.timerComment) return Promise.resolve();
+            if (this.timerSave) return this.timerSave.then(this.forScope(() => this.saveTimerComment()));
+            const timeEntryId = this.timer.timeEntryId, comments = this.timerComment;
+            const pending = this.post('updateTimer', { timeEntryId, comments }).then(this.forScope((json) => {
+                if (json.updated && this.timer && this.timer.timeEntryId === timeEntryId) this.timer.comments = comments;
+            }), () => {}).finally(() => { if (this.timerSave === pending) this.timerSave = null; });
+            this.timerSave = pending;
+            return pending;
         },
         // ===== EntryForm =====
         openEntry(one) {
@@ -483,14 +525,29 @@ module.exports = {
             const params = { timeEntryId: e.timeEntryId || '', workEffortId: e.item ? e.item.value : '', day: e.day, fromTime: e.fromTime || '', thruTime: e.thruTime || '',
                 hours: e.fromTime && e.thruTime ? '' : (e.hours || ''), breakHours: e.breakHours || '', billable: e.billable, workTypeEnumId: e.workTypeEnumId || '', comments: e.comments || '' };
             if (!this.week.isMine) params.partyId = this.week.partyId;
+            const submitted = JSON.stringify(e);
             this.busy.entry = true;
-            this.post('saveEntry', params).then((json) => { this.busy.entry = false; if (json.timeEntryId) { this.entry.open = false; this.load(); } }, () => { this.busy.entry = false; });
+            this.post('saveEntry', params).then(this.forScope((json) => {
+                this.busy.entry = false;
+                if (!json.timeEntryId) return;
+                if (this.entry === e) {
+                    const unchanged = JSON.stringify(e) === submitted;
+                    e.timeEntryId = json.timeEntryId;
+                    e.isNew = false;
+                    if (unchanged) e.open = false;
+                }
+                this.load();
+            }), this.forScope(() => { this.busy.entry = false; }));
         },
         deleteEntry() {
+            const entry = this.entry, timeEntryId = entry.timeEntryId;
             this.$q.dialog({ title: this.t('Delete this entry?'), ok: { label: this.t('Delete'), color: 'negative', unelevated: true, noCaps: true },
-                cancel: { label: this.t('Cancel'), flat: true, noCaps: true } }).onOk(() => {
-                this.post('deleteEntry', { timeEntryId: this.entry.timeEntryId }).then((json) => { if (json.deleted) { this.entry.open = false; this.load(); } }, () => {});
-            });
+                cancel: { label: this.t('Cancel'), flat: true, noCaps: true } }).onOk(this.forScope(() => {
+                if (this.entry !== entry || !entry.open) return;
+                this.post('deleteEntry', { timeEntryId }).then(this.forScope((json) => {
+                    if (json.deleted) { if (this.entry === entry) entry.open = false; this.load(); }
+                }), () => {});
+            }));
         },
         openDay(row, day) {
             this.dayDialog = { open: true, title: (row.workEffortId ? row.workEffortId + ' · ' : '') + day.label + ' ' + day.dateLabel, day: day.day, workEffortId: row.workEffortId || null };
@@ -502,18 +559,20 @@ module.exports = {
             this.busy.decide = true;
             const params = { action, weekDate: this.week.weekStart, timesheetId: this.week.timesheet.timesheetId || '' };
             if (reason) params.reason = reason;
-            this.post('decide', params).then((json) => {
+            const decision = this.decision, decisionReason = decision.reason;
+            this.post('decide', params).then(this.forScope((json) => {
                 this.busy.decide = false;
-                if (json.messageInfos) { this.submit.open = false; this.decision.open = false; }
+                if (json.messageInfos) { this.submit.open = false; if (this.decision === decision && decision.reason === decisionReason) decision.open = false; }
                 this.load();
-            }, () => { this.busy.decide = false; });
+            }), this.forScope(() => { this.busy.decide = false; }));
         }
     },
     mounted() {
+        this.requestPath = this.screenPath;
         this.load();
         this.ticker = setInterval(() => { this.now = Date.now(); }, 1000);
     },
-    beforeUnmount() { if (this.ticker) clearInterval(this.ticker); }
+    beforeUnmount() { this.disposed = true; this.seq++; if (this.ticker) clearInterval(this.ticker); }
 };
 </script>
 

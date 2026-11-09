@@ -275,6 +275,7 @@ module.exports = {
         const params = (this.$root && this.$root.currentParameters) || {};
         return {
             loading: false, seq: 0, planner: null, notAvailable: false,
+            requestPath: null, disposed: false, activeScope: null, scopeVersion: 0, peopleSeq: 0,
             fromDate: params.fromDate ? mondayOf(params.fromDate) : null,
             weekCount: Number(params.weeks) || Number(store.get('weeks')) || 12, view: store.get('view') || 'person',
             filter: { rootWorkEffortId: params.rootWorkEffortId || null, roleTypeId: params.roleTypeId || null, skillTypeEnumId: params.skillTypeEnumId || null,
@@ -386,7 +387,13 @@ module.exports = {
     },
     methods: {
         t,
-        url(name) { return this.screenPath + '/' + name; },
+        url(name) { return (this.requestPath || this.screenPath) + '/' + name; },
+        scopeKey() { return JSON.stringify(this.params()); },
+        inScope(scope, version) { return !this.disposed && scope === this.scopeKey() && version === this.scopeVersion; },
+        forScope(callback) {
+            const scope = this.scopeKey(), version = this.scopeVersion;
+            return (...args) => { if (this.inScope(scope, version)) return callback(...args); };
+        },
         action(name) {
             const rootPath = this.$root.appRootPath || '';
             const path = this.url(name);
@@ -498,34 +505,48 @@ module.exports = {
             return params;
         },
         load() {
-            const seq = ++this.seq;
+            if (this.disposed) return Promise.resolve();
+            const scope = this.scopeKey();
+            if (scope !== this.activeScope) {
+                this.activeScope = scope;
+                this.scopeVersion++;
+                this.endDrag();
+                this.preview = null;
+            }
+            const version = this.scopeVersion, seq = ++this.seq;
             this.loading = true;
             return moqui.request(this.url('plan'), { params: this.params() }).then((result) => {
-                if (seq !== this.seq) return;
+                if (seq !== this.seq || !this.inScope(scope, version)) return;
                 this.loading = false;
                 const json = result.json || {};
                 this.notAvailable = !!json.notAvailable;
                 this.planner = json.planner || null;
-            }, (err) => { if (seq !== this.seq) return; this.loading = false; moqui.handleAjaxError(err); });
+            }, (err) => { if (seq !== this.seq || !this.inScope(scope, version)) return; this.loading = false; moqui.handleAjaxError(err); });
         },
         post(name, params) {
+            const notify = this.forScope((json) => { if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos); });
+            const report = this.forScope((err) => moqui.handleAjaxError(err));
             return moqui.request(this.url(name), { method: 'POST', params: params || {} }).then((result) => {
                 const json = result.json || {};
-                if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos);
+                notify(json);
                 return json;
-            }, (err) => { moqui.handleAjaxError(err); throw err; });
+            }, (err) => { report(err); throw err; });
         },
         shiftWeeks(count) { this.fromDate = addDays(this.planner ? this.planner.fromDate : mondayOf(new Date().toISOString().slice(0, 10)), count * 7); this.load(); },
         thisWeek() { this.fromDate = null; this.load(); },
         clearFilters() { this.filter = { rootWorkEffortId: null, roleTypeId: null, skillTypeEnumId: null, teamPartyId: null }; },
         // ===== the dialogs =====
         loadPeople(initial) {
+            const key = this.form.key, seq = ++this.peopleSeq;
             moqui.request(this.url('people'), { params: { allocFromDate: initial.allocFromDate || '', allocThruDate: initial.allocThruDate || '', amount: initial.amount || '',
-                unit: initial.unit || 'h' } }).then((result) => {
+                unit: initial.unit || 'h' } }).then(this.forScope((result) => {
+                if (!this.form.open || key !== this.form.key || seq !== this.peopleSeq) return;
                 const list = Array.isArray(result.json) ? result.json : [];
                 if (initial.partyId && !list.some((one) => one.value === initial.partyId)) list.unshift({ value: initial.partyId, label: initial.partyName || initial.partyId });
                 this.peopleOptions = list;
-            }, () => {});
+            }), this.forScope((err) => {
+                if (this.form.open && key === this.form.key && seq === this.peopleSeq) moqui.handleAjaxError(err);
+            }));
         },
         openNew(person, weekStart) {
             if (!this.planner || !this.planner.canRequest) return;
@@ -536,8 +557,8 @@ module.exports = {
                 placeholder: 'N', partyId: person ? person.partyId : '', partyName: person ? person.name : '', allocRoleTypeId: person && person.roleTypeId ? person.roleTypeId : '',
                 allocSkillTypeEnumId: '', allocFromDate: start, allocThruDate: addDays(start, weekStart ? 4 : 27), amount: '8', unit: 'h', comments: '', request: 'N' };
             this.peopleOptions = person ? [{ value: person.partyId, label: person.name }] : [];
-            this.loadPeople(initial);
             this.form = { open: true, key: this.form.key + 1, isNew: true, initial, projectName: '', who: '' };
+            this.loadPeople(initial);
         },
         openEdit(alloc) {
             this.viewer.open = false;
@@ -550,34 +571,45 @@ module.exports = {
         cellClick(person, cell) { if (this.canRequestFor(person)) this.openNew(person, cell.weekStart); },
         afterChange(dialog) { dialog.open = false; this.load(); },
         decide(alloc, action) {
-            this.post('decideAllocation', { workEffortAllocationId: alloc.workEffortAllocationId, action }).then((json) => {
+            const viewer = this.viewer;
+            this.post('decideAllocation', { workEffortAllocationId: alloc.workEffortAllocationId, action }).then(this.forScope((json) => {
                 if (!json.decided) return;
-                this.viewer.open = false;
+                if (this.viewer === viewer) viewer.open = false;
                 this.load();
-            }, () => {});
+            }), () => {});
         },
         openReject(alloc) { this.viewer.open = false; this.rejecter = { open: true, alloc, reason: '' }; },
         reject() {
-            this.post('decideAllocation', { workEffortAllocationId: this.rejecter.alloc.workEffortAllocationId, action: 'reject', reason: this.rejecter.reason }).then((json) => {
+            const rejecter = this.rejecter, reason = rejecter.reason;
+            this.post('decideAllocation', { workEffortAllocationId: rejecter.alloc.workEffortAllocationId, action: 'reject', reason }).then(this.forScope((json) => {
                 if (!json.decided) return;
-                this.rejecter.open = false;
+                if (this.rejecter === rejecter && rejecter.reason === reason) rejecter.open = false;
                 this.load();
-            }, () => {});
+            }), () => {});
         },
         openStaff(alloc) {
             this.viewer.open = false;
             this.staff = { open: true, alloc, loading: true, candidates: [], canStaff: false };
-            moqui.request(this.url('candidates'), { params: { workEffortAllocationId: alloc.workEffortAllocationId } }).then((result) => {
+            const staff = this.staff;
+            moqui.request(this.url('candidates'), { params: { workEffortAllocationId: alloc.workEffortAllocationId } }).then(this.forScope((result) => {
+                if (this.staff !== staff || !staff.open) return;
                 const json = result.json || {};
-                this.staff = Object.assign({}, this.staff, { loading: false, candidates: json.candidateList || [], canStaff: !!json.canStaff });
-            }, (err) => { this.staff.loading = false; moqui.handleAjaxError(err); });
+                staff.loading = false;
+                staff.candidates = json.candidateList || [];
+                staff.canStaff = !!json.canStaff;
+            }), this.forScope((err) => {
+                if (this.staff !== staff || !staff.open) return;
+                staff.loading = false;
+                moqui.handleAjaxError(err);
+            }));
         },
         staffWith(one) {
-            this.post('decideAllocation', { workEffortAllocationId: this.staff.alloc.workEffortAllocationId, action: 'staff', partyId: one.partyId }).then((json) => {
+            const staff = this.staff;
+            this.post('decideAllocation', { workEffortAllocationId: staff.alloc.workEffortAllocationId, action: 'staff', partyId: one.partyId }).then(this.forScope((json) => {
                 if (!json.decided) return;
-                this.staff.open = false;
+                if (this.staff === staff) staff.open = false;
                 this.load();
-            }, () => {});
+            }), () => {});
         },
         // ===== a bar dragged: moved, or an end stretched, by days =====
         onBarDown(event, row, edge) {
@@ -623,11 +655,11 @@ module.exports = {
                 if (thru < alloc.fromDay) return;
                 params.allocThruDate = thru;
             }
-            this.post('moveAllocation', params).then(() => this.load(), () => this.load());
+            this.post('moveAllocation', params).then(this.forScope(() => this.load()), this.forScope(() => this.load()));
         }
     },
-    mounted() { this.load(); },
-    beforeUnmount() { this.endDrag(); }
+    mounted() { this.requestPath = this.screenPath; this.load(); },
+    beforeUnmount() { this.disposed = true; this.seq++; this.peopleSeq++; this.endDrag(); }
 };
 </script>
 

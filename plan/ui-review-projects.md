@@ -794,10 +794,10 @@ Source research for this plan does not advance live coverage to inspected or exe
 | PR-13 — Repository | pending | Local Git prerequisites, resources and controls unverified | — |
 | PR-14 — Review/merge | pending | Actual revision/review/merge and modes unverified | — |
 | PR-15 — Git access/controls | pending | Credentials, local transport and revoke unverified | — |
-| PR-16 — Time/timer | pending | Persisted grid/timer, locks and modes unverified | — |
-| PR-17 — Timesheet approval | pending | Two-user return/resubmit/approve and output unverified | — |
-| PR-18 — Time correction/import | pending | Locked rows, repeat import and totals unverified | — |
-| PR-19 — Staffing/capacity | pending | Request/staff/decision, availability and modes unverified | — |
+| PR-16 — Time/timer | exercised | partial: actual browser grid and 390px day dialog, remote terminal timer persisted; remaining lock/date/theme variants open | pr16-week-grid-saved.jpg; pr16-time-390.jpg; time-tui-session.txt; Batch 4 |
+| PR-17 — Timesheet approval | exercised | partial: remote terminal two-user return/resubmit/approve/lock observed on disposable week; print and narrow-role variants open | time-tui-session.txt |
+| PR-18 — Time correction/import | exercised | partial: terminal entry correction observed; selected-week return finding under correction, import/output variants open | time-tui-session.txt |
+| PR-19 — Staffing/capacity | exercised | partial: terminal allocation request/invalid-date recovery persisted; staffing row controls blocked by shared renderer defect, final capacity reconciliation pending | time-tui-session.txt |
 | PR-20 — Budget/estimate/rates | pending | Effective rates, approval and pay boundary unverified | — |
 | PR-21 — Invoice work | pending | Eligible sources, duplication, output and send unverified | — |
 | PR-22 — Reports | pending | All report/output/drill-through and role variants unverified | — |
@@ -821,6 +821,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-005 / mounted reproduction / P2 | PR-08: dependencies; shared Manufacturing timeline | Timeline and ProductionSchedule resource mode | Late replies closed/replaced newer dialogs; later move/override edits were discarded; dependency drag retained window handlers after unmount | planning-before-dependency-drag evidence; ProjectsPlanningResponses | BOSS shared timeline | Bind replies to dialog/input/visit, invalidate old previews, rotate consumed operation keys and remove drag handlers on teardown | Focused actual-component checks cover Projects and Manufacturing preview/apply/override compatibility; live Manufacturing retest remains |
 | PR-UI-006 / source-confirmed content / P2 | PR-12: public intake confirmation | RequestIntake success panel | Always promised an email/reply path despite disabled confirmation or no intake account | source/contract comparison; RequestWalk | BOSS public intake | Say replies are possible if an email is received, without promising delivery | Server RequestWalk passes; public browser/local-mail variants remain |
 | PR-UI-007 / mounted reproduction / P2 | PR-14: review threads/drafts and restricted read state | MergeRequestDetail/Changes; mounted deferred-response fixture, browser dark 1920×1080 | Acknowledgment erased newer drafts or navigated a replacement MR; open read-only view falsely said merged/closed; line comment action was unavailable by keyboard | ProjectsDiffState; pr14-diff-keyboard-dark.jpg | BOSS Code | Capture MR/view/lifecycle and submitted text; retain newer drafts; use actual open state; expose named line-comment actions on focus | Focused test passes; actual Tab → named action → Enter → typed comment persisted, shown in Unified and Side by side |
+| PR-UI-008 / mounted reproduction / P1 | PR-16–17: grid, timer comment and decision drafts | MyTime; actual component with deferred replies; browser grid typing/Enter | Reload after an older/failed save erased unrelated/newer edits; failed timer comment was treated as acknowledged and could not retry | ProjectsTimeAsync; time-resources-before evidence | BOSS Time | Acknowledge submitted snapshots, serialize competing writes, retain failed inputs and stop departed-view callbacks | Focused regression passes; actual browser Tuesday 1.25 + Wednesday 2 persisted after reload (week total 3.27 h), 390px day view usable |
+| PR-UI-009 / mounted reproduction / P2 | PR-19: staffing candidates and people | TeamPlanner; actual mounted component with deferred replies | Late candidate/people answers populated a replacement dialog; old decisions could reload another view | ProjectsResourcesAsync; time-resources-before evidence | BOSS Resources | Bind candidates/people/results to originating dialog and view; capture mounted endpoint and preserve later decision text | Focused regression passes; actual staffing continuation awaits separate shared TUI renderer correction |
 
 ### Static leads
 
@@ -938,6 +940,23 @@ Viewed to the visible named line-comment action, pressed Enter, typed and posted
 in Unified and Side by side. Terminal reply/decision/merge continuation remains explicit. Repository browsing and
 download TUI defects are separate findings under investigation, not covered by this correction. No service/API or
 route changes. Full gates remain pending until the end. Batch 2 committed as `aa72afd9`.
+
+**Batch 4 — time and staffing response ownership.** The time/resources worker corrected MyTime/TeamPlanner and
+added offline **regression** specs `ProjectsTimeAsync` / `ProjectsResourcesAsync`. The planning worker independently
+reviewed them, requested a decision-reason snapshot correction, and approved the final changes. Both original
+component fixtures failed as intended; final **2/2 pass**, zero skips, 3.6 s feature time. Existing focused
+`TimeEntries,Resources` passed **11/11**, and authorized acceptance `TimeWalk`, `ResourceWalk`, `BillingWalk`,
+`MilestoneBillingWalk` passed **24/24** on independent disposable databases. These tests do not certify live approval,
+staffing, billing or output activities by themselves.
+
+Actual remote terminal work created PRTIME01 and PRTIME01-1, added Joe, saved 2 h on the Oct 12 week, retained invalid
+25 h input, corrected to 2.5 h, canceled deletion and exercised worker/manager return → correction → resubmit →
+approve → lock. A separate timer started and stopped once, then F5 showed exactly one 0.02 h entry and no running
+timer. Coordinator used a separate browser identity for Joe, typed 1.25 h Tuesday and 2 h Wednesday, saved with
+blur/Enter and verified them after reload (3.27 h total). At measured 390×844, document width remains 390, Day mode
+shows the correct totals, and the Add time dialog opens/cancels without overflow. No service or route contracts
+changed in this batch. Selected-week terminal return, shared row actions and manual-rate billing findings are
+separate pending corrections. Full gates remain pending. Batch 3 committed as `3cfdc273`.
 
 ### Completion
 

@@ -3,6 +3,8 @@ suite(
     [
         "ProjectsPlanningResponses",
         "ProjectsDiffState",
+        "ProjectsTimeAsync",
+        "ProjectsResourcesAsync",
         "AccountingReceivablesWalk",
         "ProductsWalk",
         "WarehouseReceivingWalk",
