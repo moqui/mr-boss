@@ -144,7 +144,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-toolbar>
                         <link url="commits" text="History" icon="sym_o_history" parameter-map="{repositoryId:repositoryId, ref:ref, path:file.path}"/>
                         <link url="${rawUrl}" url-type="plain" text="Raw" icon="sym_o_open_in_new" target-window="_blank"/>
-                        <link url="raw" text="Download" icon="sym_o_download" parameter-map="downloadParams" target-window="_blank"/>
+                        <link url="raw" text="Download" icon="sym_o_download" parameter-map="downloadParams"/>
                         <link url="." text="Permalink" icon="sym_o_link" parameter-map="{repositoryId:repositoryId, ref:commitId, path:file.path}"/>
                     </box-toolbar>
                     <box-body>
@@ -170,7 +170,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </widgets></section>
                         <section name="FileBinary" condition="!file.isText &amp;&amp; !file.isImage"><widgets>
                             <label type="p" text="${file.tooLarge ? 'Too large to show here' : 'A binary file'}: download it to open it." style="m-muted q-mb-xs"/>
-                            <link url="raw" text="Download ${file.name}" icon="sym_o_download" parameter-map="downloadParams" target-window="_blank"/>
+                            <link url="raw" text="Download ${file.name}" icon="sym_o_download" parameter-map="downloadParams"/>
                         </widgets></section>
                     </box-body>
                 </container-box>

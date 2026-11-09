@@ -1146,3 +1146,14 @@ variants, so the terminal table displayed W0–W5 rather than actual dates. Titl
 unused week columns are hidden. Coordinator and planning peer reviews cleared the two-file correction. The existing
 Resources render was extended in place, failed before and passed4/4 afterward; actual terminal two-week headers
 show their dates. No extra render journey or regression budget increase was added. Full gates pending.
+
+
+**Batch 13 — terminal browser handoff and one-time credentials.** Framework `8f050b61` retains remote-session
+cookies only in memory while revalidating the explicit device/login key and matching session identity before CSRF
+continuity. Revoked, mismatched and expired keys do not gain authority from a cookie; cookie-only browser behavior
+remains unchanged. Existing focused auth/host controls and live one-time token read/push passed, followed by revocation
+and denial of the same Git operation. Temporary SSH and token rows were removed, and local device keys were forgotten.
+Framework `eb5fdee3` carries authored GET browser targets through normal/menu/row links; write actions retain native
+confirmation. The BOSS file Download links now use terminal attachment handling while Raw retains its browser target.
+Paired actual Download/Raw and existing Code8/8 pass; shell14/14, agent11/11 and core metadata controls pass.
+Source corrections received independent review. Full gates pending.
