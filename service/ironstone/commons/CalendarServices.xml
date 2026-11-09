@@ -808,10 +808,7 @@ along with this software (see the LICENSE.md file). If not, see
             const millisOf = (day, time) => Number(String(ec.l10n.parseTimestamp(day + ' ' + (time || '00:00') + ':00.000', pattern)))
             const startMs = millisOf(startWall.day, isAllDay ? '00:00' : (startWall.time || '09:00'))
             let endMs = endWall ? millisOf(endWall.day, isAllDay ? '00:00' : (endWall.time || startWall.time || '10:00')) : null
-            if (endMs != null && (isAllDay ? endMs < startMs : endMs <= startMs)) {
-                ec.message.addValidationError(null, 'end', null, L(isAllDay ? 'The last day must be on or after the start day' : 'The end must be after the start'), null)
-                return
-            }
+            // an end before the start is refused by create#Event
             if (endMs == null) endMs = isAllDay ? startMs : startMs + 3600000
             const ids = attendeePartyIds == null ? [] : (Array.isArray(attendeePartyIds) ? attendeePartyIds : String(attendeePartyIds).split(','))
             const created = ec.service.sync().name('ironstone.commons.QuickCreateServices.create#Event').parameters({workEffortName: name,

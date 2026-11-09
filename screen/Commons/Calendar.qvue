@@ -1247,8 +1247,9 @@ module.exports = {
         },
         setAnchor(el) {
             const rect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-            // A wide agenda row leaves no room beside either edge; anchor at its start rather than spanning the row.
-            if (rect) this.anchorRect = { left: rect.left, top: rect.top, width: 1, height: Math.max(rect.height, 1) };
+            // A popover opens beside its anchor; an element too wide to leave it room on either side (an agenda row) anchors at its start.
+            const room = rect ? Math.max(rect.left, window.innerWidth - rect.right) : 0;
+            if (rect) this.anchorRect = { left: rect.left, top: rect.top, width: room >= 440 ? Math.max(rect.width, 1) : 1, height: Math.max(rect.height, 1) };
             else this.anchorRect = { left: window.innerWidth / 2 - 210, top: 120, width: 1, height: 1 };
         },
         popupBindings(title) {
@@ -1338,9 +1339,8 @@ module.exports = {
             }
             this.pop = { open: false, loading: true, item, event: null, color: item.color || null, busy: null };
             this.$nextTick(() => { this.pop.open = true; });
-            // A computed agenda item is wrapped by Vue when stored in pop; compare its stable key, not its proxy identity.
-            const selectedKey = item.key;
-            const isCurrent = () => this.popRequestSeq === requestSeq && this.pop.open && this.pop.item?.key === selectedKey;
+            // a later selection, or a closed popover, makes this answer stale
+            const isCurrent = () => this.popRequestSeq === requestSeq && this.pop.open;
             moqui.request(this.url('eventSummary'), { params: this.scoped({ workEffortId: item.workEffortId, instanceStart: item.recurringEventId === item.workEffortId ? (item.instanceStart || '') : '' }) }).then((result) => {
                 if (!isCurrent()) return;
                 const json = result.json || {};

@@ -44,9 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="due_from"/>
     <parameter name="due_thru"/>
 
-    <transition name="taskDetail"><default-response url="../TaskDetail">
-        <parameter name="workEffortId"/><parameter name="taskListFind"/>
-    </default-response></transition>
+    <transition name="taskDetail"><default-response url="../TaskDetail"/></transition>
 
     <!-- ========== changes that show the list again, with the find of the keep field ========== -->
     <transition name="quickAdd">

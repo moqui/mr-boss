@@ -32,6 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
             try { if (typeof findJson === 'string' && findJson.length <= 8192) decoded = JSON.parse(findJson) || {} } catch (err) { decoded = {} }
             findMap = {}
             if (!Array.isArray(decoded) && typeof decoded === 'object') {
+                // the find parameters of Commons/Tasks/List.xml (its keepJson), and its smart lists
                 for (const key of ['list', 'text', 'statusId', 'purposeEnumId', 'rootWorkEffortId', 'recordId', 'orderByField', 'pageIndex',
                         'due_period', 'due_poffset', 'due_pdate', 'due_from', 'due_thru']) {
                     const value = decoded[key]

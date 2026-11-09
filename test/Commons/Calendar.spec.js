@@ -263,11 +263,14 @@ feature("agenda summaries accept proxied selections and ignore superseded or clo
         const moqui = { request: () => ({ then: (success, failure) => pending.push({ success, failure }) }), handleAjaxError: (error) => errors.push(error) }
         const source = ec.resource.getLocationText("component://mr-boss/screen/Commons/Calendar.qvue")
         const script = source.slice(source.indexOf("<script>") + 8, source.lastIndexOf("</script>"))
-        const component = runInContext(script, { module: { exports: {} }, moqui })
+        const component = runInContext(script, { module: { exports: {} }, moqui, window: { innerWidth: 1920 } })
         const point = {}
-        component.methods.setAnchor.call(point, { getBoundingClientRect: () => ({ left: 269, top: 734, width: 1635, height: 52 }) })
+        component.methods.setAnchor.call(point, { getBoundingClientRect: () => ({ left: 269, top: 734, width: 1635, height: 52, right: 1904 }) })
         // A 400px summary and 420px editor can fit beside a full-width agenda row at a 1920px viewport.
         Math.max(point.anchorRect.left - 8, 1920 - point.anchorRect.left - point.anchorRect.width - 8) >= 420
+        // A week chip leaves room beside it, so the popover opens beside the whole chip rather than over it.
+        component.methods.setAnchor.call(point, { getBoundingClientRect: () => ({ left: 600, top: 300, width: 120, height: 40, right: 720 }) })
+        point.anchorRect.width == 120
         component.methods.popupBindings.call({ phone: true }, "Event") == { title: "Event", width: "440" }
         const vm = Object.assign(component.data(), { setAnchor() {}, $nextTick: (run) => run(), url: (name) => name, scoped: (fields) => fields })
         let pop = vm.pop
