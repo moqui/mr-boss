@@ -239,6 +239,140 @@ feature("the quick event: in the default calendar with an attendee invited, a we
     },
 })
 
+feature("the quick event end rule permits a cleared date mask and checks timed and inclusive all-day ranges", {
+    expect() {
+        const source = ec.resource.getLocationText("component://mr-boss/screen/Commons/Calendar.qvue")
+        const script = source.slice(source.indexOf("<script>") + 8, source.lastIndexOf("</script>"))
+        const component = runInContext(script, { module: { exports: {} } })
+        const rule = (value, allDay) => component.methods.quickEndRule.call({ t: (text) => text }, value, { start: "2026-11-12 10:00", allDay })
+        rule("", "N") == true
+        rule("____-__-__ __:__", "N") == true
+        rule("____-__-__", "Y") == true
+        rule("2026-11-__ __:__", "N") == "The end must be after the start"
+        rule("2026-11-12 09:00", "N") == "The end must be after the start"
+        rule("2026-11-12 10:00", "N") == "The end must be after the start"
+        rule("2026-11-12 11:00", "N") == true
+        rule("2026-11-11", "Y") == "The last day must be on or after the start day"
+        rule("2026-11-12", "Y") == true
+    },
+})
+
+feature("agenda summaries accept proxied selections and ignore superseded or closed selections' responses", {
+    expect() {
+        const pending = [], errors = []
+        const moqui = { request: () => ({ then: (success, failure) => pending.push({ success, failure }) }), handleAjaxError: (error) => errors.push(error) }
+        const source = ec.resource.getLocationText("component://mr-boss/screen/Commons/Calendar.qvue")
+        const script = source.slice(source.indexOf("<script>") + 8, source.lastIndexOf("</script>"))
+        const component = runInContext(script, { module: { exports: {} }, moqui })
+        const point = {}
+        component.methods.setAnchor.call(point, { getBoundingClientRect: () => ({ left: 269, top: 734, width: 1635, height: 52 }) })
+        // A 400px summary and 420px editor can fit beside a full-width agenda row at a 1920px viewport.
+        Math.max(point.anchorRect.left - 8, 1920 - point.anchorRect.left - point.anchorRect.width - 8) >= 420
+        component.methods.popupBindings.call({ phone: true }, "Event") == { title: "Event", width: "440" }
+        const vm = Object.assign(component.data(), { setAnchor() {}, $nextTick: (run) => run(), url: (name) => name, scoped: (fields) => fields })
+        let pop = vm.pop
+        Object.defineProperty(vm, "pop", { get: () => pop, set(value) {
+            // Vue wraps a raw computed agenda item when it enters reactive component data.
+            pop = Object.assign({}, value, { item: value.item ? new Proxy(value.item, {}) : null })
+        } })
+        const a = { kind: "event", key: "series|2026-11-14 14:00", workEffortId: "series", recurringEventId: "series", instanceStart: "2026-11-14 14:00" }
+        const b = Object.assign({}, a, { key: "series|2026-11-15 14:00", instanceStart: "2026-11-15 14:00" })
+        const open = (item) => component.methods.openItem.call(vm, {}, item)
+        const answer = (name) => ({ json: { visible: true, event: { name, calendar: null } } })
+        open(a)
+        vm.pop.item !== a
+        pending[0].success(answer("Saturday"))
+        vm.pop.event.name == "Saturday"
+        vm.pop.loading == false
+        open(a)
+        open(b)
+        pending[1].success(answer("Stale Saturday"))
+        vm.pop.event == null
+        vm.pop.loading == true
+        pending[2].success(answer("Sunday"))
+        vm.pop.event.name == "Sunday"
+        open(a)
+        open(a)
+        pending[3].failure("stale error on the same occurrence")
+        errors.length == 0
+        vm.pop.loading == true
+        pending[4].failure("current error")
+        errors == ["current error"]
+        vm.pop.loading == false
+        open(b)
+        vm.pop.open = false
+        pending[5].success(answer("Closed Sunday"))
+        vm.pop.event == null
+    },
+})
+
+feature("the shared project calendar sends mutation scope in the body and keeps read scope in the URL", {
+    expect() {
+        const calls = []
+        const moqui = { objToSearch: (fields) => "workEffortId=" + encodeURIComponent(fields.workEffortId),
+            request: (url, options) => { calls.push({ url, options }); return { then() {} } } }
+        const source = ec.resource.getLocationText("component://mr-boss/screen/Commons/Calendar.qvue")
+        const script = source.slice(source.indexOf("<script>") + 8, source.lastIndexOf("</script>"))
+        const component = runInContext(script, { module: { exports: {} }, moqui })
+        const vm = Object.assign(component.data(), component.methods, { screenPath: "/qapps/Projects/Projects/ProjectDetail/Plan/Calendar",
+            pathList: ["Projects", "Projects", "ProjectDetail", "Plan", "Calendar"], $root: { appRootPath: "/qapps", currentParameters: { workEffortId: "IRON" } },
+            project: { canUpdate: true }, calendarOptions: [], setAnchor() {}, $nextTick() {} })
+        vm.url("eventSummary") == vm.screenPath + "/eventSummary?workEffortId=IRON"
+        vm.scoped({ workEffortId: "meeting" }) == { eventWorkEffortId: "meeting" }
+        vm.action("createEvent") == "/Projects/Projects/ProjectDetail/Plan/Calendar/createEvent"
+        vm.openQuick({ start: "2026-11-12 14:00", end: "2026-11-12 15:00" })
+        vm.quick.initial.workEffortId == "IRON"
+        const payload = { workEffortId: "meeting", start: "2026-11-12 16:00" }
+        vm.post("moveEvent", payload)
+        payload.workEffortId == "meeting"
+        vm.saveRail({ hiddenCalendarIds: "cal" })
+        vm.pop.event = { workEffortId: "meeting" }
+        vm.respond("accept")
+        vm.doChange("cancel", { workEffortId: "meeting" }, "this", "N")
+        calls.length == 4
+        calls.every((call) => call.options.method === "POST" && !call.url.includes("?") && call.options.params.workEffortId === "IRON")
+        calls[0].options.params.eventWorkEffortId == "meeting"
+        calls[1].options.params.hiddenCalendarIds == "cal"
+        !calls[1].options.params.eventWorkEffortId
+        calls[2].options.params.eventWorkEffortId == "meeting"
+        calls[3].options.params.eventWorkEffortId == "meeting"
+        vm.pathList = ["Commons", "Calendar"]
+        vm.screenPath = "/qapps/Commons/Calendar"
+        vm.project = null
+        vm.post("moveEvent", payload)
+        calls[4].url == "/qapps/Commons/Calendar/moveEvent"
+        calls[4].options.params.workEffortId == "meeting"
+        !calls[4].options.params.eventWorkEffortId
+        vm.openQuick({ start: "2026-11-12 14:00", end: "2026-11-12 15:00" })
+        !vm.quick.initial.workEffortId
+    },
+})
+
+feature("quick event range: #label", {
+    where: [
+        { label: "earlier end is refused", end: "09:00", allDay: "N", refused: true },
+        { label: "equal end is refused", end: "10:00", allDay: "N", refused: true },
+        { label: "earlier last day is refused", end: "previous", allDay: "Y", refused: true },
+        { label: "blank end defaults to one hour", end: null, allDay: "N", refused: false },
+        { label: "same-day all-day event is valid", end: "same", allDay: "Y", refused: false },
+    ],
+    when({ label, end, allDay, refused }) {
+        const name = "BOSS_TEST quick range " + label
+        const parameters = { workEffortName: name, start: day(4) + (allDay === "Y" ? "" : " 10:00"), allDay, calendarId: "BOSS_DEMO_CAL_JD" }
+        if (end != null) parameters.end = end === "previous" ? day(3) : end === "same" ? day(4) : day(4) + " " + end
+        const answer = post("createEvent", parameters)
+        return { answer, row: one("mantle.work.effort.WorkEffort", { workEffortName: name }), refused, allDay }
+    },
+    then({ answer, row, refused, allDay }) {
+        refused ? answer.errors.includes(allDay === "Y" ? "last day must be on or after" : "end must be after") : answer.errors == ""
+        refused ? row == null : row != null
+        refused ? !answer.json.workEffortId : !!answer.json.workEffortId
+        refused || allDay === "Y" || userText(row.estimatedCompletionDate) == day(4) + " 11:00"
+        refused || allDay !== "Y" || dateOf(row.allDayStart) == day(4)
+        refused || allDay !== "Y" || dateOf(row.allDayEnd) == day(4)
+    },
+})
+
 feature("a single event moves and resizes; with notify the attendee gets the update", {
     when() {
         const created = post("createEvent", { workEffortName: "BOSS_TEST one-off", start: day(5) + " 09:00", end: day(5) + " 10:00", attendeePartyIds: "ORG_ZIZI_JD" })

@@ -695,8 +695,11 @@ Resolve coverage gaps when implementing the relevant batch; this documentation c
   Run the affected regression specs with the existing binary unless a rebuild is required, for example
   `./moq test mr-boss --spec QuickCreate --nobuild`, and for client specs `./moq test-client mr-boss --serve --spec
   <name>`. Commands run from the mr-moqui root.
-- Before application implementation commits run `./moq test-apps`; when framework changes are part of a batch,
-  run `./moq test-framework` for that work as well. Do not run framework tests or `cargo test` merely for BOSS changes.
+- During each batch run localized checks for the affected rules, bugs and activities. Run `./moq test-apps` once
+  at the end of the planned review pass; include `./moq test-framework` there when the pass changed framework code.
+  For this Waves 1–3 pass that boundary is the end of Wave 3. This user-directed cadence also applies to future
+  review iterations and supersedes the initial per-batch full-suite cadence; earlier runs remain historical results.
+  Do not run framework tests or `cargo test` merely for BOSS changes.
   Do not run `test-all` or `accept-all` by default. A fix in BasicComms or webroot is framework work (AGENTS.md),
   even when found through a BOSS mount.
 - The desktop client's shell is not reviewed separately. When a batch changes one of its six bundled BasicComms
@@ -808,9 +811,9 @@ then allocate a DC-UI ID or close it here with the reason.
 
 ### Bounded batch record
 
-The first batch is **DC-01 and DC-03** on the demo users: browser light and dark at
-1920×1080, the embedded TUI, and one targeted keyboard pass. It exercises the shell, palette, quick-create and
-fixture setup that later waves reuse, and measures the effort per activity before the rest of Wave 1.
+Waves 1–3 were executed in the five bounded batches below. The first, **DC-01 and DC-03**, established demo-user
+browser light/dark at 1920×1080, embedded TUI and targeted keyboard baselines for the shell, palette, quick-create
+and fixture setup reused by the later activities.
 
 #### Waves 1–3 execution environment
 
@@ -825,7 +828,8 @@ fixture setup that later waves reuse, and measures the effort per activity befor
   Built-in in-app browser tab opened successfully at the isolated login page; no activity is closed by that check.
 - Bootstrap logged the expected missing Commerce starter because PASS is deliberately absent, plus existing
   independent demo-load warnings. These do not establish Commons activity outcomes.
-- Five bounded batches: DC-01/03, DC-02/04, DC-05/06, DC-07/08, DC-09/10. Full application commit gates use the
+- Five bounded batches: DC-01/03, DC-02/04, DC-05/06, DC-07/08, DC-09/10. Use localized checks during batches and
+  full suites at the pass boundary (end of Wave 3 here), as directed by the user. Full application gates use the
   normal component inventory with runtime overrides cleared, so the isolated runtime does not narrow the gate.
 
 #### Batch 1 — navigation and contextual creation (verified with mode gaps)
@@ -959,8 +963,30 @@ fixture setup that later waves reuse, and measures the effort per activity befor
 - Projects Plan Calendar New meeting exposed 016: the project identity is in the POST URL query and write guard refuses it. Caller now passes it in the body; focused regression and independent source review pass. Live event 100045 persists at Nov12 14–15 with its IRON link.
 - Popup 017 now fits its menu at 1920 and 1280px; phone quick-event dialog fits at 390px. Before/after geometry and screenshots are retained; no screenshot baseline suite was added.
 - Final release build and the six affected application specs pass: 122/122 features. Full commit gates are recorded below when complete.
-- Coordinator must append final current focused/full-app/framework gate results, relevant lint, source revisions and
-  commits after they complete. Earlier green gates do not certify later015 changes. No in-progress gate is a pass.
+- Final end-of-Wave-3 application gate passed 3410/3410 server features and 19/19 browser client features within
+  unchanged budgets (`apps-batch-5-final.log`). The six affected application specs passed 122/122; the final Calendar
+  component/request/geometry recheck passed 23/23. No broad regression walk or screenshot baseline was added.
+- Final framework gate passed every phase on the final native painter/ID source (`framework-final-verified.log`,
+  bounded Rust concurrency 2), as did `cargo lint` and `cargo lint-min`. Screen lint reports zero parse failures
+  across 1747 files; existing idiom/hazard sites remain in the separate report. Required BOSS acceptance passed
+  520/520 server and 172/172 client features when CommonsClientFixtures was added; the fixture was not changed later.
+- Local owning-layer commits include framework `d4927955` and BOSS Contacts `4182f6cc`; this commit contains the final
+  Calendar implementation and record. Framework `753b351d` records the requested future cadence: localized checks
+  during batches and full suites once at the end of the planned review pass.
+
+#### Waves 1–3 pass disposition
+
+- DC-01–10 each have observed primary outcomes, recovery evidence and explicit remaining variants in the activity
+  ledger and screen inventory. All 18 reproduced UI findings have corrections and independent after/recovery review.
+  Browser navigation was coordinator-proxied; delegated workers designed checks, fixed code and inspected saved
+  snapshots/images because child sessions could not access the shared built-in browser.
+- Remaining execution coverage includes actual 200% zoom, successful Assist/provider execution, external DAV clients,
+  valid calendar publication/revocation and resource approval controls absent from the current UI, plus the deferred
+  mode/access/recovery variants listed per activity. The live-call repeat remains Wave 6; substantive Mail/Chat work
+  remains with its later waves. These gaps retain their explicit dispositions.
+- The approved disposable sync credential was verified for one-time display, hidden after reload and revoked.
+  Secret evidence is redacted. The isolated review server is stopped; its disposable database and ignored local
+  evidence are retained. Commits are local, with no push or deployment.
 
 For each batch record:
 

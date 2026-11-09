@@ -113,6 +113,16 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="workEffortId"/><parameter name="url"/><parameter name="message"/></out-parameters>
         <actions>
+            <script><![CDATA[
+                if (estimatedCompletionDate != null) {
+                    const isAllDay = allDay === 'Y' || allDay === 'true'
+                    const start = isAllDay ? ec.l10n.format(estimatedStartDate, 'yyyy-MM-dd') : Number(String(estimatedStartDate))
+                    const end = isAllDay ? ec.l10n.format(estimatedCompletionDate, 'yyyy-MM-dd') : Number(String(estimatedCompletionDate))
+                    if (isAllDay ? end < start : end <= start) ec.message.addValidationError(null, 'estimatedCompletionDate', null,
+                        ec.l10n.localize(isAllDay ? 'The last day must be on or after the start day' : 'The end must be after the start'), null)
+                }
+            ]]></script>
+            <if condition="ec.message.hasError()"><return/></if>
             <if condition="!calendarId">
                 <service-call name="mantle.work.CalendarServices.ensure#UserDefaultCalendar" out-map="calendarOut"/>
                 <set field="calendarId" from="calendarOut?.calendarId"/>
@@ -127,10 +137,10 @@ along with this software (see the LICENSE.md file). If not, see
                 if (allDay === 'Y' || allDay === 'true') {
                     const endMillis = estimatedCompletionDate != null ? Number(String(estimatedCompletionDate)) : startMillis
                     eventFields.allDayStart = ec.l10n.format(String(startMillis), 'yyyy-MM-dd')
-                    eventFields.allDayEnd = ec.l10n.format(String(Math.max(startMillis, endMillis)), 'yyyy-MM-dd')
+                    eventFields.allDayEnd = ec.l10n.format(String(endMillis), 'yyyy-MM-dd')
                 } else {
                     eventFields.estimatedStartDate = estimatedStartDate
-                    eventFields.estimatedCompletionDate = estimatedCompletionDate != null && Number(String(estimatedCompletionDate)) > startMillis ?
+                    eventFields.estimatedCompletionDate = estimatedCompletionDate != null ?
                             estimatedCompletionDate : new Date(startMillis + 3600000)
                 }
             ]]></script>
