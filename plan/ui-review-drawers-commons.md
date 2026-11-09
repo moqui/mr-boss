@@ -18,9 +18,9 @@ design specifies behavior, implementation records construction, and UI review re
 refinements and verification. This file remains the active record through the review; append findings and bounded
 batch notes as work happens rather than scattering the results into new status files.
 
-**Initial state:** documentation planning only. All review coverage is **pending**. No browser activities, application
-changes, builds or tests were performed to establish this plan. Source/mount inspection establishes the inventory,
-not usability or passing behavior. Historical findings are leads to reproduce, not current defects.
+**Execution:** Waves 1–3 (DC-01–10) are authorized for delegated browser review, correction, independent retest and
+local commits after each verified batch. The initial inventory was established from source, not browser activity;
+the coverage ledger and batch record below distinguish current observations from untested leads.
 
 ### Inputs and reference patterns
 
@@ -744,9 +744,9 @@ mode gaps, so a successful wide-browser happy path cannot close untested TUI or 
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
-| DC-01 | pending | Not executed; all planned variants remain | — |
+| DC-01 | exercised | Partial: John/Joe login and Home; palette People/ID/missing ID, destination and Back; Projects Open bugs saved find and detail/Back; browser light/dark, phone and embedded TUI navigation. Source-failure/inaccessible-recent recovery remains; actual 200% zoom unavailable in current browser API. | Batch 1; DC-UI-003 |
 | DC-02 | pending | Not executed; all planned variants remain | — |
-| DC-03 | pending | Not executed; all planned variants remain | — |
+| DC-03 | exercised | Partial: task/event/note/contact/request/activity created and persisted; contact/request and request/activity context retained; cancel/focus return, required input, Email/Chat entry-return, phone dialog, TUI keyboard save and Standard task create. Rebuilt browser/TUI selected-name fixes retested as ordinary staff; TUI record-context creation is unsupported, and denied/failed-save variants remain. | Batch 1; DC-UI-001/002/004/005 |
 | DC-04 | pending | Not executed; all planned variants remain | — |
 | DC-05 | pending | Not executed; all planned variants remain | — |
 | DC-06 | pending | Not executed; all planned variants remain | — |
@@ -769,13 +769,18 @@ mode gaps, so a successful wide-browser happy path cannot close untested TUI or 
 
 ### Findings register
 
-No observed findings are recorded yet. Allocate **DC-UI-001** onward when evidence exists. Label static suspicions and
-design judgments separately from observed defects. Use P1 for blocked work, data/privacy risk or essential unreadability;
+Allocate **DC-UI-001** onward when evidence exists. Label static suspicions and design judgments separately from
+observed defects. Use P1 for blocked work, data/privacy risk or essential unreadability;
 P2 for substantial friction/misleading behavior; P3 for localized refinement. A confirmed security/data defect takes
 priority over visual polish and is routed to the owning layer.
 
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| DC-UI-001 / observed / P2 | DC-03: open Task/Activity or contact-linked Request | Commons quick-create; John, light/dark and phone; TUI Task | Selected remote values show IDs (`EX_JOHN_DOE`, contact ID) instead of the supplied authorized display name. Empty remote search itself is intentional until typing. | `batch-1/quick-task-dark-before.jpg`, `quick-request-before.dom.txt`, `tui-task-create.jpg` | Framework static QVT/TUI generators | Preserve `current-description` as the initial selected option label without changing submitted IDs or overriding existing option labels. | Fresh-origin Joe browser and rebuilt TUI show Joe Developer; independent browser evidence review passed. TUI Alt+Enter saved a task whose detail confirms Joe as assignee. |
+| DC-UI-002 / observed / P3 | DC-03: submit blank Task title | Quick-create Task; John, dark | Missing authored required flag allows a request that returns a technical service/field error. Inputs remain available. | `batch-1/quick-task-required-pre-restart.dom.txt` | BOSS | Mark Task title required; extend the existing render check. | Fresh-origin Joe gets inline Required, focus remains on Task, dialog is retained. Quasar rules do not require a native HTML required attribute. |
+| DC-UI-003 / observed / P2 | DC-01: follow Home task counters | Commons/Home to Tasks/List; John, light/dark | Mixed Today-source count links to a task-only list (Home 8/9 versus list 3; Overdue 1 versus 7). | `batch-1/home-light.dom.txt`, `today-counter-list.dom.txt` | BOSS Home | Use the destination Task service's counts; label cards Tasks today and Overdue tasks. Mixed-source Today strip remains. | Independent browser-evidence retest confirms 3 to 3 and 7 to 7. Before/after data differs by the recorded disposable task; shortened label avoids truncation. |
+| DC-UI-004 / observed / P2 | DC-03: immediately open a saved note | Home quick-note success notification; John/Joe | Open appears while the modal is closing; clicking then twice leaves Home, although the note persists. Waiting for the dialog to close works. | `batch-1/note-early-open-before.dom.txt`, `note-early-open-after.dom.txt` | Framework client | Publish actionable success messages after quick-create's actual on-hide event; keep refusals immediate. Regenerate existing component renders. | Fresh-origin Joe: Open appears with no dialog, immediately reaches the selected Notes record and exact body. Independent evidence review passed. |
+| DC-UI-005 / observed / P2 | DC-03: TUI Home → F6 → Activity | Embedded TUI; Joe | Context-free menu offers Activity, then only an explanatory placeholder with no Schedule action. The TUI shell does not carry record context. | `batch-1/tui-contextless-create-menu.dom.txt`, `tui-contextless-activity.jpg` | Framework host TUI adapter | Omit record-required creation entries from the context-free adapter; do not add a new TUI record-context API in this UI review. | Rebuilt live menu retains Task/Event/Note/Contact/Request and omits Activity; independent evidence review passed. Contextual TUI Activity remains explicitly unsupported. |
 
 ### Static leads
 
@@ -790,9 +795,68 @@ then allocate a DC-UI ID or close it here with the reason.
 
 ### Bounded batch record
 
-No execution batches yet. The first batch is **DC-01 and DC-03** on the demo users: browser light and dark at
+The first batch is **DC-01 and DC-03** on the demo users: browser light and dark at
 1920×1080, the embedded TUI, and one targeted keyboard pass. It exercises the shell, palette, quick-create and
 fixture setup that later waves reuse, and measures the effort per activity before the rest of Wave 1.
+
+#### Waves 1–3 execution environment
+
+- Coordinator owns runtime lifecycle, finding IDs, this record and commits; delegated workers rotate through
+  browser testing, fixes and independent verification. Shared browser control and shared-file edits are serialized.
+- Bootstrap runtime: `/private/tmp/boss-ui-review-m6x4q4px`; initial runner scratch runtime:
+  `/tmp/mt-55471-b6ee910`; HTTP `127.0.0.1:18090`. Mutable configuration is copied; base/dev components are linked
+  individually, and only Mantle and BOSS are linked as addons. No working database/resources or PASS are linked.
+- Initial revisions: framework `8d22dddc`, BOSS `58cffc1f`; existing release binary reused. The framework
+  `ClientFixtures` bootstrap passed 16 features and serves fresh demo data with `mail_capture_sends=true`.
+- Local evidence: framework `plans/ui-refinement-evidence/boss-waves-1-3/` (ignored), including `environment.json`.
+  Built-in in-app browser tab opened successfully at the isolated login page; no activity is closed by that check.
+- Bootstrap logged the expected missing Commerce starter because PASS is deliberately absent, plus existing
+  independent demo-load warnings. These do not establish Commons activity outcomes.
+- Five bounded batches: DC-01/03, DC-02/04, DC-05/06, DC-07/08, DC-09/10. Full application commit gates use the
+  normal component inventory with runtime overrides cleared, so the isolated runtime does not narrow the gate.
+
+#### Batch 1 — navigation and contextual creation (verified with mode gaps)
+
+- Browser control is coordinator-proxied: child agents cannot access the chat-scoped in-app browser; their native
+  Chrome fallback timed out. Testing agents specify steps and inspect saved DOM/screenshots; fixing and independent
+  evidence verification are delegated. No successful direct child browser navigation is claimed.
+- Important states and persisted outcomes are under `batch-1/`. The standard `/apps/Commons/QuickCreate` primary
+  action created a disposable task and returned its JSON result. Email/Chat checks cover entry and return only.
+- The debug binary was rebuilt for the embedded generators, then refreshed after both generator changes. Client
+  component renders were regenerated with the existing golden test; its diff changes only quick-create's on-hide hook.
+  A fresh localhost origin was necessary to avoid the old 127.0.0.1 client's cached templates. The rebuild restarted
+  on fresh fixtures at `/tmp/mt-78536-19743c40` with `--keep`; pre-rebuild disposable creations are evidence, not current rows.
+- Focused framework ScreenQvt: 17/17; offline client WebrootVue.qvt: 34/34; selected TUI Rust test and component
+  precompile golden passed. Initial new-test stub/selector failures were corrected. BOSS CommonsSettings passed;
+  QuickCreate's corrected compiled-output assertion passed all 19 features without another screen render.
+- Adding CommonsClientFixtures required BOSS acceptance: 520/520 server features (97 specs), 172/172 client
+  features (67 specs), both passed. These checks do not substitute for the manual DC activity outcomes.
+- The first full application gate was invalidated when a process with different sandbox visibility treated live
+  workers as stale and removed their scratch files. Its failures are infrastructure corruption, not application
+  results. All subsequent test/runtime commands have one coordinator and consistent process visibility; the normal release gate subsequently passed.
+- Required behavior checks and independent evidence review passed; the activity ledger preserves untested variants. Actual 200%
+  browser zoom is blocked: IAB exposes viewport/visibility, and native control is unavailable; no CSS zoom substitute.
+- Subsequent ordinary-staff checks: Joe's TUI task selected label is Joe Developer; Alt+Enter saved `UI review TUI
+  task`, closed the dialog, and its browser detail confirms title, Today due date and Joe as assignee. The invalid
+  Activity menu entry is DC-UI-005. Existing Projects Open bugs saved find retained Bug Fix and the same IRON-9 row
+  after detail/Back. Updated QuickCreate compiled-template assertion now passes all 19 features.
+- The kept debug database survived a later stale-run cleanup stopping its Postgres (the retained path still named
+  the original, exited runner PID). After stopping the runner, the entire kept runtime was moved to
+  `/private/tmp/boss-ui-review-data` and served with `--db existing`; rows were retained. Subsequent restarts use
+  this stable path, not a PID-named scratch directory. The reusable UI review guide records this lifecycle detail.
+- Full Debug checks passed behavior but exceeded the normal timing budgets; no budgets were raised. The expected
+  TUI generator golden changed only its selected-description fallback and was regenerated/rechecked. Normal release
+  gates were repeated sequentially. A pre-existing SupportAssignment fixture created date-effective settings
+  after its Sunday 03:00 scenario: its setup and parallel clocks are now pinned to Nov 2, and the targeted 7 features pass.
+- A direct ordinary-staff Activity submission against the other-organization fixture was refused with Work Effort
+  not found; the provided summary/date remained for correction, and the private task title was not shown.
+- Final normal application gate: 3394/3394 server and 19/19 client features passed within budgets. Full framework
+  gate passed with `RUST_TEST_THREADS=4`, including Cargo workspace and every framework/client phase. An accidental
+  global mail-capture override explained earlier local SMTP failures; an unbounded runtime-memory test flake cleared
+  with bounded concurrency. Screen lint passed with zero parse failures; existing idiom warnings remain in its report.
+- Local prerequisite commit: Mantle `da9ed876` pins SupportAssignment fixture clocks. Framework batch commit:
+  `78875383` preserves selected labels, actionable modal completion and the context-free TUI action boundary.
+  Evidence includes `test-apps-final.log`, `framework-bounded-concurrency.log` and the independent review notes.
 
 For each batch record:
 

@@ -130,18 +130,22 @@ feature("the setup card keeps Done and Dismiss, and goes when every item is; Hom
         const driveId = sys(() => call("org.moqui.impl.FileServices.ensure#PersonalDrive", {})).driveId
         sys(() => call("org.moqui.impl.FileServices.save#Text", { driveId, path: "Settings spec notes.md", text: "For Home's recent files\n" }))
         ec.message.clearErrors()
+        const taskCounts = sys(() => call("ironstone.commons.TaskServices.find#TaskRows", {pageSize: 1})).counts
         const first = render("Home")
         post("Home/setSetup", { item: "mailAccount", state: "done" })
         const done = render("Home")
         post("Home/setSetup", { item: "all", state: "dismissed" })
         const dismissed = render("Home")
-        return { first, done, dismissed, states: JSON.parse(ec.user.getPreference("COMMONS_SETUP")) }
+        return { first, done, dismissed, taskCounts, states: JSON.parse(ec.user.getPreference("COMMONS_SETUP")) }
     },
-    then({ first, done, dismissed, states }) {
+    then({ first, done, dismissed, taskCounts, states }) {
         first.status == 200
         first.errors == ""
         first.output.includes("Add a mail account")
-        first.output.includes("Due today")
+        first.output.includes('title="Tasks today" value="' + ec.l10n.format(taskCounts.today, "#,##0") + '"')
+        first.output.includes('title="Overdue tasks" value="' + ec.l10n.format(taskCounts.overdue, "#,##0") + '"')
+        first.output.match(/href="[^"]*\/Tasks(?:\/List)?\?list=today"/) != null
+        first.output.match(/href="[^"]*\/Tasks(?:\/List)?\?list=overdue"/) != null
         first.output.includes("Requests assigned")
         first.output.includes("Recent pages")
         first.output.includes("Office")

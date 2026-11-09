@@ -53,6 +53,8 @@ feature("the #kind form renders in qvt (#label)", {
         shown.errors == ""
         !shown.broken
         shown.output.includes(label)
+        // server-static qvt returns compiled vnode props, not an HTML input; a bare Boolean prop compiles to "".
+        kind !== "task" || /\bid:\s*["']QuickTask_workEffortName["'][^}]{0,600}\brequired:\s*(?:true|["']["'])/.test(shown.output)
     },
 })
 
