@@ -817,7 +817,7 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PR-UI-001 / observed / P1 | PR-11, 24–25: request files | Projects/Requests/RequestDetail, Files; staff and ACME client; light 1920×1080 | Client saw a staff attachment explicitly labelled Internal and downloaded its exact bytes | pr-ui-001-client-internal-before.jpg; paired route regression | BOSS shared files | Filter explicit outward content types before count/paging and direct resource lookup; leave internal, unclassified and case-summary files private; omit drive capabilities at service boundary | Client now sees only outward control file (pr-ui-001-client-after.jpg); staff and cross-client/refusal checks pass; broader PR-24 remains partial |
+| PR-UI-001 / observed / P1 | PR-11, 24–25: request files | Projects/Requests/RequestDetail, Files; staff and ACME client; light 1920×1080 | Client saw a staff attachment explicitly labelled Internal and downloaded its exact bytes | pr-ui-001-client-internal-before.jpg; paired route regression | BOSS shared files | Filter explicit outward content types before count/paging and direct resource lookup; leave internal, unclassified and case-summary files private; omit drive capabilities at service boundary | Client now sees only outward control file (pr-ui-001-client-after.jpg); staff and cross-client/refusal checks pass; remaining PR-24 variants are explicit in the activity ledger |
 | PR-UI-002 / observed / P1 | PR-02: Start → Next | NewProject/Start; manager; light 1920×1080 | With Create now unchecked, Next created the draft then skipped the remaining wizard steps | browser activity; batch01-before.log | BOSS Projects | Replace ignored, schema-invalid conditional-response attribute with its condition/expression child | Focused regression passes; resumed saved draft progressed through Team, Modules, Money and Review and opened the same project |
 | PR-UI-003 / observed / P2 | PR-01: empty workday | Home; no-project fixture; server route | Empty project list failed required-list validation and falsely added projects to failedParts | batch01-before.log | BOSS Projects | Accept an empty list in the internal project-row decorator | ProjectsHome verifies the first-run state with no failed parts; 3/3 Home features pass |
 | PR-UI-004 / mounted reproduction / P2 | PR-07: completion summary and quick-add | Backlog; real mounted component with deferred responses | An older sprint summary replaced a newly opened dialog; successful quick-add erased a newer title | planning-before-sprint-summary / quick-add evidence; ProjectsPlanningResponses | BOSS Projects | Bind replies to their original dialog/visit and acknowledge only submitted text | Focused regressions pass, including leave/return and unmount; actual browser drag and keyboard move/reload pass; optimistic-refusal/narrow variants remain |
@@ -835,7 +835,7 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-015 / observed / P2 | PR-18: edit from selected week | MyTimeTui → EditEntry; Joe and manager viewing Joe | Saving an historical entry returned to global current-week list and hid the corrected row | time-tui-session.txt | BOSS Time | Carry fixed MyTime person/week context through edit, rates and delete responses | Existing TimeEntries regression 7/7; debug member and manager Save + F5 retain Oct 19 and selected Joe identity; normal/project returns unchanged |
 | PR-UI-016 / observed / P1 | PR-20: manual-rate actuals | Project Money; manager | Approved manual-rate time billed correctly but project actual client value remained zero | time-tui-session.txt; WorkManualTimeRates | Mantle work | Expose explicit hourly rates to rollup and use null-aware precedence, preserving zero | Standalone explicit/zero/fallback/delete rule checks pass; debug rate resave populates actuals; existing records require their normal update trigger |
 | PR-UI-017 / observed / P1 | PR-21: grouped time billing | Unbilled → worker-grouped draft invoice | Manual-rate source contributed 375 to invoice but had no invoice source link, stayed eligible for duplicate billing | time-tui-session.txt; manual-billing-before/after | Mantle accounting | Track resolved rated contributors per group, link manual/zero/piece rates and leave unrated piece-only controls unbilled | Standalone grouping/retry/removal/rebuild/cancel checks9/9; live100102187.50 links1001041.25h, unbilled0; original100051 preserved |
-| PR-UI-018 / measured / P2 | PR-07 and shared status labels | Browser Backlog, dark; composited actual fills | Planned grey text measured 2.34:1; blue 4.18:1; light-blue acceptance control also failed | pr07-backlog-dark.jpg; tonal-before/after | Framework webroot | Use theme-specific tonal foregrounds for grey/blue chips and badges | Existing ThemeLayout feature failed before and passed after; live dark4.63/5.41 and light5.24/4.84 contrast ratios pass; component acceptance due at final gate |
+| PR-UI-018 / measured / P2 | PR-07 and shared status labels | Browser Backlog, dark; composited actual fills | Planned grey text measured 2.34:1; blue 4.18:1; light-blue acceptance control also failed | pr07-backlog-dark.jpg; tonal-before/after | Framework webroot | Use theme-specific tonal foregrounds for grey/blue chips and badges | Existing ThemeLayout feature failed before and passed after; live dark4.63/5.41 and light5.24/4.84 contrast ratios pass; full component acceptance passed at the final phase (4/4 after the later journey move) |
 
 | PR-UI-019 / observed / P2 | PR-05: project work counts | ProjectDetail WorkItems, browser dark1920×1080 | View pills showed Open40/All47 while the project had1 matching item | pr05-project-counters-before.jpg; WorkItems before/after | BOSS WorkItems | Apply fixed project context to the base shared by smart counts and rows; preserve exclusion of other find fields | Existing WorkItems check reproduced global27/project11 mismatch then passed9/9; independent code review clear; live restart retest shows Open3/All4/Done1 matching imported project records (pr05-project-counters-after.jpg) |
 
@@ -865,7 +865,7 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-036 / observed / P2 | PR-23/24: saved flags | Material project Client access, then Time policy | Checking repository sharing from initialN showed Settings saved but revertedN; merged form model retained non-optionN alongside selectedY | code-shared-tui-checks.txt; pr24-client-code-readonly.jpg; pr23-time-policy-restored.txt | Framework QVT generator | Filter initial check arrays to actual option keys, matching existing standalone/static renderers | Exact generator1/1 and mounted form1/1 pass; actual sharingN→Y/reload/read-onlyclientrepo→N/directdenial, second TimepolicyY→N→Y and validweekdaymulti preserved; framework8c558b44 |
 
-| PR-UI-037 / observed / P2 | PR-23: static work-type actions | Material Settings/Time, John ADMIN, light1920×1080 | Every Offer/Stop offering action was disabled although other authorized controls and native terminal actions worked; nested section links lacked row availability keys | pr23-time-policy-before.txt; pr037-focused-results.md; pr037-time-consumer.jpg; pr037-time-restored.jpg | Framework server-static row projection | Traverse supported containers and action-free sections with native conditions and original assembled identities; preserve denied rows and fail-closed unsupported action scopes | Existing exact control failed before, then statics38/38 and core Clippy pass; actual General Office Offer→reload9→QuickTime choice→Stop→reload8; sibling merged WorkItemTypes Research→QuickCreate→restore6 passes; framework89391fd2; final full gates pending |
+| PR-UI-037 / observed / P2 | PR-23: static work-type actions | Material Settings/Time, John ADMIN, light1920×1080 | Every Offer/Stop offering action was disabled although other authorized controls and native terminal actions worked; nested section links lacked row availability keys | pr23-time-policy-before.txt; pr037-focused-results.md; pr037-time-consumer.jpg; pr037-time-restored.jpg | Framework server-static row projection | Traverse supported containers and action-free sections with native conditions and original assembled identities; preserve denied rows and fail-closed unsupported action scopes | Existing exact control failed before, then statics38/38 and core Clippy pass; actual General Office Offer→reload9→QuickTime choice→Stop→reload8; sibling merged WorkItemTypes Research→QuickCreate→restore6 passes; framework89391fd2; both full gates and closing lint pass; final record below |
 
 ### Static leads
 
@@ -875,12 +875,12 @@ assert new runtime failures. Historical finding identifiers remain historical re
 | Lead | Source | Activity | Investigation / priority |
 | --- | --- | --- | --- |
 | Client request file audience | impl-projects F156/F159; `service/ironstone/shared/RecordFilesServices.xml` and `ChatterServices.xml` | PR-11, 24–25 | Closed as PR-UI-001: actual staff/client listing and direct-download bytes reproduced the privacy defect, followed by scoped correction and paired live denial/public-file success; cross-client checks pass |
-| Project/child context and return | ProjectDetail's WorkItems/Backlog/Plan/Time mounts; Shared details; shell QuickCreate | PR-01, 05–08, 16, 18 | Compare scoped tab/global list/palette/quick-create routes and saved-filter Back; parent project and selected child IDs must not replace one another |
-| Repeated-row dialog identity | Settings WorkItemTypes `TypeIconDialog`, Labels `EditLabelDialog`, Workflows `EditStatusDialog`; repository Settings `EditRuleDialog`, `WebhookDeliveriesDialog`, `EditWebhookDialog` | PR-15, 23 | Fixed authored IDs warrant live repeated-row/focus/reopen checks; do not assume duplication is broken without inspecting rendered identity |
-| Rich-view save and mutation parity | Backlog, Timeline, MyTime, TeamPlanner, Changes and their twins | PR-07–08, 14, 16–19 | Compare supported keyboard/menu/TUI operations with drag/grid results; inspect late responses after changing project/week/range and separate intentional delegation |
-| Financial visibility distinctions | `ironstone.projects.BillingServices`, client projections and rate views; impl-projects §4 payroll decision | PR-20–25 | Ordinary money management must not expose employee worker pay; pair restricted “Set by payroll” presentation with separate payroll-holder read/edit, including exports and shared hours |
+| Project/child context and return | ProjectDetail's WorkItems/Backlog/Plan/Time mounts; Shared details; shell QuickCreate | PR-01, 05–08, 16, 18 | Resolved in sampled paths: PR-UI-015,019,033 correct historical person/week return, fixed-project counts and clear-filter context; actual peek→full→Back and Commons same-ID handoff preserve identity. Extra boundary variants remain in activity gaps |
+| Repeated-row dialog identity | Settings WorkItemTypes `TypeIconDialog`, Labels `EditLabelDialog`, Workflows `EditStatusDialog`; repository Settings `EditRuleDialog`, `WebhookDeliveriesDialog`, `EditWebhookDialog` | PR-15, 23 | Sampled browser dialogs retain row identity in code-settings-final.json and label evidence; local webhook deliveries target the intended hook. No new duplicate-ID defect was observed; this does not claim every focus/reopen combination |
+| Rich-view save and mutation parity | Backlog, Timeline, MyTime, TeamPlanner, Changes and their twins | PR-07–08, 14, 16–19 | Resolved as PR-UI-004,005,007,008,009 plus native renderer findings: bounded mounted deferred replies and actual supported mutation paths pass. Browser versus terminal evidence and unsampled variants remain distinct in activity rows |
+| Financial visibility distinctions | `ironstone.projects.BillingServices`, client projections and rate views; impl-projects §4 payroll decision | PR-20–25 | Sampled boundaries pass: manager-hidden worker pay survives save, separate payroll70→71→70 readback, client Hours omits people/pay/comments and invoice outputs omit worker pay. Existing aggregate profitability policy is retained; no claim that aggregates make costs impossible to infer |
 | Plain/Standard modes of rich views | `render-modes` and `html,qvt` text of Backlog, `ProjectDetail/Plan/Calendar`, Changes | PR-07–08, 14 | Closed for Backlog/Calendar by PR-UI-034: their existing notices are now reachable and observed in Standard; Timeline notice also observed. Changes plain mode remains unsupported, without claiming Standard diff presentation |
-| Stale demo dates and optional Git | BossProjectsDemoData files and Time/Resource/CodeDemoServices | PR-01, 07–09, 13–22 | Fixed planning dates differ from relative week fixtures; Git loader can continue after failure. Establish dates/capabilities before calling an empty or missing surface a defect |
+| Stale demo dates and optional Git | BossProjectsDemoData files and Time/Resource/CodeDemoServices | PR-01, 07–09, 13–22 | Resolved setup prerequisite: environment.json and retained fixture files identify the disposable runtime and dates; historical/current time windows were deliberately selected. Actual local Git clone/push/review/merge/tag/Docs operations proved capability rather than treating absent demo content as a defect |
 
 ### Bounded batch record
 
@@ -1357,3 +1357,90 @@ and Stop→reload8 pass. Sibling merged WorkItemTypes Research→QuickCreate cho
 separate merged-renderer consumer, not a claim of a second affected static screen. Both original configurations were
 restored, all remaining browser tabs closed, and the restarted review listeners stopped. No new TUI keys were created.
 A second incremental maximal release build and both full regression gates are pending for this final source revision.
+
+**Post-PR-UI-037 release and application gate — passed.** The incremental maximal release build passed in3m47s,
+SHA256 `a9e5c6b54df3a4a9ae6f2ca03d37c499998fbe01b9b2fabccd6e370a7a83af16`. The first repeat could not start
+embedded PostgreSQL because the sandbox denied shmget; no test features ran. The same authorized command with the
+required local process permissions passed: server3420/3420 across451specs, zero skips,197.07s wall; Mantle370.9/393s,
+BOSS223.5/264s, Marble0.1/5s and PASS14.7/20s serial feature time. Client30/30 across16specs passed with zero skips
+in125.94s including fixtures. BOSS client64.7/57s is an advisory within the existing85.5s hard tolerance; no limit
+was raised. The final rebuilt ProjectsServerStatic/ProjectsTui repeat passed8/8 in45.09s, and full webroot acceptance
+passed3/3 in4.75s. Logs and selected eleven-spec/63-feature JUnit index are retained under ignored evidence.
+
+**Second framework run — test-isolation followup.** Both previously stale renderer expectations now pass, but two
+unchanged script-runtime memory checks failed: an exact process-global fragmentation count and a cache-stress
+same-runtime assertion subject to the independent timed fragmentation policy. The focused five-test memory namespace
+passes in1.24s; the parallel full Core run took52.84s. Source inspection is consistent with cross-test global-counter
+interference and a wall-clock policy crossing; the fixture assumptions need isolation from those independent effects. The correction is being reviewed
+as test-only isolation: retain the cache identity/20MiB checks, pressure/OOM handling and own fresh-runtime markers;
+make production fragmentation policy unchanged. This second Cargo gate is still failed pending that correction
+and the complete final rerun. No failure is called pre-existing merely because its source was unchanged.
+
+**Final-gate followups — reviewed and committed.** Framework `9a5111da` makes the cache-stress fixture independent
+of the separately tested timed-fragmentation heuristic through a thread-local, RAII-restored cfg(test) guard. Its
+same-runtime and20MiB bounds remain intact; pressure/OOM relief still runs. The fragmentation fixture accepts an
+increase in its process-global counter while retaining its own450survivors, discarded marker, fresh-runtime and
+reserved-memory assertions. Coordinator and time/billing peer reviews cleared the20-line test-only addition.
+Default-parallel full Core1636/1636 passed with4existing ignored,52.81s; the focused five-memory-test namespace
+passed1.21s and core all-target Clippy passed. The extra loopback permission failure in an earlier local focused
+attempt is retained separately; it is not represented as a functional pass.
+
+The second framework run's offline webroot phase had418/418 functional passes but failed the unchanged15s spec
+limit: WebrootVue.qvt15.22s. Framework `2bc33063` moves its existing longer routed-shell keyboard/focus/theme journey
+into existing ThemeLayout acceptance, with every action/assertion unchanged and exactly one copy. Planning peer
+independently compared the moved block. Focused regression33/33 passes,11.3s feature time/12.02s wall; the modified
+acceptance test and full webroot acceptance component pass4/4 in7.81s. No budget, timeout or production behavior was
+changed. These two followups affect tests only, so the reviewed release executable and successful application gate
+remain applicable. The complete framework gate and both final lint aliases are now running on the closing source.
+
+**Closing framework integration followup.** Core1675/1675 passed with4existing ignored, and the generated/memory
+corrections passed in the workspace configuration. All non-Cargo phases passed: framework420, demo10, offline
+webroot417 (the one keyboard journey now lives in acceptance), offline dev-aide48 and served149, all with zero
+feature skips. The only Cargo failure was the isolated all-in-one SIP integration: its fake trunk received no
+REGISTER. The same compiled all-features case passed alone in10.95s. Source inspection found latent fixture
+readiness windows: a bound child socket does not await its asynchronous live SipNode registration, and the linked
+local row keeper is likewise asynchronous; trunk reloads target only live rows. The original panic does not identify
+which of its two trunks missed registration, so no exact failed branch is claimed. A bounded fixture-only wait for
+the native VoiceStatus live row in each database is being independently reviewed. Production SIP code, scenario
+assertions and the5s REGISTER deadline remain unchanged. This Cargo run remains failed pending correction/recheck.
+
+**SIP fixture followup — committed.** Framework `40a55d36` adds only16 lines in the existing integration fixture:
+wait up to5s for the real VoiceStatus live SipNode row on the child and linked local database before their respective
+trunk stores. Coordinator and time/billing peer reviews confirmed the exact engine identity and output contract.
+The real focused case passes1/1 in10.48s; host integration-target Clippy and diff checks pass. No production SIP
+policy, existing deadline, assertion, regression budget or release executable changed. The complete framework gate
+and final lint aliases are being repeated after this test-only correction.
+
+**Retained disposable MR state.** MR100051 remains merged. The separate MR100102 remains Open after its exercised
+Draft/Ready/Close/Reopen sequence. Automatic approval review rejected an additional optional cleanup re-close before
+execution; no retry was made. Its detailed rejection reason was not retained, so no reason is invented here. The
+restored Open state and disposable repository/database are retained as review fixtures, with access credentials revoked.
+
+
+**Final verification — passed.** The closing `CARGO_BUILD_JOBS=4 ./moq test-framework --nobuild` completed with every
+phase successful: Cargo workspace (including Core1675 passed/4existing ignored and host integration175 passed/23existing
+ignored), shell orchestration342/342, framework server420/420 across66specs, demo10/10, offline webroot417/417 across20specs,
+offline dev-aide48/48 and served framework149/149 across9specs. All JavaScript feature phases have zero skips.
+The corrected SIP case passed inside the complete workspace run. Existing optional Rust ignores remain unchanged;
+no new ignore, budget or timeout increase was introduced. The offline webroot serial feature time is42.0/44s and
+no regression spec exceeds15s. Framework12.5/12s, tools3.2/3s and dev-aide37.6/30s retain component advisories within
+the existing1.5× gate tolerance. Both final `cargo lint` (17.13s) and `cargo lint-min` (8.20s) passed.
+
+Together with the post-PR-UI-037 application3420server+30client pass, the eleven requested Projects acceptance
+specs63/63 and final full webroot acceptance4/4, all required final verification is complete. Earlier failed runs,
+focused corrections and differing pre/post-change counts remain explicit above and in retained logs. The release
+SHA is unchanged after the three test-only followups; its last production revision is89391fd2. The closing framework
+head is40a55d36; Mantle25fcdaa2; BOSS production changes end at55abe0e4, followed by review-record commits.
+
+**Final coverage and cleanup.** All25 activity primary paths and the four named continuations are reconciled;
+all37 findings are corrected, independently reviewed and committed in their owning repositories. This is a bounded
+review, with the recovery/mode gaps in each activity row retained. Real browser zoom/further constrained manual
+variants remain deferred by the user; unavailable external providers, absent controls and other unsampled variants
+remain unverified. No unsupported variant is promoted to passed by a test result.
+
+A final lsof check finds no review HTTP8090/SSH2222/SMTP19926/webhook62867 listener. The mail hook and temporary
+maintenance component remain absent, and the copied runtime configuration exactly matches its pre-webhook backup.
+The previously verified27 issued-key revocations, Git-token/SSH-key removal and restored policies/preferences stand;
+no new TUI key was created in the last browser rerun. All review browser tabs are closed. The disposable database,
+Git fixtures (including the documented Open MR100102) and ignored evidence remain for inspection. No source
+repository was pushed. The only pending operation is the user's eventual push, outside this execution scope.
