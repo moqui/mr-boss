@@ -86,10 +86,11 @@ along with this software (see the LICENSE.md file). If not, see
                         <div class="text-caption m-muted">{{stateText}}</div>
                     </div>
                     <div class="row items-center no-wrap q-gutter-x-xs col-auto">
-                        <q-btn flat dense round :icon="note.pinned ? 'push_pin' : 'sym_o_keep'" :color="note.pinned ? 'primary' : undefined" @click="togglePin(note)">
+                        <q-btn flat dense round :icon="note.pinned ? 'push_pin' : 'sym_o_keep'" :color="note.pinned ? 'primary' : undefined"
+                                :aria-label="note.pinned ? t('Unpin') : t('Pin')" @click="togglePin(note)">
                             <q-tooltip>{{note.pinned ? t('Unpin') : t('Pin to the top')}}</q-tooltip></q-btn>
                         <q-btn v-if="!phone" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_history" :label="t('History')" @click="openHistory"></q-btn>
-                        <q-btn flat dense round icon="more_vert">
+                        <q-btn flat dense round icon="more_vert" :aria-label="t('Note actions')">
                             <q-menu auto-close>
                                 <q-list dense style="min-width:220px">
                                     <q-item clickable @click="openNamed"><q-item-section avatar><q-icon name="sym_o_bookmark_add"></q-icon></q-item-section><q-item-section>{{t('Save a named version')}}</q-item-section></q-item>

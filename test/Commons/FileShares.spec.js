@@ -37,6 +37,41 @@ spec({
     cleanupSpec() { login("john.doe") },
 })
 
+feature("a successful people share resets the picker to its valid empty state; a failure keeps the recipient for retry", {
+    expect() {
+        const source = ec.resource.getLocationText("component://mr-boss/screen/Commons/Files.qvue")
+        const script = source.slice(source.indexOf("<script>") + 8, source.lastIndexOf("</script>"))
+        const component = runInContext(script, { module: { exports: {} }, moqui: {} })
+        const pending = [], writes = []
+        let reloaded = 0, refreshed = 0
+        const vm = { share: { row: { driveId: "review-drive", path: "W4 review" }, withValue: "user:ORG_ZIZI_BD", permission: "RspEdit",
+                expire: "", note: "For Bob", saving: false },
+            post: (name, fields) => { writes.push({ name, fields }); return { then: (ok, fail) => pending.push({ ok, fail }) } },
+            loadShares: () => { reloaded++ }, afterShareChange: () => { refreshed++ } }
+        const share = () => component.methods.sharePeople.call(vm)
+        share()
+        share()
+        writes.length == 1
+        vm.share.saving == true
+        pending[0].fail()
+        vm.share.saving == false
+        vm.share.withValue == "user:ORG_ZIZI_BD"
+        vm.share.note == "For Bob"
+        share()
+        writes[1].fields.shareWith == "user:ORG_ZIZI_BD"
+        writes[1].fields.permissionEnumId == "RspEdit"
+        pending[1].ok()
+        // The shared select's rule treats '' as an intentionally cleared value, unlike null after a touched selection.
+        vm.share.withValue === ""
+        vm.share.note == ""
+        vm.share.saving == false
+        reloaded == 1
+        refreshed == 1
+        share()
+        writes.length == 2
+    },
+})
+
 feature("a share with a person tells them on FileShare with a link into Files", {
     when() {
         const before = notifications("ORG_ZIZI_JD").length

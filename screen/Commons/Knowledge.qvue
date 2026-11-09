@@ -64,7 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <m-drop-down id="boss-knowledge-space" name="knowledgeSpace" :model-value="spaceId" :options="spaceOptions" :label="t('Space')"
                             @update:model-value="openSpace"></m-drop-down>
                 </div>
-                <q-btn flat dense round icon="sym_o_settings" class="q-ml-xs" @click="go(spacesUrl)"><q-tooltip>{{t('Spaces and their settings')}}</q-tooltip></q-btn>
+                <q-btn flat dense round icon="sym_o_settings" class="q-ml-xs" :aria-label="t('Spaces and their settings')" @click="go(spacesUrl)"><q-tooltip>{{t('Spaces and their settings')}}</q-tooltip></q-btn>
                 </template>
                 <q-btn v-if="!wide" flat dense round icon="close" @click="sideOpen = false"></q-btn>
             </div>
@@ -270,7 +270,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     @click="openRequestReview"></q-btn>
                             <q-btn v-if="serviceActions && service.canSend" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_forward_to_inbox"
                                     :label="t('Send to customer')" @click="sendToCustomer"><q-tooltip>{{t('Email the customer its published address')}}</q-tooltip></q-btn>
-                            <q-btn flat dense round icon="more_vert">
+                            <q-btn flat dense round icon="more_vert" :aria-label="t('Page actions')">
                                 <q-menu auto-close>
                                     <q-list dense style="min-width:220px">
                                         <template v-if="serviceActions">

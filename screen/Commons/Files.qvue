@@ -1486,7 +1486,8 @@ module.exports = {
             this.post('share', { driveId: share.row.driveId, path: share.row.path, shareWith: share.withValue, permissionEnumId: share.permission,
                 expireDate: share.expire || '', note: share.note || '' }).then(() => {
                 share.saving = false;
-                share.withValue = null;
+                // m-drop-down accepts an empty string as a cleared selection; null revalidates a touched picker as missing.
+                share.withValue = '';
                 share.note = '';
                 this.loadShares();
                 this.afterShareChange();
