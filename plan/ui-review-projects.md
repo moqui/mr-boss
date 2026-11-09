@@ -834,6 +834,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-017 / observed / P1 | PR-21: grouped time billing | Unbilled → worker-grouped draft invoice | Manual-rate source contributed 375 to invoice but had no invoice source link, stayed eligible for duplicate billing | time-tui-session.txt; manual-billing-before/after | Mantle accounting | Track resolved rated contributors per group, link manual/zero/piece rates and leave unrated piece-only controls unbilled | Standalone grouping/retry/removal/rebuild/cancel checks 9/9; live corrected continuation pending |
 | PR-UI-018 / measured / P2 | PR-07 and shared status labels | Browser Backlog, dark; composited actual fills | Planned grey text measured 2.34:1; blue 4.18:1; light-blue acceptance control also failed | pr07-backlog-dark.jpg; tonal-before/after | Framework webroot | Use theme-specific tonal foregrounds for grey/blue chips and badges | Extended existing ThemeLayout feature failed before and passed after; live palette loaded, browser after measurements pending |
 
+| PR-UI-019 / observed / P2 | PR-05: project work counts | ProjectDetail WorkItems, browser dark1920×1080 | View pills showed Open40/All47 while the project had1 matching item | pr05-project-counters-before.jpg; WorkItems before/after | BOSS WorkItems | Apply fixed project context to the base shared by smart counts and rows; preserve exclusion of other find fields | Existing WorkItems check reproduced global27/project11 mismatch then passed9/9; independent code review clear; live restart retest shows Open3/All4/Done1 matching imported project records (pr05-project-counters-after.jpg) |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1025,3 +1027,39 @@ return URL. Independent planning review cleared the correction. Existing TimeEnt
 actual debug terminal member and manager edits retain Oct 19 and Joe after Save and F5, while global/project
 returns remain their existing destinations. The shared TUI debug build is now serving the retained disposable
 runtime on 8090; release binary remains unchanged. Full application/framework gates remain pending at the end.
+
+**Batch 6 — project-scoped work counters and import review.** The coordinator observed global pill totals beside
+one project-filtered row. The planning worker reproduced this in the existing WorkItems service spec, moved only
+fixed project scope into the shared base, and preserved smart counts' independence from ordinary find fields.
+The code/settings worker independently cleared the two-file correction. WorkItems passed9/9 after failing before;
+RequestWalk passed6/6. Coordinator also removed the remaining unconditional email promise from public form intro;
+planning review cleared this wording and the conditional success text. Browser work import into RVQUICK mapped
+7fields, previewed2valid hierarchy rows and1missing-title failure, created RVQUICK-4/5 withparent/label and3h
+rollup, then previewed repeat0create/2skip/1fail. Actual repeat result captured separately. This synthetic genericCSV
+proves no vendor-export compatibility. Historical-week batch committed BOSS `05f1fce7`. Full gates pending.
+
+**Batch 7 — grouped manual-rate billing and time import.** Mantle `0a4e1a4d` links only actual rated contributors
+in each worker/all aggregate, including explicit zero and piece rates. An unrated piece-only control remains unbilled.
+Coordinator found and requested that extra guard during review; planning independently reviewed the refined patch.
+Standalone Mantle checks passed9/9. Live narrow-manager PRTIME02 control:1.25h at manual150 produced invoice100102
+for187.50 with one source entry100104; fresh Money showed zero ready/unbilled after creation. Original broken
+invoice100051 was preserved for evidence. No duplicate invoice was created. Existing invoice retry/removal/cancel
+contracts are regression-tested. Actuals for the same control were exactly187.50.
+
+Browser time import preview identified the ignored External key column and actual duplicate identity (person/item/start),
+created2entries totaling2h and identified25h row refusal. Repeat preview0create/2skip/1fail and final warnings matched.
+The fixture is synthetic, not proof of vendor export compatibility. All eleven named Projects acceptance specs have
+passed (planning25, code6, time/billing24, static/TUI8 features), independently of these manual outcomes.
+User explicitly deferred real200%/otherzoom tests and directed internal-browser-only review. Native desktop automation
+was unavailable; it contributes no coverage. Invoice approval/send continuation awaits specific authorization after
+automatic approval review rejected a combined approval/send action as potentially sending a financial document.
+Full suites remain pending until review completion.
+
+Project counter live retest after normal restart passed: RVQUICK Open3/All4/Done1, matching its four persisted
+records and one completed recurrence original. Status contrast live composited measurements after correction:
+dark Planned4.63:1 / UI5.41:1; light Planned5.24:1 / UI4.84:1. Shared webroot correction committed as `87c3cd7c`;
+existing ThemeLayout feature passed immediately after the edit, and full webroot acceptance remains due at final gate.
+Constrained-tab geometry measured1280×720/DPR2/scrollWidth1280; screenshots record measured geometry, not the
+requested outer800height. User approved synthetic locally captured financial-document tests, resolving that earlier
+approval block. Isolated listeners after restart: HTTP127.0.0.1:8090, SSH127.0.0.1:2222, SMTP127.0.0.1:19926.
+Only the disposable runtime received14 additional mail/commercial/client fixtures; no production configuration changed.

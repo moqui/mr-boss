@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     are taken and their limits, the CAPTCHA's site key); the transition is under $root.basePath. The form: first and last name,
     email, organization, type, subject, description, files (picked or dropped, checked for count and size before they go), the
     CAPTCHA when one is on; a hidden website field a person leaves empty. A refused send keeps the values and says why. Once
-    sent: the request's number and that a reply to the email adds to it. Brand color names and Quasar classes only (style-guide
+    sent: the request's number and a conditional explanation of email replies. Brand color names and Quasar classes only (style-guide
     §4.8, §5). -->
 <template><div class="boss-request-intake q-py-md q-mx-auto" style="max-width:680px">
     <div class="row items-center no-wrap q-gutter-x-md q-mb-md">
@@ -46,7 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the form -->
     <q-card v-else flat bordered data-state="form">
         <q-card-section>
-            <div class="text-body2 m-muted q-mb-md">{{t('Tell us what you need. We answer by email.')}}</div>
+            <div class="text-body2 m-muted q-mb-md">{{t('Tell us what you need.')}}</div>
             <div class="row q-col-gutter-sm">
                 <div class="col-12 col-sm-6"><m-text-line id="boss-intake-first" name="firstName" v-model="form.firstName" :label="t('First name')"></m-text-line></div>
                 <div class="col-12 col-sm-6"><m-text-line id="boss-intake-last" name="lastName" v-model="form.lastName" :label="t('Last name')"></m-text-line></div>

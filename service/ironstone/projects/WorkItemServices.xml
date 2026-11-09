@@ -26,7 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="find" noun="WorkItems">
         <description>
             The rows of WorkItems: the work items of the projects the user sees, in one smart list, narrowed by the find,
-            sorted and paged, each decorated (decorate#WorkItemRows), with the count of each smart list (without the find).
+            sorted and paged, each decorated (decorate#WorkItemRows), with the count of each smart list in the given
+            project (without the other find fields).
             The smart lists: open (the default: not Complete, Closed or Cancelled), mine (open, the user an Assignee),
             reported (open, the user its owner or Reporter), watching (open, a Watcher or a follower), unassigned (open, no
             Assignee), week (open and due from today through seven days), overdue (open and due before today), recent
@@ -113,6 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
 
             // the base: the visible items of projects that are not templates
             const base = [cf.makeCondition('workEffortTypeEnumId', 'equals', 'WetTask'), cf.makeCondition('rootWorkEffortId', 'is-not-null', null)]
+            if (rootWorkEffortId) base.push(cf.makeCondition('rootWorkEffortId', 'equals', rootWorkEffortId))
             if (!all) {
                 base.push(cf.makeCondition('rootWorkEffortId', 'in', visibleIds))
                 const restrictedOk = [cf.makeCondition('visibilityEnumId', 'is-null', null),
@@ -173,7 +175,6 @@ along with this software (see the LICENSE.md file). If not, see
                 else conds.push(cf.makeCondition([cf.makeCondition('workEffortName', 'like', `%${words}%`, false, true),
                     cf.makeCondition('workEffortId', 'like', `%${words}%`, false, true), cf.makeCondition('description', 'like', `%${words}%`, false, true)], 'or'))
             }
-            if (rootWorkEffortId) conds.push(cf.makeCondition('rootWorkEffortId', 'equals', rootWorkEffortId))
             const purposes = split(purposeEnumId)
             if (purposes.length) conds.push(cf.makeCondition('purposeEnumId', 'in', purposes))
             const bands = {high: [1, 3], normal: [4, 6], low: [7, 9]}

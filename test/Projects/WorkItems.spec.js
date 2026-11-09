@@ -56,7 +56,9 @@ spec({
 feature("the smart lists and the find narrow the work items, each row with its type, status, people, plan items, labels and roll-up", {
     when() {
         return {
-            open: rows({}), project: rows({ rootWorkEffortId: "IRON" }), bugs: rows({ purposeEnumId: "WepFix" }), review: rows({ statusId: "WeInReview" }),
+            open: rows({}), project: rows({ rootWorkEffortId: "IRON" }),
+            projectAll: rows({ rootWorkEffortId: "IRON", list: "all" }), projectDone: rows({ rootWorkEffortId: "IRON", list: "done" }),
+            bugs: rows({ purposeEnumId: "WepFix" }), review: rows({ statusId: "WeInReview" }),
             key: rows({ text: "iron-9" }), words: rows({ text: "timesheet" }), label: rows({ labelId: "BOSS_DEMO_LBL_UI" }), milestone: rows({ milestoneId: "IRON-MS-1" }),
             release: rows({ releaseId: "IRON-REL-1", list: "all" }), top: rows({ rootWorkEffortId: "IRON", topLevel: "Y" }),
             level: rows({ parentWorkEffortId: "IRON-2", treeOrder: true }), under: rows({ underWorkEffortId: "IRON-1", list: "all" }),
@@ -73,6 +75,11 @@ feature("the smart lists and the find narrow the work items, each row with its t
         found.open.counts.open >= 14
         found.open.counts.done >= 2
         ids.project.every((id) => id.startsWith("IRON-"))
+        // A project's smart-list counts describe its own work; the global list retains its wider counts.
+        found.project.counts.open == found.project.rowCount
+        found.project.counts.all == found.projectAll.rowCount
+        found.project.counts.done == found.projectDone.rowCount
+        found.open.counts.all > found.project.counts.all
         ids.bugs == ["IRON-9"]
         ids.review == ["IRON-3"]
         found.key.keyMatch == "IRON-9"
