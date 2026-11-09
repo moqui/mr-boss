@@ -139,7 +139,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <section-iterate name="ServiceInvoiceOrders" list="serviceInvoice.orderRows" entry="orderRow">
                                     <widgets>
-                                        <link url="${orderRow.url}" url-type="plain" text="Order ${orderRow.orderId}"
+                                        <link url="${orderRow.url}" url-type="plain" text="${ec.l10n.localize('Order')} ${orderRow.orderId}"
                                                 link-type="anchor" condition="orderRow.url"/>
                                     </widgets>
                                 </section-iterate>

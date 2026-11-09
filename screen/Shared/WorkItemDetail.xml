@@ -739,7 +739,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </widgets></section>
                             <link url="assignToMe" link-type="hidden-form" text="Assign to me" icon="sym_o_person_raised_hand" condition="canUpdate"
                                     parameter-map="{workEffortId:workEffortId, tab:tab}"/>
-                            <container-dialog id="WorkItemEditDialog" button-text="Edit" icon="sym_o_edit" width="720" title="Edit ${workEffortId}" condition="canUpdate">
+                            <container-dialog id="WorkItemEditDialog" button-text="Edit" icon="sym_o_edit" width="720" title="${ec.l10n.localize('Edit')} ${workEffortId}" condition="canUpdate">
                                 <form-single name="WorkItemEdit" transition="saveWorkItem" map="fields" focus-field="workEffortName">
                                     <field name="workEffortId" from="workEffortId"><default-field><hidden/></default-field></field>
                                     <field name="tab" from="tab"><default-field><hidden/></default-field></field>
@@ -889,7 +889,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container style="col-12 col-md-6">
                                 <container-box><box-header title="Details"/>
                                     <box-toolbar>
-                                        <container-dialog id="TaskEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="Edit ${task.workEffortName}" condition="canUpdate">
+                                        <container-dialog id="TaskEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="${ec.l10n.localize('Edit')} ${task.workEffortName}" condition="canUpdate">
                                             <form-single name="TaskEdit" transition="updateTask" map="task" focus-field="workEffortName">
                                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                                 <field name="tab"><default-field><hidden/></default-field></field>
@@ -1106,7 +1106,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="dueText"><default-field title="Due"><label text="${dueText}" type="span" style="text-no-wrap ${overdue ? 'text-warning' : ''}"/></default-field></field>
                         <field name="estimatedText" align="right"><default-field title="Est."><display/></default-field></field>
                         <field name="remainingText" align="right"><default-field title="Rem."><display/></default-field></field>
-                        <field name="actualText" align="right"><default-field title="Act."><display/></default-field></field>
+                        <field name="actualText" align="right"><default-field title="Act"><display/></default-field></field>
                         <field name="totalEstimatedText" align="right"><default-field title="Total est."><display/></default-field></field>
                         <field name="totalRemainingText" align="right"><default-field title="Total rem."><display/></default-field></field>
                         <field name="totalActualText" align="right"><default-field title="Total act."><display/></default-field></field>

@@ -50,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-auto">
                         <link url="//Accounting/${newPath}"
-                                text="New ${documentLabel}"
+                                text="${ec.l10n.localize('New')} ${documentLabel}"
                                 link-type="anchor-button"
                                 btn-type="primary"
                                 icon="sym_o_add"
@@ -224,7 +224,7 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
         <section name="DraftDocument">
             <widgets>
-                <label text="New ${documentLabel}" type="h5"/>
+                <label text="${ec.l10n.localize('New')} ${documentLabel}" type="h5"/>
                 <label text="The ${documentLabel} starts as a draft; add its lines, then approve it."
                         type="p"
                         style="text-caption m-muted"/>

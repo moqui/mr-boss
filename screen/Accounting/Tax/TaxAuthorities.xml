@@ -214,7 +214,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <container-dialog id="EditAuthority_${taxAuthorityId}"
                             button-text="Edit"
                             icon="sym_o_edit"
-                            title="Edit ${description}"
+                            title="${ec.l10n.localize('Edit')} ${description}"
                             width="760"
                             condition="canEdit">
                         <form-single name="EditAuthority" transition="storeAuthority" extends="TaxAuthority">

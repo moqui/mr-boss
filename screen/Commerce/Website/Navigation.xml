@@ -273,7 +273,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                     condition="canEdit" parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, direction:'in'}"/>
                                             <link url="moveItem" text="" icon="sym_o_format_indent_decrease" tooltip="Out, beside its parent" link-type="hidden-form-link"
                                                     condition="canEdit &amp;&amp; parentItemId" parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, direction:'out'}"/>
-                                            <container-dialog id="EditItem_${itemId}" button-text="Edit" icon="sym_o_edit" width="640" title="Edit ${label}" condition="canEdit">
+                                            <container-dialog id="EditItem_${itemId}" button-text="Edit" icon="sym_o_edit" width="640" title="${ec.l10n.localize('Edit')} ${label}" condition="canEdit">
                                                 <form-single name="EditItemForm_${itemId}" transition="saveItem"
                                                         map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, label:label,
                                                             destinationTypeEnumId:destinationTypeEnumId, destinationValue:destinationValue, destinationText:destinationText,

@@ -404,7 +404,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <!-- the names -->
                                         <container-box><box-header title="${record.isOrganization ? 'Organization' : 'Name'}"/>
                                             <box-toolbar>
-                                                <container-dialog id="ContactEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="Edit ${record.name}" condition="canEdit">
+                                                <container-dialog id="ContactEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="${ec.l10n.localize('Edit')} ${record.name}" condition="canEdit">
                                                     <form-single name="ContactEditForm" transition="contactUpdate" map="record" focus-field="${record.isOrganization ? 'organizationName' : 'firstName'}">
                                                         <field name="partyId" from="recordPartyId"><default-field><hidden/></default-field></field>
                                                         <field name="organizationName"><conditional-field condition="record.isOrganization" title="Name"><text-line size="40"/></conditional-field>

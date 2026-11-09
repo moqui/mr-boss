@@ -171,7 +171,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="submitButton"><default-field title="Complete sprint"><submit/></default-field></field>
                             </form-single>
                         </container-dialog>
-                        <container-dialog id="SprintEditDialog" button-text="Edit" icon="sym_o_edit" width="520" title="Edit ${sprint.workEffortName}" condition="canPlan">
+                        <container-dialog id="SprintEditDialog" button-text="Edit" icon="sym_o_edit" width="520" title="${ec.l10n.localize('Edit')} ${sprint.workEffortName}" condition="canPlan">
                             <form-single name="SprintForm" transition="saveSprint" focus-field="workEffortName">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="workEffortName" from="sprint.workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>

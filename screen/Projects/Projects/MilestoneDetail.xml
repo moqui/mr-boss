@@ -280,7 +280,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="changeStatus" link-type="hidden-form" text="${primaryMove.label}" btn-type="primary" icon="sym_o_arrow_forward"
                                     confirmation="${primaryMove.label}: ${milestone.workEffortName}?" parameter-map="{workEffortId:workEffortId, statusId:primaryMove.statusId}"/>
                         </widgets></section>
-                        <container-dialog id="MilestoneEditDialog" button-text="Edit" icon="sym_o_edit" width="520" title="Edit ${milestone.workEffortName}" condition="canUpdate">
+                        <container-dialog id="MilestoneEditDialog" button-text="Edit" icon="sym_o_edit" width="520" title="${ec.l10n.localize('Edit')} ${milestone.workEffortName}" condition="canUpdate">
                             <form-single name="MilestoneForm" transition="savePlanItem" focus-field="workEffortName">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="workEffortName" from="milestone.workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>

@@ -205,7 +205,7 @@ along with this software (see the LICENSE.md file). If not, see
             <section-iterate name="CalendarCards" list="manageList" entry="calendar"><widgets>
                 <container style="col-12 col-md-6"><container-box><box-header title="${calendar.calendarName}"/>
                     <box-toolbar>
-                        <container-dialog id="EditCalendarDialog" button-text="" icon="sym_o_edit" width="520" title="Edit ${calendar.calendarName}" tooltip="Edit">
+                        <container-dialog id="EditCalendarDialog" button-text="" icon="sym_o_edit" width="520" title="${ec.l10n.localize('Edit')} ${calendar.calendarName}" tooltip="Edit">
                             <form-single name="EditCalendar" transition="updateCalendar" map="calendar">
                                 <field name="calendarId"><default-field><hidden/></default-field></field>
                                 <field name="calendarName"><default-field title="Name"><text-line size="30"/></default-field></field>

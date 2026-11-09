@@ -196,7 +196,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="${reviewUrl}" url-type="plain" text="Review" btn-type="primary" icon="sym_o_rate_review"/>
                         </widgets></section>
                         <button-menu text="More" icon="more_horiz" style="q-ml-xs">
-                            <container-dialog id="EditMergeRequestDialog" button-text="Edit" icon="sym_o_edit" width="720" title="Edit ${mr.numText}" condition="detail.canEdit">
+                            <container-dialog id="EditMergeRequestDialog" button-text="Edit" icon="sym_o_edit" width="720" title="${ec.l10n.localize('Edit')} ${mr.numText}" condition="detail.canEdit">
                                 <form-single name="EditMergeRequest" transition="editMergeRequest" map="editValue" focus-field="title">
                                     <field name="mergeRequestId"><default-field><hidden/></default-field></field>
                                     <field name="title"><default-field title="Title"><text-line size="70"/></default-field></field>

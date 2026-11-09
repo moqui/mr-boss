@@ -71,7 +71,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     warehouse.capabilities.loadEdit || warehouse.capabilities.move)"/>
                         <section-iterate name="OutboundOrders" list="outbound.orderIds" entry="orderLinkId">
                             <widgets>
-                                <link url="${sharedLinks['Orders/OrderDetail']}" text="Order ${orderLinkId}"
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="${ec.l10n.localize('Order')} ${orderLinkId}"
                                         link-type="anchor-button" icon="sym_o_receipt" parameter-map="{orderId:orderLinkId}"/>
                             </widgets>
                         </section-iterate>

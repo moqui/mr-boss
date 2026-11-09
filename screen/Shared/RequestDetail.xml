@@ -959,7 +959,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field></field>
                         <field name="dueText"><default-field title="Due"><label text="${dueText}" type="span" style="text-no-wrap ${overdue ? 'text-warning' : ''}"/></default-field></field>
                         <field name="estimatedText" align="right"><default-field title="Est."><display/></default-field></field>
-                        <field name="actualText" align="right"><default-field title="Act."><display/></default-field></field>
+                        <field name="actualText" align="right"><default-field title="Act"><display/></default-field></field>
                         <field name="unlink"><default-field title="">
                             <link url="unlinkWorkItem" link-type="hidden-form-link" icon="sym_o_link_off" text="" tooltip="Take it off the request" style="m-btn-flat"
                                     condition="canTriage" confirmation="Take ${workEffortId} off the request? The work item stays."

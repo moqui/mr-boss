@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                     <label type="p" style="text-caption m-muted" text="Internal: the customer never sees it. Replies are Customer Service's."/>
                                 </container-dialog>
-                                <link url="${sharedLinks['Orders/OrderDetail']}" text="Order ${rq.orderId}" link-type="anchor-button"
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="${ec.l10n.localize('Order')} ${rq.orderId}" link-type="anchor-button"
                                         parameter-map="{orderId:rq.orderId}" condition="rq.orderId"/>
                                 <link url="${customerUrl}" url-type="plain" text="Customer" link-type="anchor-button" condition="customerUrl"/>
                             </container>

@@ -157,7 +157,7 @@ feature("a revoked or expired link reads nothing, and the page renders its compo
     then({ revokedCheck, revokedFiles, expiredFiles, component }) {
         !revokedCheck.valid
         revokedFiles.status == 500
-        revokedFiles.errors.includes("This link has expired or was not found")
+        revokedFiles.errors.includes("This link has expired or was not found.")
         expiredFiles.status == 500
         !expiredFiles.output.includes("Welcome to My files")
         component.status == 200

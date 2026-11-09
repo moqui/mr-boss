@@ -155,7 +155,7 @@ along with this software (see the LICENSE.md file). If not, see
             <section-iterate name="BookCards" list="bookList" entry="book"><widgets>
                 <container style="col-12 col-md-6"><container-box><box-header title="${book.contactBookName}"/>
                     <box-toolbar>
-                        <container-dialog id="EditBookDialog" button-text="" icon="sym_o_edit" width="520" title="Edit ${book.contactBookName}" tooltip="Edit" condition="book.canManage">
+                        <container-dialog id="EditBookDialog" button-text="" icon="sym_o_edit" width="520" title="${ec.l10n.localize('Edit')} ${book.contactBookName}" tooltip="Edit" condition="book.canManage">
                             <form-single name="EditBook" transition="updateBook" map="book">
                                 <field name="contactBookId"><default-field><hidden/></default-field></field>
                                 <field name="contactBookName"><default-field title="Name"><text-line size="30"/></default-field></field>

@@ -105,7 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                                 <container style="col-12 col-md m-record-title">
                                     <container style="row items-center q-gutter-x-sm">
-                                        <label text="Order ${orderId}" type="h5"/>
+                                        <label text="${ec.l10n.localize('Order')} ${orderId}" type="h5"/>
                                         <link url="${so.customerUrl}" url-type="plain" text="${so.customerName}" link-type="anchor"
                                                 condition="so.customerUrl"/>
                                     </container>

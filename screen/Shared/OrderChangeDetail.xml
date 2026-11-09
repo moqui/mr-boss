@@ -302,7 +302,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md m-record-title">
                             <container style="row items-center q-gutter-x-sm">
                                 <label text="Order change ${requestId}" type="h5"/>
-                                <link url="${orderLink}" text="Order ${change.orderId}" link-type="anchor"
+                                <link url="${orderLink}" text="${ec.l10n.localize('Order')} ${change.orderId}" link-type="anchor"
                                         parameter-map="{orderId:change.orderId}" condition="orderLink"/>
                             </container>
                             <label text="${[change.kindText, change.customerName, change.organizationName, 'asked ' +
