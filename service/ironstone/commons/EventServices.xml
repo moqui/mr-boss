@@ -307,6 +307,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters>
             <parameter name="targetWorkEffortId"/>
+            <parameter name="targetInstanceStart"><description>The selected occurrence after the change, or empty when showing a new target's own time.</description></parameter>
             <parameter name="message"/>
             <parameter name="conflictList" type="List"/>
         </out-parameters>
@@ -315,6 +316,8 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()"><return/></if>
             <script><![CDATA[
                 const L = (text) => ec.l10n.localize(text)
+                const selectedWorkEffortId = String(workEffortId)
+                const selectedInstanceStart = instanceStart ? String(instanceStart) : null
                 const isAllDay = allDay === 'Y' || allDay === 'true'
                 const day = (text) => /^\d{4}-\d{2}-\d{2}/.test(String(text || '')) ? String(text).substring(0, 10) : null
                 const time = (text) => { const match = /^(\d{1,2}):(\d{2})/.exec(String(text || '').trim()); return match ? match[1].padStart(2, '0') + ':' + match[2] : null }
@@ -331,6 +334,7 @@ along with this software (see the LICENSE.md file). If not, see
                     notify: 'N', allowConflicts: allowConflicts === 'Y' || allowConflicts === 'true'}).call()
                 if (ec.message.hasError()) return
                 targetWorkEffortId = changed.targetWorkEffortId
+                targetInstanceStart = String(changed.targetWorkEffortId) === selectedWorkEffortId && selectedInstanceStart ? (start || selectedInstanceStart) : null
                 conflictList = Array.from(changed.conflictList || [])
                 const fields = {workEffortId: targetWorkEffortId}
                 if (infoUrl != null) fields.infoUrl = String(infoUrl).trim() || null

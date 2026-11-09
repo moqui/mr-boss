@@ -53,6 +53,8 @@ feature("the #kind form renders in qvt (#label)", {
         shown.errors == ""
         !shown.broken
         shown.output.includes(label)
+        // server-static qvt returns compiled vnode props, not an HTML input; a bare Boolean prop compiles to "".
+        kind !== "task" || /\bid:\s*["']QuickTask_workEffortName["'][^}]{0,600}\brequired:\s*(?:true|["']["'])/.test(shown.output)
     },
 })
 
@@ -137,6 +139,31 @@ feature("an all-day event has its days and no time", {
         // a date field reaches a script as the epoch millis of its UTC midnight
         new Date(Number(String(event.allDayStart))).toISOString().substring(0, 10) == "2026-11-05"
         new Date(Number(String(event.allDayEnd))).toISOString().substring(0, 10) == "2026-11-06"
+    },
+})
+
+feature("event range: #label", {
+    where: [
+        { label: "earlier end is refused", end: "2026-11-05 09:00", allDay: "N", refused: true },
+        { label: "equal end is refused", end: "2026-11-05 10:00", allDay: "N", refused: true },
+        { label: "earlier last day is refused", end: "2026-11-04 00:00", allDay: "Y", refused: true },
+        { label: "blank end defaults to one hour", end: null, allDay: "N", refused: false },
+        { label: "same-day all-day event is valid", end: "2026-11-05 00:00", allDay: "Y", refused: false },
+    ],
+    when({ label, end, allDay, refused }) {
+        const name = "Quick create range " + label
+        const parameters = { workEffortName: name, estimatedStartDate: "2026-11-05 " + (allDay === "Y" ? "00:00" : "10:00"), allDay }
+        if (end != null) parameters.estimatedCompletionDate = end
+        const created = post("createEvent", parameters)
+        return { created, event: one("mantle.work.effort.WorkEffort", { workEffortName: name }), refused, allDay }
+    },
+    then({ created, event, refused, allDay }) {
+        refused ? created.errors.includes(allDay === "Y" ? "last day must be on or after" : "end must be after") : created.errors == ""
+        refused ? event == null : event != null
+        refused ? !created.json.workEffortId : !!created.json.workEffortId
+        refused || allDay === "Y" || ec.l10n.format(event.estimatedCompletionDate, "yyyy-MM-dd HH:mm") == "2026-11-05 11:00"
+        refused || allDay !== "Y" || new Date(Number(String(event.allDayStart))).toISOString().substring(0, 10) == "2026-11-05"
+        refused || allDay !== "Y" || new Date(Number(String(event.allDayEnd))).toISOString().substring(0, 10) == "2026-11-05"
     },
 })
 

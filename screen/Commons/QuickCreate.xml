@@ -191,7 +191,7 @@ along with this software (see the LICENSE.md file). If not, see
             <form-single name="QuickTask" transition="createTask" focus-field="workEffortName">
                 <field name="recordEntity"><default-field><hidden/></default-field></field>
                 <field name="recordId"><default-field><hidden/></default-field></field>
-                <field name="workEffortName"><default-field title="Task"><text-line size="40"/></default-field></field>
+                <field name="workEffortName"><default-field title="Task" required="true"><text-line size="40"/></default-field></field>
                 <field name="estimatedCompletionDate" from="todayText"><default-field title="Due"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
                 <field name="assignToPartyId" from="myPartyId"><default-field title="Assignee">
                     <drop-down current-description="${myName}"><dynamic-options transition="searchPeople" server-search="true" min-length="1"/></drop-down>

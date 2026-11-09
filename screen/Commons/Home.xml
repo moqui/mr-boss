@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Commons Home (design-drawers-commons.md §5 Home; style-guide §3.1 Landing): a greeting, the first-run setup card (add a
     mail account, import contacts, connect a calendar, install on your phone; Done and Dismiss kept in the COMMONS_SETUP
     preference), the Today strip (the TodayPanel's items, ironstone.commons.CommonsServices.get#TodayView), five counters in a
-    dashboard (Due today, Overdue, Events today, Unread notifications, Requests assigned), the lists of my work (tasks this
+    dashboard (Tasks today, Overdue tasks, Events today, Unread notifications, Requests assigned), the lists of my work (tasks this
     week, requests assigned, events of the next 7 days) and the shortcuts, which open the shell's quick create, and the recent pages
     (M9) and files (M8). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -39,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
             sourceServiceNames = sources
         ]]></script>
         <service-call name="ironstone.commons.CommonsServices.get#TodayView" in-map="{sourceServiceNames:sourceServiceNames}" out-map="today"/>
+        <!-- The task counters link to Tasks' smart lists, whose own counts include the same owned, assigned and watched work. -->
+        <service-call name="ironstone.commons.TaskServices.find#TaskRows" in-map="{pageSize:1}" out-map="taskCountsOut"/>
         <service-call name="ironstone.commons.CommonsServices.get#SetupItems" out-map="setup"/>
         <service-call name="org.moqui.impl.NotificationServices.get#UserNotifications" in-map="{viewed:'N', pageSize:1}" out-map="unreadOut"/>
         <set field="partyId" from="ec.user.userAccount?.partyId"/>
@@ -61,10 +63,8 @@ along with this software (see the LICENSE.md file). If not, see
             stripItems = items.slice(0, 8)
             stripMore = Math.max(0, items.length - 8)
             const counts = today.counts || {}
-            const sourceItems = groups.filter((group) => group.isSource).flatMap((group) => Array.from(group.items || []))
-            const dueTodayGroup = groups.find((group) => group.key === 'dueToday') || {items: []}
-            dueTodayCount = Array.from(dueTodayGroup.items || []).filter((item) => !item.isEvent).length + sourceItems.filter((item) => !item.overdue).length
-            overdueCount = (counts.overdue || 0) + sourceItems.filter((item) => item.overdue).length
+            dueTodayCount = (taskCountsOut.counts || {}).today || 0
+            overdueCount = (taskCountsOut.counts || {}).overdue || 0
             eventsTodayCount = counts.eventsToday || 0
             unreadCount = (unreadOut.unreadCounts || {}).NinNotifications || 0
             setupItems = Array.from(setup.setupItems || []).filter((entry) => !entry.state)
@@ -208,9 +208,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the counters, each a link into its list; two a row on a phone (Notifications counts the unread, My requests those
             assigned to the user: the card's label is one line) -->
         <dashboard min-width="170" style="q-mb-md">
-            <number-card title="Due today" value="${ec.l10n.format(dueTodayCount, '#,##0')}" icon="sym_o_task_alt"
+            <number-card title="Tasks today" value="${ec.l10n.format(dueTodayCount, '#,##0')}" icon="sym_o_task_alt"
                     link="../Tasks?list=today"/>
-            <number-card title="Overdue" value="${ec.l10n.format(overdueCount, '#,##0')}" icon="sym_o_assignment_late"
+            <number-card title="Overdue tasks" value="${ec.l10n.format(overdueCount, '#,##0')}" icon="sym_o_assignment_late"
                     link="../Tasks?list=overdue"/>
             <number-card title="Events today" value="${ec.l10n.format(eventsTodayCount, '#,##0')}" icon="sym_o_event" link="../Calendar"/>
             <number-card title="Notifications" value="${ec.l10n.format(unreadCount, '#,##0')}" icon="sym_o_notifications"

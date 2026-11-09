@@ -9,6 +9,7 @@
 // Run: ./moq test mr-boss --spec Resources
 const webroot = "component://webroot/screen/webroot.xml"
 const made = {}
+let scenarioTime = null
 
 function render(path, parameters, mode) {
     const str = ec.screen.makeTest().rootScreen(webroot).renderMode(mode || "qvt").withStaticData().render(path,
@@ -39,10 +40,11 @@ function sys(run) {
 }
 function as(username, run) {
     login(username)
-    try { return run() } finally { login("john.doe") }
+    ec.user.setEffectiveTime(scenarioTime)
+    try { return run() } finally { login("john.doe"); ec.user.setEffectiveTime(scenarioTime) }
 }
-// this week's Monday, as the demo dates its allocations
-const monday = () => { const today = new Date().toISOString().slice(0, 10); const js = new Date(today + "T12:00:00Z").getUTCDay()
+// This week's Monday in the planner user's wall-date, rather than the host's UTC date.
+const monday = (today) => { const js = new Date(today + "T12:00:00Z").getUTCDay()
     return new Date(Date.parse(today + "T12:00:00Z") - ((js + 6) % 7) * 86400000).toISOString().slice(0, 10) }
 const personOf = (planner, partyId) => planner.personList.find((person) => person.partyId == partyId)
 
@@ -50,10 +52,26 @@ spec({
     setupSpec() {
         login("john.doe")
         sys(() => {
+            // The demo chooses its week in UTC when loaded. Keep every user's planner in that fixture week,
+            // including Sunday evenings when UTC is already Monday, without changing shared demo records.
+            const allocation = ec.entity.find("mantle.work.effort.WorkEffortAllocation")
+                    .condition({ partyId: "ORG_ZIZI_JD", rootWorkEffortId: "IRON" }).one()
+            if (!allocation) throw new Error("Resources requires Joe's demo allocation on IRON")
+            const from = String(allocation.fromDate)
+            const day = /^\d{4}-\d{2}-\d{2}/.test(from) ? from.slice(0, 10) : new Date(Number(from)).toISOString().slice(0, 10)
+            scenarioTime = Number(String(ec.l10n.parseTimestamp(day + " 12:00:00.000", "yyyy-MM-dd HH:mm:ss.SSS")))
+            ec.user.setEffectiveTime(scenarioTime)
             call('create#mantle.party.Party',{partyId:'BOSS_RESOURCE_UNSHARED',partyTypeEnumId:'PtyPerson',ownerPartyId:'ORG_ZIZI_SERVICES'})
             call('create#mantle.party.Person',{partyId:'BOSS_RESOURCE_UNSHARED',firstName:'Unassigned',lastName:'Colleague'})
         })
         ec.artifactExecution.enableAuthz()
+    },
+    setup() {
+        login("john.doe")
+        ec.user.setEffectiveTime(scenarioTime)
+    },
+    cleanup() {
+        ec.user.setEffectiveTime(null)
     },
     cleanupSpec() {
         sys(() => {
@@ -68,18 +86,19 @@ spec({
 
 feature("john.doe's team planner: Joe over-allocated this week on IRON, ACME and SUPP, Ana on her own hours, the placeholder to staff, and the plan to change", {
     when() {
+        const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
         const page = render("apps/Projects/Resources/TeamPlanner", {}, "qvue")
         const plan = json("Resources/TeamPlanner/plan", { weeks: "8" }).json
         const byProject = json("Resources/TeamPlanner/plan", { rootWorkEffortId: "ACME", weeks: "8" }).json
         const bySkill = json("Resources/TeamPlanner/plan", { skillTypeEnumId: "BossSkUiDesign" }).json
         const tui = render("apps/Projects/Resources/TeamPlannerTui", {})
-        return { page, plan, byProject, bySkill, tui }
+        return { today, page, plan, byProject, bySkill, tui }
     },
-    then({ page, plan, byProject, bySkill, tui }) {
+    then({ today, page, plan, byProject, bySkill, tui }) {
         page.status == 200
         page.output.includes("module.exports")
         const planner = plan.planner
-        planner.fromDate == monday()
+        planner.fromDate == monday(today)
         planner.weekList.length == 8
         planner.canPlan == true
         planner.canRequest == true

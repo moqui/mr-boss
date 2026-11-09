@@ -18,9 +18,9 @@ design specifies behavior, implementation records construction, and UI review re
 refinements and verification. This file remains the active record through the review; append findings and bounded
 batch notes as work happens rather than scattering the results into new status files.
 
-**Initial state:** documentation planning only. All review coverage is **pending**. No browser activities, application
-changes, builds or tests were performed to establish this plan. Source/mount inspection establishes the inventory,
-not usability or passing behavior. Historical findings are leads to reproduce, not current defects.
+**Execution:** Waves 1–3 (DC-01–10) are authorized for delegated browser review, correction, independent retest and
+local commits after each verified batch. The initial inventory was established from source, not browser activity;
+the coverage ledger and batch record below distinguish current observations from untested leads.
 
 ### Inputs and reference patterns
 
@@ -191,40 +191,40 @@ parity. Template references and hidden TUI XML routes are recorded explicitly. A
 the same activity, not an additional app or a second reason to render the screen in regression. Container rows need
 navigation/default-child inspection. Surface rows below cover dialogs and panels that have no independent URL.
 
-For **every inventory row**, initial review status is **pending**, with evidence **—**. This applies to every render
-variant named in that row; split a row's execution notes by mode when outcomes differ. DC-22 samples the access
-boundaries across the whole inventory in addition to the primary activity IDs listed. The inventory holds the
-status of each screen and mode; the §6 ledger holds the only status of each activity.
+Rows not updated by execution remain **pending**, with evidence **—**. Updated rows distinguish observed browser,
+TUI and Standard branches from deferred or unsupported variants. An exercised/partial row does not certify all
+variants listed in its source inventory. DC-22 samples access boundaries across the whole inventory in addition to
+the primary activity IDs. This inventory holds screen/mode status; §6 holds the only activity status.
 
 ### Commons routes
 
 | Route | Source / owner | Activities | Render variants / role | Status | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `Commons` | `B Commons.xml` | DC-01 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Calendar/EventDetail` | `B Commons/Calendar/EventDetail.xml` | DC-09 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Calendar/Schedules/ResourceDetail` | `B Commons/Calendar/Schedules/ResourceDetail.xml` | DC-09 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Calendar/Schedules` | `B Commons/Calendar/Schedules.xml` | DC-09 | XML + custom sections; qvue: `B Commons/Calendar/Schedules.qvue`; inline tui; inline html,qvt | pending | — |
-| `Commons/Calendar/SchedulesTui` | `B Commons/Calendar/SchedulesTui.xml` | DC-09 | Hidden XML TUI helper | pending | — |
-| `Commons/Calendar` | `B Commons/Calendar.xml` | DC-09, DC-19 | XML + custom sections; qvue: `B Commons/Calendar.qvue`; inline tui; inline html,qvt | pending | — |
-| `Commons/CalendarTui` | `B Commons/CalendarTui.xml` | DC-09 | Hidden XML TUI helper | pending | — |
-| `Commons/Contacts/Compare` | `B Commons/Contacts/Compare.xml` | DC-08 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Contacts/ContactDetail` | `B Commons/Contacts/ContactDetail.xml` | DC-07, DC-08 | XML + custom sections; inline html-print | pending | — |
-| `Commons/Contacts/Duplicates` | `B Commons/Contacts/Duplicates.xml` | DC-08 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Contacts/Import/Mapping` | `B Commons/Contacts/Import/Mapping.xml` | DC-08 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Contacts/Import/Options` | `B Commons/Contacts/Import/Options.xml` | DC-08 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Contacts/Import/Preview` | `B Commons/Contacts/Import/Preview.xml` | DC-08 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Contacts/Import/Result` | `B Commons/Contacts/Import/Result.xml` | DC-08 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Contacts/Import/Source` | `B Commons/Contacts/Import/Source.xml` | DC-08 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Contacts/Import` | `B Commons/Contacts/Import.xml` | DC-08 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Contacts/ImportProgress` | `B Commons/Contacts/ImportProgress.xml` | DC-08 | XML + custom sections; qvue: `B Commons/Contacts/ImportProgress.qvue`; tui: `B Commons/Contacts/ImportProgress.tui.json` | pending | — |
-| `Commons/Contacts/List` | `B Commons/Contacts/List.xml` | DC-07 | XML + custom sections; inline html-print; inline qvt; inline tui | pending | — |
-| `Commons/Contacts` | `B Commons/Contacts.xml` | DC-07 | XML widgets (browser/TUI) | pending | — |
+| `Commons` | `B Commons.xml` | DC-01 | XML widgets (browser/TUI) | exercised, partial | Browser navigation/default Home and embedded TUI host inspected; full Standard/mode matrix deferred. Batch 1 Home and TUI snapshots. |
+| `Commons/Calendar/EventDetail` | `B Commons/Calendar/EventDetail.xml` | DC-09 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser form, recurrence, RSVP Yes→Maybe, reschedule/cancel, booking, phone and actual ICS export exercised.012 following-series route rebased and consecutive all-series save observed; later-occurrence recovery passed for target100044 and Agenda Nov16/17; focused EventDetail 13/13 passed. TUI/Standard full action matrix deferred. Batch 5 event/recurrence/RSVP/ICS evidence. |
+| `Commons/Calendar/Schedules/ResourceDetail` | `B Commons/Calendar/Schedules/ResourceDetail.xml` | DC-09 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser resource/detail context and embedded TUI inspected. Authored TUI list-cell handling 015 is corrected; Contacts destinations and Calendar Settings names were retested on the rebuilt binary. Resource approval path absent/deferred. `batch-5/resource-detail-tui.dom`, pending/resource evidence. |
+| `Commons/Calendar/Schedules` | `B Commons/Calendar/Schedules.xml` | DC-09 | XML + custom sections; qvue: `B Commons/Calendar/Schedules.qvue`; inline tui; inline html,qvt | exercised, partial | Browser resource board, booked-slot/free-busy, pending versus Busy privacy and booking recovery inspected; embedded TUI helper inspected. Grid intentionally browser-only. Resource approval UI absent/deferred. Batch 5 room/free-time/pending evidence, `schedules-tui.dom`. |
+| `Commons/Calendar/SchedulesTui` | `B Commons/Calendar/SchedulesTui.xml` | DC-09 | Hidden XML TUI helper | exercised, partial | Embedded TUI schedule helper inspected via parent; browser grid and absent approval control are not terminal passes. `batch-5/schedules-tui.dom`. |
+| `Commons/Calendar` | `B Commons/Calendar.xml` | DC-09, DC-19 | XML + custom sections; qvue: `B Commons/Calendar.qvue`; inline tui; inline html,qvt | exercised, partial | Browser Week, Month and Agenda actually inspected, light/dark plus phone; Phone Day was inspected with the final quick-event dialog; desktop Day and Work week remain unverified. Quick-event range009 and Agenda summary011 corrected. Two-zone DST and occurrence switching observed. TUI helper inspected; calendar grid is intentionally browser-only. Projects summary, meeting creation 016 and popup geometry 017 were corrected and retested. Batch 5 Calendar/Agenda/DST captures. |
+| `Commons/CalendarTui` | `B Commons/CalendarTui.xml` | DC-09 | Hidden XML TUI helper | exercised, partial | Embedded TUI agenda inspected through actual parent; no grid parity claim. `batch-5/calendar-tui.dom/jpg`. Full terminal action matrix deferred. |
+| `Commons/Contacts/Compare` | `B Commons/Contacts/Compare.xml` | DC-08 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser explicit keeper/first-name choice and merge preservation observed. TUI/Standard and stale/collision variants deferred. `batch-4/duplicate-compare-before.dom`, `merge-keeper-book-note-after.dom`, `merge-task-keeper-link-after.dom`. |
+| `Commons/Contacts/ContactDetail` | `B Commons/Contacts/ContactDetail.xml` | DC-07, DC-08 | XML + custom sections; inline html-print | exercised, partial | Browser edit/private refusal/recipient/merge/book/note/task links, print HTML and vCard inspected. Contact Tasks reader 010 live retested. TUI browser-only email/detail fallback is unsupported. Batch 4 private/merge/task after DOM/images and output review. |
+| `Commons/Contacts/Duplicates` | `B Commons/Contacts/Duplicates.xml` | DC-08 | XML widgets (browser/TUI) | exercised, partial | Browser directory-pair scan/selection, Jo/Joseph Not a duplicate and Patricia merge flow exercised. TUI/Standard and stale-pair matrix deferred. `batch-4/duplicate-compare-before.dom`, merge keeper evidence; coordinator observed directory import/decision. |
+| `Commons/Contacts/Import/Mapping` | `B Commons/Contacts/Import/Mapping.xml` | DC-08 | XML widgets (browser/TUI) | exercised, partial | Browser mapping and phone layout exercised. TUI/Standard and broader mapping permutations deferred. `batch-4/import-mapping-phone.dom`. |
+| `Commons/Contacts/Import/Options` | `B Commons/Contacts/Import/Options.xml` | DC-08 | XML widgets (browser/TUI) | exercised, partial | Browser wizard options used for actual create imports; duplicate update/skip variants and TUI/Standard remain deferred. Batch 4 import results/coordinator wizard walk. |
+| `Commons/Contacts/Import/Preview` | `B Commons/Contacts/Import/Preview.xml` | DC-08 | XML widgets (browser/TUI) | exercised, partial | Browser preview/confirmation in actual CSV/vCard journeys; no stale-preview or TUI/Standard claim. Batch 4 import journeys. |
+| `Commons/Contacts/Import/Result` | `B Commons/Contacts/Import/Result.xml` | DC-08 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser mixed failure 2/2, corrected retry 2/0, background 125/0, vCard 2/0 and revisit; downloaded failure report checked. Phone result inspected. TUI/Standard, update/stale-job cases deferred. Batch 4 result DOMs and output review. |
+| `Commons/Contacts/Import/Source` | `B Commons/Contacts/Import/Source.xml` | DC-08 | XML widgets (browser/TUI) | exercised, partial | Browser actual CSV/vCard selection/upload exercised. Prepared but unexecuted malformed/update fixtures remain deferred; TUI/Standard unverified. Batch 4 import result evidence and coordinator wizard walk. |
+| `Commons/Contacts/Import` | `B Commons/Contacts/Import.xml` | DC-08 | XML widgets (browser/TUI) | exercised, partial | Browser wizard/default Source reached for CSV and vCard imports; TUI/Standard wizard deferred. Batch 4 actual import outputs. |
+| `Commons/Contacts/ImportProgress` | `B Commons/Contacts/ImportProgress.xml` | DC-08 | XML + custom sections; qvue: `B Commons/Contacts/ImportProgress.qvue`; tui: `B Commons/Contacts/ImportProgress.tui.json` | exercised, partial | Browser actual background 125-row progress/completion and revisit; TUI JSON twin and stopped/stale job recovery unverified. `batch-4/import-background-result.dom`, `import-result-revisited.dom`. |
+| `Commons/Contacts/List` | `B Commons/Contacts/List.xml` | DC-07 | XML + custom sections; inline html-print; inline qvt; inline tui | exercised, partial | Browser list/filter/private visibility, phone list, contact sheet/export; TUI list inspected. Full keyboard/Standard matrix deferred. `batch-4/contacts-phone-before.jpg`, `contacts-tui.dom/jpg`, independent output review. DC-UI-015 retest passes: native names are visible, row numbers are distinct and two Contacts links reach their own records.  018 pane clipping and action recovery also pass on the final rebuilt TUI. |
+| `Commons/Contacts` | `B Commons/Contacts.xml` | DC-07 | XML widgets (browser/TUI) | exercised, partial | Browser default split/list and embedded TUI Contacts navigation inspected. TUI browser-only detail fallback is unsupported, not functional parity. Batch 4 Contacts snapshots. |
 | `Commons/Files/DriveSettings` | `B Commons/Files/DriveSettings.xml` | DC-10–12 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Files/Drives` | `B Commons/Files/Drives.xml` | DC-11, DC-12 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Files/Shares` | `B Commons/Files/Shares.xml` | DC-11, DC-12 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Files` | `B Commons/Files.xml` | DC-11, DC-12 | XML + custom sections; qvue: `B Commons/Files.qvue`; inline tui; inline html,qvt | pending | — |
 | `Commons/FilesTui` | `B Commons/FilesTui.xml` | DC-11, DC-12 | Hidden XML TUI helper | pending | — |
-| `Commons/Home` | `B Commons/Home.xml` | DC-01 | XML + custom sections; inline qvt; inline tui | pending | — |
+| `Commons/Home` | `B Commons/Home.xml` | DC-01 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser light/dark, contextual navigation/counter destinations; embedded TUI inspected. `batch-1/home-light.jpg`, `home-dark.jpg`, `home-counters-after.dom.txt`, `tui-commons-dark.jpg`; DC-UI-003 corrected. |
 | `Commons/Knowledge/Review` | `B Commons/Knowledge/Review.xml` | DC-13 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Knowledge/SpaceDetail` | `B Commons/Knowledge/SpaceDetail.xml` | DC-13 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Knowledge/Spaces` | `B Commons/Knowledge/Spaces.xml` | DC-13 | XML widgets (browser/TUI) | pending | — |
@@ -232,26 +232,26 @@ status of each screen and mode; the §6 ledger holds the only status of each act
 | `Commons/KnowledgeTui` | `B Commons/KnowledgeTui.xml` | DC-13 | Hidden XML TUI helper | pending | — |
 | `Commons/Notes` | `B Commons/Notes.xml` | DC-14 | XML + custom sections; qvue: `B Commons/Notes.qvue`; inline tui | pending | — |
 | `Commons/NotesTui` | `B Commons/NotesTui.xml` | DC-14 | Hidden XML TUI helper | pending | — |
-| `Commons/Notifications` | `B Commons/Notifications.xml` | DC-04 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Panel/Notifications` | `B Commons/Panel/Notifications.xml` | DC-02, DC-04 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Panel/Today` | `B Commons/Panel/Today.xml` | DC-02, DC-04, DC-05 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Panel` | `B Commons/Panel.xml` | DC-02, DC-04 | XML widgets (browser/TUI) | pending | — |
-| `Commons/QuickCreate` | `B Commons/QuickCreate.xml` | DC-03, DC-14 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Requests/List` | `B Commons/Requests/List.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Requests` | `B Commons/Requests.xml` | DC-05, DC-06 | XML widgets (browser/TUI) | pending | — |
+| `Commons/Notifications` | `B Commons/Notifications.xml` | DC-04 | XML + custom sections; inline qvt; inline tui | exercised, partial | Bob full history and Mark all read inspected; mentions and calendar invitation/update/cancel remain in history with unread zero. TUI/Standard and preference variants deferred. `batch-2/bob-full-notifications-read.dom`, `batch-3/bob-mention-notification.dom`. |
+| `Commons/Panel/Notifications` | `B Commons/Panel/Notifications.xml` | DC-02, DC-04 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser row actions, Earlier/read state and phone containment inspected; TUI/Standard and full preference matrix deferred. `batch-2/tray-phone-width-after.dom`, `named-today-actions-after.dom`; DC-UI-006/008. |
+| `Commons/Panel/Today` | `B Commons/Panel/Today.xml` | DC-02, DC-04, DC-05 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser complete/snooze/approve/refuse, persisted outcomes and separate staff isolation; phone corrected. TUI/Standard and stale-source/action branches deferred. Batch 2 Today/approval and named-actions DOMs. |
+| `Commons/Panel` | `B Commons/Panel.xml` | DC-02, DC-04 | XML widgets (browser/TUI) | exercised, partial | Browser tray/default panel navigation inspected with combined app drawer/Assist; remaining TUI/Standard navigation deferred. Batch 2 combined drawer captures. |
+| `Commons/QuickCreate` | `B Commons/QuickCreate.xml` | DC-03, DC-14 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser all six kinds saved with contextual links; invalid title/cancel/focus and early Open corrected. Embedded TUI Task saved; Standard Task primary action succeeds. Remaining kind/mode matrix deferred. Batch 1 creation DOMs; DC-UI-001/002/004/005. |
+| `Commons/Requests/List` | `B Commons/Requests/List.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser route/list entry exercised while reaching shared request; no exhaustive find, export or TUI/Standard claim. Batch 3 shared request and projects-request-shared-final.dom. |
+| `Commons/Requests` | `B Commons/Requests.xml` | DC-05, DC-06 | XML widgets (browser/TUI) | exercised, partial | Browser request list/detail navigation used for shared-record work; full list operations/mode matrix deferred. Batch 3 shared request journey. |
 | `Commons/Search` | `B Commons/Search.xml` | DC-01 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Settings/Account` | `B Commons/Settings/Account.xml` | DC-21 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Settings/Calendars` | `B Commons/Settings/Calendars.xml` | DC-09, DC-10 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Settings/ContactBooks` | `B Commons/Settings/ContactBooks.xml` | DC-07, DC-10 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Settings/Index` | `B Commons/Settings/Index.xml` | DC-21 | XML + custom sections; inline qvt; inline tui | pending | — |
+| `Commons/Settings/Calendars` | `B Commons/Settings/Calendars.xml` | DC-09, DC-10 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser internal View sharing/read-only/revoke and Settings controls inspected; TUI settings inspected. No Publish control exists on observed surface; valid publication/token revocation deferred. `batch-5/bob-calendar-view-share.dom`, calendar-only before/after revoke, `calendar-settings-tui.dom`. DC-UI-015 retest passes: five overview names and kind/share context appear, with distinct export numbers. `batch-5/calendar-settings-tui-names-after.dom/.jpg`. |
+| `Commons/Settings/ContactBooks` | `B Commons/Settings/ContactBooks.xml` | DC-07, DC-10 | XML widgets (browser/TUI) | exercised, partial | Browser owned shared book 100000, Bob View scope/read and revoke; Bob Settings entry removed while independent directory access remains valid. TUI/Standard matrix deferred. `batch-5/bob-shared-book-view.dom`, `bob-book-settings-after-revoke.dom`. |
+| `Commons/Settings/Index` | `B Commons/Settings/Index.xml` | DC-21 | XML + custom sections; inline qvt; inline tui | navigation only; DC-21 pending | TUI index used for Calendar and Sync review; Account/Preferences/Notifications/Books/Calendars/Sync destinations visible. Full later account/preference activity remains pending. Batch 5 Settings/Calendar/Sync TUI evidence. |
 | `Commons/Settings/Notifications` | `B Commons/Settings/Notifications.xml` | DC-04, DC-21 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Settings/Preferences` | `B Commons/Settings/Preferences.xml` | DC-21 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Settings/Sync` | `B Commons/Settings/Sync.xml` | DC-10 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Settings` | `B Commons/Settings.xml` | DC-21 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Tasks/List` | `B Commons/Tasks/List.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Tasks` | `B Commons/Tasks.xml` | DC-05, DC-06 | XML widgets (browser/TUI) | pending | — |
-| `Commons/Tasks/TaskDetail` | `B Shared/WorkItemDetail.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | pending | — |
-| `Commons/Requests/RequestDetail` | `B Shared/RequestDetail.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | pending | — |
+| `Commons/Settings/Sync` | `B Commons/Settings/Sync.xml` | DC-10 | XML widgets (browser/TUI) | exercised, partial | Browser authorized one-time credential→reload hidden→revoke No devices, phone inspected; embedded TUI no-devices inspected. Only redacted secret evidence. Actual DAV/external device blocked without client fixture. `batch-5/sync-one-time-redacted.dom`, `sync-reload-no-secret.dom`, `sync-device-revoked.dom`, `sync-device-revoked-phone.jpg`, `sync-tui-no-devices.dom`. |
+| `Commons/Settings` | `B Commons/Settings.xml` | DC-21 | XML widgets (browser/TUI) | navigation only; DC-21 pending | Browser and TUI container/default Index used for DC-10 access settings. Remaining account/preference children belong to DC-21. |
+| `Commons/Tasks/List` | `B Commons/Tasks/List.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser List/Board/Calendar and persisted find inspected; explicit detail Back014 now retains scope/text and selected Board/Calendar view. Full keyboard/Standard/TUI variants deferred. `batch-3/task-filtered-board.dom`, `task-filtered-calendar.dom`; DC-UI-014. |
+| `Commons/Tasks` | `B Commons/Tasks.xml` | DC-05, DC-06 | XML widgets (browser/TUI) | exercised, partial | Browser default List/detail replacement and TUI-created Task destination inspected. Container observation is not every child/mode. Batches 1/3. |
+| `Commons/Tasks/TaskDetail` | `B Shared/WorkItemDetail.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser shared task actions/persistence, phone geometry, Chatter/files; TUI-created Task destination. Projects shared-task consumer retested; explicit Tasks arrow now retains filtered Board/Calendar state, with direct-detail fallback intact. Batches 1/3; projects-task-shared-final.dom/jpg; DC-UI-014. |
+| `Commons/Requests/RequestDetail` | `B Shared/RequestDetail.xml` | DC-05, DC-06 | XML + custom sections; inline qvt; inline tui | exercised, partial | Browser shared request/link/activity outcomes; Projects request consumer shows matching record, In Progress and Work 1/1 done. Remaining mutation/mode branches deferred. `batch-3/projects-request-progress.dom`, Batch 1 request/activity DOMs. |
 | `Commons/Settings/Account/VerifyEmail` | `T VerifyEmail.xml` | DC-21 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Settings/Account/VerifySms` | `T VerifySms.xml` | DC-21 | XML widgets (browser/TUI) | pending | — |
 | `Commons/Settings/Account/VerifyTotp` | `T VerifyTotp.xml` | DC-21 | XML widgets (browser/TUI) | pending | — |
@@ -332,9 +332,9 @@ BasicComms root is hidden in the BOSS launcher. Consent and Moderation are BOSS'
 
 | Route | Source / owner | Activities | Render variants / role | Status | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `Commons/Chatter` | `B Shared/Chatter.xml` | DC-06 | XML + custom sections; qvue: `B Shared/Chatter.qvue`; inline tui; inline html,qvt | pending | — |
+| `Commons/Chatter` | `B Shared/Chatter.xml` | DC-06 | XML + custom sections; qvue: `B Shared/Chatter.qvue`; inline tui; inline html,qvt | exercised, partial | Browser mounted shared task/request; follow, actual mention/notification/read/reply, activity feedback and cross-org visibility pair. Full TUI/Standard and author/server mutations deferred. Batch 3 Chatter/access-pair evidence; Projects consumer. |
 | `Commons/Chatter/ChatterTui` | `B Shared/ChatterTui.xml` | DC-06 | Hidden XML TUI helper, loaded by Chatter | pending | — |
-| `Commons/RecordFiles` | `B Shared/RecordFiles.xml` | DC-06, DC-11 | XML + custom sections; qvue: `B Shared/RecordFiles.qvue`; inline tui; inline html,qvt | pending | — |
+| `Commons/RecordFiles` | `B Shared/RecordFiles.xml` | DC-06, DC-11 | XML + custom sections; qvue: `B Shared/RecordFiles.qvue`; inline tui; inline html,qvt | exercised, partial | Browser actual 76-byte local upload and authorized-positive/other-org visibility pair. Bob downloaded the uploaded file: 76-byte equality verified in batch-3/download-byte-check.json. Upload failure recovery and TUI/Standard deferred. `batch-3/upload-saved.dom`, `files-positive-data.dom`, `cross-org-files-refused.dom`. |
 | `Commons/RecordFiles/RecordFilesTui` | `B Shared/RecordFilesTui.xml` | DC-06, DC-11 | Hidden XML TUI helper, loaded by RecordFiles | pending | — |
 | `Comms/Chatter` | `B Shared/Chatter.xml` | DC-06 | XML + custom sections; qvue: `B Shared/Chatter.qvue`; inline tui; inline html,qvt | pending | — |
 | `Comms/Chatter/ChatterTui` | `B Shared/ChatterTui.xml` | DC-06 | Hidden XML TUI helper, loaded by Chatter | pending | — |
@@ -342,7 +342,7 @@ BasicComms root is hidden in the BOSS launcher. Consent and Moderation are BOSS'
 | `Comms/RecordFiles/RecordFilesTui` | `B Shared/RecordFilesTui.xml` | DC-06, DC-11 | Hidden XML TUI helper, loaded by RecordFiles | pending | — |
 | `/s/<token>` | `B PublicShare.xml` | DC-12 | XML + custom sections; qvue: `B PublicShare.qvue`; tui: `B PublicShare.tui.json`; inline html,qvt | pending | — |
 | `/u/<token>` | `B Unsubscribe.xml` | DC-20 | XML + custom sections; qvue: `B Unsubscribe.qvue`; tui: `B Unsubscribe.tui.json`; inline html,qvt | pending | — |
-| `/cal/<token>` | `B PublishedCalendar.xml` | DC-10 | XML + custom sections; qvue: `B PublishedCalendar.qvue`; tui: `B PublishedCalendar.tui.json`; inline html,qvt | pending | — |
+| `/cal/<token>` | `B PublishedCalendar.xml` | DC-10 | XML + custom sections; qvue: `B PublishedCalendar.qvue`; tui: `B PublishedCalendar.tui.json`; inline html,qvt | exercised negative only; valid flow deferred | Invalid token displays Not available. Valid published calendar and token revocation unexercised: observed Calendar Settings has no Publish control. No positive publication or TUI/Standard claim. `batch-5/public-invalid-token.dom`. |
 | `/call/<token>` | `C CallGuest.xml` | DC-19 | XML + custom sections; qvue: `C CallGuest.qvue`; inline tui | pending | — |
 
 Shared XML TUI helpers support the same DC-06/DC-11 activities. Each parent mounts its helper as a hidden child;
@@ -352,27 +352,27 @@ inspect both the helper controls and the parent inline TUI loader through the ac
 
 | Route / surface | Source / owner | Activities | Variants and inspection | Status | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| All BOSS apps: launcher | W `apps/AppList.xml` / framework shell; BOSS app registrations, suite groups in `runtime/component/mr-boss/screen-extend/webroot/screen/webroot/apps/AppList.xml` and templates `runtime/component/mr-boss/template/AppList.{html,qvt,tui}.fancy` | DC-01, DC-22 | BOSS html, qvt and tui templates; authorized destinations, group order and the trailing More group, active app, empty permissions | pending | — |
-| All BOSS apps: app navigation and breadcrumbs | W / framework shell | DC-01, DC-02 | Browser/TUI, sibling menus, keyboard and Back | pending | — |
-| Saved finds and list controls | Shared framework widgets; consuming lists | DC-01, DC-05 | Find Options, sort, save/update/default/reset, columns, pagination, export | pending | — |
-| Palette | W / shell; Commons and Comms providers | DC-01, DC-22 | Recent, Screens, Actions, Saved finds, Records/ID, People, Pages/files, Events, Messages/rooms | pending | — |
-| Quick-create menu | W / shell; BOSS root providers | DC-03 | Contextual kinds, record-required activity, cancellation and focus return | pending | — |
-| Header badges | W / shell; BOSS theme/count providers | DC-04, DC-17–19 | Mail versus internal messages, unread/mentions, Today, notifications, missed calls | pending | — |
-| Account/presence menu | W / shell; BOSS account destinations | DC-01, DC-21 | Profile, status/presence, theme, preferences, re-login/logout, keyboard | pending | — |
-| Tray frame and tabs | W / shell with B/C panel content | DC-02–04, DC-18, DC-19 | Today, Chat, Notifications, Dialer; cross-navigation, resize, overlay, focus | pending | — |
-| Assist drawer | W `assist.xml`, `js/WebrootAssist.js`, canvas/sandbox clients / framework | DC-02, DC-22 | Available chat/history/context/rules/canvas controls, run state, cancellation/approval, provider unavailable; record unsupported TUI behavior | pending | — |
+| All BOSS apps: launcher | W `apps/AppList.xml` / framework shell; BOSS app registrations, suite groups in `runtime/component/mr-boss/screen-extend/webroot/screen/webroot/apps/AppList.xml` and templates `runtime/component/mr-boss/template/AppList.{html,qvt,tui}.fancy` | DC-01, DC-22 | BOSS html, qvt and tui templates; authorized destinations, group order and the trailing More group, active app, empty permissions | exercised, partial | Browser light/dark suite grouping/Commons destination; embedded TUI entry inspected. Full role/empty-permission/Standard variants deferred. `batch-1/launcher-initial-dark.dom.txt`, `launcher-light.jpg`, TUI navigation evidence. |
+| All BOSS apps: app navigation and breadcrumbs | W / framework shell | DC-01, DC-02 | Browser/TUI, sibling menus, keyboard and Back | exercised, partial | Browser Commons/Projects records, explicit Back and embedded TUI CtrlK navigation inspected.014 filtered Tasks-arrow Board/Calendar return and direct fallback retested. Full keyboard/mode matrix deferred. Batches 1/3; projects-task-shared-final.dom/jpg; DC-UI-014. |
+| Saved finds and list controls | Shared framework widgets; consuming lists | DC-01, DC-05 | Find Options, sort, save/update/default/reset, columns, pagination, export | exercised, partial | Existing Projects Open bugs saved find and Back observed; Commons Task List/Board/Calendar find exercised. Saved-find create/update/default/reset, columns/export/pagination matrix deferred; Commons Task screen has no saved-find control. `batch-1/saved-find-open-bugs.dom.txt`, `saved-find-back.dom.txt`; Batch 3 filtered view evidence. |
+| Palette | W / shell; Commons and Comms providers | DC-01, DC-22 | Recent, Screens, Actions, Saved finds, Records/ID, People, Pages/files, Events, Messages/rooms | exercised, partial | Browser @Bob exact person, known raw-ID destination, missing-ID no ghost record and return; TUI CtrlK→Commons Home. Other source groups, recent order/failure and full mode matrix deferred. `batch-1/palette-people.dom.txt`, `palette-id.dom.txt`, `palette-missing-id.dom.txt`, `tui-go-to.dom.txt`. |
+| Quick-create menu | W / shell; BOSS root providers | DC-03 | Contextual kinds, record-required activity, cancellation and focus return | exercised, partial | Browser six kinds/context/cancel/focus; TUI context-free Activity removed, Task AltEnter persisted. Standard Task primary works. Contextual TUI Activity unsupported; other terminal kinds deferred. Batch 1 quick-create/TUI after evidence. |
+| Header badges | W / shell; BOSS theme/count providers | DC-04, DC-17–19 | Mail versus internal messages, unread/mentions, Today, notifications, missed calls | exercised, partial | Today counts/task outcomes and Bob mention/read notifications observed; mail/message counts visible only. Full unread/mail/missed-call semantics belong later waves. Batches 1/2/3 counter/notification evidence. |
+| Account/presence menu | W / shell; BOSS account destinations | DC-01, DC-21 | Profile, status/presence, theme, preferences, re-login/logout, keyboard | exercised, partial | Theme switches and review identity sign-in/logout used; full profile/presence/preferences/account verification deferred to DC-21. Batch 1 light/dark and later actor captures. |
+| Tray frame and tabs | W / shell with B/C panel content | DC-02–04, DC-18, DC-19 | Today, Chat, Notifications, Dialer; cross-navigation, resize, overlay, focus | exercised, partial | Browser Today/Notifications with app drawer and Assist, phone containment and named actions; Chat only entry/cancel in DC-03. Dialer/live-call and full resize/focus/TUI variants deferred. Batch 2 combined/phone evidence; Batch1 chat-entry. |
+| Assist drawer | W `assist.xml`, `js/WebrootAssist.js`, canvas/sandbox clients / framework | DC-02, DC-22 | Available chat/history/context/rules/canvas controls, run state, cancellation/approval, provider unavailable; record unsupported TUI behavior | exercised failure path; provider blocked | Browser available context/history controls and failed run reopen/Retry inspected, explicit failure reason corrected 007. No usable provider model, so successful run/stop/approval/canvas blocked. TUI behavior not certified. Batch 2 Assist after evidence. |
 | Live-call mini-window | W call client `js/WebrootCall.js` / framework | DC-02, DC-19 | Incoming/active state, navigate away, return, end call, narrow combined layout | pending | — |
-| Contacts: contact methods, books/groups, recipient cards | B Contacts screens; Mantle contact services | DC-07, DC-08, DC-16 | Add/edit/remove, selected labels, privacy, merge comparison, print/export | pending | — |
-| Calendar: quick event, recurrence, invite and booking controls | B Calendar/Schedules QVue and EventDetail | DC-09, DC-10 | Drag and keyboard alternatives, conflict feedback, attendee/room selectors, publication | pending | — |
+| Contacts: contact methods, books/groups, recipient cards | B Contacts screens; Mantle contact services | DC-07, DC-08, DC-16 | Add/edit/remove, selected labels, privacy, merge comparison, print/export | exercised, partial | Browser selected email/phone/private recipient, merge comparison, books, print/vCard and imported Unicode/freeform phone inspected. Remaining group/address lifecycle and keyboard/modes deferred. Batches 4/5; DC-UI-010. |
+| Calendar: quick event, recurrence, invite and booking controls | B Calendar/Schedules QVue and EventDetail | DC-09, DC-10 | Drag and keyboard alternatives, conflict feedback, attendee/room selectors, publication | exercised, partial | Browser range refusal/default recovery, RSVP, two-zone DST, recurrence exception/all/following attempt, room conflict/correction/cancel and free-time controls.012 later-occurrence recovery passed; resource approval/publication UI absent/deferred. Desktop Day/Work week, full keyboard/drag and remaining mode variants are unverified. Batch 5;009/011/012/013/015. |
 | Files: browser and details pane | B `Commons/Files.qvue` | DC-11, DC-12 | Upload/progress, preview, rename/move, share/link, versions/compare/restore, trash, narrow selected file | pending | — |
 | Attach from Files / Save to Files | B and C file-picker transitions; Compose/Mail/Chat/RecordFiles consumers | DC-06, DC-11, DC-16, DC-18 | Authorized drive/folder selection, upload failures, cancel/reopen, correct destination | pending | — |
 | Knowledge: tree/editor/history/review dialogs | B `Commons/Knowledge.qvue` and child screens | DC-13 | Co-edit, save/version, compare/restore, duplicate/move, review/publish; text fallback | pending | — |
 | Notes: editor and note navigation | B `Commons/Notes.qvue` | DC-14 | Private note selection, saved/dirty state, search, recovery, text fallback | pending | — |
 | Inbox: accounts/folders/Internal mailboxes | C Inbox with B Home/Mail/MessageDetail extensions and providers | DC-16, DC-17 | Thread/list selection, labels, assignment where offered, drafts/outbox, file-on-record/create-from actions; mailbox browse/join/leave, new mailbox and members dialogs | pending | — |
-| Compose: recipients, attachments, send/draft controls | C Compose with B picker/provider additions | DC-03, DC-16 | Identity, recipient lookup/chips, text blocks, pending send, schedule, retry/cancel | pending | — |
-| Chat: room and message actions | C Chat and tray with B record providers | DC-06, DC-18 | Threads, Files, members, mentions, reactions, polls, forward, encryption/devices, record/create actions | pending | — |
+| Compose: recipients, attachments, send/draft controls | C Compose with B picker/provider additions | DC-03, DC-16 | Identity, recipient lookup/chips, text blocks, pending send, schedule, retry/cancel | entry only; later-wave review pending | DC-03 Email quick-create entry and contact recipient/context chip inspected, cancel returns same record. No send/draft/attachment workflow claim. `batch-1/email-entry.dom.txt`, `batch-4/private-contact-compose-recipient.dom`; DC-16 remains pending. |
+| Chat: room and message actions | C Chat and tray with B record providers | DC-06, DC-18 | Threads, Files, members, mentions, reactions, polls, forward, encryption/devices, record/create actions | entry only; later-wave review pending | DC-03 new-recipient/local-room quick-create entry and cancel return inspected. No message delivery/full room review claim. `batch-1/chat-entry.dom.txt`; DC-18 remains pending. |
 | Calls: lobby, incoming/active call and meeting join | C Calls and W call client; B calendar/contact providers | DC-19 | Local media, dial/search/transfer targets where offered, call-link/guest handoff, permission refusal | pending | — |
-| Record cards, Chatter and activity dialogs | B shared detail/Chatter screens; Mantle | DC-03, DC-06, DC-22 | Note/reply/edit/delete, mention, follow, activity, record visibility, mounted context | pending | — |
+| Record cards, Chatter and activity dialogs | B shared detail/Chatter screens; Mantle | DC-03, DC-06, DC-22 | Note/reply/edit/delete, mention, follow, activity, record visibility, mounted context | exercised, partial | Browser contextual activity save, follow, selected mention/reply, feedback, cross-org panels, Projects shared consumer. Author edit/delete server persistence, submitted non-author refusal and full TUI/Standard remain deferred. Batches 1/3. |
 | Account verification dialogs | B Account and mounted T screens | DC-21 | Email/SMS/TOTP configured fixtures, validation, cancellation and safe recovery | pending | — |
 
 ### Design-to-code reconciliation
@@ -695,8 +695,11 @@ Resolve coverage gaps when implementing the relevant batch; this documentation c
   Run the affected regression specs with the existing binary unless a rebuild is required, for example
   `./moq test mr-boss --spec QuickCreate --nobuild`, and for client specs `./moq test-client mr-boss --serve --spec
   <name>`. Commands run from the mr-moqui root.
-- Before application implementation commits run `./moq test-apps`; when framework changes are part of a batch,
-  run `./moq test-framework` for that work as well. Do not run framework tests or `cargo test` merely for BOSS changes.
+- During each batch run localized checks for the affected rules, bugs and activities. Run `./moq test-apps` once
+  at the end of the planned review pass; include `./moq test-framework` there when the pass changed framework code.
+  For this Waves 1–3 pass that boundary is the end of Wave 3. This user-directed cadence also applies to future
+  review iterations and supersedes the initial per-batch full-suite cadence; earlier runs remain historical results.
+  Do not run framework tests or `cargo test` merely for BOSS changes.
   Do not run `test-all` or `accept-all` by default. A fix in BasicComms or webroot is framework work (AGENTS.md),
   even when found through a BOSS mount.
 - The desktop client's shell is not reviewed separately. When a batch changes one of its six bundled BasicComms
@@ -744,16 +747,16 @@ mode gaps, so a successful wide-browser happy path cannot close untested TUI or 
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
-| DC-01 | pending | Not executed; all planned variants remain | — |
-| DC-02 | pending | Not executed; all planned variants remain | — |
-| DC-03 | pending | Not executed; all planned variants remain | — |
-| DC-04 | pending | Not executed; all planned variants remain | — |
-| DC-05 | pending | Not executed; all planned variants remain | — |
-| DC-06 | pending | Not executed; all planned variants remain | — |
-| DC-07 | pending | Not executed; all planned variants remain | — |
-| DC-08 | pending | Not executed; all planned variants remain | — |
-| DC-09 | pending | Not executed; all planned variants remain | — |
-| DC-10 | pending | Not executed; all planned variants remain | — |
+| DC-01 | exercised | Partial: John/Joe login and Home; palette People/ID/missing ID, destination and Back; Projects Open bugs saved find and detail/Back; browser light/dark, phone and embedded TUI navigation. Source-failure/inaccessible-recent recovery remains; actual 200% zoom unavailable in current browser API. | Batch 1; DC-UI-003 |
+| DC-02 | exercised | Partial: app drawer, Today tray and Assist coexist on the disposable task in light/dark; failed Assist conversation can be reopened and retried with an explicit reason after correction. Successful model run, safe cancellation/approval and canvas remain blocked by the missing usable model/fixture. Live-call repeat remains Wave 6. Actual 200% zoom and complete TUI equivalents remain unverified. | Batch 2; DC-UI-006/007/008; combined-drawers-error light/dark after images, Assist reopened/retry snapshots |
+| DC-03 | exercised | Partial: task/event/note/contact/request/activity created and persisted; contact/request and request/activity context retained; cancel/focus return, required input, Email/Chat entry-return, phone dialog, TUI keyboard save and Standard task create. Rebuilt browser/TUI selected-name fixes retested as ordinary staff; TUI record-context creation is unsupported, and denied/failed-save variants remain. | Batch 1; DC-UI-001/002/004/005 |
+| DC-04 | exercised | Partial: Today completion/snooze, persisted task states, personal-user isolation, two separately addressed approval decisions and refusal reason were exercised. Request conversation records both outcomes; notifications move to Earlier. Record-specific row actions and correct-row Reschedule were retested. Topic-preference round trip, stale/refused actions, independent-source failure and full TUI/Standard variants remain. | Batch 2; today/completed/snoozed/approval snapshots; named-today-actions-after.dom, reschedule-named-correct-row.dom |
+| DC-05 | exercised | Partial: shared task/request status and Projects consumers persist; filtered List/Board/Calendar retain find.014 explicit Tasks-arrow return now restores Assigned to me and search in both Board and Calendar; direct detail fallback and Projects shared task retested. Removed-assignee, stale/invalid writes, full keyboard and remaining Standard/TUI variants are deferred to a bounded follow-up. | Batch 3; task/filter/return before-after evidence; DC-UI-014. |
+| DC-06 | exercised | Partial: follow, actual selected mention, delivered/read notification, reply, completed activity/feedback and 76-byte upload persist; Bob Download matches uploaded bytes (download-byte-check.json). Positive shared Chatter/RecordFiles responses pair with other-org visibility refusals; Projects supplies a second consumer; final task/request DOMs show the same fixtures, task Complete and request In Progress. Author edit/delete persistence, submitted non-author refusal, attachment failure recovery and full mode variants remain deferred. | Batch 3; mention/reply/upload/access-pair evidence and independent review. |
+| DC-07 | exercised | Partial: private contact edit/recipient, Bob direct refusal, print/vCard, shared-book View/revoke and Contacts TUI inspected.010 contact Tasks reader corrected/live retested.015 rebuilt TUI shows names and distinct numbers; 31 opens Ana and 32 opens Bob Acme. The existing focused native regression passes. 018 pane text and hit targets are clipped; rebuilt Ana/Bob actions and Calendar Settings recovery pass. Remaining contact lifecycle and Standard/TUI variants are deferred. | Batches 4/5; private/export/merge/book evidence; DC-UI-010/015. |
+| DC-08 | exercised | Partial: CSV mixed failure/corrected retry, background 125/revisit, vCard 2/0 with Unicode/email/freeform-phone/About, Not a duplicate, explicit keeper choice and merge note/book/task-link preservation exercised. Import update/skip, malformed-vCard recovery, stale pair/job/cancellation and full mode variants are deferred; fixture files alone do not close these. | Batch 4; actual import/output/merge evidence; DC-UI-010. |
+| DC-09 | exercised | Partial: Week/Month/Agenda, quick event refusal/default recovery, RSVP Yes→Maybe, reschedule/cancel, actual ICS, two-zone DST, recurrence exception/all shift, booking conflict/correction/cancel and free-time controls exercised.009/011/013 retested;012 following rebase/consecutive save and13/13 focused checks pass, later-occurrence UI passed. Projects Calendar New meeting 016 persists with its IRON link; popup 017 fits at 1920 and 1280px, and the 390px phone dialog fits. Rebuilt 015 TUI names and destinations pass. Desktop Day/Work week and remaining keyboard/modes/recurrence variants are deferred; resource approval control is absent. | Batch 5 range/Agenda/RSVP/ICS/DST/recurrence/resource/TUI evidence; DC-UI-009/011/012/013/015. |
+| DC-10 | exercised | Partial: Bob calendar View/read-only then calendar-only direct refusal after revoke; shared-book View scope/read then Settings entry removed after revoke. Authorized one-time credential disappears on reload and revocation leaves No devices; evidence redacted. TUI Settings/Sync inspected; rebuilt 015 Calendar Settings shows all five names and distinct export numbers. Invalid public token refused; valid publication/revoke deferred because current Settings has no Publish control. Actual external DAV integration blocked by absent client fixture. | Batch 5 calendar/book/sync/public-negative evidence; external integration and absent-control deferrals explicit. |
 | DC-11 | pending | Not executed; all planned variants remain | — |
 | DC-12 | pending | Not executed; all planned variants remain | — |
 | DC-13 | pending | Not executed; all planned variants remain | — |
@@ -769,13 +772,31 @@ mode gaps, so a successful wide-browser happy path cannot close untested TUI or 
 
 ### Findings register
 
-No observed findings are recorded yet. Allocate **DC-UI-001** onward when evidence exists. Label static suspicions and
-design judgments separately from observed defects. Use P1 for blocked work, data/privacy risk or essential unreadability;
+Allocate **DC-UI-001** onward when evidence exists. Label static suspicions and design judgments separately from
+observed defects. Use P1 for blocked work, data/privacy risk or essential unreadability;
 P2 for substantial friction/misleading behavior; P3 for localized refinement. A confirmed security/data defect takes
 priority over visual polish and is routed to the owning layer.
 
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| DC-UI-001 / observed / P2 | DC-03: open Task/Activity or contact-linked Request | Commons quick-create; John, light/dark and phone; TUI Task | Selected remote values show IDs (`EX_JOHN_DOE`, contact ID) instead of the supplied authorized display name. Empty remote search itself is intentional until typing. | `batch-1/quick-task-dark-before.jpg`, `quick-request-before.dom.txt`, `tui-task-create.jpg` | Framework static QVT/TUI generators | Preserve `current-description` as the initial selected option label without changing submitted IDs or overriding existing option labels. | Fresh-origin Joe browser and rebuilt TUI show Joe Developer; independent browser evidence review passed. TUI Alt+Enter saved a task whose detail confirms Joe as assignee. |
+| DC-UI-002 / observed / P3 | DC-03: submit blank Task title | Quick-create Task; John, dark | Missing authored required flag allows a request that returns a technical service/field error. Inputs remain available. | `batch-1/quick-task-required-pre-restart.dom.txt` | BOSS | Mark Task title required; extend the existing render check. | Fresh-origin Joe gets inline Required, focus remains on Task, dialog is retained. Quasar rules do not require a native HTML required attribute. |
+| DC-UI-003 / observed / P2 | DC-01: follow Home task counters | Commons/Home to Tasks/List; John, light/dark | Mixed Today-source count links to a task-only list (Home 8/9 versus list 3; Overdue 1 versus 7). | `batch-1/home-light.dom.txt`, `today-counter-list.dom.txt` | BOSS Home | Use the destination Task service's counts; label cards Tasks today and Overdue tasks. Mixed-source Today strip remains. | Independent browser-evidence retest confirms 3 to 3 and 7 to 7. Before/after data differs by the recorded disposable task; shortened label avoids truncation. |
+| DC-UI-004 / observed / P2 | DC-03: immediately open a saved note | Home quick-note success notification; John/Joe | Open appears while the modal is closing; clicking then twice leaves Home, although the note persists. Waiting for the dialog to close works. | `batch-1/note-early-open-before.dom.txt`, `note-early-open-after.dom.txt` | Framework client | Publish actionable success messages after quick-create's actual on-hide event; keep refusals immediate. Regenerate existing component renders. | Fresh-origin Joe: Open appears with no dialog, immediately reaches the selected Notes record and exact body. Independent evidence review passed. |
+| DC-UI-005 / observed / P2 | DC-03: TUI Home → F6 → Activity | Embedded TUI; Joe | Context-free menu offers Activity, then only an explanatory placeholder with no Schedule action. The TUI shell does not carry record context. | `batch-1/tui-contextless-create-menu.dom.txt`, `tui-contextless-activity.jpg` | Framework host TUI adapter | Omit record-required creation entries from the context-free adapter; do not add a new TUI record-context API in this UI review. | Rebuilt live menu retains Task/Event/Note/Contact/Request and omits Activity; independent evidence review passed. Contextual TUI Activity remains explicitly unsupported. |
+| DC-UI-006 / observed / P2 | DC-02/04: identify tray actions | Commons Today/notification tray; ordinary staff, desktop/phone | Icon-only actions and tray close lacked useful accessible names; repeated actions did not identify their record. | `batch-2/today-tray-before.dom.txt`, `named-today-actions-after.dom`, `reschedule-named-correct-row.dom` | Framework QVT generators/client; BOSS Today labels | Derive icon-only link names from authored tooltips; name dialog/tray controls; include the affected record in Today actions. Preserve visible labels. | Fresh-origin AX exposes Complete/Snooze/Reschedule plus record titles and Close tray; correct-row Reschedule was exercised. Do not use older-origin anonymous-control snapshots to reopen the corrected finding. |
+| DC-UI-007 / observed / P2 | DC-02: send/open a run that fails before answering | Assist on disposable shared task; John, desktop light/dark | Tasks reports missing usable model, while the original/reopened chat showed only the user prompt and no failure or retry. | `batch-2/assist-failed-task.dom.txt`, `assist-open-failed-thread.dom.txt`, `assist-reopened-error-after.dom`, `assist-retry-error-after.dom` | Framework Assist client | Render terminal feedback after a user-only run; refresh persisted failure details/tasks when the turn already ended. | Fresh-origin reopen shows exact provider reason and Retry; retry produces explicit failure feedback. Successful provider execution remains blocked, not passed. |
+| DC-UI-008 / observed / P2 | DC-02/04: use the phone tray | Commons notification/Today tray; phone viewport with scrollbar | Tray width exceeded the available layout; left edges of Notifications/Earlier/Open in Commons were clipped. | `batch-2/notifications-phone-before.jpg`, `tray-phone-width-after.jpg`, `tray-phone-width-after.dom` | Framework shell CSS | Constrain tray/sticky width to its containing layout, including scrollbar-reduced space. | Coordinator measured bounds 0..375 after correction; screenshot content fits. Component containment regression checks close/resize/reopen. Actual 200% zoom is still blocked. |
+| DC-UI-009 / observed / P2 | DC-09: explicit invalid quick-event range | Commons Calendar; Joe, 1280px | Start Nov12 10:00/end09:00 saved event 100033 as 10–11, silently replacing the submitted end. | Batch 5 CUA observation (no saved before-input image), range-inline-refusal-1280-after and blank-end recovery/detail DOM. | BOSS Calendar/QuickCreate services and form | Refuse explicit reversed/equal timed ranges and reversed all-day dates; preserve blank-end default and same-day all-day. | Fresh inline refusal retains fields; cleared end creates persisted Nov13 14–15. Focused range tests passed; latest final gate coordinator-owned. |
+| DC-UI-010 / observed / P2 | DC-07/08: contact Tasks after merge | Contact 100233; Contact administrator | Task100035 survives merge and links keeper but Contact Tasks says No tasks: reader ignores generic Party links. | Batch 4 contact-linked-task-missing-before, merge-task-keeper-link-after, contact-linked-task-after DOM/image. | BOSS ContactActivity | Union role/generic WetTask rows, check visibility, dedup, order and bound output 100. | After lists task once; regression covers generic/role union, hidden/non-task exclusion and ordering. Merge preservation itself passed. |
+| DC-UI-011 / observed / P2 | DC-09: open Agenda occurrence | Commons Calendar Agenda; Joe | Summary API is visible=true but clicked Agenda item stays loading because reactive proxy/raw identities differ. | Batch 5 agenda-open-loading-before, summary-positive-response and open-summary-after DOM/images. | BOSS Calendar.qvue | Guard callbacks by request generation, open state and stable occurrence key. | Commons populated occurrence summary/switching passes; regression covers current, stale, reopened and closed responses. The Projects Sprint 2 review summary also populates; meeting creation is independently covered by 016. |
+| DC-UI-012 / observed / P2 | DC-09: save this and following, then save again | EventDetail recurring event; Joe | New following series persists at actual 16:00 while editor remains on stale 19:00 context; later saves can act from old occurrence coordinates. | Batch 5 recurrence-following-stale-form/new-series/actual-time-before, rebased-after and consecutive-all-18-after DOM; stale route JSON. | BOSS EventServices/EventDetail | Route to returned target, explicitly clear inherited occurrence for a new target, and return normalized changed occurrence for the same series. | Following target 100043 rebased to 17:00 and subsequent all-series save shows 18:00. Focused EventDetail 13/13 passed; Later-occurrence target 100044 now shows Nov 16 17:00 then 18:00 on consecutive save; Agenda Nov 16/17 both 6–7 PM confirms persistence. |
+| DC-UI-013 / observed / P3 | DC-09: identify calendar icon controls | Commons Calendar; browser/phone | Mini-month/range navigation, settings/options, rail/search and popup close controls have no useful accessible names. | Batch 5 earlier calendar/Agenda AX; calendar-icon-names-after.dom. | BOSS Calendar.qvue | Add localized aria-labels matching existing action/tooltips; identify calendar-specific options by calendar name. | Fresh AX exposes named mini-month/range/settings/options controls and popup closes in Commons and Projects. No new action or route. |
+| DC-UI-014 / observed / P2 | DC-05: explicit Tasks Back | Joe, Assigned to me plus Compare the calendar filter; Board/Calendar | Detail Tasks arrow returns All open with blank search; selected view preference alone survives. | Batch 3 task-back-drops-find-before DOM/image; filtered-board/calendar-after and direct-back-fallback-after. | BOSS Tasks List/SharedWorkItemDetail/TaskServices | Carry existing keep JSON as taskListFind; allowlist task-find fields and return only to fixed sibling List. Retain tabs/common actions; no arbitrary return URL. | Live Board and Calendar return preserve Assigned to me, search and one matching task. Direct detail keeps plain List fallback; Projects shared task remains usable. Existing regression renders/helper extended without extra render; test encoding assertions corrected to framework plus semantics. |
+| DC-UI-015 / observed / P1 | DC-07/09/10: terminal explicit list-cell representation | Embedded TUI Contacts/List and Settings/Calendars | Authored tui text/link branches are dropped by list-cell renderer, hiding names. First repair restores nodes but repeated empty native IDs make every Contacts link use [30], so index destinations collide. | Batch 4 Contacts TUI and contacts-tui-duplicate-ids-before DOM/image; Batch 5 calendar-settings-tui; tui-gap-source-classification.txt. | Framework ScreenTui generator | Handle authored tui branches as native cell nodes and normalize empty/duplicate IDs through existing unique-ID machinery. Empty and repeated authored IDs use the existing document-wide unique-ID machinery. | Rebuilt Contacts shows meaningful names and distinct numbers; 31 opens Ana EX_PRJ_ANA, 32 opens Bob Acme ORG_ACME_BA. Calendar Settings shows all five names and distinct export numbers. Independent evidence review and the existing focused native regression pass. Do not conflate unsupported ContactRecord qvt-only fallback or horizontally scrollable Resource facts with this defect. |
+| DC-UI-016 / observed / P1 | DC-09: Projects shared Calendar New meeting | Joe, IRON Plan Calendar | Save sends project workEffortId in the POST URL query; the framework write guard refuses the request, blocking meeting creation in this shared consumer. | Batch 5 projects-calendar-create-query-before DOM/image. | BOSS Calendar.qvue request caller | Move the existing project identity into the POST body; preserve project scope and service authorization. GET scoping and existing authorization remain unchanged; focused actual-component regression covers form setup and all mutation callers. | Joe created 100045 at Nov12 14–15 through Projects; Agenda summary and opened Event detail match, with Linked records → Project IRON. Independent source/evidence review passes. |
+| DC-UI-017 / observed / P2 | DC-09: open a wide Agenda event summary | Projects IRON and Commons Calendar; Joe, 1920/1280px | Full-row anchor leaves neither side enough space: Quasar narrows the menu to 261px while its 400px child overflows, truncating title/time/actions. | Batch 5 projects-popup-clipped-before DOM/image/bounds; projects-popup-fits-after and commons-popup-1280-after. | BOSS Calendar.qvue | Anchor the popup at a narrow point on the clicked row and bound desktop contents to the actual menu width; preserve phone dialog behavior. | Projects after: width/client/scroll all 400px at x278. Commons 1280px: all 400px at x526. Phone dialog and scroll width are 390px with no body overflow. Independent source/image/bounds review and the existing pure Agenda regression pass. |
+| DC-UI-018 / observed / P2 | DC-07: read the terminal contact list beside its detail | Embedded TUI, 40-column Contacts side pane; long rows with numbered links | A selectable list can be wider than its assigned pane. The row painter ignores child width, so text and hit targets extend into the neighboring detail. Numbering is included in truncation and is not the cause. | Batch 4 contacts-tui-unique-links-after.jpg records the pre-018 overflow; contacts-tui-pane-clipped-after DOM/image, pane-ana/bob-after DOMs and independent-tui-pane-review.txt record recovery. | Framework native TUI row painter | Intersect each child's paint boundary with its allocated width and restore the parent boundary before drawing the next sibling. Layout widths and protocol stay unchanged. | Focused native paint/hitbox regression passes. Rebuilt 1920px Contacts rows and underlines stop before the detail pane; Ana and Bob links still select their distinct records. Calendar Settings retains all five names and exports. Independent source/image/recovery review passes; final full gate is recorded with this batch. |
 
 ### Static leads
 
@@ -790,9 +811,182 @@ then allocate a DC-UI ID or close it here with the reason.
 
 ### Bounded batch record
 
-No execution batches yet. The first batch is **DC-01 and DC-03** on the demo users: browser light and dark at
-1920×1080, the embedded TUI, and one targeted keyboard pass. It exercises the shell, palette, quick-create and
-fixture setup that later waves reuse, and measures the effort per activity before the rest of Wave 1.
+Waves 1–3 were executed in the five bounded batches below. The first, **DC-01 and DC-03**, established demo-user
+browser light/dark at 1920×1080, embedded TUI and targeted keyboard baselines for the shell, palette, quick-create
+and fixture setup reused by the later activities.
+
+#### Waves 1–3 execution environment
+
+- Coordinator owns runtime lifecycle, finding IDs, this record and commits; delegated workers rotate through
+  browser testing, fixes and independent verification. Shared browser control and shared-file edits are serialized.
+- Bootstrap runtime: `/private/tmp/boss-ui-review-m6x4q4px`; initial runner scratch runtime:
+  `/tmp/mt-55471-b6ee910`; HTTP `127.0.0.1:18090`. Mutable configuration is copied; base/dev components are linked
+  individually, and only Mantle and BOSS are linked as addons. No working database/resources or PASS are linked.
+- Initial revisions: framework `8d22dddc`, BOSS `58cffc1f`; existing release binary reused. The framework
+  `ClientFixtures` bootstrap passed 16 features and serves fresh demo data with `mail_capture_sends=true`.
+- Local evidence: framework `plans/ui-refinement-evidence/boss-waves-1-3/` (ignored), including `environment.json`.
+  Built-in in-app browser tab opened successfully at the isolated login page; no activity is closed by that check.
+- Bootstrap logged the expected missing Commerce starter because PASS is deliberately absent, plus existing
+  independent demo-load warnings. These do not establish Commons activity outcomes.
+- Five bounded batches: DC-01/03, DC-02/04, DC-05/06, DC-07/08, DC-09/10. Use localized checks during batches and
+  full suites at the pass boundary (end of Wave 3 here), as directed by the user. Full application gates use the
+  normal component inventory with runtime overrides cleared, so the isolated runtime does not narrow the gate.
+
+#### Batch 1 — navigation and contextual creation (verified with mode gaps)
+
+- Browser control is coordinator-proxied: child agents cannot access the chat-scoped in-app browser; their native
+  Chrome fallback timed out. Testing agents specify steps and inspect saved DOM/screenshots; fixing and independent
+  evidence verification are delegated. No successful direct child browser navigation is claimed.
+- Important states and persisted outcomes are under `batch-1/`. The standard `/apps/Commons/QuickCreate` primary
+  action created a disposable task and returned its JSON result. Email/Chat checks cover entry and return only.
+- The debug binary was rebuilt for the embedded generators, then refreshed after both generator changes. Client
+  component renders were regenerated with the existing golden test; its diff changes only quick-create's on-hide hook.
+  A fresh localhost origin was necessary to avoid the old 127.0.0.1 client's cached templates. The rebuild restarted
+  on fresh fixtures at `/tmp/mt-78536-19743c40` with `--keep`; pre-rebuild disposable creations are evidence, not current rows.
+- Focused framework ScreenQvt: 17/17; offline client WebrootVue.qvt: 34/34; selected TUI Rust test and component
+  precompile golden passed. Initial new-test stub/selector failures were corrected. BOSS CommonsSettings passed;
+  QuickCreate's corrected compiled-output assertion passed all 19 features without another screen render.
+- Adding CommonsClientFixtures required BOSS acceptance: 520/520 server features (97 specs), 172/172 client
+  features (67 specs), both passed. These checks do not substitute for the manual DC activity outcomes.
+- The first full application gate was invalidated when a process with different sandbox visibility treated live
+  workers as stale and removed their scratch files. Its failures are infrastructure corruption, not application
+  results. All subsequent test/runtime commands have one coordinator and consistent process visibility; the normal release gate subsequently passed.
+- Required behavior checks and independent evidence review passed; the activity ledger preserves untested variants. Actual 200%
+  browser zoom is blocked: IAB exposes viewport/visibility, and native control is unavailable; no CSS zoom substitute.
+- Subsequent ordinary-staff checks: Joe's TUI task selected label is Joe Developer; Alt+Enter saved `UI review TUI
+  task`, closed the dialog, and its browser detail confirms title, Today due date and Joe as assignee. The invalid
+  Activity menu entry is DC-UI-005. Existing Projects Open bugs saved find retained Bug Fix and the same IRON-9 row
+  after detail/Back. Updated QuickCreate compiled-template assertion now passes all 19 features.
+- The kept debug database survived a later stale-run cleanup stopping its Postgres (the retained path still named
+  the original, exited runner PID). After stopping the runner, the entire kept runtime was moved to
+  `/private/tmp/boss-ui-review-data` and served with `--db existing`; rows were retained. Subsequent restarts use
+  this stable path, not a PID-named scratch directory. The reusable UI review guide records this lifecycle detail.
+- Full Debug checks passed behavior but exceeded the normal timing budgets; no budgets were raised. The expected
+  TUI generator golden changed only its selected-description fallback and was regenerated/rechecked. Normal release
+  gates were repeated sequentially. A pre-existing SupportAssignment fixture created date-effective settings
+  after its Sunday 03:00 scenario: its setup and parallel clocks are now pinned to Nov 2, and the targeted 7 features pass.
+- A direct ordinary-staff Activity submission against the other-organization fixture was refused with Work Effort
+  not found; the provided summary/date remained for correction, and the private task title was not shown.
+- Final normal application gate: 3394/3394 server and 19/19 client features passed within budgets. Full framework
+  gate passed with `RUST_TEST_THREADS=4`, including Cargo workspace and every framework/client phase. An accidental
+  global mail-capture override explained earlier local SMTP failures; an unbounded runtime-memory test flake cleared
+  with bounded concurrency. Screen lint passed with zero parse failures; existing idiom warnings remain in its report.
+- Local prerequisite commit: Mantle `da9ed876` pins SupportAssignment fixture clocks. Framework batch commit:
+  `78875383` preserves selected labels, actionable modal completion and the context-free TUI action boundary.
+  Evidence includes `test-apps-final.log`, `framework-bounded-concurrency.log` and the independent review notes.
+
+#### Batch 2 — drawers, Assist, Today and notifications
+
+- Used the isolated runtime and separate ordinary-staff identity sessions, with coordinator-owned built-in browser control and delegated step design/evidence inspection. No direct child browser navigation succeeded.
+- Compared app drawer/main record/tray/Assist in wide light/dark; phone tray exposed the containment defect. Today completion/snooze and separately addressed approve/refuse fixtures produced source-record/timeline outcomes, rather than relying on toasts alone.
+- Corrected DC-UI-006–008 in shared causes. Fresh origin was required for current browser assets. The component precompile golden was regenerated and its test passed (`precompile-batch-2-regenerated.log`). Earlier source-review notes describe their then-pending state and are superseded by the fresh after evidence.
+- Assist has no usable provider model name in this review configuration. Failure/retry feedback is exercised; successful run, stop/approval and canvas are blocked/deferred. The live-call combination remains Wave 6.
+- Regression assertions target user-only terminal failure, generated accessible names, the existing Today render and scrollbar/container geometry. No new screenshot baseline or application route sweep was added. Full framework gate passed with bounded Rust test concurrency; all 3404 application server features and 19 client features passed within budgets. Screen lint passed with zero parse failures.
+
+- Current evidence includes `fresh-phone-names-width-after.dom/.jpg`, the named correct-row reschedule dialog, and independently inspected light/dark Assist failure/retry images. Full gates: `framework-bounded-concurrency.log`, `apps-batch-2.log`; local BOSS batch 1 commit `b9d79880`.
+
+#### Batch 3 — shared records and filtered return (verified with mode gaps)
+
+- Joe/Bob operated the shared task/request, follow, selected mention, received/read notification, reply, completed
+  activity feedback, uploaded 76-byte local file and Complete/Resume. Projects showed matching work/request identity,
+  request In Progress and Work 1/1 done at task completion; final shared task/request DOMs show task Complete and request In Progress. This is representative consumer evidence, not a Projects app review.
+- Positive populated Chatter/RecordFiles responses pair with other-org visible=false refusals. Preserve the matched
+  request URL/actor context with the raw JSON: the refusal snapshot alone does not identify its input/actor.
+- List→Board→Calendar retains the find.014 corrected explicit Tasks-arrow return from detail for both Board and
+  Calendar; after evidence retains Assigned to me, Compare the calendar and one matching task. Direct fallback and
+  Projects shared task were retested. Keep removed-assignee/stale/invalid writes, author persistence/server refusal,
+  attachment failures and remaining keyboard/Standard/TUI variants explicitly deferred. Bob Download matches the uploaded 76-byte file (download-byte-check.json).
+
+- Final focused affected specs passed 122/122 features. Before this batch commit, `./moq test-apps --nobuild`
+  passed 3410/3410 server features and 19/19 client features within existing budgets (`apps-batch-3-final.log`).
+- The full gate exposed a pre-existing Resources fixture mismatch at the UTC/local week boundary. Its scenario now
+  uses the actual demo allocation week and reapplies that effective clock after user switches; assertions and budgets
+  are unchanged. Focused Resources and the full application gate pass.
+- Earlier local batch 2 commits: framework `1d3fb10d`, BOSS `fb8085cb`. This batch commits the filtered task-return
+  correction and shared-record execution record; remaining owning-layer batch commits follow their own gates.
+
+#### Batch 4 — contacts, import and merge (verified with mode gaps)
+
+- Private contact edit/Compose recipient, Bob refusal, print HTML and downloaded vCard were inspected. Actual CSV
+  mixed import created 2 / failed 2; corrected retry 2/0; background 125/0 completed and reopened result retained identity.
+  Valid vCard created 2 / failed 0; imported 100237 retains Unicode/email/freeform phone/About despite parse warning.
+- Four directory contacts support Jo/Joseph Not a duplicate and Patricia comparison. Explicit Patricia keeper choice
+ 100234→100233 preserves note, Joe My Contacts membership and generic task 100035 link.010 fixed the contact task
+  reader; fresh DOM/image lists task once. These are actual results, not prepared fixture expectations.
+- Terminal Contacts list and Calendar Settings exposed015: authored tui list-cell branches were lost; initial repair
+  then exposed duplicate native IDs. Final rebuilt UI shows unique row numbers and correct Ana/Bob destinations, and all five Calendar Settings names. Independent evidence review and the existing focused native regression pass. ContactRecord's qvt-only
+  linked email/detail fallback is unsupported; resource value columns require horizontal navigation, not a data-loss claim.
+- Import update/skip, malformed-vCard recovery, stale duplicate/job/cancel branches and remaining lifecycle/modes are
+  deferred follow-up. A prepared input file is not execution evidence.
+
+- Final artifact inspection exposed separate pane-overflow finding018 after meaningful Contact names were restored. Its native painter correction passes the focused paint/hitbox regression and independent source review. Rebuilt Contacts now stays inside its pane, both numbered Ana/Bob actions still work, and Calendar Settings retains its five named rows; independent after-image/recovery review passes.
+
+- The framework gate exposed a separate pre-existing replica-test accounting race: initial schema replay can
+  legitimately increment the cumulative fallback counter. The test now records that startup baseline and still
+  requires zero added fallbacks for the healthy fresh read and exactly one with replay paused. Returned records,
+  timeouts and budgets are unchanged. Its corrected focused run passes; independent source review confirms the
+  routing assertions retain their strength. The final aggregate gate includes this prerequisite and painter018.
+
+- Final framework gate passed every phase with `RUST_TEST_THREADS=2` (`framework-final-verified.log`), including
+  the native pane regression. One earlier run timed out in an unrelated Git fixture waiting for an internal update
+  to leave recording; the isolated case passed, then the full Git crate and complete final gate passed at bounded
+  concurrency. Optional Report-hook errors in that earlier diagnostic were not established as the timeout's cause;
+  no Git/report product or fixture code was changed.
+- `cargo lint` and `cargo lint-min` pass. The final Calendar geometry/request regression passes 23/23 features.
+  Screen lint scanned 1747 files with zero parse failures; 132 existing idiom/hazard sites remain visible in the
+  separate `screen-lint-final.log` report. This is not a claim of zero lint warnings.
+- Local batch 3 commit is BOSS `eeea177f`. Before this Contacts batch commit, `./moq test-apps --nobuild` passed
+  3410/3410 server features and 19/19 client features within unchanged budgets (`apps-batch-4-final.log`).
+  Framework owning-layer commit `d4927955` contains the native cell/ID/pane corrections, focused tests, replica-test
+  prerequisite and reusable review patterns. This BOSS batch commits the contact task reader and review record.
+
+#### Batch 5 — calendar, resources and access (verified with mode gaps)
+
+- Observed desktop views are Week, Month and Agenda; phone Day and quick dialog were inspected. Desktop Day/Work week are not inferred from buttons. Wide light/dark,
+  phone detail, RSVP Yes→Maybe, reschedule/cancel and actual METHOD:PUBLISH ICS were exercised. Independent ICS review
+  validates UID, organizer, Bob TENTATIVE, reminder and 10–11 US/Eastern interval; this is not external client import.
+- DST recurrence March 13/14/15 appears 10 AM throughout in US/Eastern, versus Berlin 16:00 then 15:00/15:00. Single
+  exception/all-series shift were observed.009 inline refusal retains input and blank end recovers to 14–15.011 Agenda
+  now opens populated summaries;013 names calendar controls.012 following rebase/consecutive save are evidenced;
+  focused EventDetail 13/13 passed, later-occurrence UI passed (target 100044, Nov 16 17:00 then 18:00; Agenda Nov 16/17 both 6–7 PM). Projects Calendar summary and New meeting 016 were retested successfully.
+- Maple 10–11 conflict retains input, corrected 11–12 booking saves, cancel preserves first. Free-time excludes booked
+  slot and Create prefills interval; cancel is observed. Pending versus Bob Busy privacy is observed; no Approve
+  control exists on current Maintenance placeholder, so approval is deferred as absent UI.
+- Bob calendar View is read-only; calendar-only 100036 becomes Not available after revoke. Book 100000 View scope/read
+  then removal from Bob Settings is observed; independent directory access legitimately remains. Device secret was
+  displayed once under user authorization, hidden after reload, then revoked to No devices; evidence is redacted.
+  Invalid public calendar token refuses. Valid publication/revoke is deferred because Settings has no Publish control;
+  actual external DAV integration is blocked by absent client fixture. Export is not publication.
+- Embedded Calendar/Schedules/ResourceDetail/Calendar Settings/Sync were inspected. Grids intentionally remain browser-only.
+ 015 rebuilt names, numbering and distinct destinations pass. Actual 200% zoom is tool-blocked, Assist success
+  lacks usable model, and later-wave live-call/Comms activities remain outside this bounded pass.
+- Projects Plan Calendar New meeting exposed 016: the project identity is in the POST URL query and write guard refuses it. Caller now passes it in the body; focused regression and independent source review pass. Live event 100045 persists at Nov12 14–15 with its IRON link.
+- Popup 017 now fits its menu at 1920 and 1280px; phone quick-event dialog fits at 390px. Before/after geometry and screenshots are retained; no screenshot baseline suite was added.
+- Final release build and the six affected application specs pass: 122/122 features. Full commit gates are recorded below when complete.
+- Final end-of-Wave-3 application gate passed 3410/3410 server features and 19/19 browser client features within
+  unchanged budgets (`apps-batch-5-final.log`). The six affected application specs passed 122/122; the final Calendar
+  component/request/geometry recheck passed 23/23. No broad regression walk or screenshot baseline was added.
+- Final framework gate passed every phase on the final native painter/ID source (`framework-final-verified.log`,
+  bounded Rust concurrency 2), as did `cargo lint` and `cargo lint-min`. Screen lint reports zero parse failures
+  across 1747 files; existing idiom/hazard sites remain in the separate report. Required BOSS acceptance passed
+  520/520 server and 172/172 client features when CommonsClientFixtures was added; the fixture was not changed later.
+- Local owning-layer commits include framework `d4927955` and BOSS Contacts `4182f6cc`; this commit contains the final
+  Calendar implementation and record. Framework `753b351d` records the requested future cadence: localized checks
+  during batches and full suites once at the end of the planned review pass.
+
+#### Waves 1–3 pass disposition
+
+- DC-01–10 each have observed primary outcomes, recovery evidence and explicit remaining variants in the activity
+  ledger and screen inventory. All 18 reproduced UI findings have corrections and independent after/recovery review.
+  Browser navigation was coordinator-proxied; delegated workers designed checks, fixed code and inspected saved
+  snapshots/images because child sessions could not access the shared built-in browser.
+- Remaining execution coverage includes actual 200% zoom, successful Assist/provider execution, external DAV clients,
+  valid calendar publication/revocation and resource approval controls absent from the current UI, plus the deferred
+  mode/access/recovery variants listed per activity. The live-call repeat remains Wave 6; substantive Mail/Chat work
+  remains with its later waves. These gaps retain their explicit dispositions.
+- The approved disposable sync credential was verified for one-time display, hidden after reload and revoked.
+  Secret evidence is redacted. The isolated review server is stopped; its disposable database and ignored local
+  evidence are retained. Commits are local, with no push or deployment.
 
 For each batch record:
 

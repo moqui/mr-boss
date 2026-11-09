@@ -21,8 +21,10 @@ function render(path, parameters) {
     ec.message.clearErrors()
     return { status: str.status, errors: str.errorMessages.join(" | "), output, broken: /Error rendering|Exception in render/.test(output) }
 }
-function post(path, parameters) {
-    const str = ec.screen.makeTest().rootScreen(commons).render(path, parameters || {}, "post")
+function post(path, parameters, jsonRedirect) {
+    const test = ec.screen.makeTest().rootScreen(commons)
+    if (jsonRedirect) test.header("Accept", "application/json")
+    const str = test.render(path, parameters || {}, "post")
     const output = String(str.output || "")
     let json = null
     try { json = JSON.parse(output) } catch (err) { json = null }
@@ -129,6 +131,52 @@ feature("When and Overview save: the series renamed for all, one instance moved 
         calendars == ["BOSS_DEMO_CAL_FAMILY"]
         userText(series.estimatedStartDate) == day(2) + " 08:00"
         badLink.errors.includes("web address")
+    },
+})
+
+feature("recurrence save redirects follow the changed occurrence and consecutive saves keep the requested time", {
+    when() {
+        const save = (parameters) => post("Calendar/EventDetail/saveOverview", parameters, true)
+        const series = quickEvent("BOSS_TEST redirect series", day(10) + " 14:00", day(10) + " 15:00", { repeat: "daily" })
+        const first = save({ workEffortId: series, instanceStart: day(10) + " 14:00", scope: "this",
+            allDay: "N", startDate: day(10), startTime: "15:00", endDate: day(10), endTime: "16:00" })
+        const following = save({ workEffortId: series, instanceStart: day(11) + " 14:00", scope: "following",
+            allDay: "N", startDate: day(11), startTime: "16:00", endDate: day(11), endTime: "17:00" })
+        const route = following.json.screenParameters || {}
+        const target = route.workEffortId
+        const afterSplit = detail(target, { instanceStart: route.instanceStart || null })
+        const allMoved = save({ workEffortId: target, instanceStart: route.instanceStart || null, scope: "all",
+            allDay: "N", startDate: day(11), startTime: "17:00", endDate: day(11), endTime: "18:00" })
+        const later = save({ workEffortId: target, instanceStart: day(12) + " 17:00", scope: "all",
+            allDay: "N", startDate: day(12), startTime: "18:00", endDate: day(12), endTime: "19:00" })
+        const laterRoute = later.json.screenParameters || {}
+        const afterLater = detail(target, { instanceStart: laterRoute.instanceStart })
+        const again = save({ workEffortId: target, instanceStart: laterRoute.instanceStart, scope: "all",
+            allDay: "N", startDate: day(12), startTime: "19:00", endDate: day(12), endTime: "20:00" })
+        const failed = save({ workEffortId: target, instanceStart: day(12) + " 19:00", scope: "all",
+            allDay: "N", startDate: day(12), startTime: "20:00", endDate: day(12), endTime: "19:00" })
+        return { series, target, first, following, route, afterSplit, allMoved, later, laterRoute, afterLater, again, failed,
+            original: one("mantle.work.effort.WorkEffort", { workEffortId: series }),
+            saved: one("mantle.work.effort.WorkEffort", { workEffortId: target }) }
+    },
+    then({ series, target, first, following, route, afterSplit, allMoved, later, laterRoute, afterLater, again, failed, original, saved }) {
+        first.errors == ""
+        !first.json.screenUrl.includes("instanceStart=")
+        following.errors == ""
+        target != series
+        !route.instanceStart
+        !following.json.screenUrl.includes("instanceStart=")
+        afterSplit.edit.startTime == "16:00"
+        allMoved.errors == ""
+        later.errors == ""
+        laterRoute.instanceStart == day(12) + " 18:00"
+        afterLater.edit.startDate == day(12)
+        afterLater.edit.startTime == "18:00"
+        again.errors == ""
+        userText(saved.estimatedStartDate) == day(11) + " 19:00"
+        userText(original.estimatedStartDate) == day(10) + " 14:00"
+        failed.errors.includes("An event ends after it starts")
+        failed.json.screenParameters.instanceStart == day(12) + " 19:00"
     },
 })
 

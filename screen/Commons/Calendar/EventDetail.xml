@@ -50,9 +50,9 @@ along with this software (see the LICENSE.md file). If not, see
                         clash.resourceName + ' (' + clash.workEffortName + ')'))).join(', ')}), 'warning')
             ]]></script></if>
         </actions>
-        <!-- an instance changed on its own, or a new series from here on: that event is shown -->
-        <conditional-response url="." condition="saveOut?.targetWorkEffortId &amp;&amp; saveOut.targetWorkEffortId != workEffortId">
-            <parameter name="workEffortId" from="saveOut.targetWorkEffortId"/><parameter name="tab"/></conditional-response>
+        <!-- The service chooses the saved target and its updated occurrence context together. -->
+        <conditional-response url="." condition="!ec.message.hasError() &amp;&amp; saveOut?.targetWorkEffortId">
+            <parameter name="workEffortId" from="saveOut.targetWorkEffortId"/><parameter name="instanceStart" from="saveOut.targetInstanceStart || ''"/><parameter name="tab"/></conditional-response>
         <default-response url="."><parameter name="workEffortId"/><parameter name="instanceStart"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>

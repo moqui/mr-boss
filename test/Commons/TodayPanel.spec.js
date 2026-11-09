@@ -97,6 +97,9 @@ feature("TodayPanel renders in qvt with the groups in order and the approvals li
         /\b[1-9]\d* approvals? waiting\b/.test(output)
         output.includes("Add a task for today")
         output.includes("/qapps/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST")
+        output.includes('aria-label="Complete Send the signed service agreement to Bob Acme"')
+        output.includes('aria-label="Snooze Send the signed service agreement to Bob Acme to tomorrow 9:00"')
+        output.includes('tooltip="Reschedule Send the signed service agreement to Bob Acme"')
     },
 })
 

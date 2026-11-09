@@ -62,8 +62,15 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="workEffortId" required="true"/>
     <parameter name="tab"/>
     <parameter name="peek"/>
+    <parameter name="taskListFind"/>
 
-    <transition name="tasks"><default-response url="../List"/></transition>
+    <always-actions><script><![CDATA[
+        taskListReturn = appRoot === 'Commons' ? ec.service.sync().name('ironstone.commons.TaskServices.get#TaskListFind')
+                .parameters({findJson: taskListFind || null}).call() : {findMap: {}, findJson: null}
+        taskListFind = taskListReturn.findJson || null
+    ]]></script></always-actions>
+
+    <transition name="tasks"><default-response url="../List" parameter-map="taskListReturn.findMap"/></transition>
 
     <!-- ========== changes, each showing the item again on its tab ========== -->
     <transition name="changeStatus">
@@ -134,7 +141,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.delete#OwnTask" out-map="deleteOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(deleteOut.message, 'success')</script></if>
         </actions>
-        <conditional-response url="../List" condition="deleteOut?.message"/>
+        <conditional-response url="../List" condition="deleteOut?.message" parameter-map="taskListReturn.findMap"/>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."/>
     </transition>
@@ -531,6 +538,7 @@ along with this software (see the LICENSE.md file). If not, see
                     .concat([['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']])
                 : [['overview', 'Overview'], ['subtasks', 'Sub-tasks' + (subTaskList.length ? ' (' + subTaskList.length + ')' : '')], ['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']]
             const base = detailPath + '?workEffortId=' + encodeURIComponent(workEffortId)
+                    + (taskListFind ? '&taskListFind=' + encodeURIComponent(taskListFind) : '')
             tabsHtml = '<q-tabs dense no-caps inline-label narrow-indicator outside-arrows mobile-arrows align="left" active-color="primary" indicator-color="primary"'
                     + ' class="text-grey-8 m-task-tabs" model-value="' + enc(tab) + '">' + tabs.map(([key, label]) => {
                         const cls = key === 'chatter' && tab !== 'chatter' ? ' class="lt-lg"' : ''
@@ -677,7 +685,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <section name="CommonsStatus" condition="!projects"><widgets>
                             <status-bar id="TaskStatusBar" status-id="${task.statusId}" status-flow-id="${statusFlowId}" stages="${stageStatusIds}"
                                     allowed-status-ids="${allowedStatusIds}" transition="changeStatus" parameter-name="toStatusId"
-                                    parameter-map="{workEffortId:workEffortId, tab:tab}" title="${task.workEffortName}"/>
+                                    parameter-map="{workEffortId:workEffortId, tab:tab, taskListFind:taskListFind}" title="${task.workEffortName}"/>
                         </widgets></section>
                         <section name="ProjectsStatus" condition="projects"><widgets>
                             <status-bar id="WorkItemStatusBar" status-id="${task.statusId}" status-flow-id="${statusFlowId}" stages="${stageStatusIds}"
@@ -703,6 +711,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="canUpdate">
                                 <form-single name="TaskReassign" transition="reassign">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="taskListFind"><default-field><hidden/></default-field></field>
                                     <field name="tab"><default-field><hidden/></default-field></field>
                                     <field name="assignToPartyId"><default-field title="Assignee">
                                         <drop-down><dynamic-options transition="assigneeSearch" server-search="true" min-length="0"/></drop-down></default-field></field>
@@ -712,6 +721,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container-dialog id="TaskDueDialog" button-text="Set due" icon="sym_o_event" width="400" title="Due date" condition="canUpdate">
                                 <form-single name="TaskSetDue" transition="setDue">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="taskListFind"><default-field><hidden/></default-field></field>
                                     <field name="tab"><default-field><hidden/></default-field></field>
                                     <field name="dueDate" from="dueEditText"><default-field title="Due (empty: no due date)"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
                                     <field name="submitButton"><default-field title="Set due"><submit/></default-field></field>
@@ -892,6 +902,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <container-dialog id="TaskEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="${ec.l10n.localize('Edit')} ${task.workEffortName}" condition="canUpdate">
                                             <form-single name="TaskEdit" transition="updateTask" map="task" focus-field="workEffortName">
                                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                <field name="taskListFind"><default-field><hidden/></default-field></field>
                                                 <field name="tab"><default-field><hidden/></default-field></field>
                                                 <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
                                                 <field name="purposeEnumId"><default-field title="Purpose">
@@ -1302,6 +1313,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container-dialog id="TaskAddTimeDialog" button-text="Add time" icon="sym_o_more_time" width="480" title="Add time on ${task.workEffortName}">
                                 <form-single name="TaskAddTime" transition="addTime" focus-field="hours">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="taskListFind"><default-field><hidden/></default-field></field>
                                     <field name="hours"><default-field title="Hours"><text-line size="6" input-type="number"/></default-field></field>
                                     <field name="fromDate"><default-field title="From" tooltip="When the work started; empty: the hours up to now">
                                         <date-time type="timestamp" format="yyyy-MM-dd HH:mm"/></default-field></field>

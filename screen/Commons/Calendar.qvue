@@ -45,13 +45,13 @@ along with this software (see the LICENSE.md file). If not, see
             <div class="row items-center no-wrap q-mb-sm">
                 <q-btn unelevated no-caps color="primary" icon="sym_o_add" :label="t('New event')" class="col" @click="newEventNow($event)">
                     <q-tooltip>{{t('New event')}} (c)</q-tooltip></q-btn>
-                <q-btn v-if="!wide" flat dense round icon="close" class="q-ml-sm" @click="railOpen = false"></q-btn>
+                <q-btn v-if="!wide" flat dense round icon="close" class="q-ml-sm" :aria-label="t('Close calendars')" @click="railOpen = false"></q-btn>
             </div>
             <!-- the mini month -->
             <div class="row items-center no-wrap q-mt-sm">
                 <div class="col text-subtitle2">{{miniTitle}}</div>
-                <q-btn flat dense round size="sm" icon="chevron_left" @click="miniShift(-1)"><q-tooltip>{{t('Previous month')}}</q-tooltip></q-btn>
-                <q-btn flat dense round size="sm" icon="chevron_right" @click="miniShift(1)"><q-tooltip>{{t('Next month')}}</q-tooltip></q-btn>
+                <q-btn flat dense round size="sm" icon="chevron_left" :aria-label="t('Previous month')" @click="miniShift(-1)"><q-tooltip>{{t('Previous month')}}</q-tooltip></q-btn>
+                <q-btn flat dense round size="sm" icon="chevron_right" :aria-label="t('Next month')" @click="miniShift(1)"><q-tooltip>{{t('Next month')}}</q-tooltip></q-btn>
             </div>
             <div class="q-mb-sm">
                 <div class="row no-wrap">
@@ -70,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
             <template v-for="group in calendarGroups" :key="group.key">
                 <div class="row items-center no-wrap q-mt-sm">
                     <div class="col text-caption text-weight-medium m-muted">{{group.label}}</div>
-                    <q-btn v-if="group.key === 'mine'" flat dense round size="sm" icon="sym_o_settings" @click="go(settingsUrl)">
+                    <q-btn v-if="group.key === 'mine'" flat dense round size="sm" icon="sym_o_settings" :aria-label="t('Calendar settings and sharing')" @click="go(settingsUrl)">
                         <q-tooltip>{{t('Calendar settings and sharing')}}</q-tooltip></q-btn>
                 </div>
                 <q-list dense>
@@ -88,7 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <q-icon name="sym_o_warning" color="warning" size="xs"><q-tooltip>{{cal.warning}}</q-tooltip></q-icon>
                         </q-item-section>
                         <q-item-section side>
-                            <q-btn flat dense round size="sm" icon="more_vert" @click.stop>
+                            <q-btn flat dense round size="sm" icon="more_vert" :aria-label="t('Calendar options') + ': ' + cal.calendarName" @click.stop>
                                 <q-menu auto-close>
                                     <q-list dense style="min-width:200px">
                                         <q-item clickable @click="onlyCalendar(cal)"><q-item-section>{{t('Show only this one')}}</q-item-section></q-item>
@@ -132,24 +132,24 @@ along with this software (see the LICENSE.md file). If not, see
         <div class="col" style="min-width:0">
             <!-- the header -->
             <div class="row items-center no-wrap q-mb-sm">
-                <q-btn v-if="!wide && !fixedView" flat dense round icon="menu" class="q-mr-xs" @click="railOpen = true"><q-tooltip>{{t('Calendars')}}</q-tooltip></q-btn>
+                <q-btn v-if="!wide && !fixedView" flat dense round icon="menu" class="q-mr-xs" :aria-label="t('Calendars')" @click="railOpen = true"><q-tooltip>{{t('Calendars')}}</q-tooltip></q-btn>
                 <q-btn-toggle v-if="project && !phone" :model-value="'calendar'" dense no-caps unelevated toggle-color="primary" class="q-mr-sm" :options="planViewOptions"
                         @update:model-value="planView"></q-btn-toggle>
                 <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" :label="t('Today')" @click="goToday"><q-tooltip>{{t('Today')}} (t)</q-tooltip></q-btn>
-                <q-btn flat dense round icon="chevron_left" class="q-ml-xs" @click="shift(-1)"><q-tooltip>{{t('Previous')}} (k)</q-tooltip></q-btn>
-                <q-btn flat dense round icon="chevron_right" @click="shift(1)"><q-tooltip>{{t('Next')}} (j)</q-tooltip></q-btn>
+                <q-btn flat dense round icon="chevron_left" class="q-ml-xs" :aria-label="t('Previous')" @click="shift(-1)"><q-tooltip>{{t('Previous')}} (k)</q-tooltip></q-btn>
+                <q-btn flat dense round icon="chevron_right" :aria-label="t('Next')" @click="shift(1)"><q-tooltip>{{t('Next')}} (j)</q-tooltip></q-btn>
                 <div class="q-ml-sm ellipsis" :class="phone ? 'text-subtitle1 text-weight-medium' : 'text-h6'" style="min-width:0">{{rangeTitle}}</div>
                 <q-space></q-space>
                 <div v-if="!compactHeader && !fixedView" class="q-mx-sm" style="width:220px">
                     <m-text-line id="boss-cal-search" name="calendarSearch" v-model="searchText" :label="t('Search events')"
                             @keyup.enter="runSearch(true)"></m-text-line>
                 </div>
-                <q-btn v-else-if="!fixedView" flat dense round icon="search" class="q-mx-xs" @click="openPhoneSearch"><q-tooltip>{{t('Search')}} (/)</q-tooltip></q-btn>
+                <q-btn v-else-if="!fixedView" flat dense round icon="search" class="q-mx-xs" :aria-label="t('Search')" @click="openPhoneSearch"><q-tooltip>{{t('Search')}} (/)</q-tooltip></q-btn>
                 <q-btn v-if="project && project.canUpdate && !phone" unelevated dense no-caps color="primary" icon="sym_o_add" class="q-mx-sm" :label="t('New meeting')"
                         @click="newEventNow($event)"></q-btn>
                 <q-btn-toggle v-if="!phone" :model-value="shownView" dense no-caps unelevated toggle-color="primary" :options="viewOptions"
                         @update:model-value="setView"></q-btn-toggle>
-                <q-btn v-if="!phone && !fixedView" flat dense round icon="more_vert" class="q-ml-xs">
+                <q-btn v-if="!phone && !fixedView" flat dense round icon="more_vert" class="q-ml-xs" :aria-label="t('Calendar options')">
                     <q-menu auto-close>
                         <q-list dense style="min-width:220px">
                             <q-item clickable @click="openFindTime"><q-item-section avatar><q-icon name="sym_o_event_available"></q-icon></q-item-section><q-item-section>{{t('Find a time')}}</q-item-section></q-item>
@@ -195,7 +195,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <q-item-label caption>{{result.whenText}}{{result.location ? ' · ' + result.location : ''}}{{result.recurring ? ' · ' + t('repeats') : ''}}</q-item-label>
                         </q-item-section>
                         <q-item-section v-if="result.dayText" side>
-                            <q-btn flat dense round icon="sym_o_calendar_view_day" @click.stop="showResultDay(result)"><q-tooltip>{{t('Show that day')}}</q-tooltip></q-btn>
+                            <q-btn flat dense round icon="sym_o_calendar_view_day" :aria-label="t('Show that day')" @click.stop="showResultDay(result)"><q-tooltip>{{t('Show that day')}}</q-tooltip></q-btn>
                         </q-item-section>
                     </q-item>
                 </q-list>
@@ -367,9 +367,9 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- ===== the quick event: a popover by the slot, a dialog on a phone ===== -->
     <component :is="phone ? 'm-dialog' : 'q-menu'" v-model="quick.open" v-bind="popupBindings(t('New event'))">
-        <div :class="phone ? '' : 'q-pa-md'" :style="phone ? {} : {width: '420px', maxWidth: '94vw'}">
+        <div :class="phone ? '' : 'q-pa-md'" :style="phone ? {} : {width: '420px', maxWidth: 'min(100%, 94vw)'}">
             <div v-if="!phone" class="row items-center q-mb-sm"><div class="text-subtitle1 text-weight-medium col">{{t('New event')}}</div>
-                <q-btn flat dense round icon="close" v-close-popup></q-btn></div>
+                <q-btn flat dense round icon="close" :aria-label="t('Close event editor')" v-close-popup></q-btn></div>
             <m-form :key="'quick' + quick.key" :action="action('createEvent')" :fields-initial="quick.initial" focus-field="workEffortName" @submitted="afterQuick" v-slot="formProps">
                 <m-text-line v-model="formProps.fields.workEffortName" name="workEffortName" id="BossCalQuickName" :label="t('Title')" required></m-text-line>
                 <div class="row items-center q-mt-xs">
@@ -378,7 +378,8 @@ along with this software (see the LICENSE.md file). If not, see
                 </div>
                 <div class="row q-col-gutter-sm q-mt-none">
                     <div class="col-12 col-sm-6"><m-date-time v-model="formProps.fields.start" name="start" id="BossCalQuickStart" :type="formProps.fields.allDay === 'Y' ? 'date' : 'date-time'" :label="t('Starts')"></m-date-time></div>
-                    <div class="col-12 col-sm-6"><m-date-time v-model="formProps.fields.end" name="end" id="BossCalQuickEnd" :type="formProps.fields.allDay === 'Y' ? 'date' : 'date-time'" :label="formProps.fields.allDay === 'Y' ? t('Last day') : t('Ends')"></m-date-time></div>
+                    <div class="col-12 col-sm-6"><m-date-time v-model="formProps.fields.end" name="end" id="BossCalQuickEnd" :type="formProps.fields.allDay === 'Y' ? 'date' : 'date-time'" :label="formProps.fields.allDay === 'Y' ? t('Last day') : t('Ends')"
+                            :rules="[value => quickEndRule(value, formProps.fields)]"></m-date-time></div>
                 </div>
                 <div class="row q-col-gutter-sm q-mt-none">
                     <div class="col-12 col-sm-6"><m-drop-down v-model="formProps.fields.calendarId" name="calendarId" id="BossCalQuickCalendar" :options="calendarOptions" :label="t('Calendar')"></m-drop-down></div>
@@ -401,7 +402,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- ===== the event popover ===== -->
     <component :is="phone ? 'm-dialog' : 'q-menu'" v-model="pop.open" v-bind="popupBindings(pop.event ? pop.event.name : t('Event'))">
-        <div :class="phone ? '' : 'q-pa-md'" :style="phone ? {} : {width: '400px', maxWidth: '94vw'}">
+        <div :class="phone ? '' : 'q-pa-md'" :style="phone ? {} : {width: '400px', maxWidth: 'min(100%, 94vw)'}">
             <div v-if="pop.loading" class="q-gutter-y-sm"><q-skeleton type="text" width="70%"></q-skeleton><q-skeleton type="text"></q-skeleton><q-skeleton type="text" width="50%"></q-skeleton></div>
             <template v-else-if="pop.event">
                 <div class="row items-start no-wrap">
@@ -411,7 +412,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <div class="text-body2">{{pop.event.whenText}}</div>
                         <div v-if="pop.event.recurrenceText" class="text-caption m-muted row items-center no-wrap"><q-icon name="sym_o_repeat" size="xs" class="q-mr-xs"></q-icon>{{pop.event.recurrenceText}}</div>
                     </div>
-                    <q-btn v-if="!phone" flat dense round icon="close" v-close-popup></q-btn>
+                    <q-btn v-if="!phone" flat dense round icon="close" :aria-label="t('Close event details')" v-close-popup></q-btn>
                 </div>
                 <q-chip v-if="pop.event.cancelled" dense square class="q-ml-none m-tonal text-negative">{{t('Cancelled')}}</q-chip>
                 <div v-if="pop.event.joinUrl" class="q-mt-sm">
@@ -549,7 +550,7 @@ module.exports = {
             searchText: '', search: { active: false, loading: false, text: '', results: [] },
             anchorRect: { left: 0, top: 0, width: 0, height: 0 },
             quick: { open: false, key: 0, initial: {} },
-            pop: { open: false, loading: false, item: null, event: null, color: null, busy: null },
+            pop: { open: false, loading: false, item: null, event: null, color: null, busy: null }, popRequestSeq: 0,
             change: { open: false, kind: 'move', title: '', recurring: false, canNotify: false, scope: 'this', notify: [], payload: null, okLabel: '', busy: false, done: false, message: '' },
             find: { open: false, partyIds: [], facilityId: '', duration: '60', days: '5', fromDay: '', workingOnly: ['Y'], loading: false, slots: [], note: null },
             drag: null, selection: null, preview: null, chipPreview: null,
@@ -842,21 +843,24 @@ module.exports = {
     methods: {
         t(text) { return moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text; },
         // in a project's calendar every request carries the project (ProjectDetail's workEffortId), and an event's id is eventWorkEffortId
-        url(name) {
+        url(name, method = 'GET') {
             const projectId = this.projectParamId();
-            return this.screenPath + '/' + name + (projectId ? '?' + moqui.objToSearch({ workEffortId: projectId }) : '');
+            return this.screenPath + '/' + name + (projectId && method !== 'POST' ? '?' + moqui.objToSearch({ workEffortId: projectId }) : '');
         },
         projectParamId() { return this.pathList.indexOf('ProjectDetail') >= 0 ? (this.$root.currentParameters || {}).workEffortId || null : null; },
-        scoped(params) {
-            if (!this.projectParamId() || !params || params.workEffortId == null) return params;
-            const out = Object.assign({}, params, { eventWorkEffortId: params.workEffortId });
-            delete out.workEffortId;
+        scoped(params, method = 'GET') {
+            const projectId = this.projectParamId();
+            if (!projectId) return params;
+            const out = Object.assign({}, params);
+            if (out.workEffortId != null) { out.eventWorkEffortId = out.workEffortId; delete out.workEffortId; }
+            if (method === 'POST') out.workEffortId = projectId;
             return out;
         },
+        post(name, params) { return moqui.request(this.url(name, 'POST'), { method: 'POST', params: this.scoped(params, 'POST') }); },
         // an m-form action is a path under the web app (m-form puts appRootPath before it)
         action(name) {
             const rootPath = this.$root.appRootPath || '';
-            const path = this.url(name);
+            const path = this.url(name, 'POST');
             return rootPath && path.indexOf(rootPath) === 0 ? path.slice(rootPath.length) : path;
         },
         go(url) { this.railOpen = false; if (url) this.$root.setUrl(url); },
@@ -985,7 +989,7 @@ module.exports = {
         },
         // ===== the rail =====
         saveRail(fields) {
-            moqui.request(this.url('saveRailState'), { method: 'POST', params: fields }).then(() => {}, moqui.handleAjaxError);
+            this.post('saveRailState', fields).then(() => {}, moqui.handleAjaxError);
         },
         toggleCalendar(cal) {
             const hidden = this.hidden.filter((id) => id !== cal.calendarId);
@@ -1243,7 +1247,9 @@ module.exports = {
         },
         setAnchor(el) {
             const rect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-            if (rect) this.anchorRect = { left: rect.left, top: rect.top, width: Math.max(rect.width, 1), height: Math.max(rect.height, 1) };
+            // A popover opens beside its anchor; an element too wide to leave it room on either side (an agenda row) anchors at its start.
+            const room = rect ? Math.max(rect.left, window.innerWidth - rect.right) : 0;
+            if (rect) this.anchorRect = { left: rect.left, top: rect.top, width: room >= 440 ? Math.max(rect.width, 1) : 1, height: Math.max(rect.height, 1) };
             else this.anchorRect = { left: window.innerWidth / 2 - 210, top: 120, width: 1, height: 1 };
         },
         popupBindings(title) {
@@ -1269,6 +1275,8 @@ module.exports = {
             this.setAnchor(el);
             this.quick = { open: false, key: this.quick.key + 1, initial: Object.assign({ workEffortName: '', allDay: 'N', start: '', end: '', calendarId,
                 repeat: '', attendeePartyIds: [], facilityId: '', reminderMinutes: String(this.defaults.defaultReminder || ''), location: '' }, values) };
+            const projectId = this.projectParamId();
+            if (projectId) this.quick.initial.workEffortId = projectId;
             this.$nextTick(() => {
                 this.quick.open = true;
                 // the title takes the keys at once (the popover itself takes no focus)
@@ -1284,6 +1292,14 @@ module.exports = {
             const base = dayNum(day) * 1440;
             const duration = Number(this.defaults.defaultDuration) || 60;
             this.openQuick({ start: wallOf(base + start), end: wallOf(base + Math.min(1440, start + duration)) }, domEvent && domEvent.currentTarget);
+        },
+        quickEndRule(value, fields) {
+            // m-date-time retains its fill-mask when cleared; m-form submits an unfilled mask as empty.
+            if (!String(value || '').trim() || /^[\s_:\-]+$/.test(value) || !fields.start) return true;
+            const allDay = fields.allDay === 'Y';
+            const start = allDay ? dayNum(fields.start) : absOf(fields.start);
+            const end = allDay ? dayNum(value) : absOf(value);
+            return (allDay ? end >= start : end > start) || this.t(allDay ? 'The last day must be on or after the start day' : 'The end must be after the start');
         },
         onQuickAllDay(fields, value) {
             if (value === 'Y') {
@@ -1311,6 +1327,7 @@ module.exports = {
         },
         // ===== the event popover =====
         openItem(domEvent, item) {
+            const requestSeq = ++this.popRequestSeq;
             if (item.kind !== 'event') { this.go(item.url); return; }
             this.quick.open = false;
             this.setAnchor(domEvent && domEvent.currentTarget);
@@ -1322,13 +1339,15 @@ module.exports = {
             }
             this.pop = { open: false, loading: true, item, event: null, color: item.color || null, busy: null };
             this.$nextTick(() => { this.pop.open = true; });
+            // a later selection, or a closed popover, makes this answer stale
+            const isCurrent = () => this.popRequestSeq === requestSeq && this.pop.open;
             moqui.request(this.url('eventSummary'), { params: this.scoped({ workEffortId: item.workEffortId, instanceStart: item.recurringEventId === item.workEffortId ? (item.instanceStart || '') : '' }) }).then((result) => {
-                if (this.pop.item !== item) return;
+                if (!isCurrent()) return;
                 const json = result.json || {};
                 this.pop.loading = false;
                 this.pop.event = json.visible ? json.event : null;
                 if (json.visible && json.event.calendar && json.event.calendar.color && !this.pop.color) this.pop.color = json.event.calendar.color;
-            }, (err) => { this.pop.loading = false; moqui.handleAjaxError(err); });
+            }, (err) => { if (!isCurrent()) return; this.pop.loading = false; moqui.handleAjaxError(err); });
         },
         openDetail() {
             const event = this.pop.event;
@@ -1338,7 +1357,7 @@ module.exports = {
         respond(value) {
             const event = this.pop.event;
             if (!event) return;
-            moqui.request(this.url('respond'), { method: 'POST', params: this.scoped({ workEffortId: event.workEffortId, response: value }) }).then((result) => {
+            this.post('respond', { workEffortId: event.workEffortId, response: value }).then((result) => {
                 const json = result.json || {};
                 moqui.notifyMessages(json.messageInfos, json.errors);
                 if (json.statusId) event.myStatusId = json.statusId;
@@ -1373,7 +1392,7 @@ module.exports = {
         },
         doChange(kind, payload, scope, notify) {
             const name = kind === 'cancel' ? 'cancelEvent' : 'moveEvent';
-            return moqui.request(this.url(name), { method: 'POST', params: this.scoped(Object.assign({}, payload, { scope, notify })) }).then((result) => {
+            return this.post(name, Object.assign({}, payload, { scope, notify })).then((result) => {
                 const json = result.json || {};
                 moqui.notifyMessages(json.messageInfos, json.errors);
                 this.preview = null;
