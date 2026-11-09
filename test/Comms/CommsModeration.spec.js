@@ -186,6 +186,9 @@ feature(
             const page = as('boss.mod.ivy', () =>
                 render('apps/Comms/Moderation/Queue', { scope }),
             )
+            as('boss.mod.ivy', () =>
+                boss('add#ReviewNote', {siteId, reviewId, noteText: 'Review timestamp check'}),
+            )
             const detail = as('boss.mod.ivy', () =>
                 render('apps/Comms/Moderation/Review', {
                     siteId,
@@ -196,6 +199,10 @@ feature(
             const review = as('boss.mod.ivy', () =>
                 boss('get#Review', { siteId, reviewId }),
             )
+            const dates = as('boss.mod.ivy', () => ({
+                queued: ec.l10n.format(new Date(Number(queue.find(row => row.reviewId === reviewId).createdAt)), 'yyyy-MM-dd HH:mm'),
+                noted: ec.l10n.format(new Date(Number(review.noteList[0].createdAt)), 'yyyy-MM-dd HH:mm'),
+            }))
             as('boss.mod.ivy', () =>
                 boss('decide#Review', {
                     siteId,
@@ -220,9 +227,9 @@ feature(
                         .list(),
                 ),
             )
-            return { scopes, scope, queue, page, detail, review, state, audit }
+            return { scopes, scope, queue, page, detail, review, dates, state, audit }
         },
-        then({ scopes, scope, queue, page, detail, review, state, audit }) {
+        then({ scopes, scope, queue, page, detail, review, dates, state, audit }) {
             scopes.internal
             scope === siteId + '|' + categoryId
             queue.some(
@@ -230,7 +237,14 @@ feature(
                     r.targetId === rootId && r.title === 'First question here',
             )
             !page.broken && page.output.includes('First question here')
+            page.output.includes(dates.queued)
+            queue.find(row => row.reviewId === reviewId).createdAtText === dates.queued
+            Number.isFinite(Number(queue.find(row => row.reviewId === reviewId).createdAt))
             !detail.broken && detail.output.includes('How do I reset it?')
+            detail.output.includes('Review timestamp check')
+            detail.output.includes(dates.noted)
+            review.noteList[0].createdAtText === dates.noted
+            Number.isFinite(Number(review.noteList[0].createdAt))
             review.post.title === 'First question here'
             state === 'approved'
             audit.length > 0

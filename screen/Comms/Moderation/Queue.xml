@@ -76,10 +76,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="../Review" text="${title}" parameter-map="{siteId:siteId, reviewId:reviewId, scope:scope}"/></default-field></field>
                     <field name="reasonFamily"><header-field title="Reason"/><default-field><display/></default-field></field>
                     <field name="state"><header-field title="State"/><default-field><display/></default-field></field>
-                    <field name="createdAt"><header-field title="Waiting since"/><default-field><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                    <field name="createdAtText"><header-field title="Waiting since"/><default-field><display/></default-field></field>
                     <columns type="mobile">
                         <column><field-ref name="title"/><field-ref name="reasonFamily"/></column>
-                        <column><field-ref name="state"/><field-ref name="createdAt"/></column>
+                        <column><field-ref name="state"/><field-ref name="createdAtText"/></column>
                     </columns>
                 </form-list>
                 <section name="NoReviews" condition="!reviewList.length"><widgets>

@@ -1,8 +1,10 @@
-// Disposable fixtures for the manual Commons UI review (ui-review-drawers-commons.md, DC-01–10).
+// Disposable fixtures for the manual Commons UI review (ui-review-drawers-commons.md, DC-01–10 and Wave 5 local mail).
 // Acceptance fixture: this prepares complete-activity data; it is not a regression rule or a screen walk.
 // Run on an isolated runtime: moqui test mr-boss --acceptance --spec CommonsClientFixtures --db fresh --serve <host>:<port>.
-// Reuse the demo users, contact books, duplicate pairs, calendars, rooms and equipment. Only BOSS_UI_* rows are added.
-// Reloading resets the disposable review work and approvals; no external provider or recipient is contacted.
+// Reuse demo users and records. The first three features reset BOSS_UI_* review work and approvals.
+// Select only the Wave 5 feature on an existing review database: its account/message setup reuses existing fixture rows
+// without resetting demo data. Mail account/folder/identity/message IDs come from the framework services.
+// The mail feature only creates a loopback account and imports local data; it does not send. Enable mail capture on the manual UI server.
 const joe = "ORG_ZIZI_JD"
 const bob = "ORG_ZIZI_BD"
 const contacts = "BOSS_UI_CONTACT_ADMIN"
@@ -174,5 +176,258 @@ feature("shared calendar roles, a DST recurrence and existing resource fixtures 
         board.bookable == "Y"
         book != null
         adminZone == "Europe/Berlin"
+    }
+})
+
+feature("Wave 5 local mail review fixtures", {
+    when() {
+        const MAIL = "org.moqui.impl.EmailClientServices"
+        const address = "joe.wave5.review@example.invalid"
+        const messageId = "<boss-ui-wave5-multipart@fixture.example.invalid>"
+        const attachmentText = "Wave 5 attachment bytes.\n"
+        const fixture = as("joe.developer", () => sys(() => {
+            let mailAccount = one("moqui.basic.email.EmailAccount", {ownerUserId: joe, emailAddress: address})
+            if (!mailAccount) {
+                const created = call(MAIL + ".create#EmailAccount", {accountKindEnumId: "EakHosted", emailAddress: address,
+                    accountName: "Wave 5 local review mail", displayName: "Joe Developer review", smtpHost: "127.0.0.1",
+                    smtpPort: "1", smtpStartTls: "N", smtpSsl: "N", recordFilingEnumId: "ErfLinkedOnly"})
+                mailAccount = one("moqui.basic.email.EmailAccount", {emailAccountId: created.emailAccountId})
+            }
+            if (!mailAccount || mailAccount.statusId === "EasRemoved") throw new Error("Wave 5 review account is missing or removed; restore it explicitly")
+            const emailAccountId = mailAccount.emailAccountId
+            call(MAIL + ".add#EmailAccountUser", {emailAccountId, userId: bob, permissionEnumId: "EapRead"})
+            const inbox = one("moqui.basic.email.EmailFolder", {emailAccountId, folderKindEnumId: "EfkInbox"})
+            const identity = one("moqui.basic.email.EmailIdentity", {emailAccountId, emailAddress: address})
+            if (!inbox || !identity) throw new Error("Wave 5 review account has no Inbox or identity")
+            let message = one("moqui.basic.email.EmailMessage", {emailAccountId, messageId})
+            let imported = null
+            if (!message) {
+                const messageText = [
+                    "From: Fictional Review Sender <review.sender@example.invalid>", "To: Joe Developer <" + address + ">",
+                    "Subject: Wave 5 local HTML and plain review", "Message-ID: " + messageId,
+                    "Date: Sun, 08 Nov 2026 12:00:00 +0000", "MIME-Version: 1.0",
+                    'Content-Type: multipart/mixed; boundary="review-mixed"', "",
+                    "--review-mixed", 'Content-Type: multipart/alternative; boundary="review-alt"', "",
+                    "--review-alt", "Content-Type: text/plain; charset=UTF-8", "",
+                    "Wave 5 plain body. The attachment is fictional review data.",
+                    "--review-alt", "Content-Type: text/html; charset=UTF-8", "",
+                    '<p>Wave 5 <strong>HTML body</strong>. Fictional review data.</p>' +
+                        '<img src="http://127.0.0.1:1/review-remote.png" alt="Review remote image">' +
+                        '<img src="invalid-review-image" onerror="document.documentElement.dataset.reviewUnsafe=\'yes\'">' +
+                        '<script>document.documentElement.dataset.reviewUnsafe="yes"</script>',
+                    "--review-alt--", "--review-mixed", 'Content-Type: text/plain; name="wave5-review.txt"',
+                    'Content-Disposition: attachment; filename="wave5-review.txt"', "Content-Transfer-Encoding: base64", "",
+                    "V2F2ZSA1IGF0dGFjaG1lbnQgYnl0ZXMuCg==", "--review-mixed--", ""
+                ].join("\r\n")
+                imported = call(MAIL + ".import#EmailMessages", {emailFolderId: inbox.emailFolderId, messageText})
+                if (imported.failedCount || imported.importedCount !== 1) throw new Error("Wave 5 RFC822 import did not create its one message")
+                message = one("moqui.basic.email.EmailMessage", {emailAccountId, messageId})
+            }
+            const attachment = message && one("moqui.basic.email.EmailMessageAttachment", {emailMessageId: message.emailMessageId, fileName: "wave5-review.txt"})
+            const storedAttachment = attachment ? ec.resource.getLocationReference(attachment.attachmentLocation).getText() : null
+            let captureJobName = null
+            const captureService = "review.ReviewMailCaptureServices.write#ReviewMailCapture"
+            if (String(System.getProperty("boss_ui_review_mail_capture") || "") === "true" &&
+                    ec.factory.getComponentInfoList().some(component => component.name === "boss-ui-review-capture") &&
+                    ec.service.getServiceDefinition(captureService)) {
+                const now = Date.now()
+                captureJobName = "BOSS_UI_W5_CAPTURE"
+                store("moqui.service.job.ServiceJob", {jobName: captureJobName,
+                    description: "Disposable Wave 5 fictional mail capture export (two-hour window)", serviceName: captureService,
+                    cronExpression: "0/10 * * * * ?", localOnly: "Y", paused: "N", errorHistoryOnly: "Y", transactionTimeout: 10,
+                    fromDate: new Date(now), thruDate: new Date(now + 2 * 60 * 60 * 1000), repeatCount: null})
+            }
+            return {emailAccountId, emailFolderId: inbox.emailFolderId, emailIdentityId: identity.emailIdentityId,
+                emailMessageId: message?.emailMessageId, accountKind: mailAccount.accountKindEnumId,
+                body: message?.body || "", bodyText: message?.bodyText || "", storedAttachment, attachmentText, imported, captureJobName}
+        }))
+        // The internal service computes the current actor's ownership/member levels; screen artifact access is reviewed in the browser.
+        const access = (username) => as(username, () => sys(() => call(MAIL + ".get#EmailAccountAccess", {emailAccountId: fixture.emailAccountId})))
+        const joeAccess = access("joe.developer")
+        const bobAccess = access("bob.developer")
+        const otherAccess = access("commons.review.other")
+        ec.logger.info("Wave 5 local review fixture IDs: " + JSON.stringify({emailAccountId: fixture.emailAccountId,
+            emailFolderId: fixture.emailFolderId, emailIdentityId: fixture.emailIdentityId, emailMessageId: fixture.emailMessageId,
+            captureJobName: fixture.captureJobName}))
+        return {fixture, joeAccess, bobAccess, otherAccess}
+    },
+    then({fixture, joeAccess, bobAccess, otherAccess}) {
+        fixture.emailAccountId != null
+        fixture.emailFolderId != null
+        fixture.emailIdentityId != null
+        fixture.emailMessageId != null
+        fixture.accountKind == "EakHosted"
+        fixture.body.includes("Wave 5")
+        fixture.bodyText.includes("Wave 5 plain body")
+        fixture.storedAttachment == fixture.attachmentText
+        joeAccess.level == 3
+        bobAccess.level == 1
+        !bobAccess.account.canSend
+        !bobAccess.account.canManage
+        otherAccess.level == 0
+    }
+})
+
+feature("Wave 7 moderation review fixtures", {
+    when() {
+        // PASS must be linked before this feature; the matching runtime host allowlist is configured separately.
+        ec.resource.getLocationText("component://mr-pass/component.xml")
+        const S = "mantle.public.SiteServices.", F = "mantle.forum.ForumServices.", B = "ironstone.comms.ModerationServices."
+        const siteName = "UIReview Wave7 moderation", categoryName = "UIReview Wave7 held questions"
+        const actors = [
+            {key: "moderator", id: "BOSS_UI_W7_MOD", username: "wave7.moderator", name: "Wave7 Internal Moderator", groups: ["BOSS_USERS", "BOSS_PROJECT_TEAM"], role: "member"},
+            {key: "nonmoderator", id: "BOSS_UI_W7_NONMOD", username: "wave7.member", name: "Wave7 Internal Member", groups: ["BOSS_USERS"], role: "member"},
+            {key: "author", id: "BOSS_UI_W7_AUTHOR", username: "wave7.author", name: "Wave7 Public Author", groups: [], role: "member"},
+            {key: "authorRefuse", id: "BOSS_UI_W7_AUTHOR_REFUSE", username: "wave7.author.refuse", name: "Wave7 Public Refusal Author", groups: [], role: "member"},
+            {key: "publicModerator", id: "BOSS_UI_W7_PUBLICMOD", username: "wave7.publicmod", name: "Wave7 Public Moderator", groups: [], role: "moderator"}
+        ]
+        const invoke = (name, params) => {
+            const out = call(name, params || {}) || {}
+            if (ec.message.hasError()) throw new Error(name + ": " + ec.message.getErrorsString())
+            return out
+        }
+        const run = (name, input) => invoke(name, {input}).result
+        const fixture = sys(() => {
+            let site = one("mantle.public.PublicSite", {name: siteName})
+            const fresh = !site
+            let siteId = site?.siteId, categoryId
+            if (fresh) {
+                for (const actor of actors)
+                    if (one("moqui.security.UserAccount", {username: actor.username}) || one("mantle.party.Party", {partyId: actor.id}))
+                        throw new Error("Wave 7 partial actor fixture requires inspection: " + actor.username)
+                const demo = one("moqui.security.UserAccount", {userId: joe})
+                if (!demo?.currentPassword) throw new Error("Wave 7 requires Joe's local demo login fixture")
+                const at = Date.now()
+                siteId = run(S + "create#Site", {name: siteName, ownerPartyId: ec.user.userAccount.partyId}).siteId
+                run(S + "update#Site", {siteId, state: "published", expectedRevision: 1})
+                run(S + "store#Mounts", {siteId, expectedRevision: 2,
+                    hosts: [{hostname: "wave7-forum.localhost", canonical: true}],
+                    mounts: [{app: "forum", pathPrefix: "/forum"}, {app: "account", pathPrefix: "/account"}, {app: "members", pathPrefix: "/members"}]})
+                categoryId = run(F + "store#Category", {siteId, name: categoryName, operationId: ec.user.randomString(32)}).contactListId
+                run(F + "set#CategoryAccess", {siteId, contactListId: categoryId, visibility: "public", publicationState: "published", expectedRevision: 1, confirm: true})
+                for (const actor of actors) {
+                    store("mantle.party.Party", {partyId: actor.id, partyTypeEnumId: "PtyPerson", disabled: "N"})
+                    store("mantle.party.Person", {partyId: actor.id, firstName: actor.name, lastName: "Review"})
+                    // Same local demo login as the other review actors; never expose its hash in the manifest.
+                    store("moqui.security.UserAccount", {userId: actor.id, username: actor.username, userFullName: actor.name,
+                        partyId: actor.id, emailAddress: actor.username + "@example.invalid", locale: "en_US", currencyUomId: "USD", timeZone: "America/Chicago",
+                        currentPassword: demo.currentPassword, passwordSalt: demo.passwordSalt, passwordHashType: demo.passwordHashType,
+                        passwordBase64: demo.passwordBase64, passwordSetDate: ec.user.nowTimestamp, requirePasswordChange: "N", disabled: "N", successiveFailedLogins: 0})
+                    for (const userGroupId of actor.groups)
+                        store("moqui.security.UserGroupMember", {userId: actor.id, userGroupId, fromDate: new Date(0), thruDate: null})
+                    store("mantle.public.PublicSiteParty", {siteId, partyId: actor.id, state: "active", role: actor.role, joinedAt: at, revision: 1})
+                    store("mantle.public.PublicSiteProfile", {siteId, partyId: actor.id, handle: "w7-" + actor.key.toLowerCase(), displayName: actor.name,
+                        discoverability: "members", revision: 1})
+                    store("mantle.marketing.contact.ContactListParty", {contactListId: categoryId, partyId: actor.id,
+                        ...(actor.key === "moderator" ? {roleTypeId: "ListModerator"} : {}), statusId: "CLPT_ACCEPTED", fromDate: new Date(0)})
+                }
+            } else {
+                // Read existing review results on repeat; never recreate posts or undo moderation decisions/grants.
+                const categories = Array.from(find("mantle.forum.ForumCategory", {siteId}).list())
+                if (categories.length !== 1) throw new Error("Wave 7 existing site needs its single category inspected")
+                categoryId = categories[0].contactListId
+                if (one("mantle.marketing.contact.ContactList", {contactListId: categoryId})?.contactListName !== categoryName)
+                    throw new Error("Wave 7 existing category identity differs")
+                for (const actor of actors)
+                    if (one("moqui.security.UserAccount", {userId: actor.id})?.username !== actor.username)
+                        throw new Error("Wave 7 existing actor is missing or differs: " + actor.username)
+            }
+            const held = []
+            for (const decision of ["approve", "refuse"]) {
+                const title = "UIReview Wave7 " + decision + " this question"
+                let event = one("mantle.party.communication.CommunicationEvent", {contactListId: categoryId, subject: title})
+                if (!event) {
+                    if (!fresh) throw new Error("Wave 7 existing post is missing; it will not be recreated: " + decision)
+                    // Separate new authors respect each member's post interval and both require first-post review.
+                    const author = decision === "approve" ? "wave7.author" : "wave7.author.refuse"
+                    const posted = as(author, () => run(F + "publish#Post", {siteId, contactListId: categoryId,
+                        title, body: "<p>Disposable " + decision + " review item.</p>", operationId: ec.user.randomString(32)}))
+                    if (posted.state !== "pending") throw new Error("Wave 7 expected a held first-contribution post: " + decision)
+                    event = one("mantle.party.communication.CommunicationEvent", {communicationEventId: posted.rootCommEventId})
+                }
+                const review = one("mantle.forum.ForumReviewItem", {siteId, targetId: event.communicationEventId})
+                const state = one("mantle.forum.ForumPostState", {communicationEventId: event.communicationEventId})
+                if (!review || !state) throw new Error("Wave 7 post has no review or publication state: " + decision)
+                held.push({decision, rootCommEventId: event.communicationEventId, reviewId: review.reviewId,
+                    reviewState: review.state, reviewRevision: Number(review.revision), visibility: state.visibility})
+            }
+            return {siteId, categoryId, fresh, held, publicHost: "wave7-forum.localhost", publicForumPath: "/forum",
+                actors: actors.map(actor => ({username: actor.username, userId: actor.id, groups: actor.groups, publicRole: actor.role}))}
+        })
+        const moderator = as("wave7.moderator", () => sys(() => invoke(B + "find#Scopes")))
+        const scope = moderator.scopeList.find(item => item.siteId === fixture.siteId && item.contactListId === fixture.categoryId)?.key
+        const nonmoderator = as("wave7.member", () => sys(() => invoke(B + "find#Scopes")))
+        const publicModerator = as("wave7.publicmod", () => sys(() => invoke(B + "find#Scopes")))
+        const publicBossGroups = find("moqui.security.UserGroupMember", {userId: "BOSS_UI_W7_PUBLICMOD", userGroupId: "BOSS_USERS"}).count()
+        ec.logger.info("Wave 7 review fixture manifest " + JSON.stringify({...fixture, scope,
+            queuePath: "/qapps/Comms/Moderation/Queue?scope=" + encodeURIComponent(scope || ""),
+            reviewPaths: fixture.held.map(item => "/qapps/Comms/Moderation/Review?siteId=" + encodeURIComponent(fixture.siteId) +
+                "&reviewId=" + encodeURIComponent(item.reviewId) + "&scope=" + encodeURIComponent(scope || ""))}))
+        return {fixture, moderator, scope, nonmoderator, publicModerator, publicBossGroups}
+    },
+    then({fixture, moderator, scope, nonmoderator, publicModerator, publicBossGroups}) {
+        fixture.held.length == 2
+        fixture.held.every(item => item.reviewId && item.rootCommEventId)
+        !fixture.fresh || fixture.held.every(item => item.visibility === "pending")
+        moderator.internal == true
+        scope != null
+        nonmoderator.internal == true
+        nonmoderator.scopeList.length == 0
+        publicModerator.internal == false
+        publicModerator.scopeList.length == 0
+        publicBossGroups == 0
+    }
+})
+
+feature("Wave 6 local queue review fixtures", {
+    when() {
+        const SERVICES = "org.moqui.impl.CallQueueServices."
+        const name = "UIReview Wave6 local support"
+        const invoke = (service, parameters) => {
+            const out = call(SERVICES + service, parameters || {}) || {}
+            if (ec.message.hasError()) throw new Error(service + ": " + ec.message.getErrorsString())
+            return out
+        }
+        const fixture = as("john.doe", () => sys(() => {
+            let queue = one("moqui.call.CallQueue", {name})
+            const fresh = !queue
+            if (fresh) {
+                const made = invoke("store#CallQueue", {name, description: "Disposable UI review queue; no phone number or external trunk",
+                    strategyEnumId: "CqsLongestIdle", ringSeconds: 20, maxWaitSeconds: 60, maxLength: 10,
+                    wrapUpSeconds: 0, announceSeconds: 0, fallbackTypeEnumId: "CtgEnd"})
+                queue = one("moqui.call.CallQueue", {callQueueId: made.callQueueId})
+                if (!queue) throw new Error("Wave 6 queue was not created")
+                invoke("store#CallQueueAgent", {callQueueId: queue.callQueueId, userId: joe, sequenceNum: 10})
+                invoke("store#CallQueueAgent", {callQueueId: queue.callQueueId, userId: bob, sequenceNum: 20})
+            }
+            // Repeat setup preserves settings and each agent's login/pause state, including results of the manual review.
+            for (const userId of [joe, bob])
+                if (!one("moqui.call.CallQueueAgent", {callQueueId: queue.callQueueId, userId}))
+                    throw new Error("Wave 6 queue is missing a review agent; inspect rather than resetting it: " + userId)
+            return {callQueueId: queue.callQueueId, name: queue.name, fresh,
+                fallbackTypeEnumId: queue.fallbackTypeEnumId,
+                agentIds: [joe, bob], queuePath: "/qapps/Comms/Calls/Queues"}
+        }))
+        // These internal screen services apply current-user membership themselves; ordinary UI actions remain for the browser review.
+        const mine = username => as(username, () => sys(() => invoke("find#MyCallQueues")))
+        const joeQueues = mine("joe.developer").queueList || []
+        const bobQueues = mine("bob.developer").queueList || []
+        const otherQueues = mine("commons.review.other").queueList || []
+        const joeQueue = joeQueues.find(queue => queue.callQueueId === fixture.callQueueId)
+        const bobQueue = bobQueues.find(queue => queue.callQueueId === fixture.callQueueId)
+        ec.logger.info("Wave 6 local queue review fixture manifest " + JSON.stringify({...fixture,
+            actors: [{username: "joe.developer", state: joeQueue?.state}, {username: "bob.developer", state: bobQueue?.state}],
+            qualification: "Queue membership and agent-state UI fixture only; no fake call, voicemail, recording, SIP trunk or media"}))
+        return {fixture, joeQueue, bobQueue, otherQueues}
+    },
+    then({fixture, joeQueue, bobQueue, otherQueues}) {
+        fixture.callQueueId != null
+        fixture.name == "UIReview Wave6 local support"
+        joeQueue != null
+        bobQueue != null
+        !fixture.fresh || fixture.fallbackTypeEnumId == "CtgEnd"
+        !fixture.fresh || joeQueue.state == "out"
+        !fixture.fresh || bobQueue.state == "out"
+        !otherQueues.some(queue => queue.callQueueId === fixture.callQueueId)
     }
 })

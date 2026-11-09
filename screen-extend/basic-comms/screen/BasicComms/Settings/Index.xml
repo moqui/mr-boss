@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets-extend name="SettingsCards" where="append">
         <row-col md="4" sm="6"><container-box><box-header title="Calls"/><box-body>
-            <label type="p" text="Camera, microphone and ringtone: coming with calls." style="m-muted"/>
+            <label type="p" text="Choose this browser's microphone, camera and speaker, test the microphone and camera, and set the ringtone and how calls start." style="m-muted"/>
             <link url="../Calls" text="Calls" icon="sym_o_call"/>
         </box-body></container-box></row-col>
         <row-col md="4" sm="6"><container-box><box-header title="Reading and keys"/><box-body>

@@ -81,13 +81,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <form-list name="Reports" list="reportList">
                     <field name="reason"><header-field title="Reason"/><default-field><display/></default-field></field>
                     <field name="evidence"><header-field title="Evidence"/><default-field><display/></default-field></field>
-                    <field name="createdAt"><header-field title="When"/><default-field><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                    <field name="createdAtText"><header-field title="When"/><default-field><display/></default-field></field>
                 </form-list>
             </box-body-nopad></container-box>
             <container-box><box-header title="Staff notes · ${noteList.length}"/><box-body-nopad>
                 <form-list name="Notes" list="noteList">
                     <field name="noteText"><header-field title="Note"/><default-field><display/></default-field></field>
-                    <field name="createdAt"><header-field title="When"/><default-field><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                    <field name="createdAtText"><header-field title="When"/><default-field><display/></default-field></field>
                 </form-list>
             </box-body-nopad></container-box>
             <container style="row q-gutter-sm q-mt-sm">

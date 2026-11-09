@@ -56,7 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
                     const detail = call('get#Review', {siteId, reviewId: r.reviewId})
                     title = detail.post?.title || 'Post'
                 }
-                return {...r, siteId, title, scope}
+                return {...r, siteId, title, scope,
+                    createdAtText: r.createdAt == null ? '' : ec.l10n.format(new Date(Number(r.createdAt)), 'yyyy-MM-dd HH:mm')}
             })
         ]]></script></actions>
     </service>
@@ -76,8 +77,11 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('mantle.forum.ModerationServices.get#Review').parameters({input: {siteId, reviewId}}).call()?.result || {}
             review = out.review || null
             post = out.post || null
-            reportList = Array.from(out.reports || [])
-            noteList = Array.from(out.notes || [])
+            // Forum timestamps remain numeric in the service contract; these display values use the viewer's time zone.
+            const dated = (row) => ({...row,
+                createdAtText: row.createdAt == null ? '' : ec.l10n.format(new Date(Number(row.createdAt)), 'yyyy-MM-dd HH:mm')})
+            reportList = Array.from(out.reports || []).map(dated)
+            noteList = Array.from(out.notes || []).map(dated)
         ]]></script></actions>
     </service>
 
