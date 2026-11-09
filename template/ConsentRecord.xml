@@ -70,11 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
                     cons = found || {found: false}
                     consFound = !!cons.found
                     consCanEdit = consFound && !!cons.canEdit
-                    // The browser chips carry escaped labels and hidden tooltips; other modes need the labels alone.
-                    const plainConsent = (html) => String(html || '').replace(/<q-tooltip\b[^>]*>[\s\S]*?<\/q-tooltip>/gi, '')
-                            .replace(/<\/q-chip>/gi, ' · ').replace(/<[^>]*>/g, '').replace(/ · $/, '').trim()
-                            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-                    consAddressList = Array.from(cons.addressList || []).map(address => Object.assign({}, address, {consentText: plainConsent(address.consentHtml)}))
+                    consAddressList = Array.from(cons.addressList || [])
                     consListList = Array.from(cons.listList || [])
                     consPartyList = Array.from(cons.partyConsentList || [])
                     consHistoryList = Array.from(cons.historyList || [])

@@ -31,15 +31,17 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             ec.service.sync().name('ironstone.commons.CommonsServices.set#Appearance').parameters({darkMode: darkMode, leftOpen: leftOpen,
                 density: density, startApp: startApp}).call()
-            if (!ec.web.request || (ec.web.request.getHeader('accept') || '').includes('application/json')) {
-                // The rendered form identifies its client; transitions themselves do not retain the render mode.
-                const prefix = appearanceUiPrefix == 'apps' ? 'apps' : appearanceUiPrefix == 'qapps' ? 'qapps' :
-                    (!ec.web.request ? 'apps' : 'qapps')
+            // a JSON answer for the browser and the terminal (no request), a normal return for a Standard page
+            appearanceJson = !ec.web.request || (ec.web.request.getHeader('accept') || '').includes('application/json')
+            if (appearanceJson) {
+                // Which shell to load again: the form says, from its render (appearanceUiPrefix below). The transition cannot tell,
+                // as a static template's form posts the same cached URL from every shell. Only the two fixed roots are taken.
+                const prefix = ['apps', 'qapps'].includes(appearanceUiPrefix) ? appearanceUiPrefix : (!ec.web.request ? 'apps' : 'qapps')
                 ec.web.sendJsonResponse(ec.message.hasError() ? {} : {redirectUrl: '/' + prefix + '/Commons/Settings/Preferences',
                     messageInfos: [{type: 'success', message: ec.l10n.localize('Appearance saved')}]})
             } else if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('Appearance saved'), 'success')
         ]]></script></actions>
-        <conditional-response condition="!!ec.web.request &amp;&amp; !(ec.web.request.getHeader('accept') || '').includes('application/json')" url="."/>
+        <conditional-response condition="!appearanceJson" url="."/>
         <default-response type="none"/>
     </transition>
     <transition name="saveCalendarDefaults">
@@ -81,10 +83,13 @@ along with this software (see the LICENSE.md file). If not, see
                 keymaps.push(Object.assign({}, map, {appTitle: app.title || app.name}))
             appKeymaps = keymaps
             appOptions = apps.map((app) => ({name: app.name, title: app.title || app.name}))
-            // Static QVT prepares this form through its implicit /actions transition, whose render mode is html.
-            const appearancePath = sri.getScreenUrlInfo().fullPathNameList || []
-            const appearanceMaterial = ['qvt', 'qvt-static', 'qjs', 'qvue'].includes(sri.getRenderMode()) ||
-                appearancePath[appearancePath.length - 1] == 'actions'
+            // The Material shell renders this form in a qvt mode, or (a server-static template) prepares its data through the
+            // screen's implicit /actions transition, whose render mode is html; anything else is the Standard or terminal /apps.
+            const renderedForMaterial = () => {
+                const path = sri.getScreenUrlInfo().fullPathNameList || []
+                return ['qvt', 'qvt-static', 'qjs', 'qvue'].includes(sri.getRenderMode()) || path[path.length - 1] == 'actions'
+            }
+            const appearanceMaterial = renderedForMaterial()
             appearance = {darkMode: ec.user.getPreference('QUASAR_DARK') == 'true' ? 'Y' : 'N',
                 leftOpen: ec.user.getPreference('QUASAR_LEFT_OPEN') == 'true' ? 'Y' : 'N',
                 density: ec.user.getPreference('SHELL_DENSITY') || 'comfortable', startApp: ec.user.getPreference('SHELL_START_APP') || '',

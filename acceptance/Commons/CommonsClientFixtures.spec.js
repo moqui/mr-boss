@@ -1,4 +1,4 @@
-// Disposable fixtures for the manual Commons UI review (ui-review-drawers-commons.md, DC-01–10 and Wave 5 local mail).
+// Disposable fixtures for the manual Commons UI review (ui-review-drawers-commons.md: DC-01–10, and Waves 5–7 mail, queue and moderation).
 // Acceptance fixture: this prepares complete-activity data; it is not a regression rule or a screen walk.
 // Run on an isolated runtime: moqui test mr-boss --acceptance --spec CommonsClientFixtures --db fresh --serve <host>:<port>.
 // Reuse demo users and records. The first three features reset BOSS_UI_* review work and approvals.
@@ -27,11 +27,13 @@ function as(username, run) {
     login(username)
     try { return run() } finally { login("john.doe") }
 }
+// orgId null: a public member, a person of no organization.
 function account(userId, username, firstName, lastName, orgId, groups, zone) {
     const demo = one("moqui.security.UserAccount", {userId: joe})
+    if (!demo?.currentPassword) throw new Error("the review actors need Joe's local demo login")
     store("mantle.party.Party", {partyId: userId, partyTypeEnumId: "PtyPerson", ownerPartyId: orgId, disabled: "N"})
     store("mantle.party.Person", {partyId: userId, firstName, lastName})
-    store("mantle.party.PartyRelationship", {partyRelationshipId: userId + "_ORG", relationshipTypeEnumId: "PrtAgent",
+    if (orgId) store("mantle.party.PartyRelationship", {partyRelationshipId: userId + "_ORG", relationshipTypeEnumId: "PrtAgent",
         fromPartyId: userId, toPartyId: orgId, toRoleTypeId: "OrgInternal", fromDate: new Date(0), thruDate: null})
     // The disposable actors use the same local demo login secret; never print it or include it in review evidence.
     store("moqui.security.UserAccount", {userId, username, userFullName: firstName + " " + lastName, partyId: userId,
@@ -271,7 +273,8 @@ feature("Wave 5 local mail review fixtures", {
 feature("Wave 7 moderation review fixtures", {
     when() {
         // PASS must be linked before this feature; the matching runtime host allowlist is configured separately.
-        ec.resource.getLocationText("component://mr-pass/component.xml")
+        if (!ec.resource.getLocationReference("component://mr-pass/component.xml")?.getExists())
+            throw new Error("Wave 7 moderation fixtures need mr-pass linked into runtime/component")
         const S = "mantle.public.SiteServices.", F = "mantle.forum.ForumServices.", B = "ironstone.comms.ModerationServices."
         const siteName = "UIReview Wave7 moderation", categoryName = "UIReview Wave7 held questions"
         const actors = [
@@ -295,8 +298,6 @@ feature("Wave 7 moderation review fixtures", {
                 for (const actor of actors)
                     if (one("moqui.security.UserAccount", {username: actor.username}) || one("mantle.party.Party", {partyId: actor.id}))
                         throw new Error("Wave 7 partial actor fixture requires inspection: " + actor.username)
-                const demo = one("moqui.security.UserAccount", {userId: joe})
-                if (!demo?.currentPassword) throw new Error("Wave 7 requires Joe's local demo login fixture")
                 const at = Date.now()
                 siteId = run(S + "create#Site", {name: siteName, ownerPartyId: ec.user.userAccount.partyId}).siteId
                 run(S + "update#Site", {siteId, state: "published", expectedRevision: 1})
@@ -306,15 +307,8 @@ feature("Wave 7 moderation review fixtures", {
                 categoryId = run(F + "store#Category", {siteId, name: categoryName, operationId: ec.user.randomString(32)}).contactListId
                 run(F + "set#CategoryAccess", {siteId, contactListId: categoryId, visibility: "public", publicationState: "published", expectedRevision: 1, confirm: true})
                 for (const actor of actors) {
-                    store("mantle.party.Party", {partyId: actor.id, partyTypeEnumId: "PtyPerson", disabled: "N"})
-                    store("mantle.party.Person", {partyId: actor.id, firstName: actor.name, lastName: "Review"})
-                    // Same local demo login as the other review actors; never expose its hash in the manifest.
-                    store("moqui.security.UserAccount", {userId: actor.id, username: actor.username, userFullName: actor.name,
-                        partyId: actor.id, emailAddress: actor.username + "@example.invalid", locale: "en_US", currencyUomId: "USD", timeZone: "America/Chicago",
-                        currentPassword: demo.currentPassword, passwordSalt: demo.passwordSalt, passwordHashType: demo.passwordHashType,
-                        passwordBase64: demo.passwordBase64, passwordSetDate: ec.user.nowTimestamp, requirePasswordChange: "N", disabled: "N", successiveFailedLogins: 0})
-                    for (const userGroupId of actor.groups)
-                        store("moqui.security.UserGroupMember", {userId: actor.id, userGroupId, fromDate: new Date(0), thruDate: null})
+                    // the same local demo login as the other review actors; no organization, as public members
+                    account(actor.id, actor.username, actor.name, "Review", null, actor.groups, "America/Chicago")
                     store("mantle.public.PublicSiteParty", {siteId, partyId: actor.id, state: "active", role: actor.role, joinedAt: at, revision: 1})
                     store("mantle.public.PublicSiteProfile", {siteId, partyId: actor.id, handle: "w7-" + actor.key.toLowerCase(), displayName: actor.name,
                         discoverability: "members", revision: 1})

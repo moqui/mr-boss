@@ -95,9 +95,11 @@ feature("Preferences shows the keys of the shell and of the apps, saves an overr
         before.output.includes("Contacts")
         // the Calendar box, whose defaults CalendarSettings saves
         before.output.includes("Week starts on")
-        // The static template binds this hidden field; withStaticData appends its prepared value as text.
+        // The static template binds this hidden field and posts the one cached /apps action from every shell, so the
+        // prepared value (withStaticData appends each value on a line of its own) is what tells the Material shell apart.
         before.output.includes("appearanceUiPrefix")
-        before.output.split("\n").includes("qapps")
+        before.output.includes('action: "/apps/Commons/Settings/Preferences/saveAppearance"')
+        before.output.includes("\nqapps\n")
         saved.errors == ""
         JSON.parse(keymap).global["g c"] == "g x"
         after.status == 200
@@ -197,6 +199,10 @@ feature("Account changes the signed-in user only, whatever user the request name
         const factor = sys(() => call("org.moqui.impl.UserServices.create#UserAuthcFactorTotp", {
             userId: "EX_JOHN_DOE", thruDate: Date.now() + 347 * 86400000 }))
         accountFactorId = factor.factorId
+        // a code sent from that factor is a sign-in step, not a factor of its own: it has its own expiry date to look for
+        const sentCode = sys(() => call("org.moqui.impl.UserServices.create#SingleUseAuthcFactor", {
+            userId: "EX_JOHN_DOE", fromFactorId: accountFactorId, thruDate: Date.now() + 3 * 86400000 }))
+        const sentCodeDate = ec.l10n.format(new Date(Number(String(one("moqui.security.UserAuthcFactor", { factorId: sentCode.factorId }).thruDate))), "yyyy-MM-dd")
         const factorRow = one("moqui.security.UserAuthcFactor", { factorId: accountFactorId })
         const factorDates = [factorRow.fromDate, factorRow.thruDate].map((value) => ec.l10n.format(new Date(Number(String(value))), "yyyy-MM-dd"))
         const page = render("Settings/Account")
@@ -204,9 +210,9 @@ feature("Account changes the signed-in user only, whatever user the request name
         // A failure must not put even a disposable fixture secret into the test report.
         if (factor.factorOption) page.output = page.output.split(factor.factorOption).join("[redacted fixture secret]")
         return { saved, email, john: one("mantle.party.Person", { partyId: "EX_JOHN_DOE" }), joe: one("mantle.party.Person", { partyId: "ORG_ZIZI_JD" }),
-            account: one("moqui.security.UserAccount", { userId: "EX_JOHN_DOE" }), page, factorSecretAbsent, factorDates }
+            account: one("moqui.security.UserAccount", { userId: "EX_JOHN_DOE" }), page, factorSecretAbsent, factorDates, sentCodeDate }
     },
-    then({ saved, email, john, joe, account, page, factorSecretAbsent, factorDates }) {
+    then({ saved, email, john, joe, account, page, factorSecretAbsent, factorDates, sentCodeDate }) {
         saved.errors == ""
         john.firstName == "Johnny"
         joe.firstName == "Joe"
@@ -218,10 +224,14 @@ feature("Account changes the signed-in user only, whatever user the request name
         page.output.includes("Where you are signed in")
         factorSecretAbsent == true
         factorDates.every(date => /^\d{4}-\d{2}-\d{2}$/.test(date) && page.output.includes(date)) == true
+        !page.output.includes(sentCodeDate)
     },
     cleanup() {
         sys(() => {
-            if (accountFactorId) ec.entity.find("moqui.security.UserAuthcFactor").condition("factorId", accountFactorId).deleteAll()
+            if (accountFactorId) {
+                ec.entity.find("moqui.security.UserAuthcFactor").condition("fromFactorId", accountFactorId).deleteAll()
+                ec.entity.find("moqui.security.UserAuthcFactor").condition("factorId", accountFactorId).deleteAll()
+            }
             call("update#mantle.party.Person", { partyId: "EX_JOHN_DOE", firstName: "John" })
             if (accountNameBefore != null) call("org.moqui.impl.UserServices.update#UserAccount", { userId: "EX_JOHN_DOE", userFullName: accountNameBefore })
         })

@@ -185,7 +185,8 @@ along with this software (see the LICENSE.md file). If not, see
         <script><![CDATA[
             // the times as text: a time stamp copied into a map reaches the list as its millis
             const when = (value, format = 'yyyy-MM-dd HH:mm') => value == null || value === '' ? '' : ec.l10n.format(new Date(Number(String(value))), format)
-            userAuthcFactorList = Array.from(userAuthcFactorList ?? []).map((row) => ({...row,
+            // the second factors themselves: a code sent from one (fromFactorId) is a passing sign-in step, not a factor to manage
+            userAuthcFactorList = Array.from(userAuthcFactorList ?? []).filter((row) => !row.fromFactorId).map((row) => ({...row,
                 fromDateText: when(row.fromDate, 'yyyy-MM-dd'), thruDateText: when(row.thruDate, 'yyyy-MM-dd')}))
             // the apps and devices signed in by a key of their own: the desktop and mobile clients
             const devicesOut = ec.service.sync().name('org.moqui.impl.UserServices.get#UserDeviceKeys').call() || {}

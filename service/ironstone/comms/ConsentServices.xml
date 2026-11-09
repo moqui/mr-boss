@@ -171,7 +171,8 @@ along with this software (see the LICENSE.md file). If not, see
             const enc = (value) => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
             const chip = (label, color, tooltip) => '<q-chip dense square class="m-tonal ' + color + ' q-ml-none q-mr-xs">' + enc(label)
                     + (tooltip ? '<q-tooltip>' + enc(tooltip) + '</q-tooltip>' : '') + '</q-chip>'
-            const consentChips = (consents) => consents.map((consent) => chip(enumText(consent.purposeEnumId) + ': ' + statusText(consent.statusId),
+            const consentLabel = (consent) => enumText(consent.purposeEnumId) + ': ' + statusText(consent.statusId)
+            const consentChips = (consents) => consents.map((consent) => chip(consentLabel(consent),
                     consent.granted ? 'text-positive' : 'text-negative', [when(consent.consentDate), enumText(consent.sourceEnumId)].filter((part) => part).join(' · '))).join('')
             // the purposes that solicit through each kind of address
             const purposesOf = {CmtEmailAddress: ['PcpMarketingEmail'], CmtTelecomNumber: ['PcpSms', 'PcpPhone']}
@@ -184,6 +185,8 @@ along with this software (see the LICENSE.md file). If not, see
                     allowText: address.allowSolicitation === 'Y' ? L('Allows contact') : address.allowSolicitation === 'N' ? L('Does not allow contact') : L('Not asked'),
                     allowColor: address.allowSolicitation === 'Y' ? 'text-positive' : address.allowSolicitation === 'N' ? 'text-negative' : 'text-grey-7',
                     consentHtml: consentChips(Array.from(address.consentList || [])) || '<span class="m-muted">' + enc(L('No consent recorded')) + '</span>',
+                    // the same consents as plain text, for the terminal and the standard page
+                    consentText: Array.from(address.consentList || []).map(consentLabel).join(' · ') || L('No consent recorded'),
                     purposeEnumId: purposes[0] || null, purposeChoices: purposes.map((id) => ({key: id, text: enumText(id)}))}
             })
             partyConsentList = Array.from(state.consentList || []).filter((consent) => !consent.contactMechId).map((consent) => ({purposeEnumId: consent.purposeEnumId,
