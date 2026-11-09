@@ -311,6 +311,8 @@ along with this software (see the LICENSE.md file). If not, see
             const hoursText = (value) => value == null ? '' : ec.l10n.format(value, '#,##0.##')
             const entries = Array.from(row?.entryList || [])
             const ready = entries.filter((entry) => entry.ready)
+            const draftDays = ec.resource.script('component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js')
+                .invoiceCalendarDays(Array.from(row?.draftInvoiceList || []).map(inv => inv.invoiceId))
             draft = {workEffortId: workEffortId, projectName: project?.workEffortName || workEffortId, clientPartyId: row?.clientPartyId || null, clientName: row?.clientName || '',
                 canInvoice: !!row?.canInvoice, cannotReason: row ? (row.cannotReason || '') : L('Nothing to invoice'),
                 entryGrouping: groupings[settings.WstInvoiceGrouping] || 'entry', settlementTermId: defaults.settlementTermId || '',
@@ -327,7 +329,7 @@ along with this software (see the LICENSE.md file). If not, see
                         + (entry.comments ? ' — ' + entry.comments.substring(0, 60) : '')})),
                 selectedIds: ready.filter((entry) => !entry.missingRate).map((entry) => entry.timeEntryId),
                 draftOptions: Array.from(row?.draftInvoiceList || []).map((inv) => ({key: inv.invoiceId,
-                    text: inv.invoiceId + ' · ' + (inv.invoiceDate != null ? ec.l10n.format(new Date(inv.invoiceDate), 'MMM d, yyyy') + ' · ' : '') + money(inv.invoiceTotal)}))}
+                    text: inv.invoiceId + ' · ' + (draftDays[inv.invoiceId]?.invoiceDay || (inv.invoiceDate != null ? ec.l10n.format(new Date(inv.invoiceDate), 'MMM d, yyyy') : '')) + ' · ' + money(inv.invoiceTotal)}))}
         ]]></script></actions>
     </service>
 
@@ -474,6 +476,8 @@ along with this software (see the LICENSE.md file). If not, see
             try {
                 for (let i = 0; i < ids.length; i += 1000) for (const row of ec.entity.find('mantle.account.invoice.Invoice').condition('invoiceId', 'in', ids.slice(i, i + 1000)).list()) invoices.push(row)
             } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
+            const invoiceDays = ec.resource.script('component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js')
+                .invoiceCalendarDays(invoices.map(inv => inv.invoiceId))
             const nowMillis = Number(String(ec.user.nowTimestamp))
             const millis = (value) => value == null ? null : Number(String(value))
             const unpaidOf = (inv) => toDecimal(inv.unpaidTotal ?? inv.invoiceTotal ?? 0)
@@ -525,8 +529,10 @@ along with this software (see the LICENSE.md file). If not, see
                 if (clientPartyId && inv.toPartyId !== clientPartyId) continue
                 if (kind && entry.kind !== kind) continue
                 const invoiceMillis = millis(inv.invoiceDate)
-                if (from != null && (invoiceMillis == null || invoiceMillis < from)) continue
-                if (thru != null && (invoiceMillis == null || invoiceMillis >= thru)) continue
+                const bookDay = invoiceDays[inv.invoiceId]?.invoiceDay
+                const findMillis = bookDay ? millis(ec.l10n.parseTimestamp(bookDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')) : invoiceMillis
+                if (from != null && (findMillis == null || findMillis < from)) continue
+                if (thru != null && (findMillis == null || findMillis >= thru)) continue
                 for (const key of keys) counts[key]++
                 if (!keys.includes(list)) continue
                 const uom = inv.currencyUomId || 'USD'
@@ -534,8 +540,8 @@ along with this software (see the LICENSE.md file). If not, see
                 rowList.push({invoiceId: inv.invoiceId, url: '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(inv.invoiceId), kind: entry.kind,
                     kindText: L(kindLabels[entry.kind]), projectText: entry.projectIds.map(projectName).join(', '), projectIds: entry.projectIds,
                     fromName: nameOf(inv.fromPartyId), toName: nameOf(inv.toPartyId), invoiceDate: invoiceMillis,
-                    dateText: invoiceMillis == null ? '' : ec.l10n.format(new Date(invoiceMillis), 'MMM d, yyyy'),
-                    dueText: inv.dueDate == null ? '' : ec.l10n.format(inv.dueDate, 'MMM d, yyyy'), overdue: overdue,
+                    dateText: invoiceDays[inv.invoiceId]?.invoiceDay || (invoiceMillis == null ? '' : ec.l10n.format(new Date(invoiceMillis), 'MMM d, yyyy')),
+                    dueText: invoiceDays[inv.invoiceId]?.dueDay || (inv.dueDate == null ? '' : ec.l10n.format(inv.dueDate, 'MMM d, yyyy')), overdue: overdue,
                     totalText: ec.l10n.formatCurrency(toDecimal(inv.invoiceTotal ?? 0), uom), unpaidText: ['InvoiceCancelled'].includes(inv.statusId) ? '' : ec.l10n.formatCurrency(unpaidOf(inv), uom),
                     statusId: inv.statusId, statusLabel: overdue ? statusOf(inv.statusId) + ' · ' + L('Overdue') : statusOf(inv.statusId),
                     statusColor: overdue ? 'negative' : (colors[inv.statusId] || 'grey-8'), description: inv.description || ''})
@@ -580,6 +586,8 @@ along with this software (see the LICENSE.md file). If not, see
                 }
                 const statusOf = (id) => id ? (ec.entity.find('moqui.basic.StatusItem').condition('statusId', id).useCache(true).one()?.description || id) : ''
                 const enumOf = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description || id) : ''
+                const calendarDays = ec.resource.script('component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js')
+                    .invoiceCalendarDays([invoiceId])[invoiceId] || {}
                 const time = ec.service.sync().name('mantle.account.InvoiceServices.get#InvoiceTimeDetail').parameters({invoiceId: invoiceId}).call() || {}
                 const entries = Array.from(time.entryList || [])
                 // a client (impl-projects.md P10b) sees the time of a line only on a project that shares its hours with it, as the day,
@@ -667,8 +675,8 @@ along with this software (see the LICENSE.md file). If not, see
                 detail = {invoiceId: invoiceId, kind: access.kind, kindText: L({client: 'Client invoice', worker: 'Worker invoice', expense: 'Expense invoice'}[access.kind] || 'Invoice'),
                     statusId: status, statusLabel: statusOf(status), isDraft: isDraft, isClient: isClient, overdue: overdue,
                     fromPartyId: inv.fromPartyId, fromName: nameOf(inv.fromPartyId), toPartyId: inv.toPartyId, toName: nameOf(inv.toPartyId),
-                    invoiceDateText: day(inv.invoiceDate), invoiceDateValue: inv.invoiceDate == null ? '' : ec.l10n.format(inv.invoiceDate, 'yyyy-MM-dd'),
-                    dueDateText: day(inv.dueDate), termText: term ? (term.description || term.settlementTermId) : '', settlementTermId: inv.settlementTermId || '',
+                    invoiceDateText: calendarDays.invoiceDay || day(inv.invoiceDate), invoiceDateValue: calendarDays.invoiceDay || (inv.invoiceDate == null ? '' : ec.l10n.format(inv.invoiceDate, 'yyyy-MM-dd')),
+                    dueDateText: calendarDays.dueDay || day(inv.dueDate), termText: term ? (term.description || term.settlementTermId) : '', settlementTermId: inv.settlementTermId || '',
                     referenceNumber: inv.referenceNumber || '', description: inv.description || '', invoiceMessage: inv.invoiceMessage || '',
                     currencyUomId: uom, totalText: money(total), unpaidText: money(unpaid), paidText: money(total.subtract(unpaid)),
                     hoursText: hoursText(clientView ? shownEntries.reduce((sum, entry) => sum.add(entry.hours), toDecimal(0)) : (time.hours ?? toDecimal(0))),
@@ -1251,6 +1259,8 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('mantle.work.ProjectServices.get#ProjectMoneySummary').parameters({workEffortId: workEffortId}).call() || {}
             if (ec.message.hasError() || !out.summary) { ec.message.clearErrors(); return }
             const sm = out.summary
+            const invoiceDays = ec.resource.script('component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js')
+                .invoiceCalendarDays(Array.from(sm.invoiceList || []).concat(Array.from(sm.expenseList || [])).map(inv => inv.invoiceId))
             const uom = sm.currencyUomId || 'USD'
             const cash = (value, currency) => value == null ? '' : ec.l10n.formatCurrency(toDecimal(value), currency || uom)
             const hoursText = (value) => value == null ? '' : ec.l10n.format(toDecimal(value), '#,##0.##')
@@ -1281,7 +1291,7 @@ along with this software (see the LICENSE.md file). If not, see
                 dueText: day(share.dueDate), statusText: statusOf(share), statusColor: share.billed ? 'positive' : share.due ? 'warning' : share.awaiting ? 'info' : 'grey-7',
                 due: share.due, invoiceUrl: share.invoiceId ? '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(share.invoiceId) : null}))
             const invoiceRow = (inv) => ({invoiceId: inv.invoiceId, url: '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(inv.invoiceId),
-                partyName: inv.kind === 'client' ? inv.toName : inv.fromName, dateText: day(inv.invoiceDate), dueText: day(inv.dueDate), statusText: inv.statusText,
+                partyName: inv.kind === 'client' ? inv.toName : inv.fromName, dateText: invoiceDays[inv.invoiceId]?.invoiceDay || day(inv.invoiceDate), dueText: invoiceDays[inv.invoiceId]?.dueDay || day(inv.dueDate), statusText: inv.statusText,
                 statusId: inv.statusId, totalText: cash(inv.total, inv.currencyUomId), unpaidText: cash(inv.unpaid, inv.currencyUomId)})
             const lineRows = Array.from(sm.lineList || []).map((line) => ({orderId: line.orderId, orderItemSeqId: line.orderItemSeqId, description: line.description || line.orderId,
                 url: '/qapps/Projects/Billing/OrderDetail?orderId=' + encodeURIComponent(line.orderId), statusText: line.orderStatusText, totalText: cash(line.total, line.currencyUomId),
@@ -1572,8 +1582,9 @@ along with this software (see the LICENSE.md file). If not, see
                         : share.milestoneStatusText, statusColor: share.billed ? 'positive' : share.due ? 'warning' : share.awaiting ? 'info' : 'grey-7',
                     invoiceUrl: share.invoiceId ? '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(share.invoiceId) : null}))
                 const invoiceIds = Array.from(new Set(Array.from(ec.entity.find('mantle.order.OrderItemBilling').condition('orderId', orderId).list()).map((row) => row.invoiceId).filter((id) => id)))
+                const invoiceDays = ec.resource.script('component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js').invoiceCalendarDays(invoiceIds)
                 const invoiceRows = invoiceIds.length ? Array.from(ec.entity.find('mantle.account.invoice.Invoice').condition('invoiceId', 'in', invoiceIds).orderBy('-invoiceDate').list()).map((inv) => ({
-                    invoiceId: inv.invoiceId, url: '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(inv.invoiceId), dateText: day(inv.invoiceDate),
+                    invoiceId: inv.invoiceId, url: '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(inv.invoiceId), dateText: invoiceDays[inv.invoiceId]?.invoiceDay || day(inv.invoiceDate),
                     statusText: statusText(inv.statusId), totalText: cash(inv.invoiceTotal ?? 0)})) : []
                 const projectRows = access.projectIds.map((id) => ({workEffortId: id, name: projectNames[id], url: '/qapps/Projects/Projects/ProjectDetail/Money?workEffortId=' + encodeURIComponent(id)}))
                 const single = access.projectIds.length === 1 ? access.projectIds[0] : null

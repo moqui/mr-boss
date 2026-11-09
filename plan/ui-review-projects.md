@@ -1127,3 +1127,15 @@ Focused owner11/11, BOSS18/18 and compatibility28/28 checks passed. Actual termi
 PROJECT_CLOSED, WorkItems shows neither quick-add nor New work item, Settings explains read-only state, and Re-open
 restores Edit with priority5 unchanged. An unrelated empty project was deleted through its normal confirmation and
 its direct URL became unavailable. Full suites remain pending at the user-directed final phase.
+
+
+**Batch 11 — invoice calendar days.** Mantle `06141ca9` exposes batched stored accounting DATE values for
+already authorized invoice IDs. BOSS uses them for project invoice labels, print/detail and date finds, without
+rewriting numeric timestamp output, history, generic finance projections or the existing overdue policy. A single
+due-schedule date supplies the due day; multiple/no-schedule legacy records retain their old fallback. Coordinator,
+planning and time/billing reviews cleared the helper and final filter. The new bounded service regression failed
+before, then passed in Berlin and Chicago, including a Nov9→10 find and missing/multiple/legacy helper controls;
+combined Billing checks7/7 passed. Actual browser and current downloaded one-page PDF show Nov9 and Dec9 for
+invoice100102, with187.50 total and no employee pay. PDF rendering was visually inspected, with no clipping. The
+older immutable issued artifact was preserved. Fresh milestone100153 captured Invoice-100153.pdf locally; its
+no-schedule due fallback still includes time and is not claimed as canonical single-schedule coverage. Full gates pending.
