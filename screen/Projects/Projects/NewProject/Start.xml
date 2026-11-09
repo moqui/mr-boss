@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
                     templateWorkEffortId:templateWorkEffortId, description:description}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(createOut.message, 'success'); workEffortId = createOut.projectId</script></if>
         </actions>
-        <conditional-response url="//Projects/Projects/ProjectDetail" condition="createNow == 'Y' &amp;&amp; !ec.message.hasError()"><parameter name="workEffortId"/></conditional-response>
+        <conditional-response url="//Projects/Projects/ProjectDetail"><condition><expression>createNow == 'Y' &amp;&amp; !ec.message.hasError()</expression></condition><parameter name="workEffortId"/></conditional-response>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."/>
     </transition>

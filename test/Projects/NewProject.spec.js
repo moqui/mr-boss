@@ -106,6 +106,7 @@ feature("Start makes the project in planning, the user its project manager, Gene
         made.isTemplate != "Y"
         managers == ["EX_JOHN_DOE"]
         String(blank.redirect).includes("workEffortId=BTBNS")
+        String(blank.redirect).includes("NewProject/Start")
         fromTemplate.errors == ""
         bake.visibilityEnumId == "WevWorkGroup"
         bake.purposeEnumId == "WepPrClient"

@@ -224,7 +224,7 @@ along with this software (see the LICENSE.md file). If not, see
             the numbers warn (hoursOver for the hours alone), the count of sub-projects, the last change. With sumSubProjects a program's items and hours sum
             those of its sub-projects in the list.</description>
         <in-parameters>
-            <parameter name="projectList" type="List" required="true"/>
+            <parameter name="projectList" type="List"/>
             <parameter name="withMoney" type="Boolean" default="false"/>
             <parameter name="sumSubProjects" type="Boolean" default="false"/>
         </in-parameters>

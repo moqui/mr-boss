@@ -18,10 +18,12 @@ the [document convention](design-doc-guide.md#ui-review-and-refinement-phase). K
 findings, decisions and bounded execution notes here throughout the review. Research records references, design
 specifies behavior, implementation records construction, and this file records review and refinement.
 
-**Execution: planning only.** The inventory and activity plan come from source inspection. All live screen and
-activity coverage starts **pending**. No browser walk, application correction, test run, commit or deployment is
-recorded by this task. Earlier Projects implementation results and the Commons pass do not establish this pass's
-coverage or transfer its execution permissions.
+**Execution authorized, 2026-11-09.** The user requested the complete review with three delegated workers,
+independent review of corrections, and a local commit after each completed batch; the user will push at the end.
+Run focused checks during the batches and defer `test-apps` and any applicable `test-framework` gate until the end
+of the entire review. The eleven existing Projects acceptance specs in §5 are explicitly authorized. Live coverage
+starts **pending** and changes only with observed evidence; earlier implementation and Commons results do not
+establish this pass's coverage. The planning-only records below remain historical.
 
 ### Inputs and reference patterns
 
@@ -734,11 +736,11 @@ walk for Projects and place additional complete journeys, phone/access walks and
   `./moq test mr-boss --spec WorkItemDetail --nobuild` or
   `./moq test mr-mantle --spec WorkProjectItems --nobuild`, with a suitable existing binary. Client specs run through
   Moqui, not Node; use `./moq test-client <component> --serve --spec <name>` for an existing served check.
-- Follow the current supplied AGENTS instructions before each authorized commit: `./moq test-apps` for application
-  changes; `./moq test-framework` for framework changes. A shared widget/renderer/Git framework correction is framework
-  work even when discovered here. Do not run framework specs, `cargo test` or `test-all` merely for application work.
-  The prior pass's end-of-pass full-suite exception is historical; this plan does not silently adopt it over the
-  current before-commit instruction. Record any user-directed cadence change before executing the pass.
+- **User-directed cadence for this execution:** run focused tests and lint during each batch, then commit after
+  independent review. Defer `./moq test-apps` until the end of this entire review, and run `./moq test-framework`
+  there only if framework sources changed. This explicit instruction supersedes the default before-each-commit
+  full-suite gate for this pass. A shared widget/renderer/Git correction is framework work even when found here;
+  do not run framework specs, `cargo test` or `test-all` merely for application work.
 - **Run acceptance only when requested or when adding/changing an acceptance test.** In the latter case run that
   test and its component's acceptance suite once written. For an authorized existing scenario the form is
   `./moq accept mr-boss --spec SprintWalk`. A plan entry, shared-code change or completion checkpoint is not permission
@@ -777,8 +779,8 @@ Source research for this plan does not advance live coverage to inspected or exe
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
-| PR-01 — Workday navigation | pending | All roles, routes and variants unverified | — |
-| PR-02 — Create/clone/template | pending | Wizard, refusal and modes unverified | — |
+| PR-01 — Workday navigation | exercised | partial: manager browser Home and fresh remote terminal Home observed; role/navigation/theme/geometry variants remain | pr01-home-light-before.jpg; Batch 1 |
+| PR-02 — Create/clone/template | exercised | partial: quick creation, duplicate-key recovery, persisted wizard draft and all five browser steps observed; clone/template and remaining modes pending | pr02-wizard-review-after.jpg; PR-UI-002; Batch 1 |
 | PR-03 — Health/team/lifecycle | pending | Membership, status and output unverified | — |
 | PR-04 — Docs/files/conversation | pending | Saved content, resources, recovery and modes unverified | — |
 | PR-05 — Work views/find | pending | View/return/selection and move variants unverified | — |
@@ -800,7 +802,7 @@ Source research for this plan does not advance live coverage to inspected or exe
 | PR-21 — Invoice work | pending | Eligible sources, duplication, output and send unverified | — |
 | PR-22 — Reports | pending | All report/output/drill-through and role variants unverified | — |
 | PR-23 — Settings | pending | Saved effect, restoration and refusals unverified | — |
-| PR-24 — Restricted client | pending | Shared reads/actions/files and isolation unverified | — |
+| PR-24 — Restricted client | exercised | partial: request attachment audience reproduced and corrected; broader client activities and isolation walk remain | PR-UI-001; Batch 1 |
 | PR-25 — Access/integration | pending | Cross-route/mount and remaining-mode matrix unverified | — |
 
 ### Findings register
@@ -812,7 +814,9 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | No findings observed in this planning task | — | — | — | — |
+| PR-UI-001 / observed / P1 | PR-11, 24–25: request files | Projects/Requests/RequestDetail, Files; staff and ACME client; light 1920×1080 | Client saw a staff attachment explicitly labelled Internal and downloaded its exact bytes | pr-ui-001-client-internal-before.jpg; paired route regression | BOSS shared files | Filter explicit outward content types before count/paging and direct resource lookup; leave internal, unclassified and case-summary files private; omit drive capabilities at service boundary | Client now sees only outward control file (pr-ui-001-client-after.jpg); staff and cross-client/refusal checks pass; broader PR-24 remains partial |
+| PR-UI-002 / observed / P1 | PR-02: Start → Next | NewProject/Start; manager; light 1920×1080 | With Create now unchecked, Next created the draft then skipped the remaining wizard steps | browser activity; batch01-before.log | BOSS Projects | Replace ignored, schema-invalid conditional-response attribute with its condition/expression child | Focused regression passes; resumed saved draft progressed through Team, Modules, Money and Review and opened the same project |
+| PR-UI-003 / observed / P2 | PR-01: empty workday | Home; no-project fixture; server route | Empty project list failed required-list validation and falsely added projects to failedParts | batch01-before.log | BOSS Projects | Accept an empty list in the internal project-row decorator | ProjectsHome verifies the first-run state with no failed parts; 3/3 Home features pass |
 
 ### Static leads
 
@@ -861,6 +865,47 @@ For each later batch append:
   integration/retest, outstanding variants and any explicitly authorized commits.
 - Cleanup/restoration, stopped listeners, removed temporary credentials and intentionally retained disposable data.
 
+**Batch 1 — execution baseline and priority corrections (2026-11-09).** Coordinator owns the runtime and this
+record; three workers own planning/requests, code/settings and time/resources/billing/access. The user explicitly
+authorized focused checks between reviewed local commits, full gates only at the end, and all eleven existing
+Projects acceptance specs. Child agents checked CUA availability: each reported no browser surfaces, so the
+coordinator owns live browser evidence; workers use isolated component fixtures, server scenarios and the actual
+remote terminal client. File upload/download tools wait for user approval: those waits are not product timing evidence.
+
+- Started from framework `33eac9d7`, BOSS `d375f61a`, Mantle `c7ba7015`; reused `target/release/moqui` maximal
+  (Git, SSH, mail, PDF/print, TUI, client testing). The ignored `environment.json` records the exact revisions,
+  binary identity and paths. The isolated bootstrap links tracked base/dev components individually and only
+  `mr-mantle` and `mr-boss` addons; configuration is copied, mail captured, and all database/resources are disposable.
+- Bootstrap: `MOQUI_RUNTIME="$PROJECTS_REVIEW_BOOTSTRAP" MOQUI_CONF=conf/MoquiLoadTestConf.xml instance_purpose=dev
+  mail_capture_sends=true target/release/moqui test mr-boss --spec ProjectsHome --db fresh --keep
+  --serve 127.0.0.1:8090`. Embedded Postgres required unsandboxed shared-memory access. The initial runtime was
+  `/private/tmp/mt-20666-2bf86c88`; after stopping both client and server, the whole kept runtime moved to
+  `/private/tmp/boss-projects-review-runtime`, outside the runner-owned namespace. Restarted with `--db existing`,
+  explicit `--spec ProjectsHome --feature "a manager's Home"` and the same isolated configuration.
+- Browser identities use separate hostnames (`projects-manager.localhost`, `projects-client.localhost`); measured
+  DOM viewport 1920×1080, DPR 2; browser capture is JPEG 1905×1072 (recorded separately, not claimed as 1920×1080).
+  Manager Home, QuickProject duplicate-key refusal with retained input and successful
+  RVQUICK creation, RVWIZ draft creation/resumption and Team → Modules → Money → Review → detail were observed.
+  Negative hours retained both entered budgets on refusal, then corrected values persisted (5 h, USD 500); Docs,
+  Time and Money module choices and database documentation space RVWIZ appeared in Review. Clone/template, narrow,
+  dark and keyboard variants remain open. Fresh remote TUI login and Home were exercised at 180×50; this is not yet
+  the embedded-terminal light/dark check.
+- Uploaded synthetic internal/outward attachments on `BOSS_DEMO_PREQ_ACME1`; Sheldon saw and downloaded the internal
+  bytes before correction. After restart, the client lists exactly the outward file with its human-readable type;
+  internal bytes are refused by the focused direct-download regression. Explicit outward types include standard
+  request files, Customer Shared and Published RFQ. Unclassified and Case Summary files stay private; staff access
+  is preserved. No routes, record keys or service parameter contracts changed.
+- Focused before/after: `ProjectsHome,NewProject` reproduced two failures, then **8/8 passed**;
+  `ProjectsAccess,RecordFiles` reproduced client audience leakage, then **20/20 passed**, including exact bytes,
+  staff visibility, cross-client refusal, direct service projections and the Commons shared-files consumer.
+  Commands use `target/release/moqui test mr-boss --spec <names> --db snapshot` with the isolated bootstrap;
+  JUnit/logs and named screenshots are under ignored `plans/ui-refinement-evidence/boss-projects/`.
+- Independent source review by the code/settings worker found a raw enum-label regression; corrected before commit
+  and covered by the client type-label assertion. Screen lint scanned 1,276 definitions with **0 parse failures**;
+  its 87 existing idiom/hazard sites are recorded in `lint-screens-current.txt`, not cleaned as unrelated work.
+  Full `test-apps` and applicable `test-framework` remain pending
+  until the end. The isolated runtime is intentionally retained for subsequent activities, with no production writes.
+
 ### Completion
 
 Mark an activity passed only with observed completion and relevant recovery outcomes. A blocked/deferred disposition
@@ -876,8 +921,8 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
 
 ## 7. Decisions
 
-- **Planning boundary:** this task prepares and reviews the plan only. Execution, product corrections, commits and acceptance
-  runs are not inferred from this file or from the previous review's permissions.
+- **Execution boundary:** the user authorized all 25 activities, corrections, three workers, reviewed local batch
+  commits and the eleven existing Projects acceptance specs. No push or deployment is authorized by this pass.
 - **Scope:** review current BOSS Projects, including Code, restricted clients and public request intake. No PASS Client
   migration, absent-feature implementation or full adjacent-app/desktop review.
 - **Inventory authority:** current mounts and templates determine scope. Historical design and “Later” notes are
@@ -891,8 +936,9 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
   terminal operations and limitations are inspected separately. Record actual viewport and zoom capability.
 - **Shared causes:** fix in the owning BOSS/Mantle/framework layer and retest a representative consumer; particularly
   preserve Manufacturing's use of the Projects timeline.
-- **Verification:** obey current before-commit gates and acceptance-run rules in §5. No inherited per-pass gate
-  exception, budget increase, duplicate sweep or new screenshot suite.
+- **Verification:** focused checks before batch commits; full application and applicable framework gates at the
+  end, as explicitly directed by the user. Preserve acceptance-run rules, budgets and the ban on duplicate sweeps
+  and screenshot suites. If an acceptance spec changes, run it immediately and its component's suite at the end.
 - **Fixtures:** isolated Mantle+BOSS runtime, local mail/Git and disposable records; no PASS dependency for existing
   client/token routes. Prepare only missing narrow roles; credentials and tokens never enter the record.
 - **Browser automation gap:** Projects has server scenario coverage but no browser walk or dedicated client fixture.
@@ -906,5 +952,5 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
 - **Fixture bootstrap and optional dependencies:** choose the existing suitable binary, isolated demo bootstrap and
   narrowly missing fixture roles; verify local Git/SMTP/PDF/SSH before their waves. Preferred course: reuse demo data
   and local resources; name a new fixture's suite only if existing setup cannot support a required activity.
-- **Execution/check cadence:** apply the current AGENTS before-commit gates by default. If the user directs a bounded
-  multi-wave pass with a different full-suite boundary, record that decision here before adopting it.
+- **Execution/check cadence (resolved):** the user explicitly directed local/focused checks during batches and
+  `test-apps` / applicable `test-framework` only at the end. Keep pending full-suite verification visible in batch notes.

@@ -122,6 +122,14 @@ spec({
             const attachment = ec.service.sync().name("create#mantle.party.communication.CommunicationEventContent").parameters({
                 communicationEventId: made.notes[0], contentLocation: "dbresource://test/ZQX-INTERNAL-NOTE.pdf", contentDate: ec.user.nowTimestamp }).call()
             made.attachmentId = attachment.communicationEventContentId
+            // Public and internal files on the same visible request: record visibility is not file audience.
+            for (const [suffix, contentTypeEnumId] of [["PUBLIC", "RqCntUserDefined"], ["INTERNAL", "RqCntInternal"], ["UNTYPED", null]]) {
+                const requestContentId = "BOSS_TEST_CLIENT_FILE_" + suffix
+                const contentLocation = "dbresource://test/projects-client-file-" + suffix + ".txt"
+                ec.resource.getLocationReference(contentLocation).putText("ZQX-REQUEST-FILE-" + suffix)
+                call("create#mantle.request.RequestContent", { requestContentId, requestId: "BOSS_DEMO_PREQ_ACME1", contentTypeEnumId,
+                    contentLocation, userId: JOHN_ID })
+            }
             // a client rate and a client budget on ACME, with amounts found nowhere else
             ec.service.sync().name("create#mantle.humanres.rate.RateAmount").parameters({ rateAmountId: "BOSS_TEST_CLI_RATE", rateTypeEnumId: "RatpStandard",
                 ratePurposeEnumId: "RaprClient", timePeriodUomId: "TF_hr", workEffortId: "ACME", partyId: "ORG_ZIZI_JD", fromDate: "2020-01-01 00:00:00",
@@ -186,6 +194,10 @@ spec({
                 ec.entity.find("mantle.party.communication.CommunicationEvent").condition("communicationEventId", id).deleteAll()
             }
             ec.entity.find("mantle.humanres.rate.RateAmount").condition("rateAmountId", "BOSS_TEST_CLI_RATE").deleteAll()
+            for (const suffix of ["PUBLIC", "INTERNAL", "UNTYPED"]) {
+                ec.entity.find("mantle.request.RequestContent").condition("requestContentId", "BOSS_TEST_CLIENT_FILE_" + suffix).deleteAll()
+                ec.resource.getLocationReference("dbresource://test/projects-client-file-" + suffix + ".txt").delete()
+            }
             const acme = ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", "ACME").one()
             acme.totalClientCostAllowed = made.acmeBudget ?? null
             acme.update()
@@ -706,6 +718,49 @@ feature("a client reads no record of another client nor an internal one: by its 
         !json.includes("Frozen banana")
         Object.entries(groups).filter(([text, found]) => found > 0).map(([text]) => text) == []
         leaksOf(pickers, ACME_SECRETS.concat(["Bluth Corp", "Gob Bluth"])) == []
+    },
+})
+
+feature("a client's request files exclude internal and unclassified content from lists and direct downloads", {
+    when() {
+        const parameters = { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_PREQ_ACME1" }
+        const download = suffix => hit("Projects/RecordFiles/download", Object.assign({}, parameters,
+            { contentKey: JSON.stringify({ requestContentId: "BOSS_TEST_CLIENT_FILE_" + suffix }) }))
+        const client = as(SHELDON, () => ({ list: hit("Projects/RecordFiles/filesData", parameters),
+            publicFile: download("PUBLIC"), internalFile: download("INTERNAL"), untypedFile: download("UNTYPED") }))
+        const staff = as("john.doe", () => ({ list: hit("Projects/RecordFiles/filesData", parameters),
+            internalFile: download("INTERNAL"), untypedFile: download("UNTYPED") }))
+        const other = as(GOB, () => ({ list: hit("Projects/RecordFiles/filesData", parameters), publicFile: download("PUBLIC") }))
+        const direct = asOff(SHELDON, () => service("ironstone.shared.RecordFilesServices.get#RecordFiles",
+            { recordEntityName: "mantle.request.Request", recordId: parameters.recordId }))
+        const drive = asOff(SHELDON, () => service("ironstone.shared.RecordFilesServices.check#RecordDrivePath",
+            { recordEntityName: "mantle.request.Request", recordId: parameters.recordId,
+                drivePath: "request/" + parameters.recordId + "/private.txt" }))
+        return { client, staff, other, direct, drive }
+    },
+    then({ client, staff, other, direct, drive }) {
+        client.list.json.visible
+        client.list.json.fileList.length == 1
+        client.list.json.fileCount == 1
+        client.list.json.fileList[0].contentTypeEnumId == "RqCntUserDefined"
+        client.list.json.fileList[0].typeLabel == "User Defined"
+        client.publicFile.output == "ZQX-REQUEST-FILE-PUBLIC"
+        !client.internalFile.output.includes("ZQX-REQUEST-FILE-INTERNAL")
+        refusedHit(client.internalFile)
+        !client.untypedFile.output.includes("ZQX-REQUEST-FILE-UNTYPED")
+        refusedHit(client.untypedFile)
+        drive._errors.includes("not available")
+        staff.list.json.fileList.length == 3
+        staff.internalFile.output == "ZQX-REQUEST-FILE-INTERNAL"
+        staff.untypedFile.output == "ZQX-REQUEST-FILE-UNTYPED"
+        !other.list.json.visible
+        refusedHit(other.publicFile)
+        direct.fileList.length == 1
+        direct.fileCount == 1
+        direct.typeOptions.length == 0
+        direct.extraList.length == 0
+        direct.recordsDriveId == null
+        !direct.fileList[0].canRemove
     },
 })
 

@@ -89,6 +89,7 @@ feature("a user on no project sees the first-run card", {
     },
     then({ home, page }) {
         home.firstRun == true
+        home.failedParts.length == 0
         home.counts.myOpen == 0
         page.status == 200
         !page.broken
