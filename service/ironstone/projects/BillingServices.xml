@@ -790,7 +790,7 @@ along with this software (see the LICENSE.md file). If not, see
                         lastUpdatedStamp:access.invoice.lastUpdatedStamp, emailTemplateId:'BOSS_PROJECT_INVOICE',
                         operationKey:'project-invoice-' + ec.user.singleUseCodeHash(JSON.stringify(request)).replace(/[^A-Za-z0-9]/g, '').slice(0, 24),
                         toAddresses:toAddresses, note:note, attachmentContentIdList:attachmentContentIdList ?? [],
-                        attachmentVersions:attachmentVersions ?? {},
+                        attachmentVersions:attachmentVersions ?? {}, projectBilling:true,
                         printLocation:'component://mr-boss/screen/Projects/Billing/InvoicePrint.xml'}"/>
             <set field="recipients" from="Array.from(sent.recipientResults ?? [])"/>
             <set field="emailMessageId" from="recipients.find((row) => row.emailMessageId)?.emailMessageId ?? null"/>

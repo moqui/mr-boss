@@ -234,3 +234,185 @@ feature("the billing settings saved and shown again", {
         grouping == "all"
     },
 })
+
+feature("a narrow project billing editor sends only a linked visible invoice without general invoice read authority", {
+    when() {
+        ec.resource.xslFoTransform("<html><body>Project delivery</body></html>", null, null, "application/pdf")
+        const capture = ec.factory.getTool("MailCapture")
+        const username = "billing.delivery.manager"
+        const partyId = "BIL_DELIVERY_PM"
+        const projectId = "BILDEL"
+        const hiddenProjectId = "BILHID"
+        const invoiceIds = []
+        const templateServer = one("moqui.basic.email.EmailTemplate", {emailTemplateId: "BOSS_PROJECT_INVOICE"}).emailServerId
+        sys(() => {
+            call("create#moqui.basic.email.EmailServer", {
+                emailServerId: "BIL_DELIVERY_SMTP",
+                smtpHost: "127.0.0.1",
+                smtpPort: "9",
+                smtpStartTls: "N",
+                smtpSsl: "N"
+            })
+            call("update#moqui.basic.email.EmailTemplate", {
+                emailTemplateId: "BOSS_PROJECT_INVOICE",
+                emailServerId: "BIL_DELIVERY_SMTP"
+            })
+            call("create#mantle.party.Party", {partyId, partyTypeEnumId: "PtyPerson", ownerPartyId: "ORG_ZIZI_SERVICES"})
+            call("create#mantle.party.Person", {partyId, firstName: "Billing", lastName: "Delivery manager"})
+            call("create#mantle.party.PartyRelationship", {
+                partyRelationshipId: partyId,
+                relationshipTypeEnumId: "PrtAgent",
+                fromPartyId: partyId,
+                toPartyId: "ORG_ZIZI_SERVICES",
+                fromDate: 0
+            })
+            call("create#moqui.security.UserAccount", {
+                userId: partyId,
+                username,
+                partyId,
+                currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                passwordHashType: "SHA"
+            })
+            for (const userGroupId of ["BOSS_USERS", "BOSS_PROJECT_MANAGER"])
+                call("create#moqui.security.UserGroupMember", {userId: partyId, userGroupId, fromDate: 0})
+            for (const [workEffortId, visible] of [
+                [projectId, true],
+                [hiddenProjectId, false]
+            ]) {
+                call("mantle.work.ProjectServices.create#Project", {
+                    workEffortId,
+                    workEffortName: "Delivery scope " + workEffortId,
+                    visibilityEnumId: "WevWorkGroup"
+                })
+                call("update#mantle.work.effort.WorkEffort", {workEffortId, ownerPartyId: "ORG_ZIZI_SERVICES"})
+                for (const [memberId, roleTypeId] of [
+                    ["ORG_ZIZI_SERVICES", "Vendor"],
+                    ["ORG_ACME", "Customer"]
+                ].concat(visible ? [[partyId, "ProjectManager"]] : []))
+                    call("create#mantle.work.effort.WorkEffortParty", {
+                        workEffortId,
+                        partyId: memberId,
+                        roleTypeId,
+                        fromDate: 0,
+                        statusId: "WeptAssigned"
+                    })
+                const invoiceId = call("create#mantle.account.invoice.Invoice", {
+                    invoiceTypeEnumId: "InvoiceSales",
+                    statusId: "InvoiceFinalized",
+                    fromPartyId: "ORG_ZIZI_SERVICES",
+                    toPartyId: "ORG_ACME",
+                    currencyUomId: "USD",
+                    invoiceDate: ec.user.nowTimestamp
+                }).invoiceId
+                invoiceIds.push(invoiceId)
+                call("create#mantle.account.invoice.InvoiceItem", {
+                    invoiceId,
+                    itemTypeEnumId: "ItemTimeEntry",
+                    description: "Project delivery control",
+                    quantity: 1,
+                    amount: 25
+                })
+                call("create#mantle.work.effort.WorkEffortInvoice", {workEffortId, invoiceId})
+            }
+        })
+        const invoiceId = invoiceIds[0]
+        const hiddenInvoiceId = invoiceIds[1]
+        const nativeOutput = "mantle.account.InvoiceServices.get#InvoiceOutput"
+        const send = "ironstone.projects.BillingServices.send#Invoice"
+        const request = {invoiceId, toAddresses: "project.delivery@example.invalid", note: "Local project delivery control"}
+        capture.enable()
+        capture.clear()
+        try {
+            // Direct service calls have no Projects screen parent; disable only artifact authz, never the domain guards.
+            const denied = as(username, () =>
+                sys(() => ({
+                    genericRead: errorOf(nativeOutput, {invoiceId}),
+                    hiddenOutput: errorOf(nativeOutput, {invoiceId: hiddenInvoiceId, projectBilling: true}),
+                    hiddenSend: errorOf(send, Object.assign({}, request, {invoiceId: hiddenInvoiceId})),
+                    customTemplate: errorOf(nativeOutput, {
+                        invoiceId,
+                        projectBilling: true,
+                        templateLocation: "component://mr-mantle/template/account/InvoiceEmail.html.fancy"
+                    }),
+                    customScreen: errorOf("mantle.account.InvoiceServices.send#Invoice", {
+                        invoiceId,
+                        projectBilling: true,
+                        lastUpdatedStamp: one("mantle.account.invoice.Invoice", {invoiceId}).lastUpdatedStamp,
+                        operationKey: "project-untrusted-screen",
+                        toAddresses: request.toAddresses,
+                        printLocation: "component://mr-boss/screen/Projects/Projects/StatusReport.xml"
+                    })
+                }))
+            )
+            const memberSend = as("joe.developer", () => sys(() => errorOf(send, request)))
+            const clientSend = as("sheldon.acme", () => sys(() => errorOf(send, request)))
+            const beforeSend = one("mantle.account.invoice.Invoice", {invoiceId}).statusId
+            const sendError = as(username, () => sys(() => errorOf(send, request)))
+            const issued = sys(() =>
+                Array.from(
+                    ec.entity
+                        .find("mantle.account.invoice.InvoiceContent")
+                        .condition("invoiceId", invoiceId)
+                        .condition("isImmutable", "Y")
+                        .list()
+                )
+            )
+            return {
+                denied,
+                memberSend,
+                clientSend,
+                beforeSend,
+                sendError,
+                message: capture.last(),
+                mailCount: capture.count(),
+                invoiceId,
+                afterSend: one("mantle.account.invoice.Invoice", {invoiceId}).statusId,
+                hiddenState: one("mantle.account.invoice.Invoice", {invoiceId: hiddenInvoiceId}).statusId,
+                issuedCount: issued.length,
+                pdfSize: issued.length ? sys(() => ec.resource.getLocationReference(issued[0].contentLocation).getSize()) : 0
+            }
+        } finally {
+            capture.reset()
+            sys(() => {
+                call("update#moqui.basic.email.EmailTemplate", {
+                    emailTemplateId: "BOSS_PROJECT_INVOICE",
+                    emailServerId: templateServer
+                })
+                for (const invoiceId of invoiceIds)
+                    call("update#mantle.account.invoice.Invoice", {invoiceId, statusId: "InvoiceCancelled"})
+                for (const workEffortId of [projectId, hiddenProjectId])
+                    call("update#mantle.work.effort.WorkEffort", {workEffortId, statusId: "WeCancelled"})
+            })
+        }
+    },
+    then({
+        denied,
+        memberSend,
+        clientSend,
+        beforeSend,
+        sendError,
+        message,
+        mailCount,
+        invoiceId,
+        afterSend,
+        hiddenState,
+        issuedCount,
+        pdfSize
+    }) {
+        denied.genericRead.includes("PERMISSION_DENIED")
+        denied.hiddenOutput.includes("PERMISSION_DENIED")
+        denied.hiddenSend.includes("not available")
+        denied.customTemplate.includes("PROJECT_INVOICE_PRINT_INVALID")
+        denied.customScreen.includes("PROJECT_INVOICE_PRINT_INVALID")
+        memberSend.includes("not available")
+        clientSend.includes("not available")
+        beforeSend == "InvoiceFinalized"
+        sendError == ""
+        afterSend == "InvoiceSent"
+        hiddenState == "InvoiceFinalized"
+        mailCount == 1
+        message.toList.join() == "project.delivery@example.invalid"
+        message.attachmentNames.join() == "Invoice-" + invoiceId + ".pdf"
+        issuedCount == 1 && pdfSize > 100
+    }
+})

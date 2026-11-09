@@ -780,30 +780,30 @@ Source research for this plan does not advance live coverage to inspected or exe
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
 | PR-01 — Workday navigation | exercised | partial: manager browser Home and fresh remote terminal Home observed; role/navigation/theme/geometry variants remain | pr01-home-light-before.jpg; Batch 1 |
-| PR-02 — Create/clone/template | exercised | partial: quick creation, duplicate-key recovery, persisted wizard draft and all five browser steps observed; clone/template and remaining modes pending | pr02-wizard-review-after.jpg; PR-UI-002; Batch 1 |
-| PR-03 — Health/team/lifecycle | pending | Membership, status and output unverified | — |
-| PR-04 — Docs/files/conversation | pending | Saved content, resources, recovery and modes unverified | — |
-| PR-05 — Work views/find | pending | View/return/selection and move variants unverified | — |
-| PR-06 — Work item delivery | pending | Workflow, recurrence and shared context unverified | — |
-| PR-07 — Sprint | pending | Planning, completion, capacity and modes unverified | — |
-| PR-08 — Schedule/calendar | pending | Date/dependency changes and modes unverified | — |
-| PR-09 — Milestone/release | pending | Gate/publication/tag/billing/client continuations unverified | — |
-| PR-10 — Work import | pending | Mapping/result/repeat/recovery unverified | — |
-| PR-11 — Request triage | pending | Conversion/response/audience/return unverified | — |
-| PR-12 — Public/email intake | pending | Token, file, local delivery and recovery unverified | — |
-| PR-13 — Repository | pending | Local Git prerequisites, resources and controls unverified | — |
-| PR-14 — Review/merge | pending | Actual revision/review/merge and modes unverified | — |
-| PR-15 — Git access/controls | pending | Credentials, local transport and revoke unverified | — |
+| PR-02 — Create/clone/template | exercised | partial: browser quick/duplicate recovery and all wizard steps persisted; terminal clone PRPLAN02, template PRPLAN03→PRPLAN04 and child context persisted; phone wizard deferred with constrained variants | pr02-wizard-review-after.jpg; planning-tui-results.json; PR-UI-002 |
+| PR-03 — Health/team/lifecycle | exercised | partial: description/health, member add/end, separate-member revocation, Hold/Resume/Complete/Close persisted; closed task remained editable, correction under review; empty deletion/output continuations remain | planning-tui-results.json; planning-tui-debug-retest.txt; PR-UI-013–014 |
+| PR-04 — Docs/files/conversation | exercised | partial: database page save/version02/history/review and real Git Docs dd1d88b99b save/history/publication persisted; actual download bytes verified; second-recipient notification/pending-save recovery variants unverified | pr04-db-docs-history.jpg; pr04-git-docs-history.jpg; planning-tui-results.json; code-tui-retest.json |
+| PR-05 — Work views/find | exercised | partial: project/text find retained List/Board/Calendar/Tree/detail/Back in terminal; browser view and hierarchy agreement, imported rollups and corrected smart counts verified; saved-find/columns/bulk/drag variants remain | planning-tui-results.json; pr05-project-counters-after.jpg; PR-UI-019 |
+| PR-06 — Work item delivery | exercised | partial: browser assignment/follow/note/due/Begin/Complete generated next monthly item RVQUICK-3; terminal daily recurrence/stop/child/watch persisted; clone/move/conversion and boundary variants remain | pr06-recurring-complete.jpg; planning-tui-results.json |
+| PR-07 — Sprint | exercised | partial: terminal invalid-date retention/create/move/start/complete/carryover persisted; reports and measured light/dark labels checked; capacity continuation and drag/refusal variants remain | planning-tui-results.json; pr07-backlog-light-1280.jpg; PR-UI-004,018; SprintWalk |
+| PR-08 — Schedule/calendar | exercised | partial: dates/self-dependency refusal/lag1/calendar record navigation persisted; mounted async checks cover Projects/Manufacturing; live Manufacturing range/scale resource view passed with no operations, live move/override unavailable in fixture; DST variants unverified | planning-tui-results.json; pr08-manufacturing-resource-live.jpg; PR-UI-005,012; TimelineWalk |
+| PR-09 — Milestone/release | exercised | partial: gate request/approval, saved release notes and published database Docs read back; real annotated release tag confirmed via Git; commercial billing/client continuation still open | planning-tui-publication.txt; code-tui-retest.json; ReleaseWalk |
+| PR-10 — Work import | exercised | partial: actual generic CSV mapping/options/preview/result created2 hierarchy rows+label/3h and identified1 missing-title row; repeat0create/2skip/1fail; terminal no-file refusal/delegation explicit; vendor/encoding variants unverified | pr10-import-preview.jpg; pr10-import-result.jpg; pr10-repeat-skip-result.jpg |
+| PR-11 — Request triage | exercised | partial: browser Form100012→Reviewed→RVQUICK-1; terminal100011→PRPLAN01-4→completed with follow-work policy; internal note and separately captured outward email verified; conversion-to-project/other recovery variants remain | planning-tui-results.json; pr12-outward-reply.jpg; RequestWalk; PR-UI-001,012 |
+| PR-12 — Public/email intake | exercised | partial: anonymous validation/file/submit, token rotate/disable, confirmation off0 versus on captured MIME, local SMTP intake+reply threading and explicit outward reply observed; CAPTCHA provider unavailable, honeypot/rate-limit live variants unverified; confirmationN/formoff restored | pr12-public-success.jpg; pr12-confirmation-off.jpg; planning-mail-protocol.json; planning-mail-final-capture.json |
+| PR-13 — Repository | exercised | partial: actual revision/file/tree/download bytes, branch/tag, admin export/import/mirror fetch/refusal/restoration/archive/unarchive and non-admin notice; source-archive action absent from Files UI; additional revision refusal variants remain | code-tui-retest.json; code-tui-observations.json; PR-UI-010–011 |
+| PR-14 — Review/merge | exercised | partial: real author/reviewer, browser keyboard line comment+unified/side-by-side, terminal reply/resolve/reopen/request-changes/approve and required1approval then merge d029b465 verified in Git preserving Docs; second MR state variants continuing; external CI unverified | pr14-diff-keyboard-dark.jpg; code-tui-retest.json; PR-UI-007; CodeReviewWalk |
+| PR-15 — Git access/controls | exercised | partial: temporary SSH key allowed actual Git read/push then removed and retry denied; required branch approval rule observed; one-time token missing in remote TUI under correction; webhook delivery/revoke continuation remains | code-tui-retest.json; pending remote session-cookie finding |
 | PR-16 — Time/timer | exercised | partial: actual browser grid and 390px day dialog, remote terminal timer persisted; remaining lock/date/theme variants open | pr16-week-grid-saved.jpg; pr16-time-390.jpg; time-tui-session.txt; Batch 4 |
 | PR-17 — Timesheet approval | exercised | partial: remote terminal two-user return/resubmit/approve/lock observed on disposable week; print and narrow-role variants open | time-tui-session.txt |
 | PR-18 — Time correction/import | exercised | partial: terminal entry correction and historical-week/person return now persisted after Save and F5; import/output variants open | time-tui-session.txt; time-tui-session-continuation.txt; PR-UI-015 |
-| PR-19 — Staffing/capacity | exercised | partial: terminal allocation request/invalid-date recovery persisted; staffing row controls blocked by shared renderer defect, final capacity reconciliation pending | time-tui-session.txt |
-| PR-20 — Budget/estimate/rates | pending | Effective rates, approval and pay boundary unverified | — |
-| PR-21 — Invoice work | pending | Eligible sources, duplication, output and send unverified | — |
-| PR-22 — Reports | pending | All report/output/drill-through and role variants unverified | — |
-| PR-23 — Settings | pending | Saved effect, restoration and refusals unverified | — |
-| PR-24 — Restricted client | exercised | partial: request attachment audience reproduced and corrected; broader client activities and isolation walk remain | PR-UI-001; Batch 1 |
-| PR-25 — Access/integration | pending | Cross-route/mount and remaining-mode matrix unverified | — |
+| PR-19 — Staffing/capacity | exercised | partial: request/invalid-date recovery/staff fitting candidate and named8h/week allocation persisted after shared row correction; person/capacity reports inspected; sprint-capacity/drag/leave reconciliation still open | time-tui-debug-session.txt; time-terminal-results.md; PR-UI-009–010,014; ResourceWalk |
+| PR-20 — Budget/estimate/rates | exercised | partial: explicit150/hour, budget10h/$1000 and Which-rate, narrow payroll allowed70 versus manager hidden, approver rate denial observed; commercial line linked; client estimate decision/output/mail continuation open | time-terminal-results.md; PR-UI-016; BillingWalk |
+| PR-21 — Invoice work | exercised | partial: reproduced duplicate-source defect and corrected live invoice100102187.50/1.25h/source100104/unbilled0; finalized state/actual print read; narrow send authority correction and milestone/client/send continuation open | time-terminal-results.md; pr21-invoice-print.jpg; PR-UI-017; BillingWalk; MilestoneBillingWalk |
+| PR-22 — Reports | exercised | partial: all7 reports adjusted scopes/grouping and drill-through, source totals reconciled; CSV and XLSX bytes checked, terminal Print delegation corrected; graphical chart/output/zero-denominator variants remain | time-terminal-results.md; time-tui-debug-session.txt; PR-UI-011; shared Print followup |
+| PR-23 — Settings | exercised | partial: Code branch default changed, inherited project reflected it, existing override preserved, create-branch preview compared and default restored; template used; intake confirmation changed/observed/restored; other repeated-row/type/workflow/label variants remain | code-tui-retest.json; planning-tui-results.json; planning-mail-final-capture.json |
+| PR-24 — Restricted client | exercised | partial: internal request file listing/direct bytes denied after fix; Sheldon ACME shared Hours1.5h/1week/ACME-7 with no pay/people/comments; BLUTH and internal Time/EditEntry denied; estimate/sent-invoice/client Code continuation open | pr-ui-001-client-after.jpg; time-terminal-results.md; PR-UI-001 |
+| PR-25 — Access/integration | exercised | partial: narrow manager/payroll/approver/otherorg and revoked member pairs, real embedded terminal keyboard Projects Home/light+dark, client internal-time isolation, Commons record handoffs and live shared Manufacturing resource-mode read; Standard/output routes continuing; real zoom deferred by user | pr25-embedded-terminal-light.jpg; pr25-embedded-terminal-dark.jpg; time-terminal-results.md; ProjectsServerStatic; ProjectsTui |
 
 ### Findings register
 
@@ -835,6 +835,12 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-018 / measured / P2 | PR-07 and shared status labels | Browser Backlog, dark; composited actual fills | Planned grey text measured 2.34:1; blue 4.18:1; light-blue acceptance control also failed | pr07-backlog-dark.jpg; tonal-before/after | Framework webroot | Use theme-specific tonal foregrounds for grey/blue chips and badges | Extended existing ThemeLayout feature failed before and passed after; live palette loaded, browser after measurements pending |
 
 | PR-UI-019 / observed / P2 | PR-05: project work counts | ProjectDetail WorkItems, browser dark1920×1080 | View pills showed Open40/All47 while the project had1 matching item | pr05-project-counters-before.jpg; WorkItems before/after | BOSS WorkItems | Apply fixed project context to the base shared by smart counts and rows; preserve exclusion of other find fields | Existing WorkItems check reproduced global27/project11 mismatch then passed9/9; independent code review clear; live restart retest shows Open3/All4/Done1 matching imported project records (pr05-project-counters-after.jpg) |
+
+| PR-UI-020 / observed / P2 | PR-22: terminal Print | Time report Print, remote terminal | Explicit html-print URL gained tui and returned404 for mixed render mode | time-tui-debug-session.txt | Framework TUI | Delegate explicitly authored html-print destinations to browser, retaining filters/current terminal page | Existing shell check and actual debug report Print pass; actual browser invoice print inspected separately |
+| PR-UI-021 / observed / P2 | PR-14: required review gate | MR100051, terminal Overview | Able to merge appeared beside0of1 approvals although Merge was unavailable | code-tui-retest.json | BOSS Code | Describe the conflict test as No merge conflicts without changing enum, policy or controls | MergeRequests6/6 and actual blocked gate text pass; committed54006f92 |
+| PR-UI-022 / observed / P1 | PR-03/06: closed project | PRPLAN01 closed, terminal child Edit | Priority5→6 saved after Closed, contradicting documented read-only state | planning-tui-debug-retest.txt | Mantle work and BOSS access projection | Under correction: central reusable owner guard for manual writes, preserve derived actuals and manager Re-open | Priority restored5 and project reopened; focused/live corrected checks pending |
+| PR-UI-023 / observed / P2 | PR-15: one-time token | Remote TUI GitAccess | Created one-day token row but redirect never showed its one-time value | code-tui-retest.json | Framework remote TUI/authentication | Under correction: ephemeral HTTP cookie continuity with explicit key revalidation and matching-identity/CSRF authority | Unusable token revoked; bounded before checks reproduce lost flash and protect revoked/mismatched keys; corrected/live checks pending |
+| PR-UI-024 / observed / P1 | PR-21: narrow manager send | Invoice100102, narrow manager | Project detail/approval allowed but Send output refused generic Invoice view authority | time-tui-debug-session.txt | Mantle invoice and BOSS delivery adapter | Under correction: checked project-scoped output; keep generic finance authority and trusted-template boundaries | Focused narrow send/capture and generic/hidden-project/member/client refusals pass; template hardening and live reload pending |
 
 ### Static leads
 
@@ -1063,3 +1069,49 @@ Constrained-tab geometry measured1280×720/DPR2/scrollWidth1280; screenshots rec
 requested outer800height. User approved synthetic locally captured financial-document tests, resolving that earlier
 approval block. Isolated listeners after restart: HTTP127.0.0.1:8090, SSH127.0.0.1:2222, SMTP127.0.0.1:19926.
 Only the disposable runtime received14 additional mail/commercial/client fixtures; no production configuration changed.
+
+**Batch 8 — shared terminal integration, real Git and local mail.** Framework terminal fixes committed `9ff43d2e`
+after27focused checks, two independent source reviews and live repository/raw-byte, current-row staffing/End/MR,
+canonical Calendar/request/Docs/Changes and immediate parent-header reruns. Explicit print mode delegates to browser
+without adding tui; actual Time-report action now preserves filters and avoids the mixed-mode404. Embedded browser
+terminal navigated Ctrl+K → Projects → Enter, then F5 retained Projects Home in light and dark. Its initial missing
+xterm assets were a review-fixture static-path issue; materializing webroot assets in the isolated runtime resolved it.
+No manual mail endpoint remains in repository source. The localhost ADMIN-only read hook lives solely in the copied
+runtime webroot and will be removed at cleanup. New files in a component symlink must never be assumed isolated.
+
+Real merge `d029b46509db54c1fa71b36aedaf0395c92d2ccc` preserves main's Docs `dd1d88b99b` and feature's value2.
+The code/settings worker independently proved the resulting Git parents/content. Conflict-free wording no longer
+implies approval eligibility: BOSS `54006f92` changes only the displayed label and extends the existing focused
+MergeRequests assertion (6/6pass, peer review clear, live0of1/No merge conflicts). Temporary SSH read/push succeeded,
+then key removal made the same operation fail. Token-session followup remains a separate confirmed correction.
+
+Local SMTP accepted synthetic requests100022/100024; confirmation-off browser100023 and internal note emitted0
+messages. Enabled SMTP100024 and browser100025 each emitted captured acknowledgments. A protocol follow-up using
+that Message-ID joined request100024's existing thread. Browser staff explicitly sent100022's outward reply using
+only the new capture account; the capture contained its exact text and no internal-only marker. TUI and browser
+Chatter show Received/Note/Sent as distinct entries. Captured envelopes/bodies and threading evidence are retained
+redacted; nothing was externally delivered. ConfirmationN and PRPLAN01 public-formoff were restored. Full gates pending.
+
+**Batch 9 — scoped invoice delivery.** Mantle `2c6a26e0` adds an optional projectBilling output mode, checked by
+existing side-editor/visible-linked-project/organization rules before replay and rendering. Default generic finance
+read authority remains intact. Coordinator security review identified arbitrary custom rendering as an extra boundary:
+project mode now rejects caller templates and accepts a custom XML print screen only when it equals the trusted
+OrgTemplateProjectInvoicePrint configuration. BOSS seeds its existing print screen and passes the flag only after its
+own invoice-change check. Code/settings independently reviewed the hardened patch. Existing Billing checks6/6 pass,
+including generic-read, hidden-project, member/client and unregistered-template refusals, unchanged state on refusal,
+issued immutable PDF and one captured synthetic-recipient email; native AccountingDelivery12/12 pass. Actual narrow
+manager retry after normal restart reaches Sent, with a truthful queued-in-Outbox message because this review's
+SYSTEM SMTP host is initially absent. Queued is not externally delivered or captured; local Outbox continuation is
+separate fixture work. No broad invoice grant, artifact-authority bypass or payment action was added.
+
+Commercial/client continuation: synthetic client selected through the normal chooser after its fixture owner was
+corrected; client sign-in enabled only on PRTIME02. Estimate revision1 refused after empty-reason validation, reason
+visible to manager, revision2 approved by the separate client. Linked order PRTIME_ORDER02 advanced to Approved.
+A distinct delivery milestone PRTIME02-MS-2 with25% of1000 stayed awaiting approval with no Invoice action, then client
+approval made it due; actual invoicing produced draft100153250 and marked the share billed, with its order/line links.
+The original defective invoice100051 remains evidence. No duplicate milestone invoice or payment was attempted.
+
+Shared timeline second-consumer continuation: a narrow released Manufacturing control was prepared in the disposable
+runtime. Its initial03:00–05:00 local placement showed an outside-work-hours conflict. Browser Move→09:00→Preview
+showed09:00–11:00/No conflict; Apply and reload retained exactly those times and zero conflicts. This is actual
+resource-mode mutation evidence (pr08-manufacturing-move-after.jpg), distinct from the deferred-response checks.
