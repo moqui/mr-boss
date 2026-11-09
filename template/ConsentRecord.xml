@@ -70,7 +70,11 @@ along with this software (see the LICENSE.md file). If not, see
                     cons = found || {found: false}
                     consFound = !!cons.found
                     consCanEdit = consFound && !!cons.canEdit
-                    consAddressList = Array.from(cons.addressList || [])
+                    // The browser chips carry escaped labels and hidden tooltips; other modes need the labels alone.
+                    const plainConsent = (html) => String(html || '').replace(/<q-tooltip\b[^>]*>[\s\S]*?<\/q-tooltip>/gi, '')
+                            .replace(/<\/q-chip>/gi, ' · ').replace(/<[^>]*>/g, '').replace(/ · $/, '').trim()
+                            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+                    consAddressList = Array.from(cons.addressList || []).map(address => Object.assign({}, address, {consentText: plainConsent(address.consentHtml)}))
                     consListList = Array.from(cons.listList || [])
                     consPartyList = Array.from(cons.partyConsentList || [])
                     consHistoryList = Array.from(cons.historyList || [])
@@ -134,10 +138,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="addressText"><default-field title="Address or number"><display style="${isCurrent ? '' : 'text-strike m-muted'}"/></default-field></field>
                                 <field name="kindText"><default-field title="Kind"><display style="text-caption m-muted"/></default-field></field>
                                 <field name="allowText"><default-field title="Contact">
-                                    <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${allowColor}" data-allow="${allowSolicitation ?? ''}">${WebUtilities.encodeHtml(allowText ?? '')}</q-chip>]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${allowColor}" data-allow="${allowSolicitation ?? ''}">${WebUtilities.encodeHtml(allowText ?? '')}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(allowText ?? '')})}]]></text>
+                                        <text type="html,html-print"><![CDATA[${WebUtilities.encodeHtml(allowText ?? '')}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="consentHtml"><default-field title="Consent">
-                                    <render-mode><text type="qvt"><![CDATA[${consentHtml}]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[${consentHtml}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(consentText ?? '')})}]]></text>
+                                        <text type="html,html-print"><![CDATA[${WebUtilities.encodeHtml(consentText ?? '')}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="rowActions" align="right"><conditional-field condition="consCanEdit &amp;&amp; isCurrent &amp;&amp; purposeEnumId" title="">
                                     <container-dialog id="ConsentAddressDialog" button-text="Change" icon="sym_o_edit" width="560" title="Consent for ${addressText}">
@@ -189,7 +197,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="contactListName"><default-field title="List"><display style="${isArchived ? 'm-muted' : ''}"/></default-field></field>
                                 <field name="typeText"><default-field title="Type"><display style="text-caption m-muted"/></default-field></field>
                                 <field name="statusText"><default-field title="Status">
-                                    <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${statusColor}" data-status="${statusId ?? ''}">${WebUtilities.encodeHtml(statusText ?? '')}</q-chip>]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${statusColor}" data-status="${statusId ?? ''}">${WebUtilities.encodeHtml(statusText ?? '')}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? '')})}]]></text>
+                                        <text type="html,html-print"><![CDATA[${WebUtilities.encodeHtml(statusText ?? '')}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="lastChangeText"><default-field title="Last change"><display style="text-caption"/></default-field></field>
                                 <field name="rowActions" align="right"><conditional-field condition="canSubscribe || canUnsubscribe" title="">
@@ -234,7 +244,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <form-list name="ConsentPartyList" list="consPartyList" skip-form="true" paginate="false">
                                 <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
                                 <field name="statusText"><default-field title="Consent">
-                                    <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${statusColor}">${WebUtilities.encodeHtml(statusText ?? '')}</q-chip>]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${statusColor}">${WebUtilities.encodeHtml(statusText ?? '')}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? '')})}]]></text>
+                                        <text type="html,html-print"><![CDATA[${WebUtilities.encodeHtml(statusText ?? '')}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="whenText"><default-field title="When"><display style="text-caption"/></default-field></field>
                                 <field name="sourceText"><default-field title="Source"><display style="text-caption"/></default-field></field>
@@ -255,7 +267,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="whenText"><default-field title="When"><display style="text-no-wrap"/></default-field></field>
                                     <field name="whatText"><default-field title="What"><display/></default-field></field>
                                     <field name="statusDescription"><default-field title="Consent">
-                                        <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${statusColor}">${WebUtilities.encodeHtml(statusDescription ?? '')}</q-chip>]]></text></render-mode>
+                                        <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${statusColor}">${WebUtilities.encodeHtml(statusDescription ?? '')}</q-chip>]]></text>
+                                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusDescription ?? '')})}]]></text>
+                                            <text type="html,html-print"><![CDATA[${WebUtilities.encodeHtml(statusDescription ?? '')}]]></text></render-mode>
                                     </default-field></field>
                                     <field name="addressText"><default-field title="Address"><display style="text-caption"/></default-field></field>
                                     <field name="sourceDescription"><default-field title="Source"><display style="text-caption"/></default-field></field>

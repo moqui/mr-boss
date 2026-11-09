@@ -69,10 +69,10 @@ along with this software (see the LICENSE.md file). If not, see
             <form-list name="NotificationsTopics" list="notificationsRows" transition="storeTopic" paginate="false">
                 <field name="topic"><default-field><hidden/></default-field></field>
                 <field name="description"><default-field title="Topic"><display/></default-field></field>
-                <field name="receiveNotifications"><header-field title="In app"/><default-field title=""><check><option key="Y" text=" "/></check></default-field></field>
-                <field name="emailNotifications"><header-field title="Email"/><conditional-field condition="hasEmail" title=""><check><option key="Y" text=" "/></check></conditional-field>
+                <field name="receiveNotifications"><header-field title="In app"/><default-field title="" tooltip="In app notifications for ${description}"><check><option key="Y" text=" "/></check></default-field></field>
+                <field name="emailNotifications"><header-field title="Email"/><conditional-field condition="hasEmail" title="" tooltip="Email notifications for ${description}"><check><option key="Y" text=" "/></check></conditional-field>
                     <default-field title=""><label text="No email" style="m-muted"/></default-field></field>
-                <field name="digest"><header-field title="Daily digest"/><default-field title=""><check><option key="Y" text=" "/></check></default-field></field>
+                <field name="digest"><header-field title="Daily digest"/><default-field title="" tooltip="Daily digest for ${description}"><check><option key="Y" text=" "/></check></default-field></field>
                 <field name="saveButton"><default-field title=""><submit text="Save"/></default-field></field>
             </form-list>
         </box-body-nopad></container-box>
@@ -81,10 +81,10 @@ along with this software (see the LICENSE.md file). If not, see
             <form-list name="UpdatesTopics" list="updatesRows" transition="storeTopic" paginate="false">
                 <field name="topic"><default-field><hidden/></default-field></field>
                 <field name="description"><default-field title="Topic"><display/></default-field></field>
-                <field name="receiveNotifications"><header-field title="In app"/><default-field title=""><check><option key="Y" text=" "/></check></default-field></field>
-                <field name="emailNotifications"><header-field title="Email"/><conditional-field condition="hasEmail" title=""><check><option key="Y" text=" "/></check></conditional-field>
+                <field name="receiveNotifications"><header-field title="In app"/><default-field title="" tooltip="In app notifications for ${description}"><check><option key="Y" text=" "/></check></default-field></field>
+                <field name="emailNotifications"><header-field title="Email"/><conditional-field condition="hasEmail" title="" tooltip="Email notifications for ${description}"><check><option key="Y" text=" "/></check></conditional-field>
                     <default-field title=""><label text="No email" style="m-muted"/></default-field></field>
-                <field name="digest"><header-field title="Daily digest"/><default-field title=""><check><option key="Y" text=" "/></check></default-field></field>
+                <field name="digest"><header-field title="Daily digest"/><default-field title="" tooltip="Daily digest for ${description}"><check><option key="Y" text=" "/></check></default-field></field>
                 <field name="saveButton"><default-field title=""><submit text="Save"/></default-field></field>
             </form-list>
             <section name="NoUpdates" condition="!(updatesRows &amp;&amp; updatesRows.length)"><widgets>

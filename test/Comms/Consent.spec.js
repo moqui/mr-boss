@@ -92,10 +92,33 @@ feature("ConsentFind narrows the registry (#what)", {
 feature("one contact's consent: the addresses with their contact flag, the lists, the contact as a whole, the history and the export of a data request", {
     when() {
         const page = contact(ALEX)
+        // This template has its own TUI status branches; inspect their actual cells on one additional mode render.
+        const terminal = ec.screen.makeTest().rootScreen(webroot).renderMode("tui")
+                .render("apps/Comms/Consent/Contact", {lastStandalone:"true", partyId:ALEX}, null)
+        const tables = {}
+        const collect = value => {
+            if (!value || typeof value !== "object") return
+            if (value.t === "formList") tables[value.name] = value
+            for (const child of Object.values(value)) {
+                if (Array.isArray(child)) child.forEach(collect)
+                else if (child && typeof child === "object") collect(child)
+            }
+        }
+        collect(JSON.parse(String(terminal.output || "{}")))
+        const text = value => Array.isArray(value) ? value.map(text).join(" ") : value && typeof value === "object" ? String(value.text || "") : String(value ?? "")
+        const cells = (name, title) => {
+            const table = tables[name]
+            assert.ok(table, "the TUI contains " + name)
+            const index = table.columns.findIndex(column => column.title === title)
+            assert.ok(index >= 0, "the TUI contains the " + title + " column of " + name)
+            return table.rows.map(row => text(row.cells[index]))
+        }
+        const terminalStatuses = {contact: cells("ConsentAddresses", "Contact"), address: cells("ConsentAddresses", "Consent"),
+            lists: cells("ConsentLists", "Status"), party: cells("ConsentPartyList", "Consent"), history: cells("ConsentHistoryList", "Consent")}
         const csv = ec.screen.makeTest().rootScreen(comms).render("Consent/Contact/consentHistoryExport", { partyId: ALEX }, "post")
-        return { page, csv: String(csv.output || "") }
+        return { page, terminalStatus: terminal.status, terminalErrors: terminal.errorMessages.join(" | "), terminalStatuses, csv: String(csv.output || "") }
     },
-    then({ page, csv }) {
+    then({ page, terminalStatus, terminalErrors, terminalStatuses, csv }) {
         page.errors == ""
         !page.broken
         page.output.includes("alex.rivera@example.com")
@@ -107,6 +130,15 @@ feature("one contact's consent: the addresses with their contact flag, the lists
         page.output.includes("History")
         page.output.includes("Signup form at shop.ziziwork.example")
         page.output.includes("Export for a data request")
+        terminalStatus == 200
+        terminalErrors == ""
+        terminalStatuses.contact == ["Allows contact"]
+        terminalStatuses.address == ["Marketing Email: Granted"]
+        terminalStatuses.lists == ["Subscribed", "Subscribed", "Subscribed"]
+        terminalStatuses.party == ["Granted"]
+        terminalStatuses.history.length > 0
+        terminalStatuses.history.every(status => status == "Granted")
+        Object.values(terminalStatuses).flat().every(value => !/<[^>]+>|&(?:amp|lt|gt|quot);/.test(value))
         csv.startsWith("Party ID,Name,When,Purpose,Status,Address,List,Source,Evidence,Comments,Recorded By")
         csv.includes("Alex Rivera")
         csv.includes("Data Processing")

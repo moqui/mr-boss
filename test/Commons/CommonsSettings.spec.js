@@ -95,6 +95,9 @@ feature("Preferences shows the keys of the shell and of the apps, saves an overr
         before.output.includes("Contacts")
         // the Calendar box, whose defaults CalendarSettings saves
         before.output.includes("Week starts on")
+        // The static template binds this hidden field; withStaticData appends its prepared value as text.
+        before.output.includes("appearanceUiPrefix")
+        before.output.split("\n").includes("qapps")
         saved.errors == ""
         JSON.parse(keymap).global["g c"] == "g x"
         after.status == 200
@@ -109,13 +112,35 @@ feature("Preferences shows the keys of the shell and of the apps, saves an overr
 
 feature("Preferences saves the appearance and answers a page load", {
     when() {
-        const saved = post("Settings/Preferences/saveAppearance", { darkMode: "Y", density: "compact", startApp: "Commons" })
-        return { saved, dark: ec.user.getPreference("QUASAR_DARK"), left: ec.user.getPreference("QUASAR_LEFT_OPEN"),
+        const appearancePost = (mode, json, appearanceUiPrefix) => {
+            let test = ec.screen.makeTest().rootScreen(webroot).renderMode(mode)
+            if (json) test = test.header("Accept", "application/json")
+            const str = test.render("apps/Commons/Settings/Preferences/saveAppearance",
+                {darkMode: "Y", density: "compact", startApp: "Commons", appearanceUiPrefix}, "post")
+            let body = {}
+            try { body = JSON.parse(str.output) } catch (err) { /* a native redirect has no JSON body */ }
+            const errors = str.errorMessages.join(" | ")
+            ec.message.clearErrors()
+            return {status: str.status, errors, json: body, location: str.header("Location")}
+        }
+        const saved = appearancePost("qvt", true, "qapps"), terminal = appearancePost("tui", true, "apps"),
+            standard = appearancePost("html", false, "apps"), legacy = appearancePost("qvt", true),
+            untrusted = appearancePost("qvt", true, "https://example.invalid/")
+        return { saved, terminal, standard, legacy, untrusted, dark: ec.user.getPreference("QUASAR_DARK"), left: ec.user.getPreference("QUASAR_LEFT_OPEN"),
             density: ec.user.getPreference("SHELL_DENSITY"), start: ec.user.getPreference("SHELL_START_APP") }
     },
-    then({ saved, dark, left, density, start }) {
+    then({ saved, terminal, standard, legacy, untrusted, dark, left, density, start }) {
         saved.errors == ""
         saved.json.redirectUrl == "/qapps/Commons/Settings/Preferences"
+        terminal.errors == ""
+        terminal.json.redirectUrl == "/apps/Commons/Settings/Preferences"
+        legacy.errors == ""
+        legacy.json.redirectUrl == "/qapps/Commons/Settings/Preferences"
+        untrusted.errors == ""
+        untrusted.json.redirectUrl == "/qapps/Commons/Settings/Preferences"
+        standard.errors == ""
+        standard.status == 302
+        standard.location == "/apps/Commons/Settings/Preferences"
         dark == "true"
         left == "false"
         density == "compact"
@@ -159,16 +184,29 @@ feature("the setup card keeps Done and Dismiss, and goes when every item is; Hom
     },
 })
 
+let accountFactorId = null
+let accountNameBefore = null
 feature("Account changes the signed-in user only, whatever user the request names", {
     when() {
         // the form posts every field of the account, its email address too (left out, the account would lose it)
-        const email = one("moqui.security.UserAccount", { userId: "EX_JOHN_DOE" }).emailAddress
+        const before = one("moqui.security.UserAccount", { userId: "EX_JOHN_DOE" })
+        accountNameBefore = before.userFullName
+        const email = before.emailAddress
         const saved = post("Settings/Account/updateAccount", { userId: "ORG_ZIZI_JD", partyId: "ORG_ZIZI_JD", firstName: "Johnny", lastName: "Doe",
             emailAddress: email, timeZone: "US/Central" })
+        const factor = sys(() => call("org.moqui.impl.UserServices.create#UserAuthcFactorTotp", {
+            userId: "EX_JOHN_DOE", thruDate: Date.now() + 347 * 86400000 }))
+        accountFactorId = factor.factorId
+        const factorRow = one("moqui.security.UserAuthcFactor", { factorId: accountFactorId })
+        const factorDates = [factorRow.fromDate, factorRow.thruDate].map((value) => ec.l10n.format(new Date(Number(String(value))), "yyyy-MM-dd"))
+        const page = render("Settings/Account")
+        const factorSecretAbsent = !!factor.factorOption && !page.output.includes(factor.factorOption)
+        // A failure must not put even a disposable fixture secret into the test report.
+        if (factor.factorOption) page.output = page.output.split(factor.factorOption).join("[redacted fixture secret]")
         return { saved, email, john: one("mantle.party.Person", { partyId: "EX_JOHN_DOE" }), joe: one("mantle.party.Person", { partyId: "ORG_ZIZI_JD" }),
-            account: one("moqui.security.UserAccount", { userId: "EX_JOHN_DOE" }), page: render("Settings/Account") }
+            account: one("moqui.security.UserAccount", { userId: "EX_JOHN_DOE" }), page, factorSecretAbsent, factorDates }
     },
-    then({ saved, email, john, joe, account, page }) {
+    then({ saved, email, john, joe, account, page, factorSecretAbsent, factorDates }) {
         saved.errors == ""
         john.firstName == "Johnny"
         joe.firstName == "Joe"
@@ -178,8 +216,18 @@ feature("Account changes the signed-in user only, whatever user the request name
         page.errors == ""
         page.output.includes("Two-factor sign-in")
         page.output.includes("Where you are signed in")
+        factorSecretAbsent == true
+        factorDates.every(date => /^\d{4}-\d{2}-\d{2}$/.test(date) && page.output.includes(date)) == true
     },
-    cleanup() { sys(() => call("update#mantle.party.Person", { partyId: "EX_JOHN_DOE", firstName: "John" })) },
+    cleanup() {
+        sys(() => {
+            if (accountFactorId) ec.entity.find("moqui.security.UserAuthcFactor").condition("factorId", accountFactorId).deleteAll()
+            call("update#mantle.party.Person", { partyId: "EX_JOHN_DOE", firstName: "John" })
+            if (accountNameBefore != null) call("org.moqui.impl.UserServices.update#UserAccount", { userId: "EX_JOHN_DOE", userFullName: accountNameBefore })
+        })
+        accountFactorId = null
+        accountNameBefore = null
+    },
 })
 
 feature("Account photo: john.doe's own face image, whatever party the request names; replaced by a new one, an SVG named as a PNG refused, removed; shown in Chatter", {

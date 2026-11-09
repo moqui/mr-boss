@@ -31,9 +31,15 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             ec.service.sync().name('ironstone.commons.CommonsServices.set#Appearance').parameters({darkMode: darkMode, leftOpen: leftOpen,
                 density: density, startApp: startApp}).call()
-            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {redirectUrl: '/qapps/Commons/Settings/Preferences',
-                messageInfos: [{type: 'success', message: ec.l10n.localize('Appearance saved')}]})
+            if (!ec.web.request || (ec.web.request.getHeader('accept') || '').includes('application/json')) {
+                // The rendered form identifies its client; transitions themselves do not retain the render mode.
+                const prefix = appearanceUiPrefix == 'apps' ? 'apps' : appearanceUiPrefix == 'qapps' ? 'qapps' :
+                    (!ec.web.request ? 'apps' : 'qapps')
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : {redirectUrl: '/' + prefix + '/Commons/Settings/Preferences',
+                    messageInfos: [{type: 'success', message: ec.l10n.localize('Appearance saved')}]})
+            } else if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('Appearance saved'), 'success')
         ]]></script></actions>
+        <conditional-response condition="!!ec.web.request &amp;&amp; !(ec.web.request.getHeader('accept') || '').includes('application/json')" url="."/>
         <default-response type="none"/>
     </transition>
     <transition name="saveCalendarDefaults">
@@ -75,9 +81,14 @@ along with this software (see the LICENSE.md file). If not, see
                 keymaps.push(Object.assign({}, map, {appTitle: app.title || app.name}))
             appKeymaps = keymaps
             appOptions = apps.map((app) => ({name: app.name, title: app.title || app.name}))
+            // Static QVT prepares this form through its implicit /actions transition, whose render mode is html.
+            const appearancePath = sri.getScreenUrlInfo().fullPathNameList || []
+            const appearanceMaterial = ['qvt', 'qvt-static', 'qjs', 'qvue'].includes(sri.getRenderMode()) ||
+                appearancePath[appearancePath.length - 1] == 'actions'
             appearance = {darkMode: ec.user.getPreference('QUASAR_DARK') == 'true' ? 'Y' : 'N',
                 leftOpen: ec.user.getPreference('QUASAR_LEFT_OPEN') == 'true' ? 'Y' : 'N',
-                density: ec.user.getPreference('SHELL_DENSITY') || 'comfortable', startApp: ec.user.getPreference('SHELL_START_APP') || ''}
+                density: ec.user.getPreference('SHELL_DENSITY') || 'comfortable', startApp: ec.user.getPreference('SHELL_START_APP') || '',
+                appearanceUiPrefix: appearanceMaterial ? 'qapps' : 'apps'}
         ]]></script>
         <service-call name="ironstone.commons.CommonsServices.get#KeymapRows" in-map="{keymaps:appKeymaps}" out-map="context"/>
         <!-- the calendar defaults and the user's own personal calendars, one of which is the default -->
@@ -101,6 +112,7 @@ along with this software (see the LICENSE.md file). If not, see
             <row-col lg="5" md="6">
                 <container-box><box-header title="Appearance"/><box-body>
                     <form-single name="Appearance" transition="saveAppearance" map="appearance">
+                        <field name="appearanceUiPrefix"><default-field><hidden/></default-field></field>
                         <field name="darkMode"><default-field title="Theme"><check><option key="Y" text="Dark mode"/></check></default-field></field>
                         <field name="leftOpen"><default-field title="App menu"><check><option key="Y" text="Keep it open"/></check></default-field></field>
                         <field name="density"><default-field title="Density"><radio>

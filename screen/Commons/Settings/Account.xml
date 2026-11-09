@@ -178,17 +178,15 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- single use codes to show once, and the second factors; is one required, also to change the password? -->
         <set field="singleUseCodes" from="JSON.parse(ec.web.sessionAttributes.remove('singleUseCodes') || 'null')"/>
         <service-call name="org.moqui.impl.UserServices.get#UserAuthcFactorInfo" out-map="context">
-            <field-map field-name="userId"/><field-map field-name="getFactorsIfNotRequired" from="false"/></service-call>
-        <entity-find entity-name="moqui.security.UserAuthcFactor" list="userAuthcFactorList">
-            <date-filter/><econdition field-name="userId"/>
-            <order-by field-name="factorTypeEnumId,fromDate"/>
-        </entity-find>
+            <field-map field-name="userId"/><field-map field-name="getFactorsIfNotRequired" from="true"/></service-call>
 
         <!-- where I am signed in: my sessions of the last 30 days, the framework's one session definition (self-scoped) -->
         <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="sessionsOut" in-map="{sinceDays:30, limit:10}"/>
         <script><![CDATA[
             // the times as text: a time stamp copied into a map reaches the list as its millis
-            const when = (value) => value == null || value === '' ? '' : ec.l10n.format(new Date(Number(String(value))), 'yyyy-MM-dd HH:mm')
+            const when = (value, format = 'yyyy-MM-dd HH:mm') => value == null || value === '' ? '' : ec.l10n.format(new Date(Number(String(value))), format)
+            userAuthcFactorList = Array.from(userAuthcFactorList ?? []).map((row) => ({...row,
+                fromDateText: when(row.fromDate, 'yyyy-MM-dd'), thruDateText: when(row.thruDate, 'yyyy-MM-dd')}))
             // the apps and devices signed in by a key of their own: the desktop and mobile clients
             const devicesOut = ec.service.sync().name('org.moqui.impl.UserServices.get#UserDeviceKeys').call() || {}
             deviceList = Array.from(devicesOut.deviceList ?? []).map((row) => ({loginKey: row.loginKey, deviceName: row.deviceName || '',
@@ -341,8 +339,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <form-list name="UserAuthcFactorList" list="userAuthcFactorList" skip-form="true" paginate="false">
                         <field name="factorTypeEnumId"><default-field title="Type"><display-entity entity-name="moqui.basic.Enumeration"/></default-field></field>
                         <field name="factorOption"><default-field title="Sent to"><display/></default-field></field>
-                        <field name="fromDate"><default-field title="Added"><display format="yyyy-MM-dd"/></default-field></field>
-                        <field name="thruDate"><default-field title="Valid until"><display format="yyyy-MM-dd"/></default-field></field>
+                        <field name="fromDateText"><default-field title="Added"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Valid until"><display/></default-field></field>
                         <field name="action"><default-field title="">
                             <container style="row no-wrap items-center q-gutter-xs">
                                 <dynamic-dialog id="VerifyTotpDialog" button-text="Verify" transition="VerifyTotp" condition="needsValidation == 'Y' &amp;&amp; factorTypeEnumId == 'UafTotp'"
