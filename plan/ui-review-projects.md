@@ -838,7 +838,7 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-020 / observed / P2 | PR-22: terminal Print | Time report Print, remote terminal | Explicit html-print URL gained tui and returned404 for mixed render mode | time-tui-debug-session.txt | Framework TUI | Delegate explicitly authored html-print destinations to browser, retaining filters/current terminal page | Existing shell check and actual debug report Print pass; actual browser invoice print inspected separately |
 | PR-UI-021 / observed / P2 | PR-14: required review gate | MR100051, terminal Overview | Able to merge appeared beside0of1 approvals although Merge was unavailable | code-tui-retest.json | BOSS Code | Describe the conflict test as No merge conflicts without changing enum, policy or controls | MergeRequests6/6 and actual blocked gate text pass; committed54006f92 |
-| PR-UI-022 / observed / P1 | PR-03/06: closed project | PRPLAN01 closed, terminal child Edit | Priority5→6 saved after Closed, contradicting documented read-only state | planning-tui-debug-retest.txt | Mantle work and BOSS access projection | Under correction: central reusable owner guard for manual writes, preserve derived actuals and manager Re-open | Priority restored5 and project reopened; focused/live corrected checks pending |
+| PR-UI-022 / observed / P1 | PR-03/06: closed project | PRPLAN01 closed, terminal child Edit | Priority5→6 saved after Closed, contradicting documented read-only state | planning-tui-debug-retest.txt | Mantle work and BOSS access projection | Reusable owner guard for manual writes; preserve derived actuals, late billing and manager Re-open | Mantle11/11, BOSS18/18 and compatibility28/28 pass; actual Closed update refused PROJECT_CLOSED, creation/edit controls absent, Re-open restores Edit and priority5 |
 | PR-UI-023 / observed / P2 | PR-15: one-time token | Remote TUI GitAccess | Created one-day token row but redirect never showed its one-time value | code-tui-retest.json | Framework remote TUI/authentication | Under correction: ephemeral HTTP cookie continuity with explicit key revalidation and matching-identity/CSRF authority | Unusable token revoked; bounded before checks reproduce lost flash and protect revoked/mismatched keys; corrected/live checks pending |
 | PR-UI-024 / observed / P1 | PR-21: narrow manager send | Invoice100102, narrow manager | Project detail/approval allowed but Send output refused generic Invoice view authority | time-tui-debug-session.txt | Mantle invoice and BOSS delivery adapter | Under correction: checked project-scoped output; keep generic finance authority and trusted-template boundaries | Focused narrow send/capture and generic/hidden-project/member/client refusals pass; template hardening and live reload pending |
 
@@ -1115,3 +1115,15 @@ Shared timeline second-consumer continuation: a narrow released Manufacturing co
 runtime. Its initial03:00–05:00 local placement showed an outside-work-hours conflict. Browser Move→09:00→Preview
 showed09:00–11:00/No conflict; Apply and reload retained exactly those times and zero conflicts. This is actual
 resource-mode mutation evidence (pr08-manufacturing-move-after.jpg), distinct from the deferred-response checks.
+
+
+**Batch 10 — Closed project manual-write boundary.** A live Closed task accepted priority5→6 before correction;
+its priority was restored. Mantle now checks the source and requested destination project before manual task,
+planning, member, content and recurrence mutations. Label/association changes preflight all affected records before
+writing; derived rollups, time, late billing, Complete-project editing and cloning a Closed source remain supported.
+BOSS projects this owner rule into editor controls and keeps Re-open available to managers. Coordinator and the
+time/billing worker independently reviewed the final patch, including target-milestone and quick-add context guards.
+Focused owner11/11, BOSS18/18 and compatibility28/28 checks passed. Actual terminal Closed task update returns
+PROJECT_CLOSED, WorkItems shows neither quick-add nor New work item, Settings explains read-only state, and Re-open
+restores Edit with priority5 unchanged. An unrelated empty project was deleted through its normal confirmation and
+its direct URL became unavailable. Full suites remain pending at the user-directed final phase.

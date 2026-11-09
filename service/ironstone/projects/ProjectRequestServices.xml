@@ -820,7 +820,7 @@ along with this software (see the LICENSE.md file). If not, see
                         makes: action.action === 'createWorkItem' ? 'workItems' : 'requests', matchedCount: rule.matchedCount || 0})
                 }
             } catch (err) { /* no mail client: no rules */ } finally { ec.message.clearErrors(); ec.message.popErrors() }
-            intake = {canManage: !!access.canManage, accountId: settings.accountId || '', accountName: account ? (account.accountName || account.emailAddress || '') : '',
+            intake = {canManage: !!access.canChange, accountId: settings.accountId || '', accountName: account ? (account.accountName || account.emailAddress || '') : '',
                 plusTag: settings.plusTag || '', address: address, formOn: !!settings.token, formPath: settings.token ? '/r/' + settings.token : '',
                 triagePartyId: settings.triagePartyId || '', triageName: party ? (party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ')) : '',
                 defaultType: settings.defaultType || '', defaultTypeLabel: typeLabel(settings.defaultType), ruleList: rules,
@@ -844,7 +844,7 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const store = (type, value) => ec.service.sync().name('mantle.work.ProjectServices.store#ProjectSetting').parameters({workEffortId: workEffortId,
                 settingTypeEnumId: type, settingValue: value}).call()
@@ -887,7 +887,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             if (change === 'off') {
                 ec.service.sync().name('mantle.request.RequestServices.remove#IntakeToken').parameters({workEffortId: workEffortId}).call()
@@ -916,7 +916,7 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="emailRuleId"/><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
             if (ec.message.hasError()) return
             const store = (type, value) => ec.service.sync().name('mantle.work.ProjectServices.store#ProjectSetting').parameters({workEffortId: workEffortId,
                 settingTypeEnumId: type, settingValue: value}).call()

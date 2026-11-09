@@ -145,6 +145,7 @@ along with this software (see the LICENSE.md file). If not, see
             typeOptions = info.typeOptions || []
             programOptions = (ec.service.sync().name('ironstone.projects.WorkItemServices.get#ProjectOptions').call()?.projectList || []).filter((option) => option.key !== workEffortId)
             canManageSettings = !!info.canManage
+            canChangeSettings = !!info.canChange
             canDelete = !!info.canDelete
             statusId = project.statusId
             const sources = info.settingSources || {}
@@ -153,7 +154,10 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
 
     <widgets>
-        <section name="SettingsFound" condition="recordFound &amp;&amp; canManageSettings"><widgets>
+        <section name="SettingsClosed" condition="recordFound &amp;&amp; canManageSettings &amp;&amp; !canChangeSettings"><widgets>
+            <label type="p" text="This project is closed. Re-open it to change its settings." style="m-muted"/>
+        </widgets></section>
+        <section name="SettingsFound" condition="recordFound &amp;&amp; canManageSettings &amp;&amp; canChangeSettings"><widgets>
         <container-row>
             <row-col md="6">
                 <container-box><box-header title="General"/><box-body>

@@ -140,7 +140,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <row-col lg="6">
                     <container-box><box-header title="Budget and actuals"/>
                         <box-toolbar>
-                            <container-dialog id="EditBudgetDialog" button-text="Edit" icon="sym_o_edit" width="520" title="Budget of the project" condition="money.canManage">
+                            <container-dialog id="EditBudgetDialog" button-text="Edit" icon="sym_o_edit" width="520" title="Budget of the project" condition="money.canManage &amp;&amp; canChange">
                                 <form-single name="EditBudget" transition="saveBudget" map="budgetValue">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
                                     <field name="billingBasis"><default-field title="Billing basis">

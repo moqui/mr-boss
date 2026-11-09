@@ -49,6 +49,57 @@ const idsOf = (out) => (out.rowList || []).filter((row) => demoItems.has(String(
 const keep = (map) => JSON.stringify(map || { list: "open" })
 const dayOf = (value) => value == null || value === "" ? "" : ec.l10n.format(value, "yyyy-MM-dd")
 
+feature("closed project work is read only in Projects and Commons, while its manager can reopen it", {
+    when() {
+        const projectId = "BCLSD"
+        sys(() => {
+            call("mantle.work.ProjectServices.create#Project", {workEffortId: projectId, workEffortName: "Closed access control", visibilityEnumId: "WevGeneral",
+                ownerPartyId: "ORG_ZIZI_SERVICES", vendorPartyId: "ORG_ZIZI_SERVICES"})
+            call("mantle.work.TaskServices.create#Task", {workEffortId: projectId + "-1", rootWorkEffortId: projectId,
+                workEffortName: "Closed access task", ownerPartyId: "EX_JOHN_DOE"})
+            call("update#mantle.work.effort.WorkEffort", {workEffortId: projectId, statusId: "WeClosed"})
+        })
+        const access = (app) => sys(() => call("ironstone.commons.TaskServices.get#TaskAccess", {workEffortId: projectId + "-1", app, need: "check"}))
+        const refusal = (service, parameters) => sys(() => {
+            try { call(service, parameters); return ec.message.getErrorsString() || "" }
+            catch (error) { return String(error.message || error) }
+            finally { ec.message.clearErrors() }
+        })
+        const projects = access("projects")
+        const commons = access("commons")
+        const project = sys(() => call("ironstone.projects.ProjectServices.get#ProjectAccess", {workEffortId: projectId, need: "none"}))
+        const settings = sys(() => call("ironstone.projects.ProjectServices.get#ProjectSettingsInfo", {workEffortId: projectId}).info)
+        const team = sys(() => call("ironstone.projects.ProjectServices.get#ProjectTeam", {workEffortId: projectId}))
+        const fixedAdd = post("Projects/ProjectDetail/WorkItems/quickAdd", {workEffortId: projectId, projectId: "IRON",
+            workEffortName: "BOSS_TEST Wrong project fallback", keep: keep({rootWorkEffortId: projectId})})
+        const misplacedCount = all("mantle.work.effort.WorkEffort", {workEffortName: "BOSS_TEST Wrong project fallback"}).length
+        const renamed = refusal("ironstone.projects.ProjectServices.save#ProjectGeneral", {workEffortId: projectId, workEffortName: "Refused rename"})
+        const changedName = one("mantle.work.effort.WorkEffort", {workEffortId: projectId}).workEffortName
+        const otherReopen = as("joe.developer", () => refusal("ironstone.projects.ProjectServices.set#ProjectStatus", {workEffortId: projectId, statusId: "WeInPlanning"}))
+        const managerScope = refusal("ironstone.projects.ProjectServices.get#ProjectAccess", {workEffortId: projectId, need: "manage"})
+        const reopened = refusal("ironstone.projects.ProjectServices.set#ProjectStatus", {workEffortId: projectId, statusId: "WeInPlanning"})
+        return {projects, commons, project, settings, team, fixedAdd, misplacedCount, renamed, changedName, otherReopen, managerScope, reopened,
+            status: one("mantle.work.effort.WorkEffort", {workEffortId: projectId}).statusId,
+            openProjects: access("projects"), openCommons: access("commons")}
+    },
+    then({projects, commons, project, settings, team, fixedAdd, misplacedCount, renamed, changedName, otherReopen, managerScope, reopened, status, openProjects, openCommons}) {
+        projects.visible && !projects.canUpdate
+        commons.visible && !commons.canUpdate
+        project.canView && project.canManage && !project.canUpdate && !project.canChange
+        settings.canManage && !settings.canChange
+        !team.canManage
+        fixedAdd.errors.includes("PROJECT_CLOSED")
+        misplacedCount == 0
+        renamed.includes("PROJECT_CLOSED")
+        changedName == "Closed access control"
+        otherReopen.includes("Only the managers")
+        managerScope == ""
+        reopened == ""
+        status == "WeInPlanning"
+        openProjects.canUpdate && openCommons.canUpdate
+    },
+})
+
 spec({
     setupSpec() { login("john.doe") },
 })

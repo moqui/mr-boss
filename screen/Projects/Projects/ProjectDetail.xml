@@ -43,6 +43,7 @@ along with this software (see the LICENSE.md file). If not, see
         project = projectAccess.project || null
         projectTabId = recordFound ? workEffortId : null
         canManage = !!projectAccess.canManage
+        canChange = !!projectAccess.canChange
         // a tab mounted from elsewhere (Commons Knowledge as Docs) knows it is in a project
         inProjectDetail = true
     ]]></script></always-actions>
@@ -201,7 +202,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     confirmation="${primaryAction.label}: ${header.workEffortName}?" parameter-map="{workEffortId:workEffortId, statusId:primaryAction.statusId}"/>
                         </widgets></section>
                         <container-dialog id="ProjectPostUpdateDialog" button-text="Post update" icon="sym_o_campaign" width="640" title="Status update of ${header.workEffortName}"
-                                condition="canManage">
+                                condition="canChange">
                             <form-single name="PostUpdate" transition="postUpdate" focus-field="body">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="healthEnumId" from="healthToday"><default-field title="Health">

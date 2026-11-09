@@ -49,7 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="TaskAccess" allow-remote="false">
         <description>Whether the current user may see and change a task: found (a WetTask), visible (get#RecordLinkInfo with
             checkOnly), the user's current roles on it (not declined or unassigned), isOwner, isAssignee, isWatcher (the Watcher
-            role or a RecordFollower row) and canUpdate (owner or assignee; never for a production run's operation, F38, which is not found in Projects). need: check answers without an error, view adds
+            role or a RecordFollower row) and canUpdate (owner or assignee; never in a closed project or for a production run's operation, F38, which is not found in Projects). need: check answers without an error, view adds
             "not available" when it is not found or not visible, update adds an error also when the user may not change it.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
@@ -148,11 +148,18 @@ along with this software (see the LICENSE.md file). If not, see
                     for (const field of ['actualCost', 'actualClientCost', 'totalClientCostAllowed', 'costUomId']) delete workEffort[field]
                 }
             }
+            const closedProject = row.rootWorkEffortId && ec.entity.find('mantle.work.effort.WorkEffort')
+                    .condition('workEffortId', row.rootWorkEffortId).one()?.statusId === 'WeClosed'
+            if (closedProject) canUpdate = false
             if (production) {
                 canUpdate = false
                 // and no cost of it: the task roll-up writes the operation's cost at pay rates (F36)
                 for (const field of ['actualCost', 'actualClientCost', 'totalClientCostAllowed', 'costUomId']) delete workEffort[field]
                 if (need === 'update') ec.message.addError(ec.resource.expand('Operation ${workEffortId} is production work: record it on the shop floor in Manufacturing', '', {workEffortId: workEffortId}))
+                return
+            }
+            if (need === 'update' && closedProject) {
+                ec.message.addError(ec.l10n.localize('PROJECT_CLOSED: The project is closed; reopen it before changing its work or plan'))
                 return
             }
             if (need === 'update' && !canUpdate)

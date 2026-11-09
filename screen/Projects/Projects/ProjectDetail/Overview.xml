@@ -165,7 +165,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="col-12 col-md-6">
                         <container-box><box-header title="Description"/>
                             <box-toolbar>
-                                <container-dialog id="ProjectDescriptionDialog" button-text="Edit" icon="sym_o_edit" width="720" title="Description of ${project.workEffortName}" condition="canManage">
+                                <container-dialog id="ProjectDescriptionDialog" button-text="Edit" icon="sym_o_edit" width="720" title="Description of ${project.workEffortName}" condition="canChange">
                                     <form-single name="ProjectDescription" transition="saveDescription">
                                         <field name="workEffortId"><default-field><hidden/></default-field></field>
                                         <field name="description" from="descriptionText"><default-field title="Description (markdown)"><text-area rows="10" cols="80" editor-type="md"/></default-field></field>

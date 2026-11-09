@@ -26,7 +26,9 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Whether the user may see (view), work in (update: a member, or one who manages) or manage (manage) a
             project; a need not met is an error ("not available" when the user does not see it), except with need none, which
             only answers. isMember: the user holds a current role on it. A client contact (get#VisibleProjectInfo isClient) sees
-            its client projects only and neither works in nor manages one (impl-projects.md P10).</description>
+            its client projects only and neither works in nor manages one (impl-projects.md P10). Closed is read only:
+            canUpdate is false, and change requires both a manager and an open project. canManage retains role authority
+            for reopening and late billing; it does not authorize manual project changes by itself.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="need" default-value="view"/>
@@ -36,13 +38,14 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="canView" type="Boolean"/>
             <parameter name="canUpdate" type="Boolean"/>
             <parameter name="canManage" type="Boolean"/>
+            <parameter name="canChange" type="Boolean"><description>A manager may change manual project settings while the project is not Closed.</description></parameter>
             <parameter name="isMember" type="Boolean"/>
             <parameter name="isClient" type="Boolean"><description>A client contact (get#VisibleProjectInfo isClient)</description></parameter>
             <parameter name="sharesHours" type="Boolean"><description>For a client contact, whether the project shares its hours with the
                 client (get#ClientProjectInfo shareHoursProjectIds); true for everyone else</description></parameter>
         </out-parameters>
         <actions><script><![CDATA[
-            canView = false; canUpdate = false; canManage = false; isMember = false; project = null; isClient = false; sharesHours = true
+            canView = false; canUpdate = false; canManage = false; canChange = false; isMember = false; project = null; isClient = false; sharesHours = true
             const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
             if (row != null && row.workEffortTypeEnumId === 'WetProject') {
@@ -52,9 +55,10 @@ along with this software (see the LICENSE.md file). If not, see
                 // a template is seen by those who make projects, as Settings/Templates lists it
                 if (!canView && !vis.isClient && row.isTemplate === 'Y' && ec.user.isInGroup('BOSS_PROJECT_MANAGER')) canView = true
                 canManage = canView && (all || Array.from(vis.managedProjectIds || []).includes(workEffortId) || ec.user.isInGroup('BOSS_PROJECT_MANAGER'))
-                canUpdate = canView && (canManage || isMember)
+                canUpdate = canView && (canManage || isMember) && row.statusId !== 'WeClosed'
                 // a client contact sees its client projects (get#VisibleProjectInfo) and changes nothing (impl-projects.md P10)
                 if (vis.isClient) { canManage = false; canUpdate = false; isMember = false }
+                canChange = canManage && row.statusId !== 'WeClosed'
                 isClient = !!vis.isClient
                 if (isClient && canView) {
                     // strict: a failure shares nothing
@@ -70,8 +74,12 @@ along with this software (see the LICENSE.md file). If not, see
             }
             if (need === 'none') return
             if (!canView) { ec.message.addError(ec.resource.expand('Project ${workEffortId} is not available', '', {workEffortId})); return }
-            if (need === 'update' && !canUpdate) ec.message.addError(ec.resource.expand('You are not on project ${workEffortId}', '', {workEffortId}))
-            else if (need === 'manage' && !canManage) ec.message.addError(ec.resource.expand('Only the managers of ${workEffortId} change that', '', {workEffortId}))
+            if (need === 'update' && !canUpdate) {
+                if ((canManage || isMember) && row.statusId === 'WeClosed') ec.service.sync()
+                    .name('mantle.work.WorkEffortServices.check#WorkEffortOpen').parameters({workEffortId}).call()
+                else ec.message.addError(ec.resource.expand('You are not on project ${workEffortId}', '', {workEffortId}))
+            } else if (['manage', 'change'].includes(need) && !canManage) ec.message.addError(ec.resource.expand('Only the managers of ${workEffortId} change that', '', {workEffortId}))
+            else if (need === 'change') ec.service.sync().name('mantle.work.WorkEffortServices.check#WorkEffortOpen').parameters({workEffortId}).call()
         ]]></script></actions>
     </service>
 
@@ -454,7 +462,7 @@ along with this software (see the LICENSE.md file). If not, see
                 finally { ec.message.clearErrors(); ec.message.popErrors() }
             }
             header = Object.assign({}, row, {
-                canManage: !!access.canManage, canUpdate: !!access.canUpdate, isMember: !!access.isMember,
+                canManage: !!access.canManage, canChange: !!access.canChange, canUpdate: !!access.canUpdate, isMember: !!access.isMember,
                 isTemplate: project.isTemplate === 'Y', isEnded: ended,
                 statusFlowId: project.statusFlowId || 'Default',
                 stageStatusIds: ['WeInPlanning', 'WeApproved', 'WeInProgress', 'WeComplete', 'WeClosed'],
@@ -649,7 +657,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const percent = percentComplete == null || String(percentComplete).trim() === '' ? null : Number(String(percentComplete).trim())
             if (percent != null && (!Number.isInteger(percent) || percent < 0 || percent > 100)) { ec.message.addError(ec.l10n.localize('The percent complete is a whole number from 0 to 100')); return }
@@ -679,7 +687,7 @@ along with this software (see the LICENSE.md file). If not, see
             memberList = []; teamList = []; clientList = []; roleOptions = []
             const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId}).call() || {}
             if (ec.message.hasError()) return
-            canManage = !!access.canManage
+            canManage = !!access.canChange
             const clientRoles = ['Customer', 'CustomerBillTo', 'ClientManager', 'ClientBilling']
             const other = clientRoles.concat(['Vendor', 'VendorBillFrom', 'OrgTeam'])
             const roleText = (id) => ec.entity.find('mantle.party.RoleType').condition('roleTypeId', id).useCache(true).one()?.description || id
@@ -717,7 +725,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const inGroup = ec.entity.find('mantle.party.RoleGroupMember').condition('roleGroupEnumId', 'RgpProject').condition('roleTypeId', roleTypeId).useCache(true).one()
             if (inGroup == null || roleTypeId === 'Vendor' || roleTypeId === 'VendorBillFrom') { ec.message.addError(ec.resource.expand('${roleTypeId} is not a project role', '', {roleTypeId})); return }
@@ -740,7 +748,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             ec.service.sync().name('mantle.work.WorkEffortServices.remove#WorkEffortParty').parameters({workEffortId: workEffortId, partyId: partyId, roleTypeId: roleTypeId}).call()
             if (!ec.message.hasError()) message = ec.l10n.localize('Taken off the project')
@@ -777,7 +785,7 @@ along with this software (see the LICENSE.md file). If not, see
             const hasItems = ec.entity.find('mantle.work.effort.WorkEffort').condition('rootWorkEffortId', workEffortId).condition('workEffortTypeEnumId', 'WetTask').count() > 0
             const linked = (entityName) => ec.entity.find(entityName).condition('workEffortId', 'in', itemIds).count() > 0
             const yn = (key) => settings[key] === 'Y' ? 'Y' : 'N'
-            info = {canManage: !!access.canManage, project: project,
+            info = {canManage: !!access.canManage, canChange: !!access.canChange, project: project,
                 general: {workEffortId: workEffortId, workEffortName: project.workEffortName || '', purposeEnumId: project.purposeEnumId || '',
                     priority: project.priority != null ? String(project.priority) : '5', visibilityEnumId: project.visibilityEnumId || '',
                     colorName: project.colorName || '',
@@ -793,7 +801,7 @@ along with this software (see the LICENSE.md file). If not, see
                 code: {branchPattern: settings.WstBranchPattern || '', mergeRequestMoves: yn('WstMergeRequestMoves')},
                 typeOptions: Array.from(types.typeList || []).map((row) => ({key: row.enumId, text: row.label})),
                 isTemplate: project.isTemplate === 'Y', settingSources: out.settingSources || {},
-                canDelete: !hasItems && !linked('mantle.work.time.TimeEntry') && !linked('mantle.work.effort.WorkEffortInvoice') && !linked('mantle.work.effort.WorkEffortGitCommit')}
+                canDelete: project.statusId !== 'WeClosed' && !hasItems && !linked('mantle.work.time.TimeEntry') && !linked('mantle.work.effort.WorkEffortInvoice') && !linked('mantle.work.effort.WorkEffortGitCommit')}
         ]]></script></actions>
     </service>
     <service verb="save" noun="ProjectGeneral">
@@ -815,7 +823,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
             if (ec.message.hasError()) return
             const dayOf = (text, label) => {
                 const value = text == null ? '' : String(text).trim().substring(0, 10)
@@ -869,7 +877,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const listOf = (value) => value == null ? [] : (Array.isArray(value) ? value : (typeof value === 'object' && value.length != null ? Array.from(value) : String(value).split(',')))
                     .map((part) => String(part).trim()).filter((part) => part)
@@ -922,7 +930,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const flag = isTemplate === 'Y' ? 'Y' : 'N'
             ec.service.sync().name('update#mantle.work.effort.WorkEffort').parameters({workEffortId: workEffortId, isTemplate: flag}).call()
@@ -961,7 +969,7 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
             if (ec.message.hasError()) return
             const info = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectSettingsInfo').parameters({workEffortId: workEffortId}).call()?.info || {}
             if (!info.canDelete) { ec.message.addError(ec.l10n.localize('Only a project with no work items, time, invoices or commits is deleted; close or cancel it instead')); return }
@@ -1091,7 +1099,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/><parameter name="repositoryId"/><parameter name="wikiSpaceId"/></out-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
             if (ec.message.hasError()) return
             const project = access.project
             ec.service.sync().name('ironstone.projects.ProjectServices.save#ProjectSettingValues').parameters({workEffortId: workEffortId, box: 'modules', modules: modules,
@@ -1148,7 +1156,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
             if (ec.message.hasError()) return
             const amount = (value, label) => {
                 const text = value == null ? '' : String(value).trim().replace(/,/g, '')
@@ -1213,7 +1221,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="rateAmountId"/><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call() || {}
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
             if (ec.message.hasError()) return
             if (!['RaprClient', 'RaprVendor'].includes(ratePurposeEnumId)) { ec.message.addError(ec.l10n.localize('A rate is for client billing or worker pay')); return }
             if (ratePurposeEnumId === 'RaprVendor' && partyId && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
@@ -1237,7 +1245,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const rate = ec.entity.find('mantle.humanres.rate.RateAmount').condition('rateAmountId', rateAmountId).one()
             if (rate == null || rate.workEffortId !== workEffortId) { ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not one of this project', '', {rateAmountId})); return }
@@ -1725,7 +1733,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="wikiSpaceId"/><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
-            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'manage'}).call()
+            ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call()
             if (ec.message.hasError()) return
             const out = ec.service.sync().name('mantle.work.ProjectServices.create#ProjectDocsSpace').parameters({workEffortId: workEffortId, storage: storage === 'repository' ? 'repository' : 'db',
                 repositoryId: storage === 'repository' ? (repositoryId || null) : null}).call() || {}

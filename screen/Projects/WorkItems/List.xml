@@ -64,7 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="quickAdd">
         <actions>
             <service-call name="ironstone.projects.WorkItemServices.quickAdd#WorkItem" out-map="addOut" in-map="{workEffortName:(workEffortName || ''),
-                    rootWorkEffortId:(projectId || null), purposeEnumId:(purposeEnumId || null), assignToPartyId:(assignToPartyId || null),
+                    rootWorkEffortId:(ec.context.get('projectTabId') || rootWorkEffortId || projectId || null), purposeEnumId:(purposeEnumId || null), assignToPartyId:(assignToPartyId || null),
                     sprintWorkEffortId:(addSprintId || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(addOut.message, 'success')</script></if>
             <script><![CDATA[
@@ -244,7 +244,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the drop-downs
             projectOptions = ec.service.sync().name('ironstone.projects.WorkItemServices.get#ProjectOptions').call()?.projectList || []
             addProjectOptions = ec.service.sync().name('ironstone.projects.WorkItemServices.get#ProjectOptions').parameters({memberOnly: true}).call()?.projectList || []
-            addProjectId = rootWorkEffortId && addProjectOptions.some((option) => option.key === rootWorkEffortId) ? rootWorkEffortId : (addProjectOptions[0]?.key || '')
+            addProjectId = rootWorkEffortId ? (addProjectOptions.some((option) => option.key === rootWorkEffortId) ? rootWorkEffortId : '') : (addProjectOptions[0]?.key || '')
             // the quick-add types: those the project offers (Settings, Work item types; the project's own WstWorkItemTypes)
             addTypeOptions = Array.from(ec.service.sync().name('ironstone.projects.ProjectServices.get#WorkItemTypes').parameters({rootWorkEffortId: addProjectId || null}).call()?.offeredList || [])
             addTypeId = addTypeOptions.some((type) => type.enumId === 'WepTask') ? 'WepTask' : (addTypeOptions[0]?.enumId || 'WepTask')
@@ -281,7 +281,9 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="row items-center q-mb-sm q-gutter-y-xs">
             <label text="Work items" type="h5" style="q-my-none q-mr-sm" condition="!projectFixed"/>
             <container style="col"/>
-            <render-mode><text type="qvt"><![CDATA[${newItemHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "WorkItemsNew", text: ec.l10n.localize("New work item"), url: sri.buildUrl("//Projects/QuickCreate").path + "?kind=workItem" + (rootWorkEffortId ? "&rootWorkEffortId=" + encodeURIComponent(rootWorkEffortId) : "")})}]]></text></render-mode>
+            <section name="NewWorkItemAction" condition="!rootWorkEffortId || addProjectId"><widgets>
+                <render-mode><text type="qvt"><![CDATA[${newItemHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "WorkItemsNew", text: ec.l10n.localize("New work item"), url: sri.buildUrl("//Projects/QuickCreate").path + "?kind=workItem" + (rootWorkEffortId ? "&rootWorkEffortId=" + encodeURIComponent(rootWorkEffortId) : "")})}]]></text></render-mode>
+            </widgets></section>
         </container>
 
         <!-- the smart lists, each with its count -->
@@ -308,7 +310,7 @@ along with this software (see the LICENSE.md file). If not, see
                 type="span" style="text-caption m-muted"/></box-toolbar>
             <box-body-nopad>
             <!-- the quick-add row: a work item in a project the user is on; Enter adds it and the cursor is back in the title -->
-            <section name="QuickAddRow" condition="addProjectOptions.length"><widgets>
+            <section name="QuickAddRow" condition="addProjectId"><widgets>
                 <container style="q-px-sm q-pt-sm m-task-quick-add">
                     <form-single name="NewWorkItem" transition="quickAdd" focus-field="workEffortName">
                         <field name="keep" from="keepJson"><default-field><hidden/></default-field></field>
