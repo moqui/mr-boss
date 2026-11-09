@@ -565,8 +565,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="ContactActivity">
         <description>One tab of the contact record beyond the overview, for a party the user may see: calendar (the party's
             events from 30 days ago to 90 days ahead, mantle.work.EventServices.get#FullCalendarData), tasks (the WetTask work
-            efforts the party is on, open ones first) and requests (the requests the party is on). The consent tab is
-            ironstone.comms.ConsentServices.get#ContactConsent.</description>
+            efforts the party is on or linked to, while the user may see each task, open ones first) and requests (the
+            requests the party is on). The consent tab is ironstone.comms.ConsentServices.get#ContactConsent.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="tab" required="true"/>
@@ -606,16 +606,27 @@ along with this software (see the LICENSE.md file). If not, see
                 const rows = Array.from(ec.entity.find('mantle.work.effort.WorkEffortAndParty').condition('partyId', partyId)
                         .condition('workEffortTypeEnumId', 'WetTask').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
                         .orderBy('-estimatedCompletionDate').limit(100).list())
+                const linkedIds = Array.from(ec.entity.find('mantle.work.effort.WorkEffortRecord').condition('recordEntityName', 'mantle.party.Party')
+                        .condition('recordId', partyId).selectField('workEffortId').list()).map((link) => link.workEffortId)
+                if (linkedIds.length) rows.push(...Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', linkedIds)
+                        .condition('workEffortTypeEnumId', 'WetTask').orderBy('-estimatedCompletionDate').limit(100).list()))
+                // Keep the existing due-date order across both sources (undated first, then latest due).
+                const due = (row) => row.estimatedCompletionDate == null ? Infinity : Number(String(row.estimatedCompletionDate))
+                rows.sort((a, b) => due(b) - due(a))
                 const seen = new Set()
                 for (const row of rows) {
                     if (seen.has(row.workEffortId)) continue
                     seen.add(row.workEffortId)
+                    const visible = ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo').parameters({
+                        recordEntityName: 'mantle.work.effort.WorkEffort', recordId: row.workEffortId, checkOnly: true}).call()
+                    if (visible?.recordVisible !== true) continue
                     const closed = ['WeComplete', 'WeClosed', 'WeCancelled'].includes(row.statusId)
                     taskList.push({workEffortId: row.workEffortId, workEffortName: row.workEffortName || row.workEffortId, statusText: status(row.statusId),
                         closed: closed, dueText: row.estimatedCompletionDate ? ec.l10n.format(row.estimatedCompletionDate, 'yyyy-MM-dd') : '',
                         roleText: role(row.roleTypeId), url: '/qapps/Commons/Tasks/TaskDetail?workEffortId=' + encodeURIComponent(row.workEffortId)})
                 }
                 taskList.sort((a, b) => (a.closed ? 1 : 0) - (b.closed ? 1 : 0))
+                taskList = taskList.slice(0, 100)
             } else if (tab === 'requests') {
                 const rows = Array.from(ec.entity.find('mantle.request.RequestParty').condition('partyId', partyId)
                         .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).orderBy('-fromDate').limit(100).list())

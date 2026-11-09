@@ -183,6 +183,49 @@ feature("the contact record of a directory party, with its books and groups, and
     },
 })
 
+feature("contact tasks include generic links once and omit tasks the reader cannot see", {
+    when() {
+        const create = (entity, fields) => call("create#" + entity, fields)
+        const service = "ironstone.commons.ContactServices.get#ContactActivity"
+        const grant = { artifactGroupId: "BOSS_COMMONS", artifactName: service, artifactTypeEnumId: "AT_SERVICE" }
+        const hadGrant = one("moqui.security.ArtifactGroupMember", grant) != null
+        const ids = ["BOSS_TEST_CONTACT_LINKED", "BOSS_TEST_CONTACT_BOTH", "BOSS_TEST_CONTACT_HIDDEN", "BOSS_TEST_CONTACT_CLOSED", "BOSS_TEST_CONTACT_EVENT"]
+        try {
+            sys(() => {
+                // A service-level call inherits the same Commons authorization and filters as the record screen.
+                if (!hadGrant) create("moqui.security.ArtifactGroupMember", Object.assign({ inheritAuthz: "Y" }, grant))
+                for (let index = 0; index < ids.length; index++) {
+                    create("mantle.work.effort.WorkEffort", { workEffortId: ids[index], workEffortTypeEnumId: index === 4 ? "WetEvent" : "WetTask",
+                        workEffortName: ids[index], ownerPartyId: index === 2 ? "EX_JOHN_DOE" : "ORG_ZIZI_JD",
+                        statusId: index === 3 ? "WeComplete" : "WeInPlanning", estimatedCompletionDate: new Date(Date.UTC(2026, 10, 10 + index, 12)) })
+                    create("mantle.work.effort.WorkEffortRecord", { workEffortId: ids[index], recordEntityName: "mantle.party.Party",
+                        recordId: "ORG_ACME_BA", linkedByUserId: "ORG_ZIZI_JD", linkedDate: ec.user.nowTimestamp })
+                    if (index === 1 || index === 2) create("mantle.work.effort.WorkEffortParty", { workEffortId: ids[index], partyId: "ORG_ACME_BA",
+                        roleTypeId: "Assignee", statusId: "WeptAssigned", fromDate: new Date(0) })
+                }
+            })
+            const out = as("joe.developer", () => call(service, { partyId: "ORG_ACME_BA", tab: "tasks" }))
+            return { rows: Array.from(out.taskList || []).filter((row) => ids.includes(row.workEffortId)), ids,
+                linkedRoles: current("mantle.work.effort.WorkEffortParty", { workEffortId: ids[0] }).length }
+        } finally {
+            sys(() => {
+                for (const entity of ["mantle.work.effort.WorkEffortParty", "mantle.work.effort.WorkEffortRecord", "mantle.work.effort.WorkEffort"])
+                    ec.entity.find(entity).condition("workEffortId", "in", ids).deleteAll()
+                if (!hadGrant) ec.entity.find("moqui.security.ArtifactGroupMember").condition(grant).deleteAll()
+            })
+        }
+    },
+    then({ rows, ids, linkedRoles }) {
+        rows.map((row) => row.workEffortId) == [ids[1], ids[0], ids[3]]
+        rows.filter((row) => row.workEffortId === ids[1]).length == 1
+        rows[0].roleText == "Assignee"
+        rows[1].roleText == ""
+        rows[2].closed == true
+        !rows.some((row) => row.workEffortId === ids[2] || row.workEffortId === ids[4])
+        linkedRoles == 0
+    },
+})
+
 feature("a personal contact shows the Private banner with its book; an employee shows the read-only directory card", {
     when() {
         return { mary: detail(MARY), joe: detail("ORG_ZIZI_JD") }
