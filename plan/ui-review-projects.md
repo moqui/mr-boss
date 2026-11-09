@@ -197,52 +197,54 @@ definitions**: `Projects.xml` and 113 below `Projects/`. Mounted sources outside
 
 Ordinary definitions use XML widgets, often with inline qvt/tui status, chart or decorative fragments. Custom
 templates, hidden helpers and output modes are listed below. Source existence does not prove effective reachability.
-Container review includes navigation and default-child selection. Each route and mode is **pending**, evidence **—**;
-split a grouped row as execution needs different outcomes. §6 is the only activity-status ledger.
+Container review includes navigation and default-child selection. The rows below map actual mode samples to §6;
+this is not a claim that every definition or recovery variant passed interactively. Unstated manual modes remain
+unverified. ProjectsServerStatic/ProjectsTui provide separate server render inspection, not browser interaction
+evidence. §6 is the only activity-status ledger.
 
 ### Local routes
 
 | Route prefix / source directory | XML definitions | Activities | Coverage / evidence |
 | --- | --- | --- | --- |
-| root | `Projects` | PR-01, 24, 25 | pending / — |
-| `Projects/` | `Home` | PR-01, 16, 24 | pending / — |
-| `Projects/` | `QuickCreate`, `QuickProject` | PR-02, 06, 16 | pending / — |
-| `Projects/` | `Projects`, `WorkItems`, `Requests`, `Code`, `Time`, `Resources`, `Billing`, `Reports`, `Settings` | PR-01; respective sections below | pending / — |
-| `Projects/Projects/` | `List`, `NewProject`, `ProjectDetail` | PR-01–03, 24 | pending / — |
-| `Projects/Projects/NewProject/` | `Start`, `Team`, `Modules`, `Money`, `Review` | PR-02 | pending / — |
-| `Projects/Projects/ProjectDetail/` | `Overview`, `Team`, `Settings` | PR-03, 19, 23 | pending / — |
-| `Projects/Projects/ProjectDetail/` | `Plan` | PR-08 | pending / — |
-| `Projects/Projects/ProjectDetail/Plan/` | `Calendar`, `CalendarTui` | PR-08 | pending / — |
-| `Projects/Projects/ProjectDetail/` | `Code`, `Files` | PR-13–14, 24; PR-04 | pending / — |
-| `Projects/Projects/ProjectDetail/` | `Money`, `ClientHours` | PR-20–21; PR-24–25 | pending / — |
-| `Projects/Projects/` | `Roadmap`, `MilestoneDetail`, `ReleaseDetail` | PR-09, 14, 21, 24 | pending / — |
-| `Projects/Projects/` | `StatusReport`, `EstimatePrint` | PR-03, 20, 22, 24 | pending / — |
-| `Projects/WorkItems/` | `List` | PR-05 | pending / — |
-| `Projects/WorkItems/` | `Backlog`, `BacklogTui`, `SprintDetail`, `SprintReport` | PR-07, 22 | pending / — |
-| `Projects/WorkItems/` | `Timeline`, `TimelineTui` | PR-08 | pending / — |
-| `Projects/WorkItems/` | `Import`, `ImportProgress` | PR-10 | pending / — |
-| `Projects/WorkItems/Import/` | `Source`, `Mapping`, `Options`, `Preview`, `Result` | PR-10 | pending / — |
-| `Projects/Requests/` | `List` | PR-11–12, 24 | pending / — |
-| `Projects/Code/` | `Repositories`, `RepositoryDetail`, `CommitDetail`, `Compare` | PR-13–14 | pending / — |
-| `Projects/Code/RepositoryDetail/` | `Files`, `Commits`, `Branches`, `Tags`, `Activity`, `Settings` | PR-13, 15 | pending / — |
-| `Projects/Code/` | `MergeRequests`, `MergeRequestDetail` | PR-14 | pending / — |
-| `Projects/Code/MergeRequestDetail/` | `Overview`, `Commits`, `Changes`, `ChangesTui` | PR-14 | pending / — |
-| `Projects/Code/` | `GitAccess` | PR-15 | pending / — |
-| `Projects/Time/` | `MyTime`, `MyTimeTui` | PR-16–17 | pending / — |
-| `Projects/Time/` | `Timesheets`, `TimesheetDetail`, `TeamTimesheet`, `TimesheetPrint` | PR-17–18, 22; TeamTimesheet is print output | pending / — |
-| `Projects/Time/` | `TimeEntries` | PR-16, 18 | pending / — |
-| `Projects/Time/TimeEntries/` | `EditEntry` | PR-16, 18 | pending / — |
-| `Projects/Time/` | `Import`, `ImportProgress` | PR-18 | pending / — |
-| `Projects/Time/Import/` | `Source`, `Preview`, `Result` | PR-18 | pending / — |
-| `Projects/Resources/` | `TeamPlanner`, `TeamPlannerTui`, `Allocations`, `PersonDetail` | PR-19 | pending / — |
-| `Projects/Resources/Allocations/` | `EditAllocation`, `Staff` | PR-19 | pending / — |
-| `Projects/Resources/PersonDetail/` | `Overview`, `Allocations`, `WorkItems`, `Time`, `Capacity` | PR-19; PR-18 time | pending / — |
-| `Projects/Billing/` | `Rates` | PR-20 | pending / — |
-| `Projects/Billing/` | `Unbilled`, `Invoices`, `InvoicePrint` | PR-21, 24 | pending / — |
-| `Projects/Billing/Unbilled/` | `CreateInvoice` | PR-21 | pending / — |
-| `Projects/Reports/` | `Index`, `Time`, `WorkItems`, `Sprints`, `Portfolio`, `Profitability`, `Utilization`, `Progress` | PR-22 | pending / — |
-| `Projects/Settings/` | `Index`, `WorkItemTypes`, `Workflows`, `Labels`, `Templates` | PR-23; PR-02 template | pending / — |
-| `Projects/Settings/` | `Time`, `Billing`, `Code`, `Intake` | PR-23; PR-12, 15, 17, 20–21 | pending / — |
+| root | `Projects` | PR-01, 24, 25 | B/T navigation exercised; §6 PR-01/24/25 |
+| `Projects/` | `Home` | PR-01, 16, 24 | B/T Home and role samples; PR-01/16/24 |
+| `Projects/` | `QuickCreate`, `QuickProject` | PR-02, 06, 16 | B quick/wizard and T creation/time; PR-02/06/16 |
+| `Projects/` | `Projects`, `WorkItems`, `Requests`, `Code`, `Time`, `Resources`, `Billing`, `Reports`, `Settings` | PR-01; respective sections below | B/T container/default-child samples across activities; §6 |
+| `Projects/Projects/` | `List`, `NewProject`, `ProjectDetail` | PR-01–03, 24 | B/T list/detail/create; PR-01–03 |
+| `Projects/Projects/NewProject/` | `Start`, `Team`, `Modules`, `Money`, `Review` | PR-02 | B all five wizard steps/draft; PR-02 |
+| `Projects/Projects/ProjectDetail/` | `Overview`, `Team`, `Settings` | PR-03, 19, 23 | B/T lifecycle/team/settings; PR-03/19/23 |
+| `Projects/Projects/ProjectDetail/` | `Plan` | PR-08 | T project plan and B wrapper; PR-08 |
+| `Projects/Projects/ProjectDetail/Plan/` | `Calendar`, `CalendarTui` | PR-08 | T agenda/open record; Standard notice; B calendar mutation unverified |
+| `Projects/Projects/ProjectDetail/` | `Code`, `Files` | PR-13–14, 24; PR-04 | T/B Code/files samples; PR-04/13/24 |
+| `Projects/Projects/ProjectDetail/` | `Money`, `ClientHours` | PR-20–21; PR-24–25 | B/T Money; B client Hours and paired denials; PR-20/24/25 |
+| `Projects/Projects/` | `Roadmap`, `MilestoneDetail`, `ReleaseDetail` | PR-09, 14, 21, 24 | T milestones/releases/client decisions; PR-09/21/24 |
+| `Projects/Projects/` | `StatusReport`, `EstimatePrint` | PR-03, 20, 22, 24 | B actual status/estimate output; PR-03/20 |
+| `Projects/WorkItems/` | `List` | PR-05 | B/T find/views/edits/export; PR-05 |
+| `Projects/WorkItems/` | `Backlog`, `BacklogTui`, `SprintDetail`, `SprintReport` | PR-07, 22 | B drag/T sprint lifecycle; B printable report; PR-07 |
+| `Projects/WorkItems/` | `Timeline`, `TimelineTui` | PR-08 | T scheduling and B mounted/shared checks; PR-08 |
+| `Projects/WorkItems/` | `Import`, `ImportProgress` | PR-10 | B import/progress; T no-file/delegation; PR-10 |
+| `Projects/WorkItems/Import/` | `Source`, `Mapping`, `Options`, `Preview`, `Result` | PR-10 | B all work-import steps; PR-10 |
+| `Projects/Requests/` | `List` | PR-11–12, 24 | B/T triage/intake; PR-11/12/24 |
+| `Projects/Code/` | `Repositories`, `RepositoryDetail`, `CommitDetail`, `Compare` | PR-13–14 | T repository paths and B/Standard content; PR-13/14 |
+| `Projects/Code/RepositoryDetail/` | `Files`, `Commits`, `Branches`, `Tags`, `Activity`, `Settings` | PR-13, 15 | T all children/admin pairs; B file samples; PR-13/15 |
+| `Projects/Code/` | `MergeRequests`, `MergeRequestDetail` | PR-14 | T/B review navigation and decisions; PR-14 |
+| `Projects/Code/MergeRequestDetail/` | `Overview`, `Commits`, `Changes`, `ChangesTui` | PR-14 | B diff presentation/keyboard; T threads; PR-14 |
+| `Projects/Code/` | `GitAccess` | PR-15 | T actual key/token flows and Git transport; PR-15 |
+| `Projects/Time/` | `MyTime`, `MyTimeTui` | PR-16–17 | B grid/day and T timer/decisions; PR-16/17 |
+| `Projects/Time/` | `Timesheets`, `TimesheetDetail`, `TeamTimesheet`, `TimesheetPrint` | PR-17–18, 22; TeamTimesheet is print output | T approval/detail; B actual Timesheet/TeamTimesheet output; PR-17/18 |
+| `Projects/Time/` | `TimeEntries` | PR-16, 18 | B/T entries/filter/reset; PR-18 |
+| `Projects/Time/TimeEntries/` | `EditEntry` | PR-16, 18 | T historical return/B entry samples; PR-16/18 |
+| `Projects/Time/` | `Import`, `ImportProgress` | PR-18 | B time import/progress; PR-18 |
+| `Projects/Time/Import/` | `Source`, `Preview`, `Result` | PR-18 | B source/preview/result; PR-18 |
+| `Projects/Resources/` | `TeamPlanner`, `TeamPlannerTui`, `Allocations`, `PersonDetail` | PR-19 | T request/staff/person; B mounted planner checks; PR-19 |
+| `Projects/Resources/Allocations/` | `EditAllocation`, `Staff` | PR-19 | T fitting staff/edit/move/restore; PR-19 |
+| `Projects/Resources/PersonDetail/` | `Overview`, `Allocations`, `WorkItems`, `Time`, `Capacity` | PR-19; PR-18 time | T person tabs/current capacity; historical selector unavailable; PR-19 |
+| `Projects/Billing/` | `Rates` | PR-20 | T rates/Which/payroll pair; PR-20 |
+| `Projects/Billing/` | `Unbilled`, `Invoices`, `InvoicePrint` | PR-21, 24 | T/B invoice lifecycle/current print/PDF/client; PR-21/24 |
+| `Projects/Billing/Unbilled/` | `CreateInvoice` | PR-21 | T actual selected manual sources; PR-21 |
+| `Projects/Reports/` | `Index`, `Time`, `WorkItems`, `Sprints`, `Portfolio`, `Profitability`, `Utilization`, `Progress` | PR-22 | T all seven reports; actual CSV/XLSX/print samples; B chart variants unverified |
+| `Projects/Settings/` | `Index`, `WorkItemTypes`, `Workflows`, `Labels`, `Templates` | PR-23; PR-02 template | T definitions/consumers, B row-dialog identity; PR-23 |
+| `Projects/Settings/` | `Time`, `Billing`, `Code`, `Intake` | PR-23; PR-12, 15, 17, 20–21 | T/B bounded defaults/policy and restoration; PR-12/15/23 |
 
 ### Defaults, shared mounts and public routes
 
@@ -266,7 +268,8 @@ split a grouped row as execution needs different outcomes. §6 is the only activ
 Record default-child selection on the container's row in the local-routes table; this table has no separate status.
 
 In the next table **PD** abbreviates route `Projects/Projects/ProjectDetail`. These are real mounted routes, not
-new copies to implement. All are pending / —, including inherited descendants. For dynamic embedded content,
+new copies to implement. Their consuming activity outcomes and exact evidence are in §6; inherited descendants
+without an explicit observation remain unverified. For dynamic embedded content,
 verify its actual resolved helper URL in the running app rather than inferring reachability from a filename.
 
 | Route under the consuming app | Definition under B | Activities / context |
@@ -294,35 +297,35 @@ verify its actual resolved helper URL in the running app rather than inferring r
 
 | Surface | Template / variant and supporting inspection | Activities | Coverage / evidence |
 | --- | --- | --- | --- |
-| Backlog, including project mount | `Projects/WorkItems/Backlog.qvue`; hidden `BacklogTui.xml` supports move and sprint decisions; inspect each mount's helper resolution | PR-07 | pending / — |
-| Timeline, including project Plan | `Projects/WorkItems/Timeline.qvue`; hidden `TimelineTui.xml` supports item moves and dependencies; plan/portfolio limitations separate | PR-08 | pending / — |
-| Project Calendar | `Commons/Calendar.qvue`; `Projects/Projects/ProjectDetail/Plan/CalendarTui.xml` read-only project-calendar twin | PR-08 | pending / — |
-| My time | `Projects/Time/MyTime.qvue`; `MyTimeTui.xml` supports entries, timer and decisions, not grid typing | PR-16–17 | pending / — |
-| Team planner | `Projects/Resources/TeamPlanner.qvue`; `TeamPlannerTui.xml` supports moves/decisions, with narrower request/staff controls | PR-19 | pending / — |
-| Merge request Changes | `Projects/Code/MergeRequestDetail/Changes.qvue`; `ChangesTui.xml` supports diff reading, comments, replies and resolve/reopen; browser-specific diff presentation separate | PR-14 | pending / — |
-| Merge request decisions | Parent `MergeRequestDetail.xml` supplies review/approve/request-changes, draft/ready, close/reopen and merge controls for browser and terminal inspection; template presence is not interaction evidence | PR-14 | pending / — |
-| Project Docs | `Commons/Knowledge.qvue` and hidden project `KnowledgeTui` mount; inspect save/history/review and browser delegation | PR-04, 09 | pending / — |
-| Both import progress screens | `Commons/Contacts/ImportProgress.qvue` and `.tui.json`; operation context and result/retry links | PR-10, 18 | pending / — |
-| Public request intake | `RequestIntake.qvue` is the submission form; `RequestIntake.tui.json` supplies a browser-delegation notice, not a terminal form | PR-12 | pending / — |
-| Project and work lists | Projects List status board/portfolio link; WorkItems List board groupings, due-date calendar, tree, quick-add, peek, selection and bulk controls | PR-01, 05–06 | pending / — |
-| Roadmap and Requests | Roadmap list/calendar; Requests list/status board and distinct staff/client create dialogs | PR-09, 11, 24 | pending / — |
-| Project creation and header | Wizard member/order/rate controls; Post update, Clone, Save as template; status confirmations | PR-02–03 | pending / — |
-| Project tabs and shared records | Description, team/client membership, allocation, repository setup/link, Docs/history/review, files and Chatter; work relations/recurrence/development/time; request triage/conversion/reply | PR-03–06, 11, 13–14, 19, 24 | pending / — |
-| Planning dialogs | Sprint create/edit/start/complete/carry-over; timeline move/dependency; milestone gate/share/deliverable/move unfinished; release notes/publish/tag | PR-07–09, 21 | pending / — |
-| Time and staffing dialogs | Week/day/entry/timer; submit/return/reopen reasons; allocation request/detail/staff/decision, EditAllocation and Staff routes | PR-16–19 | pending / — |
-| Money and billing dialogs | Which rate/new/edit/end; budget/order/estimate approval; selected Unbilled/CreateInvoice; invoice line/status/send controls | PR-20–21, 24 | pending / — |
-| Code dialogs | Repository create/mirror/link; branch/tag; rules/webhooks/deliveries; SSH keys/tokens; compare/work link; reviewers/review/merge/checkout and diff threads | PR-13–15 | pending / — |
-| Settings dialogs | Types/icons, workflow moves/statuses, labels/edit/merge, templates, time work types, intake addresses/categories | PR-23 | pending / — |
-| Reports and outputs | Chart/table/filter/drill-through; CSV/XLSX where offered; `StatusReport`, `EstimatePrint`, `SprintReport`, `TimesheetPrint`, `InvoicePrint` and report print views | PR-03, 07, 17, 20–22, 24 | pending / — |
-| Shell in Projects | Quick-create workItem/time/project, Code palette, record search, go-to keys, timer/review/time/request Today rows, approval and notification return, Assist context | PR-01, 06, 14, 16–17, 19, 25 | pending / — |
+| Backlog, including project mount | `Projects/WorkItems/Backlog.qvue`; hidden `BacklogTui.xml` supports move and sprint decisions; inspect each mount's helper resolution | PR-07 | B drag/menu and T mutations; pr07-browser-drag-after.jpg |
+| Timeline, including project Plan | `Projects/WorkItems/Timeline.qvue`; hidden `TimelineTui.xml` supports item moves and dependencies; plan/portfolio limitations separate | PR-08 | T dates/dependencies and mounted B async; B Manufacturing move; PR-08 |
+| Project Calendar | `Commons/Calendar.qvue`; `Projects/Projects/ProjectDetail/Plan/CalendarTui.xml` read-only project-calendar twin | PR-08 | T agenda/open; Standard notice; B project-calendar mutation unverified |
+| My time | `Projects/Time/MyTime.qvue`; `MyTimeTui.xml` supports entries, timer and decisions, not grid typing | PR-16–17 | B grid/day; T entries/timer/approval; PR-16/17 |
+| Team planner | `Projects/Resources/TeamPlanner.qvue`; `TeamPlannerTui.xml` supports moves/decisions, with narrower request/staff controls | PR-19 | T request/staff/move; mounted B async; B drag unverified |
+| Merge request Changes | `Projects/Code/MergeRequestDetail/Changes.qvue`; `ChangesTui.xml` supports diff reading, comments, replies and resolve/reopen; browser-specific diff presentation separate | PR-14 | B keyboard/unified/side-by-side; T threads; PR-14 |
+| Merge request decisions | Parent `MergeRequestDetail.xml` supplies review/approve/request-changes, draft/ready, close/reopen and merge controls for browser and terminal inspection; template presence is not interaction evidence | PR-14 | T actual decisions/merge and separate state variants; PR-14 |
+| Project Docs | `Commons/Knowledge.qvue` and hidden project `KnowledgeTui` mount; inspect save/history/review and browser delegation | PR-04, 09 | B database/Git save/history; T setup/read/release-publication; rich recovery variants unverified |
+| Both import progress screens | `Commons/Contacts/ImportProgress.qvue` and `.tui.json`; operation context and result/retry links | PR-10, 18 | B actual work/time imports and repeat outcomes; PR-10/18 |
+| Public request intake | `RequestIntake.qvue` is the submission form; `RequestIntake.tui.json` supplies a browser-delegation notice, not a terminal form | PR-12 | B submit/mail/token variants; T delegation only; PR-12 |
+| Project and work lists | Projects List status board/portfolio link; WorkItems List board groupings, due-date calendar, tree, quick-add, peek, selection and bulk controls | PR-01, 05–06 | B/T view/find/bulk/hierarchy samples; PR-01/05/06 |
+| Roadmap and Requests | Roadmap list/calendar; Requests list/status board and distinct staff/client create dialogs | PR-09, 11, 24 | T/B record and decision samples; PR-09/11/24 |
+| Project creation and header | Wizard member/order/rate controls; Post update, Clone, Save as template; status confirmations | PR-02–03 | B full wizard; T clone/template/lifecycle; PR-02/03 |
+| Project tabs and shared records | Description, team/client membership, allocation, repository setup/link, Docs/history/review, files and Chatter; work relations/recurrence/development/time; request triage/conversion/reply | PR-03–06, 11, 13–14, 19, 24 | B/T shared record samples with exact identity; PR-03–25 |
+| Planning dialogs | Sprint create/edit/start/complete/carry-over; timeline move/dependency; milestone gate/share/deliverable/move unfinished; release notes/publish/tag | PR-07–09, 21 | T lifecycle/gates/releases, B drag/shared move; PR-07–09/21 |
+| Time and staffing dialogs | Week/day/entry/timer; submit/return/reopen reasons; allocation request/detail/staff/decision, EditAllocation and Staff routes | PR-16–19 | B grid and T decision/staffing dialogs; PR-16–19 |
+| Money and billing dialogs | Which rate/new/edit/end; budget/order/estimate approval; selected Unbilled/CreateInvoice; invoice line/status/send controls | PR-20–21, 24 | T budget/rates/invoice/client decisions, B outputs; PR-20/21/24 |
+| Code dialogs | Repository create/mirror/link; branch/tag; rules/webhooks/deliveries; SSH keys/tokens; compare/work link; reviewers/review/merge/checkout and diff threads | PR-13–15 | T Git/admin/credentials/webhooks and B diff; PR-13–15 |
+| Settings dialogs | Types/icons, workflow moves/statuses, labels/edit/merge, templates, time work types, intake addresses/categories | PR-23 | T definitions/consumers; B repeated rows/checkboxes; PR-23 |
+| Reports and outputs | Chart/table/filter/drill-through; CSV/XLSX where offered; `StatusReport`, `EstimatePrint`, `SprintReport`, `TimesheetPrint`, `InvoicePrint` and report print views | PR-03, 07, 17, 20–22, 24 | T seven reports, B actual print/PDF, parsed CSV/XLSX; PR-03/07/17/20–22 |
+| Shell in Projects | Quick-create workItem/time/project, Code palette, record search, go-to keys, timer/review/time/request Today rows, approval and notification return, Assist context | PR-01, 06, 14, 16–17, 19, 25 | B palette/Today/Assist/notification, T shell navigation; PR-01/25 |
 
 There are five QVue files under `screen/Projects/`: Backlog, Timeline, MyTime, TeamPlanner and Changes, plus the separate
 public intake component `screen/RequestIntake.qvue`. Calendar, Knowledge, import progress, Chatter and RecordFiles
 reuse existing components. The rich wrappers differ in their plain modes: Timeline, MyTime and TeamPlanner list
-`qvt,html` in `render-modes` and show a browser notice; Backlog and the project Calendar carry an `html,qvt` notice
-but declare `render-modes="vue,qvue,tui"`; Changes has neither a notice nor qvt/html. Observe what plain and Standard
-modes actually show for each (a static lead below) and distinguish a notice from the mounted Material experience and
-from supported terminal functionality.
+`qvt,html` and show a browser notice. PR-UI-034 also makes Backlog and the project Calendar's already-authored
+`html,qvt` notices reachable; actual Standard Timeline/Backlog/Calendar notices were inspected. Changes has neither
+a notice nor qvt/html and remains unsupported in that plain mode. A notice is distinct from the mounted Material
+experience and from supported terminal functionality.
 
 ### Design-to-code reconciliation
 
@@ -779,31 +782,31 @@ Source research for this plan does not advance live coverage to inspected or exe
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
-| PR-01 — Workday navigation | exercised | partial: manager browser Home and fresh remote terminal Home observed; role/navigation/theme/geometry variants remain | pr01-home-light-before.jpg; Batch 1 |
-| PR-02 — Create/clone/template | exercised | partial: browser quick/duplicate recovery and all wizard steps persisted; terminal clone PRPLAN02, template PRPLAN03→PRPLAN04 and child context persisted; phone wizard deferred with constrained variants | pr02-wizard-review-after.jpg; planning-tui-results.json; PR-UI-002 |
-| PR-03 — Health/team/lifecycle | exercised | partial: description/health, member add/end, separate-member revocation, Hold/Resume/Complete/Close persisted; closed task remained editable, correction under review; empty deletion/output continuations remain | planning-tui-results.json; planning-tui-debug-retest.txt; PR-UI-013–014 |
-| PR-04 — Docs/files/conversation | exercised | partial: database page save/version02/history/review and real Git Docs dd1d88b99b save/history/publication persisted; actual download bytes verified; second-recipient notification/pending-save recovery variants unverified | pr04-db-docs-history.jpg; pr04-git-docs-history.jpg; planning-tui-results.json; code-tui-retest.json |
-| PR-05 — Work views/find | exercised | partial: project/text find retained List/Board/Calendar/Tree/detail/Back in terminal; browser view and hierarchy agreement, imported rollups and corrected smart counts verified; saved-find/columns/bulk/drag variants remain | planning-tui-results.json; pr05-project-counters-after.jpg; PR-UI-019 |
-| PR-06 — Work item delivery | exercised | partial: browser assignment/follow/note/due/Begin/Complete generated next monthly item RVQUICK-3; terminal daily recurrence/stop/child/watch persisted; clone/move/conversion and boundary variants remain | pr06-recurring-complete.jpg; planning-tui-results.json |
-| PR-07 — Sprint | exercised | partial: terminal invalid-date retention/create/move/start/complete/carryover persisted; reports and measured light/dark labels checked; capacity continuation and drag/refusal variants remain | planning-tui-results.json; pr07-backlog-light-1280.jpg; PR-UI-004,018; SprintWalk |
-| PR-08 — Schedule/calendar | exercised | partial: dates/self-dependency refusal/lag1/calendar record navigation persisted; mounted async checks cover Projects/Manufacturing; live Manufacturing range/scale resource view passed with no operations, live move/override unavailable in fixture; DST variants unverified | planning-tui-results.json; pr08-manufacturing-resource-live.jpg; PR-UI-005,012; TimelineWalk |
-| PR-09 — Milestone/release | exercised | partial: gate request/approval, saved release notes and published database Docs read back; real annotated release tag confirmed via Git; commercial billing/client continuation still open | planning-tui-publication.txt; code-tui-retest.json; ReleaseWalk |
-| PR-10 — Work import | exercised | partial: actual generic CSV mapping/options/preview/result created2 hierarchy rows+label/3h and identified1 missing-title row; repeat0create/2skip/1fail; terminal no-file refusal/delegation explicit; vendor/encoding variants unverified | pr10-import-preview.jpg; pr10-import-result.jpg; pr10-repeat-skip-result.jpg |
-| PR-11 — Request triage | exercised | partial: browser Form100012→Reviewed→RVQUICK-1; terminal100011→PRPLAN01-4→completed with follow-work policy; internal note and separately captured outward email verified; conversion-to-project/other recovery variants remain | planning-tui-results.json; pr12-outward-reply.jpg; RequestWalk; PR-UI-001,012 |
-| PR-12 — Public/email intake | exercised | partial: anonymous validation/file/submit, token rotate/disable, confirmation off0 versus on captured MIME, local SMTP intake+reply threading and explicit outward reply observed; CAPTCHA provider unavailable, honeypot/rate-limit live variants unverified; confirmationN/formoff restored | pr12-public-success.jpg; pr12-confirmation-off.jpg; planning-mail-protocol.json; planning-mail-final-capture.json |
-| PR-13 — Repository | exercised | partial: actual revision/file/tree/download bytes, branch/tag, admin export/import/mirror fetch/refusal/restoration/archive/unarchive and non-admin notice; source-archive action absent from Files UI; additional revision refusal variants remain | code-tui-retest.json; code-tui-observations.json; PR-UI-010–011 |
-| PR-14 — Review/merge | exercised | partial: real author/reviewer, browser keyboard line comment+unified/side-by-side, terminal reply/resolve/reopen/request-changes/approve and required1approval then merge d029b465 verified in Git preserving Docs; second MR state variants continuing; external CI unverified | pr14-diff-keyboard-dark.jpg; code-tui-retest.json; PR-UI-007; CodeReviewWalk |
-| PR-15 — Git access/controls | exercised | partial: temporary SSH key allowed actual Git read/push then removed and retry denied; required branch approval rule observed; one-time token missing in remote TUI under correction; webhook delivery/revoke continuation remains | code-tui-retest.json; pending remote session-cookie finding |
-| PR-16 — Time/timer | exercised | partial: actual browser grid and 390px day dialog, remote terminal timer persisted; remaining lock/date/theme variants open | pr16-week-grid-saved.jpg; pr16-time-390.jpg; time-tui-session.txt; Batch 4 |
-| PR-17 — Timesheet approval | exercised | partial: remote terminal two-user return/resubmit/approve/lock observed on disposable week; print and narrow-role variants open | time-tui-session.txt |
-| PR-18 — Time correction/import | exercised | partial: terminal entry correction and historical-week/person return now persisted after Save and F5; import/output variants open | time-tui-session.txt; time-tui-session-continuation.txt; PR-UI-015 |
-| PR-19 — Staffing/capacity | exercised | partial: request/invalid-date recovery/staff fitting candidate and named8h/week allocation persisted after shared row correction; person/capacity reports inspected; sprint-capacity/drag/leave reconciliation still open | time-tui-debug-session.txt; time-terminal-results.md; PR-UI-009–010,014; ResourceWalk |
-| PR-20 — Budget/estimate/rates | exercised | partial: explicit150/hour, budget10h/$1000 and Which-rate, narrow payroll allowed70 versus manager hidden, approver rate denial observed; commercial line linked; client estimate decision/output/mail continuation open | time-terminal-results.md; PR-UI-016; BillingWalk |
-| PR-21 — Invoice work | exercised | partial: reproduced duplicate-source defect and corrected live invoice100102187.50/1.25h/source100104/unbilled0; finalized state/actual print read; narrow send authority correction and milestone/client/send continuation open | time-terminal-results.md; pr21-invoice-print.jpg; PR-UI-017; BillingWalk; MilestoneBillingWalk |
-| PR-22 — Reports | exercised | partial: all7 reports adjusted scopes/grouping and drill-through, source totals reconciled; CSV and XLSX bytes checked, terminal Print delegation corrected; graphical chart/output/zero-denominator variants remain | time-terminal-results.md; time-tui-debug-session.txt; PR-UI-011; shared Print followup |
-| PR-23 — Settings | exercised | partial: Code branch default changed, inherited project reflected it, existing override preserved, create-branch preview compared and default restored; template used; intake confirmation changed/observed/restored; other repeated-row/type/workflow/label variants remain | code-tui-retest.json; planning-tui-results.json; planning-mail-final-capture.json |
-| PR-24 — Restricted client | exercised | partial: internal request file listing/direct bytes denied after fix; Sheldon ACME shared Hours1.5h/1week/ACME-7 with no pay/people/comments; BLUTH and internal Time/EditEntry denied; estimate/sent-invoice/client Code continuation open | pr-ui-001-client-after.jpg; time-terminal-results.md; PR-UI-001 |
-| PR-25 — Access/integration | exercised | partial: narrow manager/payroll/approver/otherorg and revoked member pairs, real embedded terminal keyboard Projects Home/light+dark, client internal-time isolation, Commons record handoffs and live shared Manufacturing resource-mode read; Standard/output routes continuing; real zoom deferred by user | pr25-embedded-terminal-light.jpg; pr25-embedded-terminal-dark.jpg; time-terminal-results.md; ProjectsServerStatic; ProjectsTui |
+| PR-01 — Workday navigation | exercised | primary paths exercised: manager/member Home, counter→find, Code palette, Today, app drawer and Assist; personal progress corrected to2done/9open; provider/deleted-source and additional geometry variants unverified | pr01-home-progress-after.jpg; pr01-palette-assist.txt; pr01-today-projects.txt; PR-UI-003,035 |
+| PR-02 — Create/clone/template | exercised | primary paths exercised: quick create/duplicate recovery, all wizard steps and draft resume, clone/template reuse and subproject context persisted; phone wizard remains deferred with constrained variants | pr02-wizard-review-after.jpg; planning-tui-results.json; PR-UI-002 |
+| PR-03 — Health/team/lifecycle | exercised | primary paths exercised: health/description, role add/end and separate-member revocation, lifecycle throughClosed/Re-open, empty deletion and readable status output; nonempty delete control absent, stale-edit variants unverified | planning-tui-primary-completion.txt; pr03-status-report.jpg; PR-UI-013,014,022 |
+| PR-04 — Docs/files/conversation | exercised | named continuations observed: database/Git save/history/review, actual revision/download bytes, two-staff mention→notification→same project and follow/reload/unfollow; rich-editor pending/failed-save variants unverified | pr04-db-docs-history.jpg; pr04-git-docs-history.jpg; pr04-mention-recipient.jpg; pr04-mention-return.txt |
+| PR-05 — Work views/find | exercised | primary paths exercised: find/sort/saved columns, views, assignee board grouping, peek→full→Back, bulk cancel/apply, subtree move/restore and cycle refusal; CSV/XLSX and global/fixed reset corrected; forced pagination/hidden-descendant variants unverified | planning-export-live.json; pr05-board-peek.jpg; pr05-peek-full-back.txt; PR-UI-019,031,033 |
+| PR-06 — Work item delivery | exercised | primary paths exercised: facts/type, assignment, labels, sub-item/relation, recurrence, clone/move/request conversion and Commons same-ID read; Owner remains displayed separately from editable Assignee; other boundary refusals unverified | pr06-edited-facts.jpg; pr25-commons-task-continuity.txt; planning-tui-primary-completion.txt |
+| PR-07 — Sprint | exercised | named capacity continuation observed; rank/edit/start/scope history/complete/carry-over and printable report persisted; actual browser drag and keyboard move both persisted/restored; extra optimistic-refusal/narrow-chart variants unverified | pr07-browser-drag-after.jpg; pr07-sprint-report.jpg; planning-tui-primary-completion.txt; SprintWalk |
+| PR-08 — Schedule/calendar | exercised | primary paths exercised: dependency add/edit/remove/lag, auto-rescheduled dates, project/plan/portfolio and calendar record navigation; actual Manufacturing move/preview/apply/reload passed; DST/holiday/drag-boundary variants unverified | planning-tui-primary-completion.txt; pr08-manufacturing-move-after.jpg; PR-UI-005,012; TimelineWalk |
+| PR-09 — Milestone/release | exercised | named continuations observed: gates, deliverables, linked work, real Git tag, notes overwrite/edit/save/publish and release with explicit unfinished destination; client estimate/milestone billing completed later; extra duplicate/protected-write variants unverified | planning-tui-primary-completion.txt; code-tui-final.json; ReleaseWalk; financial-milestone-invoice-capture.json |
+| PR-10 — Work import | exercised | primary paths exercised: generic CSV mapping/options/preview/result,2created hierarchy rows/label/3h, one refused row and repeat0create/2skip/1fail; vendor/encoding/progress-failure variants unverified | pr10-import-preview.jpg; pr10-import-result.jpg; pr10-repeat-skip-result.jpg |
+| PR-11 — Request triage | exercised | primary paths exercised: classify/assign/accept→linked work→complete→canceled then successful resolve, internal note, separately captured outward reply and filtered detail/Back; conversion-to-project/duplicate recovery variants unverified | planning-tui-primary-completion.txt; pr12-outward-reply.jpg; RequestWalk; PR-UI-001,012 |
+| PR-12 — Public/email intake | exercised | primary paths exercised: anonymous validation/file/submit, token rotate/disable, confirmation off0 versus enabled captured mail, SMTP intake/threaded reply; confirmationN/formoff restored; CAPTCHA provider unavailable, live honeypot/rate-limit variants unverified | pr12-public-success.jpg; planning-mail-protocol.json; planning-mail-final-capture.json; PR-UI-006 |
+| PR-13 — Repository | exercised | primary paths exercised: revision/tree/content/download bytes, branch/tag, repository link and admin export/import/mirror failure/restoration/archive pairs; source archive absent from Files UI, extra denied-revision variants unverified | code-tui-final.json; pr13-standard-merged-file.jpg; PR-UI-010,011,026 |
+| PR-14 — Review/merge | exercised | primary paths exercised: real commit/push, reviewer, keyboard line comment, both diff presentations, terminal threads/review/approval and real merge preserving Docs; separate draft/ready/close/reopen passed; conflict/changed-head/external CI variants unverified | pr14-diff-keyboard-dark.jpg; code-tui-final.json; CodeReviewWalk; PR-UI-007,021 |
+| PR-15 — Git access/controls | exercised | primary paths exercised: one-time SSH/token access, actual Git read/push and denial after removal/revoke, required approval rule, signed local200/503 webhook outcomes/history/delete; account-handoff/protected-push/removed-role variants unverified | code-tui-final.json; code-shared-tui-checks.txt; PR-UI-023,028 |
+| PR-16 — Time/timer | exercised | primary paths exercised: timer continuity/stop, grid typing and390px day dialog, week navigation and persisted totals; mounted failed/late saves retain drafts; midnight/DST and additional lock/theme variants unverified | pr16-week-grid-saved.jpg; pr16-time-390.jpg; time-terminal-results.md; PR-UI-008 |
+| PR-17 — Timesheet approval | exercised | primary paths exercised: worker/narrow approver return validation→correction/resubmit→approve/lock→allowed reopen/reason/notification→resubmit/approve; actual printed0.5h matches; repeated/stale-decision variants unverified | time-tui-audit-session.txt; pr17-timesheet-print.jpg; TimeWalk |
+| PR-18 — Time correction/import | exercised | primary paths exercised: historical person/week correction, editable/locked entries, actual time import/repeat0create/2skip/1fail and global/project-fixed grouped print2.5h; external-key mapping unsupported, failed-progress variants unverified | time-terminal-results.md; pr18-team-timesheet-print.jpg; pr18-project-fixed-print.txt; PR-UI-015,029,032,033 |
+| PR-19 — Staffing/capacity | exercised | named sprint-capacity continuation observed; request/staff/approve-allocation/edit/move/restore, Ana32h and Bob14h leave/26h capacity versus32allocated, person tabs and dated headers observed; historical PersonCapacity selector unavailable, browser drag variants unverified | time-tui-audit-session.txt; time-terminal-results.md; PR-UI-009,010,014,027; ResourceWalk |
+| PR-20 — Budget/estimate/rates | exercised | named client continuation observed: budget/order, estimate refusal/reason/revision/approval, captured mail and inspected HTML; rate add/edit/Which/end and payroll70→71→70 versus manager-hidden pay paired; extra overlap/stale-decision variants unverified | time-terminal-results.md; pr20-estimate-document.jpg; financial-estimate-capture.json; PR-UI-016; BillingWalk |
+| PR-21 — Invoice work | exercised | primary paths exercised: manual-rate invoice100102187.50/source100104/unbilled0, approval/send/client read, current PDF and immutable-file presence; milestone100153250/captured PDF/order links; legacy multi/no-schedule date fallback and extra cancel/expense variants unverified | pr21-calendar-date-after.jpg; pr21-invoice-pdf-current.png; financial-milestone-invoice-capture.json; PR-UI-017,024,025; BillingWalk; MilestoneBillingWalk |
+| PR-22 — Reports | exercised | primary paths exercised: all7 reports, scope/grouping/drill-through and reconciled totals, actual CSV/XLSX contents and supported print delegation; additional graphical/zero-denominator/failed-export variants unverified | time-terminal-results.md; time-tui-debug-session.txt; PR-UI-011,020 |
+| PR-23 — Settings | exercised | primary paths exercised: Code inheritance/override, templates, type/icon, workflow-name consumer, label merge, Time policy/work types and Intake category selector; repeated browser rows retain identity; originals restored; Projects request-category consumer absent by design | code-settings-final.json; pr23-label-dialog.jpg; pr23-time-policy-restored.txt; PR-UI-030,036 |
+| PR-24 — Restricted client | exercised | primary paths exercised: client file listing/direct bytes protected, ACME Hours1.5h without people/pay/comments, cross-client/internal-Time refusal, estimate/Sent invoice decisions, shared read-only repository then direct refusal after restoringN; further client request variants unverified | pr-ui-001-client-after.jpg; pr24-client-hours.jpg; pr24-client-code-readonly.jpg; pr24-client-code-revoked.txt; PR-UI-001 |
+| PR-25 — Access/integration | exercised | primary boundary samples exercised: narrow roles/otherorg/revoked member, Commons same-task handoff, internal-only/client-only Hours pair, real embedded terminal keyboard in both themes, Standard notices and outputs, Manufacturing shared move; real zoom deferred by user and other unsampled variants unverified | pr25-commons-task-continuity.jpg; pr25-internal-client-hours-refused.txt; pr25-embedded-terminal-light.jpg; ProjectsServerStatic; ProjectsTui |
 
 ### Findings register
 
@@ -817,12 +820,12 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-001 / observed / P1 | PR-11, 24–25: request files | Projects/Requests/RequestDetail, Files; staff and ACME client; light 1920×1080 | Client saw a staff attachment explicitly labelled Internal and downloaded its exact bytes | pr-ui-001-client-internal-before.jpg; paired route regression | BOSS shared files | Filter explicit outward content types before count/paging and direct resource lookup; leave internal, unclassified and case-summary files private; omit drive capabilities at service boundary | Client now sees only outward control file (pr-ui-001-client-after.jpg); staff and cross-client/refusal checks pass; broader PR-24 remains partial |
 | PR-UI-002 / observed / P1 | PR-02: Start → Next | NewProject/Start; manager; light 1920×1080 | With Create now unchecked, Next created the draft then skipped the remaining wizard steps | browser activity; batch01-before.log | BOSS Projects | Replace ignored, schema-invalid conditional-response attribute with its condition/expression child | Focused regression passes; resumed saved draft progressed through Team, Modules, Money and Review and opened the same project |
 | PR-UI-003 / observed / P2 | PR-01: empty workday | Home; no-project fixture; server route | Empty project list failed required-list validation and falsely added projects to failedParts | batch01-before.log | BOSS Projects | Accept an empty list in the internal project-row decorator | ProjectsHome verifies the first-run state with no failed parts; 3/3 Home features pass |
-| PR-UI-004 / mounted reproduction / P2 | PR-07: completion summary and quick-add | Backlog; real mounted component with deferred responses | An older sprint summary replaced a newly opened dialog; successful quick-add erased a newer title | planning-before-sprint-summary / quick-add evidence; ProjectsPlanningResponses | BOSS Projects | Bind replies to their original dialog/visit and acknowledge only submitted text | Focused regressions pass, including leave/return and unmount; live drag/browser variants remain |
+| PR-UI-004 / mounted reproduction / P2 | PR-07: completion summary and quick-add | Backlog; real mounted component with deferred responses | An older sprint summary replaced a newly opened dialog; successful quick-add erased a newer title | planning-before-sprint-summary / quick-add evidence; ProjectsPlanningResponses | BOSS Projects | Bind replies to their original dialog/visit and acknowledge only submitted text | Focused regressions pass, including leave/return and unmount; actual browser drag and keyboard move/reload pass; optimistic-refusal/narrow variants remain |
 | PR-UI-005 / mounted reproduction / P2 | PR-08: dependencies; shared Manufacturing timeline | Timeline and ProductionSchedule resource mode | Late replies closed/replaced newer dialogs; later move/override edits were discarded; dependency drag retained window handlers after unmount | planning-before-dependency-drag evidence; ProjectsPlanningResponses | BOSS shared timeline | Bind replies to dialog/input/visit, invalidate old previews, rotate consumed operation keys and remove drag handlers on teardown | Focused actual-component checks cover Projects and Manufacturing; actual Manufacturing Move→Preview09–11/No conflict→Apply→reload retained times and zero conflicts |
 | PR-UI-006 / source-confirmed content / P2 | PR-12: public intake confirmation | RequestIntake success panel | Always promised an email/reply path despite disabled confirmation or no intake account | source/contract comparison; RequestWalk | BOSS public intake | Say replies are possible if an email is received, without promising delivery | RequestWalk and actual confirmation-off/on browser+SMTP/captured outward reply pass; confirmationN and formoff restored |
 | PR-UI-007 / mounted reproduction / P2 | PR-14: review threads/drafts and restricted read state | MergeRequestDetail/Changes; mounted deferred-response fixture, browser dark 1920×1080 | Acknowledgment erased newer drafts or navigated a replacement MR; open read-only view falsely said merged/closed; line comment action was unavailable by keyboard | ProjectsDiffState; pr14-diff-keyboard-dark.jpg | BOSS Code | Capture MR/view/lifecycle and submitted text; retain newer drafts; use actual open state; expose named line-comment actions on focus | Focused test passes; actual Tab → named action → Enter → typed comment persisted, shown in Unified and Side by side |
 | PR-UI-008 / mounted reproduction / P1 | PR-16–17: grid, timer comment and decision drafts | MyTime; actual component with deferred replies; browser grid typing/Enter | Reload after an older/failed save erased unrelated/newer edits; failed timer comment was treated as acknowledged and could not retry | ProjectsTimeAsync; time-resources-before evidence | BOSS Time | Acknowledge submitted snapshots, serialize competing writes, retain failed inputs and stop departed-view callbacks | Focused regression passes; actual browser Tuesday 1.25 + Wednesday 2 persisted after reload (week total 3.27 h), 390px day view usable |
-| PR-UI-009 / mounted reproduction / P2 | PR-19: staffing candidates and people | TeamPlanner; actual mounted component with deferred replies | Late candidate/people answers populated a replacement dialog; old decisions could reload another view | ProjectsResourcesAsync; time-resources-before evidence | BOSS Resources | Bind candidates/people/results to originating dialog and view; capture mounted endpoint and preserve later decision text | Focused regression passes; actual staffing continuation awaits separate shared TUI renderer correction |
+| PR-UI-009 / mounted reproduction / P2 | PR-19: staffing candidates and people | TeamPlanner; actual mounted component with deferred replies | Late candidate/people answers populated a replacement dialog; old decisions could reload another view | ProjectsResourcesAsync; time-resources-before evidence | BOSS Resources | Bind candidates/people/results to originating dialog and view; capture mounted endpoint and preserve later decision text | Focused regression and actual request/staff/approve-allocation continuation pass after the shared terminal corrections |
 
 | PR-UI-010 / observed / P2 | PR-13, 19: nested list controls | Remote TUI, repository Files and Allocations | Container cells lost filenames and Staff/Edit/Approve controls | code-tui-observations.json; time-tui-session.txt | Framework ScreenTui | Flatten nested cell containers without losing actionable widgets | Debug live filenames, exact README download and requested allocation staffing now pass; focused render check passes |
 | PR-UI-011 / observed / P2 | PR-13, 22: attachments | Remote TUI navigation and agent CLI | Download parsed attachment bytes as screen JSON; agent exports queued bytes without saving | code-tui-observations.json; report export observation | Framework host/TUI | Recognize successful attachment responses, retain screen/focus and drain agent downloads through existing safe writer | Live README bytes match disposable Git revision; focused raw/save/error/JSON-mode checks pass |
@@ -869,12 +872,12 @@ assert new runtime failures. Historical finding identifiers remain historical re
 
 | Lead | Source | Activity | Investigation / priority |
 | --- | --- | --- | --- |
-| Client request file audience | impl-projects F156/F159; `service/ironstone/shared/RecordFilesServices.xml` and `ChatterServices.xml` | PR-11, 24–25 | Historical internal `RqCntInternal` exposure remains a priority source lead. Prepare outward/internal attachments on one visible request; compare list, direct download and bytes as client/nonclient. Reproduce early, before treating any client file flow as safe; do not defer a confirmed privacy defect to visual cleanup |
+| Client request file audience | impl-projects F156/F159; `service/ironstone/shared/RecordFilesServices.xml` and `ChatterServices.xml` | PR-11, 24–25 | Closed as PR-UI-001: actual staff/client listing and direct-download bytes reproduced the privacy defect, followed by scoped correction and paired live denial/public-file success; cross-client checks pass |
 | Project/child context and return | ProjectDetail's WorkItems/Backlog/Plan/Time mounts; Shared details; shell QuickCreate | PR-01, 05–08, 16, 18 | Compare scoped tab/global list/palette/quick-create routes and saved-filter Back; parent project and selected child IDs must not replace one another |
 | Repeated-row dialog identity | Settings WorkItemTypes `TypeIconDialog`, Labels `EditLabelDialog`, Workflows `EditStatusDialog`; repository Settings `EditRuleDialog`, `WebhookDeliveriesDialog`, `EditWebhookDialog` | PR-15, 23 | Fixed authored IDs warrant live repeated-row/focus/reopen checks; do not assume duplication is broken without inspecting rendered identity |
 | Rich-view save and mutation parity | Backlog, Timeline, MyTime, TeamPlanner, Changes and their twins | PR-07–08, 14, 16–19 | Compare supported keyboard/menu/TUI operations with drag/grid results; inspect late responses after changing project/week/range and separate intentional delegation |
 | Financial visibility distinctions | `ironstone.projects.BillingServices`, client projections and rate views; impl-projects §4 payroll decision | PR-20–25 | Ordinary money management must not expose employee worker pay; pair restricted “Set by payroll” presentation with separate payroll-holder read/edit, including exports and shared hours |
-| Plain/Standard modes of rich views | `render-modes` and `html,qvt` text of Backlog, `ProjectDetail/Plan/Calendar`, Changes | PR-07–08, 14 | Backlog and Calendar carry a notice their `render-modes` omit; Changes has none. Observe what qvt/html and Standard show before calling either a delegation or a defect |
+| Plain/Standard modes of rich views | `render-modes` and `html,qvt` text of Backlog, `ProjectDetail/Plan/Calendar`, Changes | PR-07–08, 14 | Closed for Backlog/Calendar by PR-UI-034: their existing notices are now reachable and observed in Standard; Timeline notice also observed. Changes plain mode remains unsupported, without claiming Standard diff presentation |
 | Stale demo dates and optional Git | BossProjectsDemoData files and Time/Resource/CodeDemoServices | PR-01, 07–09, 13–22 | Fixed planning dates differ from relative week fixtures; Git loader can continue after failure. Establish dates/capabilities before calling an empty or missing surface a defect |
 
 ### Bounded batch record
@@ -1277,3 +1280,51 @@ review cleared the six-file followup; all assertions extend existing renders. Be
 TimeEntries7/7 and Billing6/6 pass together after correction. Actual project Time reset removes dates/person while
 retaining PRTIME01/listall; actual Invoice reset removes project/kind/date and restores4rows from the filtered2.
 Column/view preferences and shared URL behavior remain intact. Full suites remain pending until the final phase.
+
+
+**Final manual coverage reconciliation.** All25 activities have observed primary paths and the named PR-04/07/09/20
+continuations are closed. This does not mark every recovery/mode variant passed: the activity rows identify their
+remaining gaps. Internal-browser geometry measured1920×1080/DPR2,1280×720/DPR2 and390×844; requested outer geometry
+and actual geometry remain distinct. Real zoom and further constrained variants remain deferred under the user's
+internal-browser direction. External CAPTCHA/CI providers, absent category/source-archive controls and a historical
+PersonCapacity selector were not invented or claimed. Mounted asynchronous controls remain separate evidence from
+actual live browser/terminal mutation.
+
+The final browser continuations changed board grouping to Assignee (same four RVQUICK records), selected its card
+for peek, opened full detail and returned to the same find/peek identity. Status grouping/List/peekoff were restored.
+RVQUICK-4's Type→Bug Fix, Assignee→Joe and added Docs label persisted through reload; Commons TaskDetail showed the
+same ID/type/project, John Owner and Joe Assignee. Owner has no offered edit control and is not conflated with Assignee.
+Actual sprint print reconciled committed1h/added2h/completed0h/carried3h across2items; both standalone and project-fixed grouped time
+print retained Joe/Oct12–18/2.5h.
+
+**Final verification started.** Source corrections are locally committed in their owning repositories. The final
+maximal release build passed in4m48s; cargo lint and cargo lint-min passed. Only then the deferred full gates began: application
+451specs/4workers, followed by framework and the required full webroot acceptance. Results remain pending here until
+the processes finish. No regression budget has been raised.
+
+**Cleanup checkpoint.** The isolated review HTTP/SSH/SMTP and webhook listeners are stopped. A temporary maintenance
+component (inside the real owned runtime component directory, never through a source symlink) ended27 active issued
+login keys and removed the review-only ACME HoursY and repository-sharingN overrides; its focused postconditions
+proved zero active keys/overrides. The maintenance component and localhost ADMIN-only mail hook were removed after
+logging counts only. Temporary Git tokens/SSH keys were revoked; child workers report SSH files removed and their
+known local TUI key files absent. Exact earlier SSH basenames were not retained, so no independent path recheck is
+claimed. Public forms/confirmation and global policies are restored, webhook configuration matches its backup, John
+is back in light mode, board preferences and viewport override are reset. The disposable database/Git fixtures and
+redacted ignored evidence remain available for inspection. No push was performed.
+
+
+**Application final gate — passed.** `CARGO_BUILD_JOBS=4 ./moq test-apps --nobuild` completed successfully on
+the final release binary. Server3420/3420 features across451specs passed with zero skipped in221.16s wall. Serial
+feature time: Mantle388.2/393s, BOSS234.9/264s, Marble0.1/5s and PASS15.6/20s. Client30/30 features across16specs
+passed with zero skipped in140.36s including served fixtures. BOSS client65.1s exceeds its57s target but remains
+within the existing1.5× gate tolerance (85.5s); the runner reported an advisory and exited0. No budget was raised,
+and no duplicate journey was added to eliminate the warning. Framework verification and webroot acceptance remain
+running/pending; application success does not substitute for them.
+
+Local source commits before this evidence-only checkpoint (oldest first; no pushes):
+
+- Framework: `87c3cd7c`, `9ff43d2e`, `8f050b61`, `eb5fdee3`, `6e715048`, `a90af8c3`, `8c558b44`.
+
+- BOSS: `6d566f29`, `aa72afd9`, `3cfdc273`, `d0952cde`, `05f1fce7`, `2ea31374`, `54006f92`, `6d100070`, `a98780db`, `5bc1663c`, `1cc74657`, `8ff471bd`, `3118b5f2`, `902eeb87`, `eb2d5450`, `43dd06d7`, `8c2d1dda`, `e94ba9cb`, `55abe0e4`.
+
+- Mantle: `df7c770e`, `0a4e1a4d`, `2c6a26e0`, `06141ca9`, `ffddc349`, `25fcdaa2`.
