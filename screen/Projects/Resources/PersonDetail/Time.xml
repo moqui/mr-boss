@@ -23,8 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
         timeRows = []; sheetRows = []
         if (!personFound) return
         const nowMs = Number(String(ec.user.nowTimestamp))
+        const dayThru = ec.user.getPeriodRange('day', '0')[1]
         const out = ec.service.sync().name('ironstone.projects.TimeServices.find#TimeEntryRows').parameters({list: 'all', partyId: partyId, pageSize: 100,
-            dateFrom: new Date(nowMs - 28 * 86400000), withTotals: true}).call() || {}
+            dateFrom: new Date(nowMs - 28 * 86400000), dateThru: dayThru, withTotals: true}).call() || {}
         ec.message.clearErrors()
         timeRows = Array.from(out.rowList || [])
         totalText = ec.l10n.format(out.totals?.hours ?? 0, '#,##0.##') + ' h'

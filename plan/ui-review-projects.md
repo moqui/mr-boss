@@ -854,6 +854,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-030 / observed / P2 | PR-23: conditional settings actions | Remote terminal type and time-work-type rows | Sections inside table cells dropped Offer/Stop offering actions | code-tui-retest.json; core existing macro before/after | Framework ScreenTui/SRI | Capture the native section JSON value with its original guards/actions/fail and row context | Existing bounded two-row macro1/1 and actual Type/Time work-type consumers pass; choices appeared/disappeared and original settings restored; framework a90af8c3 |
 | PR-UI-034 / observed / P3 | PR-07/08/25: Standard fallback | Standard Backlog and project Calendar | Authored html/qvt delegation notices were unreachable because their render-mode whitelist returned404 | pr25-standard-backlog-after.txt; pr25-standard-calendar-after.txt | BOSS screen declarations | Allow the two already-authored notice modes; no new editing mode | Independent review clear; XML parse and actual Standard notices pass; Changes plain mode remains explicitly unsupported |
 
+| PR-UI-032 / observed / P2 | PR-18/19: recent person time | PersonDetail/Time, narrow manager | Last four weeks included future Nov10/11/16 entries because the rolling query had no upper bound | time-tui-final-window-retest.txt | BOSS Person Time | Retain lower bound and end at the next viewer-local day boundary | Existing Resources4/4, DST-safe today/future controls; actual total28.52h/12rows→23.27h/8rows, current/historical kept and future days excluded after F5 |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1221,3 +1223,12 @@ so those existing fallback messages can render. Code/settings independently revi
 parse and actual Standard Backlog and project Calendar notices pass after the normal restart; Material/terminal
 paths and services are unchanged. Changes has no authored plain fallback and remains an explicit unsupported mode,
 not a claim of full Standard diff presentation. No implementation-mirroring test was added for these two declarations.
+
+
+**Batch 19 — bounded recent-person time.** PersonDetail's last-four-weeks projection included future entries
+because only its lower bound was supplied. It now ends at the next viewer-local day boundary, keeping all of today
+and the original rolling lower bound. Coordinator independently reviewed the two-file correction and requested a
+DST-safe test fixture; the same existing Person Time render uses today's final second and a future calendar-day
+control, with no extra render. Resources failed before then passed4/4. Actual narrow-manager Joe Time fell from
+28.52h/12rows to23.27h/8rows: current-day0.02 and historical0.25 remained, Nov10/11/16 entries disappeared, and F5
+retained the result. No entries were rewritten. Full suites remain pending.

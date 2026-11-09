@@ -75,6 +75,9 @@ spec({
     },
     cleanupSpec() {
         sys(() => {
+            for (const timeEntryId of made.timeEntries || []) {
+                ec.entity.find("mantle.work.time.TimeEntry").condition("timeEntryId", timeEntryId).one()?.delete()
+            }
             if (made.draft) {
                 const project = ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", made.draft).one()
                 if (project) { project.statusId = "WeCancelled"; project.update() }
@@ -190,6 +193,15 @@ feature("Allocations' Requested list and the staffing dialog for john.doe; Ana's
         const edit = render("apps/Projects/Resources/Allocations/EditAllocation", {})
         const tabs = {}
         for (const tab of ["Overview", "Allocations", "WorkItems", "Time", "Capacity"]) tabs[tab] = render(`apps/Projects/Resources/PersonDetail/${tab}`, { partyId: "EX_PRJ_ANA" })
+        // Today's later hours belong to the current day; next week's hours do not belong to the last four weeks.
+        const dayThru = Number(String(ec.user.getPeriodRange("day", "0")[1]))
+        const nextWeekDay = Number(String(ec.user.getPeriodRange("day", "7")[0]))
+        made.timeEntries = sys(() => [
+            [dayThru - 1000, "Resource time today control"],
+            [nextWeekDay, "Resource time future week control"]
+        ].map(([fromDate, comments]) => call("create#mantle.work.time.TimeEntry", {
+            partyId: "ORG_ZIZI_JD", workEffortId: "IRON-1", fromDate, hours: 0.25, comments
+        }).timeEntryId))
         const joeTime = render("apps/Projects/Resources/PersonDetail/Time", { partyId: "ORG_ZIZI_JD" })
         const bob = as("bob.developer", () => render("apps/Projects/Resources/PersonDetail", { partyId: "EX_PRJ_ANA" }))
         const unrelated = as("bob.developer", () => render("apps/Projects/Resources/PersonDetail", {partyId:"BOSS_RESOURCE_UNSHARED"}))
@@ -217,6 +229,7 @@ feature("Allocations' Requested list and the staffing dialog for john.doe; Ana's
         tabs.Allocations.output.includes("Acme customer portal")
         tabs.Capacity.output.includes("Capacity by week")
         joeTime.output.includes("The support queue")
+        joeTime.output.includes("Resource time today control") && !joeTime.output.includes("Resource time future week control")
         bobAccess.canView == true
         bob.status == 200
         !bob.broken
