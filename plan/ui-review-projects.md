@@ -817,6 +817,9 @@ to the owning layer. A source lead below has no new observed finding number yet.
 | PR-UI-001 / observed / P1 | PR-11, 24–25: request files | Projects/Requests/RequestDetail, Files; staff and ACME client; light 1920×1080 | Client saw a staff attachment explicitly labelled Internal and downloaded its exact bytes | pr-ui-001-client-internal-before.jpg; paired route regression | BOSS shared files | Filter explicit outward content types before count/paging and direct resource lookup; leave internal, unclassified and case-summary files private; omit drive capabilities at service boundary | Client now sees only outward control file (pr-ui-001-client-after.jpg); staff and cross-client/refusal checks pass; broader PR-24 remains partial |
 | PR-UI-002 / observed / P1 | PR-02: Start → Next | NewProject/Start; manager; light 1920×1080 | With Create now unchecked, Next created the draft then skipped the remaining wizard steps | browser activity; batch01-before.log | BOSS Projects | Replace ignored, schema-invalid conditional-response attribute with its condition/expression child | Focused regression passes; resumed saved draft progressed through Team, Modules, Money and Review and opened the same project |
 | PR-UI-003 / observed / P2 | PR-01: empty workday | Home; no-project fixture; server route | Empty project list failed required-list validation and falsely added projects to failedParts | batch01-before.log | BOSS Projects | Accept an empty list in the internal project-row decorator | ProjectsHome verifies the first-run state with no failed parts; 3/3 Home features pass |
+| PR-UI-004 / mounted reproduction / P2 | PR-07: completion summary and quick-add | Backlog; real mounted component with deferred responses | An older sprint summary replaced a newly opened dialog; successful quick-add erased a newer title | planning-before-sprint-summary / quick-add evidence; ProjectsPlanningResponses | BOSS Projects | Bind replies to their original dialog/visit and acknowledge only submitted text | Focused regressions pass, including leave/return and unmount; live drag/browser variants remain |
+| PR-UI-005 / mounted reproduction / P2 | PR-08: dependencies; shared Manufacturing timeline | Timeline and ProductionSchedule resource mode | Late replies closed/replaced newer dialogs; later move/override edits were discarded; dependency drag retained window handlers after unmount | planning-before-dependency-drag evidence; ProjectsPlanningResponses | BOSS shared timeline | Bind replies to dialog/input/visit, invalidate old previews, rotate consumed operation keys and remove drag handlers on teardown | Focused actual-component checks cover Projects and Manufacturing preview/apply/override compatibility; live Manufacturing retest remains |
+| PR-UI-006 / source-confirmed content / P2 | PR-12: public intake confirmation | RequestIntake success panel | Always promised an email/reply path despite disabled confirmation or no intake account | source/contract comparison; RequestWalk | BOSS public intake | Say replies are possible if an email is received, without promising delivery | Server RequestWalk passes; public browser/local-mail variants remain |
 
 ### Static leads
 
@@ -905,6 +908,20 @@ remote terminal client. File upload/download tools wait for user approval: those
   its 87 existing idiom/hazard sites are recorded in `lint-screens-current.txt`, not cleaned as unrelated work.
   Full `test-apps` and applicable `test-framework` remain pending
   until the end. The isolated runtime is intentionally retained for subsequent activities, with no production writes.
+
+**Batch 2 — planning response ownership and intake wording.** The planning worker corrected Backlog/Timeline and
+the public intake text. The code/settings worker independently reviewed the changes and requested fixes for
+leave-and-return generations, newer Manufacturing input and consumed operation keys; the final diff has no
+remaining blockers. Coordinator reviewed the integrated diff and registered `ProjectsPlanningResponses` as an
+offline **regression** spec: it mounts actual QVue components and checks particular deferred-response bugs, not a
+new journey or screen sweep. The original code failed five intended assertions; final **7/7 pass**, zero skips,
+4.89 s feature time. Existing authorized acceptance `SprintWalk`, `TimelineWalk`, `ReleaseWalk`, `RequestWalk`
+passed **25/25**, zero skips, on an independent fresh runtime. Evidence/JUnit is in the ignored review directory.
+These results do not establish browser or embedded-terminal activity coverage. Shared Manufacturing move
+preview/apply/override paths were exercised in the mounted fixture; an actual Manufacturing consumer retest is
+still owed. No wire shapes, routes or service parameters changed. Full gates remain pending until the end.
+
+Batch 1 committed in BOSS as `6d566f29` (Protect client request files and repair project entry flows).
 
 ### Completion
 

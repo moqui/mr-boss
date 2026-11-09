@@ -434,7 +434,8 @@ module.exports = {
     name: 'BossTimeline',
     data() {
         return {
-            loading: false, seq: 0, timeline: null, projectOptions: [], projectFixed: false, noProject: false, notAvailable: false,
+            loading: false, seq: 0, visit: 0, disposed: false,
+            timeline: null, projectOptions: [], projectFixed: false, noProject: false, notAvailable: false,
             filter: { text: '', assigneePartyId: null, purposeEnumId: null, sprintId: null, milestoneId: null },
             zoom: store.get('zoom') || 'weeks', group: store.get('group') || 'tree', autoSchedule: store.get('auto') === 'Y',
             collapsed: {}, drag: null, preview: null, linkDrag: null, scrollLeft: 0, scrolledFor: null,
@@ -807,6 +808,8 @@ module.exports = {
         }
     },
     watch: {
+        params: { deep: true, flush: 'sync', handler() { this.visit++; } },
+        screenPath: { flush: 'sync', handler() { this.visit++; } },
         'filter.assigneePartyId'() { this.load(); },
         'filter.purposeEnumId'() { this.load(); },
         'filter.sprintId'() { this.load(); },
@@ -826,6 +829,9 @@ module.exports = {
     methods: {
         t,
         url(name) { return this.screenPath + '/' + name; },
+        viewKey() {
+            return this.visit + '|' + this.disposed + '|' + this.screenPath + '|' + JSON.stringify(this.params);
+        },
         fmt(text, options) {
             try { return new Intl.DateTimeFormat(this.locale, Object.assign({ timeZone: 'UTC' }, options)).format(new Date(dayNum(text) * 86400000)); }
             catch (err) { return text; }
@@ -882,6 +888,7 @@ module.exports = {
                 top: ((this.rowH - height) / 2) + 'px', height: height + 'px', zIndex: this.preview && this.preview.id === row.id ? 3 : 2 };
         },
         load() {
+            if (this.disposed) return Promise.resolve();
             if (this.resourceMode) return this.rLoad();
             const seq = ++this.seq;
             this.loading = true;
@@ -1014,11 +1021,15 @@ module.exports = {
             const box = this.linkDrag.box;
             this.linkDrag = Object.assign({}, this.linkDrag, { moved: true, x2: event.clientX - box.left, y2: event.clientY - box.top });
         },
-        onLinkUp(event) {
+        endLinkDrag() {
             window.removeEventListener('pointermove', this.onLinkMove);
             window.removeEventListener('pointerup', this.onLinkUp);
             const drag = this.linkDrag;
             this.linkDrag = null;
+            return drag;
+        },
+        onLinkUp(event) {
+            const drag = this.endLinkDrag();
             if (!drag || !drag.moved) return;
             const el = document.elementFromPoint(event.clientX, event.clientY);
             const target = el && el.closest ? el.closest('[data-bar]') : null;
@@ -1032,20 +1043,32 @@ module.exports = {
             else this.dep = { open: true, isNew: true, dependentId: null, predecessorId: null, lagDays: '', violated: false, canChange: true, busy: false };
         },
         saveDependency() {
-            this.dep.busy = true;
-            this.post('saveDependency', { dependentId: this.dep.dependentId, predecessorId: this.dep.predecessorId, lagDays: this.dep.lagDays || '' }).then((json) => {
-                this.dep.busy = false;
+            const dep = this.dep;
+            if (dep.busy) return;
+            const view = this.viewKey();
+            const params = { dependentId: dep.dependentId, predecessorId: dep.predecessorId, lagDays: dep.lagDays || '' };
+            dep.busy = true;
+            this.post('saveDependency', params).then((json) => {
+                dep.busy = false;
+                if (this.dep !== dep || !dep.open || this.viewKey() !== view) return;
                 if (!json.saved) return;
-                this.dep.open = false;
+                if (dep.dependentId === params.dependentId && dep.predecessorId === params.predecessorId
+                        && (dep.lagDays || '') === params.lagDays) dep.open = false;
                 this.load();
-            }, () => { this.dep.busy = false; });
+            }, () => { dep.busy = false; });
         },
         removeDependency() {
-            this.post('removeDependency', { dependentId: this.dep.dependentId, predecessorId: this.dep.predecessorId }).then((json) => {
+            const dep = this.dep;
+            if (dep.busy) return;
+            const view = this.viewKey();
+            dep.busy = true;
+            this.post('removeDependency', { dependentId: dep.dependentId, predecessorId: dep.predecessorId }).then((json) => {
+                dep.busy = false;
+                if (this.dep !== dep || !dep.open || this.viewKey() !== view) return;
                 if (!json.removed) return;
-                this.dep.open = false;
+                dep.open = false;
                 this.load();
-            }, () => {});
+            }, () => { dep.busy = false; });
         },
         // ===== resource mode (ProductionSchedule) =====
         // a wall time (yyyy-MM-dd HH:mm in the user's zone) counted as UTC, as the days are
@@ -1054,6 +1077,7 @@ module.exports = {
         xAtWall(text) { return text ? ((this.wallMs(text) - this.range.first * 86400000) / 86400000) * this.dayPx : 0; },
         rLaneName(id) { const lane = ((this.sched && this.sched.laneList) || []).find((row) => row.facilityId === id); return lane ? lane.facilityName : (id || ''); },
         rLoad() {
+            if (this.disposed) return Promise.resolve();
             const seq = ++this.seq;
             this.loading = true;
             const params = {};
@@ -1098,7 +1122,12 @@ module.exports = {
             if (op) this.rOpenMove(op);
         },
         rCloseMove() { this.move = Object.assign({}, this.move, { open: false, preview: null }); },
-        rStale() { this.move.preview = null; this.move.override = false; },
+        rStale() {
+            this.move.preview = null;
+            this.move.override = false;
+            this.move.previewSeq = (this.move.previewSeq || 0) + 1;
+            if (this.move.step === 'preview') this.move.busy = false;
+        },
         rMoveParams(action) {
             const move = this.move;
             const preview = move.preview || {};
@@ -1109,48 +1138,76 @@ module.exports = {
                 expectedRunRevision: preview.expectedRunRevision != null ? String(preview.expectedRunRevision) : String(move.op.expectedRunRevision) };
         },
         rPreview() {
-            if (!this.move.op) return;
-            this.move.busy = true;
-            this.move.step = 'preview';
-            this.rPost('moveOperation', this.rMoveParams('preview')).then((json) => {
-                this.move.busy = false;
-                this.move.preview = json.preview || null;
-            }, () => { this.move.busy = false; });
+            if (!this.move.op || (this.move.busy && this.move.step !== 'preview')) return;
+            const move = this.move;
+            const seq = move.previewSeq = (move.previewSeq || 0) + 1;
+            const view = this.viewKey();
+            const params = this.rMoveParams('preview');
+            move.busy = true;
+            move.step = 'preview';
+            this.rPost('moveOperation', params).then((json) => {
+                if (move.previewSeq !== seq) return;
+                move.busy = false;
+                if (this.move !== move || !move.open || this.viewKey() !== view) return;
+                if (JSON.stringify(this.rMoveParams('preview')) !== JSON.stringify(params)) return;
+                move.preview = json.preview || null;
+            }, () => { if (move.previewSeq === seq) move.busy = false; });
         },
         rCommit(action) {
-            this.move.busy = true;
-            this.move.step = action;
-            this.rPost('moveOperation', this.rMoveParams(action)).then((json) => {
-                this.move.busy = false;
-                if (json.failed) { this.move.key = this.rKey(); return; }
-                this.move.open = false;
+            const move = this.move;
+            if (move.busy) return;
+            const view = this.viewKey();
+            const params = this.rMoveParams(action);
+            move.busy = true;
+            move.step = action;
+            this.rPost('moveOperation', params).then((json) => {
+                move.busy = false;
+                if (this.move !== move || !move.open || this.viewKey() !== view) return;
+                if (json.failed) { move.key = this.rKey(); return; }
+                if (JSON.stringify(this.rMoveParams(action)) === JSON.stringify(params)) move.open = false;
+                else { move.key = this.rKey(); this.rStale(); }
                 this.rLoad();
-            }, () => { this.move.busy = false; });
+            }, () => { move.busy = false; });
         },
         rUnschedule() {
-            const op = this.move.op;
+            const move = this.move;
+            const op = move.op;
+            const view = this.viewKey();
+            const params = Object.assign(this.rMoveParams('unschedule'), {
+                expectedRevision: String(op.expectedRevision), expectedRunRevision: String(op.expectedRunRevision) });
             this.$q.dialog({ title: this.t('Unschedule'), message: this.t('Take') + ' ' + op.operationName + ' ' + this.t('off the schedule?'), cancel: true, persistent: true })
                 .onOk(() => {
-                    this.move.busy = true;
-                    this.rPost('moveOperation', Object.assign(this.rMoveParams('unschedule'), { expectedRevision: String(op.expectedRevision),
-                        expectedRunRevision: String(op.expectedRunRevision) })).then((json) => {
-                        this.move.busy = false;
-                        if (json.failed) { this.move.key = this.rKey(); return; }
-                        this.move.open = false;
+                    if (this.move !== move || !move.open || move.busy || this.viewKey() !== view) return;
+                    move.busy = true;
+                    this.rPost('moveOperation', params).then((json) => {
+                        move.busy = false;
+                        if (this.move !== move || !move.open || this.viewKey() !== view) return;
+                        if (json.failed) { move.key = this.rKey(); return; }
+                        const current = Object.assign(this.rMoveParams('unschedule'), {
+                            expectedRevision: String(op.expectedRevision), expectedRunRevision: String(op.expectedRunRevision) });
+                        if (JSON.stringify(current) === JSON.stringify(params)) move.open = false;
+                        else { move.key = this.rKey(); this.rStale(); }
                         this.rLoad();
-                    }, () => { this.move.busy = false; });
+                    }, () => { move.busy = false; });
                 });
         },
         rOpenDecide(request, decision) { this.decide = { open: true, request, decision, reason: '', busy: false, key: this.rKey() }; },
         rDecide() {
-            this.decide.busy = true;
-            this.rPost('decideOverride', { scheduleChangeId: this.decide.request.scheduleChangeId, decision: this.decide.decision, reason: this.decide.reason || '',
-                operationKey: this.decide.key }).then((json) => {
-                this.decide.busy = false;
-                if (json.failed) { this.decide.key = this.rKey(); return; }
-                this.decide.open = false;
+            const decide = this.decide;
+            if (decide.busy) return;
+            const view = this.viewKey();
+            const params = { scheduleChangeId: decide.request.scheduleChangeId, decision: decide.decision,
+                reason: decide.reason || '', operationKey: decide.key };
+            decide.busy = true;
+            this.rPost('decideOverride', params).then((json) => {
+                decide.busy = false;
+                if (this.decide !== decide || !decide.open || this.viewKey() !== view) return;
+                if (json.failed) { decide.key = this.rKey(); return; }
+                if (decide.request.scheduleChangeId === params.scheduleChangeId && decide.decision === params.decision
+                        && (decide.reason || '') === params.reason) decide.open = false;
+                else decide.key = this.rKey();
                 this.rLoad();
-            }, () => { this.decide.busy = false; });
+            }, () => { decide.busy = false; });
         },
         // a bar dragged: its preview only (time by the zoom's step, the lane under the pointer); the drop opens Move with it
         rBarDown(event, bar) {
@@ -1201,7 +1258,7 @@ module.exports = {
         }
     },
     mounted() { this.load(); },
-    beforeUnmount() { this.endDrag(); this.rEndDrag(); }
+    beforeUnmount() { this.disposed = true; this.visit++; this.seq++; this.endDrag(); this.endLinkDrag(); this.rEndDrag(); }
 };
 </script>
 

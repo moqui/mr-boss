@@ -1,6 +1,7 @@
-// The regression suite's walks, one golden path per app; the other walks are acceptance tests (acceptance/client).
+// Focused client regressions and one golden-path walk per app; other walks belong in acceptance/client.
 suite(
     [
+        "ProjectsPlanningResponses",
         "AccountingReceivablesWalk",
         "ProductsWalk",
         "WarehouseReceivingWalk",

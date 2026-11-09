@@ -35,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
             <div class="col">
                 <div class="text-subtitle1 text-weight-medium">{{t('Thank you, we have your request')}}</div>
                 <div v-if="requestId" class="text-body1 q-mt-xs">{{t('Its number is')}} <span class="text-weight-medium text-mono" data-request-id>{{requestId}}</span></div>
-                <div class="text-body2 m-muted q-mt-xs">{{t('We will answer by email. To add more, reply to the email we send you.')}}</div>
+                <div class="text-body2 m-muted q-mt-xs">{{t('If we email you about your request, you can reply to that message.')}}</div>
             </div>
         </q-card-section>
         <q-card-actions class="q-px-md q-pb-md">

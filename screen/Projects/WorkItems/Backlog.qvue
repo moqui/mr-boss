@@ -285,7 +285,8 @@ module.exports = {
     components: { 'backlog-row': backlogRow },
     data() {
         return {
-            loading: false, seq: 0, backlog: null, projectOptions: [], projectFixed: false, noProject: false, notAvailable: false,
+            loading: false, seq: 0, visit: 0, disposed: false,
+            backlog: null, projectOptions: [], projectFixed: false, noProject: false, notAvailable: false,
             filter: { text: '', assigneePartyId: null, purposeEnumId: null, labelId: null, componentId: null, epicId: null },
             selected: {}, expanded: {}, drag: null, dropListKey: null, dropIndex: null, dropSide: null,
             quick: { name: '', purposeEnumId: 'WepTask', busy: false },
@@ -323,6 +324,8 @@ module.exports = {
         }
     },
     watch: {
+        params: { deep: true, flush: 'sync', handler() { this.visit++; } },
+        screenPath: { flush: 'sync', handler() { this.visit++; } },
         'filter.assigneePartyId'() { this.load(); },
         'filter.purposeEnumId'() { this.load(); },
         'filter.labelId'() { this.load(); },
@@ -346,6 +349,9 @@ module.exports = {
             if (this.inProject) params.workEffortId = this.params.workEffortId || this.projectId || '';
             return params;
         },
+        viewKey() {
+            return this.visit + '|' + this.disposed + '|' + this.screenPath + '|' + JSON.stringify(this.params);
+        },
         request(name, params, method) {
             return moqui.request(this.url(name), { method: method || 'GET', params: Object.assign(this.projectParams(), params || {}) }).then((result) => {
                 const json = result.json || {};
@@ -355,6 +361,7 @@ module.exports = {
         },
         post(name, params) { return this.request(name, params, 'POST'); },
         load() {
+            if (this.disposed) return Promise.resolve();
             const seq = ++this.seq;
             this.loading = true;
             const params = Object.assign({}, this.inProject ? { workEffortId: this.params.workEffortId || '' } : { rootWorkEffortId: this.params.rootWorkEffortId || '' });
@@ -491,15 +498,18 @@ module.exports = {
         quickAdd() {
             const name = this.quick.name.trim();
             if (!name || this.quick.busy) return;
-            this.quick.busy = true;
+            const quick = this.quick;
+            const submittedName = quick.name;
+            const view = this.viewKey();
+            quick.busy = true;
             const first = this.backlog.backlogList[0];
             this.post('quickAdd', { workEffortName: name, purposeEnumId: this.quick.purposeEnumId || '', nextWorkEffortId: first ? first.workEffortId : '' }).then((json) => {
-                this.quick.busy = false;
-                if (!json.workEffortId) return;
-                this.quick.name = '';
+                quick.busy = false;
+                if (!json.workEffortId || this.quick !== quick || this.viewKey() !== view) return;
+                if (quick.name === submittedName) quick.name = '';
                 this.load();
                 this.$nextTick(() => { const el = document.getElementById('boss-backlog-add'); if (el && el.focus) el.focus(); });
-            }, () => { this.quick.busy = false; });
+            }, () => { quick.busy = false; });
         },
         // ===== the dialogs =====
         openSprintForm(sprint) {
@@ -517,18 +527,23 @@ module.exports = {
         },
         openComplete(sprint) {
             this.complete = { open: true, key: this.complete.key + 1, sprint, summary: null, initial: {} };
+            const complete = this.complete;
+            const view = this.viewKey();
+            const fields = this.projectParams();
             this.request('sprintSummary', { sprintWorkEffortId: sprint.workEffortId }).then((json) => {
+                if (this.complete !== complete || !complete.open || this.viewKey() !== view) return;
                 const summary = json.summary;
-                if (!summary) { this.complete.open = false; return; }
-                this.complete.summary = summary;
-                this.complete.initial = Object.assign(this.projectParams(), { sprintWorkEffortId: sprint.workEffortId,
+                if (!summary) { complete.open = false; return; }
+                complete.summary = summary;
+                complete.initial = Object.assign(fields, { sprintWorkEffortId: sprint.workEffortId,
                     carryTo: summary.nextSprintId || 'new', newSprintName: '' });
-                this.complete.key++;
-            }, () => { this.complete.open = false; });
+                complete.key++;
+            }, () => { if (this.complete === complete && this.viewKey() === view) complete.open = false; });
         },
         afterChange(dialog) { dialog.open = false; this.load(); },
         turnOnSprints() { this.post('turnOnSprints', {}).then((json) => { if (json.on) this.load(); }, () => {}); }
     },
-    mounted() { this.load(); }
+    mounted() { this.load(); },
+    beforeUnmount() { this.disposed = true; this.visit++; this.seq++; }
 };
 </script>
