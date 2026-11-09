@@ -44,7 +44,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="due_from"/>
     <parameter name="due_thru"/>
 
-    <transition name="taskDetail"><default-response url="../TaskDetail"/></transition>
+    <transition name="taskDetail"><default-response url="../TaskDetail">
+        <parameter name="workEffortId"/><parameter name="taskListFind"/>
+    </default-response></transition>
 
     <!-- ========== changes that show the list again, with the find of the keep field ========== -->
     <transition name="quickAdd">
@@ -226,6 +228,8 @@ along with this software (see the LICENSE.md file). If not, see
             filtered = Object.keys(find).some((key) => key !== 'orderByField')
             const keepMap = Object.assign({list: list}, find, taskRowsPageIndex ? {pageIndex: String(taskRowsPageIndex)} : {})
             keepJson = JSON.stringify(keepMap)
+            // The same return context is used by table links, board cards and calendar entries.
+            for (const row of taskRows) row.url += '&taskListFind=' + encodeURIComponent(keepJson)
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label) + ' · ' + (counts[key] || 0), icon: icon, on: key === list,
                 params: Object.assign({}, find, {list: key})}))
             listLabel = L(lists.find((entry) => entry[0] === list)[1])
@@ -366,15 +370,15 @@ along with this software (see the LICENSE.md file). If not, see
                     macros' list state, and the later rows' links become buttons) -->
                 <field name="workEffortName"><header-field title="Task" show-order-by="true"/>
                     <conditional-field condition="recordUrl">
-                        <link url="taskDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId}" style="${isDone ? 'm-muted' : ''}"/>
+                        <link url="taskDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId, taskListFind:keepJson}" style="${isDone ? 'm-muted' : ''}"/>
                         <link url="${recordUrl}" url-type="plain" link-type="anchor" text="${recordCaption}" style="block text-caption m-muted"/>
                     </conditional-field>
                     <conditional-field condition="recordCaption">
-                        <link url="taskDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId}" style="${isDone ? 'm-muted' : ''}"/>
+                        <link url="taskDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId, taskListFind:keepJson}" style="${isDone ? 'm-muted' : ''}"/>
                         <label text="${recordCaption}" type="div" style="text-caption m-muted"/>
                     </conditional-field>
                     <default-field>
-                        <link url="taskDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId}" style="${isDone ? 'm-muted' : ''}"/>
+                        <link url="taskDetail" text="${workEffortName}" parameter-map="{workEffortId:workEffortId, taskListFind:keepJson}" style="${isDone ? 'm-muted' : ''}"/>
                     </default-field></field>
                 <field name="statusId"><header-field title="Status" show-order-by="true"/><default-field>
                     <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}" data-status="${statusId}">${WebUtilities.encodeHtml(statusLabel ?? '')}</q-chip>]]></text><text type="tui"><![CDATA[{"t": "text", "style": "strong", "text": ${JSON.stringify(statusLabel ?? "")}}]]></text></render-mode>

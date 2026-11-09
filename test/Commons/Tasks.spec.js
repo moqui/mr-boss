@@ -50,6 +50,9 @@ const rows = (list, parameters) => sys(() => call("ironstone.commons.TaskService
 const idsOf = (out) => (out.rowList || []).map((row) => row.workEffortId)
 const dayOf = (value) => value == null || value === "" ? "" : ec.l10n.format(value, "yyyy-MM-dd")
 const keep = (map) => JSON.stringify(map || { list: "all" })
+const listFindsOf = (output) => Array.from(output.matchAll(/taskListFind=([^&"'<>\s]+)/g)).flatMap((match) => {
+    try { return [JSON.parse(decodeURIComponent(match[1].replace(/\+/g, " ")))] } catch (err) { return [] }
+})
 // a task of john.doe's made through the quick-add row, by its name
 function quickAdd(name, dueDate, list) {
     const added = post("Tasks/List/quickAdd", { workEffortName: name, dueDate: dueDate || "", list: list || "all", keep: keep({ list: list || "all" }) })
@@ -189,6 +192,9 @@ feature("the list renders in qvt with the chips and counts, the views, the find,
         shown.output.includes('id="Tasks_table"')
         shown.output.includes("Plan the office move")
         found.output.includes("Check the backup restore")
+        // Board/calendar row URLs and table links carry the same list find into the detail.
+        found.output.includes("taskListFind=")
+        listFindsOf(found.output).some((find) => find.list === "all" && find.text === "backup restore")
         shown.output.includes("<m-editable")
         shown.output.includes("updateTaskField")
         shown.output.includes("sym_o_radio_button_unchecked")
@@ -420,9 +426,23 @@ feature("the calendar asks for the tasks due on the dates it shows (range-find),
     },
 })
 
+feature("the task list return context accepts only find fields and never a return destination", {
+    expect() {
+        const context = (findJson) => sys(() => call("ironstone.commons.TaskServices.get#TaskListFind", { findJson }))
+        const kept = { list: "assigned", text: "Compare the calendar", statusId: "WeInProgress", due_period: "week", pageIndex: "2" }
+        context(keep(kept)).findMap == kept
+        context(keep(Object.assign({}, kept, { returnUrl: "https://example.invalid", workEffortId: "other", tab: "files", pageNoLimit: "true" }))).findMap == kept
+        context(keep({ list: "https://example.invalid", text: { nested: "ignored" } })).findMap == {}
+        context("not JSON").findMap == {}
+        context("[]").findJson == null
+        context(null).findJson == null
+    },
+})
+
 feature("TaskDetail renders the task with its stage chips, the next status as the primary action, the facts, the tabs and Chatter", {
     when() {
-        return { overview: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "BOSS_DEMO_TASK_PLAN" }),
+        return { overview: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "BOSS_DEMO_TASK_PLAN",
+                taskListFind: keep({ list: "assigned", text: "office move" }) }),
             subtasks: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "BOSS_DEMO_TASK_PLAN", tab: "subtasks" }),
             time: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "BOSS_DEMO_TASK_PLAN", tab: "time" }),
             files: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "BOSS_DEMO_TASK_PLAN", tab: "files" }),
@@ -433,6 +453,12 @@ feature("TaskDetail renders the task with its stage chips, the next status as th
         overview.errors == ""
         !overview.broken
         overview.output.includes("Plan the office move")
+        // The explicit Tasks arrow restores the find; tabs/actions retain its context too.
+        overview.output.includes("/Commons/Tasks/List?list=assigned")
+        overview.output.includes("text=office+move")
+        overview.output.includes("taskListFind")
+        watched.output.includes("/Commons/Tasks/List")
+        !watched.output.includes("taskListFind=")
         // an assignee who is a user has an avatar with the user id (the user's photo)
         /<m-avatar name="[^"]*" user-id="EX_JOHN_DOE"/.test(overview.output)
         stagesOf(overview.output) == { WeInPlanning: "done grey-7", WeInProgress: "current primary", WeComplete: "todo positive" }

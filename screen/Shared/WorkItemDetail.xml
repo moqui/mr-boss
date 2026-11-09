@@ -62,8 +62,15 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="workEffortId" required="true"/>
     <parameter name="tab"/>
     <parameter name="peek"/>
+    <parameter name="taskListFind"/>
 
-    <transition name="tasks"><default-response url="../List"/></transition>
+    <always-actions><script><![CDATA[
+        taskListReturn = appRoot === 'Commons' ? ec.service.sync().name('ironstone.commons.TaskServices.get#TaskListFind')
+                .parameters({findJson: taskListFind || null}).call() : {findMap: {}, findJson: null}
+        taskListFind = taskListReturn.findJson || null
+    ]]></script></always-actions>
+
+    <transition name="tasks"><default-response url="../List" parameter-map="taskListReturn.findMap"/></transition>
 
     <!-- ========== changes, each showing the item again on its tab ========== -->
     <transition name="changeStatus">
@@ -72,7 +79,7 @@ along with this software (see the LICENSE.md file). If not, see
                     resolutionEnumId:(resolutionEnumId || null), stopRepeating:(stopRepeating || null), app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(statusOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="updateTask">
@@ -81,7 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
                     purposeEnumId:purposeEnumId, description:description, priority:priority, dueDate:dueDate, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(updateOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="setDue">
@@ -90,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
                     app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(dueOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="reassign">
@@ -99,7 +106,7 @@ along with this software (see the LICENSE.md file). If not, see
                     app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(reassignOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="addToToday">
@@ -107,7 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.add#TaskToToday" out-map="todayOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(todayOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="cloneTask">
@@ -115,8 +122,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.clone#Task" out-map="cloneOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(cloneOut.message, 'success')</script></if>
         </actions>
-        <conditional-response url="." condition="cloneOut?.newWorkEffortId"><parameter name="workEffortId" from="cloneOut.newWorkEffortId"/></conditional-response>
-        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <conditional-response url="." condition="cloneOut?.newWorkEffortId"><parameter name="workEffortId" from="cloneOut.newWorkEffortId"/><parameter name="taskListFind"/></conditional-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="convertToRequest">
@@ -126,7 +133,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <conditional-response url="//Commons/Requests/RequestDetail" condition="convertOut?.requestId">
             <parameter name="requestId" from="convertOut.requestId"/></conditional-response>
-        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="deleteTask">
@@ -134,8 +141,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.delete#OwnTask" out-map="deleteOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(deleteOut.message, 'success')</script></if>
         </actions>
-        <conditional-response url="../List" condition="deleteOut?.message"/>
-        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <conditional-response url="../List" condition="deleteOut?.message" parameter-map="taskListReturn.findMap"/>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/></default-response>
         <error-response url="."/>
     </transition>
     <!-- sub-tasks (Commons): subTaskId is the sub-task, workEffortId stays the task shown -->
@@ -145,7 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
                     dueDate:(dueDate || null), app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(subOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab" value="subtasks"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab" value="subtasks"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="toggleSubTask">
@@ -153,7 +160,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.toggle#TaskDone" out-map="doneOut" in-map="{workEffortId:subTaskId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(doneOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab" value="subtasks"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab" value="subtasks"/></default-response>
         <error-response url="."/>
     </transition>
     <!-- time -->
@@ -162,7 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.clockIn#Task" out-map="timeOut" in-map="{workEffortId:workEffortId, comments:comments, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(timeOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab" value="time"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab" value="time"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="clockOut">
@@ -170,7 +177,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.clockOut#Task" out-map="timeOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(timeOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab" value="time"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab" value="time"/></default-response>
         <error-response url="."/>
     </transition>
     <!-- the header's timer, back on the same tab -->
@@ -179,7 +186,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.clockIn#Task" out-map="timeOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(timeOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="stopTimer">
@@ -187,7 +194,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.commons.TaskServices.clockOut#Task" out-map="timeOut" in-map="{workEffortId:workEffortId, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(timeOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="addTime">
@@ -196,7 +203,7 @@ along with this software (see the LICENSE.md file). If not, see
                     fromDate:(fromDate || null), comments:comments, app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(timeOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab" value="time"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab" value="time"/></default-response>
         <error-response url="."/>
     </transition>
     <transition name="deleteTime">
@@ -205,7 +212,7 @@ along with this software (see the LICENSE.md file). If not, see
                     app:(appRoot == 'Projects' ? 'projects' : 'commons')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(timeOut.message, 'success')</script></if>
         </actions>
-        <default-response url="."><parameter name="workEffortId"/><parameter name="tab" value="time"/></default-response>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="taskListFind"/><parameter name="tab" value="time"/></default-response>
         <error-response url="."/>
     </transition>
     <!-- the people of the reassign drop-down -->
@@ -531,6 +538,7 @@ along with this software (see the LICENSE.md file). If not, see
                     .concat([['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']])
                 : [['overview', 'Overview'], ['subtasks', 'Sub-tasks' + (subTaskList.length ? ' (' + subTaskList.length + ')' : '')], ['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']]
             const base = detailPath + '?workEffortId=' + encodeURIComponent(workEffortId)
+                    + (taskListFind ? '&taskListFind=' + encodeURIComponent(taskListFind) : '')
             tabsHtml = '<q-tabs dense no-caps inline-label narrow-indicator outside-arrows mobile-arrows align="left" active-color="primary" indicator-color="primary"'
                     + ' class="text-grey-8 m-task-tabs" model-value="' + enc(tab) + '">' + tabs.map(([key, label]) => {
                         const cls = key === 'chatter' && tab !== 'chatter' ? ' class="lt-lg"' : ''
@@ -648,7 +656,8 @@ along with this software (see the LICENSE.md file). If not, see
                         parameter-map="{requestId:csCaseId, tab:'work'}"/></container>
             </widgets></section>
             <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !csTask"><widgets>
-                <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"/></container>
+                <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"
+                        parameter-map="{taskListFind:taskListFind}"/></container>
             </widgets></section>
             <section name="ManufacturingBack" condition="mfgTask"><widgets>
                 <container style="q-mb-xs"><link url="${sharedLinks['WorkCenters/Downtime']}" link-type="anchor" text="Downtime" icon="arrow_back"/></container>
@@ -677,7 +686,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <section name="CommonsStatus" condition="!projects"><widgets>
                             <status-bar id="TaskStatusBar" status-id="${task.statusId}" status-flow-id="${statusFlowId}" stages="${stageStatusIds}"
                                     allowed-status-ids="${allowedStatusIds}" transition="changeStatus" parameter-name="toStatusId"
-                                    parameter-map="{workEffortId:workEffortId, tab:tab}" title="${task.workEffortName}"/>
+                                    parameter-map="{workEffortId:workEffortId, tab:tab, taskListFind:taskListFind}" title="${task.workEffortName}"/>
                         </widgets></section>
                         <section name="ProjectsStatus" condition="projects"><widgets>
                             <status-bar id="WorkItemStatusBar" status-id="${task.statusId}" status-flow-id="${statusFlowId}" stages="${stageStatusIds}"
@@ -703,6 +712,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="canUpdate">
                                 <form-single name="TaskReassign" transition="reassign">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="taskListFind"><default-field><hidden/></default-field></field>
                                     <field name="tab"><default-field><hidden/></default-field></field>
                                     <field name="assignToPartyId"><default-field title="Assignee">
                                         <drop-down><dynamic-options transition="assigneeSearch" server-search="true" min-length="0"/></drop-down></default-field></field>
@@ -712,19 +722,20 @@ along with this software (see the LICENSE.md file). If not, see
                             <container-dialog id="TaskDueDialog" button-text="Set due" icon="sym_o_event" width="400" title="Due date" condition="canUpdate">
                                 <form-single name="TaskSetDue" transition="setDue">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="taskListFind"><default-field><hidden/></default-field></field>
                                     <field name="tab"><default-field><hidden/></default-field></field>
                                     <field name="dueDate" from="dueEditText"><default-field title="Due (empty: no due date)"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
                                     <field name="submitButton"><default-field title="Set due"><submit/></default-field></field>
                                 </form-single>
                             </container-dialog>
                             <link url="addToToday" link-type="hidden-form" text="Add to Today" icon="sym_o_today" style="q-ml-xs" condition="task.canAddToToday"
-                                    parameter-map="{workEffortId:workEffortId, tab:tab}"/>
+                                    parameter-map="{workEffortId:workEffortId, tab:tab, taskListFind:taskListFind}"/>
                             <button-menu text="More" icon="more_horiz" style="q-ml-xs">
-                                <link url="cloneTask" link-type="hidden-form-link" text="Clone" icon="sym_o_content_copy" parameter-map="{workEffortId:workEffortId}"/>
+                                <link url="cloneTask" link-type="hidden-form-link" text="Clone" icon="sym_o_content_copy" parameter-map="{workEffortId:workEffortId, taskListFind:taskListFind}"/>
                                 <link url="convertToRequest" link-type="hidden-form-link" text="Convert to request" icon="sym_o_support"
-                                        confirmation="Draft a request from ${task.workEffortName}?" parameter-map="{workEffortId:workEffortId}"/>
+                                        confirmation="Draft a request from ${task.workEffortName}?" parameter-map="{workEffortId:workEffortId, taskListFind:taskListFind}"/>
                                 <link url="deleteTask" link-type="hidden-form-link" text="Delete" icon="sym_o_delete" btn-type="danger" condition="canDelete"
-                                        confirmation="Delete ${task.workEffortName}?" parameter-map="{workEffortId:workEffortId}"/>
+                                        confirmation="Delete ${task.workEffortName}?" parameter-map="{workEffortId:workEffortId, taskListFind:taskListFind}"/>
                             </button-menu>
                         </widgets></section>
                         <section name="ProjectsActionRow" condition="projects"><widgets>
@@ -892,6 +903,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <container-dialog id="TaskEditDialog" button-text="Edit" icon="sym_o_edit" width="600" title="Edit ${task.workEffortName}" condition="canUpdate">
                                             <form-single name="TaskEdit" transition="updateTask" map="task" focus-field="workEffortName">
                                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                <field name="taskListFind"><default-field><hidden/></default-field></field>
                                                 <field name="tab"><default-field><hidden/></default-field></field>
                                                 <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
                                                 <field name="purposeEnumId"><default-field title="Purpose">
@@ -1295,13 +1307,14 @@ along with this software (see the LICENSE.md file). If not, see
                         <section name="ClockActions" condition="canUpdate"><widgets>
                             <section name="ClockOutAction" condition="openTimeEntry"><widgets>
                                 <link url="clockOut" link-type="hidden-form" btn-type="primary" text="${projects ? 'Stop timer' : 'Clock out'}" icon="sym_o_timer_off"
-                                        parameter-map="{workEffortId:workEffortId}"/>
+                                        parameter-map="{workEffortId:workEffortId, taskListFind:taskListFind}"/>
                             </widgets><fail-widgets>
-                                <link url="clockIn" link-type="hidden-form" text="${projects ? 'Start timer' : 'Clock in'}" icon="sym_o_timer" parameter-map="{workEffortId:workEffortId}"/>
+                                <link url="clockIn" link-type="hidden-form" text="${projects ? 'Start timer' : 'Clock in'}" icon="sym_o_timer" parameter-map="{workEffortId:workEffortId, taskListFind:taskListFind}"/>
                             </fail-widgets></section>
                             <container-dialog id="TaskAddTimeDialog" button-text="Add time" icon="sym_o_more_time" width="480" title="Add time on ${task.workEffortName}">
                                 <form-single name="TaskAddTime" transition="addTime" focus-field="hours">
                                     <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="taskListFind"><default-field><hidden/></default-field></field>
                                     <field name="hours"><default-field title="Hours"><text-line size="6" input-type="number"/></default-field></field>
                                     <field name="fromDate"><default-field title="From" tooltip="When the work started; empty: the hours up to now">
                                         <date-time type="timestamp" format="yyyy-MM-dd HH:mm"/></default-field></field>

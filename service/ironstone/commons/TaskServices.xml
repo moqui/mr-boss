@@ -22,6 +22,27 @@ along with this software (see the LICENSE.md file). If not, see
     action takes each task on its own, in its own transaction: one that fails is logged and counted, the rest go on. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
+    <service verb="get" noun="TaskListFind" allow-remote="false">
+        <description>The list's keep JSON carried into a task and back. Only task-find fields are returned; the screen
+            always returns to its own List, never to a supplied URL. Missing or malformed context uses the normal list.</description>
+        <in-parameters><parameter name="findJson"/></in-parameters>
+        <out-parameters><parameter name="findMap" type="Map"/><parameter name="findJson"/></out-parameters>
+        <actions><script><![CDATA[
+            let decoded = {}
+            try { if (typeof findJson === 'string' && findJson.length <= 8192) decoded = JSON.parse(findJson) || {} } catch (err) { decoded = {} }
+            findMap = {}
+            if (!Array.isArray(decoded) && typeof decoded === 'object') {
+                for (const key of ['list', 'text', 'statusId', 'purposeEnumId', 'rootWorkEffortId', 'recordId', 'orderByField', 'pageIndex',
+                        'due_period', 'due_poffset', 'due_pdate', 'due_from', 'due_thru']) {
+                    const value = decoded[key]
+                    if (typeof value === 'string' || typeof value === 'number') findMap[key] = String(value)
+                }
+                if (findMap.list && !['all', 'today', 'week', 'overdue', 'assigned', 'created', 'watching', 'done'].includes(findMap.list)) delete findMap.list
+            }
+            findJson = Object.keys(findMap).length ? JSON.stringify(findMap) : null
+        ]]></script></actions>
+    </service>
+
     <!-- ========== Access ========== -->
 
     <service verb="get" noun="TaskAccess" allow-remote="false">
