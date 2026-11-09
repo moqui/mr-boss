@@ -167,17 +167,15 @@ along with this software (see the LICENSE.md file). If not, see
                     </widgets></section>
                     <render-mode><text type="qvt"><![CDATA[</q-item-label></q-item-section>
                         <q-item-section side class="q-pl-none"><div class="row no-wrap items-center">]]></text><text type="tui" template="false">[]</text></render-mode>
-                    <link url="markDone" link-type="hidden-form-link" icon="sym_o_check" text="" tooltip="Mark done" condition="item.canComplete"
+                    <link url="markDone" link-type="hidden-form-link" icon="sym_o_check" text="" tooltip="Complete ${item.title}" condition="item.canComplete"
                             parameter-map="{workEffortId:item.workEffortId}"/>
-                    <link url="stopTimer" link-type="hidden-form-link" icon="sym_o_stop_circle" text="" tooltip="Stop the timer" condition="item.canStopTimer"
+                    <link url="stopTimer" link-type="hidden-form-link" icon="sym_o_stop_circle" text="" tooltip="Stop the timer for ${item.title}" condition="item.canStopTimer"
                             parameter-map="{timeEntryId:item.timeEntryId}"/>
-                    <link url="snooze" link-type="hidden-form-link" icon="sym_o_snooze" text="" tooltip="Snooze to tomorrow 9:00" condition="item.canSnooze"
+                    <link url="snooze" link-type="hidden-form-link" icon="sym_o_snooze" text="" tooltip="Snooze ${item.title} to tomorrow 9:00" condition="item.canSnooze"
                             parameter-map="{workEffortId:item.workEffortId}"/>
                     <section name="ItemReschedule" condition="item.canReschedule"><widgets>
-                        <!-- the tooltip is on the span around the dialog's button, which has none of its own -->
-                        <render-mode><text type="qvt"><![CDATA[<span><q-tooltip>Reschedule</q-tooltip>]]></text><text type="tui" template="false"><![CDATA[[]]]></text></render-mode>
                         <container-dialog id="RescheduleDialog" button-text="" icon="sym_o_event_repeat" button-style="m-btn-flat" width="360"
-                                title="Reschedule">
+                                title="Reschedule" tooltip="Reschedule ${item.title}">
                             <label type="p" text="${item.title}" style="text-body2"/>
                             <form-single name="RescheduleForm" transition="reschedule" background-reload-id="m-tray-today">
                                 <field name="workEffortId" from="item.workEffortId"><default-field><hidden/></default-field></field>
@@ -186,7 +184,6 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="submitButton"><default-field title="Reschedule"><submit/></default-field></field>
                             </form-single>
                         </container-dialog>
-                        <render-mode><text type="qvt"><![CDATA[</span>]]></text><text type="tui" template="false">[]</text></render-mode>
                     </widgets></section>
                     <render-mode><text type="qvt"><![CDATA[</div></q-item-section></q-item>]]></text><text type="tui" template="false">[]</text></render-mode>
                 </widgets></section-iterate>
