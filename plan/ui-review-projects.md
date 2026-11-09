@@ -849,6 +849,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-029 / observed / P2 | PR-18: grouped time print | TimeEntries Print, remote terminal and browser | JS Date string coercion produced entryDate_thru=%7B%7D, corrupting the selected end date | time-tui-final-session.txt; pr18-team-timesheet-print.jpg | BOSS TimeEntries | Use JS Date.getTime while retaining numeric host timestamp fallback, then preserve inclusive last day | Existing TimeEntries7/7, actual Oct12–18 href and browser grouped Joe2.5h output pass |
 
+| PR-UI-031 / observed / P2 | PR-05: work exports | WorkItems CSV and XLSX, same saved find | Title/Status/Priority were blank in CSV; rich/editable cells did not yield clean scalar export values | planning-export-live.json; planning-tui-export-after.txt | BOSS WorkItems | Export-only scalar Type/Status/Priority/Due fields and explicit Title anchor; retain shared escaping and saved columns | Existing WorkItems10/10, quoted/comma title control and actual parsed five-row CSV/XLSX pass; export covers whole find, not selection |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1190,3 +1192,13 @@ assertion reproduces the defect and passes7/7 after correction; coordinator inde
 After normal artifact-cache reload, the actual terminal emits Oct12–18 and Joe. Browser TeamTimesheet shows the
 matching corrected PRTIME01-1 entry08:00–10:30,2.5h, by-person total2.5 and overall2.5, with readable aligned columns.
 No extra journey, render sweep or budget increase was added. Full suites remain pending.
+
+
+**Batch 16 — work-item export values.** Actual WorkItems CSV omitted title, status and priority despite visible
+columns. BOSS now supplies scalar Type/Status/Priority/Due values in CSV/XLSX and marks the title link as an anchor,
+leaving its normal destination intact. Shared escaping/formula protection and saved column preferences remain in use.
+Coordinator independently reviewed the two-file correction. The existing WorkItems feature adds one bounded CSV
+serialization control with a quoted/comma title; before9/10 and after10/10,3.9s feature time. Actual paired CSV/XLSX
+downloads of the same PRPLAN02 find parsed five rows with populated title/status/priority, no raw enum or duplicate
+editable values, and hidden Type respected. Export intentionally covers the full find rather than selected rows.
+Full suites remain pending until the remaining final recovery checks are closed.

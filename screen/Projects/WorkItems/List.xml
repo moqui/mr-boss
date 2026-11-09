@@ -470,22 +470,25 @@ along with this software (see the LICENSE.md file). If not, see
                             <entity-find entity-name="moqui.basic.Enumeration" cache="true">
                                 <econdition field-name="enumTypeId" value="WorkEffortPurpose"/><econdition field-name="parentEnumId" value="WetTask"/>
                                 <order-by field-name="description"/></entity-find></entity-options></drop-down></header-field>
+                    <conditional-field condition="['csv','xlsx'].includes(sri.getRenderMode())"><display text="${purposeLabel || ''}"/></conditional-field>
                     <default-field title="Type">
                         <render-mode><text type="qvt"><![CDATA[<q-icon name="${WebUtilities.encodeHtml(typeIcon ?? '')}" size="xs" class="m-muted"><q-tooltip>${WebUtilities.encodeHtml(purposeLabel ?? '')}</q-tooltip></q-icon>]]></text>
                             <text type="tui"><![CDATA[{"t": "text", "text": ${JSON.stringify(purposeLabel ?? "")}}]]></text></render-mode>
                     </default-field></field>
                 <field name="workEffortName"><header-field title="Title" show-order-by="true"/><default-field>
-                    <link url="workItemDetail" text="${workEffortName}${isRecurring ? ' ↻' : ''}" parameter-map="{workEffortId:workEffortId}" style="${isDone ? 'm-muted' : ''}"/>
+                    <link url="workItemDetail" text="${workEffortName}${isRecurring ? ' ↻' : ''}" parameter-map="{workEffortId:workEffortId}" link-type="anchor" style="${isDone ? 'm-muted' : ''}"/>
                 </default-field></field>
                 <field name="statusId"><header-field title="Status" show-order-by="true">
                         <drop-down allow-empty="true" allow-multiple="true"><entity-options key="${statusId}" text="${description}">
                             <entity-find entity-name="moqui.basic.StatusItem" cache="true"><econdition field-name="statusTypeId" value="WorkEffort"/>
                                 <order-by field-name="sequenceNum"/></entity-find></entity-options></drop-down></header-field>
+                    <conditional-field condition="['csv','xlsx'].includes(sri.getRenderMode())"><display text="${statusLabel || ''}"/></conditional-field>
                     <default-field>
                         <render-mode><text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}" data-status="${statusId}">${WebUtilities.encodeHtml(statusLabel ?? '')}</q-chip>]]></text><text type="tui"><![CDATA[{"t": "text", "style": "strong", "text": ${JSON.stringify(statusLabel ?? "")}}]]></text></render-mode>
                     </default-field></field>
                 <!-- the in-place edits keep their click (@click.stop), so on a board card they edit rather than open the item -->
                 <field name="priority"><header-field title="Priority" show-order-by="true"/>
+                    <conditional-field condition="['csv','xlsx'].includes(sri.getRenderMode())"><display text="${priorityText}"/></conditional-field>
                     <conditional-field condition="canUpdate &amp;&amp; isOpen">
                         <render-mode><text type="qvt"><![CDATA[<span @click.stop>]]></text><text type="tui" template="false">[]</text></render-mode>
                         <editable id="WorkItemPriority" text="${priorityText || '—'}" transition="updateField" widget-type="select" parameter-map="{workEffortId:workEffortId, field:'priority'}">
@@ -498,6 +501,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <drop-down allow-empty="true"><dynamic-options transition="assigneeSearch" server-search="true" min-length="0"/></drop-down></header-field>
                     <default-field title="Assignees"><display text="${assigneeText || ''}"/></default-field></field>
                 <field name="estimatedCompletionDate"><header-field title="Due" show-order-by="true"/>
+                    <conditional-field condition="['csv','xlsx'].includes(sri.getRenderMode())"><display text="${dueText}"/></conditional-field>
                     <conditional-field condition="canUpdate &amp;&amp; isOpen">
                         <container style="text-no-wrap ${overdue ? 'text-warning' : ''}">
                             <render-mode><text type="qvt"><![CDATA[<span @click.stop>]]></text><text type="tui" template="false">[]</text></render-mode>

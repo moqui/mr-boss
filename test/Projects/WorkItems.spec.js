@@ -189,11 +189,21 @@ feature("Employees see their member and organization-visible projects; the Work 
 
 feature("the list renders in qvt with the chips and counts, the four views, the peek pane, the find, the saved finds and the quick-add row", {
     when() {
+        // The export uses the same decorated rows, with scalar values rather than the editable/chip widgets.
+        const exportId = "BOSS_TEST_CSV_WORK"
+        sys(() => call("mantle.work.TaskServices.create#Task", {workEffortId: exportId, rootWorkEffortId: "IRON",
+            workEffortName: 'BOSS_TEST "quoted", export', purposeEnumId: "WepTask", priority: 4,
+            estimatedCompletionDate: ec.l10n.parseTimestamp("2026-11-30 12:00:00", "yyyy-MM-dd HH:mm:ss")}))
+        const csv = ec.screen.makeTest().rootScreen(webroot).renderMode("csv")
+            .render("apps/Projects/WorkItems", {text: exportId, list: "all", lastStandalone: "true"}, null)
+        const exported = {status: csv.status, errors: csv.errorMessages.join(" | "), output: String(csv.output || "")}
+        ec.message.clearErrors()
+        sys(() => call("update#mantle.work.effort.WorkEffort", {workEffortId: exportId, statusId: "WeCancelled"}))
         return { list: render("apps/Projects/WorkItems", {}), project: render("apps/Projects/WorkItems", { rootWorkEffortId: "IRON", list: "all" }),
             joe: as("joe.developer", () => render("apps/Projects/WorkItems", { list: "all" })),
-            menu: ec.screen.makeTest().rootScreen(webroot).render("menuData/apps/Projects/WorkItems", {}, null).output }
+            menu: ec.screen.makeTest().rootScreen(webroot).render("menuData/apps/Projects/WorkItems", {}, null).output, exported }
     },
-    then({ list, project, joe, menu }) {
+    then({ list, project, joe, menu, exported }) {
         list.status == 200
         list.errors == ""
         !list.broken
@@ -217,6 +227,12 @@ feature("the list renders in qvt with the chips and counts, the four views, the 
         // the seeded saved finds of the Projects groups
         menu.includes("Open bugs")
         menu.includes("In review")
+        exported.status == 200
+        exported.errors == ""
+        exported.output.includes('BOSS_TEST_CSV_WORK,"BOSS_TEST ""quoted"", export",Task,In Planning,4,')
+        exported.output.includes("Nov 30")
+        !exported.output.includes("<q-chip")
+        !exported.output.includes("WeInPlanning")
     },
 })
 
