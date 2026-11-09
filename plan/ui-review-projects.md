@@ -34,8 +34,10 @@ coverage or transfer its execution permissions.
   calendar, knowledge, Chatter, approvals, files and shell contracts.
 - Current `screen/Projects.xml`, `screen/Projects/`, mounted `screen/Shared/` and `screen/Commons/` screens,
   `screen/RequestIntake.xml` and its `.qvue` / `.tui.json` templates, `MoquiConf.xml`, `data/BossSetupData.xml`,
-  `data/BossUsersDemoData.xml`, `data/BossProjectsDemoData*.xml` and `service/ironstone/projects/`: current mounts and capabilities take precedence
-  over historical tables when deciding what can be exercised.
+  `data/BossUsersDemoData.xml` (group grants), `data/BossProjectsDemoData*.xml` and `service/ironstone/projects/`;
+  the demo accounts themselves in mr-mantle `data/ZbaOrganizationDemoData.xml` and webroot
+  `data/WebrootSecurityDemoData.xml`. Current mounts and capabilities take precedence over historical tables when
+  deciding what can be exercised.
 - [Git hosting](../../../../docs/interfaces/Git-Hosting.md), [revision management](../../../../docs/data/Revision-Management.md)
   and the existing Projects specs: local code fixtures, resource storage, rule boundaries and available checks.
 
@@ -91,8 +93,9 @@ scratch path. Stop listeners and restore temporary preferences, keys and tokens 
 Reuse a suitable existing binary for application XML/QVue/script changes; rebuild when Rust or embedded renderer
 modules change. Check loaded browser assets before diagnosing stale-template behavior. The code demo loader logs
 and continues if Git support is unavailable: successful demo loading is not proof that `iron` or `acme-portal` exists.
-Check Git capability and fixture content before the Code wave, or earlier if using Git-backed Docs. Use disposable local repositories/remotes, controlled
-CI-status data and local captured mail; no external provider or webhook delivery is inferred from a success toast.
+Check Git capability and fixture content before the Code wave, or earlier if using Git-backed Docs. Use disposable
+local repositories/remotes, controlled CI-status data and local captured mail; no external provider or webhook
+delivery is inferred from a success toast.
 
 There is no `ProjectsClientFixtures` spec or Projects browser golden path at planning time. Start from suitable demo
 data; identify any missing roles before adding a small fixture. Do not use `CommonsClientFixtures` as an incidental
@@ -108,6 +111,10 @@ suite when execution is planned; a new fixture or automated walk must name its s
 | Git administrator | Separate `ADMIN` fixture for PR-13's mirror configuration/fetch, storage collect/check and repository export/import; use the developer/repository lead for ordinary operations and pair administrative success with non-admin refusal. `BOSS_PROJECTS_ADMIN` alone does not satisfy these checks |
 | Payroll-sensitive role | Narrow `PAYROLL_VIEW` / `PAYROLL_EDIT` fixture if worker pay is reviewed; `TIME_ENTRY_RATE` alone does not confer employee pay visibility. Pair the ordinary manager's restricted presentation with an authorized result |
 | Anonymous requester | Token-only session for `/r/<token>`, separate from every authenticated session; retain no live token in notes |
+
+`BossUsersDemoData.xml` grants the Projects groups only. The accounts come from other components' demo data:
+`john.doe` from webroot `WebrootSecurityDemoData.xml`, the developers and client contacts from mr-mantle
+`ZbaOrganizationDemoData.xml`. Check both are loaded before relying on a role.
 
 Use IRON and its work hierarchy/sprints, ACME and child ACMEAPP, separate-client BLUTH, restricted HIRE, service
 project SUPP and template TPLWEB as starting points, then create disposable records for changes. IRON-SP-1/2/3 give
@@ -167,10 +174,11 @@ Missing SMTP/PDF/Git/SSH/browser capabilities remain explicit blocked or unverif
 
 IDs follow the waves. Establish permission pairs from the start, then complete the cross-route walk in Wave 7.
 Use database-backed Docs for PR-04's initial pass; revisit its Git-backed variant with Code in Wave 4 unless its
-prerequisites are established earlier. PR-09's tag/release continuation uses those Code fixtures; milestone billing and estimates continue in
-Wave 6, and client decisions in Wave 7. PR-07's capacity interpretation is revisited with PR-19. After initial execution,
-record those ledger rows with status `exercised`, outcome `partial`, and named outstanding continuations until those
-are observed. Do not collapse an upstream activity's remaining work into a later activity's pass.
+prerequisites are established earlier. PR-09's tag/release continuation uses those Code fixtures; milestone billing
+and estimates continue in Wave 6, and client decisions in Wave 7. PR-07's capacity interpretation is revisited with
+PR-19, and PR-20's client estimate decision with PR-24. After initial execution, record PR-04, PR-07, PR-09 and PR-20
+with status `exercised`, outcome `partial`, and their named outstanding continuations until those are observed. Do
+not collapse an upstream activity's remaining work into a later activity's pass.
 
 Each authorized batch follows observe → prioritize → refine → rerun affected activities → compare evidence → verify
 → update this record. Start with PR-01 and PR-02, establishing fixtures and measured browser/TUI baselines before
@@ -203,8 +211,8 @@ split a grouped row as execution needs different outcomes. §6 is the only activ
 | `Projects/Projects/ProjectDetail/` | `Overview`, `Team`, `Settings` | PR-03, 19, 23 | pending / — |
 | `Projects/Projects/ProjectDetail/` | `Plan` | PR-08 | pending / — |
 | `Projects/Projects/ProjectDetail/Plan/` | `Calendar`, `CalendarTui` | PR-08 | pending / — |
-| `Projects/Projects/ProjectDetail/` | `Code`, `Files` | PR-13–14; PR-04 | pending / — |
-| `Projects/Projects/ProjectDetail/` | `Money`, `ClientHours` | PR-20–21; PR-24 | pending / — |
+| `Projects/Projects/ProjectDetail/` | `Code`, `Files` | PR-13–14, 24; PR-04 | pending / — |
+| `Projects/Projects/ProjectDetail/` | `Money`, `ClientHours` | PR-20–21; PR-24–25 | pending / — |
 | `Projects/Projects/` | `Roadmap`, `MilestoneDetail`, `ReleaseDetail` | PR-09, 14, 21, 24 | pending / — |
 | `Projects/Projects/` | `StatusReport`, `EstimatePrint` | PR-03, 20, 22, 24 | pending / — |
 | `Projects/WorkItems/` | `List` | PR-05 | pending / — |
@@ -253,6 +261,8 @@ split a grouped row as execution needs different outcomes. §6 is the only activ
 | `Projects/Billing` | Unbilled | PR-21 |
 | `Projects/Reports`, `Projects/Settings` | Index | PR-22, 23 |
 
+Record default-child selection on the container's row in the local-routes table; this table has no separate status.
+
 In the next table **PD** abbreviates route `Projects/Projects/ProjectDetail`. These are real mounted routes, not
 new copies to implement. All are pending / —, including inherited descendants. For dynamic embedded content,
 verify its actual resolved helper URL in the running app rather than inferring reachability from a filename.
@@ -271,7 +281,7 @@ verify its actual resolved helper URL in the running app rather than inferring r
 | `PD/Requests` | `Projects/Requests/List.xml` | PR-11–12; project fixed and intake controls |
 | `PD/Docs`, `PD/KnowledgeTui` | `Commons/Knowledge.xml`, `Commons/KnowledgeTui.xml` | PR-04, 09; project space and linked pages |
 | `PD/Docs/Spaces`, `PD/Docs/SpaceDetail`, `PD/Docs/Review` | `Commons/Knowledge/Spaces.xml`, `Commons/Knowledge/SpaceDetail.xml`, `Commons/Knowledge/Review.xml` | PR-04; inherited children; inspect project return and actual access |
-| `PD/Time`, `PD/Time/EditEntry` | `Projects/Time/TimeEntries.xml`, `Projects/Time/TimeEntries/EditEntry.xml` | PR-16, 18, 25; internal project-fixed time and inherited edit child; refused to clients |
+| `PD/Time`, `PD/Time/EditEntry` | `Projects/Time/TimeEntries.xml`, `Projects/Time/TimeEntries/EditEntry.xml` | PR-16, 18, 24–25; internal project-fixed time and inherited edit child; refused to clients |
 | `PD/ClientHours` | `Projects/Projects/ProjectDetail/ClientHours.xml` | PR-24–25; `BossSetupData.xml` supplies the `BOSS_PROJECT_CLIENT`-only Hours tab through `SubscreensItem`; distinct from internal Time, subject to project hours sharing |
 | `PD/Money/CreateInvoice` | `Projects/Billing/Unbilled/CreateInvoice.xml` | PR-21; selected project sources |
 | `Projects/Resources/PersonDetail/EditAllocation` | `Projects/Resources/Allocations/EditAllocation.xml` | PR-19; person context |
@@ -306,9 +316,11 @@ verify its actual resolved helper URL in the running app rather than inferring r
 
 There are five QVue files under `screen/Projects/`: Backlog, Timeline, MyTime, TeamPlanner and Changes, plus the separate
 public intake component `screen/RequestIntake.qvue`. Calendar, Knowledge, import progress, Chatter and RecordFiles
-reuse existing components. Rich wrappers for Backlog, Timeline, Calendar, MyTime and TeamPlanner deliberately delegate
-plain qvt/html rendering to the browser component; distinguish that
-notice from the mounted Material experience and from supported terminal functionality.
+reuse existing components. The rich wrappers differ in their plain modes: Timeline, MyTime and TeamPlanner list
+`qvt,html` in `render-modes` and show a browser notice; Backlog and the project Calendar carry an `html,qvt` notice
+but declare `render-modes="vue,qvue,tui"`; Changes has neither a notice nor qvt/html. Observe what plain and Standard
+modes actually show for each (a static lead below) and distinguish a notice from the mounted Material experience and
+from supported terminal functionality.
 
 ### Design-to-code reconciliation
 
@@ -530,8 +542,9 @@ print/export output where offered. Unsupported variants remain explicit rather t
 
 ### PR-15 — Manage Git access and repository controls
 
-- **Actor/start:** developer and repository lead with the required repository rights, project manager for Settings/Code,
-  disposable credential and local repository/remote; keep PR-13's separate `ADMIN` fixture limited to its administrative subcases.
+- **Actor/start:** developer and repository lead with the required repository rights, project manager for
+  Settings/Code, disposable credential and local repository/remote; keep PR-13's separate `ADMIN` fixture limited to
+  its administrative subcases.
 - **Objective/steps:** Commons Account link → Projects GitAccess → add/remove SSH key and create/revoke token → return;
   verify permitted local clone/push where transport is available; edit disposable repository branch rule and webhook,
   inspect a controlled delivery and failure, then revoke access and repeat the denied operation.
@@ -548,7 +561,8 @@ print/export output where offered. Unsupported variants remain explicit rather t
 - **Objective/steps:** QuickCreate Log time/work item Start timer → Home/Today/MyTime → stop → weekly grid entry/day
   detail → edit/delete/add/copy where offered → navigate weeks and reopen; compare project/work-item time totals.
 - **Expected:** one active timer has one persisted outcome, correct day/week and work type, totals agree and newer
-  unsaved edits survive an earlier response. No-navigation or reload shortcut substitutes for the visible save.
+  unsaved edits survive an earlier response. Neither a navigation-free check nor a reload substitutes for the
+  visible save.
 - **Recovery:** running-entry conflict, invalid hours, midnight/week/DST boundary, failed save, navigate while loading,
   submitted or invoiced lock and canceled deletion.
 - **Screens/modes:** QuickCreate, work item Time, Home/Today, MyTime/MyTimeTui, entry dialog/EditEntry;
@@ -571,13 +585,15 @@ print/export output where offered. Unsupported variants remain explicit rather t
 - **Actor/start:** worker/manager, editable and locked entries and CSV with unique external keys and one invalid row.
 - **Objective/steps:** TimeEntries filters → EditEntry/bulk action → compare project Time and PersonDetail/Time →
   Import Source → Preview → result/progress → inspect created entries → repeat file and reconcile counts; use
-  TimeEntries → Print to inspect the grouped TeamTimesheet output.
+  TimeEntries → Print to inspect the grouped TeamTimesheet output (it opens under `/apps` with
+  `renderMode=html-print`, so this is a Standard-path print, also from the project-fixed mount).
 - **Expected:** correction and duplicate handling follow the current policy, each refused row is identified, week
   and project totals agree and locked/invoiced work is not silently rewritten. Rate-only edits obey separate grants.
 - **Recovery:** invalid row/range, unknown work item, duplicate key, independent row failure, running/invoiced lock,
   cancel/back and unsuccessful progress fetch.
-- **Screens/modes:** TimeEntries/EditEntry and aliases, TeamTimesheet print, Time/Import and all steps/ImportProgress;
-  browser/TUI/Standard supported controls, targeted keyboard preview/result.
+- **Screens/modes:** TimeEntries/EditEntry and their `PD/Time`, `PD/Time/EditEntry` mounts, TeamTimesheet print,
+  Time/Import and all steps/ImportProgress; browser/TUI/Standard supported controls, targeted keyboard
+  preview/result.
 
 ### PR-19 — Request, staff and balance capacity
 
@@ -686,9 +702,10 @@ test breadth is not a reason to add duplicate rules, renders or scenarios.
 | mr-boss regression `test/Projects/` | ProjectRequests | PR-11–12; public/local-mail submission and file audiences need observed outcomes |
 | mr-boss regression `test/Projects/` | Code, MergeRequests | PR-13–15; local transport, actual diff/review/merge and revision bytes remain separate |
 | mr-boss regression `test/Projects/` | TimeEntries, Resources | PR-16–19; grid, timer, approval and capacity interaction remain separate |
-| mr-boss regression `test/Projects/` | Billing, ClientBilling, Reports | PR-20–22, 24; actual invoice/estimate/report output and client reads need evidence |
+| mr-boss regression `test/Projects/` | Billing, Reports | PR-20–22; actual invoice/estimate/report output and client reads need evidence |
 | mr-boss regression `test/Projects/` | ProjectsAccess, ClientBilling | PR-24–25; selected rule refusals are not the complete access walk |
 | mr-boss regression `test/Shared/`, `test/Commons/` | Chatter, RecordFiles; Knowledge, KnowledgeReview, Calendar, QuickCreate, TodayPanel, Notifications | PR-01, 04, 06, 08, 11, 16–17, 25; reuse affected shared-rule checks without duplicating the Commons review |
+| mr-boss regression `test/Commons/` | Tasks, Requests | PR-05–06, 11–12; the Commons consumers of Shared WorkItemDetail (as TaskDetail) and RequestDetail, for the shared-fix retest |
 | mr-boss acceptance `acceptance/Projects/` | SprintWalk, TimelineWalk, ReleaseWalk | PR-07–10, 14; TimelineWalk includes import mapping/options/preview and row failure; server scenarios, not browser/terminal interaction evidence |
 | mr-boss acceptance `acceptance/Projects/` | RequestWalk, CodeReviewWalk | PR-11–14; server scenarios with their own fixture/prerequisite scope |
 | mr-boss acceptance `acceptance/Projects/` | TimeWalk, ResourceWalk, BillingWalk, MilestoneBillingWalk | PR-16–21; existing scenarios to reuse if execution is requested |
@@ -699,6 +716,7 @@ test breadth is not a reason to add duplicate rules, renders or scenarios.
 | mr-mantle regression `test/work/` | WorkProjectRequests, WorkGit, WorkGitReview | PR-11–15; request and code rules |
 | mr-mantle regression `test/work/` | WorkTimesheets, WorkTimeEntries, TimeImports, WorkResources | PR-16–19; time, duplicate import, approval and capacity rules |
 | mr-mantle regression `test/work/` | WorkProjectBilling, WorkProjectReports, WorkProjectClients | PR-20–25; billing/projections/client visibility |
+| mr-mantle regression `test/work/` | WorkPlanToCashBasicFlow, CommonsToday | PR-16–21 plan-to-cash time/expense invoicing; PR-01, 16–17 Today rows and shell counts |
 | webroot regression `test/client/` | WebrootVue.qvt, WebrootVue.qvt.shell, WebrootVue.qvt.layout, WebrootVue.qvt.records, WebrootVue.qvt.static, WebrootVue.qvt.views, WebrootVue.qvt.markdown, WebrootTerminal, QvtKeys, Keys | Shared widget/shell/render fixes only; use existing focused assertions for the affected control |
 | webroot acceptance `acceptance/client/` | ThemeLayout | Existing offline theme/geometry acceptance home for a reusable contrast/layout check; not a reason to run it during plan writing |
 
@@ -808,6 +826,7 @@ assert new runtime failures. Historical finding identifiers remain historical re
 | Repeated-row dialog identity | Settings WorkItemTypes `TypeIconDialog`, Labels `EditLabelDialog`, Workflows `EditStatusDialog`; repository Settings `EditRuleDialog`, `WebhookDeliveriesDialog`, `EditWebhookDialog` | PR-15, 23 | Fixed authored IDs warrant live repeated-row/focus/reopen checks; do not assume duplication is broken without inspecting rendered identity |
 | Rich-view save and mutation parity | Backlog, Timeline, MyTime, TeamPlanner, Changes and their twins | PR-07–08, 14, 16–19 | Compare supported keyboard/menu/TUI operations with drag/grid results; inspect late responses after changing project/week/range and separate intentional delegation |
 | Financial visibility distinctions | `ironstone.projects.BillingServices`, client projections and rate views; impl-projects §4 payroll decision | PR-20–25 | Ordinary money management must not expose employee worker pay; pair restricted “Set by payroll” presentation with separate payroll-holder read/edit, including exports and shared hours |
+| Plain/Standard modes of rich views | `render-modes` and `html,qvt` text of Backlog, `ProjectDetail/Plan/Calendar`, Changes | PR-07–08, 14 | Backlog and Calendar carry a notice their `render-modes` omit; Changes has none. Observe what qvt/html and Standard show before calling either a delegation or a defect |
 | Stale demo dates and optional Git | BossProjectsDemoData files and Time/Resource/CodeDemoServices | PR-01, 07–09, 13–22 | Fixed planning dates differ from relative week fixtures; Git loader can continue after failure. Establish dates/capabilities before calling an empty or missing surface a defect |
 
 ### Bounded batch record
@@ -821,6 +840,12 @@ coverage, Git administrative roles, ClientHours mount, Code palette terminology 
 against current source. Rechecked document links, local inventory and activity references. This was a plan-only edit:
 no live UI finding IDs were allocated, no runtime was started or application tests run, and all live activity coverage
 remains pending.
+
+**Second document review:** checked the plan against current source again. Corrected the rich-view plain-mode
+description (and added it as a static lead), the demo-account sources, PR-24/25 references on the ProjectDetail
+Code/Time/ClientHours rows, PR-18's mount names and its Standard-path TeamTimesheet print, the duplicate
+ClientBilling row, the missing Commons Tasks/Requests and Mantle WorkPlanToCashBasicFlow/CommonsToday checks, the
+named partial-continuation rows and wording. Plan-only edit: no runtime, tests or finding IDs; coverage remains pending.
 
 The proposed first execution batch is **PR-01 and PR-02**, plus setup/reproduction of the priority client-file lead.
 Record actual fixture identities/permissions and measured geometry, then use those fixtures in later waves. Keep a
