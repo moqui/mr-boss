@@ -858,6 +858,8 @@ to the owning layer. A source lead below has no new observed finding number yet.
 
 | PR-UI-033 / observed / P2 | PR-05: no-match recovery | WorkItems global/project-fixed, browser and terminal | Both Clear filters links inherited the active text/project filter and kept zero results | pr05-clear-filters-before/global-after/fixed-after.txt | BOSS WorkItems | Explicitly empty active find, page and saved-find URL parameters while preserving smart list and fixed project | Existing WorkItems10/10; actual global reset47rows and fixed PRPLAN02 reset5rows, correct context retained |
 
+| PR-UI-035 / observed / P2 | PR-01: personal progress | Projects Home, manager browser | Header My open9 disagreed with progress5done/17open; direct aggregation included nonproject/ended or otherwise out-of-context assignments | pr01-home-progress-before/after.txt; WorkProjectHub before/after | Mantle Home counters and BOSS context | Count recent Complete/Closed work on the same current/visible/non-template project assignment base, consume both counters in BOSS | Owner7/7 and consumer3/3; actual header9/progress2done9open after restart; unavailable counters keep progress absent |
+
 ### Static leads
 
 Reproduce each lead in an authorized batch, then allocate a finding or close the lead with the reason. These do not
@@ -1244,3 +1246,13 @@ existing global/fixed QVT renders reproduce the failure and pass10/10 after corr
 Actual browser global reset drops text/project and restores47matching rows; embedded PRPLAN02 reset drops text and
 retains only its fixed project/list, restoring5matching rows. Shared URL semantics and unrelated consumers are intact.
 Full suites remain pending at the final phase.
+
+
+**Batch 21 — consistent personal Home progress.** The browser showed9 personal open project items beside a
+progress block with17open/5done. Mantle now counts recent Complete/Closed items with the same current assignment,
+visible non-template project scope as its existing open counter; completion dates are bounded from seven days ago
+through now. BOSS consumes those two nonnull counters and removes its separate unscoped assignment query. Coordinator
+independently reviewed the four-file owner/consumer patch. Existing WorkProjectHub controls cover current versus
+ended/nonproject/hidden/template and old/future completion;7/7 pass. Existing Home renders assert the shared counter
+contract;3/3 pass. After the required normal service reload/restart, actual Home shows9open in both places and2recent
+done. Failed counters still leave progress absent and unrelated Home parts usable. Full gates pending at the end.

@@ -1275,7 +1275,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const managers = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
             home = {isManager: managers, counts: {}, atRiskProjectIds: [], workItemList: [], activityList: [], projectList: [], reviewList: [], hosting: false,
-                firstRun: false, failedParts: [], timer: null, approvalList: []}
+                firstRun: false, failedParts: [], timer: null, approvalList: [], myWorkProgress: null}
             const part = (name, run) => {
                 ec.message.pushErrors()
                 try { run() } catch (err) {
@@ -1292,6 +1292,11 @@ along with this software (see the LICENSE.md file). If not, see
                 const out = ec.service.sync().name('mantle.work.ProjectServices.get#ProjectHomeCounts').parameters({managers: managers}).call() || {}
                 home.counts = out.counts || {}
                 home.atRiskProjectIds = Array.from(out.atRiskProjectIds || [])
+                if (home.counts.myOpen != null && home.counts.myDoneRecent != null) {
+                    const openCount = Number(home.counts.myOpen), doneCount = Number(home.counts.myDoneRecent)
+                    const total = openCount + doneCount
+                    home.myWorkProgress = {done: doneCount, open: openCount, total: total, percent: total ? Math.round(doneCount / total * 100) : 0}
+                }
             })
             part('time', () => {
                 const out = ec.service.sync().name('ironstone.projects.TimeServices.get#HomeTime').parameters({managers: managers}).call() || {}
@@ -1320,26 +1325,6 @@ along with this software (see the LICENSE.md file). If not, see
                 const due = (row) => row.estimatedCompletionDate == null ? Number.MAX_SAFE_INTEGER : Number(String(row.estimatedCompletionDate))
                 rows.sort((a, b) => due(a) - due(b) || Number(a.priority ?? 5) - Number(b.priority ?? 5))
                 home.workItemList = rows.slice(0, 10)
-                // the user's task progress: the open tasks assigned to them plus those completed in the last seven days,
-                // so the Home shows how much of their recent work is done (a task app's "today" progress)
-                const me = ec.user.userAccount?.partyId
-                if (me) {
-                    const cf = ec.entity.conditionFactory
-                    const myTaskIds = Array.from(new Set(ec.entity.find('mantle.work.effort.WorkEffortParty').condition('partyId', me)
-                        .condition('roleTypeId', 'Assignee').condition('statusId', 'not-in', ['WeptDeclined', 'WeptUnassigned'])
-                        .selectField('workEffortId').list().map((row) => row.workEffortId)))
-                    if (myTaskIds.length) {
-                        const base = [cf.makeCondition('workEffortId', 'in', myTaskIds), cf.makeCondition('workEffortTypeEnumId', 'equals', 'WetTask'),
-                            cf.makeCondition('isTemplate', 'not-equals', 'Y', true)]
-                        const openCount = ec.entity.find('mantle.work.effort.WorkEffort').condition(cf.makeCondition(base.concat(
-                            [cf.makeCondition('statusId', 'not-in', ['WeComplete', 'WeClosed', 'WeCancelled'])]), 'and')).count()
-                        const doneCount = ec.entity.find('mantle.work.effort.WorkEffort').condition(cf.makeCondition(base.concat([
-                            cf.makeCondition('statusId', 'in', ['WeComplete', 'WeClosed']),
-                            cf.makeCondition('actualCompletionDate', 'greater-equals', new Date(nowMillis - 7 * 86400000))]), 'and')).count()
-                        const total = openCount + doneCount
-                        home.myWorkProgress = {done: doneCount, open: openCount, total: total, percent: total ? Math.round(doneCount / total * 100) : 0}
-                    }
-                }
             })
             const projectIds = (() => {
                 const managed = Array.from(vis.managedProjectIds || [])

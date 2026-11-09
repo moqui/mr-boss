@@ -34,6 +34,8 @@ feature("a manager's Home: the counters with the projects at risk, my work items
         home.firstRun == false
         home.failedParts.length == 0
         home.counts.myOpen >= 1
+        home.myWorkProgress?.open == home.counts.myOpen
+        home.myWorkProgress?.done == home.counts.myDoneRecent
         home.counts.projectsAtRisk >= 1
         home.atRiskProjectIds.includes("ACME")
         // john.doe is asked to review the code demo's !1 (null without git hosting in the build)
@@ -63,6 +65,8 @@ feature("a team member's Home has the team's counters, the work assigned to him 
     },
     then({ home, page }) {
         home.isManager == false
+        home.myWorkProgress?.open == home.counts.myOpen
+        home.myWorkProgress?.done == home.counts.myDoneRecent
         home.counts.projectsAtRisk == null
         home.workItemList.map((row) => row.workEffortId).includes("IRON-3")
         !home.workItemList.map((row) => row.workEffortId).includes("HIRE-1")
@@ -91,6 +95,7 @@ feature("a user on no project sees the first-run card", {
         home.firstRun == true
         home.failedParts.length == 0
         home.counts.myOpen == 0
+        home.myWorkProgress?.open == 0 && home.myWorkProgress?.done == 0
         page.status == 200
         !page.broken
         page.output.includes("Get started with Projects")
