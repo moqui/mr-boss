@@ -76,6 +76,38 @@ feature("document readers can preview their content while editor writes and fore
         foreign.error.includes("not available")
     }
 })
+feature("document language choices and the suggested target include only readable catalog owners", {
+    when() {
+        as("john.doe", () => {
+            call("create#mantle.product.category.ProductCategory", {
+                productCategoryId: "BPRD_LOCALE_FOREIGN",
+                categoryName: "Foreign locale fixture",
+                ownerPartyId: "ORG_ZIZI_RETAIL"
+            })
+            for (const [productId, locale] of [["BOSS_PRD_OWN", "qab_XS"], ["BOSS_PRD_OTHER", "qaa_XR"]])
+                call("create#mantle.product.ProductContent", {productId, locale})
+            for (const [productCategoryId, locale] of [["BOSS_PRD_CAT", "qad_XS"], ["BPRD_LOCALE_FOREIGN", "qac_XR"]])
+                call("create#mantle.product.category.ProductCategoryContent", {productCategoryId, locale})
+            for (const [productStoreId, locale] of [["POPC_DEFAULT", "qae_XS"], ["BOSS_COM_DIGITAL", "qaf_XR"]])
+                call("create#mantle.product.ProductContent", {productId: "BOSS_PRD_OWN", productStoreId, locale})
+        })
+        return {
+            reader: as("catalog.reader", () => call(D + "get#DocumentContext", {productId: "BOSS_PRD_OWN"})),
+            administrator: as("john.doe", () => call(D + "get#DocumentContext", {productId: "BOSS_PRD_OWN"})),
+            commerce: as("commerce.storestaff", () => call(D + "get#DocumentContext", {appRoot: "Commerce"}))
+        }
+    },
+    then({reader, administrator, commerce}) {
+        reader.localeOptions.some(row => row.value === "qab_XS")
+        reader.localeOptions.some(row => row.value === "qad_XS")
+        !reader.localeOptions.some(row => ["qaa_XR", "qac_XR"].includes(row.value))
+        !["qaa_XR", "qac_XR"].includes(reader.targetLocale)
+        administrator.localeOptions.some(row => row.value === "qaa_XR")
+        administrator.localeOptions.some(row => row.value === "qac_XR")
+        commerce.localeOptions.some(row => row.value === "qae_XS")
+        !commerce.localeOptions.some(row => row.value === "qaf_XR")
+    }
+})
 feature("the app content and translation wrappers use native optimistic revisions and retained conflict drafts", {
     when() {
         return as("catalog.edit", () => {

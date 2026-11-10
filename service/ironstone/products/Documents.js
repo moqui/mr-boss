@@ -12,33 +12,45 @@ function run(op, parameters) {
         return a
     }
     const language = locale => String(locale).split(/[_-]/)[0]
-    // The languages catalog content is written in (one distinct read per content entity), in code order.
+    // The languages in readable catalog content, in code order. Foreign owners do not supply choices or defaults.
     let used = null
-    function usedLocales() {
+    function usedLocales(access) {
         if (used) return used
         const found = new Set()
-        for (const entity of ["mantle.product.ProductContent", "mantle.product.category.ProductCategoryContent"])
+        for (const entity of [
+            "mantle.product.ProductContentAndOwner",
+            "mantle.product.category.ProductCategoryContentAndOwner"
+        ])
             try {
-                for (const row of ec.entity
-                    .find(entity)
+                const query = lib.find(entity)
                     .selectField("locale")
                     .condition("locale", "is-not-null", null)
                     .distinct(true)
-                    .disableAuthz()
-                    .list())
-                    found.add(String(row.locale))
+                if (!access.capabilities.systemAdmin) {
+                    const factory = ec.entity.conditionFactory,
+                        owners = [factory.makeCondition("ownerPartyId", "in", access.ownerPartyIds)]
+                    if (access.ownerPartyIds.includes("_NA_"))
+                        owners.push(factory.makeCondition("ownerPartyId", "is-null", null))
+                    query.condition(factory.makeCondition(owners, "or"))
+                    if (access.storeIds)
+                        query.condition(factory.makeCondition([
+                            factory.makeCondition("productStoreId", "is-null", null),
+                            factory.makeCondition("productStoreId", "in", access.storeIds)
+                        ], "or"))
+                }
+                for (const row of query.list()) found.add(String(row.locale))
             } catch (e) {
                 ec.logger.error("Content locales of " + entity + " failed: " + e)
             }
         return (used = [...found].sort())
     }
     // Language choices: those in use, then the languages the platform names; each labeled by its name.
-    function localeOptions() {
+    function localeOptions(access) {
         const names = new Map(Array.from(ec.l10n.getAvailableLocales()).map(row => [String(row.locale), String(row.name)])),
             languages = [...names.keys()]
                 .filter(locale => !/[_-]/.test(locale))
                 .sort((a, b) => names.get(a).localeCompare(names.get(b)))
-        return [...new Set([...usedLocales(), ...languages])].map(locale => ({
+        return [...new Set([...usedLocales(access), ...languages])].map(locale => ({
             value: locale,
             label: (names.get(locale) || locale) + " (" + locale + ")"
         }))
@@ -61,9 +73,9 @@ function run(op, parameters) {
             // the target is another language the catalog content is already in, else the user picks one
             targetLocale:
                 p.targetLocale ||
-                usedLocales().find(locale => language(locale) !== language(p.sourceLocale || userLanguage)) ||
+                usedLocales(a).find(locale => language(locale) !== language(p.sourceLocale || userLanguage)) ||
                 null,
-            localeOptions: localeOptions(),
+            localeOptions: localeOptions(a),
             contentDraft: {locale: p.locale || userLanguage, [c.owner]: p[c.owner]},
             contentTypes: lib.enumOptions(c.enumType),
             canEdit: a.capabilities.catalogEdit && out.canEdit,
