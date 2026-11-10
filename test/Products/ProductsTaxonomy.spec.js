@@ -369,3 +369,20 @@ feature("a keyboard sibling move creates an ordering gap without changing a seco
         other.thruDate == null
     }
 })
+
+// Features shows the features list, the feature groups and the interactions as its tabs (Features.xml's subscreens-menu),
+// a feature's and a group's records out of the menu
+feature("Features offers the feature groups and the interactions beside the features list", {
+    when() {
+        const menu = ec.screen
+            .makeTest()
+            .rootScreen("component://webroot/screen/webroot.xml")
+            .render("menuData/apps/Products/Features/List", {}, null)
+        ec.message.clearErrors()
+        const level = JSON.parse(menu.output).find(level => level.name === "Features")
+        return {tabs: level ? level.subscreens.filter(item => item.menuInclude).map(item => item.name) : null}
+    },
+    then({tabs}) {
+        tabs == ["List", "FeatureGroups", "FeatureInteractions"]
+    }
+})
