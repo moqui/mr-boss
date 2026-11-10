@@ -257,6 +257,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="requestCount">
         <actions>
+            <script>if (appRoot !== 'Warehouse') throw new Error('Stock-location actions require the Warehouse context')</script>
             <set field="selectedIds" from="[...new Set(Array.from(assetIdList || []).flatMap(id =&gt; String(id).split(','))
                     .map(id =&gt; id.trim()).filter(Boolean))]"/>
             <set field="byFacility" from="{}"/>

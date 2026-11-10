@@ -22,6 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="relocateAssets">
         <actions>
+            <script>if (appRoot !== 'Warehouse') throw new Error('Stock-location actions require the Warehouse context')</script>
             <set field="selectedIds" from="[...new Set(Array.from(assetIdList || []).flatMap(id =&gt; String(id).split(','))
                     .map(id =&gt; id.trim()).filter(Boolean))]"/>
             <!-- a row with no assets: Availability lists a bucket's assets up to a cap, so a large one carries none -->

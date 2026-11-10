@@ -58,18 +58,16 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <service-call name="ironstone.products.CatalogServices.get#CatalogAccess" out-map="access"/>
         <service-call name="ironstone.products.CategoryServices.get#CategoryOptions" out-map="context"/>
-        <if condition="['csv','xlsx'].includes(sri.getRenderMode())">
-            <then><script><![CDATA[
-                const found = ec.service.sync().name('ironstone.products.CatalogServices.find#Products').parameters(context).call() || {}
-                if (ec.message.hasError()) {
-                    if (sri.getRenderMode() === 'xlsx') ec.web.sendJsonResponse({})
-                    else ec.web.response.setStatus(500)
-                    ec.context.putAll({productList: [], productListCount: 0})
-                }
-                else ec.context.putAll(found)
-            ]]></script></then>
-            <else><service-call name="ironstone.products.CatalogServices.find#Products" in-map="context" out-map="context"/></else>
-        </if>
+        <script><![CDATA[
+            const found = ec.service.sync().name('ironstone.products.CatalogServices.find#Products').parameters(context).call() || {}
+            if (ec.message.hasError()) {
+                // as after a service-call the actions stop; an export the find refused (more than its bound) answers
+                // with the errors rather than an empty file
+                if (['csv', 'xlsx'].includes(sri.getRenderMode())) ec.web.sendJsonResponse({})
+                return
+            }
+            ec.context.putAll(found)
+        ]]></script>
         <set field="productListPageIndex" from="pageIndex"/>
         <set field="productListPageSize" from="pageSize"/>
         <set field="productListPageMaxIndex" from="Math.max(0, Math.ceil(productListCount / pageSize) - 1)"/>

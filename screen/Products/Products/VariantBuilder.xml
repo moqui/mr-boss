@@ -16,36 +16,36 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="productId"/>
     <transition name="preview" method="get" read-only="true">
         <actions>
-            <service-call name="ironstone.products.VariantServices.preview#VariantProducts" in-map="context" out-map="answer"/>
-            <script>answer.errors=ec.message.getErrorsString(); ec.web.sendJsonResponse(answer)</script>
+            <script>const answer = ec.service.sync().name('ironstone.products.VariantServices.preview#VariantProducts').parameters(context).call() || {}
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : answer)</script>
         </actions>
         <default-response type="none"/>
     </transition>
     <transition name="generate" method="post">
         <actions>
-            <service-call name="ironstone.products.VariantServices.create#VariantProducts" in-map="context" out-map="answer"/>
-            <script>answer.errors=ec.message.getErrorsString(); ec.web.sendJsonResponse(answer)</script>
+            <script>const answer = ec.service.sync().name('ironstone.products.VariantServices.create#VariantProducts').parameters(context).call() || {}
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : answer)</script>
         </actions>
         <default-response type="none"/>
     </transition>
     <transition name="queue" method="post">
         <actions>
-            <service-call name="ironstone.products.VariantServices.start#VariantBatch" in-map="context" out-map="answer"/>
-            <script>answer.errors=ec.message.getErrorsString(); ec.web.sendJsonResponse(answer)</script>
+            <script>const answer = ec.service.sync().name('ironstone.products.VariantServices.start#VariantBatch').parameters(context).call() || {}
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : answer)</script>
         </actions>
         <default-response type="none"/>
     </transition>
     <transition name="batch" method="get" read-only="true">
         <actions>
-            <service-call name="ironstone.products.VariantServices.get#VariantBatch" in-map="context" out-map="answer"/>
-            <script>answer.errors=ec.message.getErrorsString(); ec.web.sendJsonResponse(answer)</script>
+            <script>const answer = ec.service.sync().name('ironstone.products.VariantServices.get#VariantBatch').parameters(context).call() || {}
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : answer)</script>
         </actions>
         <default-response type="none"/>
     </transition>
     <transition name="run" method="post">
         <actions>
-            <service-call name="ironstone.products.VariantServices.run#VariantBatch" in-map="context" out-map="answer"/>
-            <script>answer.errors=ec.message.getErrorsString(); ec.web.sendJsonResponse(answer)</script>
+            <script>const answer = ec.service.sync().name('ironstone.products.VariantServices.run#VariantBatch').parameters(context).call() || {}
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : answer)</script>
         </actions>
         <default-response type="none"/>
     </transition>

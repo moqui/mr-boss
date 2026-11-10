@@ -18,9 +18,6 @@ along with this software (see the LICENSE.md file). If not, see
     one location of the facility, each with its own result (template/WarehouseMoveParts.xml relocateAssets). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Locations and lots" default-menu-index="2">
-    <always-actions>
-        <script>if (appRoot !== 'Warehouse') throw new Error('Stock-location actions require the Warehouse context')</script>
-    </always-actions>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
     <transition-include name="relocateAssets" location="component://mr-boss/template/WarehouseMoveParts.xml"/>
     <transition-include name="requestCount" location="component://mr-boss/template/WarehouseCountParts.xml"/>
