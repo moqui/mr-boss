@@ -29,6 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Facility"
         default-menu-include="false">
     <parameter name="facilityId" required="true"/>
+    <!-- Insights (impl-insights P6): the record its InsightsRecord subscreen shows -->
+    <always-actions><if condition="appRoot == 'Insights'"><set field="insightsRecordType" value="FacilityDetail"/><set field="insightsRecordId" from="facilityId"/></if></always-actions>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
     <!-- the facility's identity and contact (Mantle's store#Facility checks FACILITY_EDIT, the owner and the parent cycle) -->
     <transition name="updateFacility">
@@ -42,7 +44,14 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
-    <subscreens default-item="Overview"/>
+    <subscreens default-item="Overview">
+        <subscreens-item name="InsightsRecord" location="component://mr-boss/screen/Shared/InsightsRecord.xml" menu-include="false"/>
+    </subscreens>
+    <!-- Insights (appRoot Insights, mounted at Insights/Records/FacilityDetail; design-insights §10, crosscut's Insights row, impl-insights
+        P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
+        below runs, and the fail-widgets show the InsightsRecord subscreen (template/InsightsRecord.xml): the record as the admitted datasets the viewer reads
+        show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <set field="detail" from="null"/>
         <if condition="appRoot == 'Warehouse'">
@@ -315,4 +324,5 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
     </widgets>
+    <fail-widgets><subscreens-active/></fail-widgets>
 </screen>

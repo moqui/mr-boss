@@ -1938,6 +1938,8 @@ awaiting approval (for `INVOICE_APPROVE`) and on hold (`InvoiceServices.find#Pay
 own find, for the organization in Insights' scope (none chosen: Accounting's own, the active organization, else the user's only
 one, else all of theirs; the bills, which need one organization, are then left out).
 
+**Insights annotation (impl-insights P6, Nov 10, 2026; F13, F31).** `close#Period` registers `record#BusinessEvent` (PeriodClosed) after its commit: a marker at the close, named by the period, in the closing organization, with no total. A reopen writes none.
+
 These canonical reports register with [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).
 Insights uses their authorized service results and drill targets, preserving organization, fiscal
 period, posting basis and currency; an eventually consistent search aggregation is not a replacement

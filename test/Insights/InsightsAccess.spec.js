@@ -130,14 +130,16 @@ const capabilityNames = [
     "settingsEdit",
     "legacy",
     "datasets",
-    "stewardship"
+    "stewardship",
+    // P6: Analysis, the author's and the steward's area
+    "analysis"
 ]
 // design §1.1's table; the copied screens (legacy) are the administrator's and ADMIN's; P3's dataset screens the author's and the
 // steward's (datasets), DatasetDetail the steward's (stewardship)
 const capabilityUsers = [
     {user: users.reader, granted: ["view"]},
-    {user: users.author, granted: ["view", "author", "datasets"]},
-    {user: users.steward, granted: ["view", "datasetView", "datasetEdit", "datasets", "stewardship"]},
+    {user: users.author, granted: ["view", "author", "datasets", "analysis"]},
+    {user: users.steward, granted: ["view", "datasetView", "datasetEdit", "datasets", "stewardship", "analysis"]},
     {user: users.distributor, granted: ["view", "schedule", "distribute"]},
     {user: users.flow, granted: ["view", "flowEdit"]},
     {user: users.admin, granted: ["view", "settingsView", "settingsEdit", "legacy"]},
