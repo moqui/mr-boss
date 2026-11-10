@@ -4126,4 +4126,82 @@ along with this software (see the LICENSE.md file). If not, see
             description="The shared guidance for people and agent runs, for the instance and each organization" settingsGroupEnumId="AdmSgCompany"
             scopeEnumId="AdmScOrganization" screenPath="Admin/Settings/Constitution" viewPermission="ADMIN_SETTINGS_VIEW"
             configuredBy="Configuration administrator" sequenceNum="6"/>
+
+    <!-- Admin P8 (impl-admin P8; design-admin §7 InstanceSettings, Localization and ReferenceData, §1.1): InstanceSettings and
+        Localization join the configuration administrator's Settings screens (BOSS_ADM_ORGANIZATIONS: denied to the root user
+        group, ALWAYS for the configuration administrator and the administrator); the framework's
+        org.moqui.admin.ConfigurationServices check ADMIN_SETTINGS_VIEW and ADMIN_SETTINGS_MANAGE whatever opens the screens, and
+        write registered preferences and translations only. ReferenceData is every Admin user's, as the settings index: it links
+        the owners' screens and changes nothing. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_ORGANIZATIONS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/InstanceSettings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Localization.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+    </artifactGroups>
+    <!-- Admin's own settings index entries of P8, each shown to a user Admin › Settings opens them to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.instanceSettings" version="1" ownerApp="Admin" title="Instance settings"
+            description="What the instance is called, its default locale and time zone, the new-device sign-in window, the group recipient ceiling, and where each deployment value comes from"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/InstanceSettings"
+            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="101"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.localization" version="1" ownerApp="Admin" title="Localization"
+            description="Translations of messages and of the names of statuses, options, units and places"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/Localization"
+            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="102"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.referenceData" version="1" ownerApp="Admin" title="Reference data"
+            description="Where units, currencies, tax, types, statuses and workflows are changed, each by its owner"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/ReferenceData"
+            configuredBy="Each owner's administrators" sequenceNum="103"/>
+    <!-- The reference kinds of ReferenceData (design §7 ReferenceOwners, §14.2: a deep link inside an owner's settings is a
+        further entry with the owner's permission): a group of the settings index, each entry its owner's screen and shown only
+        to a viewer that screen opens to. Each owner's rows follow its design; Admin changes none of these records. -->
+    <moqui.basic.Enumeration enumId="AdmSgReference" enumTypeId="AdminSettingsGroup" description="Reference data" sequenceNum="4"/>
+    <!-- Products (design-products: it owns units and conversions; changing a unit is an instance administrator's write) -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.units" version="1" ownerApp="Products" title="Units of measure"
+            description="Units, their conversions and barcodes; a unit a document already uses keeps its meaning"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="Products/Units"
+            configuredBy="Catalog administrator; unit changes an instance administrator" sequenceNum="210"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.identificationTypes" version="1" ownerApp="Products"
+            title="Product identification types" description="The kinds of product identifier (SKU, GTIN, supplier code)"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="Products/Settings/IdentificationTypes"
+            configuredBy="Catalog administrator" sequenceNum="220"/>
+    <!-- Accounting (design-accounting: currencies, tax, terms and posting policy are its own) -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.currencies" version="1" ownerApp="Accounting" title="Currencies"
+            description="The currencies in use and their exchange rates" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/Currencies" configuredBy="Finance administrator"
+            sequenceNum="230"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.paymentTerms" version="1" ownerApp="Accounting" title="Payment terms"
+            description="Settlement terms offered to customers and taken from suppliers" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/PaymentTerms" configuredBy="Finance administrator"
+            sequenceNum="240"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.tax" version="1" ownerApp="Accounting" title="Tax authorities and rates"
+            description="Tax authorities, their rates and what they apply to" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Accounting/Tax/TaxAuthorities" configuredBy="Finance administrator"
+            sequenceNum="250"/>
+    <!-- Customer Service, Projects and Manufacturing: their own types, statuses and reasons -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.caseTypes" version="1" ownerApp="Customer Service" title="Case types"
+            description="The kinds of case and what each asks for" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/CaseTypes"
+            configuredBy="Customer service administrator or manager" sequenceNum="260"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.caseStatusCategories" version="1" ownerApp="Customer Service"
+            title="Case status categories" description="How case statuses are grouped for queues and reports"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/StatusCategories"
+            configuredBy="Customer service administrator or manager" sequenceNum="270"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.workItemTypes" version="1" ownerApp="Projects" title="Work item types"
+            description="The kinds of work item and their fields" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/WorkItemTypes" configuredBy="Projects managers"
+            sequenceNum="280"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.workflows" version="1" ownerApp="Projects" title="Work item workflows"
+            description="The statuses a work item moves through and the moves allowed" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/Workflows" configuredBy="Projects managers"
+            sequenceNum="290"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.reasonCodes" version="1" ownerApp="Manufacturing" title="Production reason codes"
+            description="Reasons for scrap, downtime and rework" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Manufacturing/Settings/ReasonCodes"
+            configuredBy="Production or resource administrator" sequenceNum="300"/>
+    <!-- Tools (the framework's generic editors, an instance administrator's): status flows, and every message and label -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.statusFlows" version="1" ownerApp="Tools" title="Status flows"
+            description="The generic status-flow editor; an app's own workflow screen is the place to change its flow"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="tools/StatusFlows"
+            configuredBy="Instance administrator" sequenceNum="310"/>
 </entity-facade-xml>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReferenceData (design-admin §7 ReferenceData; style-guide §3 settings landing): where each kind of reference data is changed.
+    ReferenceOwners lists the settings index's reference kinds (ironstone.admin.RegistryServices.find#Settings, the entries of the
+    Reference data group: units, currencies, tax, payment terms, types, statuses and workflows), each with its owner app, what it
+    applies to, who changes it and a link to the owner's screen, shown only to a viewer that screen opens to. Admin changes none
+    of them: Products owns units, Accounting currencies, tax and terms, each app its own types and statuses, and the generic
+    status-flow editor stays in Tools for an instance administrator. Every Admin user's, as the settings index. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reference data" menu-image="sym_o_category" menu-image-type="icon">
+    <parameter name="text"/>
+    <parameter name="ownerApp"/>
+    <actions>
+        <service-call name="ironstone.admin.RegistryServices.find#Settings" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{text:(text || null), ownerApp:(ownerApp || null), settingsGroupEnumId:'AdmSgReference'}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="entries" from="found?.entries || []"/>
+        <!-- the owners among the kinds shown, or the one chosen -->
+        <set field="appOptions" from="Array.from(new Set(entries.map(row =&gt; row.ownerApp).concat(ownerApp ? [ownerApp] : []))).sort().map(app =&gt; ({key: app, text: app}))"/>
+        <set field="filtered" from="!!(text || ownerApp)"/>
+        <set field="findValues" from="{text:text, ownerApp:ownerApp}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Reference data" type="h5"/>
+                <label text="Units, currencies, types and statuses are changed in the app that owns them, by whoever that app lets. A change there never rewrites a posted document."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="ReferenceFind" transition="." map="findValues">
+            <field name="text"><default-field title="Find a kind"><text-line size="24"/></default-field></field>
+            <field name="ownerApp">
+                <default-field title="Owner">
+                    <drop-down allow-empty="true"><list-options list="appOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="text"/>
+                    <field-ref name="ownerApp"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ReferenceOwners" list="entries" skip-form="true" paginate="false">
+                    <field name="title">
+                        <default-field title="Kind">
+                            <link url="${url}" url-type="plain" text="${title}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="ownerApp"><default-field title="Owner"><display/></default-field></field>
+                    <field name="description"><default-field title="What it covers"><display/></default-field></field>
+                    <field name="scopeName"><default-field title="Applies to"><display/></default-field></field>
+                    <field name="configuredBy"><default-field title="Changed by"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="ownerApp"/></column>
+                        <column><field-ref name="scopeName"/><field-ref name="configuredBy"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!entries.length &amp;&amp; filtered" text="No kind of reference data matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!entries.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No owner's reference data is open to you. Each app's administrators change its own."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

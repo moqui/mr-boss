@@ -1859,6 +1859,117 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
   configuration and need a restart; translates a message with its placeholder kept; ReferenceData sends a unit change
   to Products.
 
+**Built Nov 10 (P8).**
+- mr-moqui (no Rust; the shared release binary):
+  - `entity/ServerEntities.xml` (appended): `moqui.server.InstanceSetting` (the registry: key, title, group, value type, allowed values,
+    limits, default, conf property, editable, secret, restart, manage permission, operator note; the `InstanceSettingValueType`
+    enumerations), `moqui.server.InstancePreference` (the value, audit-logged, with who, when and why) and
+    `moqui.basic.LocalizedLabelTarget` (a label that may be translated).
+  - `service/org/moqui/admin/ConfigurationServices.xml`, organized in parts for P10 to P13 to append: a section per part, its bodies
+    in a module of its own beside `ConfigurationLib.js` (finds, revision, permission checks, refusals, the audit row, paging).
+    - Settings (`ConfigurationSettings.js`): `get#EffectiveSettings` (each registered setting with its value, source: preference,
+      configuration or default, whether it is changed here and by the caller, restart effect, operator note, and a preference's
+      revision and last change; a secret masked, only `valueSet`; `ADMIN_SETTINGS_VIEW`); `get#InstancePreference` (added: one
+      registered preference's effective value and `numberValue`, for the code that uses it; no permission, a preference being
+      nonsecret by registration; the module also exposes `value(key)` to scripts); `store#InstancePreference` (a registered
+      preference only, typed and within its allowed values and limits, at the revision read, empty removing it;
+      `NOT_REGISTERED`, `VALUE_INVALID`, `STALE_REVISION`; `ADMIN_SETTINGS_MANAGE` and the setting's own permission).
+    - Localization (`ConfigurationLocalization.js`): `find#LocalizedMessages` and `find#LocalizedEntityFields` (added: a page by
+      locale and text, or what is missing in a locale), `store#LocalizedMessage` and `store#LocalizedEntityField` (exactly the
+      original's `${}` placeholders, a locale that is one, the revision read, empty removing it; a label only for a registered
+      target the definitions bear out; `PLACEHOLDER_MISMATCH`, `LOCALE_INVALID`, `NOT_REGISTERED`, `LABEL_UNAVAILABLE`,
+      `STALE_REVISION`); each change writes its own audit row.
+  - `data/AdminConfigurationData.xml` (new, named in MoquiDefaultConf's `load-data`): `AdminConfigurationServices` (ALL_USERS, an
+    inheritable ALLOW naming the seven services); the preferences `instance.displayName`, `instance.defaultLocale`,
+    `instance.defaultTimeZone`, `signin.newDeviceWindowDays` (90, 1 to 730) and `report.groupRecipientCeiling` (200, 1 to 500);
+    eight deployment values shown read only (purpose, locale, server and database zones, public host, HTTPS, largest upload,
+    telemetry); the label targets (enumeration, status, unit and place names and their types).
+  - `docs/security/Attack-Surface.md`: the configuration services' paragraph.
+- BOSS:
+  - Screens: `Admin/Settings.xml` gains InstanceSettings (menu 4), Localization (5) and ReferenceData (6).
+    `Settings/InstanceSettings.xml` (InstancePresentation: the preferences, each with its Change dialog, a drop-down from the
+    `valueOptions` transition for a choice, locale or time zone; ConfigurationSources: every setting with its key, value, source,
+    where it is changed, when it takes effect and the operator's note; Open the conf for `ADMIN`); `Settings/Localization.xml`
+    (LocalizationFind: messages or labels, kind of label, locale, text, missing; MessageTranslations and EntityTranslations with a
+    dialog per row, New translation, paging by the service); `Settings/ReferenceData.xml` (ReferenceFind, ReferenceOwners over
+    `find#Settings` for the Reference data group). Home shows the instance name when one is set.
+  - `Admin.js`: links `Settings/InstanceSettings`, `Settings/Localization`, `Settings/ReferenceData`. No new `ironstone` service,
+    so the client deny pattern is unchanged.
+  - `data/BossSetupData.xml` (appended): InstanceSettings and Localization added to `BOSS_ADM_ORGANIZATIONS`; the index entries
+    `admin.instanceSettings`, `admin.localization` (`ADMIN_SETTINGS_VIEW`) and `admin.referenceData`; the index group
+    `AdmSgReference` and eleven reference kinds (Products' units and identification types; Accounting's currencies, payment terms
+    and tax; Customer Service's case types and status categories; Projects' work item types and workflows; Manufacturing's reason
+    codes; Tools' status flows). BossUsersDemoData unchanged.
+- Specs: framework `test/AdminConfiguration` (4 features, 0.2 s: an unregistered key, a configuration key, a value outside its
+  allowed set or limits refused and nothing written; a stale revision refused; each value and the removal in the audit log; a
+  secret-classified setting never returned, a secret made editable left out; a deployment value with its source and restart
+  effect; a user without the permissions refused every read and change but `get#InstancePreference`; a translation that drops or
+  adds a placeholder refused; a label only for a registered target the definitions bear out). BOSS `test/Admin/AdminSettings`
+  (3 features, 0.6 s: InstanceSettings' one qvt render as the configuration administrator; a preference and a translation
+  changed through the transitions, an unregistered key and a dropped placeholder written nowhere, the reader opening neither
+  screen; ReferenceData linking Products' units for ADMIN and not for the configuration administrator). `AdminRegistries`
+  changed: the reader's index now holds `admin.referenceData`, and the Instance group Admin's three entries. Access: the
+  screens fall under P7's `organizations` capability (AdminAccess unchanged); the holder and non-holder are in AdminSettings and
+  AdminConfiguration. Acceptance, written and not run: `acceptance/Admin/AdminSettingsUsable` (3 features, the "usable when").
+- Tests run (release binary, `--nobuild`, this worktree's runtime): framework AdminConfiguration, AdminAccessServices, AdminSessions
+  13 of 13; mr-boss AdminSettings, AdminAccess, AdminRegistries, AdminOrganizations, AdminConstitution, AdminUsers, AdminGroups,
+  ProjectsAccess 34 of 35, the one failure AdminRegistries' two index expectations, then AdminRegistries and AdminSettings 8 of 8
+  with them changed; `moqui lint --screens` 132 flagged sites, as before. InstanceSettings
+  (qvt, tui), Localization (qvt with missing labels, tui), ReferenceData (qvt, tui), Home and SettingsHome (html) and the
+  `valueOptions` transition rendered once by hand without errors, not kept. Prettier clean on the new JavaScript. Not run:
+  `./moq test-framework`, `./moq test-apps`, the acceptance suite; no cargo test (no Rust changed).
+- Inventories: none (design §15.2 traces Tools' Localization forms; ss-inventory and usl-inventory have no row for them).
+- Design edits: design-admin §7 InstanceSettings, Localization and ReferenceData (as built), §17.2 (the ConfigurationServices
+  row, the InstancePreference record), §19 Q6; design-insights §7.1 (the ceiling's key and how it is read).
+- Findings (provisional, numbered by the lead):
+  - **F-P8-1** The conf's own view (`org.moqui.dev.ComponentServices.get#ConfView`: file, line and live/apply/restart class of each
+    value) is Rust and for the `ADMIN` group alone, and scripts read a property's value only (`System.getProperty`). Built:
+    deployment values are registered rows (`InstanceSetting`, `editable` N) naming a `default-property`, their restart effect and
+    operator note registered, their source "default" when the value equals the shipped MoquiDefaultConf's and "configuration"
+    otherwise (not which file or the environment); `ADMIN` is linked to System › Conf. P10's EffectiveSignInPolicy needs conf
+    attributes (`user-facade` `password`, `login`), which a property registration cannot name: a framework ask (a masked
+    projection of named conf attributes for `ADMIN_SETTINGS_VIEW`), or P10 registers what it shows another way.
+  - **F-P8-2** Nothing reads an instance default for a person with none: the session's locale and time zone fall back to the conf
+    properties read at start (l10n.rs `server_time_zone`, also the zone the server reads timestamps in), and Mantle's
+    `create#StaffAccount` and invitation acceptance set neither. `instance.defaultLocale` and `instance.defaultTimeZone` are
+    registered, stored and shown, and read by nothing yet; applying them (new accounts, or the session fallback apart from the
+    server's zone) is a framework and Mantle follow-up. `instance.displayName` is read by Admin Home only.
+  - **F-P8-3** Design §7's approved theme and logo and date and number formats are not registered: the shell reads no instance
+    value of them (themes are `UserGroupScreenTheme` rows, an owner store), so a preference would do nothing.
+  - **F-P8-4** Framework seed data is loaded only when MoquiDefaultConf's `load-data` names its file; the new file adds a line
+    there (the plan's "append to framework seed data" would otherwise have meant SecurityTypeData).
+  - **F-P8-5** `LocalizedMessage` and `LocalizedEntityField` are not audit-logged, and turning the audit log on would write a row
+    for each of the thousands a data load (mr-l10n) writes; the services write the audit row of each delegated change, and
+    Tools' direct writes stay unaudited.
+  - **F-P8-6** Scripts cannot list the localized fields of every entity cheaply (`getEntityDefinition` builds the whole definition,
+    about 6 ms each), and a localized field may be on a business entity (Mantle's `ProductFeature`, owner-scoped). Built: label
+    targets are registered rows checked against the definition (localized, unencrypted, a configuration entity, one key), so
+    translation access never reads a business record; Products' features stay Products › Translations'.
+  - **F-P8-7** A translation is shown wherever its original is, and where the original's `${}` is expanded the translation's
+    would be too (not traced through every widget), so a translator adding one could run an expression: the stores require the
+    placeholder sets to be equal (stricter than "kept").
+  - **F-P8-8** ReferenceData's kinds are settings entries, so they also show in SettingsHome under a fourth group, and the reader's
+    index is no longer empty (it holds Admin's reference data landing, which lists the reader no kind).
+- Decisions: settings are seed rows of two kinds in one registry, with secrets refused by flag and by name; a preference falls
+  back to the conf property it names, then its default; `get#InstancePreference` needs no permission; an empty value removes a
+  preference or a translation; label targets are registered and checked against the definitions; InstanceSettings and
+  Localization join `BOSS_ADM_ORGANIZATIONS` (no new capability), ReferenceData is every Admin user's; reference kinds are a
+  fourth group of the settings index.
+- For the lead:
+  - budget shares: framework about 0.2 s (AdminConfiguration); mr-boss about 0.6 s (AdminSettings); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` appended at its end, one `load-data` line added after SftpDemoData's in
+    MoquiDefaultConf, the rest new files; mr-boss `BossSetupData.xml` appended at its end (Insights P6 appends there too),
+    `Admin.js` `linkPaths` rows, `Settings.xml` subscreens, `Home.xml` (one service call and a label), `AdminRegistries.spec.js`
+    (two expectations), `design-insights.md` §7.1 (one sentence, the other app's design, as the phase's ceiling calls for);
+  - Insights P7 reads the ceiling with `org.moqui.admin.ConfigurationServices.get#InstancePreference`
+    (`settingKey: "report.groupRecipientCeiling"`, `numberValue`), from Rust by a service call or by the two rows
+    (`InstancePreference.preferenceValue`, else `InstanceSetting.defaultValue`); P10 reads `signin.newDeviceWindowDays` the same way;
+  - P10 to P13 append a section to `ConfigurationServices.xml`, a module beside `ConfigurationLib.js`, their services' names to
+    a grant of their own in `AdminConfigurationData.xml` (never a pattern over the file) and their settings rows there;
+  - the user's call: F-P8-2 (where the default locale and time zone apply) and F-P8-3 (theme, logo and formats: build with a
+    reader, or drop from design §7); whether reference kinds belong in SettingsHome's list (F-P8-8); F-P8-1's framework ask;
+  - the acceptance AdminSettingsUsable to run when asked.
+
 ### P9 — Capabilities and row rules
 
 Design §5 Capabilities and RowRules; ADM-ACCESS.

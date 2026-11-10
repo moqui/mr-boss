@@ -182,9 +182,10 @@ feature("a settings entry shows only to those its destination opens to, and its 
             if (manager.includes(key)) problems.push(`the warehouse manager gets ${key}`)
         // Comms' Consent opens to every BOSS user and needs CONTACT_ADMIN: hidden from the manager, shown to ADMIN
         if (manager.includes("comms.consent")) problems.push("the warehouse manager gets Consent")
-        // the reader opens no business app; ADMIN every entry
+        // the reader opens no business app and not the configuration administrator's screens: only Admin's reference data
+        // landing (P8), every Admin user's, which lists it no owner's kind; ADMIN every entry
         const reader = settings(users.reader)
-        if (reader.length) problems.push(`the reader gets ${reader}`)
+        if (JSON.stringify(reader) !== JSON.stringify(["admin.referenceData"])) problems.push(`the reader gets ${reader}`)
         const all = settings(users.system)
         for (const key of [
             "accounting.settings",
@@ -198,7 +199,11 @@ feature("a settings entry shows only to those its destination opens to, and its 
         const found = settings(users.system, {text: "STOCK"})
         if (JSON.stringify(found) !== JSON.stringify(["warehouse.settings"])) problems.push(`"STOCK" finds ${found}`)
         const instance = settings(users.system, {settingsGroupEnumId: "AdmSgInstance"})
-        if (JSON.stringify(instance) !== JSON.stringify(["voice.system"])) problems.push(`the instance group: ${instance}`)
+        if (
+            JSON.stringify(instance) !==
+            JSON.stringify(["voice.system", "admin.instanceSettings", "admin.localization", "admin.referenceData"])
+        )
+            problems.push(`the instance group: ${instance}`)
         // a Projects client is refused the index
         const client = asUser("sheldon.acme", () => refusal(registry + "find#Settings", {}))
         if (!/ADMIN_UNAVAILABLE|is not authorized/.test(client))

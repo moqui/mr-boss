@@ -24,6 +24,10 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <actions>
         <set field="can" from="admin.capabilities"/>
+        <!-- what the instance is called (P8: the instance.displayName preference, Settings › Instance), when it is named -->
+        <service-call name="org.moqui.admin.ConfigurationServices.get#InstancePreference" out-map="instanceName" transaction="force-new"
+                ignore-error="true" in-map="{settingKey:'instance.displayName'}"/>
+        <script>ec.message.clearErrors()</script>
         <if condition="can.overview">
             <service-call name="ironstone.admin.RegistryServices.get#Overview" out-map="overview" transaction="force-new" ignore-error="true"/>
             <set field="overviewFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
@@ -39,7 +43,10 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
-            <container style="col"><label text="Admin" type="h5"/></container>
+            <container style="col">
+                <label text="Admin" type="h5"/>
+                <label text="${instanceName?.value}" type="p" style="text-caption m-muted q-mb-none" condition="instanceName?.value"/>
+            </container>
         </container>
         <container style="row q-gutter-sm q-mb-md">
             <link url="${sharedLinks['Operations/Health']}" text="Health" link-type="anchor-button" btn-type="primary"
