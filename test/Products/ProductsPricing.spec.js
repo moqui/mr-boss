@@ -93,6 +93,23 @@ feature("sales, supplier and cost values leave only their own authorized read bo
         !JSON.stringify(sales).includes("B5_SUPPLIER")
     }
 })
+feature("the Standard sales correction submits its original date once", {
+    when() {
+        return as("catalog.price.edit", () => ec.screen.makeTest()
+            .rootScreen("component://mr-boss/screen/Products.xml").renderMode("html").withStaticData()
+            .render("Prices/List", {productId: "B5_VISIBLE", direction: "sales", lastStandalone: "-2"}, null))
+    },
+    then(result) {
+        result.status == 200
+        result.errorMessages.length == 0
+        const forms = result.output.match(/<form\b[^>]*id="CorrectPrice[^"]*"[^>]*>[\s\S]*?<\/form>/g) || []
+        forms.length == 1
+        const dates = forms[0].match(/<input\b[^>]*name="fromDate"[^>]*>/g) || []
+        dates.length == 1
+        dates[0].includes('type="hidden"')
+        dates[0].includes('value="' + String(time - 100000) + '"')
+    }
+})
 feature("disabling artifact checks never grants write authority for another direction or owner", {
     when() {
         const supplier = as("catalog.price.edit", () =>

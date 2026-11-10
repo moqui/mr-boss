@@ -641,7 +641,7 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                                     <field name="fromDate">
                                         <default-field title="Effective from">
                                             <hidden/>
-                                            <display text="${fromDateText}"/>
+                                            <display text="${fromDateText}" also-hidden="false"/>
                                         </default-field>
                                     </field>
                                     <field name="thruDate" from="thruDateText">
