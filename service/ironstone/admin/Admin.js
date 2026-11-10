@@ -699,10 +699,10 @@ const toolRoutes = [
     {tool: "Entities", purpose: "Entity definitions, tables and indexes", app: "tools", path: "Schema"},
     {tool: "Services", purpose: "Service reference and a service run", app: "tools", path: "Service"},
     {
-        tool: "Service load runner",
-        purpose: "Load tests of services",
+        tool: "Load testing",
+        purpose: "Load scripts run against this server or another, and their runs",
         app: "tools",
-        path: "Service/ServiceLoadRunner",
+        path: "Load/Scripts",
         permission: "LOAD_RUNNER"
     },
     {tool: "SQL runner", purpose: "Run SQL statements", app: "tools", path: "Sql", permission: "SQL_RUNNER_WEB"},
