@@ -115,11 +115,13 @@ along with this software (see the LICENSE.md file). If not, see
                             parameter-map="{q:q, entityType:(facet.value == entityType ? '' : facet.value), mode:mode}"/>
                 </widgets></section-iterate>
             </container>
-            <container style="q-my-sm" condition="categoryFacets.length &gt; 0">
-                <section-iterate name="CategoryFacets" list="categoryFacets" entry="facet"><widgets>
-                    <label text="${facet.label} (${facet.count})" type="span" style="q-mr-md text-grey-8"/>
-                </widgets></section-iterate>
-            </container>
+            <section name="CategoryFacetChips" condition="categoryFacets.length &gt; 0"><widgets>
+                <container style="q-my-sm">
+                    <section-iterate name="CategoryFacets" list="categoryFacets" entry="facet"><widgets>
+                        <label text="${facet.label} (${facet.count})" type="span" style="q-mr-md text-grey-8"/>
+                    </widgets></section-iterate>
+                </container>
+            </widgets></section>
 
             <section name="FileHits" condition="fileHits.length"><widgets>
                 <container-box><box-header title="Files"/><box-body>

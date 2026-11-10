@@ -233,56 +233,57 @@ along with this software (see the LICENSE.md file). If not, see
                                         <column><field-ref name="requestedQuantity"/><field-ref name="exceptionText"/></column>
                                     </columns>
                                 </form-list>
-                                <form-single name="ReturnRequest" transition="submitReturn" map="requestValues"
-                                        condition="preview.outcome != 'NotEligible'">
-                                    <field name="customerPartyId"><default-field><hidden/></default-field></field>
-                                    <field name="orderId"><default-field><hidden/></default-field></field>
-                                    <field name="requestId"><default-field><hidden/></default-field></field>
-                                    <field name="linesText"><default-field><hidden/></default-field></field>
-                                    <field name="operationKey"><default-field><hidden/></default-field></field>
-                                    <field name="customerReference">
-                                        <default-field title="Customer's reference" tooltip="Their own number for this return, if any">
-                                            <text-line size="30"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="carrierPartyId">
-                                        <default-field title="Return label carrier" tooltip="Empty: the order's carrier">
-                                            <drop-down allow-empty="true">
-                                                <entity-options key="${partyId}" text="${organizationName || partyId}">
-                                                    <entity-find entity-name="mantle.party.PartyDetailAndRole">
-                                                        <econdition field-name="roleTypeId" value="Carrier"/>
-                                                        <order-by field-name="organizationName"/>
-                                                    </entity-find>
-                                                </entity-options>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="shipmentMethodEnumId">
-                                        <default-field title="Service">
-                                            <drop-down allow-empty="true">
-                                                <entity-options key="${enumId}" text="${description}">
-                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
-                                                        <econdition field-name="enumTypeId" value="ShipmentMethod"/>
-                                                        <order-by field-name="description"/>
-                                                    </entity-find>
-                                                </entity-options>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="exceptionReason" hide="preview.outcome != 'ExceptionRequired'">
-                                        <default-field title="Why an exception" tooltip="Sent to the return exception approvers">
-                                            <text-line size="50"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="draft">
-                                        <default-field title="">
-                                            <check><option key="Y" text="Save as draft (not requested yet)"/></check>
-                                        </default-field>
-                                    </field>
-                                    <field name="submitButton">
-                                        <default-field title=""><submit text="Request the return"/></default-field>
-                                    </field>
-                                </form-single>
+                                <section name="ReturnRequestShown" condition="preview.outcome != 'NotEligible'"><widgets>
+                                    <form-single name="ReturnRequest" transition="submitReturn" map="requestValues">
+                                        <field name="customerPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="linesText"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="customerReference">
+                                            <default-field title="Customer's reference" tooltip="Their own number for this return, if any">
+                                                <text-line size="30"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="carrierPartyId">
+                                            <default-field title="Return label carrier" tooltip="Empty: the order's carrier">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${partyId}" text="${organizationName || partyId}">
+                                                        <entity-find entity-name="mantle.party.PartyDetailAndRole">
+                                                            <econdition field-name="roleTypeId" value="Carrier"/>
+                                                            <order-by field-name="organizationName"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="shipmentMethodEnumId">
+                                            <default-field title="Service">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${enumId}" text="${description}">
+                                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                            <econdition field-name="enumTypeId" value="ShipmentMethod"/>
+                                                            <order-by field-name="description"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="exceptionReason" hide="preview.outcome != 'ExceptionRequired'">
+                                            <default-field title="Why an exception" tooltip="Sent to the return exception approvers">
+                                                <text-line size="50"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="draft">
+                                            <default-field title="">
+                                                <check><option key="Y" text="Save as draft (not requested yet)"/></check>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="Request the return"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </widgets></section>
                             </box-body>
                         </container-box>
                     </widgets>

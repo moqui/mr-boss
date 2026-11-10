@@ -93,16 +93,18 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Excludes: ${panelMeasure?.exclusions}" type="p" style="m-muted" condition="panelMeasure?.exclusions"/>
                         <label text="${(panelMeasure?.rules || []).join(' ')}" type="p" style="m-muted" condition="panelMeasure?.rules?.length"/>
                         <label text="${panelMeaning?.versionMessage}" type="p" style="text-warning" condition="panelMeaning?.versionMessage"/>
-                        <form-single name="BusinessMeasure" transition="storeMeasure" map="measureValues" condition="panelOwned">
-                            <field name="definitionId"><default-field><hidden/></default-field></field>
-                            <field name="expectedVersion"><default-field><hidden/></default-field></field>
-                            <field name="metricId">
-                                <default-field title="Measure" tooltip="A measure its owning app registers; empty, the panel is an analysis">
-                                    <drop-down allow-empty="true"><list-options list="metricOptions" key="${metricId}" text="${label}"/></drop-down>
-                                </default-field>
-                            </field>
-                            <field name="saveMeasure"><default-field title="Save measure"><submit/></default-field></field>
-                        </form-single>
+                        <section name="BusinessMeasureShown" condition="panelOwned"><widgets>
+                            <form-single name="BusinessMeasure" transition="storeMeasure" map="measureValues">
+                                <field name="definitionId"><default-field><hidden/></default-field></field>
+                                <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                                <field name="metricId">
+                                    <default-field title="Measure" tooltip="A measure its owning app registers; empty, the panel is an analysis">
+                                        <drop-down allow-empty="true"><list-options list="metricOptions" key="${metricId}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="saveMeasure"><default-field title="Save measure"><submit/></default-field></field>
+                            </form-single>
+                        </widgets></section>
                         <label text="${targetText}" type="p" condition="panelMeasure"/>
                         <container-dialog id="Target" button-text="Target" condition="panelOwned &amp;&amp; panelMeasure">
                             <form-single name="TargetForm" transition="storeTarget" map="targetValues">

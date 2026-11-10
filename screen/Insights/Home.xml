@@ -123,105 +123,115 @@ along with this software (see the LICENSE.md file). If not, see
         <label text="Dashboards and reports are shown to Insights readers." type="p" style="m-muted" condition="!can.view"/>
         <label text="Home could not be read just now. ${homeFailure}" type="p" style="text-negative" condition="can.view &amp;&amp; homeFailure"/>
 
-        <container-box condition="home?.firstUse">
-            <box-header title="Getting started"/>
-            <box-body>
-                <label text="Home shows the suite overview below and the work waiting in the apps you use. Star dashboards in Dashboards and pin reports in Reports to keep them here." type="p"/>
-                <container style="row q-gutter-sm">
-                    <link url="${sharedLinks['Dashboards']}" text="Browse dashboards" link-type="anchor" icon="sym_o_dashboard"/>
-                    <link url="${sharedLinks['Reports']}" text="Find a report" link-type="anchor" icon="sym_o_summarize"/>
-                </container>
-            </box-body>
-        </container-box>
+        <section name="GettingStarted" condition="home?.firstUse"><widgets>
+            <container-box>
+                <box-header title="Getting started"/>
+                <box-body>
+                    <label text="Home shows the suite overview below and the work waiting in the apps you use. Star dashboards in Dashboards and pin reports in Reports to keep them here." type="p"/>
+                    <container style="row q-gutter-sm">
+                        <link url="${sharedLinks['Dashboards']}" text="Browse dashboards" link-type="anchor" icon="sym_o_dashboard"/>
+                        <link url="${sharedLinks['Reports']}" text="Find a report" link-type="anchor" icon="sym_o_summarize"/>
+                    </container>
+                </box-body>
+            </container-box>
+        </widgets></section>
 
         <!-- Attention: each owner's counts, opening the worklist that produced them -->
-        <container-box condition="can.view">
-            <box-header title="Needs attention"/>
-            <box-body>
-                <label text="Work waiting in the apps you use${attention?.asOfText ? ', as of ' + attention.asOfText : ''}. Counts are not added together: the same work can be in more than one list." type="p" style="m-muted"/>
-                <label text="The attention board could not be read just now." type="p" style="text-negative" condition="attentionFailure"/>
-                <label text="Nothing is waiting in the apps you use." type="p" condition="!attentionFailure &amp;&amp; !attentionGroups.length"/>
-                <section-iterate name="AttentionGroups" list="attentionGroups" entry="group">
-                    <widgets>
-                        <label text="${group.ownerName}" type="h6"/>
-                        <label text="${group.scopeText}" type="p" style="text-caption m-muted" condition="group.scopeText"/>
-                        <dashboard min-width="170">
-                            <section-iterate name="AttentionCards" list="group.cards" entry="card">
-                                <widgets>
-                                    <number-card title="${card.title}" value="${card.valueText}" size="sm" link="${card.url || ''}"/>
-                                </widgets>
-                            </section-iterate>
-                        </dashboard>
-                        <label text="${group.failedText}" type="p" style="text-caption text-warning" condition="group.failedText"/>
-                    </widgets>
-                </section-iterate>
-            </box-body>
-        </container-box>
+        <section name="NeedsAttention" condition="can.view"><widgets>
+            <container-box>
+                <box-header title="Needs attention"/>
+                <box-body>
+                    <label text="Work waiting in the apps you use${attention?.asOfText ? ', as of ' + attention.asOfText : ''}. Counts are not added together: the same work can be in more than one list." type="p" style="m-muted"/>
+                    <label text="The attention board could not be read just now." type="p" style="text-negative" condition="attentionFailure"/>
+                    <label text="Nothing is waiting in the apps you use." type="p" condition="!attentionFailure &amp;&amp; !attentionGroups.length"/>
+                    <section-iterate name="AttentionGroups" list="attentionGroups" entry="group">
+                        <widgets>
+                            <label text="${group.ownerName}" type="h6"/>
+                            <label text="${group.scopeText}" type="p" style="text-caption m-muted" condition="group.scopeText"/>
+                            <dashboard min-width="170">
+                                <section-iterate name="AttentionCards" list="group.cards" entry="card">
+                                    <widgets>
+                                        <number-card title="${card.title}" value="${card.valueText}" size="sm" link="${card.url || ''}"/>
+                                    </widgets>
+                                </section-iterate>
+                            </dashboard>
+                            <label text="${group.failedText}" type="p" style="text-caption text-warning" condition="group.failedText"/>
+                        </widgets>
+                    </section-iterate>
+                </box-body>
+            </container-box>
+        </widgets></section>
 
         <!-- ManagementPanels: the chosen dashboard's panels, each rendered as the viewer in the organization in scope -->
-        <container-box condition="can.view &amp;&amp; home">
-            <box-header title="${homeDashboard.title || 'Management panels'}"/>
-            <box-toolbar>
-                <link url="${homeDashboard.url}" url-type="plain" text="Open dashboard" link-type="anchor" condition="homeDashboard.url"/>
-            </box-toolbar>
-            <box-body>
-                <label text="${homeDashboard.message}" type="p" style="m-muted" condition="homeDashboard.message"/>
-                <section-iterate name="ManagementPanels" list="homePanels" entry="panel">
-                    <widgets>
-                        <report-embed definition-id="${homeDashboard.definitionId}" panel-id="${panel.panelId}" from="${from}" thru="now"
-                                variables="scopeVariables"/>
-                    </widgets>
-                </section-iterate>
-            </box-body>
-        </container-box>
+        <section name="ManagementPanelsBox" condition="can.view &amp;&amp; home"><widgets>
+            <container-box>
+                <box-header title="${homeDashboard.title || 'Management panels'}"/>
+                <box-toolbar>
+                    <link url="${homeDashboard.url}" url-type="plain" text="Open dashboard" link-type="anchor" condition="homeDashboard.url"/>
+                </box-toolbar>
+                <box-body>
+                    <label text="${homeDashboard.message}" type="p" style="m-muted" condition="homeDashboard.message"/>
+                    <section-iterate name="ManagementPanels" list="homePanels" entry="panel">
+                        <widgets>
+                            <report-embed definition-id="${homeDashboard.definitionId}" panel-id="${panel.panelId}" from="${from}" thru="now"
+                                    variables="scopeVariables"/>
+                        </widgets>
+                    </section-iterate>
+                </box-body>
+            </container-box>
+        </widgets></section>
 
         <container style="row q-col-gutter-md">
             <!-- FavoritesAndRecents -->
             <container style="col-12 col-md-6">
-                <container-box condition="can.view &amp;&amp; home">
-                    <box-header title="Starred and recent dashboards"/>
-                    <box-body>
-                        <label text="Dashboards you star or open show here." type="p" style="m-muted" condition="!favorites.length"/>
-                    </box-body>
-                    <box-body-nopad>
-                        <form-list name="FavoritesAndRecents" list="favorites" skip-form="true" paginate="false" condition="favorites.length">
-                            <field name="title"><default-field title="Dashboard"><link url="${url}" url-type="plain" text="${title}" link-type="anchor"/></default-field></field>
-                            <field name="kind"><default-field title="Why"><display/></default-field></field>
-                            <field name="folder"><default-field title="Folder"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/></column>
-                                <column><field-ref name="kind"/></column>
-                            </columns>
-                        </form-list>
-                    </box-body-nopad>
-                </container-box>
+                <section name="StarredDashboards" condition="can.view &amp;&amp; home"><widgets>
+                    <container-box>
+                        <box-header title="Starred and recent dashboards"/>
+                        <box-body>
+                            <label text="Dashboards you star or open show here." type="p" style="m-muted" condition="!favorites.length"/>
+                        </box-body>
+                        <box-body-nopad>
+                            <form-list name="FavoritesAndRecents" list="favorites" skip-form="true" paginate="false" condition="favorites.length">
+                                <field name="title"><default-field title="Dashboard"><link url="${url}" url-type="plain" text="${title}" link-type="anchor"/></default-field></field>
+                                <field name="kind"><default-field title="Why"><display/></default-field></field>
+                                <field name="folder"><default-field title="Folder"><display/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="title"/></column>
+                                    <column><field-ref name="kind"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad>
+                    </container-box>
+                </widgets></section>
             </container>
             <!-- PinnedReports -->
             <container style="col-12 col-md-6">
-                <container-box condition="can.view &amp;&amp; home">
-                    <box-header title="Pinned reports"/>
-                    <box-toolbar>
-                        <link url="${sharedLinks['Reports']}" text="All reports" link-type="anchor"/>
-                    </box-toolbar>
-                    <box-body>
-                        <label text="Pin reports in Reports to keep them here." type="p" style="m-muted" condition="!pinnedReports.length"/>
-                        <label text="${unavailableText}" type="p" style="text-caption text-warning" condition="unavailableText"/>
-                    </box-body>
-                    <box-body-nopad>
-                        <form-list name="PinnedReports" list="pinnedReports" skip-form="true" paginate="false" condition="pinnedReports.length">
-                            <field name="title">
-                                <conditional-field condition="url" title="Report"><link url="${url}" url-type="plain" text="${title}" link-type="anchor"/></conditional-field>
-                                <default-field title="Report"><display text="${title}"/></default-field>
-                            </field>
-                            <field name="ownerName"><default-field title="App"><display/></default-field></field>
-                            <field name="description"><default-field title="What it answers"><display text="${description}${opensFrom ? ' (' + opensFrom + ')' : ''}"/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/></column>
-                                <column><field-ref name="ownerName"/></column>
-                            </columns>
-                        </form-list>
-                    </box-body-nopad>
-                </container-box>
+                <section name="PinnedReportsBox" condition="can.view &amp;&amp; home"><widgets>
+                    <container-box>
+                        <box-header title="Pinned reports"/>
+                        <box-toolbar>
+                            <link url="${sharedLinks['Reports']}" text="All reports" link-type="anchor"/>
+                        </box-toolbar>
+                        <box-body>
+                            <label text="Pin reports in Reports to keep them here." type="p" style="m-muted" condition="!pinnedReports.length"/>
+                            <label text="${unavailableText}" type="p" style="text-caption text-warning" condition="unavailableText"/>
+                        </box-body>
+                        <box-body-nopad>
+                            <form-list name="PinnedReports" list="pinnedReports" skip-form="true" paginate="false" condition="pinnedReports.length">
+                                <field name="title">
+                                    <conditional-field condition="url" title="Report"><link url="${url}" url-type="plain" text="${title}" link-type="anchor"/></conditional-field>
+                                    <default-field title="Report"><display text="${title}"/></default-field>
+                                </field>
+                                <field name="ownerName"><default-field title="App"><display/></default-field></field>
+                                <field name="description"><default-field title="What it answers"><display text="${description}${opensFrom ? ' (' + opensFrom + ')' : ''}"/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="title"/></column>
+                                    <column><field-ref name="ownerName"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad>
+                    </container-box>
+                </widgets></section>
             </container>
         </container>
     </widgets>

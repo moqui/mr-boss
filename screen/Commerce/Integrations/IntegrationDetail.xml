@@ -140,17 +140,19 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label type="p" style="m-muted" condition="managed"
                                         text="An EDI trading partner's connection, profile and transport are the EDI administrator's; here its exceptions are worked and retried."/>
-                                <form-single name="Binding" transition="saveBinding" map="bindingValues" condition="!managed">
-                                    <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
-                                    <field name="description"><default-field title="Name"><text-line size="36"/></default-field></field>
-                                    <field name="enabled">
-                                        <default-field title="Intake" tooltip="Enabled once the operator has set the endpoint's authentication and credentials">
-                                            <drop-down><option key="Y" text="On"/><option key="N" text="Stopped"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                </form-single>
+                                <section name="BindingShown" condition="!managed"><widgets>
+                                    <form-single name="Binding" transition="saveBinding" map="bindingValues">
+                                        <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                        <field name="description"><default-field title="Name"><text-line size="36"/></default-field></field>
+                                        <field name="enabled">
+                                            <default-field title="Intake" tooltip="Enabled once the operator has set the endpoint's authentication and credentials">
+                                                <drop-down><option key="Y" text="On"/><option key="N" text="Stopped"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    </form-single>
+                                </widgets></section>
                                 <label type="p" style="text-caption m-muted" condition="!managed"
                                         text="The endpoint, authentication and credentials are the operator's (System tools); Commerce never shows or takes them. Orders arrive at /rest/sm/StoreChannelOrders/${systemMessageRemoteId}."/>
                             </box-body>
@@ -160,36 +162,38 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Mapping"/>
                             <box-body>
-                                <form-single name="Mapping" transition="saveMapping" map="mappingValues" condition="!managed">
-                                    <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
-                                    <field name="mappingVersion">
-                                        <default-field title="Mapping version">
-                                            <drop-down><list-options list="mappingVersions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="customerPartyId" hide="!takesCustomer">
-                                        <default-field title="Customer" tooltip="The party the channel's orders are placed for">
-                                            <drop-down allow-empty="true">
-                                                <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                        parameter-map="{choice:'customers', selected:mappingValues.customerPartyId}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="salesChannelEnumId" hide="!takesCustomer">
-                                        <default-field title="Sales channel">
-                                            <drop-down allow-empty="true">
-                                                <entity-options key="${enumId}" text="${description}">
-                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
-                                                        <econdition field-name="enumTypeId" value="SalesChannel"/>
-                                                        <order-by field-name="description"/>
-                                                    </entity-find>
-                                                </entity-options>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="submitButton"><default-field title="Save mapping"><submit/></default-field></field>
-                                </form-single>
+                                <section name="MappingShown" condition="!managed"><widgets>
+                                    <form-single name="Mapping" transition="saveMapping" map="mappingValues">
+                                        <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                        <field name="mappingVersion">
+                                            <default-field title="Mapping version">
+                                                <drop-down><list-options list="mappingVersions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="customerPartyId" hide="!takesCustomer">
+                                            <default-field title="Customer" tooltip="The party the channel's orders are placed for">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'customers', selected:mappingValues.customerPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="salesChannelEnumId" hide="!takesCustomer">
+                                            <default-field title="Sales channel">
+                                                <drop-down allow-empty="true">
+                                                    <entity-options key="${enumId}" text="${description}">
+                                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                            <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                                            <order-by field-name="description"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save mapping"><submit/></default-field></field>
+                                    </form-single>
+                                </widgets></section>
                                 <label type="p" condition="managed" text="EDI profile: ${integration.ediProfileId || 'none'}"/>
                             </box-body>
                         </container-box>
@@ -216,17 +220,19 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="safeError"><default-field title="Reason"><display/></default-field></field>
                                     <field name="interchangeDateText"><default-field title="When"><display/></default-field></field>
                                 </form-list>
-                                <form-single name="RetryEdiDocuments" transition="retryMessages" map="retryValues" condition="retryableDocuments.length">
-                                    <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
-                                    <field name="operationKey"><default-field><hidden/></default-field></field>
-                                    <field name="ediDocumentIds">
-                                        <default-field title="Retry">
-                                            <check><list-options list="retryableDocuments" key="${ediDocumentId}" text="${transactionSetId} ${businessKey} (${statusText})"/></check>
-                                        </default-field>
-                                    </field>
-                                    <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Retry selected"><submit confirmation="Retry the selected EDI documents with their identity?"/></default-field></field>
-                                </form-single>
+                                <section name="RetryEdiDocumentsShown" condition="retryableDocuments.length"><widgets>
+                                    <form-single name="RetryEdiDocuments" transition="retryMessages" map="retryValues">
+                                        <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="ediDocumentIds">
+                                            <default-field title="Retry">
+                                                <check><list-options list="retryableDocuments" key="${ediDocumentId}" text="${transactionSetId} ${businessKey} (${statusText})"/></check>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Retry selected"><submit confirmation="Retry the selected EDI documents with their identity?"/></default-field></field>
+                                    </form-single>
+                                </widgets></section>
                             </box-body-nopad>
                         </container-box>
                     </widgets>
@@ -287,81 +293,85 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-body-nopad>
                 </container-box>
 
-                <container-box condition="retryable.length">
-                    <box-header title="Retry failed messages"/>
-                    <box-body>
-                        <form-single name="RetryMessages" transition="retryMessages" map="retryValues">
-                            <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
-                            <field name="operationKey"><default-field><hidden/></default-field></field>
-                            <field name="systemMessageIds">
-                                <default-field title="Messages">
-                                    <check><list-options list="retryable" key="${systemMessageId}" text="${systemMessageId} ${externalId}: ${safeError}"/></check>
-                                </default-field>
-                            </field>
-                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
-                            <field name="submitButton">
-                                <default-field title="Retry selected">
-                                    <submit confirmation="Retry the selected messages? Each keeps its identity; an order already made is not made again."/>
-                                </default-field>
-                            </field>
-                        </form-single>
-                    </box-body>
-                </container-box>
+                <section name="RetryMessagesBox" condition="retryable.length"><widgets>
+                    <container-box>
+                        <box-header title="Retry failed messages"/>
+                        <box-body>
+                            <form-single name="RetryMessages" transition="retryMessages" map="retryValues">
+                                <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="systemMessageIds">
+                                    <default-field title="Messages">
+                                        <check><list-options list="retryable" key="${systemMessageId}" text="${systemMessageId} ${externalId}: ${safeError}"/></check>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Retry selected">
+                                        <submit confirmation="Retry the selected messages? Each keeps its identity; an order already made is not made again."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </box-body>
+                    </container-box>
+                </widgets></section>
 
                 <section name="MessageDetail" condition="systemMessageId">
                     <widgets>
                         <label type="p" style="text-negative" condition="detailFailure" text="${detailFailure}"/>
-                        <container-box condition="detailMessage">
-                            <box-header title="Message ${detailMessage.systemMessageId}: ${detailMessage.kindText} ${detailMessage.externalId}"/>
-                            <box-body>
-                                <label type="p" text="${detailMessage.stateText} · received ${detailMessage.receivedText}${detailMessage.processedText ? ' · processed ' + detailMessage.processedText : ''} · ${detailMessage.attempts} failed attempts"/>
-                                <label type="p" style="text-negative" condition="detailMessage.safeError" text="${detailMessage.safeError}"/>
-                                <section name="DetailOrder" condition="detail.order">
-                                    <widgets>
-                                        <link url="${sharedLinks['Orders/OrderDetail']}" condition="canOpenOrder" link-type="anchor"
-                                                text="Order ${detail.order.orderId} · ${detail.order.statusText} · ${detail.order.totalText}" parameter-map="{orderId:detail.order.orderId}"/>
-                                        <label type="p" condition="!canOpenOrder" text="Order ${detail.order.orderId} · ${detail.order.statusText} · ${detail.order.totalText}"/>
-                                    </widgets>
-                                </section>
-                                <label type="p" condition="detail.original"
-                                        text="Original: message ${detail.original?.systemMessageId} (${detail.original?.stateText}${detail.original?.order ? ', order ' + detail.original.order.orderId : ''})"/>
-                                <label type="p" style="m-muted" condition="detail.summary"
-                                        text="Channel order ${detail.summary?.externalId}${detail.summary?.placedDateText ? ', placed ' + detail.summary.placedDateText : ''} · ${detail.summary?.lineCount} lines${detail.summary?.shippingText ? ' · shipping ' + detail.summary.shippingText : ''}${detail.summary?.taxText ? ' · tax ' + detail.summary.taxText : ''}"/>
-                            </box-body>
-                            <box-body-nopad>
-                                <form-list name="MessageLines" list="detailLines" skip-form="true" condition="detailLines.length">
-                                    <field name="lineId"><default-field title="Line"><display/></default-field></field>
-                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
-                                    <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
-                                    <field name="unitAmountText" align="right"><default-field title="Price"><display/></default-field></field>
-                                </form-list>
-                                <form-list name="MessageFindings" list="detailFindings" skip-form="true" condition="detailFindings.length">
-                                    <field name="code"><default-field title="Mapping finding"><display/></default-field></field>
-                                    <field name="message"><default-field title=" "><display/></default-field></field>
-                                </form-list>
-                                <form-list name="MessageOrders" list="detailChildren" skip-form="true" condition="detailChildren.length">
-                                    <field name="systemMessageId">
-                                        <default-field title="Order message">
-                                            <link url="." text="${systemMessageId}" link-type="anchor" style="text-mono"
-                                                    parameter-map="{systemMessageRemoteId:systemMessageRemoteId, systemMessageId:systemMessageId}"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="externalId"><default-field title="External ID"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <field name="safeError"><default-field title="Error"><display/></default-field></field>
-                                </form-list>
-                                <form-list name="MessageDocuments" list="detailDocuments" skip-form="true" condition="detailDocuments.length">
-                                    <field name="ediDocumentId"><default-field title="EDI document"><display/></default-field></field>
-                                    <field name="transactionSetId"><default-field title="Set"><display/></default-field></field>
-                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
-                                    <field name="safeError"><default-field title="Reason"><display/></default-field></field>
-                                </form-list>
-                                <form-list name="MessageErrors" list="detailErrors" skip-form="true" condition="detailErrors.length">
-                                    <field name="errorDateText"><default-field title="Error at"><display/></default-field></field>
-                                    <field name="text"><default-field title="Error"><display/></default-field></field>
-                                </form-list>
-                            </box-body-nopad>
-                        </container-box>
+                        <section name="MessageDetailBox" condition="detailMessage"><widgets>
+                            <container-box>
+                                <box-header title="Message ${detailMessage.systemMessageId}: ${detailMessage.kindText} ${detailMessage.externalId}"/>
+                                <box-body>
+                                    <label type="p" text="${detailMessage.stateText} · received ${detailMessage.receivedText}${detailMessage.processedText ? ' · processed ' + detailMessage.processedText : ''} · ${detailMessage.attempts} failed attempts"/>
+                                    <label type="p" style="text-negative" condition="detailMessage.safeError" text="${detailMessage.safeError}"/>
+                                    <section name="DetailOrder" condition="detail.order">
+                                        <widgets>
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" condition="canOpenOrder" link-type="anchor"
+                                                    text="Order ${detail.order.orderId} · ${detail.order.statusText} · ${detail.order.totalText}" parameter-map="{orderId:detail.order.orderId}"/>
+                                            <label type="p" condition="!canOpenOrder" text="Order ${detail.order.orderId} · ${detail.order.statusText} · ${detail.order.totalText}"/>
+                                        </widgets>
+                                    </section>
+                                    <label type="p" condition="detail.original"
+                                            text="Original: message ${detail.original?.systemMessageId} (${detail.original?.stateText}${detail.original?.order ? ', order ' + detail.original.order.orderId : ''})"/>
+                                    <label type="p" style="m-muted" condition="detail.summary"
+                                            text="Channel order ${detail.summary?.externalId}${detail.summary?.placedDateText ? ', placed ' + detail.summary.placedDateText : ''} · ${detail.summary?.lineCount} lines${detail.summary?.shippingText ? ' · shipping ' + detail.summary.shippingText : ''}${detail.summary?.taxText ? ' · tax ' + detail.summary.taxText : ''}"/>
+                                </box-body>
+                                <box-body-nopad>
+                                    <form-list name="MessageLines" list="detailLines" skip-form="true" condition="detailLines.length">
+                                        <field name="lineId"><default-field title="Line"><display/></default-field></field>
+                                        <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                        <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                        <field name="unitAmountText" align="right"><default-field title="Price"><display/></default-field></field>
+                                    </form-list>
+                                    <form-list name="MessageFindings" list="detailFindings" skip-form="true" condition="detailFindings.length">
+                                        <field name="code"><default-field title="Mapping finding"><display/></default-field></field>
+                                        <field name="message"><default-field title=" "><display/></default-field></field>
+                                    </form-list>
+                                    <form-list name="MessageOrders" list="detailChildren" skip-form="true" condition="detailChildren.length">
+                                        <field name="systemMessageId">
+                                            <default-field title="Order message">
+                                                <link url="." text="${systemMessageId}" link-type="anchor" style="text-mono"
+                                                        parameter-map="{systemMessageRemoteId:systemMessageRemoteId, systemMessageId:systemMessageId}"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="externalId"><default-field title="External ID"><display/></default-field></field>
+                                        <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                        <field name="safeError"><default-field title="Error"><display/></default-field></field>
+                                    </form-list>
+                                    <form-list name="MessageDocuments" list="detailDocuments" skip-form="true" condition="detailDocuments.length">
+                                        <field name="ediDocumentId"><default-field title="EDI document"><display/></default-field></field>
+                                        <field name="transactionSetId"><default-field title="Set"><display/></default-field></field>
+                                        <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                        <field name="safeError"><default-field title="Reason"><display/></default-field></field>
+                                    </form-list>
+                                    <form-list name="MessageErrors" list="detailErrors" skip-form="true" condition="detailErrors.length">
+                                        <field name="errorDateText"><default-field title="Error at"><display/></default-field></field>
+                                        <field name="text"><default-field title="Error"><display/></default-field></field>
+                                    </form-list>
+                                </box-body-nopad>
+                            </container-box>
+                        </widgets></section>
                     </widgets>
                 </section>
             </widgets>

@@ -62,9 +62,11 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="SettingsLinks" list="settingsRows" skip-form="true" paginate="false">
                             <field name="area">
+                                <conditional-field condition="url" title="Area">
+                                    <link url="${url}" url-type="plain" text="${area}" link-type="anchor"/>
+                                </conditional-field>
                                 <default-field title="Area">
-                                    <link url="${url}" url-type="plain" text="${area}" link-type="anchor" condition="url"/>
-                                    <display condition="!url"/>
+                                    <display/>
                                 </default-field>
                             </field>
                             <field name="description">

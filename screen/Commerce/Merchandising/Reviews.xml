@@ -221,27 +221,29 @@ along with this software (see the LICENSE.md file). If not, see
                                         <image url="reviewImage" url-type="transition" alt="Photo 3 of review ${productReviewId}" height="160"
                                                 parameter-map="{productReviewId:productReviewId, imageSeqId:images[2]?.imageSeqId}" condition="images.length &gt; 2"/>
                                         <label text="Store reply: ${replyText}" type="p" condition="replied"/>
-                                        <form-single name="ReviewDecisionForm_${productReviewId}" transition="moderate" condition="can.merchandise"
-                                                map="{productReviewId:productReviewId, expectedLastUpdatedStamp:lastUpdatedStamp}">
-                                            <field name="productReviewId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
-                                            <field name="decision">
-                                                <default-field title="Decision">
-                                                    <drop-down allow-empty="false">
-                                                        <option key="approve" text="Approve"/>
-                                                        <option key="delete" text="Delete"/>
-                                                    </drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="changeReason">
-                                                <default-field title="Reason" tooltip="Kept with the decision; needed to delete"><text-line size="40"/></default-field>
-                                            </field>
-                                            <field name="submitButton"><default-field title="Decide"><submit/></default-field></field>
-                                            <field-layout>
-                                                <field-row><field-ref name="decision"/><field-ref name="changeReason"/></field-row>
-                                                <field-ref name="submitButton"/>
-                                            </field-layout>
-                                        </form-single>
+                                        <section name="ReviewDecision" condition="can.merchandise"><widgets>
+                                            <form-single name="ReviewDecisionForm_${productReviewId}" transition="moderate"
+                                                    map="{productReviewId:productReviewId, expectedLastUpdatedStamp:lastUpdatedStamp}">
+                                                <field name="productReviewId"><default-field><hidden/></default-field></field>
+                                                <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                                <field name="decision">
+                                                    <default-field title="Decision">
+                                                        <drop-down allow-empty="false">
+                                                            <option key="approve" text="Approve"/>
+                                                            <option key="delete" text="Delete"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="changeReason">
+                                                    <default-field title="Reason" tooltip="Kept with the decision; needed to delete"><text-line size="40"/></default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Decide"><submit/></default-field></field>
+                                                <field-layout>
+                                                    <field-row><field-ref name="decision"/><field-ref name="changeReason"/></field-row>
+                                                    <field-ref name="submitButton"/>
+                                                </field-layout>
+                                            </form-single>
+                                        </widgets></section>
                                     </container-dialog>
                                     <container-dialog id="ReviewReply_${productReviewId}" button-text="${replied ? 'Change reply' : 'Reply'}" icon="sym_o_reply" width="640"
                                             title="Reply to the review of ${productName}" condition="can.merchandise &amp;&amp; statusId == 'PrvwApproved'">

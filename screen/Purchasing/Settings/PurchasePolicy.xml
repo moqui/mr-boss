@@ -364,9 +364,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 style="q-px-md q-pt-md text-caption m-muted"/>
                         <form-list name="PolicyDependencies" list="dependencyRows" skip-form="true" paginate="false">
                             <field name="area">
+                                <conditional-field condition="url" title="Area">
+                                    <link url="${url}" url-type="plain" text="${area}" link-type="anchor"/>
+                                </conditional-field>
                                 <default-field title="Area">
-                                    <link url="${url}" url-type="plain" text="${area}" link-type="anchor" condition="url"/>
-                                    <display condition="!url"/>
+                                    <display/>
                                 </default-field>
                             </field>
                             <field name="setting"><default-field title="Setting"><display/></default-field></field>

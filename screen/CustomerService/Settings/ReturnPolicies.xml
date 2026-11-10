@@ -89,15 +89,16 @@ along with this software (see the LICENSE.md file). If not, see
         <label text="Return policies" type="h5"/>
         <label type="p" style="text-caption m-muted" text="With no policy a return is reviewed by a person; a return keeps the policy row it was evaluated against."/>
         <label type="p" style="m-negative" text="${settingsError}" condition="settingsError"/>
-        <form-single name="ReturnPolicyOrganization" transition="chooseOrganization" map="{organizationPartyId:cfg.organizationPartyId}"
-                condition="cfg.organizations.length &gt; 1">
-            <field name="organizationPartyId">
-                <default-field title="Organization">
-                    <drop-down><list-options list="cfg.organizations" key="${value}" text="${label}"/></drop-down>
-                </default-field>
-            </field>
-            <field name="submitButton"><default-field title=""><submit text="Show"/></default-field></field>
-        </form-single>
+        <section name="ReturnPolicyOrganizationShown" condition="cfg.organizations.length &gt; 1"><widgets>
+            <form-single name="ReturnPolicyOrganization" transition="chooseOrganization" map="{organizationPartyId:cfg.organizationPartyId}">
+                <field name="organizationPartyId">
+                    <default-field title="Organization">
+                        <drop-down><list-options list="cfg.organizations" key="${value}" text="${label}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="submitButton"><default-field title=""><submit text="Show"/></default-field></field>
+            </form-single>
+        </widgets></section>
         <container-dialog id="NewReturnPolicy" button-text="New policy" type="primary" icon="sym_o_add" title="New return policy"
                 width="720" condition="cfg.canEdit">
             <form-single name="NewReturnPolicyForm" transition="savePolicy" map="newPolicy" extends="component://mr-boss/screen/CustomerService/Settings/ReturnPolicies.xml#ReturnPolicyEditForm"/>

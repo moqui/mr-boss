@@ -405,11 +405,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="${agr.template ? 'A template has no balance: start an agreement from it' : 'Balance'}"/>
                     <box-body>
-                        <container style="row q-col-gutter-md" condition="!agr.template">
-                            <label text="Limit ${agr.limitText}" type="div" style="col-auto"/>
-                            <label text="Released ${agr.releasedText}" type="div" style="col-auto"/>
-                            <label text="Remaining ${agr.remainingText}" type="div" style="col-auto" condition="agr.remainingText"/>
-                        </container>
+                        <section name="AgreementLimits" condition="!agr.template"><widgets>
+                            <container style="row q-col-gutter-md">
+                                <label text="Limit ${agr.limitText}" type="div" style="col-auto"/>
+                                <label text="Released ${agr.releasedText}" type="div" style="col-auto"/>
+                                <label text="Remaining ${agr.remainingText}" type="div" style="col-auto" condition="agr.remainingText"/>
+                            </container>
+                        </widgets></section>
                         <label text="${agr.releaseRefusalText}" type="p" style="text-caption m-muted q-mb-none"
                                 condition="agr.releaseRefusalText &amp;&amp; !agr.template"/>
                     </box-body>

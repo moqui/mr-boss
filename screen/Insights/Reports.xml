@@ -117,26 +117,28 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Open ${options?.title || 'the report'}"/>
                     <box-body>
                         <label type="p" style="text-negative" condition="optionsFailure" text="${optionsFailure}"/>
-                        <form-single name="ReportContext" transition="openReport" map="contextValues" condition="options">
-                            <field name="entryId"><default-field><hidden/></default-field></field>
-                            <field name="organizationPartyId" hide="!optionFields.organizationPartyId">
-                                <default-field title="Organization">
-                                    <drop-down allow-empty="true"><list-options list="organizationChoices" key="${key}" text="${text}"/></drop-down>
-                                </default-field>
-                            </field>
-                            <field name="timePeriodId" hide="!optionFields.timePeriodId">
-                                <default-field title="Fiscal period" tooltip="The organization's own fiscal periods; empty, the report's default">
-                                    <drop-down allow-empty="true"><list-options list="periodChoices" key="${key}" text="${text}"/></drop-down>
-                                </default-field>
-                            </field>
-                            <field name="fromDate" hide="!optionFields.fromDate">
-                                <default-field title="From"><date-time type="date"/></default-field>
-                            </field>
-                            <field name="thruDate" hide="!optionFields.thruDate">
-                                <default-field title="Through"><date-time type="date"/></default-field>
-                            </field>
-                            <field name="openButton"><default-field title="Open"><submit/></default-field></field>
-                        </form-single>
+                        <section name="ReportContextShown" condition="options"><widgets>
+                            <form-single name="ReportContext" transition="openReport" map="contextValues">
+                                <field name="entryId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId" hide="!optionFields.organizationPartyId">
+                                    <default-field title="Organization">
+                                        <drop-down allow-empty="true"><list-options list="organizationChoices" key="${key}" text="${text}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="timePeriodId" hide="!optionFields.timePeriodId">
+                                    <default-field title="Fiscal period" tooltip="The organization's own fiscal periods; empty, the report's default">
+                                        <drop-down allow-empty="true"><list-options list="periodChoices" key="${key}" text="${text}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate" hide="!optionFields.fromDate">
+                                    <default-field title="From"><date-time type="date"/></default-field>
+                                </field>
+                                <field name="thruDate" hide="!optionFields.thruDate">
+                                    <default-field title="Through"><date-time type="date"/></default-field>
+                                </field>
+                                <field name="openButton"><default-field title="Open"><submit/></default-field></field>
+                            </form-single>
+                        </widgets></section>
                         <link url="." text="Close" link-type="anchor" parameter-map="findValues"/>
                     </box-body>
                 </container-box>

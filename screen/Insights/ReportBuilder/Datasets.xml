@@ -98,10 +98,14 @@ along with this software (see the LICENSE.md file). If not, see
             <box-body-nopad>
                 <form-list name="DatasetList" list="datasetList" skip-form="true" paginate="false">
                     <field name="title">
+                        <conditional-field condition="stewarded" title="Dataset">
+                            <link url="../DatasetDetail" text="${title}" link-type="anchor" parameter-map="{datasetId:datasetId}"/>
+                        </conditional-field>
+                        <conditional-field condition="readable" title="Dataset">
+                            <link url="../DatasetView" text="${title}" link-type="anchor" parameter-map="{datasetId:datasetId}"/>
+                        </conditional-field>
                         <default-field title="Dataset">
-                            <link url="../DatasetDetail" text="${title}" link-type="anchor" parameter-map="{datasetId:datasetId}" condition="stewarded"/>
-                            <link url="../DatasetView" text="${title}" link-type="anchor" parameter-map="{datasetId:datasetId}" condition="!stewarded &amp;&amp; readable"/>
-                            <display text="${title}" condition="!stewarded &amp;&amp; !readable"/>
+                            <display text="${title}"/>
                         </default-field>
                     </field>
                     <field name="statusName">

@@ -41,14 +41,16 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="NoOrder" condition="!noteOrderId">
             <widgets><label type="p" style="m-muted" text="Open a store order or cart to log a note on it."/></widgets>
         </section>
-        <form-single name="LogNoteForm" transition="logNote" map="noteValues" condition="noteOrderId">
-            <field name="orderId"><default-field title="Order or cart"><display/></default-field></field>
-            <field name="noteText">
-                <default-field title="Note" tooltip="An internal note on the order, never sent to the customer">
-                    <text-area rows="8" cols="60"/>
-                </default-field>
-            </field>
-            <field name="submitButton"><default-field title="Log the note"><submit/></default-field></field>
-        </form-single>
+        <section name="LogNoteFormShown" condition="noteOrderId"><widgets>
+            <form-single name="LogNoteForm" transition="logNote" map="noteValues">
+                <field name="orderId"><default-field title="Order or cart"><display/></default-field></field>
+                <field name="noteText">
+                    <default-field title="Note" tooltip="An internal note on the order, never sent to the customer">
+                        <text-area rows="8" cols="60"/>
+                    </default-field>
+                </field>
+                <field name="submitButton"><default-field title="Log the note"><submit/></default-field></field>
+            </form-single>
+        </widgets></section>
     </widgets>
 </screen>

@@ -130,52 +130,55 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="message"><default-field title="Finding"><display/></default-field></field>
                                 </form-list>
                                 <label text="No conflict." type="p" style="text-positive" condition="!moveFindings.length"/>
-                                <form-single name="ApplyMove" transition="applyMove" map="moveValues"
-                                        condition="movePreview.canApply || (movePreview.needsOverride &amp;&amp; movePreview.canOverride &amp;&amp; !!manufacturing.capabilities.schedule)">
-                                    <field name="moveOperationId"><default-field><hidden/></default-field></field>
-                                    <field name="moveFacilityId"><default-field><hidden/></default-field></field>
-                                    <field name="moveStart"><default-field><hidden/></default-field></field>
-                                    <field name="moveEnd"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
-                                    <field name="operationKey"><default-field><hidden/></default-field></field>
-                                    <field name="moveOverride">
-                                        <conditional-field condition="movePreview.needsOverride" title="Override the conflicts">
-                                            <drop-down><option key="N" text="No"/><option key="Y" text="Yes, a supervisor exception"/></drop-down>
-                                        </conditional-field>
-                                        <default-field><hidden/></default-field>
-                                    </field>
-                                    <field name="moveReason">
-                                        <default-field title="Reason"><text-line/></default-field>
-                                    </field>
-                                    <field name="submit"><default-field title=""><submit text="${moveApplyText}"/></default-field></field>
-                                </form-single>
-                                <form-single name="RequestOverride" transition="requestOverride" map="moveValues"
-                                        condition="movePreview.canRequestOverride">
-                                    <field name="moveOperationId"><default-field><hidden/></default-field></field>
-                                    <field name="moveFacilityId"><default-field><hidden/></default-field></field>
-                                    <field name="moveStart"><default-field><hidden/></default-field></field>
-                                    <field name="moveEnd"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
-                                    <field name="operationKey"><default-field><hidden/></default-field></field>
-                                    <field name="moveReason">
-                                        <default-field title="Reason for the override"><text-line required="true"/></default-field>
-                                    </field>
-                                    <field name="submit"><default-field title=""><submit text="Request override"/></default-field></field>
-                                </form-single>
-                                <form-single name="UnscheduleOperation" transition="unscheduleOperation" map="moveValues"
-                                        condition="moveUnschedulable">
-                                    <field name="moveOperationId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
-                                    <field name="operationKey"><default-field><hidden/></default-field></field>
-                                    <field name="submit">
-                                        <default-field title="">
-                                            <submit text="Unschedule" btn-type="danger" confirmation="Take ${movePreview.operationName} off the schedule?"/>
-                                        </default-field>
-                                    </field>
-                                </form-single>
+                                <section name="ApplyMoveShown" condition="movePreview.canApply || (movePreview.needsOverride &amp;&amp; movePreview.canOverride &amp;&amp; !!manufacturing.capabilities.schedule)"><widgets>
+                                    <form-single name="ApplyMove" transition="applyMove" map="moveValues">
+                                        <field name="moveOperationId"><default-field><hidden/></default-field></field>
+                                        <field name="moveFacilityId"><default-field><hidden/></default-field></field>
+                                        <field name="moveStart"><default-field><hidden/></default-field></field>
+                                        <field name="moveEnd"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="moveOverride">
+                                            <conditional-field condition="movePreview.needsOverride" title="Override the conflicts">
+                                                <drop-down><option key="N" text="No"/><option key="Y" text="Yes, a supervisor exception"/></drop-down>
+                                            </conditional-field>
+                                            <default-field><hidden/></default-field>
+                                        </field>
+                                        <field name="moveReason">
+                                            <default-field title="Reason"><text-line/></default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="${moveApplyText}"/></default-field></field>
+                                    </form-single>
+                                </widgets></section>
+                                <section name="RequestOverrideShown" condition="movePreview.canRequestOverride"><widgets>
+                                    <form-single name="RequestOverride" transition="requestOverride" map="moveValues">
+                                        <field name="moveOperationId"><default-field><hidden/></default-field></field>
+                                        <field name="moveFacilityId"><default-field><hidden/></default-field></field>
+                                        <field name="moveStart"><default-field><hidden/></default-field></field>
+                                        <field name="moveEnd"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="moveReason">
+                                            <default-field title="Reason for the override"><text-line required="true"/></default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Request override"/></default-field></field>
+                                    </form-single>
+                                </widgets></section>
+                                <section name="UnscheduleOperationShown" condition="moveUnschedulable"><widgets>
+                                    <form-single name="UnscheduleOperation" transition="unscheduleOperation" map="moveValues">
+                                        <field name="moveOperationId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Unschedule" btn-type="danger" confirmation="Take ${movePreview.operationName} off the schedule?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </widgets></section>
                             </widgets>
                         </section>
                     </box-body>

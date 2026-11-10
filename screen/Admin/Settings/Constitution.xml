@@ -362,51 +362,53 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-list>
                         </box-body-nopad></container-box>
 
-                        <container-box id="ConstitutionReferenceBox" condition="ruleId"><box-header title="References of ${ruleId}: ${selectedRuleTitle}"/><box-toolbar>
-                            <container-dialog id="AddReferenceDialog" button-text="Add reference" icon="sym_o_add" width="700" title="Add a reference to ${ruleId}">
-                                <label text="A reference URL is https:// on a trusted origin or a path on this server starting with /. Its title is in the default language." type="p"/>
-                                <form-single name="AddReferenceForm" transition="applyEdit" map="{scope:scope, ruleId:ruleId, locale:cons.defaultLocale, expectedHash:expectedHash}">
-                                    <field name="operation"><default-field><hidden default-value="addReference"/></default-field></field>
-                                    <field name="ruleId"><default-field><hidden/></default-field></field>
-                                    <field name="scope"><default-field><hidden/></default-field></field>
-                                    <field name="locale"><default-field><hidden/></default-field></field>
-                                    <field name="expectedHash"><default-field><hidden/></default-field></field>
-                                    <field name="title" from="''"><default-field title="Title" tooltip="How the reference supports the rule"><text-line size="60"/></default-field></field>
-                                    <field name="url" from="''"><default-field title="URL"><text-line size="60"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Add reference"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                        </box-toolbar><box-body-nopad>
-                            <form-list name="ConstitutionReferences" list="referenceRows" skip-form="true">
-                                <field name="referenceId"><default-field title="Reference"><display/></default-field></field>
-                                <field name="titleShown"><default-field title="Title"><display/></default-field></field>
-                                <field name="url"><default-field title="URL"><display/></default-field></field>
-                                <field name="trusted"><default-field title="Origin"><display/></default-field></field>
-                                <field name="actions" align="right"><default-field title="">
-                                    <container-dialog id="EditReferenceDialog" button-text="Edit" icon="sym_o_edit" width="700" title="Reference ${referenceId} in ${locale}">
-                                        <form-single name="EditReferenceForm" transition="applyEdit">
-                                            <field name="operation"><default-field><hidden default-value="setReference"/></default-field></field>
-                                            <field name="referenceId"><default-field><hidden/></default-field></field>
-                                            <field name="ruleId" from="ruleId"><default-field><hidden/></default-field></field>
-                                            <field name="scope" from="scope"><default-field><hidden/></default-field></field>
-                                            <field name="locale" from="locale"><default-field><hidden/></default-field></field>
-                                            <field name="expectedHash" from="expectedHash"><default-field><hidden/></default-field></field>
-                                            <field name="title"><default-field title="Title"><text-line size="60"/></default-field></field>
-                                            <field name="url"><default-field title="URL" tooltip="Shared by every language"><text-line size="60"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <link url="applyEdit" text="Up" icon="sym_o_arrow_upward" condition="!first"
-                                            parameter-map="{operation:'moveReference', direction:'up', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
-                                    <link url="applyEdit" text="Down" icon="sym_o_arrow_downward" condition="!last"
-                                            parameter-map="{operation:'moveReference', direction:'down', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
-                                    <link url="applyEdit" text="Remove" icon="sym_o_delete" btn-type="danger" confirmation="Remove reference ${referenceId} from ${ruleId}?"
-                                            parameter-map="{operation:'removeReference', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
-                                </default-field></field>
-                                <columns type="mobile"><column><field-ref name="titleShown"/><field-ref name="url"/></column>
-                                    <column><field-ref name="actions"/></column></columns>
-                            </form-list>
-                        </box-body-nopad></container-box>
+                        <section name="ConstitutionReferenceBoxShown" condition="ruleId"><widgets>
+                            <container-box id="ConstitutionReferenceBox"><box-header title="References of ${ruleId}: ${selectedRuleTitle}"/><box-toolbar>
+                                <container-dialog id="AddReferenceDialog" button-text="Add reference" icon="sym_o_add" width="700" title="Add a reference to ${ruleId}">
+                                    <label text="A reference URL is https:// on a trusted origin or a path on this server starting with /. Its title is in the default language." type="p"/>
+                                    <form-single name="AddReferenceForm" transition="applyEdit" map="{scope:scope, ruleId:ruleId, locale:cons.defaultLocale, expectedHash:expectedHash}">
+                                        <field name="operation"><default-field><hidden default-value="addReference"/></default-field></field>
+                                        <field name="ruleId"><default-field><hidden/></default-field></field>
+                                        <field name="scope"><default-field><hidden/></default-field></field>
+                                        <field name="locale"><default-field><hidden/></default-field></field>
+                                        <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                        <field name="title" from="''"><default-field title="Title" tooltip="How the reference supports the rule"><text-line size="60"/></default-field></field>
+                                        <field name="url" from="''"><default-field title="URL"><text-line size="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add reference"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar><box-body-nopad>
+                                <form-list name="ConstitutionReferences" list="referenceRows" skip-form="true">
+                                    <field name="referenceId"><default-field title="Reference"><display/></default-field></field>
+                                    <field name="titleShown"><default-field title="Title"><display/></default-field></field>
+                                    <field name="url"><default-field title="URL"><display/></default-field></field>
+                                    <field name="trusted"><default-field title="Origin"><display/></default-field></field>
+                                    <field name="actions" align="right"><default-field title="">
+                                        <container-dialog id="EditReferenceDialog" button-text="Edit" icon="sym_o_edit" width="700" title="Reference ${referenceId} in ${locale}">
+                                            <form-single name="EditReferenceForm" transition="applyEdit">
+                                                <field name="operation"><default-field><hidden default-value="setReference"/></default-field></field>
+                                                <field name="referenceId"><default-field><hidden/></default-field></field>
+                                                <field name="ruleId" from="ruleId"><default-field><hidden/></default-field></field>
+                                                <field name="scope" from="scope"><default-field><hidden/></default-field></field>
+                                                <field name="locale" from="locale"><default-field><hidden/></default-field></field>
+                                                <field name="expectedHash" from="expectedHash"><default-field><hidden/></default-field></field>
+                                                <field name="title"><default-field title="Title"><text-line size="60"/></default-field></field>
+                                                <field name="url"><default-field title="URL" tooltip="Shared by every language"><text-line size="60"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <link url="applyEdit" text="Up" icon="sym_o_arrow_upward" condition="!first"
+                                                parameter-map="{operation:'moveReference', direction:'up', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                        <link url="applyEdit" text="Down" icon="sym_o_arrow_downward" condition="!last"
+                                                parameter-map="{operation:'moveReference', direction:'down', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                        <link url="applyEdit" text="Remove" icon="sym_o_delete" btn-type="danger" confirmation="Remove reference ${referenceId} from ${ruleId}?"
+                                                parameter-map="{operation:'removeReference', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                    </default-field></field>
+                                    <columns type="mobile"><column><field-ref name="titleShown"/><field-ref name="url"/></column>
+                                        <column><field-ref name="actions"/></column></columns>
+                                </form-list>
+                            </box-body-nopad></container-box>
+                        </widgets></section>
 
                         <container-box id="ConstitutionLanguageBox"><box-header title="Languages"/><box-body>
                             <label text="The default language (${cons.defaultLocale}) has every text; another language may leave texts out, which then fall back. To translate, choose the language above and edit."
