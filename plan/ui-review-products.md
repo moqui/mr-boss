@@ -19,7 +19,7 @@ Keep the current inventory, activities, coverage, findings, decisions and bounde
 records references, design specifies behavior, implementation records construction, and this file records review
 and refinement.
 
-**Status: review paused at the user-requested checkpoint, 2026-11-09.** Activity coverage starts **pending** and advances
+**Status: review resumed after the requested rebuild, 2026-11-09.** Activity coverage starts **pending** and advances
 only with the evidence recorded in §6. Execution scope, workers, commit cadence, authorized acceptance specs and
 gate timing are recorded in §7. Historical Products implementation results and existing tests are inputs, not
 evidence of this review's outcomes.
@@ -849,8 +849,8 @@ research for this plan does not advance live coverage. Record actual modes and r
 | PRD-11 — Supplier offers | exercised / partial | Existing supplier walk and actual offer CSV inspected; broader two-buyer/recovery/modal identity variants remain | PRD-UI-010; checkpoint |
 | PRD-12 — Stock/policy | exercised / partial | Stock-planner policy/tracking save/reload browser walk; Commerce facility-scope rule fixed. Kit/revocation/mode continuations remain | PRD-UI-007; checkpoint |
 | PRD-13 — Methods | exercised / partial | Existing method browser walk imported/revised/released method and routing; narrow-role/recovery/mode cases remain | checkpoint |
-| PRD-14 — Cost roll-up | pending | Not executed; saved draft continues PRD-15 | — |
-| PRD-15 — Standard/finance handoff | pending | Not executed; posting scope/prerequisites unresolved | — |
+| PRD-14 — Cost roll-up | exercised / partial | Purchased-item roll-up/draft through the existing CostWalk; manufactured by-product/phantom/missing/stale-input variants continue | resumed batch |
+| PRD-15 — Standard/finance handoff | exercised / partial | Purchased estimate saved/independently approved; canceled and expired preview refused; one disposable posting persisted, balanced and idempotent. Manufacturing approval/output continuation remains | finance-outcome; resumed batch |
 | PRD-16 — Documents/files/Chatter | exercised / partial | Managed-content conflict recovery, datasheet HTML/PDF and bytes checked; generic files/Chatter/multi-file recovery not reached | PRD-UI-005; documents/ |
 | PRD-17 — Translations | exercised / partial | Existing document walk refreshed translated content/source-review state; scoped locale regression. Additional locale/clear/owner recovery remains | PRD-UI-005; checkpoint |
 | PRD-18 — Units/packs/scans | exercised / partial | Existing tools walk unit/identifier/packaging flows passed; pack factor now 24 in disposable DB. Historical transaction/mode checks remain | tools/ |
@@ -873,10 +873,10 @@ leads separate until investigated.
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | PRD-UI-001 / observed / P3 | PRD-01 Home card | catalog.edit; Material light/dark 1920×1080, dark 390×844; TUI keyboard | Ending-in-30-days title clipped at desktop; meaning and timestamp zone unclear | Home CUA captures; screens-batch1.txt | BOSS | Shortened to Ending soon, visible sales-discontinuation explanation and zone | Measured desktop light/dark captures, dark phone and live TUI show complete label/caption |
-| PRD-UI-002 / observed / P2 | PRD-03, 23–24 Product360 navigation | catalog.edit; ordinary asset; Material dark 1920×1080 | Replenishment/Purchase history and type-inapplicable tabs appear; clicking Replenishment reaches Screen not found | CUA observation on disposable UI_PRD_20261109 | Framework menu | Generic menu evaluation now honors child conditions in prepared parent context | New red/green regression and all 9 menu tests pass; live rebuilt-binary retest remains pending at pause |
+| PRD-UI-002 / observed / P2 | PRD-03, 23–24 Product360 navigation | catalog.edit; ordinary asset; Material dark 1920×1080 | Replenishment/Purchase history and type-inapplicable tabs appear; clicking Replenishment reaches Screen not found | CUA observation on disposable UI_PRD_20261109 | Framework menu | Generic menu evaluation now honors child conditions in prepared parent context | New red/green regression and all 9 menu tests pass; rebuilt live Product360 omits operational and type-inapplicable tabs |
 | PRD-UI-003 / mounted reproduction / P2 | PRD-06 preview/generate/batch | Actual VariantBuilder QVue on native offline client | Delayed success/failure/finally overwrites replacement source/operation; confirmation submits changed selection; unmount continuation requests destination route | variant-responses-before/after; four failing baseline cases | BOSS | Captured source/path/request ownership, confirmation snapshot and disposal; clears stale operation/results | Four focused mounted regressions pass; browser variant walk 2/2 |
 | PRD-UI-008 / observed / P2 | PRD-06 Standard entry | catalog.edit; /apps variant builder | Authored HTML fallback unreachable because html was excluded; HTTP 404 | products-standard-variant-fallback.log | BOSS | Admit existing HTML fallback and encode product context with sri URL builder | Native request 200 plus targeted HTML regression; no new workflow |
-| PRD-UI-009 / mounted reproduction / P3 | PRD-03 bulk action visibility | catalog.price.edit; Products list | Price-only editor sees Category/Feature bulk controls despite lacking catalog edit; services still refuse writes | products-narrow-actions local evidence | Framework/BOSS | Open at requested pause; per-action condition support was assessed but no implementation started | Do not count as corrected |
+| PRD-UI-009 / mounted reproduction / P3 | PRD-03 bulk action visibility | catalog.price.edit; Products list | Price-only editor sees Category/Feature bulk controls despite lacking catalog edit; services still refuse writes | products-narrow-actions local evidence | Framework/BOSS | Added optional per-action condition across QVT/static/TUI; Products gates actions and permitted price directions | Five renderer checks and three live editing-role counterparts pass; framework c7620238 |
 | PRD-UI-004 / source-confirmed / P2 | PRD-09 initial history parameters | supplier-only reader; Services EUR pricing policy | Defaults selected unauthorized sales direction and hard-coded USD | ProductsPricing failing baseline and corrected regression; visual-evidence/ | BOSS | Choose permitted direction and dated organization currency, then user preference | ProductsPricing/Documents 33/33; pricing acceptance 8/8 |
 | PRD-UI-005 / source-confirmed / P2 | PRD-16–17 locale choices/default | catalog reader, foreign owner, Commerce store-limited counterpart, ADMIN | Unscoped distinct locales disclosed foreign-content locale choices and influenced suggested target | ProductsDocuments failing baseline and corrected regression | Mantle/BOSS | Add two content-owner views; filter owner/store in SQL before distinct locale read | 33/33 pricing/document checks; document acceptance 2/2; bytes inspected |
 | PRD-UI-006 / source-confirmed / P1 | PRD-23 paid-access read | Narrow catalog owner/store holders and foreign counterparts | Native read returned foreign digital-product terms without owner/store scope | ShopSubscriptions red/green regression | Mantle | Require readable catalog owner/shared master or an authorized store assortment | Full focused spec 16/16; direct Products mount/live continuation remains |
@@ -977,6 +977,35 @@ were restored. Review listeners will be stopped and the kept disposable runtime 
 scratch namespace before pulls; its path and retained stock/method/variant/packaging fixture changes are recorded in
 ignored environment evidence. The working database was never used.
 
+**Resumed batch, 2026-11-09 — rebuild and action scope:** user resumed with the same three workers, reviewed
+local batch commits, focused checks, final full suites and no push. Starting merged heads were framework `e5ee437f`,
+BOSS `9725a5bd`, Mantle `57aa89a9`. Rebuilt Maximal debug with `CARGO_BUILD_JOBS=4 ./moq build --debug -j 4` (2m43s),
+then rebuilt the embedded action templates incrementally (21.81s). Reused the retained disposable runtime outside the
+runner cleanup namespace, explicitly restarting only ProductsPriceFixtures against its existing database (1/1).
+Primary browser host is now `products-resume.localhost`; no working database was opened.
+
+Live Product360 retest confirms PRD-UI-002: an ordinary asset no longer advertises Replenishment, Purchase history,
+Paid access, Kit components or Equipment. The ungranted BOM tab gives its named Manufacturing-access explanation.
+Fixed PRD-UI-009 with additive `row-selection/action@condition`: false/error omits that action's whole dialog/form;
+services still enforce authority. Products offers Category/Feature only for catalog editors, Prices only for the
+relevant editors, and only their permitted directions. Five existing focused renderer tests pass (0.25s); only the
+existing gated static golden was regenerated/inspected. Native catalog/sales-price/supplier-price roles pass (8.10s);
+ProductsCatalog 12/12 (4.5s feature time), changed-file rustfmt and screen lint (zero parse failures, 87 existing idiom
+sites) pass. Two independent peer reviews found no blockers. Framework commit: `c7620238`.
+
+Additional observed continuations: cloned/canceled/deleted disposable draft, including delete cancellation/reload;
+edited two distinct identifier rows and reloaded; saved-find create/default/update/apply/delete restored its prior
+default. Native evidence is under `products-catalog-resume/`. Primary logged a private note on `UI_PRD_20261109`,
+followed the record and reloaded to verify both; the named Message/Internal note controls are now visible. A missing
+Find submit control was reproduced separately (PRD-UI-014) and is the next small app correction.
+
+Finance: exactly one authorized disposable revaluation completed through ProductsCostWalk. Before posting,
+confirmation cancellation and expired-preview refusal left zero events/operations. Persisted transaction `100051`
+and event `100051` link to the posted preview/operation; pack stock quantity remains 5, unit cost changes 10→8 USD,
+adjustment −10 USD, debits and credits each 10 USD. Identical operation retry produced no second event. Evidence is
+retained under `finance-outcome/`; no further post is planned. Retail manufactured costing and broader access/mode
+continuations are still being exercised. The full framework/apps suites remain deferred until the final wave.
+
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.
 Keep full-gate status and any explicitly changed cadence visible. Do not append an unbounded transcript or repeat
@@ -1009,8 +1038,8 @@ into the framework review guide. An accurate, reviewable plan does not close any
 - **Inventory authority:** current sources/policies decide what is reachable. Count physical inherited sources
   separately from admitted tabs and record the documented design differences explicitly.
 - **Sequence:** seven waves, 24 activities, positive/negative pairs from the start and explicit cross-wave continuations.
-- **Status:** §6 is the activity ledger; every live outcome is pending. Source research and old test results do not
-  establish a pass. Mode and recovery gaps remain named after partial execution.
+- **Status:** §6 is the activity ledger; each observed outcome and remaining mode/recovery gap is recorded there.
+  Source research and old test results do not establish a pass.
 - **Modes:** Material is the visual target; TUI gets actual supported operations and Standard brief functional/output
   or fallback checks. Measure viewport and real zoom instead of assuming the tools honored a request.
 - **Permissions:** catalog, sale/purchase pricing, costs, methods, facility policy, global units and finance remain
