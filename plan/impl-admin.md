@@ -268,7 +268,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | built and reviewed Nov 7, merged |
 | P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | built and reviewed Nov 7, merged |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | built and reviewed Nov 7, merged |
-| P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | — |
+| P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | built and reviewed Nov 10, merged |
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | — |
 | P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | — |
 | P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | — |
@@ -1922,33 +1922,33 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
 - Design edits: design-admin §7 InstanceSettings, Localization and ReferenceData (as built), §17.2 (the ConfigurationServices
   row, the InstancePreference record), §19 Q6; design-insights §7.1 (the ceiling's key and how it is read).
 - Findings (provisional, numbered by the lead):
-  - **F-P8-1** The conf's own view (`org.moqui.dev.ComponentServices.get#ConfView`: file, line and live/apply/restart class of each
+  - **F110** The conf's own view (`org.moqui.dev.ComponentServices.get#ConfView`: file, line and live/apply/restart class of each
     value) is Rust and for the `ADMIN` group alone, and scripts read a property's value only (`System.getProperty`). Built:
     deployment values are registered rows (`InstanceSetting`, `editable` N) naming a `default-property`, their restart effect and
     operator note registered, their source "default" when the value equals the shipped MoquiDefaultConf's and "configuration"
     otherwise (not which file or the environment); `ADMIN` is linked to System › Conf. P10's EffectiveSignInPolicy needs conf
     attributes (`user-facade` `password`, `login`), which a property registration cannot name: a framework ask (a masked
     projection of named conf attributes for `ADMIN_SETTINGS_VIEW`), or P10 registers what it shows another way.
-  - **F-P8-2** Nothing reads an instance default for a person with none: the session's locale and time zone fall back to the conf
+  - **F111** Nothing reads an instance default for a person with none: the session's locale and time zone fall back to the conf
     properties read at start (l10n.rs `server_time_zone`, also the zone the server reads timestamps in), and Mantle's
     `create#StaffAccount` and invitation acceptance set neither. `instance.defaultLocale` and `instance.defaultTimeZone` are
     registered, stored and shown, and read by nothing yet; applying them (new accounts, or the session fallback apart from the
     server's zone) is a framework and Mantle follow-up. `instance.displayName` is read by Admin Home only.
-  - **F-P8-3** Design §7's approved theme and logo and date and number formats are not registered: the shell reads no instance
+  - **F112** Design §7's approved theme and logo and date and number formats are not registered: the shell reads no instance
     value of them (themes are `UserGroupScreenTheme` rows, an owner store), so a preference would do nothing.
-  - **F-P8-4** Framework seed data is loaded only when MoquiDefaultConf's `load-data` names its file; the new file adds a line
+  - **F113** Framework seed data is loaded only when MoquiDefaultConf's `load-data` names its file; the new file adds a line
     there (the plan's "append to framework seed data" would otherwise have meant SecurityTypeData).
-  - **F-P8-5** `LocalizedMessage` and `LocalizedEntityField` are not audit-logged, and turning the audit log on would write a row
+  - **F114** `LocalizedMessage` and `LocalizedEntityField` are not audit-logged, and turning the audit log on would write a row
     for each of the thousands a data load (mr-l10n) writes; the services write the audit row of each delegated change, and
     Tools' direct writes stay unaudited.
-  - **F-P8-6** Scripts cannot list the localized fields of every entity cheaply (`getEntityDefinition` builds the whole definition,
+  - **F115** Scripts cannot list the localized fields of every entity cheaply (`getEntityDefinition` builds the whole definition,
     about 6 ms each), and a localized field may be on a business entity (Mantle's `ProductFeature`, owner-scoped). Built: label
     targets are registered rows checked against the definition (localized, unencrypted, a configuration entity, one key), so
     translation access never reads a business record; Products' features stay Products › Translations'.
-  - **F-P8-7** A translation is shown wherever its original is, and where the original's `${}` is expanded the translation's
+  - **F116** A translation is shown wherever its original is, and where the original's `${}` is expanded the translation's
     would be too (not traced through every widget), so a translator adding one could run an expression: the stores require the
     placeholder sets to be equal (stricter than "kept").
-  - **F-P8-8** ReferenceData's kinds are settings entries, so they also show in SettingsHome under a fourth group, and the reader's
+  - **F117** ReferenceData's kinds are settings entries, so they also show in SettingsHome under a fourth group, and the reader's
     index is no longer empty (it holds Admin's reference data landing, which lists the reader no kind).
 - Decisions: settings are seed rows of two kinds in one registry, with secrets refused by flag and by name; a preference falls
   back to the conf property it names, then its default; `get#InstancePreference` needs no permission; an empty value removes a
@@ -1966,8 +1966,8 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
     (`InstancePreference.preferenceValue`, else `InstanceSetting.defaultValue`); P10 reads `signin.newDeviceWindowDays` the same way;
   - P10 to P13 append a section to `ConfigurationServices.xml`, a module beside `ConfigurationLib.js`, their services' names to
     a grant of their own in `AdminConfigurationData.xml` (never a pattern over the file) and their settings rows there;
-  - the user's call: F-P8-2 (where the default locale and time zone apply) and F-P8-3 (theme, logo and formats: build with a
-    reader, or drop from design §7); whether reference kinds belong in SettingsHome's list (F-P8-8); F-P8-1's framework ask;
+  - the user's call: F111 (where the default locale and time zone apply) and F112 (theme, logo and formats: build with a
+    reader, or drop from design §7); whether reference kinds belong in SettingsHome's list (F117); F110's framework ask;
   - the acceptance AdminSettingsUsable to run when asked.
 
 **Review Nov 10 (P8).** A fresh review of both repositories' P8 diffs, security first; fixes committed apart per repository
@@ -2020,11 +2020,11 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
   preference); mr-boss `AdminSettings` and `AdminRegistries` 8 of 8 (AdminSettings 0.7 s). Prettier clean. Not run: the full
   suites, the acceptance suite.
 - For the lead:
-  - **F-P8-R1 (framework ask, the user's call)** The sound fix of R2 is in the framework: do not localize a link's `url` and
+  - **F118 (framework ask, the user's call)** The sound fix of R2 is in the framework: do not localize a link's `url` and
     `url-type` (or localize only texts), which departs from Java; until then a holder of `ADMIN_SETTINGS_MANAGE` can still
     retarget, within the app, a relative url whose text has words (`editItem?id=${id}`), for one locale. Tools' Localization
     (`ADMIN`) writes any translation, as before.
-  - F-P8-5 stands: translations written by Tools or a data file are not audited; only the delegated services' changes are.
+  - F114 stands: translations written by Tools or a data file are not audited; only the delegated services' changes are.
   - `InstanceSetting`, `InstancePreference` and `LocalizedLabelTarget` are plain entities: whoever may write them directly
     (`ADMIN`, Tools' entity screens, a data load) registers settings and targets; the services trust the registry and check
     each row against the definitions and the secret rules when read.
@@ -2338,7 +2338,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7.s F103 to F109 and P8.s F110 to F118 (Nov 10) in theirs.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
