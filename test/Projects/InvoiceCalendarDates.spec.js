@@ -50,6 +50,9 @@ spec({
     },
     cleanupSpec() {
         ec.user.setTimeZone(made.zone)
+        call("update#mantle.account.invoice.Invoice", {invoiceId: made.id, statusId: "InvoiceCancelled"})
+        call("update#mantle.work.effort.WorkEffort", {workEffortId: project, statusId: "WeCancelled"})
+        ec.artifactExecution.enableAuthz()
     }
 })
 
@@ -75,27 +78,12 @@ feature("project invoice detail and list use their canonical book day and single
                 dated: Array.from(dated || []).some(row => row.invoiceId === made.id)
             })
         }
-        const calendar = ec.resource.script("component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js")
-        const single = calendar.invoiceCalendarDays([made.id, made.id])[made.id]
-        call("create#mantle.account.invoice.InvoiceDueSchedule", {
-            invoiceId: made.id,
-            scheduleSeqId: "02",
-            dueDate: "2026-12-19",
-            amount: 0
-        })
-        const multiple = calendar.invoiceCalendarDays([made.id])[made.id]
-        for (const scheduleSeqId of ["01", "02"])
-            call("delete#mantle.account.invoice.InvoiceDueSchedule", {invoiceId: made.id, scheduleSeqId})
-        const legacy = calendar.invoiceCalendarDays([made.id])[made.id]
-        return {results, single, multiple, legacy, missing: calendar.invoiceCalendarDays(["INV_CAL_MISSING"])}
+        return {results}
     },
-    then({results, single, multiple, legacy, missing}) {
+    // Mantle's invoiceCalendarDays cases (single, multiple, legacy, missing) are in mr-mantle ProjectInvoiceOutput.
+    then({results}) {
         results.length == 2
         results.every(row => row.dated)
-        single.dueDay === "2026-12-09"
-        multiple.dueDay === null && legacy.dueDay === null
-        multiple.invoiceDay === "2026-11-09" && legacy.invoiceDay === "2026-11-09"
-        Object.keys(missing).length === 0
         results.every(row => row.detail.invoiceDateText === "2026-11-09" && row.detail.invoiceDateValue === "2026-11-09")
         results.every(row => row.detail.dueDateText === "2026-12-09")
         results.every(row => row.row && row.row.dateText === "2026-11-09" && row.row.dueText === "2026-12-09")

@@ -504,7 +504,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <drop-down allow-empty="true"><dynamic-options transition="assigneeSearch" server-search="true" min-length="0"/></drop-down></header-field>
                     <default-field title="Assignees"><display text="${assigneeText || ''}"/></default-field></field>
                 <field name="estimatedCompletionDate"><header-field title="Due" show-order-by="true"/>
-                    <conditional-field condition="['csv','xlsx'].includes(sri.getRenderMode())"><display text="${dueText}"/></conditional-field>
+                    <conditional-field condition="['csv','xlsx'].includes(sri.getRenderMode())"><display text="${dueEditText}"/></conditional-field>
                     <conditional-field condition="canUpdate &amp;&amp; isOpen">
                         <container style="text-no-wrap ${overdue ? 'text-warning' : ''}">
                             <render-mode><text type="qvt"><![CDATA[<span @click.stop>]]></text><text type="tui" template="false">[]</text></render-mode>

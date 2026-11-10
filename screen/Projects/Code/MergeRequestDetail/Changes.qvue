@@ -336,7 +336,8 @@ module.exports = {
                 const json = result.json || {};
                 if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos);
                 return json;
-            }, (err) => { if (this.isCurrent(context)) moqui.handleAjaxError(err); throw err; });
+            // A comment or review that fails after switching requests still says so; a read's error belongs to its request.
+            }, (err) => { if (this.isCurrent(context) || (method || 'GET') !== 'GET') moqui.handleAjaxError(err); throw err; });
         },
         post(name, params, context) { return this.request(name, params, 'POST', context); },
         load() {

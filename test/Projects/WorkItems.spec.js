@@ -75,14 +75,16 @@ feature("closed project work is read only in Projects and Commons, while its man
         const misplacedCount = all("mantle.work.effort.WorkEffort", {workEffortName: "BOSS_TEST Wrong project fallback"}).length
         const renamed = refusal("ironstone.projects.ProjectServices.save#ProjectGeneral", {workEffortId: projectId, workEffortName: "Refused rename"})
         const changedName = one("mantle.work.effort.WorkEffort", {workEffortId: projectId}).workEffortName
+        const described = post("Projects/ProjectDetail/Overview/saveDescription", {workEffortId: projectId, description: "Refused description"})
+        const description = one("mantle.work.effort.WorkEffort", {workEffortId: projectId}).description
         const otherReopen = as("joe.developer", () => refusal("ironstone.projects.ProjectServices.set#ProjectStatus", {workEffortId: projectId, statusId: "WeInPlanning"}))
         const managerScope = refusal("ironstone.projects.ProjectServices.get#ProjectAccess", {workEffortId: projectId, need: "manage"})
         const reopened = refusal("ironstone.projects.ProjectServices.set#ProjectStatus", {workEffortId: projectId, statusId: "WeInPlanning"})
-        return {projects, commons, project, settings, team, fixedAdd, misplacedCount, renamed, changedName, otherReopen, managerScope, reopened,
+        return {projects, commons, project, settings, team, fixedAdd, misplacedCount, renamed, changedName, described, description, otherReopen, managerScope, reopened,
             status: one("mantle.work.effort.WorkEffort", {workEffortId: projectId}).statusId,
             openProjects: access("projects"), openCommons: access("commons")}
     },
-    then({projects, commons, project, settings, team, fixedAdd, misplacedCount, renamed, changedName, otherReopen, managerScope, reopened, status, openProjects, openCommons}) {
+    then({projects, commons, project, settings, team, fixedAdd, misplacedCount, renamed, changedName, described, description, otherReopen, managerScope, reopened, status, openProjects, openCommons}) {
         projects.visible && !projects.canUpdate
         commons.visible && !commons.canUpdate
         project.canView && project.canManage && !project.canUpdate && !project.canChange
@@ -92,6 +94,8 @@ feature("closed project work is read only in Projects and Commons, while its man
         misplacedCount == 0
         renamed.includes("PROJECT_CLOSED")
         changedName == "Closed access control"
+        described.errors.includes("PROJECT_CLOSED")
+        description != "Refused description"
         otherReopen.includes("Only the managers")
         managerScope == ""
         reopened == ""
@@ -241,7 +245,8 @@ feature("the list renders in qvt with the chips and counts, the four views, the 
         exported.status == 200
         exported.errors == ""
         exported.output.includes('BOSS_TEST_CSV_WORK,"BOSS_TEST ""quoted"", export",Task,In Planning,4,')
-        exported.output.includes("Nov 30")
+        // a calendar date, not "Today" or a yearless "Nov 30"
+        exported.output.includes("2026-11-30")
         !exported.output.includes("<q-chip")
         !exported.output.includes("WeInPlanning")
     },

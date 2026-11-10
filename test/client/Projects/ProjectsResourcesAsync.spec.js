@@ -13,6 +13,8 @@ feature("staffing and people answers belong to the dialog that requested them; p
         page.setContent(`<!doctype html><html><head><link rel="stylesheet" href="/libs/quasar/quasar.prod.css"></head><body><div id="app"></div>
             <script src="/libs/vue/vue.global.prod.js"></script><script src="/libs/quasar/quasar.umd.prod.js"></script>
             <script src="/js/MoquiLib.js"></script><script src="/js/WebrootVue.qvt.js"></script><script>
+            // settle: past every promise hop of a response (a macrotask), then Vue's update.
+            window.settle = () => new Promise(resolve => setTimeout(resolve, 0)).then(() => Vue.nextTick());
             window.pending = []; window.calls = []; window.notices = [];
             moqui.notifyMessages = messages => notices.push(messages); moqui.handleAjaxError = error => notices.push(error);
             moqui.request = (url, options) => {
@@ -46,11 +48,9 @@ feature("staffing and people answers belong to the dialog that requested them; p
                         json: {canStaff: true, candidateList: [{partyId: id, name, fitText: "Available", fitColor: "positive"}]}
                     })
             answer("B", "Bob current")
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             answer("A", "Alice stale")
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             return true
         })
         assert.deepEqual(
@@ -65,11 +65,9 @@ feature("staffing and people answers belong to the dialog that requested them; p
             s.openNew({partyId: "B", name: "Bob"}, "2026-11-16")
             const answers = pending.filter(one => one.name === "people")
             answers[1].resolve({json: [{value: "B", label: "Bob current"}]})
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             answers[0].resolve({json: [{value: "A", label: "Alice stale"}]})
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             return true
         })
         assert.deepEqual(
@@ -89,8 +87,7 @@ feature("staffing and people answers belong to the dialog that requested them; p
             pending
                 .find(one => one.name === "decideAllocation")
                 .resolve({json: {decided: true, messageInfos: [{message: "Approved"}]}})
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             return true
         })
         assert.equal(

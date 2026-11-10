@@ -13,11 +13,13 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
         page.setContent(`<!doctype html><html><head><link rel="stylesheet" href="/libs/quasar/quasar.prod.css"></head><body><div id="app"></div>
             <script src="/libs/vue/vue.global.prod.js"></script><script src="/libs/quasar/quasar.umd.prod.js"></script>
             <script src="/js/MoquiLib.js"></script><script src="/js/WebrootVue.qvt.js"></script><script>
+            // settle: past every promise hop of a response (a macrotask), then Vue's update.
+            window.settle = () => new Promise(resolve => setTimeout(resolve, 0)).then(() => Vue.nextTick());
             window.runningTimer = null; window.saved = {A: 1, B: 0}; window.pending = []; window.calls = []; window.notices = [];
             const day = '2026-11-09';
             window.weekAnswer = () => ({week: {partyId: 'WORKER', isMine: true, isThisWeek: true, weekStart: day, label: 'Nov 9–15',
                 personOptions: [], expectedTotal: 8, total: saved.A + saved.B, billableTotal: saved.A + saved.B,
-                serverNow: Date.now(), timer: runningTimer, timesheet: {statusId: 'TmshInProcess', returned: false},
+                serverNow: Date.now(), timer: runningTimer && Object.assign({}, runningTimer), timesheet: {statusId: 'TmshInProcess', returned: false},
                 access: {canEdit: true}, dayList: [{day, label: 'Monday', dateLabel: 'Nov 9', expected: 8, total: saved.A + saved.B, isWorkday: true}],
                 rowList: ['A', 'B'].map(id => ({workEffortId: id, workEffortName: 'Item ' + id, isOpen: true, total: saved[id],
                     cells: {[day]: {hours: saved[id], entryIds: saved[id] ? [id + '-ENTRY'] : []}}})),
@@ -114,8 +116,7 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
         page.getByLabel("B Monday").click()
         page.evaluate(async () => {
             answer("updateTimer", true)
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             return true
         })
         assert.equal(
@@ -128,13 +129,13 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
         page.waitFor(() => pending.filter(one => one.name === "updateTimer").length === 2)
         page.evaluate(async () => {
             answer("updateTimer", false)
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             return true
         })
         assert.equal(
-            page.evaluate(() => runningTimer.comments),
-            "Comment to retry"
+            page.evaluate(() => vm.$refs.screen.timer.comments),
+            "Comment to retry",
+            "a saved comment is acknowledged"
         )
         page.evaluate(async () => {
             const s = vm.$refs.screen
@@ -143,8 +144,7 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
             s.decide("return", s.decision.reason)
             s.decision.reason = "A newer reason"
             answer("decide", false)
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
             return true
         })
         assert.equal(
@@ -156,6 +156,15 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
             page.evaluate(() => vm.$refs.screen.decision.reason),
             "A newer reason"
         )
+        // Leave with two writes pending: B's succeeds and A's (the retained failed hours) fails.
+        page.evaluate(async () => {
+            vm.$refs.screen.decision.open = false
+            await settle()
+            return true
+        })
+        page.getByLabel("B Monday").fill("6")
+        page.getByLabel("A Monday").click()
+        page.waitFor(() => pending.some(one => !one.done && one.name === "saveCell" && one.params.workEffortId === "B"))
         const before = page.evaluate(async () => {
             const s = vm.$refs.screen
             s.commitCell(s.week.rowList[0], s.week.dayList[0])
@@ -163,18 +172,24 @@ feature("a cell save preserves newer drafts, failed cells remain retryable, and 
             vm.show = false
             vm.currentPathList = ["Commons", "Home"]
             await Vue.nextTick()
-            return calls.length
+            return {calls: calls.length, notices: notices.length}
         })
         page.evaluate(async () => {
             answer("saveCell", false)
-            await Promise.resolve()
-            await Vue.nextTick()
+            await settle()
+            answer("saveCell", true)
+            await settle()
             return true
         })
         assert.equal(
             page.evaluate(() => calls.length),
-            before,
+            before.calls,
             "a finished write cannot reload against the destination screen"
+        )
+        assert.deepEqual(
+            page.evaluate(from => notices.slice(from), before.notices),
+            ["Fixture refused the write"],
+            "a write that fails after leaving still reports"
         )
     }
 })

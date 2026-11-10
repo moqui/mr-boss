@@ -361,8 +361,10 @@ module.exports = {
         },
         fmt(value) { const n = Number(value || 0); return (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 }); },
         request(name, params, method) {
+            // A failed write reports even after the week or person changed (its edits are gone from this view); a read's
+            // error and any success message matter only to the view that asked.
             const notify = this.forScope((json) => { if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos); });
-            const report = this.forScope((err) => moqui.handleAjaxError(err));
+            const report = (method || 'GET') !== 'GET' ? (err) => moqui.handleAjaxError(err) : this.forScope((err) => moqui.handleAjaxError(err));
             return moqui.request(this.url(name), { method: method || 'GET', params: params || {} }).then((result) => {
                 const json = result.json || {};
                 notify(json);

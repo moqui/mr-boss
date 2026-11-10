@@ -524,8 +524,9 @@ module.exports = {
             }, (err) => { if (seq !== this.seq || !this.inScope(scope, version)) return; this.loading = false; moqui.handleAjaxError(err); });
         },
         post(name, params) {
+            // A failed write reports even after the planner's view changed; a success message belongs to the view that asked.
             const notify = this.forScope((json) => { if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos); });
-            const report = this.forScope((err) => moqui.handleAjaxError(err));
+            const report = (err) => moqui.handleAjaxError(err);
             return moqui.request(this.url(name), { method: 'POST', params: params || {} }).then((result) => {
                 const json = result.json || {};
                 notify(json);

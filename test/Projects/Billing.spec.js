@@ -334,31 +334,17 @@ feature("a narrow project billing editor sends only a linked visible invoice wit
         })
         const invoiceId = invoiceIds[0]
         const hiddenInvoiceId = invoiceIds[1]
-        const nativeOutput = "mantle.account.InvoiceServices.get#InvoiceOutput"
         const send = "ironstone.projects.BillingServices.send#Invoice"
         const request = {invoiceId, toAddresses: "project.delivery@example.invalid", note: "Local project delivery control"}
         capture.enable()
         capture.clear()
         try {
             // Direct service calls have no Projects screen parent; disable only artifact authz, never the domain guards.
+            // Mantle's own projectBilling refusals (generic read, hidden project, custom template or screen) are
+            // tested in mr-mantle ProjectInvoiceOutput; here only the BOSS send.
             const denied = as(username, () =>
                 sys(() => ({
-                    genericRead: errorOf(nativeOutput, {invoiceId}),
-                    hiddenOutput: errorOf(nativeOutput, {invoiceId: hiddenInvoiceId, projectBilling: true}),
                     hiddenSend: errorOf(send, Object.assign({}, request, {invoiceId: hiddenInvoiceId})),
-                    customTemplate: errorOf(nativeOutput, {
-                        invoiceId,
-                        projectBilling: true,
-                        templateLocation: "component://mr-mantle/template/account/InvoiceEmail.html.fancy"
-                    }),
-                    customScreen: errorOf("mantle.account.InvoiceServices.send#Invoice", {
-                        invoiceId,
-                        projectBilling: true,
-                        lastUpdatedStamp: one("mantle.account.invoice.Invoice", {invoiceId}).lastUpdatedStamp,
-                        operationKey: "project-untrusted-screen",
-                        toAddresses: request.toAddresses,
-                        printLocation: "component://mr-boss/screen/Projects/Projects/StatusReport.xml"
-                    })
                 }))
             )
             const memberSend = as("joe.developer", () => sys(() => errorOf(send, request)))
@@ -416,11 +402,7 @@ feature("a narrow project billing editor sends only a linked visible invoice wit
         issuedCount,
         pdfSize
     }) {
-        denied.genericRead.includes("PERMISSION_DENIED")
-        denied.hiddenOutput.includes("PERMISSION_DENIED")
         denied.hiddenSend.includes("not available")
-        denied.customTemplate.includes("PROJECT_INVOICE_PRINT_INVALID")
-        denied.customScreen.includes("PROJECT_INVOICE_PRINT_INVALID")
         memberSend.includes("not available")
         clientSend.includes("not available")
         beforeSend == "InvoiceFinalized"

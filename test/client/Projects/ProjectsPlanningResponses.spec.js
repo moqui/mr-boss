@@ -1,15 +1,24 @@
 // Focused client regressions for Projects UI review: delayed planning responses acknowledge their own dialog/input,
 // and leaving a timeline releases dependency-drag listeners. Real QVue components mount on the vendored client;
 // deferred fixture responses keep these bug checks offline, without a project walk or database fixtures.
-spec({server: false, timeout: 15})
+let page
+spec({
+    server: false,
+    timeout: 15,
+    setupSpec() {
+        page = browser.newPage()
+    }
+})
 
+// The spec's one page, loaded again with a fresh planning screen of this kind.
 function planningPage(kind) {
-    const page = browser.newPage()
     page.setContent(`<!doctype html><html><head><link rel="stylesheet" href="/libs/quasar/quasar.prod.css"></head>
         <body><div id="app"></div><script src="/libs/vue/vue.global.prod.js"></script>
         <script src="/libs/quasar/quasar.umd.prod.js"></script><script src="/js/MoquiLib.js"></script>
         <script src="/js/WebrootVue.qvt.js"></script><script>
         window.pending = []; window.calls = [];
+        // settle: past every promise hop of a response (a macrotask), then Vue's update.
+        window.settle = () => new Promise(resolve => setTimeout(resolve, 0)).then(() => Vue.nextTick());
         window.answer = (name, json, index = 0) => {
             const request = pending.filter(one => one.name === name)[index];
             pending.splice(pending.indexOf(request), 1); request.resolve({json});
@@ -51,7 +60,7 @@ function planningPage(kind) {
 
 feature("a late sprint summary cannot replace the sprint opened afterward", {
     expect() {
-        const page = planningPage("Backlog")
+        planningPage("Backlog")
         page.evaluate(() => {
             const screen = vm.$refs.screen
             screen.openComplete(screen.backlog.sprintList[0])
@@ -83,7 +92,7 @@ feature("a late sprint summary cannot replace the sprint opened afterward", {
 
 feature("quick add preserves a newer title and clears an acknowledged unchanged title", {
     expect() {
-        const page = planningPage("Backlog")
+        planningPage("Backlog")
         page.getByLabel("Add a work item", {exact: true}).fill("First title")
         page.getByRole("button", {name: "Add", exact: true}).click()
         page.getByLabel("Add a work item", {exact: true}).fill("Next title")
@@ -111,7 +120,7 @@ feature("quick add preserves a newer title and clears an acknowledged unchanged 
 
 feature("a dependency save does not close a different dependency dialog or discard newer lag input", {
     expect() {
-        const page = planningPage("Timeline")
+        planningPage("Timeline")
         page.evaluate(() => {
             const screen = vm.$refs.screen
             screen.openDependency({workEffortId: "IRON-2", toWorkEffortId: "IRON-1", canChange: true})
@@ -120,7 +129,7 @@ feature("a dependency save does not close a different dependency dialog or disca
             answer("saveDependency", {saved: true})
             return true
         })
-        page.waitFor(() => pending.length === 0)
+        page.evaluate(async () => { await settle(); return true })
         assert.equal(
             page.evaluate(() => vm.$refs.screen.dep.open),
             true
@@ -150,7 +159,7 @@ feature("a dependency save does not close a different dependency dialog or disca
 
 feature("Manufacturing previews remain attached to their operation and submitted target", {
     expect() {
-        const page = planningPage("Timeline")
+        planningPage("Timeline")
         page.evaluate(() => {
             const screen = vm.$refs.screen
             vm.currentPathList = ["Manufacturing", "Planning", "ProductionSchedule"]
@@ -199,7 +208,7 @@ feature("Manufacturing previews remain attached to their operation and submitted
             answer("moveOperation", {preview: {facilityName: "Outdated target", refusals: [], conflicts: []}})
             return true
         })
-        page.waitFor(() => pending.length === 0)
+        page.evaluate(async () => { await settle(); return true })
         assert.equal(
             page.evaluate(() => vm.$refs.screen.move.preview),
             null
@@ -223,7 +232,7 @@ feature("Manufacturing previews remain attached to their operation and submitted
 
 feature("leaving a dependency drag releases its pointer handlers", {
     expect() {
-        const page = planningPage("Timeline")
+        planningPage("Timeline")
         page.waitFor(() => !!document.querySelector(".boss-tl-handle"))
         page.evaluate(() => {
             window.departed = vm.$refs.screen
@@ -290,7 +299,7 @@ feature("leaving and returning cannot revive an old planning write", {
             answer("saveDependency", {saved: true})
             return true
         })
-        timeline.waitFor(() => pending.length === 0)
+        timeline.evaluate(async () => { await settle(); return true })
         assert.equal(
             timeline.evaluate(() => calls.filter(one => one.name === "timeline").length),
             timelineReads
@@ -300,7 +309,7 @@ feature("leaving and returning cannot revive an old planning write", {
 
 feature("Manufacturing writes preserve target and decision text edited after submission", {
     expect() {
-        const page = planningPage("Timeline")
+        planningPage("Timeline")
         page.evaluate(() => {
             const screen = vm.$refs.screen
             vm.currentPathList = ["Manufacturing", "Planning", "ProductionSchedule"]

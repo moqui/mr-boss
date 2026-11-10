@@ -71,8 +71,9 @@ along with this software (see the LICENSE.md file). If not, see
             // A visible request is not permission to read the team's internal or unclassified attachments.
             contentType.clientRequest = info.recordEntityName === 'mantle.request.Request' && ec.user.hasPermission('PROJECT_CLIENT')
             if (contentType.clientRequest) {
-                contentType.clientContentTypeIds = ['RqCntUserDefined', 'RqCntDocumentation', 'RqCntStory', 'RqCntImage',
-                    'RqCntCustomerShared', 'RqCntRfqPublished']
+                // Mantle's one rule for the request files a customer may see (CaseRelations uses it too)
+                contentType.clientContentTypeIds = Array.from(ec.resource
+                    .script('component://mr-mantle/service/mantle/request/RequestContent.js').customerContentTypeIds)
                 contentType.catalogCanChange = false
             }
             // A journal entry's, invoice's or payment's files: Mantle says who may change them, whether a payment's are kept

@@ -943,7 +943,8 @@ remote terminal client. File upload/download tools wait for user approval: those
   bytes before correction. After restart, the client lists exactly the outward file with its human-readable type;
   internal bytes are refused by the focused direct-download regression. Explicit outward types include standard
   request files, Customer Shared and Published RFQ. Unclassified and Case Summary files stay private; staff access
-  is preserved. No routes, record keys or service parameter contracts changed.
+  is preserved. No routes or record keys changed; `get#ProjectRows`' `projectList` became optional (callers that pass
+  it are unchanged).
 - Focused before/after: `ProjectsHome,NewProject` reproduced two failures, then **8/8 passed**;
   `ProjectsAccess,RecordFiles` reproduced client audience leakage, then **20/20 passed**, including exact bytes,
   staff visibility, cross-client refusal, direct service projections and the Commons shared-files consumer.
@@ -1000,6 +1001,25 @@ blur/Enter and verified them after reload (3.27 h total). At measured 390×844, 
 shows the correct totals, and the Add time dialog opens/cancels without overflow. No service or route contracts
 changed in this batch. Selected-week terminal return, shared row actions and manual-rate billing findings are
 separate pending corrections. Full gates remain pending. Batch 3 committed as `3cfdc273`.
+
+**Review of the committed batches (2026-11-09).** A code review of the unpushed commits found and fixed:
+- key auth now falls back to anonymous when a rejected key has no conflicting session, with one lookup per request;
+- a TUI save no longer fetches record headers twice;
+- MyTime, TeamPlanner and Changes report failures that arrive after the view changed;
+- closed projects can be reopened through `update#Project`, and the remaining manual-change paths are guarded,
+  including the Overview description;
+- the project invoice print screen comes from `OrgTemplateProjectInvoicePrint` instead of a hard-coded path;
+- the CSV/XLSX work-item due date is a calendar date;
+- one Mantle rule decides which request files a customer may see;
+- client specs wait for a response to settle before checking that nothing happened;
+- Mantle rules are tested in Mantle.
+
+Follow-ups recorded rather than done:
+- one shared stale-response helper for the five planning, time and code `.qvue` files, which still use three local
+  patterns;
+- invoice list day text mixes ISO days with formatted dates; Mantle should return the display text;
+- `Changes.qvue` mounts a comment button on every diff line;
+- `store#VoiceTrunk` may find no live SIP node to reload right after boot (the edge fixture waits for one).
 
 ### Completion
 
