@@ -491,3 +491,47 @@ feature("catalog policy scheduling preserves as-of reads and audits while reject
         duplicate.error.includes("already starts")
     }
 })
+
+feature("catalog exports include the filtered find across pages and refuse more than 200 matches", {
+    when() {
+        const fixtureIds = []
+        as("john.doe", () => {
+            const create = (productId, ownerPartyId) => {
+                const row = ec.entity.makeValue("mantle.product.Product")
+                for (const [key, value] of Object.entries({
+                    productId, productName: productId, productTypeEnumId: "PtAsset", ownerPartyId
+                })) row[key] = value
+                row.create()
+                fixtureIds.push(productId)
+            }
+            for (const suffix of ["A", "B", "C"]) create("P2_EXPORT_SMALL_" + suffix, "ORG_ZIZI_SERVICES")
+            create("P2_EXPORT_SMALL_FOREIGN", "ORG_ZIZI_RETAIL")
+            for (let i = 0; i < 201; i++) create("P2_EXPORT_LIMIT_" + i, "ORG_ZIZI_SERVICES")
+        })
+        try {
+            return as("catalog.edit", () => ({
+                page: invoke(C + "find#Products", {text: "P2_EXPORT_SMALL", pageIndex: 1, pageSize: 1}),
+                unpaged: invoke(C + "find#Products", {text: "P2_EXPORT_SMALL", pageIndex: 1, pageSize: 1, pageNoLimit: true}),
+                csv: ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml").renderMode("csv")
+                    .render("Products/List", {text: "P2_EXPORT_LIMIT", pageIndex: 1, pageSize: 1, pageNoLimit: true}, null),
+                xlsx: ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml").renderMode("xlsx")
+                    .render("Products/List", {text: "P2_EXPORT_LIMIT", pageIndex: 1, pageSize: 1, pageNoLimit: true}, null),
+                large: invoke(C + "find#Products", {text: "P2_EXPORT_LIMIT", pageSize: 200, pageNoLimit: true})
+            }))
+        } finally {
+            as("john.doe", () => ec.entity.find("mantle.product.Product").condition("productId", "in", fixtureIds).deleteAll())
+        }
+    },
+    then({page, unpaged, csv, xlsx, large}) {
+        page.productListCount == 3
+        page.productList.map(row => row.productId) == ["P2_EXPORT_SMALL_B"]
+        unpaged.productList.map(row => row.productId) == ["P2_EXPORT_SMALL_A", "P2_EXPORT_SMALL_B", "P2_EXPORT_SMALL_C"]
+        csv.status >= 400
+        csv.output.includes("Narrow product export to at most 200 matching products")
+        !csv.output.includes("Product ID,Name")
+        csv.errorMessages.join("\n").includes("Narrow product export to at most 200 matching products")
+        xlsx.status >= 400
+        JSON.parse(xlsx.output).errors.includes("Narrow product export to at most 200 matching products")
+        large.error.includes("Narrow product export to at most 200 matching products")
+    }
+})

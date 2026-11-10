@@ -648,8 +648,11 @@ function run(op, parameters) {
             if (variantIds && !variantIds.has(row.productId)) return false
             return true
         })
-        const pageIndex = Math.max(0, Number(p.pageIndex || 0)),
-            pageSize = Math.max(1, Math.min(200, Number(p.pageSize || 25)))
+        const exportAll = p.pageNoLimit === true || p.pageNoLimit === "true"
+        if (exportAll && productRows.length > 200)
+            throw new Error("Narrow product export to at most 200 matching products")
+        const pageIndex = exportAll ? 0 : Math.max(0, Number(p.pageIndex || 0)),
+            pageSize = exportAll ? 200 : Math.max(1, Math.min(200, Number(p.pageSize || 25)))
         if (p.orderByField === "-lastUpdatedStamp") productRows.sort((a, b) => ms(b.lastUpdatedStamp) - ms(a.lastUpdatedStamp))
         return {
             productList: productRows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize).map(row => ({
