@@ -377,6 +377,32 @@ function run(op, parameters) {
               : out.releaseHistory?.length || released
                 ? {text: "Released", color: "positive"}
                 : {text: "Not released", color: "grey"}
+        const operations = [...result.operationRows, ...result.releasedOperationRows],
+            equipmentIds = [...new Set(operations.flatMap(row => (row.resources || []).map(resource => resource.assetProductId)).filter(Boolean))],
+            equipmentNames = new Map(rowsIn("mantle.product.Product", "productId", equipmentIds)
+                .filter(product => result.methodAccess.systemAdmin || result.methodAccess.ownerPartyIds.includes(product.ownerPartyId || "_NA_"))
+                .map(product => [product.productId, product.productName || product.productId])),
+            skillNames = new Map(c.skillOptions.map(option => [option.value, option.label])),
+            resourceLabel = resource => {
+                const id = resource.assetProductId || resource.skillTypeEnumId,
+                    name = resource.assetProductId ? equipmentNames.get(id) : skillNames.get(id)
+                return ec.l10n.localize(resource.kind || "Resource") + ": " + (name && name !== id ? name + " (" + id + ")" : id)
+            },
+            describeResources = row => {
+                const resources = row.resources || [],
+                    unit = {TF_min: "min", TF_hr: "h"}[row.timeUomId] ||
+                        c.unitOptions.find(option => option.value === row.timeUomId)?.label || row.timeUomId || ""
+                return Object.assign({}, row, {
+                    resourcesText: resources.map(resource => {
+                        const quantity = resource.assetProductId ? resource.estimatedQuantity : resource.estimatedNumPeople
+                        return resourceLabel(resource) + (quantity == null ? "" : " × " + String(quantity))
+                    }).join("; "),
+                    resourceDurationsText: result.standardTimesShown ? resources.filter(resource => resource.estimatedDuration != null)
+                        .map(resource => resourceLabel(resource) + ": " + String(resource.estimatedDuration) + " " + unit).join("; ") : ""
+                })
+            }
+        result.operationRows = result.operationRows.map(describeResources)
+        result.releasedOperationRows = result.releasedOperationRows.map(describeResources)
         return result
     }
     function execute(op, p) {

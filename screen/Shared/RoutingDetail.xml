@@ -613,6 +613,16 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display />
                                 </default-field>
                             </field>
+                            <field name="resourcesText">
+                                <default-field title="Resources">
+                                    <display />
+                                </default-field>
+                            </field>
+                            <field name="resourceDurationsText" hide="!standardTimesShown">
+                                <conditional-field condition="standardTimesShown" title="Resource durations">
+                                    <display />
+                                </conditional-field>
+                            </field>
                             <field name="editOperation">
                                 <default-field title="">
                                     <link url="." text="Stage standards" condition="methodAccess.edit" parameter-map="{productId:productId,productBomId:productBomId,workEffortId:routing.workEffortId,selectedOperationId:workEffortId,_openDialog:'RoutingOperationDialog'}" />
@@ -620,7 +630,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <columns type="mobile">
                                 <column><field-ref name="workEffortId"/></column>
-                                <column><field-ref name="workEffortName"/></column>
+                                <column><field-ref name="workEffortName"/><field-ref name="resourcesText"/></column>
                             </columns>
                         </form-list>
                     </box-body>
@@ -850,6 +860,16 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display />
                                 </default-field>
                             </field>
+                            <field name="resourcesText">
+                                <default-field title="Resources">
+                                    <display />
+                                </default-field>
+                            </field>
+                            <field name="resourceDurationsText" hide="!standardTimesShown">
+                                <conditional-field condition="standardTimesShown" title="Resource durations">
+                                    <display />
+                                </conditional-field>
+                            </field>
                             <field name="editOperation">
                                 <default-field title="">
                                     <link url="." text="Edit standards" condition="methodAccess.edit" parameter-map="{productId:productId,productBomId:productBomId,workEffortId:routing.workEffortId,selectedOperationId:workEffortId,_openDialog:'RoutingOperationDialog'}" />
@@ -857,7 +877,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <columns type="mobile">
                                 <column><field-ref name="workEffortId"/></column>
-                                <column><field-ref name="workEffortName"/></column>
+                                <column><field-ref name="workEffortName"/><field-ref name="resourcesText"/></column>
                             </columns>
                         </form-list>
                     </box-body>
