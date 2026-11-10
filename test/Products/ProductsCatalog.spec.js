@@ -264,8 +264,13 @@ feature("catalog settings use dated optimistic tokens and require the administra
 feature("successful dated policy saves return to current settings so the next save has a fresh token", {
     when() {
         login("john.doe")
-        const organizationPartyId = "ORG_ZIZI_SERVICES",
-            screens = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("tui"),
+        const organizationPartyId = "PRD_POLICY_REDIRECT_ORG"
+        as("john.doe", () => {
+            call("create#mantle.party.Party", {partyId: organizationPartyId, partyTypeEnumId: "PtyOrganization"})
+            call("create#mantle.party.Organization", {partyId: organizationPartyId, organizationName: "Policy redirect regression"})
+            call("create#mantle.party.PartyRole", {partyId: organizationPartyId, roleTypeId: "OrgInternal"})
+        })
+        const screens = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("tui"),
             cases = [
                 {path: "Index", service: S, noun: "CatalogSettings", token: "expectedVersion", value: "versionSeqId", field: "packagingEnabled", changed: false},
                 {path: "VariantSettings", service: S, noun: "VariantSettings", token: "expectedFromDate", value: "fromDate", field: "batchLimit", changed: 999},
