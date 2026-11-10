@@ -102,19 +102,29 @@ feature("routing resource summaries distinguish current drafts from retained rel
                 estimatedQuantity: 1, estimatedDuration: 7, changeReason: "Reference before owner changes"})
             return op
         })
-        as("catalog.method.approve", () => {
+        const releasedView = as("catalog.method.approve", () => {
             const current = call(R + "get#RoutingDetail", {workEffortId: resourceRoutingId})
-            call(R + "release#RoutingDraft", {workEffortId: resourceRoutingId, expectedRevision: current.expectedRevision,
-                changeReason: "Retain resource requirements"})
+            // TUI posts its rendered snapshot date as a hidden screen parameter. After a write it must show current data.
+            const saved = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("tui")
+                .render("apps/Products/Products/Product360/BOM/RoutingDetail/releaseRouting", {
+                    productId, workEffortId: resourceRoutingId, expectedRevision: current.expectedRevision,
+                    asOfDate: new Date(Date.now() - 1000).toISOString(), changeReason: "Retain resource requirements"
+                }, "post"), response = JSON.parse(String(saved.output))
+            return {status: saved.status, asOfDate: response.screenParameters.asOfDate,
+                detail: call(M + "get#RoutingDetail", response.screenParameters)}
         })
         as("catalog.method", () => call(R + "store#RoutingResource", {operationWorkEffortId: operation,
             assetProductId, estimatedQuantity: 3, estimatedDuration: 45, changeReason: "Next equipment requirement"}))
         as("john.doe", () => call("update#mantle.product.Product", {productId: hiddenProductId, ownerPartyId: "ORG_ZIZI_SERVICES"}))
         const parameters = {productId, workEffortId: resourceRoutingId}
-        return {editor: as("catalog.method", () => call(M + "get#RoutingDetail", parameters)),
+        return {releasedView, editor: as("catalog.method", () => call(M + "get#RoutingDetail", parameters)),
             reader: as("catalog.method.read", () => call(M + "get#RoutingDetail", parameters))}
     },
-    then({editor, reader}) {
+    then({releasedView, editor, reader}) {
+        releasedView.status == 200
+        releasedView.asOfDate == ""
+        releasedView.detail.releasedOperationRows.length == 1
+        releasedView.detail.releasedOperationRows[0].workEffortName == "Resource operation"
         editor.operationRows[0].resourcesText.includes("Review tooling")
         editor.operationRows[0].resourcesText.includes("× 3")
         editor.operationRows[0].resourcesText.includes("Review assembly skill")
