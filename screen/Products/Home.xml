@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.products.CatalogServices.get#CatalogAccess" out-map="access"/>
         <set field="canImport" from="access.capabilities.catalogEdit || access.capabilities.priceEdit || access.capabilities.supplierPriceEdit"/>
         <set field="emptyCatalog" from="!summary.total"/>
-        <set field="catalogTimeZone" from="String(ec.user.timeZone?.getID?.() || ec.user.timeZone || 'UTC')"/>
+        <set field="catalogTimeZone" from="ec.user.getTimeZone() || 'UTC'"/>
         <script><![CDATA[
             const count = value => (value == null ? '—' : ec.l10n.format(value, '#,##0'))
             counts = {active: count(summary.active), variants: count(summary.variants), missingPrice: count(summary.missingPrice),

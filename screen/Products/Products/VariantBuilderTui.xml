@@ -88,7 +88,6 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.products.CatalogServices.get#CatalogAccess" out-map="access"/>
         <service-call name="ironstone.products.CatalogServices.get#CatalogOptions" out-map="context"/>
         <set field="productTypeEnumId" from="productTypeEnumId || 'PtAsset'"/>
-        <set field="variantTypes" from="options.productTypes.filter(row =&gt; row.value !== 'PtVirtual')"/>
         <set field="rows" from="[]"/>
         <set field="results" from="[]"/>
         <if condition="productId">
@@ -113,7 +112,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="productTypeEnumId">
                         <default-field title="Variant type">
                             <drop-down allow-empty="false">
-                                <list-options list="variantTypes" key="${value}" text="${label}"/>
+                                <list-options list="options.variantTypes" key="${value}" text="${label}"/>
                             </drop-down>
                         </default-field>
                     </field>

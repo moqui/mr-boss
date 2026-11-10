@@ -57,7 +57,7 @@
 </div></template>
 <script>
 module.exports = {
-    data(){return {form:{productId:'',productTypeEnumId:'PtAsset',groups:[],copyFields:null,copyCategoryMembers:'N'},sourceOptions:[],groupOptions:[],copyFieldOptions:[],variantTypes:[{value:'PtAsset',label:'Asset'}],categoryCopyAllowed:false,filters:{},axes:[],axisX:'',axisY:'',rows:[],selected:[],revision:'',totalCount:0,pageIndex:0,pageSize:50,batchLimit:1000,busy:false,error:'',listView:false,results:[],summary:'',operationKey:'',pendingCount:0,operationTotal:0,resultPage:0,requestSeq:0,disposed:false,requestPath:null}},
+    data(){return {form:{productId:'',productTypeEnumId:'PtAsset',groups:[],copyFields:null,copyCategoryMembers:'N'},sourceOptions:[],groupOptions:[],copyFieldOptions:[],variantTypes:[{value:'PtAsset',label:'Asset'}],categoryCopyAllowed:false,filters:{},axes:[],axisX:'',axisY:'',rows:[],selected:[],revision:'',totalCount:0,pageIndex:0,pageSize:50,batchLimit:1000,busy:false,error:'',listView:false,results:[],summary:'',operationKey:'',pendingCount:0,operationTotal:0,resultPage:0,requestSeq:0,requestKind:'',disposed:false,requestPath:null}},
     computed:{screenPath(){return this.$root.basePath+'/'+this.$root.currentPathList.join('/')},phone(){return this.$q.screen.lt.sm},axisChoices(){return this.axes.map(a=>({value:a.enumId,label:a.description}))},extraAxes(){return this.axes.filter(a=>a.enumId!==this.axisX&&a.enumId!==this.axisY)},existingOnPage(){return this.rows.filter(r=>r.existingProductId).length}},
     methods:{
         async request(name,params,post,path){
@@ -69,11 +69,13 @@ module.exports = {
         },
         parameters(){const p={productId:this.form.productId,productTypeEnumId:this.form.productTypeEnumId,productFeatureGroupIds:JSON.stringify(this.form.groups||[]),copyCategoryMembers:this.form.copyCategoryMembers==='Y',filterFeatureIdsJson:JSON.stringify(Object.values(this.filters).filter(Boolean))};if(this.form.copyFields!==null)p.copyFieldsJson=JSON.stringify(this.form.copyFields);return p},
         // Every continuation, including failure and cleanup, belongs to the source and request that started it.
-        begin(){const owner={seq:++this.requestSeq,path:this.requestPath,productId:this.form.productId};this.busy=true;this.error='';return owner},
+        begin(kind){const owner={seq:++this.requestSeq,path:this.requestPath,productId:this.form.productId};this.requestKind=kind||'';this.busy=true;this.error='';return owner},
         current(owner){return !this.disposed&&owner.seq===this.requestSeq&&owner.path===this.screenPath&&owner.productId===this.form.productId},
         cancelRequests(){this.requestSeq++;this.busy=false;this.error=''},
         clearResults(){this.results=[];this.summary='';this.pendingCount=0;this.operationTotal=0;this.resultPage=0},
-        operationChanged(){this.cancelRequests();this.clearResults()},
+        // A typed key names another operation: its earlier results no longer apply, nor does a read or run of the old key.
+        // A preview or generate in flight keeps its own results.
+        operationChanged(){if(this.busy&&this.requestKind==='operation')this.cancelRequests();this.clearResults()},
         invalidate(){this.cancelRequests();this.revision='';this.selected=[]},
         sourceChanged(){this.invalidate();this.clearResults();this.operationKey='';this.rows=[];this.totalCount=0;this.sourceOptions=[];this.axes=[];this.groupOptions=[];this.copyFieldOptions=[];this.form.copyFields=null;this.form.groups=[];this.form.copyCategoryMembers='N';this.filters={};this.axisX='';this.axisY=''},
         async load(page,keep){
@@ -106,19 +108,19 @@ module.exports = {
             }catch(e){if(this.current(owner))this.error=String(e.message||e)}finally{if(this.current(owner))this.busy=false}
         },
         async queue(){
-            const owner=this.begin(),operationKey='variants-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),params=Object.assign(this.selectedParameters(),{operationKey});
+            const owner=this.begin('operation'),operationKey='variants-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),params=Object.assign(this.selectedParameters(),{operationKey});
             try{
                 const out=await this.request('queue',params,true,owner.path);if(!this.current(owner))return;
                 this.operationKey=operationKey;this.showResults(out);this.summary+=' · Operation '+operationKey;
             }catch(e){if(this.current(owner))this.error=String(e.message||e)}finally{if(this.current(owner))this.busy=false}
         },
         async readBatch(page){
-            const owner=this.begin(),params={operationKey:this.operationKey,pageIndex:page};
+            const owner=this.begin('operation'),params={operationKey:this.operationKey,pageIndex:page};
             try{const out=await this.request('batch',params,false,owner.path);if(this.current(owner))this.showResults(out)}
             catch(e){if(this.current(owner))this.error=String(e.message||e)}finally{if(this.current(owner))this.busy=false}
         },
         async runBatch(retryFailed){
-            const owner=this.begin(),params={operationKey:this.operationKey,retryFailed};
+            const owner=this.begin('operation'),params={operationKey:this.operationKey,retryFailed};
             try{const out=await this.request('run',params,true,owner.path);if(!this.current(owner))return;this.showResults(out);if(this.revision)await this.load(this.pageIndex,true)}
             catch(e){if(this.current(owner))this.error=String(e.message||e)}finally{if(this.current(owner))this.busy=false}
         },

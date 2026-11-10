@@ -160,6 +160,26 @@ feature("operation changes discard old results and prevent a delayed operation a
     }
 })
 
+feature("typing an operation key while variants generate keeps the generate result", {
+    expect() {
+        readyPreview()
+        page.getByRole("button", {name: "Generate selected", exact: true}).click()
+        page.evaluate(async () => {
+            confirmations.shift()(true)
+            await settle()
+            return true
+        })
+        page.fill("input[name=operationKey]", "operation-typed")
+        page.evaluate(async () => {
+            take("generate").resolve({json: {createdCount: 1, results: [{result: "created", productId: "A-SKU"}]}})
+            await settle()
+            return true
+        })
+        assert.equal(page.evaluate(() => vm.$refs.screen.results[0].productId), "A-SKU")
+        assert.equal(page.evaluate(() => vm.$refs.screen.summary.startsWith("1 created")), true)
+    }
+})
+
 feature("leaving the component invalidates callbacks instead of refreshing a different page", {
     expect() {
         readyPreview()

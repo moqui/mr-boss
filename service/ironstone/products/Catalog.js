@@ -648,11 +648,13 @@ function run(op, parameters) {
             if (variantIds && !variantIds.has(row.productId)) return false
             return true
         })
-        const exportAll = p.pageNoLimit === true || p.pageNoLimit === "true"
-        if (exportAll && productRows.length > 200)
-            throw new Error("Narrow product export to at most 200 matching products")
+        // the largest page, and the most an unpaged export may hold
+        const maxRows = 200,
+            exportAll = p.pageNoLimit === true
+        if (exportAll && productRows.length > maxRows)
+            throw new Error("Narrow product export to at most " + maxRows + " matching products")
         const pageIndex = exportAll ? 0 : Math.max(0, Number(p.pageIndex || 0)),
-            pageSize = exportAll ? 200 : Math.max(1, Math.min(200, Number(p.pageSize || 25)))
+            pageSize = exportAll ? maxRows : Math.max(1, Math.min(maxRows, Number(p.pageSize || 25)))
         if (p.orderByField === "-lastUpdatedStamp") productRows.sort((a, b) => ms(b.lastUpdatedStamp) - ms(a.lastUpdatedStamp))
         return {
             productList: productRows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize).map(row => ({
@@ -766,6 +768,8 @@ function run(op, parameters) {
             features: () => byOwner(P + "feature.ProductFeature").map(option("productFeatureId", "description")),
             dimensions: () => list("moqui.basic.UomDimensionType").map(option("uomDimensionTypeId", "description")),
             productTypes: () => lib.enumOptions("ProductType"),
+            // the types a generated variant may have: any but virtual
+            variantTypes: () => lib.enumOptions("ProductType").filter(row => row.value !== "PtVirtual"),
             idTypes: () => lib.enumOptions("ProductIdentificationType"),
             parties: () =>
                 (admin

@@ -27,16 +27,6 @@ function scopeFor(parameters) {
                   {issueRows: [], checkedCount: 0, issueCount: 0, incompleteCount: 0, valid: true},
                   call("mantle.product.CatalogCheckServices.get#CatalogChecks")
               )
-        if (catalogChecksRan && p.severity) {
-            result.issueRows = result.issueRows.filter(row => row.severity === p.severity)
-            result.issueCount = result.issueRows.length
-            result.incompleteCount = new Set(
-                result.issueRows.filter(row => row.severity === "error" && row.productId).map(row => row.productId)
-            ).size
-            result.missingPriceCount = new Set(
-                result.issueRows.filter(row => row.checkId === "prices" && row.severity === "warning").map(row => row.productId)
-            ).size
-        }
         return Object.assign({}, result, {
             appRoot: a.appRoot,
             catalogChecksRan,

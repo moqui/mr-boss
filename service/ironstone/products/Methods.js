@@ -379,8 +379,7 @@ function run(op, parameters) {
                 : {text: "Not released", color: "grey"}
         const operations = [...result.operationRows, ...result.releasedOperationRows],
             equipmentIds = [...new Set(operations.flatMap(row => (row.resources || []).map(resource => resource.assetProductId)).filter(Boolean))],
-            equipmentNames = new Map(rowsIn("mantle.product.Product", "productId", equipmentIds)
-                .filter(product => result.methodAccess.systemAdmin || result.methodAccess.ownerPartyIds.includes(product.ownerPartyId || "_NA_"))
+            equipmentNames = new Map(rowsIn("mantle.product.Product", "productId", local.visibleProductIds(equipmentIds))
                 .map(product => [product.productId, product.productName || product.productId])),
             skillNames = new Map(c.skillOptions.map(option => [option.value, option.label])),
             resourceLabel = resource => {

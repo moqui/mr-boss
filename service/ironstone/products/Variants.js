@@ -114,7 +114,7 @@ function preview(p) {
         copyCategoryMembers: s.args.copyCategoryMembers,
         categoryCopyAllowed: s.cfg.settings.copyCategoryMembers,
         copyFieldOptions: s.cfg.settings.copyFields.map(f => ({value: f, label: fieldLabels[f] || f})),
-        variantTypes: call(C + "get#CatalogOptions").options.productTypes.filter(r => r.value !== "PtVirtual")
+        variantTypes: call(C + "get#CatalogOptions", {optionNames: ["variantTypes"]}).options.variantTypes
     })
 }
 function selected(p) {
