@@ -1288,7 +1288,7 @@ INS-04 (drill).
     formatted.
 
 **Review Nov 10 (P6).** Fresh review of mr-moqui 64aabb1c, mr-mantle 47a6d628 and mr-boss 70304a0a/136f77f6; fixes mr-moqui
-599f0b65, mr-mantle 9b6fa188, the mr-boss review commit and this note (branch `ins/p6`).
+599f0b65, mr-mantle 9b6fa188, mr-boss fc1d926c and this note (branch `ins/p6`).
 - Checked and kept:
   - **`get#Drill`** (drill.rs): the definition is read as the viewer (`definitions::read`), the panel is run by
     `dashboard_frames_filtered` as its dashboard runs it, and the request gives only ids, a range, variable values, bucket
@@ -1305,8 +1305,8 @@ INS-04 (drill).
     available"; rows carry named columns, never the document body.
   - **The semantic guards**: in `execute_query_inner`, so a panel, Explore, a direct `run#Query`, the drill's breakdown, an
     alert and a schedule are all held to them. The unit guard is decided on the records (F-P6-5): with one currency in the
-    records no shipped panel changes (InsightsDashboards, InsightsHome's panels and the demo's dashboards run as before; the
-    review's additions fire only where two units are found). Ratio and nonadditive are static; a bounded page refuses totals,
+    records no shipped panel changes: every refusal needs two units found in the query's records, the review's additions
+    included (InsightsDashboards passes on the rebuilt binary; the other dashboards' specs were not run). Ratio and nonadditive are static; a bounded page refuses totals,
     reduce, groupBy and pivot.
   - **Business annotations**: the `business` source needs `org.moqui.report.annotation.business` (ADMIN only; no wildcard grant
     reaches it; `MONITOR_INGEST` does not write one; BOSS denies every ReportServices operation to the Insights groups, so an
@@ -1340,9 +1340,10 @@ INS-04 (drill).
     close it: a transition's artifact is the shared screen's location, so a deny for an Insights group would deny it in the
     owner's app too. `screen/Insights/Records.xml` now refuses, in its always-actions (which run before any transition or
     render below it), every path below a record screen but the `InsightsRecord` subscreen, with `RECORD_READ_ONLY`, for every
-    user. Probed as `insights.reader` on all ten mounts: the ten record contexts and the four `InsightsRecord` subscreens
-    render (qvt, tui, html), the menu data builds, and every owner tab, `facilityChoices`, `confirmationFile`,
-    `updateFacility`, `cancelOrder` and `approveOrder` is refused before it runs. A tabbed record screen opened without
+    user. Probed as `insights.reader`: the ten record contexts render in qvt (the four tabbed ones as `InsightsRecord`;
+    Customer360's also in tui and html), the menu data builds, and the owner tabs tried (twelve, of Customer360, Product360,
+    FacilityDetail and Supplier360), `facilityChoices`, `confirmationFile`, `updateFacility`, `cancelOrder` and `approveOrder`
+    are refused before they run. A tabbed record screen opened without
     `InsightsRecord` (its default tab is chosen before the app is known, F-P6-8) is refused too, where it was blank.
     InsightsRecords asserts a transition and a tab. Design §10's "As built" and the block comment in BossSetupData say so.
   - **R2** (medium, INS-03) The unit guard passed a sum beside the unit's group instead of under it (the raw `aggs` form:
