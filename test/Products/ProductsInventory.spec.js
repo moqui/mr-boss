@@ -144,6 +144,55 @@ feature("Products administrators and catalog editors cannot change Warehouse pol
         tracking.error.includes("stock-planner")
     }
 })
+feature("Commerce stock reads keep the store's facilities instead of all facilities of its organizations", {
+    when() {
+        const productId = "PRD_UI_COM_PRODUCT",
+            facilityId = "PRD_UI_COM_OUTSIDE"
+        as("john.doe", () => {
+            call("create#mantle.product.Product", {
+                productId,
+                productName: "Store facility scope example",
+                productTypeEnumId: "PtAsset",
+                ownerPartyId: "ORG_ZIZI_RETAIL",
+                amountUomId: "OTH_ea"
+            })
+            call("create#mantle.facility.Facility", {
+                facilityId,
+                facilityTypeEnumId: "FcTpWarehouse",
+                facilityName: "Outside the store's facilities",
+                ownerPartyId: "ORG_ZIZI_RETAIL"
+            })
+            for (const [stockFacilityId, quantity] of [["ZIRET_WH", 11], [facilityId, 777]])
+                call("create#mantle.product.asset.Asset", {
+                    assetId: "PRD_UI_COM_STOCK_" + stockFacilityId,
+                    assetTypeEnumId: "AstTpInventory",
+                    statusId: "AstAvailable",
+                    ownerPartyId: "ORG_ZIZI_RETAIL",
+                    productId,
+                    facilityId: stockFacilityId,
+                    hasQuantity: "Y",
+                    quantityOnHandTotal: quantity,
+                    availableToPromiseTotal: quantity
+                })
+        })
+        const commerce = as("commerce.storestaff", () => ({
+            scope: call(C + "get#SharedContext", {appRoot: "Commerce"}),
+            stock: call(I + "get#InventorySummary", {appRoot: "Commerce", productId}),
+            direct: invoke(I + "get#InventorySummary", {appRoot: "Commerce", productId, facilityId})
+        }))
+        const catalog = as("catalog.method.read", () => call(I + "get#InventorySummary", {productId, facilityId}))
+        return {commerce, catalog, facilityId}
+    },
+    then({commerce, catalog, facilityId}) {
+        commerce.scope.facilityIds.includes("ZIRET_WH")
+        commerce.stock.stockRows.some(row => row.facilityId === "ZIRET_WH" && row.onHand === 11)
+        commerce.stock.stockRows.every(row => commerce.scope.facilityIds.includes(row.facilityId))
+        !commerce.stock.facilityOptions.some(row => row.value === facilityId)
+        commerce.direct.error.includes("Facility is not available")
+        catalog.stockRows.some(row => row.facilityId === facilityId && row.onHand === 777)
+    }
+})
+
 const paths = [
     ["Products/Product360/Stock", scope],
     ["Products/Product360/Stock/Projection", scope],

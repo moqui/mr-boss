@@ -27,9 +27,9 @@ function run(op, parameters) {
         const internal = new Set(rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(role => role.partyId)),
             owners = capabilities.systemAdmin ? [...internal] : shared.ownerPartyIds.filter(id => internal.has(id))
         // Warehouse's mount: the user's Warehouse facilities (facilityIds of its get#SharedContext branch, null for every one);
-        // Customer Service's: the customer-serving facilities (impl-customer-service P3)
+        // Customer Service's: the customer-serving facilities (impl-customer-service P3); Commerce's: its stores' facilities.
         const warehouseRoot = shared.appRoot === "Warehouse"
-        const scopedRoot = warehouseRoot || shared.appRoot === "CustomerService"
+        const scopedRoot = warehouseRoot || shared.appRoot === "CustomerService" || shared.appRoot === "Commerce"
         let facilities =
             scopedRoot && shared.facilityIds != null
                 ? rowsIn(F + "Facility", "facilityId", shared.facilityIds)
