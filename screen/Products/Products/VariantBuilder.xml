@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Build variants" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Build variants" default-menu-include="false" render-modes="vue,qvue,tui,html" server-static="vue,qvue">
     <parameter name="productId"/>
     <transition name="preview" method="get" read-only="true">
         <actions>
@@ -54,7 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
         <render-mode>
             <text type="qvue" location="component://mr-boss/screen/Products/Products/VariantBuilder.qvue" template="false"/>
             <text type="tui"><![CDATA[${JSON.stringify([{t:'dynamicContainer',id:'VariantBuilderTui',url:sri.buildUrl('../VariantBuilderTui').addParameters({productId:productId||null}).getUrlWithParams()}])}]]></text>
-            <text type="html,qvt"><![CDATA[<p><a href="VariantBuilderTui?productId=${productId||''}">Open variant setup and combination list</a></p>]]></text>
+            <text type="html,qvt"><![CDATA[<p><a href="${sri.buildUrl('../VariantBuilderTui').addParameters({productId:productId||null}).getUrlWithParams()}">Open variant setup and combination list</a></p>]]></text>
         </render-mode>
     </widgets>
 </screen>

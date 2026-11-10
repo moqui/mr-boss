@@ -839,9 +839,9 @@ research for this plan does not advance live coverage. Record actual modes and r
 | PRD-01 — Workday/find | exercised / partial | Home/create/detail navigation; dark desktop and 390px; actual embedded-TUI keyboard launch. Saved finds, exports and shell recovery continue | PRD-UI-001; batch 1 |
 | PRD-02 — Create/clone/lifecycle | exercised / partial | Created/activated disposable draft; canceled activation; duplicate-ID recovery retained input; identifier/party golden path passed. Clone/delete/obsolete continuations remain | batch 1 |
 | PRD-03 — Master record | exercised / partial | Summary/header and standalone identifiers/parties exercised; operational tabs incorrectly advertised. Remaining master tabs and continuations PRD-07, 11–16, 18 stay open | PRD-UI-002; batch 1 |
-| PRD-04 — Categories | pending | Not executed; content continuation PRD-16 | — |
-| PRD-05 — Features/groups | pending | Not executed; combinations continue PRD-06 | — |
-| PRD-06 — Variants | pending | Not executed | — |
+| PRD-04 — Categories | exercised / partial | Created category; moved one dated edge, retained second parent/tree occurrence; keyboard move cancellation observed. Delete/cycle and content continuation remain | batch 2 |
+| PRD-05 — Features/groups | exercised / partial | Created feature/group and saved membership through UI. Interaction/refusal/delete cases remain | batch 2 |
+| PRD-06 — Variants | exercised / partial | Browser preview/generate/durable resume and settings limit exercised; mounted response-order recovery verified. Standard fallback works; actual TUI operations remain | PRD-UI-003, 008; batch 2 |
 | PRD-07 — Sales prices/bulk | pending | Not executed | — |
 | PRD-08 — Price lists/rules | pending | Not executed; output PRD-10 | — |
 | PRD-09 — Explain/history | pending | Not executed; cost basis/margin PRD-14/15 | — |
@@ -863,8 +863,8 @@ research for this plan does not advance live coverage. Record actual modes and r
 
 ### Findings register
 
-No interactive findings yet. Assign `PRD-UI-001` onward only after reproducing an issue or making an explicit design
-judgment. Record severity, actor/activity step, route, theme/measured geometry, reproduction, observed impact,
+Assign finding IDs only after reproducing an issue or making an explicit design judgment. Record severity,
+actor/activity step, route, theme/measured geometry, reproduction, observed impact,
 evidence, owning component, correction and retest, in the same columns the Projects and drawers reviews use. Kind is
 observed, mounted reproduction, measured or source-confirmed. P1 blocks work, exposes restricted data or makes
 essential information unusable; P2 materially misleads or impedes work; P3 is a localized refinement. Keep static
@@ -874,6 +874,9 @@ leads separate until investigated.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | PRD-UI-001 / observed / P3 | PRD-01 Home card | catalog.edit; Material light/dark 1920×1080, dark 390×844; TUI keyboard | Ending-in-30-days title clipped at desktop; meaning and timestamp zone unclear | Home CUA captures; screens-batch1.txt | BOSS | Shortened to Ending soon, visible sales-discontinuation explanation and zone | Browser dark phone and live TUI show complete label/caption; desktop light capture follows |
 | PRD-UI-002 / observed / P2 | PRD-03, 23–24 Product360 navigation | catalog.edit; ordinary asset; Material dark 1920×1080 | Replenishment/Purchase history and type-inapplicable tabs appear; clicking Replenishment reaches Screen not found | CUA observation on disposable UI_PRD_20261109 | Framework menu | Investigating shared child-condition evaluation | Open; direct route refused, no unauthorized read observed |
+| PRD-UI-003 / mounted reproduction / P2 | PRD-06 preview/generate/batch | Actual VariantBuilder QVue on native offline client | Delayed success/failure/finally overwrites replacement source/operation; confirmation submits changed selection; unmount continuation requests destination route | variant-responses-before/after; four failing baseline cases | BOSS | Captured source/path/request ownership, confirmation snapshot and disposal; clears stale operation/results | Four focused mounted regressions pass; browser variant walk 2/2 |
+| PRD-UI-008 / observed / P2 | PRD-06 Standard entry | catalog.edit; /apps variant builder | Authored HTML fallback unreachable because html was excluded; HTTP 404 | products-standard-variant-fallback.log | BOSS | Admit existing HTML fallback and encode product context with sri URL builder | Native request 200 plus targeted HTML regression; no new workflow |
+| PRD-UI-009 / mounted reproduction / P3 | PRD-03 bulk action visibility | catalog.price.edit; Products list | Price-only editor sees Category/Feature bulk controls despite lacking catalog edit; services still refuse writes | products-narrow-actions local evidence | Framework/BOSS | Open at requested pause; per-action condition support was assessed but no implementation started | Do not count as corrected |
 
 ### Static leads
 
@@ -933,6 +936,18 @@ Checks before this batch commit: ProductsCatalog/ProductsTaxonomy/ProductsVarian
 1/1; screen lint 1,280 files, zero parse failures, 87 existing idiom/hazard sites and no new Home site. Coordinator
 reviewed the small Home change. Full framework/apps gates are explicitly deferred until the end of all seven waves.
 No live activity is closed by these bounded checks; the ledger names the remaining continuations.
+
+**Batch 2, 2026-11-09 — taxonomy and variants:** fixed PRD-UI-003 and PRD-UI-008 after failing baseline
+reproductions. Actual QVue deferred-response checks cover obsolete success/failure/cleanup, confirmation source
+replacement, operation-key replacement and unmount. The existing local request-ownership pattern was reused; no shared
+API was introduced. Standard's authored fallback is now reachable and encodes the product context.
+
+Checks: ProductsCatalog/Taxonomy/Variants 29/29; updated ProductsVariants 9/9 (2.1s feature time), offline
+ProductsVariantResponses 4/4 (2.7s), authorized ProductsTaxonomyWalk/ProductsVariantWalk 3/3, native Standard request
+1/1. Screen lint has zero parse failures. Coordinator and pricing/engineering peers reviewed the changes without
+blocking findings. Actual terminal variant selection/generation and remaining taxonomy recovery cases stay open.
+ProductsVariantWalk changed the disposable Services variant batch limit from 1000 to 100; the entire disposable
+runtime is retained separately at pause. PRD-UI-009 was reproduced but not implemented before the requested pause.
 
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.

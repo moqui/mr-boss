@@ -298,3 +298,21 @@ feature("blank optional XML form fields retain the previewed copy policy", {
         out.operationKey == "B4_XML_RUN"
     }
 })
+
+feature("the Standard builder fallback reaches the XML twin with encoded product context", {
+    when() {
+        return as("catalog.edit", () => {
+            const productId = 'BOSS_PRD_VIRT&<review>"'
+            const rendered = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml")
+                .renderMode("html").render("Products/VariantBuilder", {productId}, null)
+            return {rendered, productId}
+        })
+    },
+    then({rendered, productId}) {
+        rendered.status == 200
+        rendered.errorMessages.length == 0
+        rendered.output.includes("Open variant setup and combination list")
+        rendered.output.includes("VariantBuilderTui?productId=" + encodeURIComponent(productId))
+        !rendered.output.includes(productId)
+    }
+})

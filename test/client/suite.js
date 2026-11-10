@@ -7,6 +7,7 @@ suite(
         "ProjectsResourcesAsync",
         "AccountingReceivablesWalk",
         "ProductsWalk",
+        "ProductsVariantResponses",
         "WarehouseReceivingWalk",
         "ManufacturingWorkOrdersWalk",
         "PurchasingOrdersWalk",
