@@ -316,3 +316,27 @@ feature("the Standard builder fallback reaches the XML twin with encoded product
         !rendered.output.includes(productId)
     }
 })
+
+feature("the terminal setup shows its resolved asset type and only nonvirtual choices", {
+    when() {
+        return as("catalog.edit", () => {
+            const rendered = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml")
+                .renderMode("tui").render("Products/VariantBuilderTui", {productId: "BOSS_PRD_VIRT"}, null)
+            let picker = null
+            function visit(value) {
+                if (!value || typeof value !== "object") return
+                if (value.name === "productTypeEnumId" && value.w?.kind === "dropDown") picker = value.w
+                for (const child of Object.values(value)) if (child && typeof child === "object") visit(child)
+            }
+            visit(JSON.parse(rendered.output))
+            return {rendered, picker}
+        })
+    },
+    then({rendered, picker}) {
+        rendered.status == 200
+        rendered.errorMessages.length == 0
+        picker.value == "PtAsset"
+        picker.options.some(option => option.value === "PtAsset")
+        picker.options.every(option => option.value !== "PtVirtual")
+    }
+})
