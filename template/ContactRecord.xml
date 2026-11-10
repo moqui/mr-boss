@@ -491,7 +491,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <form-list name="ContactMechList" list="contactMechList" skip-form="true" paginate="false" skip-header="true">
                                                     <field name="typeLabel"><default-field title="Kind"><display style="m-muted"/></default-field></field>
                                                     <field name="value"><conditional-field condition="linkHtml" title="Address or number">
-                                                            <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text></render-mode>
+                                                            <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(value ?? '')})}]]></text></render-mode>
                                                         </conditional-field>
                                                         <default-field title="Address or number"><display style="${expired ? 'text-strike m-muted' : (isPrimary ? 'text-weight-medium' : '')}"/></default-field></field>
                                                     <field name="detailText"><default-field title="Purpose"><display style="text-caption m-muted"/></default-field></field>
@@ -820,7 +820,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <form-list name="ContactEventList" list="eventList" skip-form="true" paginate="false">
                                 <field name="whenText"><default-field title="When"><display style="${upcoming ? 'text-weight-medium' : 'm-muted'}"/></default-field></field>
                                 <field name="title"><default-field title="Event">
-                                    <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(url ? {t: "link", text: String(title ?? ''), url: url} : {t: "text", text: String(title ?? '')})}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="statusText"><default-field title="Status"><display/></default-field></field>
                             </form-list>
@@ -835,7 +835,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box><box-header title="Tasks"/><box-body-nopad>
                             <form-list name="ContactTaskList" list="taskList" skip-form="true" paginate="false">
                                 <field name="workEffortName"><default-field title="Task">
-                                    <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(url ? {t: "link", text: String(workEffortName ?? ''), url: url} : {t: "text", text: String(workEffortName ?? '')})}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="statusText"><default-field title="Status"><display/></default-field></field>
                                 <field name="dueText"><default-field title="Due"><display/></default-field></field>
@@ -852,7 +852,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box><box-header title="Requests"/><box-body-nopad>
                             <form-list name="ContactRequestList" list="requestList" skip-form="true" paginate="false">
                                 <field name="requestName"><default-field title="Request">
-                                    <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text></render-mode>
+                                    <render-mode><text type="qvt"><![CDATA[${linkHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(url ? {t: "link", text: String(requestName ?? ''), url: url} : {t: "text", text: String(requestName ?? '')})}]]></text></render-mode>
                                 </default-field></field>
                                 <field name="statusText"><default-field title="Status"><display/></default-field></field>
                                 <field name="roleText"><default-field title="Role"><display style="text-caption"/></default-field></field>

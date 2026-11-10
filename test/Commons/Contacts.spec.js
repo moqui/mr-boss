@@ -422,6 +422,20 @@ feature("the contact info shows each kind's primary first, as Mantle's get#Party
     },
 })
 
+// the record's contact info has a qvt link template and its tui twin (template/ContactRecord.xml): the terminal shows the
+// address, not the kind and purpose alone (its one tui render)
+feature("in the terminal the contact info shows each address beside its kind", {
+    when() {
+        const str = ec.screen.makeTest().rootScreen(webroot).renderMode("tui").render("apps/Commons/Contacts/ContactDetail", { partyId: MARY }, null)
+        ec.message.clearErrors()
+        return { output: String(str.output || "") }
+    },
+    then({ output }) {
+        !/Error rendering|Exception in render/.test(output)
+        output.includes('"t":"text","text":"mary.doe@example.com"')
+    },
+})
+
 feature("john.doe as a contact admin edits a directory party; the star of his default book", {
     when() {
         const add = post("Contacts/ContactDetail/contactInfoStore", { partyId: PAT, kind: "web", webAddress: "quinnco.example", webPurposeId: "WebUrlPrimary" })
