@@ -110,7 +110,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box><box-header title="Linked pages"/><box-body-nopad>
                     <form-list name="KnowledgeTuiLinkedPages" list="linkedList" skip-form="true" paginate="false">
                         <field name="title"><default-field title="Page">
-                            <link url="${knowledgeUrl}" link-type="anchor" text="${title}" parameter-map="{wikiSpaceId:linkSpaceId, pagePath:linkPath}"/></default-field></field>
+                            <link url="${knowledgeUrl}" link-type="anchor" text="${title}" parameter-map="{wikiSpaceId:linkSpaceId, pagePath:linkPath, wikiPageId:''}"/></default-field></field>
                         <field name="spaceName"><default-field title="Space"><display/></default-field></field>
                     </form-list>
                 </box-body-nopad></container-box>
@@ -120,7 +120,7 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box><box-header title="Spaces"/><box-body-nopad>
             <form-list name="KnowledgeTuiSpaces" list="spaceList" skip-form="true" paginate="false">
                 <field name="description"><default-field title="Space">
-                    <link url="${knowledgeUrl}" link-type="anchor" text="${description}" parameter-map="{wikiSpaceId:spaceId}"/></default-field></field>
+                    <link url="${knowledgeUrl}" link-type="anchor" text="${description}" parameter-map="{wikiSpaceId:spaceId, pagePath:'', wikiPageId:''}"/></default-field></field>
                 <field name="storageText"><default-field title="Storage"><display/></default-field></field>
                 <field name="openText"><default-field title=""><display style="text-caption"/></default-field></field>
             </form-list>
@@ -131,7 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="KnowledgeTuiPage" condition="page"><widgets>
             <container style="row items-center q-gutter-xs q-mt-md">
                 <section-iterate name="KnowledgeTuiCrumbs" list="crumbList" entry="crumb"><widgets>
-                    <link url="${knowledgeUrl}" link-type="anchor" text="${crumb.label}" parameter-map="{wikiSpaceId:page.wikiSpaceId, pagePath:crumb.crumbPath}"/>
+                    <link url="${knowledgeUrl}" link-type="anchor" text="${crumb.label}" parameter-map="{wikiSpaceId:page.wikiSpaceId, pagePath:crumb.crumbPath, wikiPageId:''}"/>
                 </widgets></section-iterate>
             </container>
             <label type="h5" text="${page.title || page.pageName || page.spaceDescription}"/>
@@ -145,7 +145,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container-box><box-header title="Pages under it"/><box-body-nopad>
                 <form-list name="KnowledgeTuiChildren" list="childList" skip-form="true" paginate="false">
                     <field name="name"><default-field title="Page">
-                        <link url="${knowledgeUrl}" link-type="anchor" text="${name}" parameter-map="{wikiSpaceId:childSpaceId, pagePath:childPath}"/></default-field></field>
+                        <link url="${knowledgeUrl}" link-type="anchor" text="${name}" parameter-map="{wikiSpaceId:childSpaceId, pagePath:childPath, wikiPageId:''}"/></default-field></field>
                     <field name="restrictedText"><default-field title=""><display style="text-caption"/></default-field></field>
                 </form-list>
             </box-body-nopad></container-box>
