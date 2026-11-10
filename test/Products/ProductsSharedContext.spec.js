@@ -162,6 +162,26 @@ feature("Product360 keeps its tab and link context when a request supplies forge
         const rendered = r.mode === "tui" ? JSON.stringify(JSON.parse(r.output).c) : r.output
         !rendered.includes("//Accounting/Bad")
         !/Error rendering|Exception in render/.test(r.output)
+        // html renders the whole path, with Product360's tab bar: only the server-derived tabs, none from another app
+        // and none for another product type (qvt and the terminal render the tab's own level here)
+        r.mode !== "html" || rendered.includes("Product360/Features")
+        r.mode !== "html" || !/Product360\/(Replenishment|PurchaseHistory|KitComponents|Equipment|PaidAccess)/.test(rendered)
+    }
+})
+feature("Product360's qvt level draws its tabs from the server-derived list and follows the active path in the browser", {
+    when() {
+        return as("catalog.reader", false, () =>
+            ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml").renderMode("qvt").withStaticData()
+                .render("Products/Product360.qvt", {productId: "BOSS_PRD_OWN"}, null))
+    },
+    then(r) {
+        r.status == 200
+        r.errorMessages.length == 0
+        r.output.includes('<q-tab name="Features"')
+        !/<q-tab name="(Replenishment|PurchaseHistory|KitComponents|Equipment|PaidAccess)"/.test(r.output)
+        r.output.includes(":model-value=\"$root.currentPathList[$root.currentPathList.lastIndexOf('Product360') + 1]\"")
+        r.output.includes("<m-subscreens-active>")
+        !r.output.includes("<m-subscreens-tabs>")
     }
 })
 feature("paid-access writes stay in Commerce even when a holder calls the read-only Products mount", {

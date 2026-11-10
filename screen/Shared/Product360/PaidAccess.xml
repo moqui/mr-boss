@@ -24,8 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Paid access" default-menu-index="21">
     <condition>
-        <!-- Products shows it for a digital product only (the one kind Shop sells as paid access) -->
-        <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('PaidAccess') &amp;&amp; (appRoot == 'Commerce' || product?.productTypeEnumId == 'PtDigital')</expression>
+        <!-- Product360 admits it in Commerce, and elsewhere for a digital product only (the one kind Shop sells as paid access) -->
+        <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('PaidAccess')</expression>
     </condition>
     <transition name="savePaidAccess">
         <actions>

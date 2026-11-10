@@ -38,6 +38,10 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.products.CatalogServices.get#CatalogOptions" out-map="context"/>
             <set field="product" from="detail.product"/>
             <set field="canEdit" from="detail.canEdit"/>
+            <!-- the tabs that apply to this product's type: the tab bar and each tab screen's condition read this one list -->
+            <set field="product360Tabs" from="product360Tabs.filter(tab =&gt; tab === 'Equipment' ? product?.assetTypeEnumId === 'AstTpEquipment'
+                    : tab === 'KitComponents' ? product?.productTypeEnumId === 'PtPickAssembly'
+                    : tab === 'PaidAccess' ? appRoot == 'Commerce' || product?.productTypeEnumId == 'PtDigital' : true)"/>
         </if>
     </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/CatalogChoiceTransitions.xml"/>
@@ -383,7 +387,32 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-box>
                     </widgets>
                 </section>
-                <subscreens-panel id="ProductTabs" type="tab"/>
+                <!-- As in Moqui Java a menu lists every subscreen; the tabs here are the server-derived product360Tabs. -->
+                <section name="ProductTabs">
+                    <actions>
+                        <set field="productTabItems" from="Array.from(sri.getMenuItems() || []).filter(item =&gt; product360Tabs.includes(item.name))"/>
+                    </actions>
+                    <widgets>
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<div id="ProductTabs"><q-tabs dense no-caps align="left" narrow-indicator inline-label class="text-grey-7" active-color="primary" indicator-color="primary" :model-value="$root.currentPathList[$root.currentPathList.lastIndexOf('Product360') + 1]">${productTabItems.map(item => '<q-tab name="' + WebUtilities.encodeHtml(item.name) + '" label="' + WebUtilities.encodeHtml(item.title || item.name) + '" @click.prevent="$root.setUrl($root.getLinkPath(' + WebUtilities.encodeHtml(JSON.stringify(item.url)) + '))"></q-tab>').join('')}</q-tabs><q-separator class="q-mb-md"></q-separator></div>]]></text>
+                        </render-mode>
+                        <section name="ProductTabLinks" condition="sri.getRenderMode() !== 'qvt'">
+                            <widgets>
+                                <container id="ProductTabs" style="row q-gutter-xs q-mb-sm">
+                                    <section-iterate name="ProductTab" list="productTabItems" entry="tab">
+                                        <widgets>
+                                            <section name="ProductTabActive" condition="tab.inPath">
+                                                <widgets><link url="${tab.url}" url-type="plain" link-type="anchor-button" btn-type="primary" text="${tab.title || tab.name}"/></widgets>
+                                                <fail-widgets><link url="${tab.url}" url-type="plain" link-type="anchor-button" text="${tab.title || tab.name}"/></fail-widgets>
+                                            </section>
+                                        </widgets>
+                                    </section-iterate>
+                                </container>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+                <subscreens-active/>
             </widgets>
         </section>
         <section name="Unavailable" condition="appRoot != 'Accounting' &amp;&amp; !productFound">

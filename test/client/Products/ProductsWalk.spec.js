@@ -11,9 +11,14 @@ feature("a catalog editor creates and activates a draft, then assigns an identif
         page.waitForURL(/Product360/)
         page.text().includes("Browser catalog product")
         page.getByRole("button", {name: "Activate", exact: true}).click()
+        page.getByRole("dialog").getByRole("button", {name: "Confirm", exact: true}).click()
         // an active product has no Activate action (Discontinue is in its More menu)
-        page.waitFor(() => !Array.from(document.querySelectorAll("button")).some(button => button.innerText.trim() === "Activate"))
-        page.goto("/qapps/Products/Products/Product360/Identifiers?productId=" + id)
+        page.waitFor(() => !document.querySelector("[role=dialog]") &&
+            !Array.from(document.querySelectorAll("button")).some(button => button.innerText.trim() === "Activate"))
+        // the product's tab bar is Product360's own list: an asset has no kit, equipment or other app's tabs
+        page.getByRole("tab", {name: "Identifiers", exact: true}).click()
+        page.waitForURL(/Product360\/Identifiers/)
+        page.getByRole("tab", {name: "Kit components", exact: true}).count() == 0
         page.getByRole("button", {name: "Add identifier", exact: true}).click()
         const dialog = page.getByRole("dialog")
         dialog.getByLabel("Type", {exact: true}).click()
