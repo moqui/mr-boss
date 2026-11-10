@@ -142,7 +142,7 @@ along with this software (see the LICENSE.md file). If not, see
             <box-body-nopad>
                 <form-list name="ConfigurationSources" list="sources" skip-form="true" paginate="false">
                     <field name="title"><default-field title="Setting"><display/></default-field></field>
-                    <field name="settingKey"><default-field title="Key"><display text="${propertyName || settingKey}"/></default-field></field>
+                    <field name="settingKey"><default-field title="Key"><display text="${propertyName || confAttribute || settingKey}"/></default-field></field>
                     <field name="shownValue"><default-field title="Effective value"><display/></default-field></field>
                     <field name="sourceText"><default-field title="From"><display/></default-field></field>
                     <field name="editText"><default-field title="Changed"><display/></default-field></field>

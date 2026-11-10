@@ -2231,6 +2231,154 @@ ADM-CONNECTIONS, ADM-LIFECYCLE (the notice).
 - **Usable when:** an OIDC provider is configured, tested and enabled, maps a remote role to a Projects bundle, and is
   disabled again by a changed issuer until retested; a sign-in from a new browser sends one notice.
 
+**Built Nov 10 (P10).**
+- mr-moqui (Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it):
+  - Rust, `crates/moqui-core/src/service/sso.rs` (the sign-in's account sync, which writes with authorization off, so the security
+    EECAs skip it): an existing account with no provider id is linked only under the flow's rule (`link_allowed`: `AflVerifiedEmail`,
+    the provider's verified email equal to the account's; never the username alone; never an account in a privileged group or in a
+    group granting a sealed permission); a role map or default group never gives such a group (`sso_may_give`, logged and passed
+    over); the sync ends only memberships in the groups the flow's role maps name. `check#Flow` (new, `org.moqui.sso.AuthServices`):
+    the start of a login for a flow enabled or not, nothing kept, for `ADMIN_CONNECTION_MANAGE` or `ADMIN_ACCESS_MANAGE`.
+    `service/sign_in_policy.rs` (new): `ConfigurationServices.get#SignInPolicyValues`, a fixed list of 13 nonsecret conf attributes
+    as the server runs with them. `moqui-host` `test_cmd/fixture.rs`: `moqui test` installs the SSO client as a server does.
+  - `entity/SecurityEntities.xml`: `AuthFlow` gains `accountLinkEnumId` (the `AuthFlowAccountLink` enumerations `AflNever`,
+    `AflVerifiedEmail`), `testedConfigHash`, `testedDate`, `testedByUserId`; the audit log on `AuthFlow.defaultUserGroupId` and
+    `accountLinkEnumId`, the client id and endpoints of `OidcFlow`, `OauthFlow` and `SamlFlow`, and `AuthFlowRoleMap.userGroupId`.
+    `entity/ServerEntities.xml`: `InstanceSetting.confAttribute`. `entity/Security.eecas.xml` (appended): `UserLoginHistoryNewDevice`.
+  - `service/org/moqui/admin/ConfigurationServices.xml` (appended, its bodies in the new `ConfigurationProviders.js`):
+    - `find#IdentityProviders` (the list with type, readiness and callback; with `authFlowId` the provider's configuration, each
+      secret as `secretSet` only, its mappings, its revision and its forms' options);
+    - `store#IdentityProvider` (a new OIDC or OAuth provider, saved disabled, or changes at the revision read: the configuration
+      with `ADMIN_CONNECTION_MANAGE`; the role mappings, the default group, the link rule and enabling with `ADMIN_ACCESS_MANAGE`;
+      a mapped group by the grant proposal's rules for the actor and never privileged or granting a sealed permission; the
+      endpoint-change rule; enabling only with a passing test of the configuration as it is, role mappings that hold and no linked
+      account holding access beyond the actor's; disabling keeps the administration path; `STALE_REVISION`, `PRIVILEGED_GROUP`,
+      `SEALED_PERMISSION`, `UNREGISTERED_BUNDLE`, `NOT_DELEGABLE`, `TEST_REQUIRED`, `HELD_BEYOND`, `ADMINISTRATION_PATH`,
+      `UNSUPPORTED_TYPE`, `UNSUPPORTED_PROVIDER`, `ADVANCED_MAPPING`);
+    - `test#IdentityProvider` (the configuration is complete, the mapped groups still hold, a sign-in can start through
+      `check#Flow`; a pass marked for the configuration's fingerprint, a failure clears it; a test identity's roles previewed).
+    `ConfigurationSettings.js`: a setting naming a `confAttribute` takes its value from `get#SignInPolicyValues`;
+    `get#EffectiveSettings` gives an `ADMIN_ACCESS_VIEW` holder the sign-in groups only.
+  - `AccessServices.xml` (appended) with `AccessSignIn.js` (new): `preview#GroupSignInRules`, the lockout preview (members, members
+    with no confirmed factor, whether the actor's address is admitted, the administration path; counts only). `Access.js`:
+    `find#Groups` rows gain `ipAllowed` and `canChange`; `lib` gains `proposalBundles`, `validIpAllowed`, `find`, `identity`.
+  - `IdentityServices.xml` (appended) with `IdentityNewDevice.js` (new): `notify#NewDeviceSignIn`. `Identity.js`: the
+    administration path takes `disabledFlowIds`, and an inbound flow is no sign-in path.
+  - Data: `AdminConfigurationData.xml` (appended: the `AdminIdentityProviderServices` grant naming the three services; 13
+    `InstanceSetting` rows of the group Sign-in policy); `SecurityTypeData.xml` (a third `AdminAccessServices` member row,
+    `preview#GroupSignInRules`); `MoquiSetupData.xml` (appended: the `AccountSignIn` topic and the `ACCOUNT_SIGN_IN` template);
+    `screen/AccountSignInEmail.xml` (new).
+  - Docs: Attack-Surface (the provider services, the sign-in's bounds, the policy values, the notice); Parity-Diffs (P8c-18,
+    P8c-19); Remaining-Work's `org.moqui.admin` row.
+- BOSS:
+  - Screens: `Admin/Security.xml` (new area, menu 4: SignInPolicy, IdentityProviders, IdentityProviderDetail);
+    `Security/SignInPolicy.xml` (EffectiveSignInPolicy; GroupSignInRules with Change opening the group's rules, the review and
+    Save with its confirmation); `Security/IdentityProviders.xml` (ProviderFind, ProviderList, NewProvider);
+    `Security/IdentityProviderDetail.xml` (record header with one primary by state: Test, then Enable, Disable under More;
+    ProviderConfiguration, a form per type; IdentityMappings with the link rule; RoleMappings with the default group;
+    ProviderCheck). `Settings/InstanceSettings.xml`: a conf attribute shown as a setting's key.
+  - `Admin.js`: the `security` area and the three link paths. No new `ironstone` service, so the client deny pattern is unchanged.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_SECURITY` (denied to the root group; the access, configuration and integration
+    administrators and the administrator) and the `AccountSignIn` topic's link to Commons Account. BossUsersDemoData unchanged.
+- Specs: framework `test/AdminIdentityProviders` (3 features, 0.6 s on the Debug binary: a role mapping to a privileged group, by
+  a member too, to a sealed grant, to an unregistered group and as the default group refused and nothing written, by the
+  integration administrator an error, a registered bundle mapped and its removal audited; a changed endpoint clears the secret
+  and disables, the secret re-entered kept, enabling refused untested, by the integration administrator and while a linked
+  administrator signs in by a provider, a passing test then enabling, the provider in the administration path, no answer holding
+  the secret; the policy's 13 rules read only, for the access administrator the sign-in groups only, and the lockout preview);
+  `test/AdminNewDevice` (1 feature, 0.07 s: through the EECA, none for a failed sign-in or a known client, one for a new client,
+  none again from its network, another network new, a first sign-in none, a client from before the window new, another
+  account's visit refused, the service not callable by a user). BOSS `test/Admin/AdminSecurity` (3 features, 1.2 s on the Debug
+  binary: SignInPolicy's one qvt render with the review of a change; a provider started, configured, mapped, tested and enabled
+  through the transitions, each administrator refused the other's part and the reader the area; IdentityProviders' and
+  IdentityProviderDetail's one qvt render each, the secret in neither). `AdminAccess` changed: the `security` capability for the
+  three administrators and the administrator, and Security in the administrator's and ADMIN's menus. Cargo: `service::sso`
+  (two new tests: linking, and the groups a sign-in gives and ends; the fixture links by verified email) and
+  `service::sign_in_policy`. Acceptance, written and not run: `acceptance/Admin/AdminSecurityUsable` (4 features, the "usable
+  when"; its OIDC test reads a public discovery document, so it needs the network).
+- Tests run (the worktree's Debug binary and runtime): framework AdminIdentityProviders, AdminNewDevice, AdminConfiguration,
+  AdminAccessServices, AdminAccessCapabilities, AdminSessions 20 of 20; mr-boss AdminSecurity, AdminAccess, AdminSettings,
+  AdminRegistries, AdminGroups, AdminCapabilities, AdminUsers, ProjectsAccess 36 of 36; `cargo test -p moqui-core --lib` for
+  `service::sso` and `service::sign_in_policy` 14 of 14; `cargo test -p moqui-host --test it -- sso` 2 of 2; `moqui lint --screens`
+  132 flagged sites, as master. By hand, not kept: SignInPolicy (qvt, tui, html; with a review; as the configuration and the
+  integration administrator), IdentityProviders (tui, html; as the configuration administrator, not available),
+  IdentityProviderDetail (qvt, tui, html; an OIDC and a SAML provider; as the integration administrator; a missing one), an OIDC
+  test against an unreachable issuer and a SAML test (each failed with its reason), the notice's email body, and three real
+  sign-ins as john.doe on a served test database (Firefox, a first sign-in: none; Chrome a minute later: one notice; Chrome
+  again: none). Prettier and rustfmt clean on the changed files. Not run: `./moq test-framework`, `./moq test-apps`, the
+  acceptance suite, the rest of cargo; no browser.
+- Inventories: none (the forms derive from Tools' Security screens and the framework's AuthFlow records, outside ss-inventory
+  and usl-inventory).
+- Design edits: design-admin §1.1 (the provider change in the administration path), §4 Sessions (the notice as built), §6
+  SignInPolicy, IdentityProviders and IdentityProviderDetail (as built), §16 (the notice's row), §17.2 (IdentityServices,
+  AccessServices, ConfigurationServices, the provider records), §19 Q6.
+- Findings (provisional, numbered by the lead):
+  - **F-P10-1** The sign-in's account sync (sso.rs, as Java's) writes with authorization off, which the privileged-group and
+    sealed-permission EECAs skip: it linked an existing account by the provider's username alone, gave any group a role map
+    named, and ended every current group no mapped role named at each sign-in, an administrator's `ADMIN` membership included.
+    Done in Rust (above; Parity-Diffs P8c-18, P8c-19), so the rules hold whoever wrote the rows, Tools included.
+  - **F-P10-2** `UserAccount.externalUserId` is not scoped to a provider: every enabled provider signs in every linked account
+    whose id it asserts, so whoever configures or runs one provider speaks for all linked accounts. Built: enabling is the access
+    administrator's and refused while a linked account holds access beyond the actor's. A link record per provider is a
+    framework ask.
+  - **F-P10-3** The server signs in by OpenID Connect and OAuth 2; a SAML flow answers "not available in this port". SAML rows are
+    listed and their fields kept (passwords write-only), cannot pass a test or be enabled, and NewProvider offers no SAML.
+  - **F-P10-4** (F110) The sign-in policy is literal conf attributes: `InstanceSetting.confAttribute` and a Rust read of a fixed
+    list. A general masked projection of conf attributes stays unbuilt.
+  - **F-P10-5** The plan's "role maps through `preview#Grants`": a role map gives a membership, so it is checked by the grant
+    proposal's rules (as P4's comment foresaw), and never a privileged or sealed-granting group even for a member or a holder
+    (as invitations, P5).
+  - **F-P10-6** A test cannot prove the client secret: no token is asked for without a person signing in. An OAuth provider with
+    its endpoints given starts with no request at all, so its test checks completeness only; an OIDC test reads the discovery
+    document (the request a sign-in makes, to a URL the integration administrator chose: `https` only, an internal host
+    accepted, the answer pass or fail with the host's text).
+  - **F-P10-7** `AuthFlowFieldMap.srcFieldName` is evaluated as an expression by the sign-in, as `dstFieldExpression` and a mapping
+    service are. A delegated mapping is a plain claim name (letters, digits, underscores) onto four account fields; a
+    namespaced claim (a URL, a dotted path) and anything computed stay Tools', and such a provider's mappings are read only.
+  - **F-P10-8** Login history is one row a minute for a user (login.rs), so a second sign-in within the minute is not checked;
+    a key sign-in writes history too and is checked as any other.
+  - **F-P10-9** A notification whose email cannot be sent marks its sender's transaction rollback-only (the mail service's error),
+    though the notification itself is kept. The notice runs in a transaction of its own; on an instance with no sender address
+    each notice logs an error. The framework's (open).
+  - **F-P10-10** The framework has no account screen, so its topic has no link; mr-boss sets it to Commons Account, which lists
+    the last ten sessions of thirty days with Sign out, not the one session.
+  - **F-P10-11** Removing a role mapping leaves the memberships it gave (the group is the provider's no more); the confirmation
+    says so and an access administrator ends them.
+  - **F-P10-12** One artifact group for the Security area: an integration administrator opens SignInPolicy and a configuration
+    administrator IdentityProviders, each told it is not available to them. The reader holds none of it.
+  - **F-P10-13** `moqui test` installed no SSO client (only a server did), so a spec could test no provider; the fixture
+    installs it now. F37 (ProjectsAccess on a Debug binary) did not recur: 8 of 8.
+  - **F-P10-14** InstanceSettings' ConfigurationSources also lists the 13 sign-in policy rows, since it lists every setting.
+- Decisions: the parts of a provider by permission (configuration the integration administrator's; role mappings, link rule,
+  default group and enabling the access administrator's); a provider is tested, then enabled, as two acts; the link rule defaults
+  to never; an account in a privileged or sealed-granting group is linked by an administrator only; a change of the token
+  signature or the nonce also needs a new test, the secret kept; a secret replaced alone leaves the provider enabled; `http`
+  only for the server's own machine on an instance that is not production; a client is the browser and system with an IPv4 /24
+  or IPv6 /48 network; an account's first sign-in sends no notice; the notice's topic and template are seed-initial rows an
+  installation may change; Security is one area for three administrator groups; the rule change is reviewed on the page
+  (`reviewGroupId`), as P6's lifecycle review.
+- For the lead:
+  - the shared release binary needs a rebuild after the merge: AdminIdentityProviders, AdminSecurity and SignInPolicy need
+    P10's Rust (`check#Flow`, `get#SignInPolicyValues`, the fixture's SSO client), and the new `AuthFlow` and `InstanceSetting`
+    fields a fresh database;
+  - budget shares (Debug binary; a release binary is faster): framework about 0.7 s (AdminIdentityProviders 0.6,
+    AdminNewDevice 0.07); mr-boss about 1.2 s (AdminSecurity); no budget raised;
+  - merge: mr-moqui `SecurityEntities.xml` (fields and audit attributes inside the `AuthFlow` family), `ServerEntities.xml` (one
+    field in `InstanceSetting`), `Security.eecas.xml`, `AdminConfigurationData.xml` and `MoquiSetupData.xml` (appended at their
+    ends), `SecurityTypeData.xml` (one member row after P9's), `ConfigurationServices.xml` (appended; one service before the
+    Localization section; two descriptions), `AccessServices.xml` and `IdentityServices.xml` (appended), `Access.js`
+    (`groupSummary`, `lib`), `Identity.js`, `ConfigurationSettings.js`, the Rust files above, Attack-Surface, Parity-Diffs and
+    Remaining-Work; mr-boss `BossSetupData.xml` appended at its end (Insights appends there too), `Admin.js` (`areas`, `linkPaths`
+    after P9's), `AdminAccess.spec.js` (the capability rows and two menus), `InstanceSettings.xml` (one attribute),
+    `design-admin.md`; P11 appends its connection part after the identity providers' in `ConfigurationServices.xml` and may
+    reuse the endpoint-change shape (a fingerprint of the endpoint fields, the test mark);
+  - the user's call: who enables a provider (built: `ADMIN_ACCESS_MANAGE`, never the integration administrator alone) and
+    the `HELD_BEYOND` rule; the link rule's default (never) and that no username-only rule is offered; F-P10-2 (a link per
+    provider); F-P10-3 (SAML: a client in the framework, or the type dropped from the design); the notice's network (/24, /48)
+    and no notice on a first sign-in; F-P10-9 (the mail failure marking the transaction); F-P10-12 (one area, or one per
+    audience);
+  - the acceptance AdminSecurityUsable to run when asked (it needs the network).
+
 ### P11 — Connections and mail relays
 
 Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail; ADM-CONNECTIONS.

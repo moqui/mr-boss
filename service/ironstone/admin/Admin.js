@@ -70,6 +70,9 @@ const capabilityPermissions = {
 const areas = {
     users: "Users",
     access: "Access",
+    // P10: Security (SignInPolicy, IdentityProviders, IdentityProviderDetail) for the access, configuration and integration
+    // administrators and the administrator (BOSS_ADM_SECURITY)
+    security: "Security",
     organizations: "Settings/Organizations",
     operations: "Operations",
     agents: "Agents",
@@ -287,6 +290,10 @@ const linkPaths = [
     "Access/Capabilities",
     "Access/RowRules",
     "Access/AccessReview",
+    // P10: sign-in policy and identity providers
+    "Security/SignInPolicy",
+    "Security/IdentityProviders",
+    "Security/IdentityProviderDetail",
     "Agents/Home",
     "System",
     "Developer/Home"

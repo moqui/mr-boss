@@ -4204,4 +4204,38 @@ along with this software (see the LICENSE.md file). If not, see
             description="The generic status-flow editor; an app's own workflow screen is the place to change its flow"
             settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="tools/StatusFlows"
             configuredBy="Instance administrator" sequenceNum="310"/>
+
+    <!-- Admin P10 (impl-admin P10; design-admin §6, §1.1, §1.2): the Security area (SignInPolicy, IdentityProviders,
+        IdentityProviderDetail) for the access administrator, the configuration administrator, the integration administrator
+        and the administrator, denying the root user group as the other areas do. Each screen shows a viewer what the
+        framework's services answer them: the policy with ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW, the groups' sign-in rules
+        with ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE, a provider's configuration with ADMIN_CONNECTION_VIEW and
+        ADMIN_CONNECTION_MANAGE, its role mappings and enabling with ADMIN_ACCESS_MANAGE, checked by
+        org.moqui.admin.ConfigurationServices and AccessServices whatever opens the screens. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_SECURITY" description="Admin sign-in policy and identity providers">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Security.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_ACCESS" userGroupId="BOSS_ADMIN_ACCESS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_INTEGRATIONS" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The new-device sign-in notice (the framework's AccountSignIn topic, org.moqui.admin.IdentityServices
+        notify#NewDeviceSignIn; design-admin §4 Sessions): its link opens Commons Account, where the account's owner signs that
+        session out ("Where you are signed in"; design-drawers-commons Account). Only the link is set here. -->
+    <moqui.security.user.NotificationTopic topic="AccountSignIn" linkTemplate="/qapps/Commons/Settings/Account"/>
 </entity-facade-xml>
