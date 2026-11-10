@@ -31,8 +31,9 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="chosen">
             <service-call name="ironstone.admin.CapabilityServices.get#AccessReview" out-map="review" transaction="force-new" ignore-error="true"
                     in-map="{appRoot:appRoot, groups:groupsParameter, appName:(appName || null), asOfDate:(asOfDate || null)}"/>
-            <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-            <script>ec.message.clearErrors()</script>
+            <!-- ignore-error clears a refusal's message: the service answers its bound as a reason, anything else reads as unavailable -->
+            <set field="failure" from="review?.reviewRows ? (review.failure || null) : 'The access review is not available'"/>
+            <set field="review" from="failure ? null : review"/>
         </if>
         <set field="reviewRows" from="review?.reviewRows || []"/>
         <set field="groupRows" from="review?.groupRows || []"/>

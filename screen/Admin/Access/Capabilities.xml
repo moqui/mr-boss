@@ -53,8 +53,8 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.admin.CapabilityServices.get#MatrixContext" out-map="matrix" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, appName:(appName || null), groups:groupsParameter, kind:(kind || null), text:(text || null),
                     changes:(changes || null)}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- ignore-error clears a refusal's message: the service answers its bounds as a reason, anything else reads as unavailable -->
+        <set field="failure" from="matrix?.columns ? (matrix.failure || null) : 'Capabilities are not available'"/>
         <set field="columns" from="matrix?.columns || []"/>
         <set field="matrixRows" from="matrix?.matrixRows || []"/>
         <set field="listRows" from="matrix?.listRows || []"/>
@@ -123,6 +123,8 @@ along with this software (see the LICENSE.md file). If not, see
             </field-layout>
         </form-single>
         <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <link url="." text="Clear proposed changes" icon="sym_o_close" link-type="anchor" condition="!!failure &amp;&amp; !!changesText"
+                parameter-map="Object.assign({}, selection, {changes:''})"/>
         <label type="p" style="q-pa-md m-muted" condition="!selected &amp;&amp; !failure"
                 text="Choose an app to see what its groups hold, or up to ${matrix?.maxGroups || 8} groups to compare."/>
 

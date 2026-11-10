@@ -2150,6 +2150,64 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
     its record;
   - the acceptance AdminCapabilitiesUsable to run when asked.
 
+**Review Nov 10 (P9).** A fresh review of both repositories' P9 diffs, access and scope first; fixes committed apart per repository
+("Admin P9 review: …").
+- Checked: the row rule in `preview#Grants` and `apply#Grants` (the set must exist and be named for that artifact group by a
+  registered bundle the actor may assign; only added; only on a binding of the registered type; the group refusals of P3
+  first, so a privileged group by its members only, an unregistered group and a non-delegable bundle refused; the revision
+  over each binding's filter sets, the group row locked before the preview is taken again; the audit row per bound rule; the
+  administration path as P3 counts it, through `ADMIN` membership alone, which a row rule does not touch); that a bound rule
+  only narrows (filter.rs: a find takes every filter set of the one record that authorized it, joined with AND, and a write
+  to `ArtifactAuthzFilter` moves the authorization generation); the seed and demo bindings on the twelve registered artifact
+  groups (39 rows, read from a loaded database: `ADMIN`'s and each app administrator group's are `AUTHZT_ALWAYS`, so
+  `SCOPE_UNBOUND`; `BOSS_ADMIN_ADMIN`, `BOSS_INSIGHTS_ADMIN` and `BOSS_PROJECT_CLIENT` carry a set of their own, so
+  `SCOPE_CONFIGURED`; the rest carry every registered set), and that neither the access administrator, the administrator
+  nor an `ADMIN` member is offered or allowed a Bind on any of them; `get#Capabilities`, `get#ScopeRules` and
+  `get#GrantReview` (`ADMIN_ACCESS_VIEW` in each; nothing written; no `filterMap` or `applyCond`, only whether a condition
+  applies; sealed grants out of the review and counted; no allowed IP or preference value read); BOSS `apply#MatrixChanges`
+  (Admin and `ADMIN_ACCESS_MANAGE`; the tokens by a pattern, at most 40, in `apply` as in the read; each group through
+  `apply#Grants` with authorization on and the caller's own authority, in its own transaction, a refused, failed or unknown
+  group named and left proposed; a client-made `revisions` only ever a stale revision); `get#AccessReview` (members through
+  `get#MemberScope` as GroupDetail, the others counted; no user id, no sealed grant; the print and the CSV the one list:
+  the CSV rendered by hand); the screens (`applyChanges` and `bindScope` each reach a service with its own check; the
+  identity operator is refused the three screens and the reader `apply#MatrixChanges`); `ironstone.admin.*` in the
+  client deny pattern; the second `AdminAccessServices` member row; the specs (one render a screen a mode, the transition in
+  `html` as gate 1's).
+- Fixes:
+  - **R1 (low, scope)** A row rule asked for beside the launcher it belongs to (one request, the group with no binding yet)
+    previewed as bound and was then left to the launcher's own bundle: when that bundle is another one, registering the
+    artifact group without the set or with another type, the rule was not bound though the preview said so. Now the rule is
+    a change of its own, applied after the request's bindings (`apply#Grants` writes row rules last), counted only when it
+    binds, and `SCOPE_UNBOUND` when the binding the request adds is of another type. No seed row has two bundles on one
+    artifact group; the framework spec has the case.
+  - **R2 (low)** `ignore-error` clears a refused call's message, so the three screens' `failure` was never set: more than 8
+    groups, more than 40 changes or more than 60 reviewed groups drew an empty matrix or review with no reason, and a
+    proposal over 40 could not be cleared from the screen. `get#MatrixContext` and `get#AccessReview` answer their bounds
+    as `failure` (the proposal kept), the screens show it, with Clear on Capabilities, and read any other failed call as
+    "not available". The same dead `failure` lines are in gate 1's screens (GroupDetail and others), which show a "not
+    available" state from the missing record: see For the lead.
+- Tests (release binary, `--nobuild`, this worktree's runtime): framework AdminAccessCapabilities (3 features, 0.36 s, with
+  R1's case) and AdminAccessServices 9 of 9; mr-boss AdminCapabilities (4 features, 0.6 s, with R2's bound), AdminGroups,
+  AdminAccess and ProjectsAccess 22 of 22. By hand, not kept: Capabilities with 41 changes and with 9 groups, AccessReview
+  with 61 groups (each its reason), AccessReview as CSV, the three screens as the identity operator (refused). Prettier clean.
+  Not run: `moqui lint --screens` (no Debug binary; the screen edits are three `set` lines and one link), the full suites,
+  the acceptance spec.
+- For the lead:
+  - findings: **F-P9-11** `ignore-error="true"` clears the message, so `ec.message.hasError()` after it is always false: the
+    `failure` capture gate 1's screens copy (GroupDetail, Constitution, InstanceSettings and others) is dead code; they fall
+    back to a "not available" state, so nothing is exposed, but a refusal's reason is not shown there. **F-P9-12** Ending a
+    registered launcher of a group whose binding is scoped on purpose (P3's rule, now one click in the matrix: End on
+    `BOSS_INSIGHTS_ADMIN`'s Insights launcher, or on `BOSS_ADMIN_ADMIN`'s by a member) deletes the binding with its own filter
+    sets, and the audit row keeps the type only; granting it again gives the registry's sets (`MANTLE_USER_ORG` for
+    `MANTLE_ACTIVE_ORG`). Within the access administrator's delegated authority (the same members could be given the
+    registered bundle), so left as P3 decided; refusing the end as `SCOPE_CONFIGURED`, or recording the sets in the audit
+    row, is the user's call. **F-P9-13** A binding of the registered type with no filter set at all reads as "missing"
+    and may be bound by an access administrator (it narrows a non-privileged group to its organizations); a group left
+    unfiltered on purpose in Tools is not told apart from one granted without its rules;
+  - merge: mr-moqui `Access.js` and `AdminAccessCapabilities.spec.js` only; mr-boss `Capabilities.js`,
+    `CapabilityServices.xml` (a `failure` out-parameter on two services), the three P9 screens and the spec;
+  - budget: unchanged shares (framework about 0.36 s, mr-boss about 0.6 s).
+
 ### P10 — Sign-in policy and identity providers
 
 Design §6 SignInPolicy, IdentityProviders and IdentityProviderDetail, §4 Sessions' new-device notice; ADM-ACCESS,

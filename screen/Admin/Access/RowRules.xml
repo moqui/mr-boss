@@ -46,8 +46,8 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="org.moqui.admin.AccessServices.get#ScopeRules" out-map="found" transaction="force-new" ignore-error="true"
                 in-map="{userGroupId:(userGroupId || null), artifactGroupId:(artifactGroupId || null),
                     entityFilterSetId:(entityFilterSetId || null), state:(state || null), pageIndex:(pageIndex || 0), pageSize:pageSize}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="failure" from="found?.ruleList ? null : 'Row rules are not available'"/>
         <set field="rules" from="(found?.ruleList || []).map(row => Object.assign({}, row, {
                 stateText: row.state === 'missing' ? 'Not bound' : row.conditional ? 'Bound, by condition' : 'Bound',
                 bindKey: [row.artifactAuthzId, row.entityFilterSetId].join('_')}))"/>

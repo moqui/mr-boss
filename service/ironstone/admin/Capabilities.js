@@ -17,6 +17,9 @@ const {denied} = lib
 const access = "org.moqui.admin.AccessServices."
 const tokenPattern = /^([A-Za-z0-9_.-]+)~([ae])~([pa]):([A-Za-z0-9_.-]+)$/
 const maxProposed = 40
+// the framework's bounds (get#Capabilities, get#GrantReview), answered here as a reason the screen shows
+const maxGroups = 8
+const maxReviewGroups = 60
 
 const text = value => String(value ?? "").trim()
 // a date as text in the user's zone; a grant or membership from the epoch (seed data's "always") shows no start
@@ -37,10 +40,11 @@ function requireAccess(capability) {
 }
 
 // ===== the proposal =====
+const proposalTokens = value => listOf(value).filter(token => tokenPattern.test(token))
+const tooManyText = "Apply or clear the proposed changes before adding more than " + maxProposed
 function parseChanges(value) {
-    const tokens = listOf(value).filter(token => tokenPattern.test(token))
-    if (tokens.length > maxProposed)
-        denied("TOO_MANY_CHANGES", "Apply or clear the proposed changes before adding more than " + maxProposed)
+    const tokens = proposalTokens(value)
+    if (tokens.length > maxProposed) denied("TOO_MANY_CHANGES", tooManyText)
     return tokens.map(token => {
         const [, userGroupId, action, type, id] = token.match(tokenPattern)
         return {
@@ -186,9 +190,36 @@ function previews(changes, canManage) {
 // get#MatrixContext
 function matrixContext(p) {
     const userScope = requireAccess("accessView")
+    const groupIds = listOf(p.groups)
+    // a request over a bound is answered with its reason and nothing else (a screen's read that fails shows none), the
+    // proposal kept so it can be cleared
+    const proposed = proposalTokens(p.changes)
+    const failure =
+        proposed.length > maxProposed
+            ? tooManyText
+            : groupIds.length > maxGroups
+              ? "Compare at most " + maxGroups + " groups at a time"
+              : null
+    if (failure)
+        return {
+            failure,
+            columns: [],
+            matrixRows: [],
+            listRows: [],
+            unsupportedRows: [],
+            appOptions: [],
+            kindOptions: [],
+            groupOptions: [],
+            groups: groupIds.join(","),
+            moreGroupCount: 0,
+            maxGroups,
+            changes: proposed.join(","),
+            changeCount: proposed.length,
+            proposal: null,
+            canManage: false
+        }
     const changes = parseChanges(p.changes)
     const tokens = changes.map(change => change.token)
-    const groupIds = listOf(p.groups)
     const found = call(access + "get#Capabilities", {
         appName: text(p.appName) || null,
         userGroupIdList: groupIds,
@@ -244,8 +275,9 @@ function matrixContext(p) {
         kindOptions: Array.from(found.kindOptions || []),
         groupOptions,
         groups: columns.map(column => column.userGroupId).join(","),
+        failure: null,
         moreGroupCount: found.moreGroupCount || 0,
-        maxGroups: found.maxGroups || 8,
+        maxGroups: found.maxGroups || maxGroups,
         changes: tokens.join(","),
         changeCount: tokens.length,
         proposal: tokens.length ? previews(changes, !!userScope.capabilities.accessManage) : null,
@@ -302,8 +334,19 @@ function applyMatrixChanges(p) {
 // get#AccessReview
 function accessReview(p) {
     requireAccess("accessView")
+    const groupIds = listOf(p.groups)
+    if (groupIds.length > maxReviewGroups)
+        return {
+            failure: "Review at most " + maxReviewGroups + " groups at a time",
+            reviewRows: [],
+            groupRows: [],
+            asOfText: "",
+            groups: groupIds.join(","),
+            sealedOmittedCount: 0,
+            outsideCount: 0
+        }
     const found = call(access + "get#GrantReview", {
-        userGroupIdList: listOf(p.groups),
+        userGroupIdList: groupIds,
         appName: text(p.appName) || null,
         asOfDate: p.asOfDate || null
     })
@@ -359,6 +402,7 @@ function accessReview(p) {
         )
     }
     return {
+        failure: null,
         reviewRows,
         groupRows,
         asOfText: dateText(found.asOfDate, "yyyy-MM-dd HH:mm"),

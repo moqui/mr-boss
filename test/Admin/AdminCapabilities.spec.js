@@ -128,7 +128,12 @@ feature(
                     changes: refusedToken,
                     revisions: before.proposal.revisions
                 })
-                return {before, applied, after, result}
+                // over a bound: answered as the reason the screen shows, the proposal kept so it can be cleared
+                const bounded = invoke(capability + "get#MatrixContext", {
+                    groups: Array.from({length: 9}, (unused, n) => "SPEC_G" + n).join(","),
+                    changes: launcherToken
+                })
+                return {before, applied, after, result, bounded}
             })
             const cell = kind => taken.after.matrixRows.find(row => row.kind === kind)?.cells[0]
             return Object.assign(taken, {
@@ -147,7 +152,7 @@ feature(
                 reader: asUser(users.reader, () => refusal(capability + "apply#MatrixChanges", {changes: launcherToken}))
             })
         },
-        then({before, applied, result, launcherCell, viewCell, permissions, filters, backup, identity, reader}) {
+        then({before, applied, result, bounded, launcherCell, viewCell, permissions, filters, backup, identity, reader}) {
             // one group of the proposal is refused: nothing is offered to apply, and applying names it and applies the other
             before.proposal.canApply == false
             before.proposal.groups.find(row => row.userGroupId === ids.backupGroupId).allowed == false
@@ -160,6 +165,7 @@ feature(
             backup.length == 0
             result.refusedCount == 1 && result.appliedCount == 0
             result.resultList[0].reasonCode == "PRIVILEGED_GROUP" && result.remainingChanges.includes(ids.backupGroupId)
+            bounded.failure.includes("at most 8 groups") && bounded.changes == launcherToken && bounded.columns.length == 0
             identity.includes("ADMIN_ACCESS_VIEW")
             reader.includes("ADMIN_ACCESS_MANAGE")
         }
