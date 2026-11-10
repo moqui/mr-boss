@@ -261,6 +261,61 @@ feature("catalog settings use dated optimistic tokens and require the administra
     }
 })
 
+feature("successful dated policy saves return to current settings so the next save has a fresh token", {
+    when() {
+        login("john.doe")
+        const organizationPartyId = "ORG_ZIZI_SERVICES",
+            screens = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("tui"),
+            cases = [
+                {path: "Index", service: S, noun: "CatalogSettings", token: "expectedVersion", value: "versionSeqId", field: "packagingEnabled", changed: false},
+                {path: "VariantSettings", service: S, noun: "VariantSettings", token: "expectedFromDate", value: "fromDate", field: "batchLimit", changed: 999},
+                {path: "PricingSettings", service: "mantle.product.PriceServices.", noun: "PricingSettings", token: "expectedFromDate", value: "fromDate", field: "roundingIncrement", changed: 0.02}
+            ]
+        const results = cases.map(item => {
+            const get = parameters => invoke(item.service + "get#" + item.noun, Object.assign({organizationPartyId}, parameters)),
+                base = get({}),
+                asOfDate = new Date(Number(String(ec.user.nowTimestamp))).toISOString(),
+                post = (current, settings, parameters) => screens.render("apps/Products/Settings/" + item.path + "/save", Object.assign({}, settings, parameters, {
+                    organizationPartyId,
+                    [item.token]: current[item.value],
+                    changeReason: "Dated redirect regression"
+                }), "post")
+            try {
+                const saved = post(base, Object.assign({}, base.settings, {[item.field]: item.changed}), {asOfDate}),
+                    response = JSON.parse(String(saved.output)),
+                    refreshed = get(response.screenParameters),
+                    savedCurrent = get({}),
+                    restored = post(refreshed, base.settings, response.screenParameters),
+                    current = get({}),
+                    historical = get({asOfDate})
+                return {path: item.path, status: saved.status, asOfDate: response.screenParameters.asOfDate,
+                    tokenFresh: String(refreshed[item.value]) === String(savedCurrent[item.value]),
+                    changedValue: item.changed, refreshedValue: refreshed.settings[item.field],
+                    restoreStatus: restored.status, originalValue: base.settings[item.field],
+                    restoredValue: current.settings[item.field], historicalValue: historical.settings[item.field]}
+            } finally {
+                // Keep unrelated spec features on their original policy even when a broken redirect returns a stale token.
+                const current = get({})
+                invoke(item.service + "store#" + item.noun, Object.assign({}, base.settings, {
+                    organizationPartyId, [item.token]: current[item.value], settings: base.settings,
+                    changeReason: "Restore dated redirect regression"
+                }))
+                ec.message.clearErrors()
+            }
+        })
+        return {results}
+    },
+    then({results}) {
+        results.every(result => result.status == 200)
+        results.every(result => result.asOfDate == "")
+        results.every(result => result.restoreStatus == 200)
+        results.every(result => result.tokenFresh)
+        results.every(result => String(result.refreshedValue) == String(result.changedValue))
+        results.every(result => String(result.restoredValue) == String(result.originalValue))
+        results.every(result => String(result.historicalValue) == String(result.originalValue))
+    }
+})
+
 feature("clone preserves scoped IDs and independently copied document bytes, meters and maintenance references", {
     when() {
         return as("catalog.edit", () => {

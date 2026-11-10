@@ -21,6 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response url=".">
             <parameter name="organizationPartyId"/>
+            <parameter name="asOfDate" from="''"/>
         </default-response>
         <error-response url="."/>
     </transition>
