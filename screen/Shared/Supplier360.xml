@@ -17,6 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="vendorPartyId"/>
     <parameter name="organizationPartyId"/>
     <always-actions>
+        <!-- Insights' mount (appRoot Insights, Insights/Records/Supplier360) reads no catalog or purchasing context: its root
+            checked Insights' access, and what it shows is the admitted datasets' (template/InsightsRecord.xml) -->
+        <if condition="appRoot == 'Insights'"><set field="insightsRecordType" value="Supplier360"/><set field="insightsRecordId" from="vendorPartyId"/><return/></if>
         <!-- Manufacturing's mount (Manufacturing/Subcontracting/Supplier360, crosscut §3.3 Manufacturing row, impl-manufacturing
             P14) has its own read: contact and the supplier's subcontract orders, their price only for a buyer
             (ironstone.manufacturing.SubcontractServices.get#SupplierContext over find#SubcontractOperations) -->
@@ -72,6 +75,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Purchasing P16: Invite to the Supplier app (template/PurchasingSupplierPortal.xml) -->
     <transition-include name="inviteSupplierContact" location="component://mr-boss/template/PurchasingSupplierPortal.xml"/>
     <subscreens default-item="Overview">
+        <subscreens-item name="InsightsRecord" location="component://mr-boss/screen/Shared/InsightsRecord.xml" menu-include="false"/>
         <subscreens-item name="Prices" menu-index="2" location="component://mr-boss/screen/Shared/SupplierPrices.xml" menu-title="Products &amp; prices"/>
         <!-- Purchasing (impl-purchasing P2): the buying profile, buyer and category, and the finance details for a finance
             reader; each tab's condition keeps it to Purchasing -->
@@ -89,6 +93,11 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="PurchasingPerformance" menu-index="13"
                 location="component://mr-boss/screen/Shared/Supplier360/PurchasingPerformance.xml" menu-title="Performance"/>
     </subscreens>
+    <!-- Insights (appRoot Insights, mounted at Insights/Records/Supplier360; design-insights §10, crosscut's Insights row, impl-insights
+        P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
+        below runs, and the fail-widgets show the InsightsRecord subscreen (template/InsightsRecord.xml): the record as the admitted datasets the viewer reads
+        show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <entity-find-one entity-name="mantle.party.Organization" value-field="buyerOrganization" cache="true">
             <field-map field-name="partyId" from="organizationPartyId"/>
@@ -156,4 +165,5 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
     </widgets>
+    <fail-widgets><subscreens-active/></fail-widgets>
 </screen>

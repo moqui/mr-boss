@@ -113,6 +113,11 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="confirmationFile" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
     <!-- Commerce (impl-commerce P8): Order again -->
     <transition-include name="commerceReorder" location="component://mr-boss/template/CommerceOrderDetail.xml"/>
+    <!-- Insights (appRoot Insights, mounted at Insights/Records/OrderDetail; design-insights §10, crosscut's Insights row, impl-insights
+        P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
+        below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads
+        show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"
@@ -313,4 +318,13 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- a customer order's drop-ship lines, for a purchasing user in any context (impl-purchasing P7) -->
         <section-include name="OrderDropShip" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
     </widgets>
+    <fail-widgets>
+        <section name="InsightsContext">
+            <actions>
+                <set field="insightsRecordType" value="OrderDetail"/>
+                <set field="insightsRecordId" from="orderId"/>
+            </actions>
+            <widgets><section-include name="InsightsRecord" location="component://mr-boss/template/InsightsRecord.xml"/></widgets>
+        </section>
+    </fail-widgets>
 </screen>

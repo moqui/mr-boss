@@ -4204,4 +4204,65 @@ along with this software (see the LICENSE.md file). If not, see
             description="The generic status-flow editor; an app's own workflow screen is the place to change its flow"
             settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="tools/StatusFlows"
             configuredBy="Instance administrator" sequenceNum="310"/>
+    <!-- Insights P6 (impl-insights P6; design-insights §4 Drill and business annotations, §5 Analysis, §10): drill, Analysis, the
+        record contexts and business events.
+        Drill: the report engine's get#Drill, a reading operation (it reads a saved panel as the viewer and each dataset by its own
+        artifact and row filter), ALWAYS for the groups that read, past BOSS_INS_REPORT_ENGINE's deny; Insights' own Drill screen and
+        the Records mounts are open to every Insights user by the root's ALLOW, and ironstone.insights.DrillServices check
+        INSIGHTS_VIEW. That ALLOW is inheritable, so it also covers the shared record screens' own transitions and tabs when they
+        are reached under Insights/Records: no row here can deny them without denying them in their owners' apps (a transition's
+        artifact is its screen's location, not its mount), so Records.xml refuses every path below a record screen but its
+        InsightsRecord subscreen (the P6 review). No Insights group holds a dataset's records artifact (org.moqui.report.rows.<id>): a dataset whose definition
+        restricts its records gives them totals only.
+        Business events: the dataset mantle-business-events (Mantle's ReportAnnotationSource over the engine's annotations, scoped
+        to the viewer's organizations), view only; writing one (org.moqui.report.annotation.business) is no Insights group's, its
+        owner's service does it after its commit.
+        Analysis: the author's and the dataset steward's, as the editors (BOSS_INS_AUTHORING): the root user group and the
+        administrator are denied it, and the non-inheritable ALWAYS names its one transition. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DRILL" description="Insights: drilling a saved panel">
+        <artifacts artifactName="org.moqui.report.ReportServices.get#Drill" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_EVENTS" description="Insights: business events on the time series">
+        <artifacts artifactName="org.moqui.report.dataset.mantle-business-events" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_ANALYSIS" description="Insights: Analysis">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/Analysis.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/Analysis.xml/saveAnalysis"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
 </entity-facade-xml>

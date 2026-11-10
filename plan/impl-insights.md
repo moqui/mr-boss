@@ -1127,6 +1127,263 @@ INS-04 (drill).
   ORG_ZIZI_RETAIL's orders opens one in Insights' OrderDetail with no Approve; an analysis summing amounts across
   currencies is refused until grouped by currency; the price-list publication shows as a marker on the revenue panel.
 
+**Built Nov 10 (P6).** mr-moqui 64aabb1c, mr-mantle 47a6d628, mr-boss 70304a0a (branch `ins/p6`).
+- **The framework** (mr-moqui `docs/tools/Monitoring.md` "Business events", "Semantic guards", "Drill"):
+  - **Business events** (`crates/moqui-report/src/annotations.rs`; F13, F31): `create#Annotation` takes the source `business`
+    with `organizationPartyId`, `event`, `recordType`, `recordId`, `link` (a path on this server) and `eventKey` (one marker per
+    key and time), a text of at most 255 bytes and no technical scope. It needs the artifact
+    `org.moqui.report.annotation.business` (`ADMIN`'s, `REPORT_BUSINESS_ADMIN` in MonitoringSecurityData); `MONITOR_INGEST` does
+    not write one. Reading is by registered sources: a `ReportAnnotationSource` enumeration names a dataset over the
+    annotations, and a dashboard with a panel over a business dataset reads each source as the viewer (its artifact and row
+    filter decide; only `business` markers are taken) and adds the markers to its panels. The technical marker query leaves
+    business events out. The annotations mapping gains four fields (moqui-core `search/telemetry.rs`, added to an existing
+    table in place).
+  - **Semantic guards** (`semantics.rs`; INS-03), for a business dataset's query from what its `fieldDefaults` declare, for
+    every caller: `unitField` (`UNIT_MIXED` when the records hold several units and the query neither groups by the unit field
+    nor is filtered to one; a count is exempt), `ratio` (`RATIO_AGGREGATE` for a sum or an average), `nonAdditive`
+    (`NONADDITIVE` for a sum across a listed dimension that is neither a group nor pinned), and a bounded page of records
+    (`bounded_result` notice; `BOUNDED_RESULT` for a total, reduce, groupBy or pivot of it). A dataset whose definition says
+    `rows: "restricted"` gives aggregates to its readers and records only to a holder of `org.moqui.report.rows.<id>`
+    (`ROWS_RESTRICTED`; query#Documents, a documents query, top-hits and a drill's records).
+  - **Drill** (`drill.rs`; INS-04): `ReportServices.get#Drill` takes a definition, a panel, a query index, the range, the
+    variables and the buckets chosen, never a query. It runs the panel as its dashboard does, takes each bucket's predicate from
+    the engine's own result (`config.bucket.filters`, so "Other" and missing keep theirs) and answers the saved query narrowed
+    by them: the panel's frames, the dataset's dimensions, a breakdown, and a page of records with the query's columns, total
+    and bounded. No record is fetched for a viewer without the records; an unread panel answers unavailable with its reason.
+  - **The mount** (P0's "other escapes", the drill part): `reportLinks.drill` reaches the dashboard as `appLinks.drill`, and
+    each panel's menu offers Drill in the browser (WebrootReport.js) and the terminal (moqui-tui `components/report.rs`),
+    opening the app's drill screen with the dashboard, the panel, the range and the variable values. Tools mounts none.
+- **Mantle**: `mantle.party.BusinessEventServices.record#BusinessEvent` over `BusinessEvents.js` makes a marker from the stored
+  record (PriceListPublished: a published list with an organization; PromotionStart: a dated promotion, a band, in its store's
+  organization; PeriodClosed: a closed run, named by the period), never from its caller, and writes it with authorization off;
+  a failure is logged and answered. `publish#ProductPriceList`, `store#Promotion` (a start date set, or dates or description
+  changed) and `close#Period` register it on commit through `register`, which never fails the owner. The dataset
+  `mantle-business-events` (the annotations, `business` only, scoped by `get#OrganizationRowFilter` on `organizationPartyId`)
+  is registered as the `ReportAnnotationSource` MantleBusinessEvents (MonitoringSalesSecurityData).
+- **BOSS services** (`service/ironstone/insights/`, each `allow-remote="false"`):
+  - `DrillServices.get#Drill` (Drill.js): `INSIGHTS_VIEW`; the organization in scope fixed over any variable sent
+    (Insights.js `scopeVariables`, the rule of Insights › Dashboard), a requested organization only when it is the user's; the
+    engine's answer with the measure's registered meaning (`get#Metric`), the panel's buckets with the link that chooses each,
+    the breakdown, and each record's query columns and Insights record screen. A refusal that would say whether a definition or
+    dataset exists is "not available".
+  - `DrillServices.get#Record` (Records.js): the record contexts' one read (F16). Each record type names its admitted sources
+    (dataset, key field, shown columns) and its owners' screens; a source is read through `query#Documents` as the viewer in
+    its own transaction, an unread dataset is omitted, and owner links are offered only where the route opens
+    (Admin.js `destinationOpens`) and only for a record a source showed.
+  - `AnalysisServices.get#AnalysisOptions`, `get#AnalysisResult`, `store#Analysis` (Analysis.js): `INSIGHTS_AUTHOR` or
+    `INSIGHTS_DATASET_EDIT`; typed choices checked against the dataset's own fields, run through `run#Query` as the author; a
+    guard's refusal is the answer's code and reason; a saved analysis is a library panel (private or one of the author's own
+    groups, as ShareDashboard), optionally placed on one of their own dashboards by reference.
+- **Screens.**
+  - `Insights/Drill` (hidden; DrillMeaning, Breakdown with the panel's buckets and one more dimension, SourceRows with paging,
+    Back to the dashboard, Clear the selection, Open as analysis for authors).
+  - `Insights/ReportBuilder/Analysis` (the second tab, Datasets now third; AnalysisSource, the refusal box, AnalysisResult, the
+    SaveAnalysis dialog, whose save opens PanelDetail, the framework editor, as AnalysisSteps).
+  - `Insights/Records` (hidden) mounting Shared/OrderDetail, Customer360, Supplier360, Product360, RequestDetail,
+    WorkItemDetail, ShipmentDetail, FacilityDetail, EquipmentDetail and InvoiceDetail. Each shared screen gains a screen
+    condition (`appRoot != 'Insights'`) and fail-widgets showing `template/InsightsRecord.xml`: the header, the sources as
+    lists, the owners' links and Back to the report; no form, transition or action. The four tabbed screens show it as the
+    subscreen `Shared/InsightsRecord.xml`, which Insights' links name, and Product360 and Supplier360 skip their catalog context
+    for Insights. The owners' widgets are untouched.
+- **Access** (`data/BossSetupData.xml`, one block appended): `BOSS_INS_REPORT_DRILL` (`get#Drill`, ALWAYS for the six groups
+  that read, past BOSS_INS_REPORT_ENGINE's deny), `BOSS_INS_EVENTS` (the `mantle-business-events` dataset, view, for the five
+  groups that read data), `BOSS_INS_ANALYSIS` (Analysis and its `saveAnalysis`: the root user group and the administrator
+  denied, a non-inheritable ALWAYS for the author and steward). Insights.js: the capability `analysis`, the links of Analysis,
+  Drill, PanelDetail and the ten record screens, `reportLinks.drill`. No Insights group holds the business annotation
+  artifact or any records artifact.
+- **Specs.**
+  - framework `ReportDrill` (4 features, 0.5 s: the fixtures; the chosen bucket's records in the viewer's scope, an Other
+    bucket, a breakdown, a bounded page, a bucket not in the result and a field that is no dimension refused; restricted
+    records and an unadmitted panel; the four guards with their passing forms) and `ReportAnnotations` (2 features, 0.1 s,
+    `dependsOn` ReportDrill: the business source refused to a holder of `MONITOR_INGEST`, its checks, one marker per key; a
+    registered source's markers on a dashboard in the viewer's scope only).
+  - moqui-report unit tests `semantics::tests` (3); moqui-tui `a_mounted_dashboard_links_...` and webroot's
+    `a dashboard mounted under another app ...` extended with Drill.
+  - Mantle `test/party/BusinessEvents` (1 feature, 0.3 s: the three events from their records, one marker, a draft, a list
+    without an organization and a missing record write nothing).
+  - BOSS `InsightsRecords` (5 features, 1.8 s, `dependsOn` InsightsDatasets: the drill's scope for a Retail and a Services
+    reader, a forged variable and another organization; OrderDetail's one qvt render under Insights, another organization's
+    and a missing order alike, the order's own Approve refused; Analysis' one qvt render with the mixed-currency refusal, the
+    grouped result, a reader, a foreign field and a foreign group refused, the saved panel; a business event's marker by
+    organization and the write refused to an author). `InsightsAccess`: the `analysis` capability by group.
+  - Acceptance, written and not run: `acceptance/Insights/InsightsDrillUsable` (3 features, `dependsOn`
+    InsightsDatasetsUsable: the "usable when").
+- **Tests run** (this worktree's Debug binary, `--nobuild`): framework ReportDrill, ReportAnnotations, BusinessDatasets and
+  tools ReportMounts, DocumentExport 15 of 15 (framework 1.3 s of 12 s); webroot WebrootReport offline 49 of 49; Mantle
+  BusinessEvents, OrganizationRowFilter, SalesReports 10 of 10, and AccountingPeriodClose, ProductPriceLists, StorePromotions
+  26 of 26 with BusinessEvents (the hooks' owners); BOSS InsightsAccess, InsightsDashboards, InsightsDatasets, InsightsCatalog,
+  InsightsHome, InsightsRecords, ProjectsAccess, AdminRegistries and sixteen owners' specs of the shared screens
+  (PurchasingOrders, CommerceOrders, CustomerServiceOrders, PurchasingSuppliers, ProductsSharedContext, CommerceAssortment,
+  ProjectRequests, CustomerServiceCases, WorkItemDetail, PurchasingReceiving, WarehouseFacilities, ManufacturingWorkCenters,
+  AccountingFixedAssets, Billing, AccountingReceivables) 152 of 155: CustomerServiceOrders' three fail on Debug only (its
+  demo order is not made, "stack overflow", F37) and pass 6 of 6 on the shared release binary. Cargo: `clippy -p moqui-report
+  -p moqui-tui --all-targets -D warnings` clean, `test -p moqui-report` 80 of 80, `test -p moqui-tui` all pass, moqui-host
+  `--test it report_` 9 of 9. `moqui lint --screens`: 132 sites, as before, none in Insights or the shared record screens.
+  Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- **Rendered by hand** (a throwaway spec, not kept): the ten record screens under Insights in qvt and tui; Drill in qvt, tui
+  and html; Analysis in qvt and tui; Insights › Dashboard's `appLinks.drill`. A probe after the owners' specs found the
+  on-commit markers of eight price lists and six period closes.
+- **Budget shares**: framework server 0.6 s (ReportDrill 0.5, ReportAnnotations 0.1); mr-mantle 0.3 s; mr-boss server 1.8 s
+  (InsightsRecords); no client spec added (webroot's case grew by one click).
+- Inventories: no ss-inventory or usl-inventory row is implemented by P6 (the services are new).
+- Design edits: design-insights §2 (Drill's archetype), §4 Business annotations and Drill, §5 Analysis, §10 (each "As built");
+  design-crosscut §3.6 (the Insights rows as built); the owners' annotation lines in design-products §1.3, design-commerce §3
+  and design-accounting §13. mr-moqui `plans/Remaining-Work.md` (the report-engine row).
+- **Findings** (provisional, for the lead to number):
+  - F-P6-1: the annotations index keeps a typed column per mapped field, so an organization could not be filtered until it
+    was mapped. Four fields added (the framework adds columns to an existing table in place); `link` stays unmapped.
+  - F-P6-2: `registerOnCommit` checks the caller's authorization for the registered service at once, and BossSetupData denies
+    `create#Annotation` to every member of `BOSS_INSIGHTS`, so an owner registering it directly would fail its own change for
+    a user who is also in Insights. Mantle registers its own service, which writes with authorization off, and a failed
+    registration or write is logged, never thrown.
+  - F-P6-3: there is no promotion start event (F31) and the annotations are kept by id and time, so a promotion whose start is
+    moved leaves its earlier band. Kept; a delete of a keyed business marker would close it.
+  - F-P6-4: the engine already records each bucket's exact predicate in its frames, so the drill takes predicates from the
+    engine's own result and needs none from the client. A breakdown's buckets are therefore shown, not chosen.
+  - F-P6-5: before P6 an amount summed across currencies lost its unit and showed a number. A static refusal would have
+    refused every shipped panel that sums an amount without its currency (Mantle's `mantle-sales`, Commerce's Store
+    operations) even with one currency in use, so the guard refuses only when the records hold several units. On an instance
+    with a second currency those panels now say `UNIT_MIXED`; grouping them by currency is their owners' fix.
+  - F-P6-6: Insights holds no domain permission, so an "Insights branch" over an owner's read would show nothing to a plain
+    reader. The record contexts read the admitted datasets instead; five record types have no admitted source yet, and
+    Products' SharedContext.js is not changed (the plan named it).
+  - F-P6-7: a shared screen's transitions are authorized by the screen's location, not its mount, so they cannot be denied
+    for the Insights mount without denying them in the owner's app. They, and the owners' tabs, stay reachable by URL under
+    `Insights/Records/` and are refused or scoped by their owners' own checks (InsightsRecords posts Approve as the reader).
+    A read-only mount is a framework ask (Remaining-Work).
+  - F-P6-8: a screen's default subscreen is chosen from the request before the root's always-actions set `appRoot`, so a
+    `conditional-default` cannot see Insights (Customer360's own works only where `appRoot` is sent as a parameter). Insights'
+    links name the `InsightsRecord` subscreen.
+  - F-P6-9: `mantle-sales-items` carries cost and margin fields (`acquireCost`, the issued cost and margin totals), which every
+    reader of the admitted dataset reads in Explore and a direct query (P3's note: no field classes). The drill and the record
+    contexts show named columns only; the dataset itself is F58's open item.
+  - F-P6-10: a registered domain drill service (design §4) is not built: a service-source panel answers that its value has no
+    drill, and `MetricRegistration.drill` is unused.
+  - F-P6-11: a record's status and type show as their ids (the documents' values); names need the datasets' lookups applied
+    to document rows.
+  - F-P6-12: the framework's `ReportUserGroups` policy has no administrator bypass, so `ADMIN` reads no row of a dataset
+    scoped by it; Mantle's organization policy has one.
+  - F-P6-13: the bar of a chart still filters the dashboard when clicked; Drill is the panel menu's item, with the buckets
+    chosen on the drill page.
+- **Decisions** (for §4): the business source is its own artifact and is read through registered source datasets, on
+  dashboards over business data only; the semantic guards are declared in `fieldDefaults` and the unit guard is decided on the
+  records; a dataset's records can be restricted apart from its aggregates; `get#Drill` is a reading operation of every group
+  that reads; the record contexts' authority is the admitted datasets; Drill is a page, not a dialog; an analysis is typed
+  choices saved as a library panel, with the framework editor as its steps.
+- **For the lead:**
+  - budget shares as above: framework 0.6 s, mr-mantle 0.3 s, mr-boss 1.8 s server;
+  - merge: BossSetupData's P6 block is one append at the end (Admin P8 appends there too: keep both); mr-moqui's
+    `ReportSetupData.xml` and `MonitoringSecurityData.xml` each gain one block (the first at the end, the second before the
+    permissions); `ReportServices.xml` gains `get#Drill` after `create#Annotation`; `Datasets.xml`'s menu index is 3;
+  - an existing instance loads ReportSetupData, MonitoringSecurityData, Mantle's MonitoringSalesSecurityData and BossSetupData
+    again (Monitoring.md "Upgrading");
+  - the user's call: F-P6-5 (refusing mixed currencies only when the records mix them, or always); F-P6-6 (the record
+    contexts from admitted datasets, with supplier, work item, shipment, equipment and invoice not available until a dataset
+    is admitted for each, or owner reads behind owner permissions); F-P6-7 (owner transitions reachable under the Insights
+    mount for a user who holds the owner's permission);
+  - not built: a registered domain drill service (F-P6-10), a catalog report or a conversion measure as an analysis' starting
+    point, the drilled records' export (DatasetView's export serves), a marker's link resolved to a screen in the browser's
+    marker list (the marker carries `recordType` and `recordId`);
+  - `cargo fmt` on moqui-core reformats some sixty files this build did not touch; only the files changed here were
+    formatted.
+
+**Review Nov 10 (P6).** Fresh review of mr-moqui 64aabb1c, mr-mantle 47a6d628 and mr-boss 70304a0a/136f77f6; fixes mr-moqui
+599f0b65, mr-mantle 9b6fa188, mr-boss fc1d926c and this note (branch `ins/p6`).
+- Checked and kept:
+  - **`get#Drill`** (drill.rs): the definition is read as the viewer (`definitions::read`), the panel is run by
+    `dashboard_frames_filtered` as its dashboard runs it, and the request gives only ids, a range, variable values, bucket
+    names and values, one dimension name and a page. A bucket's predicate is the engine's own `config.bucket.filters` entry of
+    the row the name and value match; a value that matches no row is refused; nothing sent is parsed as a query. The narrowed
+    query keeps the saved `datasetId`, `query`, `queryString` and `filters` and only adds predicates. The dataset is resolved
+    again (`dataset`: its artifact, admission and row filter as the viewer) and `documents_of` applies that filter, so a
+    Services reader drills the same panel to Services' orders (InsightsRecords). `check_rows` runs before any record is
+    fetched, in `documents_of`, in a documents query and for a top-hits aggregation, so an aggregate readable while its rows
+    are not answers no row (ReportDrill). A breakdown dimension must be one of the dataset's mapped sortable fields. Selection
+    8 buckets, span 200, page 100 (BOSS asks 20).
+  - **BOSS `get#Drill`** (Drill.js): `INSIGHTS_VIEW`; the organization through `get#Context` (another organization refused);
+    `scopeVariables` laid over the request's variables; a refusal that would name a definition or dataset is "not
+    available"; rows carry named columns, never the document body.
+  - **The semantic guards**: in `execute_query_inner`, so a panel, Explore, a direct `run#Query`, the drill's breakdown, an
+    alert and a schedule are all held to them. The unit guard is decided on the records (F-P6-5): with one currency in the
+    records no shipped panel changes: every refusal needs two units found in the query's records, the review's additions
+    included (InsightsDashboards passes on the rebuilt binary; the other dashboards' specs were not run). Ratio and nonadditive are static; a bounded page refuses totals,
+    reduce, groupBy and pivot.
+  - **Business annotations**: the `business` source needs `org.moqui.report.annotation.business` (ADMIN only; no wildcard grant
+    reaches it; `MONITOR_INGEST` does not write one; BOSS denies every ReportServices operation to the Insights groups, so an
+    author is refused, InsightsRecords). Mantle writes from the stored record (name, time, organization, key; no amount, no
+    caller text) with authorization off, after the commit, in a transaction of its own; `register` and `record` catch and log,
+    so the owner's change stands (the owners' specs pass unchanged, 26 of 26). Reading is through registered source datasets
+    as the viewer, `source = business` forced, fixed fields copied (no `created_by`); `mantle-business-events` is scoped by
+    `get#OrganizationRowFilter` on `organizationPartyId`; the technical marker query leaves business events out. A marker
+    carries `recordType` and `recordId`, no link: the app resolves it by the viewer's permissions.
+  - **Mantle's hooks**: one `register` call at the end of `publish#ProductPriceList`, `store#Promotion` (dates or description
+    changed, or created with a start) and `close#Period`; no parameter, result or refusal of those services changed.
+  - **Access rows**: `BOSS_INS_REPORT_DRILL` is ALWAYS on the one service `get#Drill`, not inheritable to anything else of
+    note (it is a service, and what it calls it calls natively, checking each dataset itself); `BOSS_INS_EVENTS` is view on
+    one dataset; `BOSS_INS_ANALYSIS` is the non-inheritable ALWAYS over the root deny, as the editors. No Insights group holds
+    a rows or business-annotation artifact.
+  - **Analysis**: `INSIGHTS_AUTHOR` or `INSIGHTS_DATASET_EDIT` on each service; every field is checked against the dataset's
+    own fields; the query is built from typed choices and run as the author; a share group must be the author's; a dashboard
+    target must be the author's own.
+  - **Spec leanness**: InsightsRecords renders `Records/OrderDetail` once (qvt) and `ReportBuilder/Analysis` once (qvt); no
+    other regression spec renders either under Insights; the refused paths are posts that never reach a screen. Its five
+    features are kept: the first is the fixture, the marker feature checks BOSS's own grant and deny (the engine's rule is
+    ReportAnnotations'). 1.9 s.
+- Fixes:
+  - **R1** (high, access; F-P6-7) The ten record mounts were read only by their widgets only. The Insights root's grant is an
+    inheritable ALLOW (`BOSS_INSIGHTS_ROOT`, with `MANTLE_USER_ORG`), which covers every screen, transition and service call
+    below it, so `Insights/Records/<screen>/<transition>` ran the owner's transition with only the owner service's own check
+    in the way (some 170 transitions and includes across the ten screens, none audited for a caller without the owner's app),
+    and `Insights/Records/<screen>/<owner tab>` rendered the owner's tab through the fail-widgets' `subscreens-active` with the
+    parent's actions skipped (in the probe: blank shells, one null error in Supplier360/Overview, the catalog's own refusal on
+    Prices; nothing leaked in the sixteen paths tried, by each tab's incidental conditions, not by a rule). No authz row can
+    close it: a transition's artifact is the shared screen's location, so a deny for an Insights group would deny it in the
+    owner's app too. `screen/Insights/Records.xml` now refuses, in its always-actions (which run before any transition or
+    render below it), every path below a record screen but the `InsightsRecord` subscreen, with `RECORD_READ_ONLY`, for every
+    user. Probed as `insights.reader`: the ten record contexts render in qvt (the four tabbed ones as `InsightsRecord`;
+    Customer360's also in tui and html), the menu data builds, and the owner tabs tried (twelve, of Customer360, Product360,
+    FacilityDetail and Supplier360), `facilityChoices`, `confirmationFile`, `updateFacility`, `cancelOrder` and `approveOrder`
+    are refused before they run. A tabbed record screen opened without
+    `InsightsRecord` (its default tab is chosen before the app is known, F-P6-8) is refused too, where it was blank.
+    InsightsRecords asserts a transition and a tab. Design §10's "As built" and the block comment in BossSetupData say so.
+  - **R2** (medium, INS-03) The unit guard passed a sum beside the unit's group instead of under it (the raw `aggs` form:
+    `{currency: terms, total: sum}`), a group of another field that only carried the unit field's id, and, once grouped, the
+    rows added again by `subtotals`, a footer `totals`, or a `reduce`, `groupBy` or `pivot` step. `check_units` now takes the
+    groups above each measure, counts a column's per-row units as units, and refuses those derived sums (`UNIT_MIXED`); count,
+    first and last pass, as does a groupBy or pivot that keeps the unit and totals nothing across it. Unit tests and two
+    assertions in ReportDrill. Only where the records hold two units.
+  - **R3** (medium, restricted values; F-P6-9) A drill's columns are the saved query's measured fields, so a panel that sums
+    `itemCostTotal` or a margin gave every reader the cost of each record, and any cost field could be asked as the breakdown
+    dimension. Drill.js drops cost and margin fields from the columns and the dimensions and refuses such a breakdown unless
+    the viewer holds `PRODUCT_COST_VIEW`. By field name (`/cost|margin/i`), since a dataset has no field classes (F58). Not
+    covered by a spec: no admitted fixture dataset carries a cost field.
+  - **R4** (low) `get#Drill` paged without a bound on the offset; it now pages through the first 10,000 records.
+  - **R5** (low) `record#BusinessEvent` looked its event up with `events[p.event]`, which finds `constructor`; own names only.
+- Recorded, not fixed:
+  - F-P6-9 remains for Explore, a direct query, Analysis' measure list and a panel's own aggregate: an admitted
+    `mantle-sales-items` gives its readers `acquireCost`, `itemCostTotal` and the margins (F58's field classes).
+  - The unit guard does not see a `calculate`, `runningTotal` or `percentOfTotal` step across rows of several units, an
+    expression over two queries, or a sum the browser's stat reduction makes; a `filter` aggregation to one unit is refused
+    (conservative). `distinct_units` failing leaves the fallback unit and no refusal (logged).
+  - Chatter and RecordFiles are mounted under the Insights root since P1 (`Insights.xml`), with the same inheritable grant
+    and the hosts' own access checks; not P6's, and not narrowed here.
+  - A drill's variables other than the fixed scope are the viewer's, as on Dashboard; the row filter is the guard.
+- Tests run (this worktree's Debug binary, rebuilt for R2 and R4, `--nobuild`): framework ReportDrill, ReportAnnotations,
+  BusinessDatasets 12 of 12 (1.2 s); `cargo test -p moqui-report` 81 of 81, clippy `-D warnings` clean; Mantle BusinessEvents,
+  ProductPriceLists, StorePromotions, AccountingPeriodClose 26 of 26; BOSS InsightsRecords, InsightsAccess, InsightsDashboards
+  with InsightsDatasets 18 of 18 (InsightsRecords 1.9 s); `moqui lint --screens`: none flagged in Insights or the shared record
+  screens. Prettier clean on the changed JavaScript. A throwaway probe spec (not kept) for R1. Not run: the suites, any
+  acceptance test (InsightsDrillUsable is unchanged and its Approve check still holds: the post is refused earlier).
+- For the lead:
+  - F-P6-7 is closed by R1 for every user, which also settles its user's-call item the conservative way: a user who holds
+    the owner's permission works in the owner's app, by the link. A read-only mount in the screen definition (in place of the
+    path check) stays a framework ask;
+  - R2 widens what `UNIT_MIXED` refuses on an instance with a second currency: a table grouped by currency with a footer sum
+    is refused whole, not shown without its footer. With F-P6-5, the user's call;
+  - R3's name pattern is a stopgap for F58;
+  - merge: `Records.xml`, Drill.js, Records.js, the P6 block's comment in BossSetupData, design-insights §4 and §10; mr-moqui
+    semantics.rs, drill.rs, one line of lib.rs, Monitoring.md, ReportDrill.
+
 ### P7 — Scheduled delivery and digests
 
 Design §7.1, §7.3, ScheduledReports, ScheduledReportDetail, ReportDelivery and ManagementDigest, §3 DigestPreview;

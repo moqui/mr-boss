@@ -35,6 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="customerPartyId"/>
     <parameter name="appRoot"/>
     <always-actions>
+        <!-- Insights (impl-insights P6): the record its InsightsRecord subscreen shows -->
+        <if condition="appRoot == 'Insights'"><set field="insightsRecordType" value="Customer360"/><set field="insightsRecordId" from="customerPartyId"/></if>
         <!-- Customer Service (impl-customer-service P3): its read of the customer, which its tabs use -->
         <if condition="appRoot == 'CustomerService'">
             <service-call name="ironstone.customerservice.CustomerServices.get#Customer360" out-map="serviceCustomer"
@@ -58,7 +60,13 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
     <subscreens default-item="Contact" always-use-full-path="true">
         <conditional-default condition="appRoot == 'CustomerService'" item="ServiceOverview"/>
+        <subscreens-item name="InsightsRecord" location="component://mr-boss/screen/Shared/InsightsRecord.xml" menu-include="false"/>
     </subscreens>
+    <!-- Insights (appRoot Insights, mounted at Insights/Records/Customer360; design-insights §10, crosscut's Insights row, impl-insights
+        P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
+        below runs, and the fail-widgets show the InsightsRecord subscreen (template/InsightsRecord.xml): the record as the admitted datasets the viewer reads
+        show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <if condition="organizationPartyId &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce'">
             <service-call name="ironstone.accounting.ReceivableServices.get#CustomerContext"
@@ -155,4 +163,5 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
     </widgets>
+    <fail-widgets><subscreens-active/></fail-widgets>
 </screen>

@@ -41,7 +41,9 @@ const capabilityPermissions = {
 const areas = {
     legacy: "ScheduledReports",
     datasets: "ReportBuilder/Datasets",
-    stewardship: "ReportBuilder/DatasetDetail"
+    stewardship: "ReportBuilder/DatasetDetail",
+    // P6: Analysis, the author's and the steward's (BOSS_INS_ANALYSIS)
+    analysis: "ReportBuilder/Analysis"
 }
 
 // ===== scope =====
@@ -157,8 +159,25 @@ const linkPaths = [
     "ReportBuilder/DatasetView",
     // P4: the report catalog and saved reports (design §6)
     "Reports",
-    "SavedReports"
+    "SavedReports",
+    // P6: Analysis, Drill and the read-only record contexts (design §5, §4, §10)
+    "ReportBuilder/Analysis",
+    "Drill",
+    "PanelDetail",
+    "Records/OrderDetail",
+    "Records/Customer360",
+    "Records/Supplier360",
+    "Records/Product360",
+    "Records/RequestDetail",
+    "Records/WorkItemDetail",
+    "Records/ShipmentDetail",
+    "Records/FacilityDetail",
+    "Records/EquipmentDetail",
+    "Records/InvoiceDetail"
 ]
+// The record screens with tabs: under Insights their one subscreen is InsightsRecord (Shared/InsightsRecord.xml), which the
+// links name, since a screen's default tab is chosen before the app's context is known.
+const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Product360", "Records/FacilityDetail"]
 // The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
 // (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
 // authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or
@@ -176,8 +195,24 @@ function reportLinks(capabilities) {
         playlist: "//Insights/Playlists",
         alertRule: null,
         logContext: null,
-        share: "//Insights/Dashboard"
+        share: "//Insights/Dashboard",
+        // P6: each panel's menu offers Drill, Insights' own screen over the engine's get#Drill
+        drill: "//Insights/Drill"
     }
+}
+// The variables a dashboard's panels are fixed to under Insights, as Insights › Dashboard fixes them (design §4 Dashboard):
+// the organization in scope (the chosen one, else the user's organizations; none fixed for the administrator in every
+// organization; a user of no organization is fixed to _NA_, which matches no record), also as vendorPartyId where the
+// dashboard declares that variable over Mantle's sales datasets. found is get#Context's answer for the requested organization.
+function scopeVariables(found, definition) {
+    const scopeOrganization =
+        found.organizationPartyId ||
+        (found.allOrganizations ? null : found.organizationPartyIds.length ? found.organizationPartyIds : ["_NA_"])
+    if (!scopeOrganization) return {}
+    const seller = Array.from(definition?.body?.variables || []).some(
+        variable => variable.name === "vendorPartyId" && String(variable.datasetId || "").startsWith("mantle-sales")
+    )
+    return Object.assign({organizationPartyId: scopeOrganization}, seller ? {vendorPartyId: scopeOrganization} : {})
 }
 // get#Context: the organization choices, the organization in scope (a requested one only when it is the user's, else the active
 // one, else the only one), the capabilities, the safe defaults (the reporting range; currencies kept apart, never a default
@@ -205,7 +240,9 @@ function context(p) {
         appRoot: "Insights",
         linkBase: "//Insights",
         webBase: "/qapps/Insights",
-        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Insights/" + path])),
+        sharedLinks: Object.fromEntries(
+            linkPaths.map(path => [path, "//Insights/" + path + (tabbedRecords.includes(path) ? "/InsightsRecord" : "")])
+        ),
         reportLinks: reportLinks(userScope.capabilities)
     }
 }
@@ -228,6 +265,13 @@ function shareGroups() {
 // A report engine call as the viewer, so the engine's own checks (the operation's grant, the owner, each dataset) apply.
 function asViewer(name, parameters) {
     const out = ec.service.sync().name(name).parameters(parameters).call() || {}
+    if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+    return out
+}
+// The same in a transaction of its own, for a call whose refusal the caller expects and gets past (an unread dataset, a guard's
+// refusal): the refusal does not mark the caller's transaction.
+function asViewerApart(name, parameters) {
+    const out = ec.service.sync().name(name).parameters(parameters).requireNewTransaction(true).call() || {}
     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
     return out
 }
@@ -265,6 +309,12 @@ const operations = {context, shareGroups, shareDashboard}
     sees,
     // the user's root and screen grants (P4: whether a catalog entry's route opens, Admin.js destinationOpens)
     grants: rootGrants,
+    // P6: the context, the fixed scope variables and an engine call as the viewer, for Drill.js, Analysis.js and Records.js
+    context,
+    scopeVariables,
+    asViewer,
+    asViewerApart,
+    shareGroupIds,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights operation " + op)
         return operations[op](parameters)

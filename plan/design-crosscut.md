@@ -1056,6 +1056,8 @@ CX-ORDER-AUTHORITY, CX-RECURRING, CX-CREDIT, CX-AUTOMATION, CX-DELIVERY, CX-SHEL
 | Maintenance | Header, Items, Fulfillment and receipts, History | purchase and service orders linked to authorized maintenance work through AssetMaintenanceOrderItem | read; the buyer's actions by grant; Accept outside service through `accept#ServiceItem` with the work's evidence | parts and outside service for the work order |
 | Insights | Header, Items, Fulfillment, permitted Invoices/payments, History | the order and the report's period and organization | read only; a return link to the report | the order behind an aggregate |
 
+Insights rows as built (impl-insights P6, Nov 10, 2026; this one and those of §3.2, §3.3, §3.5, §3.8, §3.10, §3.16 and Projects §5, §6): under `Insights/Records/` the shared screen shows only Insights' own read-only section (`template/InsightsRecord.xml`): what the admitted datasets the viewer reads say of the record (for an order its parts and items, with amounts in their currency and no cost), the owners' screens of it that open to the viewer, and the return to the drill. The owners' tabs and regions named in these rows are not shown under Insights; a tab opens in its owner's app. Records with no admitted dataset (supplier, work item, shipment, equipment, invoice) say not available until one is admitted ([Insights §10](design-insights.md#10-shared-screen-contexts)).
+
 ### 3.7 InventoryAvailability
 
 **Layout.** XML list with summary strip, find form and expandable facility/location/lot rows;

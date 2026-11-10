@@ -413,6 +413,11 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
     </transition>
 
+    <!-- Insights (appRoot Insights, mounted at Insights/Records/WorkItemDetail; design-insights §10, crosscut's Insights row, impl-insights
+        P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
+        below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads
+        show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <script><![CDATA[
             projects = appRoot === 'Projects'
@@ -1398,4 +1403,13 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets></section>
         </widgets></section>
     </widgets>
+    <fail-widgets>
+        <section name="InsightsContext">
+            <actions>
+                <set field="insightsRecordType" value="WorkItemDetail"/>
+                <set field="insightsRecordId" from="workEffortId"/>
+            </actions>
+            <widgets><section-include name="InsightsRecord" location="component://mr-boss/template/InsightsRecord.xml"/></widgets>
+        </section>
+    </fail-widgets>
 </screen>
