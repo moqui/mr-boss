@@ -82,6 +82,23 @@ feature("resolved price output and supplier exports keep direction and owner sco
         supplierDenied == true
     }
 })
+feature("dated price and supplier exports retain interval state and omit action controls", {
+    when() {
+        return {
+            prices: as("catalog.price.read", true, () => render("Prices/List", {productId: "BOSS_PRD_OWN"}, "csv")),
+            suppliers: as("catalog.supplier.price.read", true, () =>
+                render("SupplierPrices/List", {productId: "BOSS_PRD_OWN", organizationPartyId: "ORG_ZIZI_SERVICES"}, "csv")
+            )
+        }
+    },
+    then({prices, suppliers}) {
+        ;[prices, suppliers].every(result => result.status === 200 && result.errorMessages.length === 0)
+        ;[prices, suppliers].every(result => result.output.includes("Effective"))
+        ;[prices, suppliers].every(result => !result.output.split("\n")[0].includes("Row Actions"))
+        !prices.output.split("\n")[0].includes("History")
+        !suppliers.output.includes("SERV-RETAIL-01")
+    }
+})
 feature("Products alone refuses financial outputs, posting and unsupported contexts", {
     when() {
         return as("catalog.reader", true, () => {

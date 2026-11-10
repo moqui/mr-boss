@@ -539,6 +539,9 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                         </default-field>
                     </field>
                     <field name="state">
+                        <conditional-field condition="!['qvt','tui'].includes(sri.getRenderMode())" title="State">
+                            <display/>
+                        </conditional-field>
                         <default-field title="State">
                             <render-mode>
                                 <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${({effective:'positive',published:'positive',approved:'positive',active:'positive',scheduled:'info',draft:'warning',pending:'warning',ended:'grey-7',retired:'grey-7',superseded:'grey-7'})[String(state ?? '').toLowerCase()] || 'primary'}">${WebUtilities.encodeHtml(String(state ?? ''))}</q-chip>]]></text>
@@ -546,7 +549,7 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                             </render-mode>
                         </default-field>
                     </field>
-                    <field name="history">
+                    <field name="history" hide="['csv','xlsx'].includes(sri.getRenderMode())">
                         <default-field title="History">
                             <!-- an app with no price history route (Commerce, impl-commerce F48) shows none -->
                             <link url="history" text="History" parameter-map="{productId:productId,productPriceId:productPriceId}" condition="!!sharedLinks['Prices/PriceHistory']"/>
@@ -567,7 +570,7 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                             <display/>
                         </conditional-field>
                     </field>
-                    <field name="rowActions">
+                    <field name="rowActions" hide="['csv','xlsx'].includes(sri.getRenderMode())">
                         <default-field title="">
                             <container-dialog condition="canEdit" id="ChangePrice" button-text="Schedule" icon="sym_o_event_repeat" title="Schedule a successor price" width="720">
                                 <form-single name="ChangePrice" transition="replace">

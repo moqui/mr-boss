@@ -455,6 +455,9 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="state">
+                        <conditional-field condition="!['qvt','tui'].includes(sri.getRenderMode())" title="State">
+                            <display/>
+                        </conditional-field>
                         <default-field title="State">
                             <render-mode>
                                 <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${({effective:'positive',published:'positive',approved:'positive',active:'positive',scheduled:'info',draft:'warning',pending:'warning',ended:'grey-7',retired:'grey-7',superseded:'grey-7'})[String(state ?? '').toLowerCase()] || 'primary'}">${WebUtilities.encodeHtml(String(state ?? ''))}</q-chip>]]></text>
@@ -462,7 +465,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </render-mode>
                         </default-field>
                     </field>
-                    <field name="rowActions">
+                    <field name="rowActions" hide="['csv','xlsx'].includes(sri.getRenderMode())">
                         <default-field title="">
                             <container-dialog condition="canEdit" id="Offer_replace" button-text="Schedule" icon="sym_o_event_repeat" title="Schedule successor" width="800">
                                 <form-single name="ScheduleOffer" transition="replace">

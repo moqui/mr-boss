@@ -19,7 +19,7 @@ Keep the current inventory, activities, coverage, findings, decisions and bounde
 records references, design specifies behavior, implementation records construction, and this file records review
 and refinement.
 
-**Status: execution authorized, 2026-11-09; review in progress.** Activity coverage starts **pending** and advances
+**Status: review paused at the user-requested checkpoint, 2026-11-09.** Activity coverage starts **pending** and advances
 only with the evidence recorded in §6. Execution scope, workers, commit cadence, authorized acceptance specs and
 gate timing are recorded in §7. Historical Products implementation results and existing tests are inputs, not
 evidence of this review's outcomes.
@@ -842,24 +842,24 @@ research for this plan does not advance live coverage. Record actual modes and r
 | PRD-04 — Categories | exercised / partial | Created category; moved one dated edge, retained second parent/tree occurrence; keyboard move cancellation observed. Delete/cycle and content continuation remain | batch 2 |
 | PRD-05 — Features/groups | exercised / partial | Created feature/group and saved membership through UI. Interaction/refusal/delete cases remain | batch 2 |
 | PRD-06 — Variants | exercised / partial | Browser preview/generate/durable resume and settings limit exercised; mounted response-order recovery verified. Standard fallback works; actual TUI operations remain | PRD-UI-003, 008; batch 2 |
-| PRD-07 — Sales prices/bulk | pending | Not executed | — |
-| PRD-08 — Price lists/rules | pending | Not executed; output PRD-10 | — |
-| PRD-09 — Explain/history | pending | Not executed; cost basis/margin PRD-14/15 | — |
-| PRD-10 — Price outputs | pending | Not executed; supplier-offer output PRD-11 | — |
-| PRD-11 — Supplier offers | pending | Not executed | — |
-| PRD-12 — Stock/policy | pending | Not executed | — |
-| PRD-13 — Methods | pending | Not executed; cost basis PRD-14 | — |
+| PRD-07 — Sales prices/bulk | exercised / partial | Existing price walk updated dated prices/bulk; output bytes inspected. Expiry notices/time-zone boundaries and remaining refusal recovery not completed | PRD-UI-004, 010; checkpoint |
+| PRD-08 — Price lists/rules | exercised / partial | Existing price-list walk passed; publication/rules and effective output sampled. Full competing-rule/recovery variants remain | checkpoint |
+| PRD-09 — Explain/history | exercised / partial | Price explanation/history and supplier-only configured default regression; approved-standard margin continuation not reached | PRD-UI-004; checkpoint |
+| PRD-10 — Price outputs | exercised / partial | Actual HTML/PDF/XLSX/CSV inspected for owned rows and amounts; failure/limit variants remain | PRD-UI-010; pricing/ and output-bytes-after/ |
+| PRD-11 — Supplier offers | exercised / partial | Existing supplier walk and actual offer CSV inspected; broader two-buyer/recovery/modal identity variants remain | PRD-UI-010; checkpoint |
+| PRD-12 — Stock/policy | exercised / partial | Stock-planner policy/tracking save/reload browser walk; Commerce facility-scope rule fixed. Kit/revocation/mode continuations remain | PRD-UI-007; checkpoint |
+| PRD-13 — Methods | exercised / partial | Existing method browser walk imported/revised/released method and routing; narrow-role/recovery/mode cases remain | checkpoint |
 | PRD-14 — Cost roll-up | pending | Not executed; saved draft continues PRD-15 | — |
 | PRD-15 — Standard/finance handoff | pending | Not executed; posting scope/prerequisites unresolved | — |
-| PRD-16 — Documents/files/Chatter | pending | Not executed | — |
-| PRD-17 — Translations | pending | Not executed | — |
-| PRD-18 — Units/packs/scans | pending | Not executed; labels PRD-19 | — |
-| PRD-19 — Labels | pending | Not executed; printer availability unresolved | — |
+| PRD-16 — Documents/files/Chatter | exercised / partial | Managed-content conflict recovery, datasheet HTML/PDF and bytes checked; generic files/Chatter/multi-file recovery not reached | PRD-UI-005; documents/ |
+| PRD-17 — Translations | exercised / partial | Existing document walk refreshed translated content/source-review state; scoped locale regression. Additional locale/clear/owner recovery remains | PRD-UI-005; checkpoint |
+| PRD-18 — Units/packs/scans | exercised / partial | Existing tools walk unit/identifier/packaging flows passed; pack factor now 24 in disposable DB. Historical transaction/mode checks remain | tools/ |
+| PRD-19 — Labels | exercised / partial | Existing tools walk prepared labels and inspected actual PDF/print layout; no printer send. Remaining stale/invalid/retry variants open | tools/ |
 | PRD-20 — Import/resume | pending | Not executed | — |
 | PRD-21 — Catalog checks | pending | Not executed | — |
-| PRD-22 — Settings/consumers | pending | Not executed; consumers in PRD-02, 06–09, 15, 18–21 | — |
-| PRD-23 — Access/scope | pending | Not executed | — |
-| PRD-24 — Cross-app/modes | pending | Not executed | — |
+| PRD-22 — Settings/consumers | exercised / partial | Variant settings limit validation exercised; other settings/consumers not reached before pause | batch 2; checkpoint |
+| PRD-23 — Access/scope | exercised / partial | Narrow owner/store/facility response regressions fixed two reads; full direct-route/forged-context/revocation activity remains | PRD-UI-006, 007; checkpoint |
+| PRD-24 — Cross-app/modes | exercised / partial | Actual Products Home TUI keyboard launch, Standard variant entry and representative Commerce stock rule; further shared/mode handoffs remain | PRD-UI-002, 008; checkpoint |
 
 ### Findings register
 
@@ -872,11 +872,16 @@ leads separate until investigated.
 
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PRD-UI-001 / observed / P3 | PRD-01 Home card | catalog.edit; Material light/dark 1920×1080, dark 390×844; TUI keyboard | Ending-in-30-days title clipped at desktop; meaning and timestamp zone unclear | Home CUA captures; screens-batch1.txt | BOSS | Shortened to Ending soon, visible sales-discontinuation explanation and zone | Browser dark phone and live TUI show complete label/caption; desktop light capture follows |
-| PRD-UI-002 / observed / P2 | PRD-03, 23–24 Product360 navigation | catalog.edit; ordinary asset; Material dark 1920×1080 | Replenishment/Purchase history and type-inapplicable tabs appear; clicking Replenishment reaches Screen not found | CUA observation on disposable UI_PRD_20261109 | Framework menu | Investigating shared child-condition evaluation | Open; direct route refused, no unauthorized read observed |
+| PRD-UI-001 / observed / P3 | PRD-01 Home card | catalog.edit; Material light/dark 1920×1080, dark 390×844; TUI keyboard | Ending-in-30-days title clipped at desktop; meaning and timestamp zone unclear | Home CUA captures; screens-batch1.txt | BOSS | Shortened to Ending soon, visible sales-discontinuation explanation and zone | Measured desktop light/dark captures, dark phone and live TUI show complete label/caption |
+| PRD-UI-002 / observed / P2 | PRD-03, 23–24 Product360 navigation | catalog.edit; ordinary asset; Material dark 1920×1080 | Replenishment/Purchase history and type-inapplicable tabs appear; clicking Replenishment reaches Screen not found | CUA observation on disposable UI_PRD_20261109 | Framework menu | Generic menu evaluation now honors child conditions in prepared parent context | New red/green regression and all 9 menu tests pass; live rebuilt-binary retest remains pending at pause |
 | PRD-UI-003 / mounted reproduction / P2 | PRD-06 preview/generate/batch | Actual VariantBuilder QVue on native offline client | Delayed success/failure/finally overwrites replacement source/operation; confirmation submits changed selection; unmount continuation requests destination route | variant-responses-before/after; four failing baseline cases | BOSS | Captured source/path/request ownership, confirmation snapshot and disposal; clears stale operation/results | Four focused mounted regressions pass; browser variant walk 2/2 |
 | PRD-UI-008 / observed / P2 | PRD-06 Standard entry | catalog.edit; /apps variant builder | Authored HTML fallback unreachable because html was excluded; HTTP 404 | products-standard-variant-fallback.log | BOSS | Admit existing HTML fallback and encode product context with sri URL builder | Native request 200 plus targeted HTML regression; no new workflow |
 | PRD-UI-009 / mounted reproduction / P3 | PRD-03 bulk action visibility | catalog.price.edit; Products list | Price-only editor sees Category/Feature bulk controls despite lacking catalog edit; services still refuse writes | products-narrow-actions local evidence | Framework/BOSS | Open at requested pause; per-action condition support was assessed but no implementation started | Do not count as corrected |
+| PRD-UI-004 / source-confirmed / P2 | PRD-09 initial history parameters | supplier-only reader; Services EUR pricing policy | Defaults selected unauthorized sales direction and hard-coded USD | ProductsPricing failing baseline and corrected regression; visual-evidence/ | BOSS | Choose permitted direction and dated organization currency, then user preference | ProductsPricing/Documents 33/33; pricing acceptance 8/8 |
+| PRD-UI-005 / source-confirmed / P2 | PRD-16–17 locale choices/default | catalog reader, foreign owner, Commerce store-limited counterpart, ADMIN | Unscoped distinct locales disclosed foreign-content locale choices and influenced suggested target | ProductsDocuments failing baseline and corrected regression | Mantle/BOSS | Add two content-owner views; filter owner/store in SQL before distinct locale read | 33/33 pricing/document checks; document acceptance 2/2; bytes inspected |
+| PRD-UI-006 / source-confirmed / P1 | PRD-23 paid-access read | Narrow catalog owner/store holders and foreign counterparts | Native read returned foreign digital-product terms without owner/store scope | ShopSubscriptions red/green regression | Mantle | Require readable catalog owner/shared master or an authorized store assortment | Full focused spec 16/16; direct Products mount/live continuation remains |
+| PRD-UI-007 / source-confirmed / P1 | PRD-12/23 Commerce stock | Store-limited staff; authorized and unassigned same-org facilities | Shared stock ignored Commerce facilityIds and returned unassigned stock/picker options | ProductsInventory red/green spec-local fixtures | BOSS | Honor Commerce server-derived facility scope | Inventory/SharedContext 20/20; inventory/method browser walks 3/3 |
+| PRD-UI-010 / observed / P2 | PRD-07/11 CSV output | Sales/supplier price readers | Dated prices/offers export blank State and empty action-only columns | output-bytes/ before, output-bytes-after/ after; regression same-state capture | BOSS | Export state as text and omit History/Row Actions in CSV/XLSX | ProductsFinish/Suppliers 29/29; actual CSV contains Effective and omits controls |
 
 ### Static leads
 
@@ -948,6 +953,29 @@ ProductsVariantResponses 4/4 (2.7s), authorized ProductsTaxonomyWalk/ProductsVar
 blocking findings. Actual terminal variant selection/generation and remaining taxonomy recovery cases stay open.
 ProductsVariantWalk changed the disposable Services variant batch limit from 1000 to 100; the entire disposable
 runtime is retained separately at pause. PRD-UI-009 was reproduced but not implemented before the requested pause.
+
+**Checkpoint round and pause, 2026-11-09:** the user requested the next round of reviewed commits, then a
+pull-only merge across mr-moqui and every mr-* addon repository before continuing this review. New review work stopped;
+PRD-UI-009's assessed widget enhancement was not started. All current fixes received coordinator and independent peer
+review. Pricing/export fixes cover PRD-UI-004/010; scoped document languages cover PRD-UI-005 with Mantle owner views;
+Mantle paid-access and BOSS Commerce stock reads cover PRD-UI-006/007; the framework conditional-menu correction
+addresses PRD-UI-002 in source. Live menu retest requires rebuilding the server and remains explicitly open.
+
+Focused checks passed: pricing/documents 33/33; finish/suppliers 29/29; ShopSubscriptions 16/16; inventory/shared context
+20/20; framework menu 9/9 including a failing baseline regression; targeted core Clippy and changed-file rustfmt checks.
+Final local screen lint: 1,280 files, 35,064 expression sites, zero parse failures, 87 existing idiom/hazard sites.
+Authorized existing acceptance: taxonomy/variants 3/3, pricing 8/8, inventory/methods 3/3, documents 2/2, tools 4/4.
+No acceptance test or screenshot baseline was added. Actual effective-price PDF/layout, XLSX numeric/string cells,
+CSV and managed-content bytes were inspected; Home light/dark 1920×1080, supplier history and document captures are
+under ignored `visual-evidence/`. Important browser and actual TUI observations are recorded separately above.
+
+PRD-14/15 manufactured costing and authorized finance posting were not reached: **no posting occurred**. A scratch
+setup/probe runner rejected its external spec path before executing, so no Retail accounts were created. Imports,
+checks and remaining settings activities also stay open. All full framework/apps suites remain deferred until the
+resumed pass reaches its final wave; this checkpoint is not completion of the review. Browser theme and viewport
+were restored. Review listeners will be stopped and the kept disposable runtime relocated intact outside the runner's
+scratch namespace before pulls; its path and retained stock/method/variant/packaging fixture changes are recorded in
+ignored environment evidence. The working database was never used.
 
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.

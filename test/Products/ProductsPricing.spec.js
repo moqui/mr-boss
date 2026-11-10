@@ -201,6 +201,45 @@ feature("transaction statistics require their own direction authority and reject
         other.error.includes("organization")
     }
 })
+feature("price history starts with the reader's permitted direction and organization currency", {
+    when() {
+        const fromDate = new Date(time - 1).toISOString()
+        as("john.doe", () =>
+            makeRow(P + "ProductPricingSetting", {
+                organizationPartyId: "ORG_ZIZI_SERVICES",
+                fromDate,
+                defaultCurrencyUomId: "EUR",
+                defaultPurposeEnumId: "PppPurchase",
+                allowedPurposeIds: "PppPurchase"
+            })
+        )
+        try {
+            return as("catalog.supplier.price.read", () =>
+                ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Products.xml")
+                    .renderMode("qvt")
+                    .withStaticData()
+                    .render("Prices/PriceHistory", {productId: "B5_VISIBLE", lastStandalone: "-2"}, null)
+            )
+        } finally {
+            as("john.doe", () =>
+                ec.entity
+                    .find(P + "ProductPricingSetting")
+                    .condition({organizationPartyId: "ORG_ZIZI_SERVICES", fromDate})
+                    .disableAuthz()
+                    .deleteAll()
+            )
+        }
+    },
+    then(result) {
+        result.status == 200
+        result.errorMessages.length == 0
+        const encoded = result.output.match(/<m-form(?:-link)?\b[^>]*\bid="PriceHistoryFind"[^>]*:fields-initial="([^"]+)"/)[1]
+        encoded.includes("'direction':'purchase'")
+        encoded.includes("'priceUomId':'EUR'")
+    }
+})
 feature("transaction statistics isolate organization, direction and currency in the actual indexed order facts", {
     when() {
         as("john.doe", () => {
