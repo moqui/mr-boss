@@ -115,6 +115,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="severity">
+                                <conditional-field condition="!['qvt','tui'].includes(sri.getRenderMode())" title="Severity">
+                                    <display/>
+                                </conditional-field>
                                 <default-field title="Severity">
                                     <render-mode>
                                         <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severity === 'error' ? 'negative' : severity === 'warning' ? 'warning' : 'info'}">${WebUtilities.encodeHtml(String(severity ?? ''))}</q-chip>]]></text>
@@ -132,7 +135,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display/>
                                 </default-field>
                             </field>
-                            <field name="retry">
+                            <field name="retry" hide="['csv','xlsx'].includes(sri.getRenderMode())">
                                 <default-field title="Retry">
                                     <link url="." text="Retry check" parameter-map="{productIds:productId,productCategoryId:productCategoryId,checkIds:checkId,runChecks:true,asOfDate:asOfDate}" condition="checkId !== 'record'"/>
                                 </default-field>

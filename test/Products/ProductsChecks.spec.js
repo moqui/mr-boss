@@ -103,6 +103,21 @@ feature("severity-filtered check contexts count only their displayed issues and 
         warnings.incompleteCount == 0
     }
 })
+feature("check CSV retains error and warning severities without an empty retry action column", {
+    when() {
+        return as("catalog.reader", () => ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml")
+            .renderMode("csv").render("CatalogChecks/Index", {
+                runChecks: true, productIds: "BOSS_CHK_EMPTY,BOSS_PRD_PACK", checkIds: "requiredFields,legacyPacks"
+            }, null))
+    },
+    then(rendered) {
+        rendered.status == 200
+        rendered.errorMessages.length == 0
+        rendered.output.includes(",error,")
+        rendered.output.includes(",warning,")
+        !rendered.output.split(/\r?\n/)[0].includes("Retry")
+    }
+})
 feature("activation uses native readiness checks and refuses a duplicate identifier without changing status", {
     when() {
         return as("catalog.edit", () => ({

@@ -894,6 +894,9 @@ leads separate until investigated.
 | PRD-UI-020 / observed / P3 | PRD-06 terminal child type | catalog.edit; actual TUI 1920×1080 | Blank type concealed the Asset default and offered ineligible Virtual children | products-catalog-resume/twin-type*; coordinator keyboard retest | BOSS | Resolve blank to Asset and filter Virtual from choices; retain invalid supplied values for refusal | ProductsVariants 10/10, native picker and actual terminal show Asset plus eight eligible types; two peer reviews |
 | PRD-UI-021 / measured / P2 | PRD-07/11 ended status text | Material light, native computed colors | Ended chip/badge text contrast 3.97 | resumed-contrast-* before/after | Framework | Use existing muted text token for grey tonal chip/badge text | Actual contrast 5.24; MoquiHtmlCss 10/10; price and supplier consumers checked; da2e2766 |
 | PRD-UI-022 / measured / P2 | PRD-07 focused field label | Material dark, native computed colors | Default focused label contrast 3.66 | resumed-contrast-* before/after | Framework | Use theme link token for default focused labels; preserve explicit and error colors | Actual contrast 7.61; errors and stroke retain passing contrast; MoquiHtmlCss 10/10; da2e2766 |
+| PRD-UI-023 / observed / P2 | PRD-07/08/17 stale-edit recovery | Native Material sales/list and translation editors | Correct stale refusal retained the draft, but first real reload reused old hidden stamp/publication token/source revision and refused again | pricing-recovery payloads; content-tools recovery before/after | Framework | JSON failures no longer queue form parameters for a later page; ordinary redirect input recovery remains | Failing baseline regression; 45 render/transition checks pass with one existing ignored; actual single-reload sales/list and translation save/clear pass; two peer reviews |
+| PRD-UI-024 / observed / P2 | PRD-16 denied/missing download | Catalog reader and narrow Retail holder, identical resource | Denied or missing managed document returned empty HTTP 200, hiding the named service refusal | content-entry-recovery paired downloaded bytes | BOSS | Invoke resource service and emit its named error or authorized bytes in one script | ProductsDocuments 20/20, native foreign/missing 500 and exact same-resource holder bytes 200; peer approved |
+| PRD-UI-025 / observed / P2 | PRD-21 check CSV | Catalog reader; independent record failure plus known-product check | Severity blank and empty Retry action column exported | resumed-checks-recovery before/after actual CSV | BOSS | Plain severity outside custom modes; omit Retry from CSV/XLSX | ProductsChecks 7/7; native independent/empty/CSV 1/1 with error text and no Retry header; peer approved |
 
 ### Static leads
 
@@ -1084,6 +1087,24 @@ corrections PRD-UI-021/022 are committed as `da2e2766`: actual light Ended text 
 3.66→7.61. Existing MoquiHtmlCss checks went red before the correction and pass 10/10 after (4.66s); native light/dark
 price and supplier consumers agree. Explicit colors/error labels and focus strokes were checked separately; original
 light preference was restored. No screenshot baseline or additional complete regression journey was added.
+
+**Final recovery/output batch, 2026-11-09:** PRD-UI-023 was independently reproduced in sales prices, price-list
+publication and translations. Persisted current data and actual submitted payloads proved the first reload's stamp/
+publication token remained old after a JSON refusal. The framework now queues recovery fields only for ordinary
+redirect responses, including its no-response branch; JSON clients retain their current draft locally. Focused Rust
+render/transition checks: 45 passed, one existing ignored (2.12s); new regression fails on the original behavior.
+Non-JSON retained draft/password filtering is verified separately. Core all-target Clippy passes (25.08s) after removing
+an upstream obsolete TUI argument-count lint expectation, reviewed and separately committed as `8d891361`. Debug
+rebuild passed (22.45s); retained disposable server restarted with only the price fixture (1/1). Native sales recovery
+13.00s, price-list recovery 9.48s and translation recovery/clear 5.96s pass with exactly one real reload. Both peers
+approved the framework correction; reusable route, AJAX recovery and cold-history patterns entered UI-Review.md.
+
+PRD-UI-024 document download correction preserves resource authority and bytes while returning named denied/missing/
+version failures. Existing ProductsDocuments: 20/20 (8.0s feature time), native same-resource holder/non-holder and
+missing-resource checks 1/1 (5.81s). PRD-UI-025 check exports now include severity and omit Retry; existing
+ProductsChecks: 7/7 (4.2s), native independent failure/clean zero-issue/CSV 1/1 (3.00s). Both had failing baselines,
+coordinator and peer review. Final output screen lint: zero parse failures, 87 existing sites, 35,071 expressions.
+The final release build and deferred full framework/apps gates follow this batch; no push is authorized.
 
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.
