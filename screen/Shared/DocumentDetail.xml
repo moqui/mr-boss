@@ -54,10 +54,13 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="." />
     </transition>
     <transition name="download" read-only="true" method="get">
-        <actions>
-            <service-call name="mantle.product.ContentServices.get#CatalogContentResource" in-map="context" out-map="result" />
-            <script>if(result.contentLocation)ec.web.sendResourceResponse(result.contentLocation,String(inline)==='true'&amp;&amp;result.inlineAllowed,result.filename)</script>
-        </actions>
+        <actions><script><![CDATA[
+            const result = ec.service.sync().name('mantle.product.ContentServices.get#CatalogContentResource')
+                .parameters(context).call() || {}
+            if (ec.message.hasError()) ec.web.sendJsonResponse({})
+            else if (result.contentLocation) ec.web.sendResourceResponse(result.contentLocation,
+                String(inline) === 'true' && result.inlineAllowed, result.filename)
+        ]]></script></actions>
         <default-response type="none" />
     </transition>
     <transition name="datasheet" read-only="true" method="get">

@@ -76,6 +76,34 @@ feature("document readers can preview their content while editor writes and fore
         foreign.error.includes("not available")
     }
 })
+feature("document downloads name denied and missing resources instead of returning empty success", {
+    when() {
+        const created = as("john.doe", () => ["BOSS_PRD_OWN", "BOSS_PRD_OTHER"].map(productId =>
+            call("mantle.product.ProductServices.create#ProductContent", {productId,
+                productContentTypeEnumId: "PcntDescription", filename: "guarded-download.txt",
+                contentText: productId === "BOSS_PRD_OWN" ? "Readable document bytes" : "Foreign private document bytes"})))
+        const download = parameters => as("catalog.reader", () => ec.screen.makeTest()
+            .rootScreen("component://mr-boss/screen/Products.xml").renderMode("html")
+            .render("DocumentDetail/download", parameters, null), true)
+        return {
+            holder: download({productContentId: created[0].productContentId}),
+            foreign: download({productContentId: created[1].productContentId}),
+            missing: download({productContentId: "PRD_DOCUMENT_DOES_NOT_EXIST"}),
+            missingVersion: download({productContentId: created[0].productContentId, versionName: "missing-version"})
+        }
+    },
+    then({holder, foreign, missing, missingVersion}) {
+        holder.status == 200
+        holder.output == "Readable document bytes"
+        foreign.status >= 400
+        foreign.output.includes("Catalog content owner is not available")
+        !foreign.output.includes("Foreign private document bytes")
+        missing.status >= 400
+        missing.output.includes("Catalog document is not available")
+        missingVersion.status >= 400
+        missingVersion.output.includes("Content version is not available")
+    }
+})
 feature("document language choices and the suggested target include only readable catalog owners", {
     when() {
         as("john.doe", () => {
