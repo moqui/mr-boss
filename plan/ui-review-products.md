@@ -855,9 +855,9 @@ research for this plan does not advance live coverage. Record actual modes and r
 | PRD-17 — Translations | exercised / partial | Existing document walk refreshed translated content/source-review state; scoped locale regression. Additional locale/clear/owner recovery remains | PRD-UI-005; checkpoint |
 | PRD-18 — Units/packs/scans | exercised / partial | Existing tools walk unit/identifier/packaging flows passed; pack factor now 24 in disposable DB. Historical transaction/mode checks remain | tools/ |
 | PRD-19 — Labels | exercised / partial | Existing tools walk prepared labels and inspected actual PDF/print layout; no printer send. Remaining stale/invalid/retry variants open | tools/ |
-| PRD-20 — Import/resume | pending | Not executed | — |
-| PRD-21 — Catalog checks | pending | Not executed | — |
-| PRD-22 — Settings/consumers | exercised / partial | Variant settings limit validation exercised; other settings/consumers not reached before pause | batch 2; checkpoint |
+| PRD-20 — Import/resume | exercised / partial | Existing walk and actor-private/stale mapping/fingerprint/cancel/mixed-row/resume/idempotent-retry probes passed; actual result/error CSV inspected. Remaining mode limitations recorded | PRD-UI-013; maintenance batch |
+| PRD-21 — Catalog checks | exercised / partial | Existing reader readiness/retry walk, severity/count correction and native rerun passed; individual failing-check and mode variants remain | PRD-UI-011; maintenance batch |
+| PRD-22 — Settings/consumers | exercised / partial | Variant limit and catalog settings exercised; four flag saves/reloads, stale/invalid refusal and original-value restoration passed. Additional pricing/identifier consumers continue | batch 2; checkpoint |
 | PRD-23 — Access/scope | exercised / partial | Narrow owner/store/facility response regressions fixed two reads; full direct-route/forged-context/revocation activity remains | PRD-UI-006, 007; checkpoint |
 | PRD-24 — Cross-app/modes | exercised / partial | Actual Products Home TUI keyboard launch, Standard variant entry and representative Commerce stock rule; further shared/mode handoffs remain | PRD-UI-002, 008; checkpoint |
 
@@ -882,6 +882,11 @@ leads separate until investigated.
 | PRD-UI-006 / source-confirmed / P1 | PRD-23 paid-access read | Narrow catalog owner/store holders and foreign counterparts | Native read returned foreign digital-product terms without owner/store scope | ShopSubscriptions red/green regression | Mantle | Require readable catalog owner/shared master or an authorized store assortment | Full focused spec 16/16; direct Products mount/live continuation remains |
 | PRD-UI-007 / source-confirmed / P1 | PRD-12/23 Commerce stock | Store-limited staff; authorized and unassigned same-org facilities | Shared stock ignored Commerce facilityIds and returned unassigned stock/picker options | ProductsInventory red/green spec-local fixtures | BOSS | Honor Commerce server-derived facility scope | Inventory/SharedContext 20/20; inventory/method browser walks 3/3 |
 | PRD-UI-010 / observed / P2 | PRD-07/11 CSV output | Sales/supplier price readers | Dated prices/offers export blank State and empty action-only columns | output-bytes/ before, output-bytes-after/ after; regression same-state capture | BOSS | Export state as text and omit History/Row Actions in CSV/XLSX | ProductsFinish/Suppliers 29/29; actual CSV contains Effective and omits controls |
+
+| PRD-UI-011 / observed / P2 | PRD-21 severity-filtered checks | Reader; error filter | Three visible errors reported as four issues because one hidden warning remained in summary | resumed-check-severity-before/after | BOSS | Filter rows and displayed counts together in CheckContext; domain readiness unchanged | Focused red/green regression and live three-row/three-issue result |
+| PRD-UI-012 / observed / P3 | PRD-16 collaboration editing | catalog.edit; product Chatter | Rich message, note, edit and reply fields had no accessible names | Chatter named-field baseline/after; primary actual note/follow/reload | BOSS Shared | Add localized existing editor labels | Checks/Chatter 33/33; native note/edit/reply/follow/two-file upload/reader-download pass |
+| PRD-UI-013 / observed / P2 | PRD-20 results/sample refusal | Different authorized importer, unknown kind | Service refusal returned HTTP 200 with empty body rather than named failure | resumed import recovery and ProductsImport baseline | BOSS | Keep service invocation and error/CSV response in one script; return standard named JSON errors | ProductsImport 7/7; native holder CSV and refused actor/invalid kind checks pass |
+| PRD-UI-014 / observed / P2 | PRD-01 find dialog | Catalog editor, pointer input | Find Options had no visible submit control, so filters could not be applied with pointer | products-catalog-resume/export-evidence | BOSS | Add conventional header-only Find action; keep export columns clean | Existing ProductsCatalog render assertion and actual find/no-match/reset/CSV/XLSX pass; next commit |
 
 ### Static leads
 
@@ -1006,6 +1011,30 @@ adjustment −10 USD, debits and credits each 10 USD. Identical operation retry 
 retained under `finance-outcome/`; no further post is planned. Retail manufactured costing and broader access/mode
 continuations are still being exercised. The full framework/apps suites remain deferred until the final wave.
 
+**Maintenance and collaboration batch, 2026-11-09:** completed the authorized existing ImportWalk/Checks (3/3)
+and CatalogSettings/Phone (10/10) against the rebuilt retained runtime. Native import continuation covered actor-private
+reports, stale mappings, forged source fingerprint, canceled apply, mixed row results, reopening and idempotent retry,
+and actual CSV bytes. Found/fixed PRD-UI-013: XML service-call error flow skipped the following response script, leaving
+an empty successful response; one script now sends either authorized CSV or the framework's named error response.
+
+Found/fixed PRD-UI-011: severity filtering happened after summary calculation. The optional severity is now declared
+on CheckContext and filters displayed rows/counts together; native readiness and Home counts keep their existing
+business meaning. Live error-only result is three errors/three issues. Found/fixed PRD-UI-012 using existing localized
+rich-editor label support; primary typed/logged a private note, followed and reloaded the record, and native checks
+exercised note editing, replies, followers, two-file upload and reader download. A second shared consumer is retained
+in the existing shared Chatter regression; no framework widget code was changed.
+
+Focused checks before commits: ProductsChecks/Chatter 33/33 (8.4s feature time); ProductsImport 7/7 (3.1s), red before
+its response correction. Native settings flags persisted all four chosen values after reload; stale-version and
+invalid-currency submissions failed for their intended reasons, and original flags were restored in cleanup. Source
+and two independent peer reviews found no blockers. Screen lint remains zero parse failures with 87 existing sites.
+No new registered acceptance test or screenshot baseline was added; full suites still wait for the final wave.
+
+Observed modality limits remain explicit: native IAB zoom shortcut left measured 1920×1080, DPR 1 and visual scale 1,
+so actual 200% browser zoom is unverified; responsive 1280/390px samples are independent evidence. Physical printer
+send is outside the authorized scope, while generated labels/PDF/print layout were exercised. Native terminal Home
+and navigation are being used for the remaining TUI continuations, not inferred from a browser-rendered twin.
+
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.
 Keep full-gate status and any explicitly changed cadence visible. Do not append an unbounded transcript or repeat
@@ -1054,15 +1083,15 @@ into the framework review guide. An accurate, reviewable plan does not close any
 
 - **Bootstrap:** select a suitable binary and explicit demo/fixture setup without silently running acceptance.
   Only add narrowly missing roles/data.
-- **Cost-role alignment:** decide whether to prepare a Retail estimator/approver pair for manufactured roll-up or
-  record the composed `catalog.method.walk` limit; the narrow cost roles are Services users.
+- **Cost-role alignment (resolved):** prepared separate Retail estimator/approver fixtures; they have cost permissions
+  and read-only method access, not method edit. Existing Services roles cover the purchased-item/finance path.
 - **Execution dates:** record the as-of date and zone and prepare price rows relative to it; the demo price change on
   2026-11-15 shifts current/future prices and expiring notices. The Home Ending-in-30-days count is separately based on
   product sales discontinuation dates.
 - **Mark items here *(resolved)* as they are decided, with the decision.**
 - **Tool capability:** measure browser dimensions/zoom and terminal interaction; verify PDF/content resource support
   and whether a safe printer is available. Leave unsupported variants explicit.
-- **Finance extent:** choose whether PRD-15 stops at an inspected revaluation preview/cancel or includes an actual
-  posting in the disposable database as the inventory accountant; record the choice and required accounts/periods.
+- **Finance extent (resolved):** user authorized one actual disposable posting. It completed after cancellation/stale
+  recovery; persisted quantity, cost, balanced ledger and same-operation retry were checked. No second post is needed.
 - **Automation selection:** identify existing acceptance specs the next execution request actually asks to run.
   The map in §5 is available coverage, not a default command to run all of it.

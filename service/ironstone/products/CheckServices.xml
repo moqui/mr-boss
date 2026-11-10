@@ -22,6 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="includeDescendants" type="Boolean" />
             <parameter name="asOfDate" type="Timestamp" />
             <parameter name="checkIds" type="List" />
+            <parameter name="severity" type="String" />
             <parameter name="includeInactive" type="Boolean" />
             <parameter name="appRoot" type="String" />
             <parameter name="runChecks" type="Boolean" />

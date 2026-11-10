@@ -78,6 +78,31 @@ feature("Home incomplete counts and report retries use the same native checks wi
         denied.error.includes("authority")
     }
 })
+feature("severity-filtered check contexts count only their displayed issues and incomplete products", {
+    when() {
+        return as("catalog.reader", () => {
+            const parameters = {
+                runChecks: true,
+                productIds: ["BOSS_CHK_EMPTY", "BOSS_CHK_DUP_A", "BOSS_PRD_PACK"],
+                checkIds: ["requiredFields", "identifiers", "legacyPacks"]
+            }
+            return {
+                errors: call(S + "get#CheckContext", Object.assign({}, parameters, {severity: "error"})),
+                warnings: call(S + "get#CheckContext", Object.assign({}, parameters, {severity: "warning"}))
+            }
+        })
+    },
+    then({errors, warnings}) {
+        errors.issueRows.length > 0
+        errors.issueRows.every(row => row.severity === "error")
+        errors.issueCount == errors.issueRows.length
+        errors.incompleteCount == new Set(errors.issueRows.map(row => row.productId).filter(Boolean)).size
+        warnings.issueRows.length > 0
+        warnings.issueRows.every(row => row.severity === "warning")
+        warnings.issueCount == warnings.issueRows.length
+        warnings.incompleteCount == 0
+    }
+})
 feature("activation uses native readiness checks and refuses a duplicate identifier without changing status", {
     when() {
         return as("catalog.edit", () => ({
