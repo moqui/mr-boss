@@ -269,7 +269,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | built and reviewed Nov 7, merged |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | built and reviewed Nov 7, merged |
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | built and reviewed Nov 10, merged |
-| P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | — |
+| P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | built and reviewed Nov 10, merged |
 | P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | — |
 | P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | — |
 | P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | — |
@@ -2105,30 +2105,30 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
 - Design edits: design-admin §2 (the AccessReview row), §5 Capabilities and RowRules (as built) and AccessReview (new), §16
   (the review's row), §17.2 (AccessServices); design-crosscut §1.4 (one clause).
 - Findings (provisional, numbered by the lead):
-  - **F-P9-1** The design gives the matrix no read (only `preview#Grants` and `apply#Grants`) and the review no service. Built:
+  - **F119** The design gives the matrix no read (only `preview#Grants` and `apply#Grants`) and the review no service. Built:
     `get#Capabilities` and `get#GrantReview` in the framework, beside `get#ScopeRules`.
-  - **F-P9-2** The grant revision did not cover a binding's filter sets, so a row rule had no revision. It does now; a preview
+  - **F120** The grant revision did not cover a binding's filter sets, so a row rule had no revision. It does now; a preview
     taken before the change is stale once.
-  - **F-P9-3** Three demo bindings are of the registered launcher's type with another row rule: `BOSS_ADMIN_ADMIN` on
+  - **F121** Three demo bindings are of the registered launcher's type with another row rule: `BOSS_ADMIN_ADMIN` on
     `BOSS_ADMIN` and `BOSS_INSIGHTS_ADMIN` on `BOSS_INSIGHTS` (ALLOW with `MANTLE_ACTIVE_ORG`, F34) and `BOSS_PROJECT_CLIENT`
     on `BOSS_PROJECTS` (its client filter). Read as "lacking `MANTLE_USER_ORG`", Bind would have narrowed the administrator to
     its own organizations (against §4's Nov 7 rows on F65). A binding that carries a filter set the registry does not name
     for its artifact group is scoped on purpose: not listed as missing, `SCOPE_CONFIGURED` when asked. So no demo row offers
     Bind; it serves an app gate granted in Tools without its rules.
-  - **F-P9-4** `ArtifactAuthzFilter` has no dates and no audit log, and removing one widens what members read: a row rule is
+  - **F122** `ArtifactAuthzFilter` has no dates and no audit log, and removing one widens what members read: a row rule is
     only added, with an explicit audit row; removal stays Tools'.
-  - **F-P9-5** `ArtifactAuthz` has no dates: the review's date and time apply to grants and memberships, app gates are shown as
+  - **F123** `ArtifactAuthz` has no dates: the review's date and time apply to grants and memberships, app gates are shown as
     they are now (the print says so).
-  - **F-P9-6** "Sealed and secret values left out" is read as: the review lists no sealed permission (counted per group), no
+  - **F124** "Sealed and secret values left out" is read as: the review lists no sealed permission (counted per group), no
     allowed IPs, preference values or filter expressions. The screens still show sealed grants, marked.
-  - **F-P9-7** A form-list's export menu (`show-csv-button`) is drawn only with a list header (pagination, `select-columns`, a
+  - **F125** A form-list's export menu (`show-csv-button`) is drawn only with a list header (pagination, `select-columns`, a
     header dialog or saved finds); the review's list sets `select-columns`.
-  - **F-P9-8** A permission is in bundles of several apps (`PRODUCT_CATALOG_VIEW` in Products' and Warehouse's): the matrix has
+  - **F126** A permission is in bundles of several apps (`PRODUCT_CATALOG_VIEW` in Products' and Warehouse's): the matrix has
     a row per app and capability, and the grant is one row whatever app shows it. A cell is offered when any registered
     bundle the actor may assign carries it, as `preview#Grants` decides.
-  - **F-P9-9** The registry has no "Warehouse reader" bundle; `BOSS_WAREHOUSE` (the launcher with `MANTLE_USER_ORG` and
+  - **F127** The registry has no "Warehouse reader" bundle; `BOSS_WAREHOUSE` (the launcher with `MANTLE_USER_ORG` and
     `MANTLE_PRIVATE_CONTACT`, and `PRODUCT_CATALOG_VIEW`) is what the "usable when" grants.
-  - **F-P9-10** `get#GrantReview` returns every member of a group, as `get#Group` does; BOSS's `get#AccessReview` names only
+  - **F128** `get#GrantReview` returns every member of a group, as `get#Group` does; BOSS's `get#AccessReview` names only
     those in the user's organizations. A direct framework caller with `ADMIN_ACCESS_VIEW` reads them all, as before.
 - Decisions: the matrix is XML (a form-list with eight hidden-when-unused columns), not a `.qvue`, and its changes are a
   proposal carried in the screen's `changes` parameter (at most 40), previewed per group and applied per group, a refused
@@ -2143,8 +2143,8 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
     Attack-Surface and Remaining-Work (one paragraph, one clause); mr-boss `Admin.js` `linkPaths` rows after P8's,
     `Access.xml` subscreens, `GroupDetail.xml` (two header links), `design-admin.md`, `design-crosscut.md` §1.4 (one clause);
     `BossSetupData.xml`, `BossUsersDemoData.xml` and `MoquiConf.xml` are not touched, so nothing meets Insights P6 there;
-  - the user's call: F-P9-6 (should the review list sealed grants for a reviewer who holds them, or keep them out of every
-    print and export); whether the review should name members at all (built: yes, in scope); F-P9-4 (a delegated removal of a
+  - the user's call: F124 (should the review list sealed grants for a reviewer who holds them, or keep them out of every
+    print and export); whether the review should name members at all (built: yes, in scope); F122 (a delegated removal of a
     row rule, refused here);
   - for P17 (audit and access evidence): the review is a current projection, not kept; a kept, signed-off review would be
     its record;
@@ -2193,15 +2193,15 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
   Not run: `moqui lint --screens` (no Debug binary; the screen edits are three `set` lines and one link), the full suites,
   the acceptance spec.
 - For the lead:
-  - findings: **F-P9-11** `ignore-error="true"` clears the message, so `ec.message.hasError()` after it is always false: the
+  - findings: **F129** `ignore-error="true"` clears the message, so `ec.message.hasError()` after it is always false: the
     `failure` capture gate 1's screens copy (GroupDetail, Constitution, InstanceSettings and others) is dead code; they fall
-    back to a "not available" state, so nothing is exposed, but a refusal's reason is not shown there. **F-P9-12** Ending a
+    back to a "not available" state, so nothing is exposed, but a refusal's reason is not shown there. **F130** Ending a
     registered launcher of a group whose binding is scoped on purpose (P3's rule, now one click in the matrix: End on
     `BOSS_INSIGHTS_ADMIN`'s Insights launcher, or on `BOSS_ADMIN_ADMIN`'s by a member) deletes the binding with its own filter
     sets, and the audit row keeps the type only; granting it again gives the registry's sets (`MANTLE_USER_ORG` for
     `MANTLE_ACTIVE_ORG`). Within the access administrator's delegated authority (the same members could be given the
     registered bundle), so left as P3 decided; refusing the end as `SCOPE_CONFIGURED`, or recording the sets in the audit
-    row, is the user's call. **F-P9-13** A binding of the registered type with no filter set at all reads as "missing"
+    row, is the user's call. **F131** A binding of the registered type with no filter set at all reads as "missing"
     and may be bound by an access administrator (it narrows a non-privileged group to its organizations); a group left
     unfiltered on purpose in Tools is not told apart from one granted without its rules;
   - merge: mr-moqui `Access.js` and `AdminAccessCapabilities.spec.js` only; mr-boss `Capabilities.js`,
@@ -2501,7 +2501,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7.s F103 to F109 and P8.s F110 to F118 (Nov 10) in theirs.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7.s F103 to F109 and P8.s F110 to F118 (Nov 10) in theirs. P9.s F119 to F131 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
