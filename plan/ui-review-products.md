@@ -19,7 +19,7 @@ Keep the current inventory, activities, coverage, findings, decisions and bounde
 records references, design specifies behavior, implementation records construction, and this file records review
 and refinement.
 
-**Status: all 24 activities exercised; final verification in progress, 2026-11-09 America/Chicago.**
+**Status: review pass and final regression gates complete, 2026-11-09 America/Chicago.**
 Observed outcomes and explicit unverified recovery/mode branches are recorded in §6; partial coverage is not a pass. Execution scope, workers, commit cadence, authorized acceptance specs and
 gate timing are recorded in §7. Historical Products implementation results and existing tests are inputs, not
 evidence of this review's outcomes.
@@ -836,7 +836,7 @@ research for this plan does not advance live coverage. Record actual modes and r
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
-| PRD-01 — Workday/find | exercised / partial | Home/create/detail, saved-find create/default/update/apply/delete, no-match/reset and actual filtered CSV/XLSX passed; default restored. Actual light TUI launch; 1920 light/dark and 390 samples. Actual 200% zoom remains unverified | 001, 014; catalog-resume/export and saved-find evidence |
+| PRD-01 — Workday/find | exercised / partial | Home/create/detail, saved-find create/default/update/apply/delete, no-match/reset and actual filtered CSV/XLSX passed; default restored. Execution-relative future discontinuation made Home 0→1 and its card opened the correct filtered record; clearing restored 0. Actual light TUI launch; 1920 light/dark and 390 samples. Actual 200% zoom remains unverified | 001, 014; catalog-resume/export and saved-find evidence |
 | PRD-02 — Create/clone/lifecycle | exercised / partial | Create/activate, canceled activation, duplicate-ID retained input, clone/cancel, delete/cancel/reload and confirmed delete passed. Generated child stayed editable through Active→Discontinued→Obsolete; obsolete had no Activate. Browser; no full Standard/TUI lifecycle walk | batch 1; catalog-resume clone/delete/discontinued/obsolete |
 | PRD-03 — Master record | exercised / partial | Summary/header, two identifier edits/reload, party codes, Equivalent outgoing/incoming association and dedicated-editor refusal passed. Both actual terminal identifier-row dialogs showed their own SKU/Other identity and canceled without changes. Less-used kit/equipment/dimension edit variants unverified live | 002, 009; identifiers and association evidence |
 | PRD-04 — Categories | exercised / partial | Created/moved one dated edge, retained second parent and both tree occurrences; keyboard move cancellation, unused-category delete and category content entry passed. Actual cycle refusal retained input and left both parent-edge arrays unchanged. Remaining TUI/Standard edits unverified | taxonomy walk; category-delete and content-entry evidence |
@@ -1110,6 +1110,63 @@ Final PRD-09 read-only continuation used existing approved BOSS_COST_SAMPLE at 6
 on BOSS_PRD_OWN: actual margin 7.25 USD / 53.7037% agrees. The positive catalog.admin identity has both grants;
 catalog.price.read actions JSON omits all four cost/margin/source fields and corresponding labels, while
 catalog.cost.read independently sees the approved cost/link. Returned to the same Product360; no writes (6.91s). Final actual parent-cycle attempt named its path and retained sequence 73; both parent-edge arrays stayed unchanged, then returned to the child Parents record (6.96s).
+
+**Final regression verification, 2026-11-09 America/Chicago:** built Maximal release once at the end
+(`CARGO_BUILD_JOBS=4 ./moq build -j 4`, 4m15s). Full gates ran from the repository with MOQUI_RUNTIME,
+MOQUI_FRAMEWORK and MOQUI_CONF unset, four build/test workers, and `--nobuild` on that release binary.
+No application/framework code changed during the full gates; later edits only reconcile review documentation.
+Workspace `cargo lint` passed (1m43s).
+
+| Final check | Observed result |
+| --- | --- |
+| `./moq test-framework --nobuild` | All seven suites passed: workspace Rust tests, 342 shell checks, 425 framework server features, 10 demo features, 419 webroot offline + 48 dev-aide offline features, 149 served client features |
+| `./moq test-apps --nobuild` (final rerun) | 3,436/3,436 server features, 452 specs, 194.52s wall; 36/36 client features, 17 specs, 132.15s wall; zero failed/ignored/skipped |
+| Changed-screen lint | 1,280 files, 35,071 expression sites, zero parse failures; 87 existing idiom/hazard sites |
+| Budget preservation | No budget changed. Final app server feature time: Mantle 375.9/393s, BOSS 234.1/264s, PASS 15.8/20s. Soft warnings: framework 12.8/12s and tools 3.2/3s; final BOSS client 66.7/57s. No hard budget gate failed |
+
+The first full app run had 17 failures around one Customer Service delivered order; its client suite passed 36/36.
+Read-only inspection of the exact cached `test-5d49575c52820843` dump proved that order/header/parts absent before
+any specs, while other Customer Service orders were present. Earlier separate bootstrap logs contain the same
+partial-loader failure class (delivered-order transaction rolled back after a script stack overflow); they are not
+claimed as the exact cache creation log. Fresh-release CustomerServiceOrders passed 6/6. Quarantined only the bad
+snapshot, regenerated it on the release binary, and passed all 51 affected Customer Service/Commerce features across
+six specs before the complete successful app rerun. No source correction, test assertion weakening or helper
+self-seeding was used. Exact hashes, original dumps, failed/successful logs and peer diagnosis remain local.
+
+Final execution-relative product-date verification used the final release server and the existing active owned
+product. Summary saved/reloaded salesDiscontinuationDate 2026-11-25 04:29 UTC (15 days ahead), Home Ending soon0→1,
+and the actual card opened list=discontinuingSoon with that product. Clearing/reloading restored the original null,
+Home 1→0 and exclusion from the filtered list (5.97s). This count is independent of price-expiry notifications.
+No source changed; retained runtime field was restored before stopping the final listener.
+
+Cleanup: Services/Retail variant batch limits are 1000 again; catalog flags/defaults, effective Light appearance,
+price-user zones and saved-find default are restored. Initial theme preference-row presence was not captured;
+only restored effective appearance is claimed. Temporary grant, stock location and supplier profile changes were
+restored. New synthetic fixture/history rows and exactly one reviewed revaluation remain in the disposable runtime;
+working data was never opened. Final review and full app-test listener ports were verified closed; browser viewport
+was reset and temporary tab closed. The kept runtime/database and downloaded evidence remain local and ignored.
+
+Confirmed findings PRD-UI-001–025 are corrected, reviewed and retested. All 24 activities have observed outcomes;
+the ledger's partial statuses preserve the named unverified branches. Actual 200% zoom was not established by the
+available tool; selected 1280/390px checks are independent. Less-used master/routing/long-batch mode variants,
+renderer-unavailable fault injection and multi-page price-list page breaks remain unverified, not passed.
+Physical printer/external delivery remain outside scope. No additional production feature is inferred from a gap.
+
+Compatibility: routes, record keys, preferences and existing service contracts are retained. Content-owner views and
+row-action conditions are additive. Products now refuses owning-app mutation routes before the native service;
+authored explicit save-parameters and ordinary redirect form recovery remain intact. No migration or renamed API.
+
+Reviewed local review commits (the final verification-only commit follows this index):
+
+| Repository | Commits |
+| --- | --- |
+| mr-moqui | c8507e2f, c7620238, 453483c0, da2e2766, 8d891361, fe9dbd98 |
+| mr-boss | c74f9d8e, f26cde70, cc2eef83, a4b55267, b7dc256b, e39e490c, 0a1cf3f0, 82fff833, c625863e, e5059b5f, f51e2a23, 70f70d7e, 6937fea2, 5a63404e, 35f173e7, 9f037725 |
+| mr-mantle | bcc065a1, c3546cd4 |
+
+The earlier requested pull-only merges were e5ee437f/9725a5bd/57aa89a9 (framework/BOSS/Mantle), with the other
+mr-repos fast-forwarded or already current. No push was performed. Local ignored evidence and exact environment
+metadata are indexed in [evidence-index.md](../../../../plans/ui-refinement-evidence/boss-products/evidence-index.md).
 
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.
