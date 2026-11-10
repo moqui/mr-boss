@@ -788,7 +788,7 @@ A case template is a DbForm with dependency rows, and a case's values are a Form
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReplyList | list | Find reusable response | title, shortcut, scope Personal/Team/Global, team, language, active, tags | search/preview | `org.moqui.impl.EmailClientServices.find#EmailTextBlocks`, filtered to the service groups | Comms `Comms/Settings/TextBlocks` `TextBlockList`; Frappe HD Saved Reply |
+| ReplyList | list | Find reusable response | title, shortcut, scope Personal/Team/Global, team, language, active, tags | search/preview | `org.moqui.mail.EmailClientServices.find#EmailTextBlocks`, filtered to the service groups | Comms `Comms/Settings/TextBlocks` `TextBlockList`; Frappe HD Saved Reply |
 | ReplyEdit | single | Define text and optional actions | title, shortcut, bodyHtml, shared-with group (`userGroupId`), language, safe variables; actions: sequence, operation, field/value, assignee/team, tag, note/reply text, suggested status | action chips with ordered row alternative | text through Comms' `org.moqui.comms.MailSettingsServices.store#TextBlock`; actions through proposed `ReplyServices.save#SavedReplyAction` | Comms `TextBlocks` `EditTextBlock`; Frappe saved reply DocType and action components |
 | ReplyPreview | display | Check resolved text and effects | target case/revision, rendered body, recipients/audience, changes, forbidden/unavailable actions | explicit apply/send | proposed `mantle.request.SupportCaseServices.preview#SavedReply`, `apply#SavedReply` | Frappe SavedRepliesSelectorModal |
 

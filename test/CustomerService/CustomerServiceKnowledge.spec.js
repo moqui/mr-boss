@@ -28,7 +28,7 @@ feature(
             const restricted = system(() => {
                 const out = ec.service
                     .sync()
-                    .name("org.moqui.impl.WikiServices.update#WikiPage")
+                    .name("org.moqui.resource.WikiServices.update#WikiPage")
                     .parameters({wikiSpaceId: "ZZW_SVC", parentPath: "", pageName: "Knowledge spec restricted", pageText: "x"})
                     .call()
                 ec.service

@@ -276,7 +276,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (['WeComplete', 'WeClosed'].includes(itemStatus[link.workEffortId])) entry.done++
             }
             const statusIds = Array.from(new Set(requests.map((row) => row.statusId).filter((id) => id)))
-            const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: statusIds}).call()?.colors || {}
+            const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: statusIds}).call()?.colors || {}
             const statusLabel = (id) => id ? (ec.entity.find('moqui.basic.StatusItem').condition('statusId', id).useCache(true).one()?.description || id) : ''
             const enumLabel = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description || id) : ''
             const toMillis = (value) => {
@@ -813,7 +813,7 @@ along with this software (see the LICENSE.md file). If not, see
             const rules = []
             ec.message.pushErrors()
             try {
-                for (const rule of Array.from(ec.service.sync().name('org.moqui.impl.EmailClientServices.find#EmailRules').call()?.ruleList || [])) {
+                for (const rule of Array.from(ec.service.sync().name('org.moqui.mail.EmailClientServices.find#EmailRules').call()?.ruleList || [])) {
                     const action = Array.from(rule.actionList || []).find((one) => ['createRequest', 'createWorkItem'].includes(one.action))
                     if (!action || (action.value || '') !== workEffortId) continue
                     rules.push({emailRuleId: rule.emailRuleId, ruleName: rule.ruleName, accountName: rule.accountName || '', enabled: rule.enabled,
@@ -903,7 +903,7 @@ along with this software (see the LICENSE.md file). If not, see
             An intake address (design-projects.md §12 EmailIntake): the project's mail account and plus tag (WstIntakeAccount,
             WstIntakePlusTag), and the email rule on the account that makes them: To contains the address (local+tag@domain, or
             the account's address with no tag), the action createRequest (or createWorkItem: work items for internal senders)
-            with the project as its value, written as the user (org.moqui.impl.EmailClientServices create#EmailRule or
+            with the project as its value, written as the user (org.moqui.mail.EmailClientServices create#EmailRule or
             update#EmailRule, so the user must manage the account). An empty account takes the address off: the settings, and
             the user's rules naming the project. For one who manages the project.
         </description>
@@ -927,11 +927,11 @@ along with this software (see the LICENSE.md file). If not, see
                         .find((row) => row.workEffortId !== workEffortId && String(row.settingValue || '').toLowerCase() === tag)
                 if (other) { ec.message.addError(ec.resource.expand('The plus tag ${tag} is project ${project}\'s', '', {tag, project: other.workEffortId})); return }
             }
-            const mine = Array.from(ec.service.sync().name('org.moqui.impl.EmailClientServices.find#EmailRules').call()?.ruleList || [])
+            const mine = Array.from(ec.service.sync().name('org.moqui.mail.EmailClientServices.find#EmailRules').call()?.ruleList || [])
                     .filter((rule) => Array.from(rule.actionList || []).some((one) => ['createRequest', 'createWorkItem'].includes(one.action) && one.value === workEffortId))
             if (ec.message.hasError()) return
             if (!emailAccountId) {
-                for (const rule of mine) ec.service.sync().name('org.moqui.impl.EmailClientServices.delete#EmailRule').parameter('emailRuleId', rule.emailRuleId).call()
+                for (const rule of mine) ec.service.sync().name('org.moqui.mail.EmailClientServices.delete#EmailRule').parameter('emailRuleId', rule.emailRuleId).call()
                 store('WstIntakeAccount', null)
                 store('WstIntakePlusTag', null)
                 if (!ec.message.hasError()) message = L('The project takes no mail')
@@ -945,16 +945,16 @@ along with this software (see the LICENSE.md file). If not, see
             const ruleName = ec.resource.expand('Intake: ${project}', '', {project: access.project?.workEffortName || workEffortId})
             const same = mine.find((rule) => rule.emailAccountId === emailAccountId)
             if (same) {
-                ec.service.sync().name('org.moqui.impl.EmailClientServices.update#EmailRule').parameters({emailRuleId: same.emailRuleId, ruleName: ruleName,
+                ec.service.sync().name('org.moqui.mail.EmailClientServices.update#EmailRule').parameters({emailRuleId: same.emailRuleId, ruleName: ruleName,
                     conditionList: conditions, actionList: actions, enabled: 'Y'}).call()
                 emailRuleId = same.emailRuleId
             } else {
-                emailRuleId = ec.service.sync().name('org.moqui.impl.EmailClientServices.create#EmailRule').parameters({ruleName: ruleName, emailAccountId: emailAccountId,
+                emailRuleId = ec.service.sync().name('org.moqui.mail.EmailClientServices.create#EmailRule').parameters({ruleName: ruleName, emailAccountId: emailAccountId,
                     conditionList: conditions, actionList: actions}).call()?.emailRuleId || null
             }
             if (ec.message.hasError()) return
             for (const rule of mine) if (rule.emailRuleId !== emailRuleId)
-                ec.service.sync().name('org.moqui.impl.EmailClientServices.delete#EmailRule').parameter('emailRuleId', rule.emailRuleId).call()
+                ec.service.sync().name('org.moqui.mail.EmailClientServices.delete#EmailRule').parameter('emailRuleId', rule.emailRuleId).call()
             store('WstIntakeAccount', emailAccountId)
             store('WstIntakePlusTag', tag || null)
             if (!ec.message.hasError()) message = ec.resource.expand('Mail to ${address} makes ${what} in the project', '', {address,
@@ -989,7 +989,7 @@ along with this software (see the LICENSE.md file). If not, see
             ec.message.pushErrors()
             let accountList = []
             try {
-                const out = ec.service.sync().name('org.moqui.impl.EmailClientServices.get#EmailAccountAccess').call() || {}
+                const out = ec.service.sync().name('org.moqui.mail.EmailClientServices.get#EmailAccountAccess').call() || {}
                 accountList = Array.from(out.accountList || []).filter((account) => account.level >= 3 && !account.isInternal)
                         .map((account) => ({key: account.emailAccountId, text: (account.accountName || account.emailAddress) + (account.emailAddress ? ' <' + account.emailAddress + '>' : '')}))
             } catch (err) { accountList = [] } finally { ec.message.clearErrors(); ec.message.popErrors() }

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- RepositoryCommits (design-projects.md §7 RepositoryCommits): the log of a ref, or of a path in it (History of a file), 30 a
     page with Older (after the page's last commit) and Newest; each commit's author (an avatar), summary (to CommitDetail), short
     id, date, linked work items (to WorkItemDetail) and combined CI state. Service: ironstone.projects.CodeServices get#RepositoryCommits
-    (org.moqui.impl.GitServices.get#GitLog, get#GitCommitStatuses; WorkEffortGitCommit). -->
+    (org.moqui.git.GitServices.get#GitLog, get#GitCommitStatuses; WorkEffortGitCommit). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Commits" default-menu-index="2" menu-image="sym_o_commit" menu-image-type="icon">
 

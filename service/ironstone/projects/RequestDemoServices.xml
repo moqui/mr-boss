@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
               BOSS_DEMO_MAIL_R_INTAKE_IRON of its owner john.doe (To contains support+iron@ziziwork.example: createRequest IRON),
               the public form's link BossDemoIronIntakeForm1, John Doe the triage assignee, Bug Fix the default type;
             - a message from Dana Reyes (dana.reyes@acme.example) in the Support Inbox, run through the account's rules
-              (org.moqui.impl.EmailClientServices.run#EmailRules), so the rule makes its request;
+              (org.moqui.mail.EmailClientServices.run#EmailRules), so the rule makes its request;
             - a request sent through the form (mantle.request.RequestServices.create#IntakeRequest with the token) by Sam Patel.
             Each part on its own: one that fails is logged and the rest go on. The settings, the rule and the message are each
             written in a transaction of their own, as the rule's action reads them in its own (the loader runs a data file in one
@@ -75,7 +75,7 @@ along with this software (see the LICENSE.md file). If not, see
                         bodyText: body, body: body.split('\n\n').map((part) => '<p>' + part.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</p>').join(''),
                         snippet: body.substring(0, 137).replace(/\s+/g, ' '), messageId: '<boss-demo-intake-1@acme.example>', messageDate: when, receivedDate: when,
                         isRead: 'N', hasAttachment: 'N', rootEmailMessageId: MAIL}).requireNewTransaction(true).call()
-                    ec.service.sync().name('org.moqui.impl.EmailClientServices.run#EmailRules').parameters({emailAccountId: SUPPORT, emailMessageIdList: [MAIL]}).call()
+                    ec.service.sync().name('org.moqui.mail.EmailClientServices.run#EmailRules').parameters({emailAccountId: SUPPORT, emailMessageIdList: [MAIL]}).call()
                 })
                 // a request sent through the form, as a visitor with no session user does
                 if (ec.entity.find('mantle.request.Request').condition('requestName', 'Add a dark theme to the request form').count() === 0) step('the request from the form', () => {

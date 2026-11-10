@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     storage, members, used of quota and the user's permission, New drive (a folder drive, or version-controlled in the
     database or on disk, with members and a quota) and, for administrators, Add mirror (a read-only drive over a git URL).
     A drive's name opens it in Files; Settings opens its settings and members (DriveSettings). Through
-    org.moqui.impl.FileServices (get#UserDrives, create#Drive), which check who may do what (R21). -->
+    org.moqui.resource.FileServices (get#UserDrives, create#Drive), which check who may do what (R21). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Drives" default-menu-index="1" server-static="qvt" menu-image="sym_o_hard_drive" menu-image-type="icon">
 

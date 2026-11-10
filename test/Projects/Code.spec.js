@@ -37,7 +37,7 @@ function settle() {
         const busy = sys(() => ec.entity.find("moqui.resource.GitUpdate").condition("repositoryId", "in", ["iron", "acme-portal"])
                 .condition("ecaStatus", "in", ["pending", "running"]).count())
         if (busy == 0) return
-        sys(() => call("org.moqui.impl.GitServices.process#PendingGitUpdates", {}))
+        sys(() => call("org.moqui.git.GitServices.process#PendingGitUpdates", {}))
     }
 }
 // the test database is a copy taken right after the load, which can cut a demo update short while it runs: put it back to
@@ -46,7 +46,7 @@ function recoverCutShort() {
     sys(() => ec.entity.find("moqui.resource.GitUpdate").condition("repositoryId", "in", ["iron", "acme-portal"]).condition("ecaStatus", "running")
             .updateAll({ ecaStatus: "pending" }))
 }
-const refNames = (repositoryId, refType) => sys(() => Array.from(call("org.moqui.impl.GitServices.get#GitRefs", { repositoryId, refType }).refList).map((ref) => ref.shortName))
+const refNames = (repositoryId, refType) => sys(() => Array.from(call("org.moqui.git.GitServices.get#GitRefs", { repositoryId, refType }).refList).map((ref) => ref.shortName))
 
 spec({
     requires: ["git"],
@@ -55,9 +55,9 @@ spec({
     cleanupSpec() {
         sys(() => {
             for (const refName of refNames("iron", "branch").filter((name) => name.startsWith("bt-") || name.includes("-bt-")))
-                ec.service.sync().name("org.moqui.impl.GitServices.delete#GitRef").parameters({ repositoryId: "iron", refName, refType: "branch" }).call()
+                ec.service.sync().name("org.moqui.git.GitServices.delete#GitRef").parameters({ repositoryId: "iron", refName, refType: "branch" }).call()
             for (const refName of refNames("iron", "tag").filter((name) => name.startsWith("bt-")))
-                ec.service.sync().name("org.moqui.impl.GitServices.delete#GitRef").parameters({ repositoryId: "iron", refName, refType: "tag" }).call()
+                ec.service.sync().name("org.moqui.git.GitServices.delete#GitRef").parameters({ repositoryId: "iron", refName, refType: "tag" }).call()
             ec.message.clearErrors()
             const mrIds = Array.from(ec.entity.find("moqui.resource.GitMergeRequest").condition("repositoryId", "iron").condition("title", "like", "BT %").list())
                     .map((row) => row.mergeRequestId)
@@ -187,11 +187,11 @@ feature("Compare: the demo's merge request branch, and a new branch's merge requ
     when() {
         const open = render("apps/Projects/Code/Compare", { repositoryId: "iron", head: "IRON-3-expand-collapse" })
         // a branch named for IRON-4 with a commit, as joe
-        sys(() => call("org.moqui.impl.GitServices.create#GitRef", { repositoryId: "iron", refName: "IRON-4-bt-drag", refType: "branch" }))
+        sys(() => call("org.moqui.git.GitServices.create#GitRef", { repositoryId: "iron", refName: "IRON-4-bt-drag", refType: "branch" }))
         sys(() => {
-            call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: "iron", branch: "IRON-4-bt-drag" })
-            try { call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: "iron", message: "Drag a row onto another", fileMap: { "src/drag.js": "export const drop = () => null\n" } }) }
-            finally { call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: "iron", branch: "main" }) }
+            call("org.moqui.git.GitServices.update#GitRepository", { repositoryId: "iron", branch: "IRON-4-bt-drag" })
+            try { call("org.moqui.git.GitServices.commit#GitFiles", { repositoryId: "iron", message: "Drag a row onto another", fileMap: { "src/drag.js": "export const drop = () => null\n" } }) }
+            finally { call("org.moqui.git.GitServices.update#GitRepository", { repositoryId: "iron", branch: "main" }) }
         })
         settle()
         const fresh = as("joe.developer", () => render("apps/Projects/Code/Compare", { repositoryId: "iron", head: "IRON-4-bt-drag" }))
@@ -230,7 +230,7 @@ feature("Compare: the demo's merge request branch, and a new branch's merge requ
 
 feature("CommitDetail: the commit with its work item, checks and diff; a work item linked and unlinked by hand", {
     when() {
-        const head = sys(() => call("org.moqui.impl.GitServices.get#GitLog", { repositoryId: "iron", limit: 1 }).commitList[0].commitId)
+        const head = sys(() => call("org.moqui.git.GitServices.get#GitLog", { repositoryId: "iron", limit: 1 }).commitList[0].commitId)
         const page = render("apps/Projects/Code/CommitDetail", { repositoryId: "iron", commitId: head })
         const linked = post("Code/CommitDetail/linkItem", { repositoryId: "iron", commitId: head, workEffortId: "IRON-10" })
         const withItem = sys(() => ec.entity.find("mantle.work.effort.WorkEffortGitCommit").condition({ workEffortId: "IRON-10", repositoryId: "iron", commitId: head }).one())

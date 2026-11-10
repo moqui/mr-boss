@@ -5,7 +5,7 @@
 // revoked no longer opens; the Shares screen lists what is shared both ways; joe.developer cannot share what he may only view.
 // Run: ./moq test mr-boss --spec FileShares
 const commons = "component://mr-boss/screen/Commons.xml"
-const FILES = "org.moqui.impl.FileServices"
+const FILES = "org.moqui.resource.FileServices"
 let personalDriveId
 
 function render(path, parameters, method) {

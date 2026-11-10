@@ -18,8 +18,8 @@ const GOB = "gob.bluth"
 const SHELDON_ID = "ORG_ACME_SA"
 const GOB_ID = "ORG_BLUTH_GOB"
 const JOHN_ID = "EX_JOHN_DOE"
-const CHAT = "org.moqui.impl.ChatServices"
-const FILES = "org.moqui.impl.FileServices"
+const CHAT = "org.moqui.chat.ChatServices"
+const FILES = "org.moqui.resource.FileServices"
 const CLIENT = "ironstone.client.ClientServices."
 const CODE = "ironstone.projects.CodeServices."
 const ROOM_SECRET = "ZQX-ROOM-SECRET"
@@ -929,7 +929,7 @@ function settle() {
     while (Date.now() - started < 20000) {
         const busy = sys(() => ec.entity.find("moqui.resource.GitUpdate").condition("repositoryId", "in", ["iron", REPO]).condition("ecaStatus", "in", ["pending", "running"]).count())
         if (busy == 0) return
-        sys(() => call("org.moqui.impl.GitServices.process#PendingGitUpdates", {}))
+        sys(() => call("org.moqui.git.GitServices.process#PendingGitUpdates", {}))
     }
 }
 function share(projectId, on) {
@@ -941,7 +941,7 @@ function share(projectId, on) {
 }
 // what a client's write could change of the repository, to compare before and after
 const codeState = () => sys(() => ({
-    refs: Array.from(call("org.moqui.impl.GitServices.get#GitRefs", { repositoryId: REPO }).refList).map((ref) => ref.refName + "@" + ref.commitId).sort().join(","),
+    refs: Array.from(call("org.moqui.git.GitServices.get#GitRefs", { repositoryId: REPO }).refList).map((ref) => ref.refName + "@" + ref.commitId).sort().join(","),
     mr: (() => { const mr = ec.entity.find("moqui.resource.GitMergeRequest").condition("mergeRequestId", made.mrId).one()
         return [mr.statusId, mr.title, mr.description, mr.targetRef].join("|") })(),
     reviewers: Array.from(ec.entity.find("moqui.resource.GitMergeRequestReviewer").condition("mergeRequestId", made.mrId).list()).map((row) => row.userId + ":" + row.statusId).sort().join(","),
@@ -973,16 +973,16 @@ feature("shared repositories: a client reads its project's, read only and withou
         sys(() => {
             made.shareBefore = Array.from(ec.entity.find("mantle.work.effort.WorkEffortSetting").condition({ settingTypeEnumId: "WstShareRepositories" })
                 .condition("workEffortId", "in", ["ACME", "BLUTH"]).list()).map((row) => row.getMap())
-            call("org.moqui.impl.GitServices.create#GitRef", { repositoryId: REPO, refName: BRANCH, refType: "branch" })
-            call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: BRANCH })
+            call("org.moqui.git.GitServices.create#GitRef", { repositoryId: REPO, refName: BRANCH, refType: "branch" })
+            call("org.moqui.git.GitServices.update#GitRepository", { repositoryId: REPO, branch: BRANCH })
             try {
-                made.commitId = call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO, message: "The portal's colors for ACME-1",
+                made.commitId = call("org.moqui.git.GitServices.commit#GitFiles", { repositoryId: REPO, message: "The portal's colors for ACME-1",
                     fileMap: { "src/theme.css": ":root { --brand: #b40000; }\n" } }).commitId
-            } finally { call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" }) }
+            } finally { call("org.moqui.git.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" }) }
         })
         settle()
         sys(() => {
-            made.mrId = call("org.moqui.impl.GitReviewServices.create#MergeRequest", { repositoryId: REPO, sourceRef: BRANCH, targetRef: "main",
+            made.mrId = call("org.moqui.git.GitReviewServices.create#MergeRequest", { repositoryId: REPO, sourceRef: BRANCH, targetRef: "main",
                 title: "CC portal colors", description: "The brand colors of the portal." }).mergeRequestId
             for (const workEffortId of ["ACME-1", "ACME-3"]) {
                 if (!ec.entity.find("mantle.work.effort.WorkEffortGitMergeRequest").condition({ mergeRequestId: made.mrId, workEffortId }).count())
@@ -993,7 +993,7 @@ feature("shared repositories: a client reads its project's, read only and withou
                 statusId: "GmrrChangesRequested", requestedDate: ec.user.nowTimestamp, reviewedDate: ec.user.nowTimestamp, reviewNote: "ZQX-REVIEW-NOTE: not this red" }).call()
             made.commentId = call("mantle.work.GitServices.create#ReviewComment", { mergeRequestId: made.mrId, body: "ZQX-LINE-COMMENT: the margin is thin here",
                 path: "src/theme.css", newLine: 1, lineText: ":root { --brand: #b40000; }" }).communicationEventId
-            call("org.moqui.impl.GitServices.create#GitCommitStatus", { repositoryId: REPO, commitId: made.commitId, state: "failure", context: "ci/build",
+            call("org.moqui.git.GitServices.create#GitCommitStatus", { repositoryId: REPO, commitId: made.commitId, state: "failure", context: "ci/build",
                 description: "ZQX-CI-NOTE: the staging password expired", target_url: "https://ci.internal.example/run/9" })
         })
         ec.message.clearErrors()
@@ -1158,7 +1158,7 @@ feature("shared repositories: a client reads its project's, read only and withou
                 ec.entity.find("mantle.work.effort.WorkEffortGitCommit").condition({ repositoryId: REPO, commitId: made.commitId }).deleteAll()
             }
             ec.entity.find("mantle.work.effort.WorkEffortGitRef").condition({ repositoryId: REPO, refName: "refs/heads/" + BRANCH }).deleteAll()
-            ec.service.sync().name("org.moqui.impl.GitServices.delete#GitRef").parameters({ repositoryId: REPO, refName: BRANCH, refType: "branch" }).call()
+            ec.service.sync().name("org.moqui.git.GitServices.delete#GitRef").parameters({ repositoryId: REPO, refName: BRANCH, refType: "branch" }).call()
             ec.message.clearErrors()
             ec.entity.find("mantle.work.effort.WorkEffortSetting").condition({ settingTypeEnumId: "WstShareRepositories" }).condition("workEffortId", "in", ["ACME", "BLUTH"]).deleteAll()
             for (const row of made.shareBefore || []) ec.service.sync().name("create#mantle.work.effort.WorkEffortSetting").parameters(row).call()

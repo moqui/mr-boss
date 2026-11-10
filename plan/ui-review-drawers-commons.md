@@ -47,7 +47,7 @@ third-party research or copy a reference application's feature inventory into th
 
 | Surface | Owner and review boundary |
 | --- | --- |
-| Commons | BOSS screens, screen context and app services (`service/ironstone/commons/`: palette, Today, quick-create, contacts, drives, calendar publication, knowledge); business rules and business record services in Mantle; file and public-share token services in the framework (`org.moqui.impl.FileServices`) |
+| Commons | BOSS screens, screen context and app services (`service/ironstone/commons/`: palette, Today, quick-create, contacts, drives, calendar publication, knowledge); business rules and business record services in Mantle; file and public-share token services in the framework (`org.moqui.resource.FileServices`) |
 | Comms | BasicComms screens mounted under `/qapps/Comms`, with BOSS extensions (`screen-extend/basic-comms`) and providers for internal mailboxes, record context and calls; BOSS's own Consent and Moderation screens under `screen/Comms/`; BOSS app services in `service/ironstone/comms/`; fix generic mail/chat/call behavior in BasicComms (framework work, §5) |
 | Task and request detail | BOSS `Shared/WorkItemDetail.xml` and `Shared/RequestDetail.xml`, mounted by Commons; inspect the consuming context rather than creating copies |
 | Header, drawer frames, shared controls, Assist, live call | Framework webroot/client and framework services; BOSS supplies providers, theme destinations and the launcher's suite grouping and templates (`screen-extend/webroot`, `template/AppList.*.fancy`) |

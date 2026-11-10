@@ -64,7 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
             none (the user, or a person whose weeks the user approves). A new import gets an id; the same importId replaces its file.</description>
         <in-parameters>
             <parameter name="importId"/>
-            <parameter name="timeEntryFile" type="org.apache.commons.fileupload2.core.FileItem"/>
+            <parameter name="timeEntryFile" type="FileItem"/>
             <parameter name="characterSet" default-value="UTF-8"/>
             <parameter name="partyId"/>
         </in-parameters>

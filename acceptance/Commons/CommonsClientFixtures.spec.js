@@ -183,7 +183,7 @@ feature("shared calendar roles, a DST recurrence and existing resource fixtures 
 
 feature("Wave 5 local mail review fixtures", {
     when() {
-        const MAIL = "org.moqui.impl.EmailClientServices"
+        const MAIL = "org.moqui.mail.EmailClientServices"
         const address = "joe.wave5.review@example.invalid"
         const messageId = "<boss-ui-wave5-multipart@fixture.example.invalid>"
         const attachmentText = "Wave 5 attachment bytes.\n"
@@ -375,7 +375,7 @@ feature("Wave 7 moderation review fixtures", {
 
 feature("Wave 6 local queue review fixtures", {
     when() {
-        const SERVICES = "org.moqui.impl.CallQueueServices."
+        const SERVICES = "org.moqui.call.CallQueueServices."
         const name = "UIReview Wave6 local support"
         const invoke = (service, parameters) => {
             const out = call(SERVICES + service, parameters || {}) || {}

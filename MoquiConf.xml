@@ -13,7 +13,7 @@
     <webapp-list>
         <webapp name="webroot">
             <token-route name="s" screen-location="component://mr-boss/screen/PublicShare.xml"
-                    token-service="org.moqui.impl.FileServices.check#PublicShareToken" title="Shared files"/>
+                    token-service="org.moqui.resource.FileServices.check#PublicShareToken" title="Shared files"/>
             <token-route name="u" screen-location="component://mr-boss/screen/Unsubscribe.xml"
                     token-service="mantle.party.ConsentServices.check#UnsubscribeToken" title="Email preferences" post-transition="oneClick"/>
             <token-route name="cal" screen-location="component://mr-boss/screen/PublishedCalendar.xml"

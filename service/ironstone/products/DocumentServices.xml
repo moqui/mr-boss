@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="sequenceNum" type="Long" />
             <parameter name="contentLocation" type="String" />
             <parameter name="contentText" type="String" allow-html="any" />
-            <parameter name="contentFile" type="org.apache.commons.fileupload2.core.FileItem" />
+            <parameter name="contentFile" type="FileItem" />
             <parameter name="contentFiles" type="List" />
             <parameter name="filename" type="String" />
             <parameter name="expectedRevision" type="String" />

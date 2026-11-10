@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- What Commons Knowledge, Spaces, Review and Notes show and do (design-drawers-commons.md §10; impl-drawers-commons.md M9)
-    over the framework wiki (org.moqui.impl.WikiServices, mr-moqui docs/data/Revision-Management.md "Wiki pages").
+    over the framework wiki (org.moqui.resource.WikiServices, mr-moqui docs/data/Revision-Management.md "Wiki pages").
 
     WikiSpace and WikiPage are moqui.* entities, which no entity filter covers (R21, R28), so every service here first finds
     the page or space through get#PageRef, which asks the wiki's own rule (WikiServices.get#WikiPageAccess: view, update,
@@ -50,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="pageName"/>
             <parameter name="wikiPage" type="Map"/>
             <parameter name="wikiSpace" type="Map"/>
-            <parameter name="pageReference" type="org.moqui.resource.ResourceReference"/>
+            <parameter name="pageReference" type="ResourceReference"/>
             <parameter name="exists" type="Boolean"/>
             <parameter name="access" type="Map"/>
             <parameter name="isNotes" type="Boolean"/>
@@ -70,14 +70,14 @@ along with this software (see the LICENSE.md file). If not, see
             const space = ec.entity.find('moqui.resource.wiki.WikiSpace').condition('wikiSpaceId', wikiSpaceId).useCache(true).one()
             if (space == null || !space.rootPageLocation) return notFound()
             pagePath = String(pagePath || '').split('/').map((part) => part.trim()).filter((part) => part).join('/')
-            const refOut = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageReference')
+            const refOut = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageReference')
                     .parameters({wikiSpaceId: wikiSpaceId, pagePath: pagePath}).call()
             if (ec.message.hasError() || refOut == null) { ec.message.clearErrors(); return notFound() }
             const ref = refOut.pageReference
             wikiSpaceId = refOut.wikiSpaceId
             pagePath = refOut.pagePath || ''
             wikiPageId = refOut.wikiPageId || null
-            const rights = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess')
+            const rights = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess')
                     .parameters(wikiPageId ? {wikiPageId: wikiPageId} : {wikiSpaceId: wikiSpaceId}).call() || {}
             if (!rights.canView) {
                 ec.logger.info(`Knowledge: ${wikiSpaceId}/${pagePath} is not visible to user ${ec.user.username}`)
@@ -125,11 +125,11 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             const storageText = (access) => access.storage === 'git' ? (access.repositoryKind === 'remote' ? L('Git mirror (read only)')
                     : access.repositoryKind === 'local' ? L('Git on disk') : L('Git in the database')) : L('Database files')
-            const scope = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiViewScope').call() || {}
+            const scope = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiViewScope').call() || {}
             const viewIds = new Set(Array.from(scope.viewSpaceIdList || []))
             for (const space of Array.from(ec.entity.find('moqui.resource.wiki.WikiSpace').orderBy('description,wikiSpaceId').list())) {
                 if (!viewIds.has(space.wikiSpaceId) || String(space.wikiSpaceId).startsWith('NOTES_')) continue
-                const access = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', space.wikiSpaceId).call() || {}
+                const access = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', space.wikiSpaceId).call() || {}
                 spaceList.push({wikiSpaceId: space.wikiSpaceId, description: space.description || space.wikiSpaceId, canUpdate: !!access.canUpdate,
                     canAdmin: !!access.canAdmin, storage: access.storage || null, repositoryKind: access.repositoryKind || null, readOnly: !!access.readOnly,
                     storageText: storageText(access), restrictView: space.restrictView === 'Y', restrictUpdate: space.restrictUpdate === 'Y'})
@@ -143,7 +143,7 @@ along with this software (see the LICENSE.md file). If not, see
             } catch (err) { ec.logger.warn(`Knowledge setup: the recent pages not read: ${err}`); failedParts.push('recent') }
             ec.message.pushErrors()
             try {
-                reviewCount = ec.service.sync().name('org.moqui.impl.WikiServices.find#WikiPageReviews').parameter('filter', 'toDo').call()?.reviewCount || 0
+                reviewCount = ec.service.sync().name('org.moqui.resource.WikiServices.find#WikiPageReviews').parameter('filter', 'toDo').call()?.reviewCount || 0
                 if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
             } catch (err) { ec.logger.warn(`Knowledge setup: the reviews not counted: ${err}`); failedParts.push('reviews') }
             finally { ec.message.clearErrors(); ec.message.popErrors() }
@@ -169,7 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
                 pagePath: pagePath || '', need: 'view'}).call()
             if (ec.message.hasError() || !ref?.found || !ref.exists) return
             const base = ref.pagePath || ''
-            const scope = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiViewScope').call() || {}
+            const scope = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiViewScope').call() || {}
             const hidden = new Set(Array.from(scope.hiddenPageIdList || []))
             const rows = new Map()
             for (const row of Array.from(ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', ref.wikiSpaceId).list()))
@@ -304,10 +304,10 @@ along with this software (see the LICENSE.md file). If not, see
                             .condition('wikiPageCategoryId', id).useCache(true).one()?.categoryName || id).sort((a, b) => a.localeCompare(b))
                 })
                 part('links', () => {
-                    const links = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageLinks').parameter('wikiPageId', ref.wikiPageId).call()
+                    const links = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageLinks').parameter('wikiPageId', ref.wikiPageId).call()
                     page.links = Array.from(links?.linkList || []).map((link) => ({toWikiSpaceId: link.toWikiSpaceId, toPagePath: link.toPagePath || '',
                         toWikiPageId: link.toWikiPageId || null, linkText: link.linkText, linkTarget: link.linkTarget, found: !!link.found}))
-                    const back = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageBacklinks').parameter('wikiPageId', ref.wikiPageId).call()
+                    const back = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageBacklinks').parameter('wikiPageId', ref.wikiPageId).call()
                     page.backlinks = Array.from(back?.backlinkList || []).filter((link) => !String(link.wikiSpaceId).startsWith('NOTES_') || link.wikiSpaceId === 'NOTES_' + ec.user.userId)
                             .map((link) => ({wikiPageId: link.wikiPageId, wikiSpaceId: link.wikiSpaceId, spaceDescription: link.spaceDescription,
                                 pagePath: link.pagePath || '', pageName: link.pageName, linkText: link.linkText}))
@@ -418,7 +418,7 @@ along with this software (see the LICENSE.md file). If not, see
                         .orderBy('-changeDateTime').limit(200).list())) note(row.wikiPageId, toMillis(row.changeDateTime), 'changed')
             } catch (err) { failed = true; ec.logger.warn(`Recent pages: the changed pages not read: ${err}`) }
             try {
-                const scope = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiViewScope').call() || {}
+                const scope = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiViewScope').call() || {}
                 const viewIds = new Set(Array.from(scope.viewSpaceIdList || []))
                 const hidden = new Set(Array.from(scope.hiddenPageIdList || []))
                 const mine = 'NOTES_' + me
@@ -467,7 +467,7 @@ along with this software (see the LICENSE.md file). If not, see
             const mine = me ? 'NOTES_' + me : null
             const spaceId = scope === 'notes' ? mine : (wikiSpaceId || null)
             if (scope === 'notes' && !mine) return
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.search#WikiPages').parameters({text: needle, wikiSpaceId: spaceId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.search#WikiPages').parameters({text: needle, wikiSpaceId: spaceId,
                 limit: Math.min(Number(limit) || 25, 100)}).call() || {}
             usedIndex = !!out.usedIndex
             const fmt = (millis, pattern) => ec.l10n.format(new Date(Number(millis)), pattern)
@@ -495,10 +495,10 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             optionList = []
             const L = (text) => ec.l10n.localize(text)
-            const access = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
+            const access = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
             if (!access.canView) { ec.message.addError(L('Space not found')); return }
             canUpdate = !!access.canUpdate
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiSpacePages').parameter('wikiSpaceId', wikiSpaceId).call() || {}
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiSpacePages').parameter('wikiSpaceId', wikiSpaceId).call() || {}
             optionList.push({value: '', label: L('Top level')})
             const skip = excludePagePath ? String(excludePagePath) : null
             for (const item of Array.from(out.allChildFileFlatList || [])) {
@@ -552,7 +552,7 @@ along with this software (see the LICENSE.md file). If not, see
             const note = versionNote ? String(versionNote).trim().substring(0, 255) : null
             if (collab && ref.wikiPageId) {
                 // the co-edited document is the text: edits merged as they were made, so no conflict to check
-                const out = ec.service.sync().name('org.moqui.impl.CollabServices.save#CollabDocument').parameters({documentKey: `WikiPage:${ref.wikiPageId}`,
+                const out = ec.service.sync().name('org.moqui.resource.CollabServices.save#CollabDocument').parameters({documentKey: `WikiPage:${ref.wikiPageId}`,
                     versionNote: note}).call()
                 if (ec.message.hasError()) return
                 wikiPageId = ref.wikiPageId
@@ -574,7 +574,7 @@ along with this software (see the LICENSE.md file). If not, see
                     pagePath = ref.pagePath
                     return
                 }
-                const saved = ec.service.sync().name('org.moqui.impl.WikiServices.update#WikiPage').parameters({wikiSpaceId: ref.wikiSpaceId,
+                const saved = ec.service.sync().name('org.moqui.resource.WikiServices.update#WikiPage').parameters({wikiSpaceId: ref.wikiSpaceId,
                     wikiPageId: ref.wikiPageId || null, pagePath: path || null, pageName: name,
                     parentPath: path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : null, pageText: pageText ?? '', versionNote: note}).call()
                 if (ec.message.hasError()) return
@@ -636,10 +636,10 @@ along with this software (see the LICENSE.md file). If not, see
             // update#WikiPage writes over a page at the path: a new page is not made there
             const taken = () => { ec.message.addError(ec.resource.expand('There is a page ${path} already', '', {path: path})) }
             if (ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', wikiSpaceId).condition('pagePath', path).one() != null) return taken()
-            const file = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageFile').parameters({wikiSpaceId: wikiSpaceId, pagePath: path}).call()
+            const file = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageFile').parameters({wikiSpaceId: wikiSpaceId, pagePath: path}).call()
             if (ec.message.hasError()) return
             if (file?.exists) return taken()
-            const saved = ec.service.sync().name('org.moqui.impl.WikiServices.update#WikiPage').parameters({wikiSpaceId: wikiSpaceId, pageName: name,
+            const saved = ec.service.sync().name('org.moqui.resource.WikiServices.update#WikiPage').parameters({wikiSpaceId: wikiSpaceId, pageName: name,
                 parentPath: parent || null, wikiType: 'md', pageText: pageText ? String(pageText) : '# ' + name + '\n\n'}).call()
             if (ec.message.hasError()) return
             wikiPageId = saved.wikiPageId
@@ -705,7 +705,7 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.message.addError(L('A page is not copied under itself with the pages under it')); return }
             const taken = () => { ec.message.addError(ec.resource.expand('There is a page ${path} already', '', {path: path})) }
             if (ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', spaceId).condition('pagePath', path).one() != null) return taken()
-            const file = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageFile').parameters({wikiSpaceId: spaceId, pagePath: path}).call()
+            const file = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageFile').parameters({wikiSpaceId: spaceId, pagePath: path}).call()
             if (ec.message.hasError()) return
             if (file?.exists) return taken()
 
@@ -784,7 +784,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             failedFiles = []
             // clone#WikiPage takes the space's id as the parent for the top level (an empty parent is the source page's)
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.clone#WikiPage').parameters({baseWikiSpaceId: fromWikiSpaceId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.clone#WikiPage').parameters({baseWikiSpaceId: fromWikiSpaceId,
                 pagePath: fromPagePath, wikiSpaceId: toWikiSpaceId, parentPath: toParentPath || toWikiSpaceId, pageName: toPageName,
                 withChildren: false, copyAliases: false, copyAttachments: true, publishNew: false, usePublished: !!usePublished,
                 versionNote: versionNote || null}).call()
@@ -813,7 +813,7 @@ along with this software (see the LICENSE.md file). If not, see
             const path = ref.pagePath || ''
             if (!path) { ec.message.addError(L('The home page of a space keeps its name')); return }
             const name = String(pageName || '').replace(/\s+/g, ' ').trim()
-            const moved = ec.service.sync().name('org.moqui.impl.WikiServices.move#WikiPage').parameters({wikiPageId: wikiPageId,
+            const moved = ec.service.sync().name('org.moqui.resource.WikiServices.move#WikiPage').parameters({wikiPageId: wikiPageId,
                 toWikiSpaceId: ref.wikiSpaceId, toParentPath: path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '', toPageName: name}).call()
             if (ec.message.hasError()) return
             wikiSpaceId = moved.wikiSpaceId
@@ -842,7 +842,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId, need: 'update'}).call()
             if (ec.message.hasError() || !ref?.found) return
-            const moved = ec.service.sync().name('org.moqui.impl.WikiServices.move#WikiPage').parameters({wikiPageId: wikiPageId,
+            const moved = ec.service.sync().name('org.moqui.resource.WikiServices.move#WikiPage').parameters({wikiPageId: wikiPageId,
                 toWikiSpaceId: toWikiSpaceId || ref.wikiSpaceId, toParentPath: toParentPath || '', toPageName: toPageName || null,
                 versionNote: versionNote || null}).call()
             if (ec.message.hasError()) return
@@ -884,13 +884,13 @@ along with this software (see the LICENSE.md file). If not, see
             const name = path.substring(path.lastIndexOf('/') + 1)
             pagePath = path
             if (parentOf(path) !== newParent) {
-                const moved = ec.service.sync().name('org.moqui.impl.WikiServices.move#WikiPage').parameters({wikiPageId: wikiPageId,
+                const moved = ec.service.sync().name('org.moqui.resource.WikiServices.move#WikiPage').parameters({wikiPageId: wikiPageId,
                     toWikiSpaceId: ref.wikiSpaceId, toParentPath: newParent, toPageName: name}).call()
                 if (ec.message.hasError()) return
                 pagePath = moved.pagePath
             }
             if (position === 'inside') return
-            const spaceAccess = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', ref.wikiSpaceId).call() || {}
+            const spaceAccess = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', ref.wikiSpaceId).call() || {}
             if (!spaceAccess.canUpdate) return
             // the siblings in their order, the page moved before or after the target, each given its place
             const children = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageChildren').parameters({wikiSpaceId: ref.wikiSpaceId,
@@ -899,7 +899,7 @@ along with this software (see the LICENSE.md file). If not, see
             const at = order.indexOf(target)
             order.splice(at < 0 ? order.length : (position === 'before' ? at : at + 1), 0, pagePath)
             order.forEach((childPath, index) => {
-                const idOut = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageId').parameters({wikiSpaceId: ref.wikiSpaceId,
+                const idOut = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageId').parameters({wikiSpaceId: ref.wikiSpaceId,
                     pagePath: childPath, createIfMissing: true}).call()
                 const sequenceNum = (index + 1) * 10
                 if (idOut?.wikiPageId && Number(idOut.wikiPage?.sequenceNum) !== sequenceNum)
@@ -921,7 +921,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId, need: 'update'}).call()
             if (ec.message.hasError() || !ref?.found) return
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.delete#WikiPage').parameters({wikiPageId: wikiPageId, deleteAttachments: true}).call()
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.delete#WikiPage').parameters({wikiPageId: wikiPageId, deleteAttachments: true}).call()
             if (ec.message.hasError()) return
             wikiSpaceId = out.wikiSpaceId || ref.wikiSpaceId
             parentPath = out.pagePath || ''
@@ -945,7 +945,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the current version by default: an empty name would take the page's published version away
             const name = versionName || (ref.exists && ref.pageReference.supportsVersion() ? ref.pageReference.getCurrentVersion()?.versionName : null)
             if (!name) { ec.message.addError(L('This page keeps no versions to publish')); return }
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.set#PublishedVersion').parameters({wikiPageId: wikiPageId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.set#PublishedVersion').parameters({wikiPageId: wikiPageId,
                 publishedVersionName: name}).call()
             if (ec.message.hasError()) return
             publishedVersionName = out.publishedVersionName
@@ -975,7 +975,7 @@ along with this software (see the LICENSE.md file). If not, see
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId || null,
                 wikiSpaceId: wikiSpaceId || null, pagePath: pagePath || '', need: 'view'}).call()
             if (ec.message.hasError() || !ref?.found || !ref.exists) return
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageHistory').parameters({wikiPageId: ref.wikiPageId || null,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageHistory').parameters({wikiPageId: ref.wikiPageId || null,
                 wikiSpaceId: ref.wikiSpaceId, pagePath: ref.pagePath || ''}).call()
             if (ec.message.hasError() || out == null) return
             const toMillis = (value) => {
@@ -1026,7 +1026,7 @@ along with this software (see the LICENSE.md file). If not, see
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId || null,
                 wikiSpaceId: wikiSpaceId || null, pagePath: pagePath || '', need: 'view'}).call()
             if (ec.message.hasError() || !ref?.found) return
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageVersionDiff').parameters({wikiPageId: ref.wikiPageId || null,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageVersionDiff').parameters({wikiPageId: ref.wikiPageId || null,
                 wikiSpaceId: ref.wikiSpaceId, pagePath: ref.pagePath || '', fromVersionName: fromVersionName || null, toVersionName: toVersionName || null}).call()
             if (ec.message.hasError() || out == null) return
             const short = (name) => name == null ? null : String(name).length > 12 ? String(name).substring(0, 10) : String(name)
@@ -1051,7 +1051,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId, need: 'update'}).call()
             if (ec.message.hasError() || !ref?.found) return
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.restore#WikiPageVersion').parameters({wikiPageId: wikiPageId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.restore#WikiPageVersion').parameters({wikiPageId: wikiPageId,
                 versionName: versionName, versionNote: versionNote || null}).call()
             if (ec.message.hasError()) return
             newVersionName = out?.newVersionName || null
@@ -1089,7 +1089,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) { ec.message.addError(L('The due date is a day: yyyy-MM-dd')); return }
                 due = ec.l10n.parseTimestamp(text + ' 23:59:59.000', 'yyyy-MM-dd HH:mm:ss.SSS')
             }
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.request#WikiPageReview').parameters({wikiPageId: wikiPageId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.request#WikiPageReview').parameters({wikiPageId: wikiPageId,
                 versionName: versionName || null, reviewerUserIdList: ids, dueDate: due, note: note ? String(note).trim() : null,
                 link: '/qapps/Commons/Knowledge?wikiPageId=' + encodeURIComponent(wikiPageId) + '&review=open'}).call()
             if (ec.message.hasError()) return
@@ -1113,7 +1113,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="wikiPageId"/>
         </out-parameters>
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.decide#WikiPageReview').parameters({wikiPageReviewId: wikiPageReviewId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.decide#WikiPageReview').parameters({wikiPageReviewId: wikiPageReviewId,
                 decision: decision, decisionNote: decisionNote ? String(decisionNote).trim() : null}).call()
             if (ec.message.hasError()) return
             statusId = out?.statusId
@@ -1130,7 +1130,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="statusId"/></out-parameters>
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.cancel#WikiPageReview').parameters({wikiPageReviewId: wikiPageReviewId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.cancel#WikiPageReview').parameters({wikiPageReviewId: wikiPageReviewId,
                 note: note || null}).call()
             if (ec.message.hasError()) return
             statusId = out?.statusId
@@ -1153,7 +1153,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="reviewCount" type="Integer"/>
         </out-parameters>
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.find#WikiPageReviews').parameters({filter: filter || 'toDo',
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.find#WikiPageReviews').parameters({filter: filter || 'toDo',
                 statusId: statusId || 'WprRequested', wikiSpaceId: wikiSpaceId || null, wikiPageId: wikiPageId || null, limit: 200}).call() || {}
             const toMillis = (value) => {
                 if (value == null || value === '') return null
@@ -1282,7 +1282,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (file == null) continue
                 const name = String(file.getName ? file.getName() : (file.name || '')).replace(/^.*[\\/]/, '').trim()
                 if (!name || name.startsWith('.')) { ec.message.addError(L('A file needs a name')); return }
-                ec.service.sync().name('org.moqui.impl.WikiServices.upload#WikiPageAttachment').parameters({wikiPageId: ref.wikiPageId,
+                ec.service.sync().name('org.moqui.resource.WikiServices.upload#WikiPageAttachment').parameters({wikiPageId: ref.wikiPageId,
                     attachmentFile: file}).call()
                 if (ec.message.hasError()) return
                 filenameList.push(name)
@@ -1300,7 +1300,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId, need: 'view'}).call()
             if (ec.message.hasError() || !ref?.found) return
-            ec.service.sync().name('org.moqui.impl.WikiServices.delete#WikiPageAttachment').parameters({wikiPageId: ref.wikiPageId,
+            ec.service.sync().name('org.moqui.resource.WikiServices.delete#WikiPageAttachment').parameters({wikiPageId: ref.wikiPageId,
                 filename: String(filename || '')}).call()
         ]]></script></actions>
     </service>
@@ -1320,7 +1320,7 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             const ref = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageRef').parameters({wikiPageId: wikiPageId, need: 'view'}).call()
             if (ec.message.hasError() || !ref?.found) return
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAttachment').parameters({wikiPageId: ref.wikiPageId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAttachment').parameters({wikiPageId: ref.wikiPageId,
                 filename: String(filename || '')}).call()
             const attachment = out?.attachmentReference
             if (ec.message.hasError() || attachment == null || !attachment.exists || !attachment.isFile()) { ec.message.addError(L('File not found')); return }
@@ -1432,10 +1432,10 @@ along with this software (see the LICENSE.md file). If not, see
             tagList = []
             totalCount = 0
             const L = (text) => ec.l10n.localize(text)
-            const space = ec.service.sync().name('org.moqui.impl.WikiServices.ensure#UserNotesSpace').call()
+            const space = ec.service.sync().name('org.moqui.resource.WikiServices.ensure#UserNotesSpace').call()
             if (ec.message.hasError() || !space?.wikiSpaceId) return
             wikiSpaceId = space.wikiSpaceId
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiSpacePages').parameters({wikiSpaceId: wikiSpaceId, includeDetail: true}).call()
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiSpacePages').parameters({wikiSpaceId: wikiSpaceId, includeDetail: true}).call()
             if (ec.message.hasError()) return
             const toMillis = (value) => {
                 if (value == null || value === '') return null
@@ -1495,7 +1495,7 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const space = ec.service.sync().name('org.moqui.impl.WikiServices.ensure#UserNotesSpace').call()
+            const space = ec.service.sync().name('org.moqui.resource.WikiServices.ensure#UserNotesSpace').call()
             if (ec.message.hasError() || !space?.wikiSpaceId) return
             wikiSpaceId = space.wikiSpaceId
             const cleanTitle = String(title || '').replace(/[^\w.\-,':()!? ]+/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 80)
@@ -1525,13 +1525,13 @@ along with this software (see the LICENSE.md file). If not, see
             spaceList = []
             const L = (text) => ec.l10n.localize(text)
             isAdmin = ec.user.isInGroup('ADMIN')
-            const scope = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiViewScope').call() || {}
+            const scope = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiViewScope').call() || {}
             const viewIds = new Set(Array.from(scope.viewSpaceIdList || []))
             const storageText = (access) => access.storage === 'git' ? (access.repositoryKind === 'remote' ? L('Git mirror (read only)')
                     : access.repositoryKind === 'local' ? L('Git on disk') : L('Git in the database')) : (access.storage === 'db' ? L('Database files') : L('Other'))
             for (const space of Array.from(ec.entity.find('moqui.resource.wiki.WikiSpace').orderBy('description,wikiSpaceId').list())) {
                 if (!viewIds.has(space.wikiSpaceId) || String(space.wikiSpaceId).startsWith('NOTES_')) continue
-                const access = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', space.wikiSpaceId).call() || {}
+                const access = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', space.wikiSpaceId).call() || {}
                 const members = ec.entity.find('moqui.resource.wiki.WikiSpaceUser').condition('wikiSpaceId', space.wikiSpaceId).count()
                 const pages = ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', space.wikiSpaceId).count()
                 const view = space.restrictView === 'Y' ? L('Members') : L('Everyone')
@@ -1571,13 +1571,13 @@ along with this software (see the LICENSE.md file). If not, see
             const flag = (value) => value === 'Y' || value === true || value === 'true' ? 'Y' : 'N'
             const id = String(wikiSpaceId || '').trim()
             const title = String(description || '').trim()
-            const made = ec.service.sync().name('org.moqui.impl.WikiServices.create#WikiSpace').parameters({wikiSpaceId: id, description: title,
+            const made = ec.service.sync().name('org.moqui.resource.WikiServices.create#WikiSpace').parameters({wikiSpaceId: id, description: title,
                 repositoryKind: kinds[storage], remoteUrl: storage === 'mirror' ? (remoteUrl || null) : null, restrictView: flag(restrictView),
                 restrictUpdate: flag(restrictUpdate), allowAnyHtml: 'N'}).call()
             if (ec.message.hasError()) return
             wikiSpaceId = made.wikiSpaceId
             repositoryId = made.repositoryId || null
-            if (storage !== 'mirror') ec.service.sync().name('org.moqui.impl.WikiServices.update#WikiPage').parameters({wikiSpaceId: wikiSpaceId,
+            if (storage !== 'mirror') ec.service.sync().name('org.moqui.resource.WikiServices.update#WikiPage').parameters({wikiSpaceId: wikiSpaceId,
                 pageName: wikiSpaceId, pageText: '# ' + title + '\n\n' + L('The home page of this space: say what the space is for and link to its pages.') + '\n',
                 versionNote: L('New space')}).call()
         ]]></script></actions>
@@ -1604,7 +1604,7 @@ along with this software (see the LICENSE.md file). If not, see
             const kinds = {db: null, gitdb: 'db', gitlocal: 'local'}
             if (!(storage in kinds)) { ec.message.addError(L('A clone is kept in database files or a git repository')); return }
             if (String(baseWikiSpaceId).startsWith('NOTES_')) { ec.message.addError(L('Space not found')); return }
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.clone#WikiSpace').parameters({baseWikiSpaceId: baseWikiSpaceId,
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.clone#WikiSpace').parameters({baseWikiSpaceId: baseWikiSpaceId,
                 wikiSpaceId: String(wikiSpaceId || '').trim(), description: description ? String(description).trim() : null, repositoryKind: kinds[storage],
                 copyHistory: !!copyHistory, copyAttachments: copyAttachments !== false}).call()
             if (ec.message.hasError()) return
@@ -1629,7 +1629,7 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             if (String(wikiSpaceId).startsWith('NOTES_')) { ec.message.addError(L('Space not found')); return }
             const row = ec.entity.find('moqui.resource.wiki.WikiSpace').condition('wikiSpaceId', wikiSpaceId).one()
-            const access = row ? (ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}) : {}
+            const access = row ? (ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}) : {}
             if (row == null || !access.canView) { ec.message.addError(L('Space not found')); return }
             const users = {}
             const userName = (userId) => {
@@ -1671,7 +1671,7 @@ along with this software (see the LICENSE.md file). If not, see
             for (const page of Array.from(ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', wikiSpaceId)
                     .condition(cf.makeCondition([cf.makeCondition('restrictView', 'equals', 'Y'), cf.makeCondition('restrictUpdate', 'equals', 'Y')], 'or'))
                     .orderBy('pagePath').list())) {
-                const pageAccess = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiPageId', page.wikiPageId).call() || {}
+                const pageAccess = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiPageId', page.wikiPageId).call() || {}
                 if (!pageAccess.canView && !access.canAdmin) continue
                 const pageUsers = Array.from(ec.entity.find('moqui.resource.wiki.WikiPageUser').condition('wikiPageId', page.wikiPageId).list())
                         .map((user) => ({userId: user.userId, name: userName(user.userId), permission: user.allowUpdate === 'Y' ? 'edit' : user.allowView === 'Y' ? 'view' : 'none'}))
@@ -1697,7 +1697,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const access = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
+            const access = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
             if (!access.canView || String(wikiSpaceId).startsWith('NOTES_')) { ec.message.addError(L('Space not found')); return }
             if (!access.canAdmin) { ec.message.addError(L('Only an administrator of this space may do that')); return }
             const url = (value) => {
@@ -1734,7 +1734,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const access = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
+            const access = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
             if (!access.canView || String(wikiSpaceId).startsWith('NOTES_')) { ec.message.addError(L('Space not found')); return }
             if (!access.canAdmin) { ec.message.addError(L('Only an administrator of this space may do that')); return }
             if (!['view', 'edit', 'admin'].includes(permission)) { ec.message.addError(L('A member may read, edit or administer')); return }
@@ -1759,7 +1759,7 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const access = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
+            const access = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameter('wikiSpaceId', wikiSpaceId).call() || {}
             if (!access.canView || String(wikiSpaceId).startsWith('NOTES_')) { ec.message.addError(L('Space not found')); return }
             if (!access.canAdmin) { ec.message.addError(L('Only an administrator of this space may do that')); return }
             const existing = ec.entity.find('moqui.resource.wiki.WikiSpaceUser').condition({wikiSpaceId: wikiSpaceId, userId: userId}).one()

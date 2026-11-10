@@ -871,7 +871,7 @@ along with this software (see the LICENSE.md file). If not, see
             and files are removed (remove#ContactAvatar keepPartyContentId), as Settings/Account's own photo does.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
-            <parameter name="contentFile" type="org.apache.commons.fileupload2.core.FileItem" required="true"/>
+            <parameter name="contentFile" type="FileItem" required="true"/>
         </in-parameters>
         <out-parameters><parameter name="partyContentId"/></out-parameters>
         <actions><script><![CDATA[
@@ -1324,7 +1324,7 @@ along with this software (see the LICENSE.md file). If not, see
             draft. A new import gets an id; the same importId replaces its file.</description>
         <in-parameters>
             <parameter name="importId"/>
-            <parameter name="contactFile" type="org.apache.commons.fileupload2.core.FileItem"/>
+            <parameter name="contactFile" type="FileItem"/>
             <parameter name="presetId"/>
             <parameter name="characterSet" default-value="UTF-8"/>
         </in-parameters>

@@ -1,5 +1,5 @@
 // Knowledge review (screen/Commons/Knowledge.xml and its subscreen Review, service/ironstone/commons/KnowledgeServices.xml over
-// org.moqui.impl.WikiServices request, decide, cancel and find#WikiPageReviews; impl-drawers-commons.md M9, R23; design §10
+// org.moqui.resource.WikiServices request, decide, cancel and find#WikiPageReviews; impl-drawers-commons.md M9, R23; design §10
 // Review): a version asked for review from the page, decided from the tray's Notifications tab (approve publishes it, refuse
 // asks for changes with the reason) or from the page and the Review list, cancelled by the one who asked; the requester told
 // on WikiPageReviewDecision with a link that opens the page on its review. On the knowledge demo (data/BossKnowledgeDemoData.xml):
@@ -7,7 +7,7 @@
 // john.doe is decided here, so his tray keeps the M2 demo's one approval for the specs after this one.
 // Run: ./moq test mr-boss --spec KnowledgeReview
 const commons = "component://mr-boss/screen/Commons.xml"
-const NOTIFY = "org.moqui.impl.NotificationServices"
+const NOTIFY = "org.moqui.ui.NotificationServices"
 
 function call_(path, parameters, method) {
     const str = ec.screen.makeTest().rootScreen(commons).render(path, parameters || {}, method || null)

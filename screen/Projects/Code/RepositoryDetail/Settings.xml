@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition name="saveGeneral">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.update#GitRepository" in-map="{repositoryId:repositoryId, description:(description ?? ''),
+            <service-call name="org.moqui.git.GitServices.update#GitRepository" in-map="{repositoryId:repositoryId, description:(description ?? ''),
                     branch:(branch || null), defaultMergeMethodEnumId:(defaultMergeMethodEnumId || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.l10n.localize('Repository saved'), 'success')</script></if>
         </actions>
@@ -50,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="storeRule">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.store#GitBranchRule" in-map="{branchRuleId:(branchRuleId || null), repositoryId:repositoryId, refPattern:refPattern,
+            <service-call name="org.moqui.git.GitServices.store#GitBranchRule" in-map="{branchRuleId:(branchRuleId || null), repositoryId:repositoryId, refPattern:refPattern,
                     allowForcePush:(allowForcePush || 'N'), allowDelete:(allowDelete || 'N'), requireMergeRequest:(requireMergeRequest || 'N'),
                     requiredApprovals:(requiredApprovals || 0), dismissStaleApprovals:(dismissStaleApprovals || 'N'), requiredStatusContexts:(requiredStatusContexts || null),
                     allowedMergeMethods:(allowedMergeMethods ? (allowedMergeMethods instanceof Array || (typeof allowedMergeMethods == 'object' &amp;&amp; allowedMergeMethods.length != null) ? Array.from(allowedMergeMethods).join(',') : allowedMergeMethods) : null),
@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="deleteRule">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.delete#GitBranchRule" in-map="{branchRuleId:branchRuleId}"/>
+            <service-call name="org.moqui.git.GitServices.delete#GitBranchRule" in-map="{branchRuleId:branchRuleId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.l10n.localize('Branch rule deleted'), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>
@@ -70,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="storeWebhook">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.store#GitWebhook" in-map="{webhookId:(webhookId || null), repositoryId:repositoryId, url:url,
+            <service-call name="org.moqui.git.GitServices.store#GitWebhook" in-map="{webhookId:(webhookId || null), repositoryId:repositoryId, url:url,
                     events:(events ? (typeof events == 'object' &amp;&amp; events.length != null ? Array.from(events).join(',') : events) : null),
                     secret:(secret || null), active:(active || 'N'), description:(description || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.l10n.localize('Webhook saved'), 'success')</script></if>
@@ -80,7 +80,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="deleteWebhook">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.delete#GitWebhook" in-map="{webhookId:webhookId}"/>
+            <service-call name="org.moqui.git.GitServices.delete#GitWebhook" in-map="{webhookId:webhookId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.l10n.localize('Webhook deleted'), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>
@@ -88,7 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="testWebhook">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.test#GitWebhook" out-map="testOut" in-map="{webhookId:webhookId}"/>
+            <service-call name="org.moqui.git.GitServices.test#GitWebhook" out-map="testOut" in-map="{webhookId:webhookId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(testOut.delivered ? ec.resource.expand('Ping delivered (${status})', '', {status: testOut.statusCode || 'ok'})
                 : ec.resource.expand('Ping not delivered: ${error}', '', {error: testOut.errorText || testOut.statusCode || ''}), testOut.delivered ? 'success' : 'warning')</script></if>
         </actions>
@@ -97,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="setupLfs">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.setup#GitLfs" out-map="lfsOut" in-map="{repositoryId:repositoryId,
+            <service-call name="org.moqui.git.GitServices.setup#GitLfs" out-map="lfsOut" in-map="{repositoryId:repositoryId,
                     patterns:(patterns ? String(patterns).split(/[\s,]+/).filter((pattern) => pattern) : null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(lfsOut.commitId ? ec.l10n.localize('Large file patterns committed') : ec.l10n.localize('It keeps those in LFS already'), 'success')</script></if>
         </actions>
@@ -123,7 +123,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <script>if (!ec.user.isInGroup('ADMIN')) ec.message.addError(ec.l10n.localize('Only administrators fetch a mirror'))</script>
             <if condition="!ec.message.hasError()">
-                <service-call name="org.moqui.impl.GitServices.fetch#GitRepository" in-map="{repositoryId:repositoryId}"/></if>
+                <service-call name="org.moqui.git.GitServices.fetch#GitRepository" in-map="{repositoryId:repositoryId}"/></if>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.l10n.localize('Fetched'), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>
@@ -133,7 +133,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <script>if (!ec.user.isInGroup('ADMIN')) ec.message.addError(ec.l10n.localize('Only administrators collect a repository'))</script>
             <if condition="!ec.message.hasError()">
-                <service-call name="org.moqui.impl.GitServices.gc#GitRepositories" out-map="gcOut" in-map="{repositoryId:repositoryId, dryRun:(dryRun == 'Y')}"/>
+                <service-call name="org.moqui.git.GitServices.gc#GitRepositories" out-map="gcOut" in-map="{repositoryId:repositoryId, dryRun:(dryRun == 'Y')}"/>
                 <script>const result = Array.from(gcOut?.results || [])[0] || {}
                     if (!ec.message.hasError()) ec.message.addMessage(result.error ? result.error : (dryRun == 'Y' ? ec.l10n.localize('Dry run: ') : '') + (result.summary || ec.l10n.localize('Collected')),
                         result.error ? 'warning' : 'success')</script>
@@ -146,7 +146,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <script>if (!ec.user.isInGroup('ADMIN')) ec.message.addError(ec.l10n.localize('Only administrators check a repository'))</script>
             <if condition="!ec.message.hasError()">
-                <service-call name="org.moqui.impl.GitServices.fsck#GitRepository" out-map="fsckOut" in-map="{repositoryId:repositoryId}"/>
+                <service-call name="org.moqui.git.GitServices.fsck#GitRepository" out-map="fsckOut" in-map="{repositoryId:repositoryId}"/>
                 <script>if (!ec.message.hasError()) ec.message.addMessage(Array.from(fsckOut?.errors || []).length ? Array.from(fsckOut.errors).join('; ')
                     : ec.resource.expand('${count} objects checked, all sound', '', {count: fsckOut?.checkedCount || 0}), Array.from(fsckOut?.errors || []).length ? 'warning' : 'success')</script>
             </if>
@@ -158,7 +158,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <script>if (!ec.user.isInGroup('ADMIN')) ec.message.addError(ec.l10n.localize('Only administrators export a repository'))</script>
             <if condition="!ec.message.hasError()">
-                <service-call name="org.moqui.impl.GitServices.export#GitRepository" out-map="exportOut" in-map="{repositoryId:repositoryId, targetPath:(targetPath || null)}"/>
+                <service-call name="org.moqui.git.GitServices.export#GitRepository" out-map="exportOut" in-map="{repositoryId:repositoryId, targetPath:(targetPath || null)}"/>
                 <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Exported to ${path} (${count} objects)', '', {path: exportOut.exportPath, count: exportOut.objectCount || 0}), 'success')</script>
             </if>
         </actions>
@@ -169,7 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <script>if (!ec.user.isInGroup('ADMIN')) ec.message.addError(ec.l10n.localize('Only administrators import into a repository'))</script>
             <if condition="!ec.message.hasError()">
-                <service-call name="org.moqui.impl.GitServices.import#GitRepository" out-map="importOut" in-map="{repositoryId:repositoryId, source:(source || null)}"/>
+                <service-call name="org.moqui.git.GitServices.import#GitRepository" out-map="importOut" in-map="{repositoryId:repositoryId, source:(source || null)}"/>
                 <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Imported: ${count} objects', '', {count: importOut.objectCount || 0}), 'success')</script>
             </if>
         </actions>
@@ -178,7 +178,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="archive">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.archive#GitRepository" out-map="archiveOut" in-map="{repositoryId:repositoryId}"/>
+            <service-call name="org.moqui.git.GitServices.archive#GitRepository" out-map="archiveOut" in-map="{repositoryId:repositoryId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.resource.expand('${repositoryId} archived; ${count} open merge requests closed', '', {repositoryId, count: archiveOut.closedMergeRequestCount || 0}), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>
@@ -186,7 +186,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="unarchive">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.unarchive#GitRepository" in-map="{repositoryId:repositoryId}"/>
+            <service-call name="org.moqui.git.GitServices.unarchive#GitRepository" in-map="{repositoryId:repositoryId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.resource.expand('${repositoryId} is writable again', '', {repositoryId}), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>
@@ -202,7 +202,7 @@ along with this software (see the LICENSE.md file). If not, see
             const deliveries = (webhookId) => {
                 ec.message.pushErrors()
                 try {
-                    return Array.from(ec.service.sync().name('org.moqui.impl.GitServices.find#GitWebhookDeliveries').parameters({webhookId, pageSize: 10}).call()?.deliveryList || [])
+                    return Array.from(ec.service.sync().name('org.moqui.git.GitServices.find#GitWebhookDeliveries').parameters({webhookId, pageSize: 10}).call()?.deliveryList || [])
                             .map((delivery) => ({event: delivery.event || '', statusId: delivery.statusId, httpStatus: delivery.httpStatus || '', failCount: delivery.failCount || 0,
                                 whenText: delivery.initDate ? ec.l10n.format(delivery.initDate, 'MMM d, h:mm a') : '',
                                 errorText: Array.from(delivery.errorList || []).map((error) => error.errorText).filter((text) => text)[0] || ''}))

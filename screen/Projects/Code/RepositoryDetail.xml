@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- RepositoryDetail (design-projects.md §7 RepositoryDetail; style-guide §3.3 Detail): one repository the user may view
-    (ironstone.projects.CodeServices.get#RepositoryAccess over org.moqui.impl.GitServices.get#GitRepositoryAccess, in always-actions so a
+    (ironstone.projects.CodeServices.get#RepositoryAccess over org.moqui.git.GitServices.get#GitRepositoryAccess, in always-actions so a
     tab loaded on its own has it, impl-projects.md F18). The title row: the id, the description, the storage, the default branch
     and the linked projects as chips; Clone (a dialog with the HTTPS and SSH URLs and the way to Git access) and New merge
     request (primary, opening Compare). An archived repository shows its banner on every tab. The tabs: Files, Commits,

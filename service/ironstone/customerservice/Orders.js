@@ -378,7 +378,7 @@ function recipientOptions(customerIds) {
 // The mail accounts the user may send from.
 function senderOptions() {
     try {
-        const access = lib.call("org.moqui.impl.EmailClientServices.get#EmailAccountAccess")
+        const access = lib.call("org.moqui.mail.EmailClientServices.get#EmailAccountAccess")
         return Array.from(access.accountList || [])
             .filter(account => account.canSend)
             .map(account => ({value: account.emailAccountId, label: account.accountName || account.emailAddress}))

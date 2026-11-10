@@ -617,11 +617,11 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="307" resourceTypeEnumId="STRT_SHELL_COUNTS_SERVICE"
             resourceValue="mantle.party.PartyServices.get#ShellCounts"/>
     <!-- Chat (design-drawers-commons.md §13, impl M10): a room bound to a record is read and joined by the users who may see the
-        record (org.moqui.impl.ChatServices.check#RecordVisible calls this service with checkOnly, under the user's filters) -->
+        record (org.moqui.chat.ChatServices.check#RecordVisible calls this service with checkOnly, under the user's filters) -->
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="309" resourceTypeEnumId="STRT_RECORD_VISIBLE_SERVICE"
             resourceValue="mantle.party.CommunicationServices.get#RecordLinkInfo"/>
     <!-- Out of office (design-drawers-commons.md §17, impl M5): an automatic reply to "my contacts and people inside" asks which
-        senders are the account owner's contacts (org.moqui.impl.EmailClientServices.filter#ContactAddresses calls this service:
+        senders are the account owner's contacts (org.moqui.mail.EmailClientServices.filter#ContactAddresses calls this service:
         the owner's personal contacts, own and shared contact books, and the directory of the owner's organizations) -->
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="310" resourceTypeEnumId="STRT_EMAIL_CONTACT_SERVICE"
             resourceValue="mantle.party.ContactBookServices.filter#ContactAddresses"/>
@@ -4040,7 +4040,7 @@ along with this software (see the LICENSE.md file). If not, see
         own permission (granted below to the identity operator and the administrator, who offboard) and the new owner. -->
     <ironstone.admin.LifecycleParticipant participantKey="commons.drives" version="1" ownerApp="Commons" title="Shared drives"
             description="The shared drives the user owns; personal drives stay with their user." resourceKind="drive"
-            lookupService="org.moqui.impl.FileServices.find#OwnedDrives" transferService="org.moqui.impl.FileServices.transfer#DriveOwner"
+            lookupService="org.moqui.resource.FileServices.find#OwnedDrives" transferService="org.moqui.resource.FileServices.transfer#DriveOwner"
             resourceParameter="driveId" requiredPermission="DRIVE_OWNER_CHANGE" sequenceNum="10"/>
     <ironstone.admin.LifecycleParticipant participantKey="commons.calendars" version="1" ownerApp="Commons" title="Shared calendars"
             description="The shared and resource calendars the user owns, and an organization's calendars the user alone manages; personal calendars stay with their user."
@@ -4054,8 +4054,8 @@ along with this software (see the LICENSE.md file). If not, see
             requiredPermission="CONTACT_BOOK_OWNER_CHANGE" sequenceNum="30"/>
     <ironstone.admin.LifecycleParticipant participantKey="comms.mailAccounts" version="1" ownerApp="Comms" title="Shared mail accounts"
             description="The shared mail accounts the user owns; personal accounts stay with their user." resourceKind="mailAccount"
-            lookupService="org.moqui.impl.EmailClientServices.find#OwnedEmailAccounts"
-            transferService="org.moqui.impl.EmailClientServices.transfer#EmailAccountOwner" resourceParameter="emailAccountId"
+            lookupService="org.moqui.mail.EmailClientServices.find#OwnedEmailAccounts"
+            transferService="org.moqui.mail.EmailClientServices.transfer#EmailAccountOwner" resourceParameter="emailAccountId"
             requiredPermission="EMAIL_ACCOUNT_OWNER_CHANGE" sequenceNum="40"/>
     <ironstone.admin.LifecycleParticipant participantKey="projects.assignments" version="1" ownerApp="Projects" title="Open assignments"
             description="The open tasks, work items and requests assigned to the user, reassigned through Projects' and Commons' own services."

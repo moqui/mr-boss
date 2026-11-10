@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- RepositoryActivity (design-projects.md §7 RepositoryActivity): the push log, newest first, 20 a page: when, who, the source
     (push, mirror fetch, import, a write through Moqui), the transport, the refs changed, and the state of its gitECA rules with
     a failure's error; Run again (process#GitUpdate) for a failed one, for the repository's maintainers. Services:
-    ironstone.projects.CodeServices.get#RepositoryActivity (org.moqui.impl.GitServices.find#GitUpdates). -->
+    ironstone.projects.CodeServices.get#RepositoryActivity (org.moqui.git.GitServices.find#GitUpdates). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Activity" default-menu-index="6" menu-image="sym_o_history" menu-image-type="icon">
 
@@ -24,11 +24,11 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition name="runAgain">
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('org.moqui.impl.GitServices.get#GitRepositoryAccess').parameters({repositoryId: repositoryId}).call() || {}
+            const access = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId: repositoryId}).call() || {}
             const update = ec.entity.find('moqui.resource.GitUpdate').condition('updateId', updateId).disableAuthz().one()
             if (!access.canDelete || update == null || update.repositoryId !== repositoryId) { ec.message.addError(ec.l10n.localize('Only the maintainers run the rules again')); return }
             if (update.ecaStatus === 'failed') { update.ecaStatus = 'pending'; update.update() }
-            ec.service.sync().name('org.moqui.impl.GitServices.process#GitUpdate').parameters({updateId: updateId}).disableAuthz().call()
+            ec.service.sync().name('org.moqui.git.GitServices.process#GitUpdate').parameters({updateId: updateId}).disableAuthz().call()
             if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('The rules ran again'), 'success')
         ]]></script></actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>

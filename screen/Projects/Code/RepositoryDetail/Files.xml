@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- RepositoryFiles (design-projects.md §7 RepositoryFiles): the ref picker (branches and tags; a commit id in the URL), the
-    path as breadcrumbs, the directory's entries with each one's last commit (org.moqui.impl.GitServices.get#GitTree) and its
+    path as breadcrumbs, the directory's entries with each one's last commit (org.moqui.git.GitServices.get#GitTree) and its
     README rendered below; a file as code with line numbers and highlighting (code-view), an image, or a download for a binary,
     a file over 1 MB or one kept in LFS (get#GitBlob), with History (Commits with the path), Raw, Download and Permalink (the
     path at the commit). Raw and Download stream the file at its commit through the raw transition, after the view check
@@ -30,14 +30,14 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the file at a commit: inline (Raw of an image or a PDF) or as an attachment (download=Y, and Raw of any other type), for those who may view the repository -->
     <transition name="raw" read-only="true">
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('org.moqui.impl.GitServices.get#GitRepositoryAccess').parameters({repositoryId: repositoryId}).call() || {}
+            const access = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId: repositoryId}).call() || {}
             const clean = String(path || '').split('/').filter((part) => part && part !== '.' && part !== '..').join('/')
             if (!access.canView || !clean) { ec.web.sendError(404, 'Not found', null); return }
-            const tree = ec.service.sync().name('org.moqui.impl.GitServices.get#GitTree').parameters({repositoryId: repositoryId, revision: ref || null, path: clean}).call() || {}
+            const tree = ec.service.sync().name('org.moqui.git.GitServices.get#GitTree').parameters({repositoryId: repositoryId, revision: ref || null, path: clean}).call() || {}
             if (ec.message.hasError() || !tree.isFile || !tree.commitId) { ec.message.clearErrors(); ec.web.sendError(404, 'Not found', null); return }
             const name = clean.substring(clean.lastIndexOf('/') + 1)
             // a version of a git:// file is a commit that changed it: the last one up to the commit asked for
-            const last = Array.from(ec.service.sync().name('org.moqui.impl.GitServices.get#GitLog').parameters({repositoryId: repositoryId, revision: tree.commitId,
+            const last = Array.from(ec.service.sync().name('org.moqui.git.GitServices.get#GitLog').parameters({repositoryId: repositoryId, revision: tree.commitId,
                 path: clean, limit: 1}).call()?.commitList || [])[0]
             if (!last) { ec.web.sendError(404, 'Not found', null); return }
             // shown inline only as a type that runs nothing in this origin (an image or a PDF, as the record files); a page,

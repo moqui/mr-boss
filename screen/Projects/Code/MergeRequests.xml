@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- MergeRequests (design-projects.md §7 MergeRequests; style-guide §3.2 List): the merge requests of the repositories the user
-    may view (org.moqui.impl.GitReviewServices.find#MergeRequests through ironstone.projects.CodeServices.find#MergeRequests). Chips with
+    may view (org.moqui.git.GitReviewServices.find#MergeRequests through ironstone.projects.CodeServices.find#MergeRequests). Chips with
     their counts: Waiting for my review (the default when there are any), Mine, Open (with the drafts), Draft, Merged, Closed and
     All; the find in the list's dialog (text in the title, repository, project, author, reviewer, target branch), its saved finds
     the user keeps. The columns: the number and title (a link to MergeRequestDetail) with the branches, the repository, the

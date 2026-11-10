@@ -74,7 +74,7 @@ spec({
         let guidelines = row({siteId: ids.siteId, pageRole: "guidelines"})
         if (!guidelines)
             system(() => {
-                const wiki = (verb, input) => call("org.moqui.impl.WikiServices." + verb, input)
+                const wiki = (verb, input) => call("org.moqui.resource.WikiServices." + verb, input)
                 if (!ec.entity.find("moqui.resource.wiki.WikiSpace").condition("wikiSpaceId", "COMWALKG").one())
                     wiki("create#WikiSpace", {wikiSpaceId: "COMWALKG", description: "Walk guidelines"})
                 const wikiPageId = wiki("update#WikiPage", {

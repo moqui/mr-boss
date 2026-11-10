@@ -526,7 +526,7 @@ along with this software (see the LICENSE.md file). If not, see
         update#Milestone), with their progress from their items (get#PlanItemSummary). Who sees the project sees them; its team
         (members and those who manage it) makes and changes them, adds and removes their items, releases a release and publishes
         its notes (generate#, store#, publish#ReleaseNotes, release#Release). Merge requests and tags are read only of the
-        repositories the user may view (org.moqui.impl.GitServices.get#GitRepositoryAccess, impl-projects.md F23). -->
+        repositories the user may view (org.moqui.git.GitServices.get#GitRepositoryAccess, impl-projects.md F23). -->
 
     <service verb="get" noun="PlanItemAccess" allow-remote="false">
         <description>A milestone or release and its project's access (get#ProjectAccess with need): plan (the record), project,
@@ -590,7 +590,7 @@ along with this software (see the LICENSE.md file). If not, see
             const fmt = (value) => ec.l10n.format(Math.round(Number(value || 0) * 100) / 100, '#,##0.##')
             const today = day(ec.user.nowTimestamp)
             const summary = ec.service.sync().name('mantle.work.ProjectServices.get#PlanItemSummary').parameters({workEffortIdList: plans.map((plan) => plan.workEffortId)}).call()?.summaryMap || {}
-            const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(new Set(plans.map((plan) => plan.statusId)))}).call()?.colors || {}
+            const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(new Set(plans.map((plan) => plan.statusId)))}).call()?.colors || {}
             const projectIds = Array.from(new Set(plans.map((plan) => plan.rootWorkEffortId)))
             const projectNames = {}
             for (const row of Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', projectIds).selectField('workEffortId,workEffortName').list()))
@@ -976,7 +976,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="get" noun="ReleaseCode" allow-remote="false">
-        <description>ReleaseDetail's code, of the repositories the user may view (org.moqui.impl.GitServices.get#GitRepositoryAccess):
+        <description>ReleaseDetail's code, of the repositories the user may view (org.moqui.git.GitServices.get#GitRepositoryAccess):
             the merge requests of its items (WorkEffortGitMergeRequest; merged ones first, then open, with !num, title, status and
             when merged), its tags (WorkEffortGitRef of the release, refType tag), the project's repositories the user may update
             (to make a tag at their default branch, or a ref given) and the tags of the project's repositories not linked yet (to
@@ -1005,7 +1005,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!(repositoryId in viewable)) {
                     ec.message.pushErrors()
                     try {
-                        const repoAccess = ec.service.sync().name('org.moqui.impl.GitServices.get#GitRepositoryAccess').parameters({repositoryId}).call() || {}
+                        const repoAccess = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId}).call() || {}
                         viewable[repositoryId] = ec.message.hasError() || !repoAccess.canView ? null : repoAccess
                     } catch (err) { viewable[repositoryId] = null }
                     finally { ec.message.clearErrors(); ec.message.popErrors() }
@@ -1053,7 +1053,7 @@ along with this software (see the LICENSE.md file). If not, see
                 for (const repositoryId of linked) {
                     const repoAccess = accessOf(repositoryId)
                     if (!repoAccess) continue
-                    const refs = ec.service.sync().name('org.moqui.impl.GitServices.get#GitRefs').parameters({repositoryId}).call() || {}
+                    const refs = ec.service.sync().name('org.moqui.git.GitServices.get#GitRefs').parameters({repositoryId}).call() || {}
                     if (ec.message.hasError()) { ec.message.clearErrors(); continue }
                     if ((repoAccess.canCreate || repoAccess.canUpdate) && !repoAccess.archived)
                         code.repositoryOptions.push({key: repositoryId, text: repositoryId + ' · ' + (refs.defaultBranch || 'main'), defaultBranch: refs.defaultBranch || 'main'})
@@ -1069,7 +1069,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="create" noun="ReleaseTag" allow-remote="false">
         <description>ReleaseTag's Create tag: an annotated tag (tagName, by default v and the version) at revision (the default branch's
-            head when empty) in repositoryId, a repository of the release's project (org.moqui.impl.GitServices.create#GitRef, which
+            head when empty) in repositoryId, a repository of the release's project (org.moqui.git.GitServices.create#GitRef, which
             checks the right to create and the branch rules), linked to the release. By the project's team.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
@@ -1087,7 +1087,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (!linked) { ec.message.addError(ec.resource.expand('${repositoryId} is not a repository of the project', '', {repositoryId})); return }
             const version = String(plan.workEffortName || workEffortId)
             const name = String(tagName || '').trim() || (/^\d/.test(version) ? 'v' + version : version)
-            const out = ec.service.sync().name('org.moqui.impl.GitServices.create#GitRef').parameters({repositoryId: repositoryId, refName: name, refType: 'tag',
+            const out = ec.service.sync().name('org.moqui.git.GitServices.create#GitRef').parameters({repositoryId: repositoryId, refName: name, refType: 'tag',
                 revision: revision ? String(revision).trim() : null, message: ec.resource.expand('Release ${version}', '', {version})}).call() || {}
             if (ec.message.hasError()) return
             const refName = String(out.refName || name).startsWith('refs/') ? String(out.refName || name) : 'refs/tags/' + (out.refName || name)
@@ -1122,7 +1122,7 @@ along with this software (see the LICENSE.md file). If not, see
             const settings = ec.service.sync().name('mantle.work.ProjectServices.get#ProjectSettings').parameters({workEffortId: access.plan.rootWorkEffortId}).call()?.settings || {}
             let pageUrl = ''
             if (kept.wikiPageId) {
-                const pageAccess = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameters({wikiPageId: kept.wikiPageId}).call() || {}
+                const pageAccess = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameters({wikiPageId: kept.wikiPageId}).call() || {}
                 if (!ec.message.hasError() && pageAccess.canView) pageUrl = settings.WstDocsWikiSpace === kept.wikiSpaceId
                     ? '/qapps/Projects/Projects/ProjectDetail/Docs?workEffortId=' + encodeURIComponent(access.plan.rootWorkEffortId) + '&wikiSpaceId=' + encodeURIComponent(kept.wikiSpaceId)
                         + '&pagePath=' + encodeURIComponent(kept.pagePath || '')

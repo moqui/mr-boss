@@ -397,8 +397,8 @@ feature("active distinguishing identity, forged child IDs and supplier-only item
 feature("typed content copies an authorized drive file and refuses server paths and inaccessible drives", {
     when() {
         return as("catalog.edit", () => {
-            const drive = call("org.moqui.impl.FileServices.get#UserDrives").personalDriveId
-            call("org.moqui.impl.FileServices.upload#Resource", {
+            const drive = call("org.moqui.resource.FileServices.get#UserDrives").personalDriveId
+            call("org.moqui.resource.FileServices.upload#Resource", {
                 driveId: drive,
                 file: uploadedFile("catalog-source.txt", "Authorized catalog source")
             })

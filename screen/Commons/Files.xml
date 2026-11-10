@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     trash and restore, favorites, tags, the share dialog (people and groups, links with a password and expiry), the details
     pane (preview, details, sharing, versions with compare and restore, activity) and the Files key scope; its subscreens
     Drives, DriveSettings and Shares show in its place. The view is in the URL (drive, path, view, tag, q, file), so a view is
-    a link. The data and every change go through the JSON transitions below, each a service of org.moqui.impl.FileServices
+    a link. The data and every change go through the JSON transitions below, each a service of org.moqui.resource.FileServices
     (which checks the drive's members and shares, R21, and on the records drive the records: only those the user may see,
     R5) or of service/ironstone/commons/DriveServices.xml over it. A download is sent by ec.web.sendResourceResponse under the file's
     own name (a past version by its location#version, a zip under its folder's name). -->
@@ -49,7 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the storage of the drive the rail shows (sizing reads every file, so it is asked for that one drive only) -->
     <transition name="usage" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#DriveUsage').parameter('driveId', driveId || '').call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#DriveUsage').parameter('driveId', driveId || '').call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {usage: Array.from(out.usageList || [])[0] || null})
         ]]></script></actions>
         <default-response type="none"/>
@@ -84,7 +84,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="versions" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#Versions').parameters({driveId: driveId || '', path: path || ''}).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#Versions').parameters({driveId: driveId || '', path: path || ''}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {versionList: out.versionList})
         ]]></script></actions>
         <default-response type="none"/>
@@ -92,7 +92,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the line diff of two versions of a text file (an empty version is the current text), a moqui-diff table -->
     <transition name="diff" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#VersionDiff').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#VersionDiff').parameters({driveId: driveId || '',
                 path: path || '', fromVersion: fromVersion || null, toVersion: toVersion || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {diff: out.diff})
         ]]></script></actions>
@@ -100,7 +100,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="activity" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#Activity').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#Activity').parameters({driveId: driveId || '',
                 path: path || ''}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {activityList: out.activityList})
         ]]></script></actions>
@@ -111,7 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
         rows of sheetName, else the first sheet, with the sheet names. The open is recent. -->
     <transition name="preview" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#Preview').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#Preview').parameters({driveId: driveId || '',
                 path: path || '', size: Math.max(16, Math.min(Number(size) || 64, 2048)), sheetName: sheetName || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {kind: out.kind, text: out.text, contentType: out.contentType,
                 hasImage: out.kind === 'pdf' && !!out.previewLocation, pages: out.pages, rows: out.rows, sheetNames: out.sheetNames,
@@ -122,7 +122,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- an image's thumbnail or a PDF's first page (PNG, made once per version and size) -->
     <transition name="thumb" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#Preview').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#Preview').parameters({driveId: driveId || '',
                 path: path || '', size: Math.max(16, Math.min(Number(size) || 256, 2048))}).call()
             if (!ec.message.hasError() && out.previewLocation) ec.web.sendResourceResponse(out.previewLocation, true)
             else ec.web.sendJsonResponse({})
@@ -133,10 +133,10 @@ along with this software (see the LICENSE.md file). If not, see
         (its location#version), or a folder as a zip, each under its own name -->
     <transition name="download" method="get" read-only="true">
         <actions><script><![CDATA[
-            const info = ec.service.sync().name('org.moqui.impl.FileServices.get#ResourceInfo').parameters({driveId: driveId || '',
+            const info = ec.service.sync().name('org.moqui.resource.FileServices.get#ResourceInfo').parameters({driveId: driveId || '',
                 path: path || '', versionName: versionName || null, opened: true}).call()
             const resource = ec.message.hasError() ? null : info.resource
-            const zip = resource && resource.isDirectory ? ec.service.sync().name('org.moqui.impl.FileServices.download#Zip').parameters({driveId: driveId,
+            const zip = resource && resource.isDirectory ? ec.service.sync().name('org.moqui.resource.FileServices.download#Zip').parameters({driveId: driveId,
                 path: path}).call() : null
             if (ec.message.hasError() || !resource) ec.web.sendJsonResponse({})
             else if (zip) ec.web.sendResourceResponse(zip.zipLocation, false, zip.zipFilename)
@@ -150,7 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             let paths = []
             try { paths = JSON.parse(pathListJson || '[]') } catch (err) { paths = [] }
-            const zip = ec.service.sync().name('org.moqui.impl.FileServices.download#Zip').parameters({driveId: driveId || '',
+            const zip = ec.service.sync().name('org.moqui.resource.FileServices.download#Zip').parameters({driveId: driveId || '',
                 pathList: Array.isArray(paths) ? paths : []}).call()
             if (!ec.message.hasError() && zip?.zipLocation) ec.web.sendResourceResponse(zip.zipLocation, false, zip.zipFilename)
             else ec.web.sendJsonResponse({})
@@ -199,7 +199,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="newFolder">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.create#Folder').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.create#Folder').parameters({driveId: driveId || '',
                 path: path || '', name: name || ''}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {newPath: out.newPath, messageInfos: [{type: 'success',
                 message: ec.resource.expand('Folder ${name} made', '', {name: name})}]})
@@ -218,7 +218,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="rename">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.rename#Resource').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.rename#Resource').parameters({driveId: driveId || '',
                 path: path || '', newName: newName || ''}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {newPath: out.newPath, messageInfos: [{type: 'success', message: ec.l10n.localize('Renamed')}]})
         ]]></script></actions>
@@ -232,8 +232,8 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             if (!Array.isArray(paths)) paths = []
             const moving = {driveId: driveId || '', pathList: paths, toDriveId: toDriveId || driveId || '', toPath: toPath || '', conflictPolicy: 'keepBoth'}
-            const rows = mode === 'copy' ? (ec.service.sync().name('org.moqui.impl.FileServices.copy#Resource').parameters(moving).call()?.copiedList || [])
-                : (ec.service.sync().name('org.moqui.impl.FileServices.move#Resource').parameters(moving).call()?.movedList || [])
+            const rows = mode === 'copy' ? (ec.service.sync().name('org.moqui.resource.FileServices.copy#Resource').parameters(moving).call()?.copiedList || [])
+                : (ec.service.sync().name('org.moqui.resource.FileServices.move#Resource').parameters(moving).call()?.movedList || [])
             if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
             const done = Array.from(rows).filter((row) => row.outcome === 'moved' || row.outcome === 'copied' || row.outcome === 'unchanged')
             const infos = [{type: done.length ? 'success' : 'warning', message: ec.resource.expand(mode === 'copy' ? 'Copied ${count} of ${total}' : 'Moved ${count} of ${total}', '',
@@ -247,7 +247,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             let paths = []
             try { paths = JSON.parse(pathListJson || '[]') } catch (err) { paths = [] }
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.trash#Resource').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.trash#Resource').parameters({driveId: driveId || '',
                 pathList: Array.isArray(paths) ? paths : []}).call()
             if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
             const trashed = Array.from(out.trashList || []).filter((row) => row.outcome === 'trashed')
@@ -260,7 +260,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="restore">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.restore#Resource').parameter('trashId', trashId || '').call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.restore#Resource').parameter('trashId', trashId || '').call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {driveId: out.driveId, path: out.path, messageInfos: [{type: 'success',
                 message: ec.resource.expand('${name} restored', '', {name: String(out.path || '').split('/').pop()})}]})
         ]]></script></actions>
@@ -268,14 +268,14 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="deleteForever">
         <actions><script><![CDATA[
-            ec.service.sync().name('org.moqui.impl.FileServices.delete#TrashForever').parameter('trashId', trashId || '').call()
+            ec.service.sync().name('org.moqui.resource.FileServices.delete#TrashForever').parameter('trashId', trashId || '').call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize('Deleted for good')}]})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
     <transition name="emptyTrash">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.empty#Trash').parameter('driveId', driveId || '').call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.empty#Trash').parameter('driveId', driveId || '').call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {deletedCount: out.deletedCount, messageInfos: [{type: 'success',
                 message: ec.resource.expand('Trash emptied: ${count} deleted for good', '', {count: out.deletedCount})}]})
         ]]></script></actions>
@@ -283,7 +283,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="favorite">
         <actions><script><![CDATA[
-            ec.service.sync().name('org.moqui.impl.FileServices.set#Favorite').parameters({driveId: driveId || '', path: path || '',
+            ec.service.sync().name('org.moqui.resource.FileServices.set#Favorite').parameters({driveId: driveId || '', path: path || '',
                 favorite: String(favorite) !== 'false'}).call()
             ec.web.sendJsonResponse({})
         ]]></script></actions>
@@ -293,7 +293,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             let names = []
             try { names = JSON.parse(tagNamesJson || '[]') } catch (err) { names = [] }
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.set#Tags').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.set#Tags').parameters({driveId: driveId || '',
                 path: path || '', tagNameList: names}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {tagList: out.tagList})
         ]]></script></actions>
@@ -313,14 +313,14 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="revokeShare">
         <actions><script><![CDATA[
-            ec.service.sync().name('org.moqui.impl.FileServices.revoke#Share').parameter('shareId', shareId || '').call()
+            ec.service.sync().name('org.moqui.resource.FileServices.revoke#Share').parameter('shareId', shareId || '').call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize('Sharing ended')}]})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
     <transition name="answerShare">
         <actions><script><![CDATA[
-            ec.service.sync().name(answer === 'decline' ? 'org.moqui.impl.FileServices.decline#Share' : 'org.moqui.impl.FileServices.accept#Share')
+            ec.service.sync().name(answer === 'decline' ? 'org.moqui.resource.FileServices.decline#Share' : 'org.moqui.resource.FileServices.accept#Share')
                     .parameter('shareId', shareId || '').call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize(answer === 'decline' ? 'Declined' : 'Accepted')}]})
         ]]></script></actions>
@@ -328,7 +328,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="restoreVersion">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.restore#Version').parameters({driveId: driveId || '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.restore#Version').parameters({driveId: driveId || '',
                 path: path || '', versionName: versionName || '', versionNote: versionNote || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {newVersionName: out.newVersionName, messageInfos: [{type: 'success',
                 message: ec.l10n.localize('Restored as the newest version')}]})
@@ -339,9 +339,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="fetchMirror">
         <actions><script><![CDATA[
             if (!ec.user.isInGroup('ADMIN')) ec.message.addError(ec.l10n.localize('Only an administrator fetches a mirror'))
-            const access = ec.message.hasError() ? null : ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameter('driveId', driveId || '').call()
+            const access = ec.message.hasError() ? null : ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', driveId || '').call()
             if (access && (!access.drive || access.level < 1 || !access.drive.repositoryId)) ec.message.addError(ec.l10n.localize('Drive not found'))
-            if (!ec.message.hasError()) ec.service.sync().name('org.moqui.impl.GitServices.fetch#GitRepository').parameter('repositoryId', access.drive.repositoryId).call()
+            if (!ec.message.hasError()) ec.service.sync().name('org.moqui.git.GitServices.fetch#GitRepository').parameter('repositoryId', access.drive.repositoryId).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize('Fetched')}]})
         ]]></script></actions>
         <default-response type="none"/>

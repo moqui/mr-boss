@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (chat mentions and unread comments to the user), mail that could not be sent, Needs reply (find#InboxThreads with
     needsReply), the follow-up calls and emails due (WorkEffortAndParty, WepPhoneCall and WepEmail), the meetings of the next
     days with their join links (mantle.work.EventServices.get#FullCalendarData), the mailboxes and chat rooms with unread
-    (mantle.marketing.ContactListServices.find#ContactLists, org.moqui.impl.ChatServices.find#Rooms). Failure tolerant
+    (mantle.marketing.ContactListServices.find#ContactLists, org.moqui.chat.ChatServices.find#Rooms). Failure tolerant
     (AGENTS.md): each part runs in a transaction of its own; one that fails is logged by name, named in failedParts and
     left out, and the rest is answered. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
@@ -114,7 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
             // an end-to-end encrypted room (C7) has no text on the server: its row says so in place of a snippet
             let encryptedRoomIds = new Set()
             part('rooms', () => {
-                rooms = callService('org.moqui.impl.ChatServices.find#Rooms', {filter: 'unread', limit: 50})
+                rooms = callService('org.moqui.chat.ChatServices.find#Rooms', {filter: 'unread', limit: 50})
                 const ids = Array.from(rooms.roomList || []).map((room) => room.chatRoomId)
                 if (ids.length) encryptedRoomIds = new Set(Array.from(ec.entity.find('moqui.chat.ChatRoom').condition('chatRoomId', 'in', ids)
                         .condition('encrypted', 'Y').selectField('chatRoomId').disableAuthz().list()).map((row) => row.chatRoomId))
@@ -127,14 +127,14 @@ along with this software (see the LICENSE.md file). If not, see
             })
             // missed calls not seen yet (the framework's call history), into the Calls history's Missed tab
             part('missedCalls', () => {
-                const missed = callService('org.moqui.impl.CallServices.count#MissedCalls').missedCount || 0
+                const missed = callService('org.moqui.call.CallServices.count#MissedCalls').missedCount || 0
                 cardList.push({key: 'missedCalls', title: L('Missed calls'), value: count(missed), icon: missed ? 'sym_o_phone_missed' : 'sym_o_call',
                     link: '/qapps/Comms/Calls/History?outcome=missed'})
             })
             // voicemail not heard yet (the framework's voicemail, V2; a ring group's box counts for its members, V3), into the Voicemail tab;
             // shown only to a user with a box
             part('voicemail', () => {
-                const vm = callService('org.moqui.impl.VoicemailServices.count#UnheardVoicemails')
+                const vm = callService('org.moqui.call.VoicemailServices.count#UnheardVoicemails')
                 if (!vm.hasBox) return
                 const unheard = vm.unheardCount || 0
                 cardList.push({key: 'voicemail', title: L('Voicemail'), value: count(unheard), icon: 'sym_o_voicemail',

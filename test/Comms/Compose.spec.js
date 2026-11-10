@@ -8,7 +8,7 @@
 // is refused, and a file location the composer did not store is refused.
 // Run: ./moq test mr-boss --spec Compose
 const comms = "component://mr-boss/screen/Comms.xml"
-const MAIL = "org.moqui.impl.EmailClientServices"
+const MAIL = "org.moqui.mail.EmailClientServices"
 const capture = ec.factory.getTool("MailCapture")
 let accountId, identityValue
 

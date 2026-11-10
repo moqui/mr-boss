@@ -6,7 +6,7 @@
 // The token route itself (the 404 page, the public shell) is the framework's: crates/moqui-host/tests/gate3.rs.
 // Run: ./moq test mr-boss --spec PublicShare
 const page = "component://mr-boss/screen/PublicShare.xml"
-const FILES = "org.moqui.impl.FileServices"
+const FILES = "org.moqui.resource.FileServices"
 const PHOTOS = "BossDemoPhotosLink2026", DROP = "BossDemoQuoteDrop2026", PLAN = "BossDemoOfficePlan2026"
 
 // a transition of the page as the route calls it: the token is the route's

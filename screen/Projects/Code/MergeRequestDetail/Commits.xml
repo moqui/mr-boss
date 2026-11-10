@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- MergeRequestDetail's Commits (design-projects.md §7 MergeRequestCommits): the commits the source has that the target lacks
-    (org.moqui.impl.GitReviewServices.get#MergeRequestDiff without diffs, through ironstone.projects.CodeServices.get#MergeRequestDetail;
+    (org.moqui.git.GitReviewServices.get#MergeRequestDiff without diffs, through ironstone.projects.CodeServices.get#MergeRequestDetail;
     from the recorded merge base to the recorded head once merged or closed), newest first, each with its summary (a link to
     CommitDetail), author, date, short id and CI state. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"

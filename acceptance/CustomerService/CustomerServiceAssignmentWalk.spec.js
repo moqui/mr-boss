@@ -246,7 +246,7 @@ feature(
             const comms = asUser(
                 users.agent,
                 () =>
-                    Array.from(invoke("org.moqui.impl.EmailClientServices.find#EmailTextBlocks", {}).textBlockList || []).map(
+                    Array.from(invoke("org.moqui.mail.EmailClientServices.find#EmailTextBlocks", {}).textBlockList || []).map(
                         row => row.emailTextBlockId
                     ),
                 false

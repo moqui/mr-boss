@@ -69,7 +69,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const actors = {}
                 const actor = (userId) => {
                     if (!userId) return null
-                    if (!actors[userId]) actors[userId] = (ec.service.sync().name('org.moqui.impl.ChatServices.get#LocalActors')
+                    if (!actors[userId]) actors[userId] = (ec.service.sync().name('org.moqui.chat.ChatServices.get#LocalActors')
                             .parameter('userIdList', [userId]).call()?.actorMap || {})[userId] || null
                     return actors[userId]
                 }
@@ -257,7 +257,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the search index: each message on its own (nothing without search)
             for (const chatRoomId of chatRoomIdList) for (const row of ec.entity.find('moqui.chat.ChatEvent').condition('chatRoomId', chatRoomId)
                     .condition('eventTypeEnumId', 'CetMessage').selectField('eventSeq').disableAuthz().list())
-                ec.service.sync().name('org.moqui.impl.ChatServices.index#ChatEvent').parameters({chatRoomId: chatRoomId, eventSeq: Number(row.eventSeq)}).call()
+                ec.service.sync().name('org.moqui.chat.ChatServices.index#ChatEvent').parameters({chatRoomId: chatRoomId, eventSeq: Number(row.eventSeq)}).call()
         ]]></script></actions>
     </service>
 </services>

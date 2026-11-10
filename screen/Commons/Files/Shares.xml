@@ -15,21 +15,21 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Shares (design-drawers-commons.md §9 Shares; style-guide §3.2 List, §3.3 boxes on one page): what is shared with the user
     (IncomingShares, waiting ones first, with Accept and Decline), what the user shared with people (OutgoingShares) and the
     user's links (Links: label, permission, password, expiry, opened count and last opened; a link's address is shown only
-    when it is made), each with Stop sharing or Revoke. Through org.moqui.impl.FileServices get#Shares, accept#Share,
+    when it is made), each with Stop sharing or Revoke. Through org.moqui.resource.FileServices get#Shares, accept#Share,
     decline#Share and revoke#Share, which answer only the user's own shares and those of drives the user manages. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shares" default-menu-index="2" menu-image="sym_o_folder_shared" menu-image-type="icon">
 
     <transition name="answerShare">
         <actions><script><![CDATA[
-            ec.service.sync().name(answer === 'decline' ? 'org.moqui.impl.FileServices.decline#Share' : 'org.moqui.impl.FileServices.accept#Share')
+            ec.service.sync().name(answer === 'decline' ? 'org.moqui.resource.FileServices.decline#Share' : 'org.moqui.resource.FileServices.accept#Share')
                     .parameter('shareId', shareId || '').call()
             if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize(answer === 'decline' ? 'Declined' : 'Accepted: it is in Shared with me'), 'success')
         ]]></script></actions>
         <default-response url="."/>
     </transition>
     <transition name="revokeShare">
-        <service-call name="org.moqui.impl.FileServices.revoke#Share" in-map="{shareId:shareId}"/>
+        <service-call name="org.moqui.resource.FileServices.revoke#Share" in-map="{shareId:shareId}"/>
         <actions><if condition="!ec.message.hasError()"><message type="success">Sharing ended</message></if></actions>
         <default-response url="."/>
     </transition>

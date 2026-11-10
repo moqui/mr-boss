@@ -46,7 +46,7 @@ function settle() {
     while (Date.now() - started < 20000) {
         const busy = sys(() => ec.entity.find("moqui.resource.GitUpdate").condition("repositoryId", REPO).condition("ecaStatus", "in", ["pending", "running"]).count())
         if (busy == 0) return
-        sys(() => call("org.moqui.impl.GitServices.process#PendingGitUpdates", {}))
+        sys(() => call("org.moqui.git.GitServices.process#PendingGitUpdates", {}))
     }
 }
 const item = () => sys(() => ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", ITEM).one())
@@ -67,9 +67,9 @@ spec({
             call("mantle.work.ProjectServices.store#ProjectSetting", { workEffortId: PROJECT, settingTypeEnumId: "WstModules", settingValue: "code" })
             call("mantle.work.GitServices.create#ProjectRepository", { workEffortId: PROJECT, repositoryId: REPO, repositoryKind: "db",
                 description: "The code review walk", applyDefaults: false })
-            call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO, message: "Start the walk", fileMap: {
+            call("org.moqui.git.GitServices.commit#GitFiles", { repositoryId: REPO, message: "Start the walk", fileMap: {
                 "README.md": "# The walk\n\nA repository for the code review walk.\n", "src/threads.js": "export const threads = []\n" } })
-            call("org.moqui.impl.GitServices.store#GitBranchRule", { repositoryId: REPO, refPattern: "main", allowForcePush: "N", allowDelete: "N",
+            call("org.moqui.git.GitServices.store#GitBranchRule", { repositoryId: REPO, refPattern: "main", allowForcePush: "N", allowDelete: "N",
                 requiredApprovals: 1, requiredStatusContexts: "ci/build" })
             call("mantle.work.TaskServices.create#Task", { rootWorkEffortId: PROJECT, workEffortId: ITEM, workEffortName: "Show the review threads under their lines",
                 assignToPartyId: "ORG_ZIZI_JD", purposeEnumId: "WepNewFeature" })
@@ -81,7 +81,7 @@ spec({
     cleanupSpec() {
         sys(() => {
             ec.message.clearErrors()
-            call("org.moqui.impl.GitServices.archive#GitRepository", { repositoryId: REPO })
+            call("org.moqui.git.GitServices.archive#GitRepository", { repositoryId: REPO })
             ec.message.clearErrors()
             const project = ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", PROJECT).one()
             if (project) { project.statusId = "WeCancelled"; project.update() }
@@ -113,13 +113,13 @@ feature("joe makes a branch for the work item on its Development tab, named by t
 
 feature("joe commits on the branch through the services, as a push would; the commit links itself to the work item", {
     when() {
-        sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: branchName }))
+        sys(() => call("org.moqui.git.GitServices.update#GitRepository", { repositoryId: REPO, branch: branchName }))
         try {
             // as joe (the commit's Moqui-User-Id), outside a screen: the service's own authorization is the app's, so off here
-            headCommitId = as("joe.developer", () => sys(() => call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO,
+            headCommitId = as("joe.developer", () => sys(() => call("org.moqui.git.GitServices.commit#GitFiles", { repositoryId: REPO,
                 message: "CRW-1 Each thread under its line, with replies and Resolve", fileMap: {
                     "src/threads.js": "// the review threads of a file, by line\nexport const threads = []\nexport const byLine = (line) => threads.filter((thread) => thread.line === line)\n" } }).commitId))
-        } finally { sys(() => call("org.moqui.impl.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" })) }
+        } finally { sys(() => call("org.moqui.git.GitServices.update#GitRepository", { repositoryId: REPO, branch: "main" })) }
         settle()
         const dev = as("joe.developer", () => sys(() => call("ironstone.projects.CodeServices.get#WorkItemDevelopment", { workEffortId: ITEM }).development))
         const page = as("joe.developer", () => render("apps/Projects/WorkItems/WorkItemDetail", { workEffortId: ITEM, tab: "development" }))
@@ -187,7 +187,7 @@ feature("john comments on a line of the diff and approves; the merge waits for c
 
 feature("CI posts a passed ci/build on the head; joe may now merge", {
     when() {
-        sys(() => call("org.moqui.impl.GitServices.create#GitCommitStatus", { repositoryId: REPO, commitId: headCommitId, state: "success", context: "ci/build",
+        sys(() => call("org.moqui.git.GitServices.create#GitCommitStatus", { repositoryId: REPO, commitId: headCommitId, state: "success", context: "ci/build",
             description: "Build and tests passed", targetUrl: "https://ci.example.com/crw/1" }))
         const detail = as("joe.developer", () => sys(() => call("ironstone.projects.CodeServices.get#MergeRequestDetail", { mergeRequestId, parts: "" }).detail))
         const header = as("joe.developer", () => render("apps/Projects/Code/MergeRequestDetail", { mergeRequestId }, "qvt", "2"))
@@ -208,8 +208,8 @@ feature("joe merges with a squash and deletes the branch: the merge request is m
             commitMessage: "Show the review threads under their lines (!1)", deleteSourceBranch: "Y" }))
         settle()
         const mr = sys(() => ec.entity.find("moqui.resource.GitMergeRequest").condition("mergeRequestId", mergeRequestId).one())
-        const branches = sys(() => Array.from(call("org.moqui.impl.GitServices.get#GitRefs", { repositoryId: REPO, refType: "branch" }).refList).map((ref) => ref.shortName))
-        const log = sys(() => Array.from(call("org.moqui.impl.GitServices.get#GitLog", { repositoryId: REPO, limit: 1 }).commitList))
+        const branches = sys(() => Array.from(call("org.moqui.git.GitServices.get#GitRefs", { repositoryId: REPO, refType: "branch" }).refList).map((ref) => ref.shortName))
+        const log = sys(() => Array.from(call("org.moqui.git.GitServices.get#GitLog", { repositoryId: REPO, limit: 1 }).commitList))
         const dev = sys(() => call("ironstone.projects.CodeServices.get#WorkItemDevelopment", { workEffortId: ITEM }).development)
         const overview = render("apps/Projects/Code/MergeRequestDetail/Overview", { mergeRequestId })
         return { merged, mr, branches, log, task: item(), dev, overview }

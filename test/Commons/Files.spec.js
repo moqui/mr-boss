@@ -8,7 +8,7 @@
 // Run: ./moq test mr-boss --spec Files
 const commons = "component://mr-boss/screen/Commons.xml"
 const comms = "component://mr-boss/screen/Comms.xml"
-const FILES = "org.moqui.impl.FileServices"
+const FILES = "org.moqui.resource.FileServices"
 let personalDriveId
 
 function render(root, path, parameters, method) {
@@ -419,7 +419,7 @@ feature("the palette finds files", {
 feature("Compose: Attach from Files copies the file onto an email draft or an internal message, and a link for one too large", {
     when() {
         const capture = ec.factory.getTool("MailCapture")
-        const accountId = sys(() => call("org.moqui.impl.EmailClientServices.create#EmailAccount", { accountKindEnumId: "EakHosted", emailAddress: "john.files@ziziwork.example",
+        const accountId = sys(() => call("org.moqui.mail.EmailClientServices.create#EmailAccount", { accountKindEnumId: "EakHosted", emailAddress: "john.files@ziziwork.example",
             accountName: "Files", smtpHost: "127.0.0.1", smtpPort: "1", smtpStartTls: "N" })).emailAccountId
         const identity = "identity:" + sys(() => ec.entity.find("moqui.basic.email.EmailIdentity").condition("emailAccountId", accountId).one().emailIdentityId)
         const draft = render(comms, "Inbox/Compose/saveDraft", { fromValue: identity, toJson: JSON.stringify([{ value: "bob@example.com", label: "bob@example.com" }]),

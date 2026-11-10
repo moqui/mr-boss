@@ -38,7 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="description" type="String"/>
             <parameter name="contentText" type="String"/>
             <parameter name="filename" type="String"/>
-            <parameter name="contentFile" type="org.apache.commons.fileupload2.core.FileItem"/>
+            <parameter name="contentFile" type="FileItem"/>
             <parameter name="workEffortId" type="String"/>
             <parameter name="routingWorkEffortId" type="String"/>
             <parameter name="operationWorkEffortId" type="String"/>

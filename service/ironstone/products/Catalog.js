@@ -781,7 +781,7 @@ function run(op, parameters) {
             assetTypes: () => lib.enumOptions("AssetType"),
             maintenanceTypes: () => lib.enumOptions("MaintenanceType"),
             drives: () =>
-                Array.from(call("org.moqui.impl.FileServices.get#UserDrives").driveList || []).map(row => ({
+                Array.from(call("org.moqui.resource.FileServices.get#UserDrives").driveList || []).map(row => ({
                     value: row.driveId,
                     label: row.driveName || row.driveId
                 })),

@@ -82,7 +82,7 @@ feature("Save keeps the preferences, which get#ChatPrefs and the Chat screens re
         const preview = pref("CHAT_NOTIFY_PREVIEW")
         const bad = post("savePreferences", { notifyDefault: "loud", autoAwayMinutes: "15" })
         return { before, saved, preview, bad, prefs: sys(() => call("org.moqui.comms.ChatScreenServices.get#ChatPrefs", {})).prefs, away: pref("CHAT_AUTO_AWAY_MINUTES"),
-            presence: sys(() => call("org.moqui.impl.ChatServices.get#UserStatuses", { userIdList: ["EX_JOHN_DOE"] })).myStatus }
+            presence: sys(() => call("org.moqui.chat.ChatServices.get#UserStatuses", { userIdList: ["EX_JOHN_DOE"] })).myStatus }
     },
     allowMessageErrors: true,
     then({ before, saved, preview, bad, prefs, away, presence }) {
@@ -171,7 +171,7 @@ feature("status presets: added, used for my status, removed", {
         const todayStatus = one("moqui.security.UserStatus", { userId: "EX_JOHN_DOE" })
         const kept = JSON.parse(pref("CHAT_STATUS_PRESETS") || "null")
         const removed = post("removePreset", { index })
-        sys(() => call("org.moqui.impl.ChatServices.set#UserStatus", { clearStatus: true }))
+        sys(() => call("org.moqui.chat.ChatServices.set#UserStatus", { clearStatus: true }))
         return { added, empty, presets, index, used, status, todayStatus, removed, kept,
             after: sys(() => call("org.moqui.comms.ChatScreenServices.get#ChatPrefs", {})).prefs.statusPresets, now: Number(ec.user.nowTimestamp) }
     },

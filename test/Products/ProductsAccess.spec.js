@@ -390,7 +390,7 @@ feature("catalog writes need the editor grant over the owner, and shared records
                     "is not authorized for AT_SERVICE"
                 ],
                 [
-                    "org.moqui.impl.UnitServices.store#Unit",
+                    "org.moqui.ui.UnitServices.store#Unit",
                     {uomId: "DENIED", description: "Denied", uomTypeEnumId: "UT_OTHER_MEASURE", changeReason: "Denied"},
                     "is not authorized for AT_SERVICE"
                 ],

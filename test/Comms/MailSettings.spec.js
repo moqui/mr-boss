@@ -55,7 +55,7 @@ spec({
     },
     cleanupSpec() {
         login("john.doe")
-        if (ownId) sys(() => call("org.moqui.impl.EmailClientServices.delete#EmailAccount", { emailAccountId: ownId, deleteLocalCopies: true }))
+        if (ownId) sys(() => call("org.moqui.mail.EmailClientServices.delete#EmailAccount", { emailAccountId: ownId, deleteLocalCopies: true }))
         sys(() => call("ironstone.comms.MailDemoServices.load#MailSettingsDemo", {}))
         for (const key of ["MAIL_READING_PANE", "MAIL_MARK_READ_SECONDS", "MAIL_UNDO_SECONDS", "MAIL_ARCHIVE_NEXT", "MAIL_REMOTE_IMAGES",
                 "MAIL_CONVERSATION", "MAIL_DEFAULT_ACCOUNT", "MAIL_SIGNATURE_PLACEMENT", "MAIL_SWIPE_LEFT", "MAIL_SWIPE_RIGHT"]) ec.user.setPreference(key, null)
@@ -114,9 +114,9 @@ feature("two messages imported into that account's Inbox", {
     when() {
         sys(() => ec.entity.find("moqui.basic.email.EmailMessage").condition("emailAccountId", ownId).deleteAll())
         const eml = (id, subject, from) => `From: ${from}\r\nTo: rules@acme.example\r\nSubject: ${subject}\r\nMessage-ID: <${id}@acme.example>\r\nDate: Mon, 12 Oct 2026 10:00:00 +0000\r\n\r\nHello.\r\n`
-        const imported = sys(() => call("org.moqui.impl.EmailClientServices.import#EmailMessages", { emailFolderId: ownInbox,
+        const imported = sys(() => call("org.moqui.mail.EmailClientServices.import#EmailMessages", { emailFolderId: ownInbox,
             messageText: eml("inv-7", "Invoice 7 is due", "Billing <billing@vendor.example>") + "\r\n" }))
-        sys(() => call("org.moqui.impl.EmailClientServices.import#EmailMessages", { emailFolderId: ownInbox, messageText: eml("hello-1", "Hello", "Ada <ada@vendor.example>") }))
+        sys(() => call("org.moqui.mail.EmailClientServices.import#EmailMessages", { emailFolderId: ownInbox, messageText: eml("hello-1", "Hello", "Ada <ada@vendor.example>") }))
         return { imported, count: rows("moqui.basic.email.EmailMessage", { emailAccountId: ownId }).length }
     },
     then({ imported, count }) {
@@ -331,7 +331,7 @@ feature("out of office to contacts and people inside: Mary, john.doe's personal 
         try {
             capture.clear()
             const now = Date.now()
-            sys(() => call("org.moqui.impl.EmailClientServices.store#EmailOutOfOffice", { emailAccountId: ownId, enabled: true, fromDate: new Date(now - 3600000),
+            sys(() => call("org.moqui.mail.EmailClientServices.store#EmailOutOfOffice", { emailAccountId: ownId, enabled: true, fromDate: new Date(now - 3600000),
                 subject: "Away", bodyHtml: "<p>Away this week, back Monday.</p>", replyOncePerDays: 4, replyAudienceEnumId: "EraContacts" }))
             // two messages to the account just now: from Mary (her address in another case) and from a stranger
             const ids = sys(() => [["Mary.Doe@Example.com", "Lunch on Friday?"], ["stranger@nowhere.example", "A business offer"]].map(([fromAddress, subject]) => {
@@ -344,13 +344,13 @@ feature("out of office to contacts and people inside: Mary, john.doe's personal 
                 return message.emailMessageId
             }))
             // the hook, as the framework asks it for the account's owner
-            const hook = sys(() => call("org.moqui.impl.EmailClientServices.filter#ContactAddresses", { userId: "EX_JOHN_DOE",
+            const hook = sys(() => call("org.moqui.mail.EmailClientServices.filter#ContactAddresses", { userId: "EX_JOHN_DOE",
                 emailAddressList: ["mary.doe@example.com", "stranger@nowhere.example"] }))
-            const out = sys(() => call("org.moqui.impl.EmailClientServices.send#OutOfOfficeReplies", { emailAccountId: ownId, emailMessageIdList: ids }))
+            const out = sys(() => call("org.moqui.mail.EmailClientServices.send#OutOfOfficeReplies", { emailAccountId: ownId, emailMessageIdList: ids }))
             return { hook, out, captured: Array.from(capture.getMessages()), sent: rows("moqui.basic.email.EmailOutOfOfficeSent", { emailAccountId: ownId }) }
         } finally {
             capture.reset()
-            sys(() => call("org.moqui.impl.EmailClientServices.store#EmailOutOfOffice", { emailAccountId: ownId, enabled: false, bodyHtml: "<p>Away.</p>",
+            sys(() => call("org.moqui.mail.EmailClientServices.store#EmailOutOfOffice", { emailAccountId: ownId, enabled: false, bodyHtml: "<p>Away.</p>",
                 replyAudienceEnumId: "EraContacts" }))
         }
     },

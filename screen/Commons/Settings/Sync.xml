@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Sync (design-drawers-commons.md §11 Sync; style-guide §3.9 Settings): phones and desktop apps reading the user's calendars
     and tasks (CalDAV), contacts (CardDAV) and drives (WebDAV, SFTP) on the framework's DAV and SSH servers, each logging in
     with an app password of its own. Devices (the app passwords: name, made, last used; Revoke), NewAppPassword (a dialog: the
-    device's name; the password is shown once, after the redirect), the addresses (org.moqui.impl.DavServices.get#SyncAddresses)
+    device's name; the password is shown once, after the redirect), the addresses (org.moqui.resource.DavServices.get#SyncAddresses)
     and SetupGuides (the steps for iOS and iPadOS, macOS, Android, Windows, Thunderbird and Linux). Services:
     org.moqui.impl.UserServices create#UserAppPassword, revoke#UserAppPassword, get#UserAppPasswords. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="newAppPassword" from="ec.web.sessionAttributes.remove('newAppPassword') || null"/>
         <set field="newAppPasswordName" from="ec.web.sessionAttributes.remove('newAppPasswordName') || ''"/>
         <service-call name="org.moqui.impl.UserServices.get#UserAppPasswords" out-map="passwordsOut"/>
-        <service-call name="org.moqui.impl.DavServices.get#SyncAddresses" out-map="addresses"/>
+        <service-call name="org.moqui.resource.DavServices.get#SyncAddresses" out-map="addresses"/>
         <script><![CDATA[
             const when = (value) => value == null ? '' : ec.l10n.format(value, 'MMM d, yyyy h:mm a')
             deviceList = Array.from(passwordsOut.appPasswordList || []).map((row) => Object.assign({}, row,

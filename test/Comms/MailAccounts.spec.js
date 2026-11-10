@@ -68,7 +68,7 @@ spec({
             const ours = Array.from(ec.entity.find("moqui.basic.email.EmailAccount").condition("ownerUserId", "EX_JOHN_DOE").list())
                     .filter((account) => String(account.emailAddress || "").endsWith(`@${DOMAIN}`))
             for (const account of ours) {
-                call("org.moqui.impl.EmailClientServices.delete#EmailAccount", { emailAccountId: account.emailAccountId, deleteLocalCopies: true })
+                call("org.moqui.mail.EmailClientServices.delete#EmailAccount", { emailAccountId: account.emailAccountId, deleteLocalCopies: true })
                 ec.message.clearErrors()
             }
             ec.entity.find("moqui.basic.email.EmailOAuthProvider").condition("oauthProviderEnumId", PROVIDER).deleteAll()
@@ -441,7 +441,7 @@ feature("the outgoing server's own sign-in: tried before it is saved and refused
         const afterRefused = serverOf(accountOf("pat@acme.example"))
         const smtpOnly = sys(() => call(`${SETTINGS}.test#MailAccount`, { emailAccountId: personalId, testStore: false, smtpUsername: "pat-out", smtpPassword: "out-pass" }))
         // one stored apart, as when a server took it: the page says so, the same user with no password keeps it, an empty user takes it back
-        sys(() => call("org.moqui.impl.EmailClientServices.update#EmailAccount", { emailAccountId: personalId, smtpUsername: "pat-out", smtpPassword: "out-pass" }))
+        sys(() => call("org.moqui.mail.EmailClientServices.update#EmailAccount", { emailAccountId: personalId, smtpUsername: "pat-out", smtpPassword: "out-pass" }))
         const page = render("Account", { emailAccountId: personalId })
         const kept = post("Account/saveServers", Object.assign({}, base, { smtpUsername: "pat-out", smtpPassword: "" }))
         const afterKept = serverOf(accountOf("pat@acme.example"))

@@ -101,7 +101,7 @@ along with this software (see the LICENSE.md file). If not, see
                 title = path ? path.substring(path.lastIndexOf('/') + 1) : ''
                 ec.message.pushErrors()
                 try {
-                    const page = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageInfoById').parameters({wikiPageId: recordId}).call()
+                    const page = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageInfoById').parameters({wikiPageId: recordId}).call()
                     if (!path && page?.wikiSpace) title = page.wikiSpace.description || page.wikiSpace.wikiSpaceId || ''
                     const text = page?.pageReference?.exists ? (page.pageReference.getText() ?? '') : ''
                     const heading = String(text).match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/m)

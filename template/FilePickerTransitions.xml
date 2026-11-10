@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the drives the user may open (no storage sizes) and the recent files -->
     <transition name="pickerData" method="get" read-only="true">
         <actions><script><![CDATA[
-            const drives = ec.service.sync().name('org.moqui.impl.FileServices.get#UserDrives').parameter('includeUsage', false).call()
+            const drives = ec.service.sync().name('org.moqui.resource.FileServices.get#UserDrives').parameter('includeUsage', false).call()
             const recent = ec.message.hasError() ? null : ec.service.sync().name('ironstone.commons.DriveServices.find#FileRows').parameters({view: 'recent', limit: 12}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {personalDriveId: drives.personalDriveId,
                 driveList: Array.from(drives.driveList || []).map((drive) => ({driveId: drive.driveId, driveName: drive.isPersonal ? ec.l10n.localize('My files') : drive.driveName,

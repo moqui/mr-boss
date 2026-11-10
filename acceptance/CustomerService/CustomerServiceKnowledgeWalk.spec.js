@@ -20,7 +20,7 @@ const pageText = wikiPageId =>
         String(
             ec.service
                 .sync()
-                .name("org.moqui.impl.WikiServices.get#WikiPageReference")
+                .name("org.moqui.resource.WikiServices.get#WikiPageReference")
                 .parameters({wikiPageId})
                 .call()
                 .pageReference.getText() || ""

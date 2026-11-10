@@ -42,7 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- The task counters link to Tasks' smart lists, whose own counts include the same owned, assigned and watched work. -->
         <service-call name="ironstone.commons.TaskServices.find#TaskRows" in-map="{pageSize:1}" out-map="taskCountsOut"/>
         <service-call name="ironstone.commons.CommonsServices.get#SetupItems" out-map="setup"/>
-        <service-call name="org.moqui.impl.NotificationServices.get#UserNotifications" in-map="{viewed:'N', pageSize:1}" out-map="unreadOut"/>
+        <service-call name="org.moqui.ui.NotificationServices.get#UserNotifications" in-map="{viewed:'N', pageSize:1}" out-map="unreadOut"/>
         <set field="partyId" from="ec.user.userAccount?.partyId"/>
         <script><![CDATA[
             const nowMillis = Number(String(ec.user.nowTimestamp))

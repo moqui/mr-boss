@@ -158,15 +158,15 @@ feature("the Voicemail card shows for a user with a box, and the recipient-sourc
             store("mantle.party.contact.PartyContactMech", { partyId: DIALOTHER, contactMechId: DIALOTHER, contactMechPurposeId: "PhoneMobile",
                 fromDate: new Date(Date.now() - 60000) })
         })
-        const ask = () => sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "Dialtest", kinds: "phone", limit: 10 } })) || {}
+        const ask = () => sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "Dialtest", kinds: "phone", limit: 10 } })) || {}
         const asJohn = ask()
         login("joe.developer")
         const asJoe = ask()
-        const byNumber = sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "555 012 3456", kinds: "phone" } })) || {}
+        const byNumber = sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "555 012 3456", kinds: "phone" } })) || {}
         // digits both numbers hold: the other organization's person still stays out
-        const byDigits = sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "01234", kinds: "phone" } })) || {}
-        const emailOnly = sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "Dialtest", kinds: "person" } })) || {}
-        const dialer = sys(() => call("org.moqui.impl.CallHandlingServices.search#Dialable", { text: "Dialtest" })) || {}
+        const byDigits = sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "01234", kinds: "phone" } })) || {}
+        const emailOnly = sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "recipient-source", parameters: { text: "Dialtest", kinds: "person" } })) || {}
+        const dialer = sys(() => call("org.moqui.call.CallHandlingServices.search#Dialable", { text: "Dialtest" })) || {}
         login("john.doe")
         sys(() => {
             ec.entity.find("moqui.call.VoicemailBox").condition("voicemailBoxId", box).deleteAll()
@@ -232,7 +232,7 @@ feature("the call-context provider pops the caller's party and open requests for
             store("mantle.request.Request", { requestId: CTXREQ, requestName: "Ctxtest broken widget", statusId: "ReqSubmitted", requestDate: new Date() })
             store("mantle.request.RequestParty", { requestId: CTXREQ, partyId: CTXOWN, roleTypeId: "Customer", fromDate: new Date(Date.now() - 60000) })
         })
-        const ask = (number) => sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "call-context", parameters: { number } })) || {}
+        const ask = (number) => sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "call-context", parameters: { number } })) || {}
         const boss = (out) => (out.results || []).find((r) => r.sourceId == "boss.parties") || {}
         login("john.doe")
         const asJohn = ask("+15550198877")
@@ -276,7 +276,7 @@ feature("the call-context provider pops the caller's party and open requests for
 // (the flag alone decides, as the server would still have this message's text) shows no text.
 feature("Home's Chat list shows a room's last message, and an encrypted room's as Encrypted message", {
     when() {
-        const CHAT = "org.moqui.impl.ChatServices"
+        const CHAT = "org.moqui.chat.ChatServices"
         const john = userIdOf("john.doe")
         login("joe.developer")
         const rooms = {}

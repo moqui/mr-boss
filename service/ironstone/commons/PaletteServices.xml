@@ -417,7 +417,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="search" noun="Pages">
-        <description>The palette's Pages and files group: org.moqui.impl.WikiServices.search#WikiPages (the search documents on
+        <description>The palette's Pages and files group: org.moqui.resource.WikiServices.search#WikiPages (the search documents on
             WikiPage, MantleWikiPage, for the title and text when search is available, else the page paths), which leaves out
             the spaces and restricted pages the user may not view; another user's notes are left out too (an administrator
             may view them), the user's own notes are in. Each to Commons/Knowledge, a note to Commons/Notes. Files and drives
@@ -431,7 +431,7 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="rows" type="List"/></out-parameters>
         <actions><script><![CDATA[
             rows = []
-            const out = ec.service.sync().name('org.moqui.impl.WikiServices.search#WikiPages').parameters({text: text, limit: Math.max(20, (limit || 5) * 4)}).call() || {}
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.search#WikiPages').parameters({text: text, limit: Math.max(20, (limit || 5) * 4)}).call() || {}
             const mine = ec.user.userId ? 'NOTES_' + ec.user.userId : null
             for (const page of Array.from(out.pageList || [])) {
                 if (rows.length >= (limit || 5)) break

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     last fetch and its status or error, Fetch now, Unsubscribe) with Subscribe; and Import .ics into a calendar the user may
     change. Everything goes through mantle.work.CalendarServices, which checks the user's permission on each calendar
     (ironstone.commons.CalendarServices.get#CalendarSettings reads the shares only of the calendars the user manages: IronStone R21).
-    CalDavInfo: the CalDAV address of the user's calendars and of each one (org.moqui.impl.DavServices.get#SyncAddresses), for a
+    CalDavInfo: the CalDAV address of the user's calendars and of each one (org.moqui.resource.DavServices.get#SyncAddresses), for a
     phone or a desktop app logged in with an app password (Settings, Sync). Google and Microsoft 365 accounts come later. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Calendars" default-menu-index="5" menu-image="sym_o_calendar_month" menu-image-type="icon">
@@ -107,7 +107,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <service-call name="ironstone.commons.CalendarServices.get#CalendarSettings" out-map="settings"/>
-        <service-call name="org.moqui.impl.DavServices.get#SyncAddresses" out-map="syncAddresses"/>
+        <service-call name="org.moqui.resource.DavServices.get#SyncAddresses" out-map="syncAddresses"/>
         <script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const enc = (text) => String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')

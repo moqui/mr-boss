@@ -981,8 +981,8 @@ product identifications and category identifications.
 | --- | --- | --- |
 | `mantle.product.PromotionServices.apply#OrderPromotions`, `add#OrderPromoCode`, `remove#OrderPromoCode`; interface `apply#Promotion` with `apply#NewCustomerDiscount`, `apply#BuyGetDiscount`, `apply#FlatDiscount` | Promotion evaluation on orders and promo code entry | `component/mr-mantle/service/mantle/product/PromotionServices.xml` |
 | `org.moqui.impl.ScreenServices.create#FormResponse`, `get#FormResponse`, `update#FormResponse`, `delete#FormResponse`, `get#FormResponseStats`, `update#DbFormField`, `delete#DbFormField` | Survey responses, stats and field maintenance | `base-component/framework/service/org/moqui/impl/ScreenServices.xml` |
-| `org.moqui.impl.WikiServices.create#WikiBlog`, `update#WikiBlog` | Blog post create/update | `base-component/framework/service/org/moqui/impl/WikiServices.xml` |
-| `org.moqui.impl.EmailServices.send#EmailTemplate`, `send#EmailMessage`, `poll#EmailServer` (Rust implementations) | Template send and mail polling — the Comms transport Marketing sends go through | `base-component/framework/service/org/moqui/impl/EmailServices.xml` |
+| `org.moqui.resource.WikiServices.create#WikiBlog`, `update#WikiBlog` | Blog post create/update | `base-component/framework/service/org/moqui/resource/WikiServices.xml` |
+| `org.moqui.mail.EmailServices.send#EmailTemplate`, `send#EmailMessage`, `poll#EmailServer` (Rust implementations) | Template send and mail polling — the Comms transport Marketing sends go through | `base-component/framework/service/org/moqui/mail/EmailServices.xml` |
 | `send#OrderStoreEmail`, `send#InvoiceStoreEmail`, `send#ShipmentStoreEmail` | Transactional store emails (not marketing) | `component/mr-mantle/service/mantle/order/OrderInfoServices.xml`; `component/mr-mantle/service/mantle/account/InvoiceServices.xml`; `component/mr-mantle/service/mantle/shipment/ShipmentServices.xml` |
 
 **Missing services:** nothing creates or progresses a `MarketingCampaign`; no

@@ -11,8 +11,8 @@ const ORG = "BOSS_TEST_CT_ORG"
 const SAME = "BOSS_TEST_CT_SAME"
 const OTHER = "BOSS_TEST_CT_OTHER"
 const NOPARTY = "BOSS_TEST_CT_NOPARTY"
-const CALLS = "org.moqui.impl.CallServices."
-const TRANSFERS = "org.moqui.impl.CallTransferServices."
+const CALLS = "org.moqui.call.CallServices."
+const TRANSFERS = "org.moqui.call.CallTransferServices."
 
 function sys(run) {
     const wasDisabled = ec.artifactExecution.disableAuthz()
@@ -95,7 +95,7 @@ spec({
 feature("the provider answers which users joe.developer may not reach: another organization's, not one with no party", {
     when() {
         ec.user.internalLoginUser("joe.developer")
-        const out = sys(() => call("org.moqui.impl.ShellServices.call#Providers", { hook: "call-target",
+        const out = sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "call-target",
             parameters: { userIdList: [SAME, OTHER, NOPARTY, userIdOf("john.doe")] } })) || {}
         return { out, mine: (out.results || []).filter((r) => r.sourceId == "boss.parties") }
     },
@@ -149,7 +149,7 @@ feature("a phone call is not transferred to another organization's user; the sam
     when() {
         const joe = userIdOf("joe.developer")
         sys(() => {
-            call("org.moqui.impl.VoiceServices.register#SipNode", { instanceId: NODE, sipAddress: "127.0.0.1:5060" })
+            call("org.moqui.call.VoiceServices.register#SipNode", { instanceId: NODE, sipAddress: "127.0.0.1:5060" })
             ec.entity.find("moqui.call.PhoneNumber").condition("phoneNumber", NUMBER).deleteAll()
             ec.entity.find("moqui.call.VoiceTrunk").condition("voiceTrunkId", TRUNK).deleteAll()
             const trunk = ec.entity.makeValue("moqui.call.VoiceTrunk")
@@ -160,7 +160,7 @@ feature("a phone call is not transferred to another organization's user; the sam
             number.setFields({ phoneNumber: NUMBER, voiceTrunkId: TRUNK, routeTypeEnumId: "PnrUser", routeId: joe }, true, null, null)
             number.create()
         })
-        const ring = sys(() => call("org.moqui.impl.VoiceServices.receive#PhoneCall", { toNumber: NUMBER, fromNumber: "+15550177399", instanceId: NODE })) || {}
+        const ring = sys(() => call("org.moqui.call.VoiceServices.receive#PhoneCall", { toNumber: NUMBER, fromNumber: "+15550177399", instanceId: NODE })) || {}
         const answered = as("joe.developer", CALLS + "answer#Call", { callSessionId: ring.callSessionId })
         const revision = () => Number(sys(() => ec.entity.find("moqui.call.CallSession").condition("callSessionId", ring.callSessionId).one()).revision)
         const other = as("joe.developer", TRANSFERS + "transfer#Call", { callSessionId: ring.callSessionId, targetType: "user", targetId: OTHER,

@@ -632,7 +632,7 @@ Design assumptions found wrong in the code, with the resolution (written into th
 | F33 | P3b2: the lite binary's `lint --screens` flags `code-view` as unknown (git is not built in) | Lint with the Debug binary |
 | F34 | P3b2: the screen lint's gstring check flagged a template literal in a script, likely reading a `/"/g` regex as a string's start | Worked around with concatenation; check the lint later |
 | F35 | P3b2: Chatter's header shows a `moqui.*` record by type and id ("Merge request 100000") | A label for framework records in Chatter, later |
-| F36 | P3b2: a team user calling `org.moqui.impl.GitServices` outside a screen is refused (only the app root's ALLOW grants the services) | As intended; specs stand in for a push with authorization off |
+| F36 | P3b2: a team user calling `org.moqui.git.GitServices` outside a screen is refused (only the app root's ALLOW grants the services) | As intended; specs stand in for a push with authorization off |
 | F37 | P4a: the screen lint's gstring check loses its place on any odd quote in a script (an apostrophe in a `//` comment, the `/"/g` regex of the `enc` helpers), then flags a double-quoted attribute with `$root` (extends F34) | Worked around; the lint should skip comments and regex literals |
 | F38 | P4a: a `paginate="false"` form-list with a header row shows No results found unless the screen sets `${listName}Count` | Set in SprintDetail; the framework could fall back to the list's size |
 | F39 | P4a: in `.qvue`, a `q-item-section` does not bound its inner row's width | `width:100%` on the row and `display:block` on the ellipsis link |

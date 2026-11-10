@@ -154,8 +154,8 @@ feature("the setup card keeps Done and Dismiss, and goes when every item is; Hom
     when() {
         // a page john.doe opened lately (the Knowledge screen's page transition) and a file he changed
         get("Knowledge/page", { wikiSpaceId: "BOSSKB", pagePath: "Office" })
-        const driveId = sys(() => call("org.moqui.impl.FileServices.ensure#PersonalDrive", {})).driveId
-        sys(() => call("org.moqui.impl.FileServices.save#Text", { driveId, path: "Settings spec notes.md", text: "For Home's recent files\n" }))
+        const driveId = sys(() => call("org.moqui.resource.FileServices.ensure#PersonalDrive", {})).driveId
+        sys(() => call("org.moqui.resource.FileServices.save#Text", { driveId, path: "Settings spec notes.md", text: "For Home's recent files\n" }))
         ec.message.clearErrors()
         const taskCounts = sys(() => call("ironstone.commons.TaskServices.find#TaskRows", {pageSize: 1})).counts
         const first = render("Home")

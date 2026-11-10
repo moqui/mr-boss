@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     complete the linked items on merge as the project says, delete the branch after); then the commits and every file's diff
     (the moqui-diff table), up to 25 files, past that a file list opening each. Opening the merge request goes on to its
     MergeRequestDetail. Services: ironstone.projects.CodeServices get#CompareInfo,
-    create#MergeRequestFromCompare (org.moqui.impl.GitServices.get#GitCompare, org.moqui.impl.GitReviewServices.create#MergeRequest,
+    create#MergeRequestFromCompare (org.moqui.git.GitServices.get#GitCompare, org.moqui.git.GitReviewServices.create#MergeRequest,
     mantle.work.GitServices.link#MergeRequestItems). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Compare" default-menu-include="false">

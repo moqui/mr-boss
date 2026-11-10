@@ -14,7 +14,7 @@ const organizationPartyId = "ORG_ZIZI_RETAIL"
 const retailSpace = "ZZW_RETAIL"
 const serviceSpace = "ZZW_SVC"
 const team = "BOSS_CS_TEAM_SUPPORT"
-const W = "org.moqui.impl.WikiServices."
+const W = "org.moqui.resource.WikiServices."
 const K = "mantle.request.KnowledgeServices."
 
 function asDemoAdministrator(operation) {

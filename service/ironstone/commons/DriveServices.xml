@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Files and drives for the BOSS screens (design-drawers-commons.md §9; impl-drawers-commons.md M8): screen/Commons/Files
     (the browser, Drives, Shares), the records drive under Shared/RecordFiles, Compose's Attach from Files, Commons Home's
-    recent files and the palette's Files group. Every read and write goes through org.moqui.impl.FileServices, which checks
+    recent files and the palette's Files group. Every read and write goes through org.moqui.resource.FileServices, which checks
     the drive's members and shares (R21) and, on a records drive, the records (below); these services add what the framework
     leaves to the application:
 
@@ -181,7 +181,7 @@ along with this software (see the LICENSE.md file). If not, see
             tagList = []
             pendingShareCount = 0
             isAdmin = ec.user.isInGroup('ADMIN')
-            const drives = ec.service.sync().name('org.moqui.impl.FileServices.get#UserDrives').call()
+            const drives = ec.service.sync().name('org.moqui.resource.FileServices.get#UserDrives').call()
             if (ec.message.hasError()) return
             personalDriveId = drives.personalDriveId
             for (const drive of Array.from(drives.driveList || [])) {
@@ -191,8 +191,8 @@ along with this software (see the LICENSE.md file). If not, see
             }
             ec.message.pushErrors()
             try {
-                tagList = Array.from(ec.service.sync().name('org.moqui.impl.FileServices.get#Tags').requireNewTransaction(true).call().tagList || [])
-                const shares = ec.service.sync().name('org.moqui.impl.FileServices.get#Shares').requireNewTransaction(true).call()
+                tagList = Array.from(ec.service.sync().name('org.moqui.resource.FileServices.get#Tags').requireNewTransaction(true).call().tagList || [])
+                const shares = ec.service.sync().name('org.moqui.resource.FileServices.get#Shares').requireNewTransaction(true).call()
                 pendingShareCount = Array.from(shares.incomingList || []).filter((share) => share.pending).length
             } catch (err) {
                 ec.logger.warn(`Files rail: tags or shares not read: ${err && err.message ? err.message : err}`)
@@ -230,7 +230,7 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             fileList = []; folder = null; drive = null; breadcrumbList = []; record = null; hiddenCount = 0
             path = clean(path)
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.list#Folder').parameters({driveId: driveId, path: path,
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.list#Folder').parameters({driveId: driveId, path: path,
                 recordLimit: limit || 200}).call()
             if (ec.message.hasError()) return
             folder = out.folder
@@ -289,7 +289,7 @@ along with this software (see the LICENSE.md file). If not, see
                             if (!row.isDirectory || !/^content_/.test(row.name)) { opened.push(row); continue }
                             ec.message.pushErrors()
                             try {
-                                const listed = ec.service.sync().name('org.moqui.impl.FileServices.list#Folder').parameters({driveId: driveId, path: row.path})
+                                const listed = ec.service.sync().name('org.moqui.resource.FileServices.list#Folder').parameters({driveId: driveId, path: row.path})
                                         .requireNewTransaction(true).call()
                                 if (!ec.message.hasError()) for (const child of Array.from(listed.fileList || [])) opened.push(Object.assign({}, child, {contentFolder: row.path}))
                                 else opened.push(row)
@@ -313,7 +313,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (folder && folder.viaShareId) {
                 ec.message.pushErrors()
                 try {
-                    const shares = ec.service.sync().name('org.moqui.impl.FileServices.get#Shares').call()
+                    const shares = ec.service.sync().name('org.moqui.resource.FileServices.get#Shares').call()
                     const share = Array.from(shares.incomingList || []).find((item) => item.shareId === folder.viaShareId)
                     if (share) {
                         const at = breadcrumbList.findIndex((crumb) => crumb.path === clean(share.path))
@@ -354,7 +354,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="usedIndex" type="Boolean"/>
         </out-parameters>
         <actions><script><![CDATA[
-            const FILES = 'org.moqui.impl.FileServices'
+            const FILES = 'org.moqui.resource.FileServices'
             const L = (text) => ec.l10n.localize(text)
             fileList = []
             drive = null
@@ -454,7 +454,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="record" type="Map"/>
         </out-parameters>
         <actions><script><![CDATA[
-            const FILES = 'org.moqui.impl.FileServices'
+            const FILES = 'org.moqui.resource.FileServices'
             const clean = (text) => String(text == null ? '' : text).split('/').filter((part) => part && part !== '.').join('/')
             item = null; drive = null; access = null; shareList = []; linkList = []; record = null
             path = clean(path)
@@ -520,7 +520,7 @@ along with this software (see the LICENSE.md file). If not, see
                     listed[folder] = {}
                     ec.message.pushErrors()
                     try {
-                        const out = ec.service.sync().name('org.moqui.impl.FileServices.list#Folder').parameters({driveId: driveId, path: folder})
+                        const out = ec.service.sync().name('org.moqui.resource.FileServices.list#Folder').parameters({driveId: driveId, path: folder})
                                 .requireNewTransaction(true).call()
                         if (!ec.message.hasError()) for (const row of Array.from(out.fileList || [])) listed[folder][row.name] = row
                     } finally { ec.message.clearErrors(); ec.message.popErrors() }
@@ -563,7 +563,7 @@ along with this software (see the LICENSE.md file). If not, see
             const relatives = relativePath == null ? [] : (Array.isArray(relativePath) ? relativePath : [relativePath]).map((item) => String(item || ''))
             const parameters = {driveId: driveId, path: path || null, fileList: files, conflictPolicy: conflictPolicy || 'replace', versionNote: versionNote || null}
             if (relatives.length === files.length && relatives.some((item) => item.includes('/'))) parameters.relativePathList = relatives
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.upload#Resource').parameters(parameters).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.upload#Resource').parameters(parameters).call()
             if (ec.message.hasError()) return
             uploadedList = Array.from(out.uploadedList || [])
             const count = (outcome) => uploadedList.filter((row) => row.outcome === outcome).length
@@ -610,12 +610,12 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.message.pushErrors()
                 let exists = false
                 try {
-                    ec.service.sync().name('org.moqui.impl.FileServices.get#ResourceInfo').parameters({driveId: driveId, path: target}).requireNewTransaction(true).call()
+                    ec.service.sync().name('org.moqui.resource.FileServices.get#ResourceInfo').parameters({driveId: driveId, path: target}).requireNewTransaction(true).call()
                     exists = !ec.message.hasError()
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
                 if (exists) { ec.message.addError(L('Something by that name is already there')); return }
             }
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.save#Text').parameters({driveId: driveId, path: target, text: text ?? '',
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.save#Text').parameters({driveId: driveId, path: target, text: text ?? '',
                 versionNote: versionNote || null}).call()
             if (ec.message.hasError()) return
             newPath = target
@@ -637,7 +637,7 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions><script><![CDATA[
             text = null
-            const info = ec.service.sync().name('org.moqui.impl.FileServices.get#ResourceInfo').parameters({driveId: driveId, path: path, opened: true}).call()
+            const info = ec.service.sync().name('org.moqui.resource.FileServices.get#ResourceInfo').parameters({driveId: driveId, path: path, opened: true}).call()
             if (ec.message.hasError()) return
             const resource = info.resource
             if (resource.isDirectory || !resource.isText) { ec.message.addError(ec.l10n.localize('Only a text file opens in the editor')); return }
@@ -691,16 +691,16 @@ along with this software (see the LICENSE.md file). If not, see
                 if (userId) parameters.sharedWithUserId = userId
                 else parameters.sharedWithUserGroupId = groupId
             }
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.share#Resource').parameters(parameters).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.share#Resource').parameters(parameters).call()
             if (ec.message.hasError()) return
             shareId = out.shareId
             linkToken = out.linkToken ?? null
             linkPath = out.linkPath ?? null
-            const access = ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
+            const access = ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
             const itemName = path ? path.slice(path.lastIndexOf('/') + 1) : (access.drive ? access.drive.driveName : driveId)
             if (link) { message = L('Link made: copy it now, it is shown only once'); return }
             // the person or the group is told, with the item in Files
-            const info = ec.service.sync().name('org.moqui.impl.FileServices.get#ResourceInfo').parameters({driveId: driveId, path: path}).call()
+            const info = ec.service.sync().name('org.moqui.resource.FileServices.get#ResourceInfo').parameters({driveId: driveId, path: path}).call()
             const isDirectory = !path || !!(info.resource && info.resource.isDirectory)
             const query = isDirectory ? `drive=${encodeURIComponent(driveId)}&path=${encodeURIComponent(path)}`
                     : `view=shared&drive=${encodeURIComponent(driveId)}&file=${encodeURIComponent(path)}`
@@ -810,7 +810,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             isAdmin = ec.user.isInGroup('ADMIN')
             driveList = []
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.get#UserDrives').parameters({includeArchived: true, includeUsage: true}).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.get#UserDrives').parameters({includeArchived: true, includeUsage: true}).call()
             if (ec.message.hasError()) return
             const STORAGE = {folder: 'Folder', 'git-db': 'Version-controlled in the database', 'git-local': 'Version-controlled on disk',
                 'git-remote': 'Mirror', other: 'Records'}
@@ -863,7 +863,7 @@ along with this software (see the LICENSE.md file). If not, see
                 quotaBytes: quotaMb != null && Number(quotaMb) > 0 ? Math.round(Number(quotaMb) * 1048576) : null}
             if (storage === 'mirror') Object.assign(parameters, {remoteUrl: remoteUrl || null, branch: branch || null, username: username || null,
                 accessToken: accessToken || null, fetchIntervalMinutes: fetchIntervalMinutes ?? null})
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.create#Drive').parameters(parameters).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.create#Drive').parameters(parameters).call()
             if (ec.message.hasError()) return
             driveId = out.driveId
             message = ec.resource.expand('Drive ${name} made', '', {name: driveName})
@@ -885,7 +885,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             isAdmin = ec.user.isInGroup('ADMIN')
             memberList = []
-            const access = ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
+            const access = ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
             if (!access.drive || access.level < 1) { ec.message.addError(ec.l10n.localize('Drive not found')); return }
             drive = access.drive
             level = access.level
@@ -894,7 +894,7 @@ along with this software (see the LICENSE.md file). If not, see
             ownerName = owner ? (owner.userFullName || owner.username) : null
             if (drive.driveKindEnumId === 'RdkPersonal' || drive.driveKindEnumId === 'RdkRecords') return
             const LEVEL = {RdpView: 'View', RdpEdit: 'Edit', RdpManage: 'Manage'}
-            memberList = Array.from(ec.service.sync().name('org.moqui.impl.FileServices.get#DriveMembers').parameter('driveId', driveId).call().memberList || [])
+            memberList = Array.from(ec.service.sync().name('org.moqui.resource.FileServices.get#DriveMembers').parameter('driveId', driveId).call().memberList || [])
                     .map((member) => Object.assign({}, member, {permissionLabel: ec.l10n.localize(LEVEL[member.permissionEnumId] || 'View'),
                         kind: member.userId ? 'user' : 'group'}))
         ]]></script></actions>
@@ -910,12 +910,12 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const shares = ec.service.sync().name('org.moqui.impl.FileServices.get#Shares').call()
+            const shares = ec.service.sync().name('org.moqui.resource.FileServices.get#Shares').call()
             if (ec.message.hasError()) return
             const driveNames = {}
             const driveName = (id) => {
                 if (driveNames[id] === undefined) {
-                    const access = ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameter('driveId', id).call()
+                    const access = ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', id).call()
                     driveNames[id] = access.drive ? access.drive.driveName : id
                 }
                 return driveNames[id]

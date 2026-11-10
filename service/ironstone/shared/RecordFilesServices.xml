@@ -587,7 +587,7 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()">
                 <return/>
             </if>
-            <service-call name="org.moqui.impl.FileServices.get#Versions" in-map="{driveId:pathOut.driveId, path:drivePath}" out-map="versionsOut"/>
+            <service-call name="org.moqui.resource.FileServices.get#Versions" in-map="{driveId:pathOut.driveId, path:drivePath}" out-map="versionsOut"/>
             <set field="versionList" from="versionsOut.versionList || []"/>
             <set field="canChange" from="pathOut.canChange"/>
         </actions>
@@ -612,7 +612,7 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()">
                 <return/>
             </if>
-            <service-call name="org.moqui.impl.FileServices.get#ResourceInfo" out-map="infoOut" in-map="{driveId:pathOut.driveId, path:drivePath, versionName:(versionName || null), opened:true}"/>
+            <service-call name="org.moqui.resource.FileServices.get#ResourceInfo" out-map="infoOut" in-map="{driveId:pathOut.driveId, path:drivePath, versionName:(versionName || null), opened:true}"/>
             <if condition="ec.message.hasError()">
                 <return/>
             </if>
@@ -649,13 +649,13 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
             <script><![CDATA[
                 // the upload below is internal (the drive is read only to its members): the path must be one the user reaches
-                const access = ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameters({driveId: pathOut.driveId, path: drivePath}).call()
+                const access = ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameters({driveId: pathOut.driveId, path: drivePath}).call()
                 if (!access?.drive || !(access.level >= 1)) { ec.message.addError(ec.l10n.localize('File not found')); return }
                 const file = Array.isArray(contentFile) ? contentFile[0] : contentFile
                 if (!file || typeof file !== 'object') { ec.message.addError(ec.l10n.localize('Choose the file of the new version')); return }
                 const slash = drivePath.lastIndexOf('/')
                 const name = drivePath.slice(slash + 1)
-                const out = ec.service.sync().name('org.moqui.impl.FileServices.upload#Resource').parameters({driveId: pathOut.driveId,
+                const out = ec.service.sync().name('org.moqui.resource.FileServices.upload#Resource').parameters({driveId: pathOut.driveId,
                     path: drivePath.slice(0, slash), fileList: [file], relativePathList: [name], conflictPolicy: 'replace', versionNote: versionNote || null,
                     asInternal: true}).disableAuthz().call()
                 if (ec.message.hasError()) return
@@ -683,7 +683,7 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()">
                 <return/>
             </if>
-            <service-call name="org.moqui.impl.FileServices.get#ResourceInfo" out-map="infoOut" in-map="{driveId:pathOut.driveId, path:drivePath, versionName:versionName}"/>
+            <service-call name="org.moqui.resource.FileServices.get#ResourceInfo" out-map="infoOut" in-map="{driveId:pathOut.driveId, path:drivePath, versionName:versionName}"/>
             <if condition="ec.message.hasError()">
                 <return/>
             </if>
@@ -695,7 +695,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const location = String(infoOut.resource.location)
                 const bytes = ec.resource.getVersionBytes(location.slice(0, location.indexOf('#') > 0 ? location.indexOf('#') : location.length), versionName)
                 if (bytes == null) { ec.message.addError(ec.l10n.localize('That version is not there')); return }
-                const out = ec.service.sync().name('org.moqui.impl.FileServices.upload#Resource').parameters({driveId: pathOut.driveId,
+                const out = ec.service.sync().name('org.moqui.resource.FileServices.upload#Resource').parameters({driveId: pathOut.driveId,
                     path: drivePath.slice(0, slash), fileList: [bytes], relativePathList: [name], conflictPolicy: 'replace',
                     versionNote: ec.resource.expand('Restored version ${version}', '', {version: short}), asInternal: true}).disableAuthz().call()
                 if (ec.message.hasError()) return
@@ -750,7 +750,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const readable = (item) => {
                     ec.message.pushErrors()
                     try {
-                        const out = ec.service.sync().name('org.moqui.impl.FileServices.get#ResourceInfo').parameters({driveId: item.driveId, path: item.path, opened: true})
+                        const out = ec.service.sync().name('org.moqui.resource.FileServices.get#ResourceInfo').parameters({driveId: item.driveId, path: item.path, opened: true})
                                 .requireNewTransaction(true).call()
                         return ec.message.hasError() ? {why: ec.message.getErrorsString()} : {resource: out.resource}
                     } finally { ec.message.clearErrors(); ec.message.popErrors() }
