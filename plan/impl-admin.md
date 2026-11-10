@@ -1970,6 +1970,66 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
     reader, or drop from design §7); whether reference kinds belong in SettingsHome's list (F-P8-8); F-P8-1's framework ask;
   - the acceptance AdminSettingsUsable to run when asked.
 
+**Review Nov 10 (P8).** A fresh review of both repositories' P8 diffs, security first; fixes committed apart per repository
+("Admin P8 review: …").
+- Checked: `get#EffectiveSettings` (`ADMIN_SETTINGS_VIEW` or `_MANAGE`, checked in the service; each row a registered
+  `InstanceSetting`; a value read only through the property its registration names; a secret answered as `value` null,
+  `defaultValue` null and `valueSet`; the eight registered deployment values against MoquiDefaultConf: purpose, locale, the two
+  zones, public host, HTTPS, largest upload and telemetry, none marked `is-secret` or holding a credential); `get#InstancePreference`
+  (no permission: only a registered row with `editable` Y, which the registry refuses for a secret by flag or name, so nothing
+  but a nonsecret registered preference; not remote, and an anonymous caller has no authorization for it);
+  `store#InstancePreference` (`ADMIN_SETTINGS_MANAGE` and the setting's own permission; registered and editable only; type,
+  allowed values and limits; the revision before any write; who and when on the row, each value and the removal in the audit
+  log; a stored value a narrowed registration no longer accepts passed over); the localization stores (a registered target
+  the definitions bear out: localized, unencrypted, a `use="configuration"` entity with one key; the label read only by that
+  key; the finds under `ADMIN_SETTINGS_VIEW` and only over registered targets); the `AdminConfigurationServices` grant (the
+  seven services by name, never a pattern over the file; inheritable as gate 1's, the bodies calling fixed entities only); the
+  BOSS screens (`BOSS_ADM_ORGANIZATIONS` denies the root group and allows the configuration administrator and the
+  administrator; `storePreference`, `storeMessage`, `storeLabel` and `valueOptions` each call one fixed framework service that
+  checks its own permission; ReferenceData reads `find#Settings`, which shows an entry only to a viewer its destination opens
+  to, and changes nothing; Home's `get#InstancePreference` of the display name); the eleven reference kinds' screen paths
+  (each exists); the `load-data` line and the seed file (no Mantle or BOSS entity, service or group; the plan references are
+  comments, as gate 1's); the specs' renders.
+- Fixes:
+  - **R1 (medium, security)** A translation is expanded wherever its original is (`expand_localized`: the text is localized,
+    then run as a template literal), and the stores compared placeholders found by a pattern (`${` to the first `}`), which is
+    not how the expander finds them (`scan_expression`: strings, nested braces, templates, comments, regular expressions).
+    For an original whose value has a `}` inside it (`${ok ? '}' : no}`), a translation could keep "the same" placeholder and
+    add an expression after it that the server would run as whoever reads the screen. `ConfigurationLocalization.js`
+    `placeholders` now reads the values as the expander does for plain ones (names, paths, calls, quoted text, balanced `(`
+    and `[`; an escaped `\${` is text) and refuses a text with any other (`PLACEHOLDER_UNSUPPORTED` for the original, which
+    stays Tools'; `PLACEHOLDER_MISMATCH` for the translation).
+  - **R2 (medium, security)** The framework localizes a link's `url` and `url-type` before it expands them (urls.rs
+    `make_url_by_type`, `url_type_of`, as Java), so a translator could "translate" `${url}` or `transition` and send every
+    such link of a locale elsewhere. The stores refuse an original that is a link, a path or a link type, and a translation
+    that is a link or a path (`://`, a leading `/`, `\`, `./` or a scheme). A translation of a relative url that holds words
+    can still be changed to another relative path: see For the lead.
+  - **R3 (low, secrets)** A setting was secret by its own flag or by its property's name (pass, pw, key, secret, token,
+    credential), but the conf marks secrets whose names do not read as one (`fcm_service_account`, `cluster_tls_cert`), which
+    a registration naming them would have returned. `ConfigurationSettings.js` now also reads the shipped conf's `is-secret`
+    marks (one parse with the shipped values, attributes in any order) and masks those properties.
+  - **R4 (low)** A text preference with `${` in it is refused (`VALUE_INVALID`): the value is shown, never run, whatever
+    screen shows it later.
+  - **R5 (low)** `find#LocalizedEntityFields` read at most 2,000 translations and did not say when it stopped; it sets
+    `truncated` now, as the "missing" search does. The services file's comment named the wrong data file; a comment in the
+    framework seed file named Insights.
+  - **R6 (spec leanness)** `AdminSettings` rendered ReferenceData twice in html; the configuration administrator's case now
+    reads the list's service (`find#Settings`, the Reference data group), one render left.
+- Tests (release binary, `--nobuild`, this worktree's runtime): framework `AdminConfiguration` 4 of 4 (0.2 s; added cases: the
+  kept-and-extended placeholder, an unsupported original, a link as a translation, the conf-marked secret, `${` in a text
+  preference); mr-boss `AdminSettings` and `AdminRegistries` 8 of 8 (AdminSettings 0.7 s). Prettier clean. Not run: the full
+  suites, the acceptance suite.
+- For the lead:
+  - **F-P8-R1 (framework ask, the user's call)** The sound fix of R2 is in the framework: do not localize a link's `url` and
+    `url-type` (or localize only texts), which departs from Java; until then a holder of `ADMIN_SETTINGS_MANAGE` can still
+    retarget, within the app, a relative url whose text has words (`editItem?id=${id}`), for one locale. Tools' Localization
+    (`ADMIN`) writes any translation, as before.
+  - F-P8-5 stands: translations written by Tools or a data file are not audited; only the delegated services' changes are.
+  - `InstanceSetting`, `InstancePreference` and `LocalizedLabelTarget` are plain entities: whoever may write them directly
+    (`ADMIN`, Tools' entity screens, a data load) registers settings and targets; the services trust the registry and check
+    each row against the definitions and the secret rules when read.
+  - A reason code was added (`PLACEHOLDER_UNSUPPORTED`); design-admin §7 Localization says so. No budget raised.
+
 ### P9 — Capabilities and row rules
 
 Design §5 Capabilities and RowRules; ADM-ACCESS.

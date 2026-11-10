@@ -123,14 +123,19 @@ feature("ReferenceData links a kind to its owner only for a viewer the owner's s
     when() {
         return {
             system: asUser(users.system, () => page("Settings/ReferenceData", {}, "html")),
-            configure: asUser(users.configure, () => page("Settings/ReferenceData", {}, "html"))
+            // the screen's list is the settings index's Reference data group: what it gives the configuration administrator
+            configure: asUser(users.configure, () =>
+                Array.from(
+                    invoke("ironstone.admin.RegistryServices.find#Settings", {settingsGroupEnumId: "AdmSgReference"}).entries ||
+                        []
+                ).map(entry => entry.settingsKey)
+            )
         }
     },
     then({system, configure}) {
         system.errors.length == 0 && system.output.includes("Units of measure") && system.output.includes("/qapps/Products/Units")
         system.output.includes("Currencies") && system.output.includes("Status flows")
-        // an Admin user in no Products or Accounting group opens the screen and is linked to neither
-        configure.status == 200 && configure.errors.length == 0
-        !configure.output.includes("/qapps/Products/Units") && !configure.output.includes("Status flows")
+        // an Admin user in no Products or Tools group is given neither kind
+        !configure.includes("reference.units") && !configure.includes("reference.statusFlows")
     }
 })
