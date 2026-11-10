@@ -15,26 +15,6 @@ Imports stage actor-private CSV and keep mapping, preview and row outcomes durab
 
 Effective price outputs use `mantle.product.PriceServices.get#EffectivePriceList`. The selected published list, date, quantity, quantity unit and counterparties define the output. Missing prices remain blank; an independent resolution failure is named and does not stop other rows. Products outside the user's owner scope never enter the rows or document. The screen exports CSV/XLSX and opens matching printable HTML/PDF. One output accepts up to 1,000 products; filter by product IDs for a larger catalog.
 
-Other app contexts are extension work described in [ProductsSharedScreens.md](ProductsSharedScreens.md). Configurable products, change notices, and the deferred owner-app workflows remain outside this build.
+Shared catalog contexts are implemented for Products, Warehouse, Manufacturing, Purchasing, Customer Service and Commerce; Accounting has its own Product360 presentation. Their boundaries and extension procedure are in [ProductsSharedScreens.md](ProductsSharedScreens.md). Configurable products, change notices and other deferred Products features remain separate work.
 
-After the review (impl-products R), on Oct 29, 2026:
-
-- BOSS: **992 passed, 21 skipped** (1,013 features; the alias routes the review removed no longer render).
-- Standalone Mantle: all Products features pass, with the two failures reproduced at the baseline (InboxThreads,
-  MantleSearch); new ProductCatalogSettings, ProductStockTotals and bulk price-change features.
-- Browser: the Products shots at 390, 1280 and 1440 and the walks pass, except ProductsCostWalk and ProductsToolsWalk,
-  which fail the same way at the P14 commits on a machine without Chromium.
-
-After the deferred review items (R7), the same day: BOSS 992 passed, 21 skipped; Mantle as above; browser 571 of 573
-(the one `ProductsShots` spec, every Products walk, ProductsChecks, ProductsCatalogSettings and ProductsFinish),
-the two failures being ProductsFinish's PDF without Chromium and a walk assertion since fixed and rerun.
-- Screen expression lint: zero parse failures.
-
-Validation on Oct 29, 2026:
-
-- BOSS: **1,025/1,025** features, including authorization enabled/disabled, full screen rendering, terminal twins and the extended server-static compatibility pass.
-- Standalone Mantle: **804 passed, 17 skipped, four baseline failures**, reproduced before these changes: InboxThreads, MantleSearch, WorkTimeEntries and WorkTimesheets. All Products features pass.
-- Native pricing/output focus: **14/14**; final output browser walks cover HTML/PDF/CSV/XLSX, source restrictions, all required widths and themes. Saved XLSX contents were inspected for owner isolation.
-- Screen expression lint: **zero parse failures**. The existing 125 idiom/hazard findings are unchanged.
-
-The `plan/` completion and inventory edits are deliberately uncommitted, as requested by the user.
+Construction history and past verification are recorded in [the implementation plan](../plan/impl-products.md). Current activity coverage, findings and verification belong to [the Products UI review](../plan/ui-review-products.md); historical test results do not establish current review coverage.
