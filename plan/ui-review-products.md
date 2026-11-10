@@ -19,10 +19,10 @@ Keep the current inventory, activities, coverage, findings, decisions and bounde
 records references, design specifies behavior, implementation records construction, and this file records review
 and refinement.
 
-**Status: plan; execution not yet authorized.** All activity coverage is **pending**. Execution scope, workers,
-commit cadence, authorized acceptance specs and gate timing are recorded in §7 when the user authorizes execution;
-the Projects pass's authorization and exceptions do not transfer to Products. Historical Products implementation
-results and existing tests are inputs, not evidence of this review's outcomes.
+**Status: execution authorized, 2026-11-09; review in progress.** Activity coverage starts **pending** and advances
+only with the evidence recorded in §6. Execution scope, workers, commit cadence, authorized acceptance specs and
+gate timing are recorded in §7. Historical Products implementation results and existing tests are inputs, not
+evidence of this review's outcomes.
 
 ### Inputs and reference patterns
 
@@ -155,7 +155,8 @@ a bootstrap explicitly; this plan does not authorize running those acceptance fi
 
 Dates matter: demo `BOSS_PRICE_SALES` ends at **2026-11-15 00:00**, when `BOSS_PRICE_NEXT` starts, six days after this
 plan was written. From that date the demo has no future price, `BOSS_PRICE_ORDER` refers to an expired row, and the
-Home "Ending in 30 days" count and expiring-price notices change. Record the as-of date and zone, and create
+expiring-price notices change. Home "Ending in 30 days" instead counts products approaching their
+`salesDiscontinuationDate`; prepare independent discontinuation fixtures for that card. Record the as-of date and zone, and create
 disposable rows relative to the execution date: current, future, expired and ending within 30 days. Check an exclusive
 `thruDate` boundary from two time zones; Projects' date findings (PR-UI-025, 029, 032) were this class. Also prepare
 quantity breaks, two currencies/units, published/draft lists, missing cost bases, approved/draft methods and
@@ -835,9 +836,9 @@ research for this plan does not advance live coverage. Record actual modes and r
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
-| PRD-01 — Workday/find | pending | Not executed | — |
-| PRD-02 — Create/clone/lifecycle | pending | Not executed | — |
-| PRD-03 — Master record | pending | Not executed; tab continuations PRD-07, 11–16, 18 | — |
+| PRD-01 — Workday/find | exercised / partial | Home/create/detail navigation; dark desktop and 390px; actual embedded-TUI keyboard launch. Saved finds, exports and shell recovery continue | PRD-UI-001; batch 1 |
+| PRD-02 — Create/clone/lifecycle | exercised / partial | Created/activated disposable draft; canceled activation; duplicate-ID recovery retained input; identifier/party golden path passed. Clone/delete/obsolete continuations remain | batch 1 |
+| PRD-03 — Master record | exercised / partial | Summary/header and standalone identifiers/parties exercised; operational tabs incorrectly advertised. Remaining master tabs and continuations PRD-07, 11–16, 18 stay open | PRD-UI-002; batch 1 |
 | PRD-04 — Categories | pending | Not executed; content continuation PRD-16 | — |
 | PRD-05 — Features/groups | pending | Not executed; combinations continue PRD-06 | — |
 | PRD-06 — Variants | pending | Not executed | — |
@@ -871,7 +872,8 @@ leads separate until investigated.
 
 | ID / kind / severity | Activity and step | Route, actor, theme / viewport / input | Reproduction and impact | Evidence | Owner | Correction / decision | Retest / remaining gap |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | No live review performed | — | — | — | — |
+| PRD-UI-001 / observed / P3 | PRD-01 Home card | catalog.edit; Material light/dark 1920×1080, dark 390×844; TUI keyboard | Ending-in-30-days title clipped at desktop; meaning and timestamp zone unclear | Home CUA captures; screens-batch1.txt | BOSS | Shortened to Ending soon, visible sales-discontinuation explanation and zone | Browser dark phone and live TUI show complete label/caption; desktop light capture follows |
+| PRD-UI-002 / observed / P2 | PRD-03, 23–24 Product360 navigation | catalog.edit; ordinary asset; Material dark 1920×1080 | Replenishment/Purchase history and type-inapplicable tabs appear; clicking Replenishment reaches Screen not found | CUA observation on disposable UI_PRD_20261109 | Framework menu | Investigating shared child-condition evaluation | Open; direct route refused, no unauthorized read observed |
 
 ### Static leads
 
@@ -913,6 +915,25 @@ inherited owning-app transitions and forged `appRoot` for PRD-23, Projects' defe
 the price-date rollover, further Mantle specs, and the Projects findings/leads table format. No runtime, test or
 application change; all live coverage remains pending.
 
+**Batch 1, 2026-11-09 — baseline and catalog workday:** coordinator plus three delegated workers; clean starting
+revisions framework `7d4027eb`, BOSS `9622bd4c`, Mantle `05d33505`, existing release binary. Disposable Mantle+BOSS
+bootstrap and actual runner runtime are recorded in ignored `boss-products/environment.json`; local HTTP port 57820,
+primary browser identity `products-review.localhost`. The sandbox refused Postgres shared memory; the host-permission
+retry loaded all six explicitly selected Products fixture features (6/6). Keep all database runners at the same host
+process visibility; sandboxed stale-process checks cannot reliably identify the host's live review processes.
+
+Created/activated `UI_PRD_20261109` as catalog.edit through visible controls, tested canceled activation and observed
+persisted status/history. Existing ProductsWalk covered create/activate/identifier/party-code navigation (1/1, 6.97s);
+a disposable native-client duplicate-ID check retained both submitted ID and name (1/1). Home measured 1920×1080
+(DPR 1, visual scale 1) and 390×844, light/dark; actual embedded terminal opened with keyboard Tab/Enter and rendered
+Products Home. Corrected the source-confirmed discontinuation/price-expiry documentation drift and PRD-UI-001. Source
+review found no need to change NewProduct recovery. PRD-UI-002 remains open for the shared-menu batch.
+
+Checks before this batch commit: ProductsCatalog/ProductsTaxonomy/ProductsVariants 29/29 (3.9s feature time); ProductsWalk
+1/1; screen lint 1,280 files, zero parse failures, 87 existing idiom/hazard sites and no new Home site. Coordinator
+reviewed the small Home change. Full framework/apps gates are explicitly deferred until the end of all seven waves.
+No live activity is closed by these bounded checks; the ledger names the remaining continuations.
+
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.
 Keep full-gate status and any explicitly changed cadence visible. Do not append an unbounded transcript or repeat
@@ -932,9 +953,14 @@ into the framework review guide. An accurate, reviewable plan does not close any
 
 ## 7. Decisions
 
-- **Execution authorization:** *(not yet given)*. When the user authorizes execution, record here the date, scope,
-  delegated workers, commit/push cadence, authorized acceptance specs and gate timing. No prior Projects exception is
-  assumed.
+- **Execution authorization (2026-11-09):** all 24 activities and seven waves, with three workers: catalog/variants
+  (PRD-01–06), pricing/content/tools (PRD-07–11, 16–22), and engineering/access (PRD-12–15, 23–24). The coordinator
+  owns browser/terminal observation, runtime lifecycle, shared integration and commits. Review and run focused
+  regression/lint checks before each local batch commit; run `./moq test-framework` and `./moq test-apps` only at the
+  end. The user reviews along the way and pushes at the end; no push is authorized here. Focused existing Products
+  acceptance walks and their six named fixture specs are authorized; no unrelated acceptance sweep. Adding/changing
+  an acceptance test still requires that test and its component's acceptance suite. One disposable local revaluation
+  posting is authorized with persisted inventory/ledger and idempotency checks. Labels use local PDF/output only.
 - **Scope:** current Products workflows, hidden helpers, actual shared mounts, outputs and bounded handoffs;
   no absent-feature implementation or complete adjacent-app review.
 - **Inventory authority:** current sources/policies decide what is reachable. Count physical inherited sources
@@ -959,7 +985,8 @@ into the framework review guide. An accurate, reviewable plan does not close any
 - **Cost-role alignment:** decide whether to prepare a Retail estimator/approver pair for manufactured roll-up or
   record the composed `catalog.method.walk` limit; the narrow cost roles are Services users.
 - **Execution dates:** record the as-of date and zone and prepare price rows relative to it; the demo price change on
-  2026-11-15 shifts current/future prices, the Ending-in-30-days count and expiring notices.
+  2026-11-15 shifts current/future prices and expiring notices. The Home Ending-in-30-days count is separately based on
+  product sales discontinuation dates.
 - **Mark items here *(resolved)* as they are decided, with the decision.**
 - **Tool capability:** measure browser dimensions/zoom and terminal interaction; verify PDF/content resource support
   and whether a safe printer is available. Leave unsupported variants explicit.

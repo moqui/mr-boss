@@ -20,6 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.products.CatalogServices.get#CatalogAccess" out-map="access"/>
         <set field="canImport" from="access.capabilities.catalogEdit || access.capabilities.priceEdit || access.capabilities.supplierPriceEdit"/>
         <set field="emptyCatalog" from="!summary.total"/>
+        <set field="catalogTimeZone" from="String(ec.user.timeZone?.getID?.() || ec.user.timeZone || 'UTC')"/>
         <script><![CDATA[
             const count = value => (value == null ? '—' : ec.l10n.format(value, '#,##0'))
             counts = {active: count(summary.active), variants: count(summary.variants), missingPrice: count(summary.missingPrice),
@@ -46,12 +47,12 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="Variants" value="${counts.variants}" icon="sym_o_style" size="sm" link="/qapps/Products/Products?list=variants"/>
             <number-card title="Missing price" value="${counts.missingPrice}" icon="sym_o_sell" size="sm" link="/qapps/Products/Products?list=missingPrice"
                     condition="summary.missingPrice != null"/>
-            <number-card title="Ending in 30 days" value="${counts.discontinuingSoon}" icon="sym_o_event_busy" size="sm"
+            <number-card title="Ending soon" value="${counts.discontinuingSoon}" icon="sym_o_event_busy" size="sm"
                     link="/qapps/Products/Products?list=discontinuingSoon"/>
             <number-card title="Incomplete" value="${counts.incomplete}" icon="sym_o_rule" size="sm"
                     link="/qapps/Products/CatalogChecks?runChecks=true&amp;checkIds=requiredFields&amp;severity=error"/>
         </dashboard>
-        <label text="As of ${summary.asOf}" type="p" style="text-caption m-muted"/>
+        <label text="As of ${summary.asOf} (${catalogTimeZone}). Ending soon: sales discontinuation within 30 days." type="p" style="text-caption m-muted"/>
         <container-row>
             <row-col lg="8" md="7">
                 <container-box>
