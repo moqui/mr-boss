@@ -238,15 +238,18 @@ feature("Home shows the reader's shortcuts, what needs attention, the setup chec
 feature("Agents and Developer tools show one tab each, and AgentsHome's destinations open under Admin", {
     when() {
         const root = "component://webroot/screen/webroot.xml"
-        const tabs = area => asUser(users.system, () => {
-            const menu = ec.screen.makeTest().rootScreen(root).render(`menuData/apps/Admin/${area}/Home`, {}, null)
-            const level = JSON.parse(menu.output).find(level => level.name === area)
-            return level ? level.subscreens.filter(item => item.menuInclude).map(item => item.name) : null
-        })
+        const tabs = area =>
+            asUser(users.system, () => {
+                const menu = ec.screen.makeTest().rootScreen(root).render(`menuData/apps/Admin/${area}/Home`, {}, null)
+                const level = JSON.parse(menu.output).find(level => level.name === area)
+                return level ? level.subscreens.filter(item => item.menuInclude).map(item => item.name) : null
+            })
         const agents = asUser(users.system, () => {
             const result = ec.screen.makeTest().rootScreen(root).renderMode("html").render("apps/Admin/Agents/Home", {}, null)
             const output = String(result.output || "")
-            const errors = Array.from(result.errorMessages || []).concat(output.match(/(Error rendering|Exception in render)[^\n<]*/g) || [])
+            const errors = Array.from(result.errorMessages || []).concat(
+                output.match(/(Error rendering|Exception in render)[^\n<]*/g) || []
+            )
             ec.message.clearErrors()
             return {output, errors}
         })

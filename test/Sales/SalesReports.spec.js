@@ -4,21 +4,26 @@
 const webroot = "component://webroot/screen/webroot.xml"
 
 spec({
-    setupSpec() { login("john.doe") },
+    setupSpec() {
+        login("john.doe")
+    }
 })
 
 feature("SalesAnalysis renders its rows with the average, margin and margin percent", {
     when() {
-        const str = ec.screen.makeTest().rootScreen(webroot).renderMode("html")
-                .render("apps/Sales/Reports/SalesAnalysis", { placedDate_from: "2000-01-01", placedDate_thru: "2100-01-01" }, null)
+        const str = ec.screen
+            .makeTest()
+            .rootScreen(webroot)
+            .renderMode("html")
+            .render("apps/Sales/Reports/SalesAnalysis", {placedDate_from: "2000-01-01", placedDate_thru: "2100-01-01"}, null)
         const output = String(str.output || "")
         const errors = str.errorMessages.join(" | ")
         ec.message.clearErrors()
-        return { output, errors }
+        return {output, errors}
     },
-    then({ output, errors }) {
+    then({output, errors}) {
         errors == ""
         !/Error rendering|Exception in render/.test(output)
         output.includes("Margin Percent")
-    },
+    }
 })
