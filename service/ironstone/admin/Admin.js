@@ -703,7 +703,7 @@ const toolRoutes = [
         purpose: "Load tests of services",
         app: "tools",
         path: "Service/ServiceLoadRunner",
-        permission: "SERVICE_LOAD_RUNNER"
+        permission: "LOAD_RUNNER"
     },
     {tool: "SQL runner", purpose: "Run SQL statements", app: "tools", path: "Sql", permission: "SQL_RUNNER_WEB"},
     {
