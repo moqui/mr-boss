@@ -29,6 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     </condition>
     <transition name="savePaidAccess">
         <actions>
+            <script>if (appRoot !== 'Commerce') throw new Error('Paid access changes require the Commerce context')</script>
             <service-call name="mantle.product.ShopSubscriptionServices.store#ProductSubscriptionResource"
                     in-map="{productId:productId, subscriptionResourceId:subscriptionResourceId, fromDate:(fromDate || null),
                         newFromDate:(newFromDate || null), change:(change || null), ended:(ended || null), thruDate:(thruDate || null),

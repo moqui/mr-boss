@@ -837,11 +837,11 @@ research for this plan does not advance live coverage. Record actual modes and r
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
 | PRD-01 — Workday/find | exercised / partial | Home/create/detail navigation; dark desktop and 390px; actual embedded-TUI keyboard launch. Saved finds, exports and shell recovery continue | PRD-UI-001; batch 1 |
-| PRD-02 — Create/clone/lifecycle | exercised / partial | Created/activated disposable draft; canceled activation; duplicate-ID recovery retained input; identifier/party golden path passed. Clone/delete/obsolete continuations remain | batch 1 |
+| PRD-02 — Create/clone/lifecycle | exercised / partial | Created/activated disposable draft; canceled activation; duplicate-ID recovery retained input; identifier/party golden path passed. Clone/cancel/unused-draft delete and delete-cancel/reload later passed; closed-state/consumer continuations remain | batch 1 |
 | PRD-03 — Master record | exercised / partial | Summary/header and standalone identifiers/parties exercised; operational tabs incorrectly advertised. Remaining master tabs and continuations PRD-07, 11–16, 18 stay open | PRD-UI-002; batch 1 |
 | PRD-04 — Categories | exercised / partial | Created category; moved one dated edge, retained second parent/tree occurrence; keyboard move cancellation observed. Delete/cycle and content continuation remain | batch 2 |
-| PRD-05 — Features/groups | exercised / partial | Created feature/group and saved membership through UI. Interaction/refusal/delete cases remain | batch 2 |
-| PRD-06 — Variants | exercised / partial | Browser preview/generate/durable resume and settings limit exercised; mounted response-order recovery verified. Standard fallback works; actual TUI operations remain | PRD-UI-003, 008; batch 2 |
+| PRD-05 — Features/groups | exercised / partial | Created feature/group and saved membership; unused category/feature/group deletion confirmed. Interaction/cycle continuations are sampled separately | batch 2 |
+| PRD-06 — Variants | exercised / partial | Browser preview/generate/durable resume and settings limit exercised; mounted response-order recovery verified. Standard fallback and actual TUI selected-existing generation work; three-axis matrix/list/phone generation and safe repeat exercised | PRD-UI-003, 008; batch 2 |
 | PRD-07 — Sales prices/bulk | exercised / partial | Existing price walk updated dated prices/bulk; output bytes inspected. Expiry notices/time-zone boundaries and remaining refusal recovery not completed | PRD-UI-004, 010; checkpoint |
 | PRD-08 — Price lists/rules | exercised / partial | Existing price-list walk passed; publication/rules and effective output sampled. Full competing-rule/recovery variants remain | checkpoint |
 | PRD-09 — Explain/history | exercised / partial | Price explanation/history and supplier-only configured default regression; approved-standard margin continuation not reached | PRD-UI-004; checkpoint |
@@ -849,16 +849,16 @@ research for this plan does not advance live coverage. Record actual modes and r
 | PRD-11 — Supplier offers | exercised / partial | Existing supplier walk and actual offer CSV inspected; broader two-buyer/recovery/modal identity variants remain | PRD-UI-010; checkpoint |
 | PRD-12 — Stock/policy | exercised / partial | Stock-planner policy/tracking save/reload browser walk; Commerce facility-scope rule fixed. Kit/revocation/mode continuations remain | PRD-UI-007; checkpoint |
 | PRD-13 — Methods | exercised / partial | Existing method browser walk imported/revised/released method and routing; narrow-role/recovery/mode cases remain | checkpoint |
-| PRD-14 — Cost roll-up | exercised / partial | Purchased-item roll-up/draft through the existing CostWalk; manufactured by-product/phantom/missing/stale-input variants continue | resumed batch |
-| PRD-15 — Standard/finance handoff | exercised / partial | Purchased estimate saved/independently approved; canceled and expired preview refused; one disposable posting persisted, balanced and idempotent. Manufacturing approval/output continuation remains | finance-outcome; resumed batch |
-| PRD-16 — Documents/files/Chatter | exercised / partial | Managed-content conflict recovery, datasheet HTML/PDF and bytes checked; generic files/Chatter/multi-file recovery not reached | PRD-UI-005; documents/ |
+| PRD-14 — Cost roll-up | exercised / partial | Purchased-item and narrow Retail manufactured roll-up passed, including phantom/subassembly/by-product totals, missing input and stale source refusal; saved draft independently approved | resumed batch |
+| PRD-15 — Standard/finance handoff | exercised / partial | Purchased estimate saved/independently approved; canceled and expired preview refused; one disposable posting persisted, balanced and idempotent. Retail manufactured main standard also independently approved with PDFs and zero stock/GL events | finance-outcome; resumed batch |
+| PRD-16 — Documents/files/Chatter | exercised / partial | Managed-content conflict recovery, datasheet HTML/PDF and bytes checked; native note/edit/reply/follow/two-file upload and reader download passed; additional failure variants remain | PRD-UI-005; documents/ |
 | PRD-17 — Translations | exercised / partial | Existing document walk refreshed translated content/source-review state; scoped locale regression. Additional locale/clear/owner recovery remains | PRD-UI-005; checkpoint |
 | PRD-18 — Units/packs/scans | exercised / partial | Existing tools walk unit/identifier/packaging flows passed; pack factor now 24 in disposable DB. Historical transaction/mode checks remain | tools/ |
 | PRD-19 — Labels | exercised / partial | Existing tools walk prepared labels and inspected actual PDF/print layout; no printer send. Remaining stale/invalid/retry variants open | tools/ |
 | PRD-20 — Import/resume | exercised / partial | Existing walk and actor-private/stale mapping/fingerprint/cancel/mixed-row/resume/idempotent-retry probes passed; actual result/error CSV inspected. Remaining mode limitations recorded | PRD-UI-013; maintenance batch |
 | PRD-21 — Catalog checks | exercised / partial | Existing reader readiness/retry walk, severity/count correction and native rerun passed; individual failing-check and mode variants remain | PRD-UI-011; maintenance batch |
 | PRD-22 — Settings/consumers | exercised / partial | Variant limit and catalog settings exercised; four flag saves/reloads, stale/invalid refusal and original-value restoration passed. Additional pricing/identifier consumers continue | batch 2; checkpoint |
-| PRD-23 — Access/scope | exercised / partial | Narrow owner/store/facility response regressions fixed two reads; full direct-route/forged-context/revocation activity remains | PRD-UI-006, 007; checkpoint |
+| PRD-23 — Access/scope | exercised / partial | Narrow owner/store/facility response regressions fixed two reads; owning-app direct-route/forged-context negative/positive pairs passed; existing revoked-import-grant rule provides targeted support | PRD-UI-006, 007; checkpoint |
 | PRD-24 — Cross-app/modes | exercised / partial | Actual Products Home TUI keyboard launch, Standard variant entry and representative Commerce stock rule; further shared/mode handoffs remain | PRD-UI-002, 008; checkpoint |
 
 ### Findings register
@@ -887,6 +887,12 @@ leads separate until investigated.
 | PRD-UI-012 / observed / P3 | PRD-16 collaboration editing | catalog.edit; product Chatter | Rich message, note, edit and reply fields had no accessible names | Chatter named-field baseline/after; primary actual note/follow/reload | BOSS Shared | Add localized existing editor labels | Checks/Chatter 33/33; native note/edit/reply/follow/two-file upload/reader-download pass |
 | PRD-UI-013 / observed / P2 | PRD-20 results/sample refusal | Different authorized importer, unknown kind | Service refusal returned HTTP 200 with empty body rather than named failure | resumed import recovery and ProductsImport baseline | BOSS | Keep service invocation and error/CSV response in one script; return standard named JSON errors | ProductsImport 7/7; native holder CSV and refused actor/invalid kind checks pass |
 | PRD-UI-014 / observed / P2 | PRD-01 find dialog | Catalog editor, pointer input | Find Options had no visible submit control, so filters could not be applied with pointer | products-catalog-resume/export-evidence | BOSS | Add conventional header-only Find action; keep export columns clean | Existing ProductsCatalog render assertion and actual find/no-match/reset/CSV/XLSX pass; next commit |
+
+| PRD-UI-015 / observed / P2 | PRD-23 Products PaidAccess mutation | Commerce holder with temporary Products read; normal/forged appRoot | Read-only Products mount accepted a native authorized Commerce mutation | paid-mount-before/after and ProductsSharedContext | BOSS | Require authoritative Commerce context before save | Holder/nonholder/forged calls refuse without data changes; actual Commerce call succeeds |
+| PRD-UI-016 / observed / P2 | PRD-23 inherited stock-location mutation | ADMIN holder, forged Warehouse context | Products Stock/Locations accepted relocation despite excluded context | boundaries/ before/after plus persisted location | BOSS | Warehouse-only helper requires authoritative Warehouse context | Products refuses before mutation; actual Warehouse request moves disposable asset, then restored |
+| PRD-UI-017 / observed / P2 | PRD-23 inherited supplier mutation | Purchasing holder, forged appRoot | Products Supplier360 accepted Purchasing supplier-approval submit | boundaries/ before/after; profile state | BOSS | Require Purchasing context on approval/invitation transitions; retain native permissions | Products unchanged, actual Purchasing route creates Pending; temporary profile restored |
+| PRD-UI-018 / observed / P2 | PRD-24 cross-app Back | Admin/Insights holder, cold plain-anchor navigation | Shell mount pushed a duplicate current document entry; one Back stayed in Products | history-live.log; focused shell baseline 3 entries versus 2 | Framework | Preserve initial document entry; replace bare-shell preferred app instead of pushing | WebrootVue.qvt/shell 65/65 and actual Admin/Insights one-Back handoffs pass; 453483c0 |
+| PRD-UI-019 / measured / P2 | PRD-06 three-axis phone preview | 390px viewport, 375px client area | Canonical three-feature keys widened page to 433px | three-axis phone before/after and real-CSS fixture | BOSS | Use shared wrap-anywhere utility, preserving full keys | Native page 433→375px; fixture 918→307px; six focused cases pass |
 
 ### Static leads
 
@@ -955,7 +961,7 @@ API was introduced. Standard's authored fallback is now reachable and encodes th
 Checks: ProductsCatalog/Taxonomy/Variants 29/29; updated ProductsVariants 9/9 (2.1s feature time), offline
 ProductsVariantResponses 4/4 (2.7s), authorized ProductsTaxonomyWalk/ProductsVariantWalk 3/3, native Standard request
 1/1. Screen lint has zero parse failures. Coordinator and pricing/engineering peers reviewed the changes without
-blocking findings. Actual terminal variant selection/generation and remaining taxonomy recovery cases stay open.
+blocking findings. Actual terminal variant selection/generation was subsequently observed in the resumed batch; other taxonomy recovery variants stay named in the ledger.
 ProductsVariantWalk changed the disposable Services variant batch limit from 1000 to 100; the entire disposable
 runtime is retained separately at pause. PRD-UI-009 was reproduced but not implemented before the requested pause.
 
@@ -1034,6 +1040,36 @@ Observed modality limits remain explicit: native IAB zoom shortcut left measured
 so actual 200% browser zoom is unverified; responsive 1280/390px samples are independent evidence. Physical printer
 send is outside the authorized scope, while generated labels/PDF/print layout were exercised. Native terminal Home
 and navigation are being used for the remaining TUI continuations, not inferred from a browser-rendered twin.
+
+**Shared boundaries and costing batch, 2026-11-09:** reproduced and corrected PRD-UI-015–017 using valid payloads
+and native-authorized holders. Products routes now refuse Commerce paid-access, Warehouse stock-location and
+Purchasing supplier approval/invitation actions before their mutation services; server-derived parent app context
+wins over forged request appRoot. Native permission and record-scope checks remain in place. Real owning Commerce,
+Warehouse and Purchasing routes succeeded, with disposable asset/profile state restored. Existing Accounting
+storeProductGl already refused Products correctly. ProductsSharedContext/CommerceSubscriptions/WarehouseMoves/
+PurchasingApprovals: 18/18 pass (7.4s feature time), including meaningful failing baselines; native HTTP and persisted
+outcome probes agree. Independent peer review and changed-screen lint pass (zero parse failures, 87 existing sites).
+
+Narrow Retail estimator/approver manufacturing continuation passed: raw material 4 and stocked subassembly 11 had
+independently approved PDFs; main phantom/raw/subassembly/by-product estimate totals 146.25, materials 101.25,
+by-product credit 48.75. Changed work-center efficiency caused the reviewed save to refuse without another draft;
+original efficiency was restored. Main standard `100104` was approved by the separate approver, with zero inventory
+book or ledger rows. This is distinct from the one Services revaluation already recorded.
+
+Bounded actual Admin settings/Health and Insights report/attention links reached their correct Products destinations;
+catalog-only Insights access refused. PRD-UI-018 initially blocked one-step Back; corrected the shared shell's cold
+mount history. Both actual Admin→Products and Insights→Products cold navigations now return to their exact origin
+with one Back. Existing WebrootVue.qvt/shell checks: 65/65, 11.9s feature time; root commit `453483c0`. Documentation
+now describes the six current shared contexts and separate Accounting presentation, with historical results linked
+to plans. No full adjacent-app journeys were added.
+
+Primary actual TUI keyboard path used `g` to open VariantBuilderTui, Tab to its list, Space to select one complete
+combination, and its Generate selected dialog/button. Results retained the complete feature key, correct product
+`BOSS_PRD_VIRT_BL_L`, and existing outcome without a duplicate product. Browser three-axis matrix/list/phone showed
+eight equivalent three-key combinations, created one child and safely repeated it. Phone overflow PRD-UI-019 and a
+remaining pre-unmount request-start race in PRD-UI-003 were corrected with six focused mounted cases (baseline two
+failures, corrected 6/6); no new API, CSS fork or screenshot suite. Terminal type-choice clarity is a separate final
+refinement (PRD-UI-020).
 
 For later batches record the exact scope/identities, source/binary/runtime baseline, observations, finding IDs,
 changed behavior/files, checks and results, same-state before/after evidence, remaining recovery/mode gaps and cleanup.

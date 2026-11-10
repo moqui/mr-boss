@@ -22,6 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="submitSupplier">
         <actions>
+            <script>if (appRoot !== 'Purchasing') throw new Error('Supplier approval actions require the Purchasing context')</script>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'profileEdit'}"/>
             <service-call name="mantle.order.PurchaseServices.submit#SupplierApproval" out-map="submitted"
@@ -36,6 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="decideSupplier">
         <actions>
+            <script>if (appRoot !== 'Purchasing') throw new Error('Supplier approval actions require the Purchasing context')</script>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'approve'}"/>
             <service-call name="mantle.order.PurchaseServices.decide#SupplierApproval" out-map="decided"
@@ -52,6 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="suspendSupplier">
         <actions>
+            <script>if (appRoot !== 'Purchasing') throw new Error('Supplier approval actions require the Purchasing context')</script>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'profileEdit'}"/>
             <service-call name="mantle.order.PurchaseServices.suspend#Supplier"
