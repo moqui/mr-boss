@@ -61,6 +61,7 @@ that are otherwise encumbered.
 Signed by git commit adding my legal name and git username:
 
 - Written in 2026 by David E. Jones - jonesde
+- Written in 2026 by Michael Jones - acetousk
 
 ## Grant of Patent License
 
@@ -81,4 +82,5 @@ litigation is filed.
 Signed by git commit adding my legal name and git username:
 
 - Written in 2026 by David E. Jones - jonesde
+- Written in 2026 by Michael Jones - acetousk
 
