@@ -2490,6 +2490,10 @@ the owner's design.
 | Nov 7, 2026 | OrganizationDefaults are the setting types registered for OrgInternal (`PartySettingTypeRole`); Admin changes the typed ones and those Mantle validates against the organization's records, and their owners the rest | P7, F104 |
 | Nov 7, 2026 | An organization's Constitution is read and changed in Admin by the organization entity filters, as identity scope: `check#OrganizationConstitutionAccess` reads for an organization in the filtered find on `InternalOrganization` (ADMIN every one with none active, the active one with one; a delegate its organizations and their children) and changes it with `ORG_CONSTITUTION_EDIT` only so; membership only for a call with no organization filter and for members' reading in the Rules pane | Follows the user's Nov 7 decision on visibility (rows above), settling F105 and F52 (P7 review) |
 | Nov 7, 2026 | Organizations, OrganizationDetail and Constitution are one area group (`BOSS_ADM_ORGANIZATIONS`) for the configuration administrator and the administrator, who hold `ORG_CONSTITUTION_EDIT`; members read their organization's Constitution in the Assist drawer's Rules pane, and no read entry is built in Admin | P7, F46 |
+| Nov 10, 2026 | The access and grant review lists no sealed permission in any print or export; each group's sealed grants are counted (the screens still show them, marked) | The user's call (Nov 10), F124; design §16 |
+| Nov 10, 2026 | The access review names only the members who work for the reviewer's organizations and counts the others | The user's call (Nov 10), P9; as GroupDetail (P3) |
+| Nov 10, 2026 | A row rule is add-only for a delegated administrator: `apply#Grants` binds a registered filter set and refuses a removal (`SCOPE_REMOVAL`), which would widen access; removing one stays Tools' | The user's call (Nov 10), F122; design §5 RowRules |
+| Nov 10, 2026 | Ending a launcher binding that was scoped on purpose stays within the access administrator's delegated authority, as P3 decided: the end removes the binding's own filter sets and a later grant gives the registry's | The user's call (Nov 10), F130 |
 
 ## 5. Open questions
 
