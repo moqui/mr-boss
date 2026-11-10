@@ -588,7 +588,8 @@ function serviceCustomers(p) {
 }
 
 // ===== prepare#Case (NewCase) =====
-// What NewCase offers for the user and its choices so far: the organizations with Customer Service configured, the types
+// What NewCase offers for the user and its choices so far: the organizations with Customer Service configured (with no
+// organization chosen, the active one, unless a type is asked for that it does not service-enable and another does), the types
 // the organization service-enables with their customer labels, the queues offering the type, the defaults (the type's
 // queue and priority, else the policy's queue), the priority bands, and the customer's open or recent cases (the
 // duplicate warning; another customer's are never shown).
@@ -598,10 +599,16 @@ function prepareCase(p) {
         .vendorIds(userScope)
         .filter(hasPolicy)
         .map(partyId => ({value: partyId, label: cs.partyName(partyId)}))
+    // a type asked for (New claim's RqtWarranty) prefers an organization that service-enables it, the active one first
+    const enables = partyId =>
+        !p.requestTypeEnumId || currentTypes(partyId).some(row => row.requestTypeEnumId === p.requestTypeEnumId)
+    const ordered = organizations
+        .filter(row => row.value === userScope.activeOrganizationPartyId)
+        .concat(organizations.filter(row => row.value !== userScope.activeOrganizationPartyId))
     const organizationPartyId =
         organizations.find(row => row.value === p.organizationPartyId)?.value ||
-        organizations.find(row => row.value === userScope.activeOrganizationPartyId)?.value ||
-        organizations[0]?.value ||
+        ordered.find(row => enables(row.value))?.value ||
+        ordered[0]?.value ||
         null
     const types = organizationPartyId ? currentTypes(organizationPartyId) : []
     const requestTypeEnumId =

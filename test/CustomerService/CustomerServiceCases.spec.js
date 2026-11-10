@@ -269,6 +269,33 @@ feature("the settings reads: readiness, the queue tree and the teams, a team's c
     }
 })
 
+// New claim (WarrantyClaims) asks NewCase for the warranty claim type alone: of the user's organizations NewCase starts in
+// one that service-enables it (Retail), the active one (Services, which enables none) left for it; a type it does
+// not name keeps the active organization
+feature("NewCase asked for a type starts in an organization that service-enables it, else in the active one", {
+    when() {
+        const prepare = parameters =>
+            asUser(users.admin, () => {
+                const previous = ec.user.getPreference("ACTIVE_ORGANIZATION")
+                ec.user.setPreference("ACTIVE_ORGANIZATION", ids.otherOrganizationId)
+                for (const field of ["userOrgIds", "filterOrgIds", "activeOrgId"]) delete ec.user.context[field]
+                try {
+                    return invoke(cases + "prepare#Case", parameters).prepared
+                } finally {
+                    ec.user.setPreference("ACTIVE_ORGANIZATION", previous || null)
+                    for (const field of ["userOrgIds", "filterOrgIds", "activeOrgId"]) delete ec.user.context[field]
+                }
+            })
+        return {warranty: prepare({requestTypeEnumId: "RqtWarranty"}), plain: prepare({})}
+    },
+    then({warranty, plain}) {
+        warranty.organizations.map(row => row.value).includes(ids.otherOrganizationId)
+        warranty.organizationPartyId == ids.organizationId
+        warranty.requestTypeEnumId == "RqtWarranty"
+        plain.organizationPartyId == ids.otherOrganizationId
+    }
+})
+
 feature("CaseDetail's Customer Service section and NewCase's duplicate warning render for the agent (qvt)", {
     when() {
         const detail = asUser(users.agent, () => lib.page("Cases/CaseDetail", {requestId: ids.thermostatCaseId}))
