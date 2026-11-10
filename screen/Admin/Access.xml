@@ -13,8 +13,9 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Access area of IronStone Admin (design-admin §1.2, §5): Groups, the grant bundles and their use (P3, the default), and
-    GroupDetail, a group's profile, dated memberships, grants and defaults (P3, contextual); Capabilities and RowRules are P9's,
-    AccessInspector later. For the access administrator and the administrator (BOSS_ADM_ACCESS; design §2 gives Groups to the
+    GroupDetail, a group's profile, dated memberships, grants and defaults (P3, contextual); Capabilities, the registry's
+    matrix and its list, RowRules, the row rules in effect, and AccessReview, the access and grant review for print and CSV
+    (P9, contextual); AccessInspector later. For the access administrator and the administrator (BOSS_ADM_ACCESS; design §2 gives Groups to the
     access administrator, A); the framework's org.moqui.admin.AccessServices check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE
     and the delegation rules themselves, whatever opens the screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -22,6 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
     <subscreens default-item="Groups" always-use-full-path="true">
         <subscreens-item name="Groups" location="component://mr-boss/screen/Admin/Access/Groups.xml" menu-title="Groups" menu-index="1"/>
         <subscreens-item name="GroupDetail" location="component://mr-boss/screen/Admin/Access/GroupDetail.xml" menu-include="false"/>
+        <subscreens-item name="Capabilities" location="component://mr-boss/screen/Admin/Access/Capabilities.xml" menu-title="Capabilities" menu-index="2"/>
+        <subscreens-item name="RowRules" location="component://mr-boss/screen/Admin/Access/RowRules.xml" menu-title="Row rules" menu-index="3"/>
+        <subscreens-item name="AccessReview" location="component://mr-boss/screen/Admin/Access/AccessReview.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminAccessPanel" type="tab"/>

@@ -283,6 +283,10 @@ const linkPaths = [
     "Settings/InstanceSettings",
     "Settings/Localization",
     "Settings/ReferenceData",
+    // P9: capabilities, row rules and the access review
+    "Access/Capabilities",
+    "Access/RowRules",
+    "Access/AccessReview",
     "Agents/Home",
     "System",
     "Developer/Home"

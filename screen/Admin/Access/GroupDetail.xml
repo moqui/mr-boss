@@ -211,6 +211,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <text type="html">${markerTexts.join(' · ')}</text>
                             </render-mode>
                         </container>
+                        <container style="col-12 col-md-auto m-record-actions">
+                            <link url="../AccessReview" text="Access review" icon="sym_o_fact_check" parameter-map="{groups:userGroupId}"/>
+                            <link url="../Capabilities" text="Compare" icon="sym_o_rule" link-type="anchor" parameter-map="{groups:userGroupId}"/>
+                        </container>
                     </container>
                     <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="!canManage &amp;&amp; manageReason" text="${manageReason}"/>
                 </container>
