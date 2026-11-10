@@ -212,6 +212,10 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                         </action>
                     </row-selection>
+                    <field name="findButton">
+                        <header-field title="Find"><submit/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
                     <field name="text">
                         <header-field title="ID or name">
                             <text-line/>

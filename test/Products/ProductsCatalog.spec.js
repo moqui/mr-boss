@@ -173,6 +173,7 @@ feature("a bulk change from the list reports its outcome as messages that surviv
         status == 302
         page.includes("1 products updated, 1 failed")
         page.includes("BOSS_PRD_OTHER: ")
+        page.includes('name="findButton"')
     }
 })
 feature("product choices search the whole authorized catalog and keep the selected product's label", {
