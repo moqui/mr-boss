@@ -103,7 +103,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                             <!-- Move: the guarded move task with this asset chosen (P5) -->
-                            <link url="${sharedLinks['Transfers/Move']}" url-type="plain" text="Move" link-type="anchor-button"
+                            <link url="${sharedLinks['Transfers/Move']}" text="Move" link-type="anchor-button"
                                     icon="sym_o_move_down" condition="warehouse.capabilities.move &amp;&amp; !asset.equipment"
                                     parameter-map="{assetId:assetId, facilityId:asset.facilityId}"/>
                             <!-- Record adjustment and Scrap: the guarded adjustment task with this asset fixed (P6) -->

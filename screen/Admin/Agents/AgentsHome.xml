@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     gateway key) show as not available until it builds them. The Constitution (P7) opens Admin › Settings › Constitution, the
     canonical screen for the instance's and each organization's document, for a user that screen opens to. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Agents" menu-image="sym_o_smart_toy" menu-image-type="icon">
+        default-menu-title="Agents" default-menu-include="false" menu-image="sym_o_smart_toy" menu-image-type="icon">
     <actions>
         <set field="can" from="admin.capabilities"/>
         <if condition="can.agentAdmin">
@@ -87,7 +87,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <form-list name="AgentAdminLinks" list="agentLinks" skip-form="true" paginate="false">
                     <field name="name">
                         <default-field title="Destination">
-                            <link url="${url}" url-type="plain" text="${name}" link-type="anchor" condition="url"/>
+                            <link url="${url}" text="${name}" link-type="anchor" condition="url"/>
                             <label text="${name}" condition="!url"/>
                         </default-field>
                     </field>
