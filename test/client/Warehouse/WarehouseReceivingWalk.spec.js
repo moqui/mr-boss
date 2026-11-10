@@ -1,26 +1,18 @@
-// Warehouse P7 in the live client (impl-warehouse P7 "Usable when", design §19 short receipt): a receiver opens the receipt
-// of the demo purchase order part with New receipt, and a second New receipt for the part opens the same receipt; they
-// receive part of the sealant line with one unit rejected for a reason and a lot, and finish the short receipt by closing
-// the remainder with a reason, which delivers it; on a phone (390 px) Handheld Receive keeps the scan focus at handheld
-// density. The Mantle rules (the generated lot range, the double submit, the serial count, backorder, the self-billing
-// bill) are mr-mantle's WarehouseReceiving spec; the screens' reads and refusals are BOSS's WarehouseReceiving and
-// WarehouseAccess.
-let pages = {}
+// Warehouse P7's golden path in the live client (impl-warehouse P7 "Usable when"): a receiver opens the receipt of the
+// demo purchase order part with New receipt, and a second New receipt for the part opens the same receipt. Receiving part
+// of a line with a rejection and a lot, the short receipt's close, and Handheld Receive at 390 px are the acceptance walk
+// WarehouseReceiptFinishWalk. The Mantle rules (the generated lot range, the double submit, the serial count, backorder,
+// the self-billing bill) are mr-mantle's WarehouseReceiving spec; the screens' reads and refusals are BOSS's
+// WarehouseReceiving and WarehouseAccess.
+let page
 spec({
     setupSpec() {
-        for (const width of [1280, 390]) {
-            const page = browser.newPage({user: "warehouse.receive", viewport: {width, height: 1000}, timeout: 30})
-            page.allowProblems(/userPhoto\?userId=/)
-            pages[width] = page
-        }
+        page = browser.newPage({user: "warehouse.receive", viewport: {width: 1280, height: 1000}, timeout: 30})
+        page.allowProblems(/userPhoto\?userId=/)
     }
 })
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
-}
-// the in-app confirmation (moqui.confirmAction): only its Confirm button approves the action
-function confirmAction(page) {
-    page.locator(".q-dialog-plugin").getByRole("button", {name: "Confirm", exact: true}).click()
 }
 // a drop-down of the open dialog or the page: open it, type, choose the option; the options stay open over the dialog's
 // button (with every open purchase order part listed) until the focus moves on
@@ -46,70 +38,11 @@ function openReceipt(page) {
 
 feature("a receiver opens the part's receipt with New receipt, and a second New receipt opens the same one", {
     expect() {
-        const page = pages[1280]
         const first = openReceipt(page)
         page.text().includes("Lot-tracked sealant")
         page.text().includes("Serialized scanner")
         const second = openReceipt(page)
         second == first
         page.text().includes("Opened the open receipt")
-    }
-})
-
-feature("they receive part of the sealant with one unit rejected and a lot, then close the remainder with a reason", {
-    expect() {
-        const page = pages[1280]
-        const shipmentId = openReceipt(page)
-        page.getByRole("link", {name: "Receive", exact: true}).first().click()
-        page.waitForURL(/Receiving\/Receive/)
-        waitForText(page, "Lot-tracked sealant")
-        page.getByRole("link", {name: "Lot-tracked sealant", exact: true}).first().click()
-        waitForText(page, "Receive Lot-tracked sealant")
-        page.getByLabel("Accepted", {exact: true}).fill("12")
-        page.getByLabel("Rejected", {exact: true}).fill("1")
-        choose(page, page, "Rejection reason", "", "Damaged")
-        page.getByLabel("Lot", {exact: true}).fill("SEAL-P7-WALK")
-        page.getByRole("button", {name: "Receive", exact: true}).first().click()
-        waitForText(page, "Receive Lot-tracked sealant: 7")
-        // finish: close what did not arrive, with the reason, and the receipt is delivered
-        page.goto("/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + shipmentId).status == 200
-        waitForText(page, "SEAL-P7-WALK")
-        page.getByRole("button", {name: "Finish receipt", exact: true}).first().click()
-        const dialog = page.getByRole("dialog")
-        dialog.getByText("Close it on the order").click()
-        dialog.getByLabel("Reason", {exact: true}).fill("Supplier out of stock")
-        dialog.getByRole("button", {name: "Finish receipt", exact: true}).click()
-        confirmAction(page)
-        waitForText(page, "Delivered")
-        // the dialog closes after the answer shows: its "Finish receipt" button leaves the page a moment later
-        page.waitFor(() => !(document.body.innerText || "").includes("Finish receipt"))
-        page.text().includes("The remainder is closed")
-        page.text().includes("Damaged")
-        !page.text().includes("Finish receipt")
-    }
-})
-
-feature("at handheld density on a phone Receive keeps the scan focus and fits the screen", {
-    expect() {
-        const page = pages[390]
-        page.goto("/qapps/Warehouse/Handheld/Receive").status == 200
-        page.waitFor(() => !!document.querySelector("#ScanReceipt_receiptCode"))
-        page.settle()
-        const shell = page.evaluate(() => {
-            const control = document
-                .querySelector("#ScanReceipt_receiptCode")
-                .closest(".q-field")
-                .querySelector(".q-field__control")
-            return {
-                handheld: document.body.classList.contains("m-density-handheld"),
-                height: Math.round(control.getBoundingClientRect().height),
-                focused: document.activeElement && document.activeElement.id,
-                fits: document.documentElement.scrollWidth <= innerWidth
-            }
-        })
-        shell.handheld
-        shell.height >= 48
-        shell.focused == "ScanReceipt_receiptCode"
-        shell.fits
     }
 })
