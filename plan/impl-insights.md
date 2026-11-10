@@ -1127,7 +1127,7 @@ INS-04 (drill).
   ORG_ZIZI_RETAIL's orders opens one in Insights' OrderDetail with no Approve; an analysis summing amounts across
   currencies is refused until grouped by currency; the price-list publication shows as a marker on the revenue panel.
 
-**Built Nov 10 (P6).** mr-moqui, mr-mantle and mr-boss, branch `ins/p6`.
+**Built Nov 10 (P6).** mr-moqui 64aabb1c, mr-mantle 47a6d628, mr-boss 70304a0a (branch `ins/p6`).
 - **The framework** (mr-moqui `docs/tools/Monitoring.md` "Business events", "Semantic guards", "Drill"):
   - **Business events** (`crates/moqui-report/src/annotations.rs`; F13, F31): `create#Annotation` takes the source `business`
     with `organizationPartyId`, `event`, `recordType`, `recordId`, `link` (a path on this server) and `eventKey` (one marker per
