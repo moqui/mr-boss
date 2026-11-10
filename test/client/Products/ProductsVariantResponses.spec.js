@@ -55,6 +55,28 @@ function readyPreview() {
     })
 }
 
+feature("structured HTTP failures name the refusal and preserve the current operation results", {
+    expect() {
+        readyPreview()
+        page.evaluate(async () => {
+            const screen = vm.$refs.screen
+            screen.operationKey = "operation-held"
+            screen.results = [{result: "pending", featureKey: '["A-F"]'}]
+            screen.summary = "0 created · 0 existing · 0 failed"
+            screen.pendingCount = 1
+            screen.runBatch(false)
+            take("run").reject({status: 403, json: {errors: "Catalog edit access was revoked"}, text: ""})
+            await settle()
+            return true
+        })
+        assert.equal(page.getByRole("alert").text(), "Catalog edit access was revoked")
+        assert.equal(page.evaluate(() => vm.$refs.screen.operationKey), "operation-held")
+        assert.equal(page.evaluate(() => vm.$refs.screen.results[0].result), "pending")
+        assert.equal(page.evaluate(() => vm.$refs.screen.pendingCount), 1)
+        assert.equal(page.evaluate(() => vm.$refs.screen.busy), false)
+    }
+})
+
 feature("late preview success and failure cannot overwrite a different source or release its pending preview", {
     expect() {
         variantPage()

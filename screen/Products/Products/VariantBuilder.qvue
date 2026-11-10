@@ -60,7 +60,13 @@ module.exports = {
     data(){return {form:{productId:'',productTypeEnumId:'PtAsset',groups:[],copyFields:null,copyCategoryMembers:'N'},sourceOptions:[],groupOptions:[],copyFieldOptions:[],variantTypes:[{value:'PtAsset',label:'Asset'}],categoryCopyAllowed:false,filters:{},axes:[],axisX:'',axisY:'',rows:[],selected:[],revision:'',totalCount:0,pageIndex:0,pageSize:50,batchLimit:1000,busy:false,error:'',listView:false,results:[],summary:'',operationKey:'',pendingCount:0,operationTotal:0,resultPage:0,requestSeq:0,disposed:false,requestPath:null}},
     computed:{screenPath(){return this.$root.basePath+'/'+this.$root.currentPathList.join('/')},phone(){return this.$q.screen.lt.sm},axisChoices(){return this.axes.map(a=>({value:a.enumId,label:a.description}))},extraAxes(){return this.axes.filter(a=>a.enumId!==this.axisX&&a.enumId!==this.axisY)},existingOnPage(){return this.rows.filter(r=>r.existingProductId).length}},
     methods:{
-        async request(name,params,post,path){const target=path||this.requestPath;if(this.disposed||target!==this.screenPath)throw new Error('Variant screen changed');const r=await moqui.request(target+'/'+name,{method:post?'POST':'GET',params});const out=r.json||{};if(out.errors)throw new Error(typeof out.errors==='string'?out.errors:JSON.stringify(out.errors));return out},
+        async request(name,params,post,path){
+            const target=path||this.requestPath;if(this.disposed||target!==this.screenPath)throw new Error('Variant screen changed');
+            let response;
+            try{response=await moqui.request(target+'/'+name,{method:post?'POST':'GET',params})}
+            catch(error){const reason=error?.json?.errors||error?.message||error?.error?.message||error?.error||error?.statusText||error?.text||error;throw new Error(typeof reason==='string'?reason:JSON.stringify(reason))}
+            const out=response.json||{};if(out.errors)throw new Error(typeof out.errors==='string'?out.errors:JSON.stringify(out.errors));return out
+        },
         parameters(){const p={productId:this.form.productId,productTypeEnumId:this.form.productTypeEnumId,productFeatureGroupIds:JSON.stringify(this.form.groups||[]),copyCategoryMembers:this.form.copyCategoryMembers==='Y',filterFeatureIdsJson:JSON.stringify(Object.values(this.filters).filter(Boolean))};if(this.form.copyFields!==null)p.copyFieldsJson=JSON.stringify(this.form.copyFields);return p},
         // Every continuation, including failure and cleanup, belongs to the source and request that started it.
         begin(){const owner={seq:++this.requestSeq,path:this.requestPath,productId:this.form.productId};this.busy=true;this.error='';return owner},
