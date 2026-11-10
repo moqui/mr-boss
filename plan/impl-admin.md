@@ -2501,7 +2501,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7.s F103 to F109 and P8.s F110 to F118 (Nov 10) in theirs. P9.s F119 to F131 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
