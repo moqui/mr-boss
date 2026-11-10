@@ -64,17 +64,21 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="." />
     </transition>
     <transition name="download" read-only="true" method="get">
-        <actions>
-            <service-call name="mantle.product.LabelServices.get#ProductLabelResource" in-map="context" out-map="result" />
-            <script>ec.web.sendResourceResponse(result.contentLocation,true,result.filename)</script>
-        </actions>
+        <actions><script><![CDATA[
+            const result = ec.service.sync().name('mantle.product.LabelServices.get#ProductLabelResource')
+                .parameters(context).call() || {}
+            if (ec.message.hasError()) ec.web.sendJsonResponse({})
+            else if (result.contentLocation) ec.web.sendResourceResponse(result.contentLocation,true,result.filename)
+        ]]></script></actions>
         <default-response type="none" />
     </transition>
     <transition name="printable" read-only="true" method="get">
-        <actions>
-            <service-call name="mantle.product.LabelServices.get#ProductLabelPrint" in-map="context" out-map="result" />
-            <script>ec.web.sendTextResponse(result.printHtml,'text/html',null)</script>
-        </actions>
+        <actions><script><![CDATA[
+            const result = ec.service.sync().name('mantle.product.LabelServices.get#ProductLabelPrint')
+                .parameters(context).call() || {}
+            if (ec.message.hasError()) ec.web.sendJsonResponse({})
+            else if (result.printHtml) ec.web.sendTextResponse(result.printHtml,'text/html',null)
+        ]]></script></actions>
         <default-response type="none" />
     </transition>
     <actions>

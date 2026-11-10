@@ -136,3 +136,39 @@ feature("a label selection retains ready products and named failures, and its ac
         denied.error.includes("own label selection")
     }
 })
+feature("label resource navigation names unavailable artifacts and actor refusals while preserving authorized bytes", {
+    when() {
+        const prepared = as("catalog.reader", () => call(L + "prepare#ProductLabels", {
+                productIds: ["BOSS_PRD_OWN"], symbology: "QR"
+            })),
+            parameters = {operationKey: prepared.operationKey, inputFingerprint: prepared.inputFingerprint},
+            resource = (path, user = "catalog.reader") => as(user, () => ec.screen.makeTest()
+                .rootScreen("component://mr-boss/screen/Products.xml").renderMode("html")
+                .render("Units/Labels/" + path, parameters, null), true),
+            unrendered = resource("download"), deniedPrint = resource("printable", "catalog.edit")
+        // A local byte fixture isolates resource response handling from the PDF renderer.
+        as("john.doe", () => {
+            const location = "dbresource://mantle/labels/" + prepared.operationKey + "/artifact-fixture.txt"
+            ec.resource.getLocationReference(location).putText("Authorized label artifact fixture bytes")
+            call("update#mantle.product.ProductCatalogOperation", {
+                operationKey: prepared.operationKey, state: "rendered", outputContentLocation: location
+            })
+        })
+        return {unrendered, deniedPrint, holder: resource("download"), denied: resource("download", "catalog.edit"),
+            printed: resource("printable")}
+    },
+    then({unrendered, deniedPrint, holder, denied, printed}) {
+        unrendered.status >= 400
+        unrendered.output.includes("Render the label PDF first")
+        deniedPrint.status >= 400
+        deniedPrint.output.includes("own label selection")
+        holder.status == 200
+        holder.output == "Authorized label artifact fixture bytes"
+        denied.status >= 400
+        denied.output.includes("own label selection")
+        !denied.output.includes("Authorized label artifact fixture bytes")
+        printed.status == 200
+        printed.output.includes("BOSS_SAMPLE")
+        printed.output.includes("@page")
+    }
+})
