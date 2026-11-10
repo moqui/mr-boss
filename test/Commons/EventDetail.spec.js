@@ -5,7 +5,8 @@
 // repeat editor writes the RRULE; attendees are invited (a user by notification, an outside address as a new personal contact by
 // email), made optional and removed (the removed outside address told by email); the user's reminders; meeting rooms and
 // equipment booked at once or requested by the policy, a booking cancelled; a new time that clashes with a
-// booking of its room refused, then kept anyway; Duplicate and Export .ics; Cancel event telling the attendees; an answer with
+// booking of its room refused, then kept anyway; Duplicate and Export .ics; Cancel event telling the attendees, one instance
+// cancelled and restored; an answer with
 // a note; a link to a changed instance by its series and start opens the instance; the linked records as record cards, linked by
 // an id (lookup#ById) and taken off, a record the user may not see left out, and Joe Developer may not change them.
 // Joe Developer gets "not available" for john.doe's family birthday and may not change john.doe's events (IronStone R5, R28).
@@ -382,6 +383,27 @@ feature("Cancel event tells the attendees; an attendee answers with a note", {
         answer.errors == ""
         joe.statusId == "WeptTentative"
         joe.comments == "Late by ten minutes"
+    },
+})
+
+feature("one instance of the sync cancelled shows as cancelled (its EXDATE) and Restore this event brings it back", {
+    when() {
+        const at = { workEffortId: "BOSS_DEMO_EV_SYNC", instanceStart: day(21) + " 10:00" }
+        const cancelled = detailPost("cancelEvent", Object.assign({ scope: "this" }, at))
+        const off = detail("BOSS_DEMO_EV_SYNC", at).event
+        const restored = detailPost("restoreEvent", at)
+        return { cancelled, off, restored, back: detail("BOSS_DEMO_EV_SYNC", at).event,
+            exdates: one("mantle.work.effort.WorkEffortRecurrence", { workEffortId: "BOSS_DEMO_EV_SYNC" }).exdates }
+    },
+    then({ cancelled, off, restored, back, exdates }) {
+        cancelled.errors == ""
+        off.cancelled == true
+        off.excluded == true
+        off.statusLabel == "Cancelled"
+        restored.errors == ""
+        back.cancelled == false
+        back.excluded == false
+        exdates == null
     },
 })
 

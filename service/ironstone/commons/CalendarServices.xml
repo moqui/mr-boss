@@ -447,7 +447,7 @@ along with this software (see the LICENSE.md file). If not, see
             when (whenText; startText and endText as yyyy-MM-dd HH:mm, or days for an all-day event), the recurrence and its
             summary, the series and instance, location, join link, description, visibility, the calendars it is in, organizer,
             attendees (with answer, required or optional, invited or not), meeting rooms and equipment with their booking
-            status, and the user's own answer.</description>
+            status, and the user's own answer. An instance left out of its series (an EXDATE) is cancelled and excluded.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="instanceStart"/>
@@ -594,12 +594,22 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const statusLabels = {WeInPlanning: ['Planned', 'grey-7'], WeApproved: ['Confirmed', 'primary'], WeCancelled: ['Cancelled', 'negative'],
                 WeInProgress: ['In progress', 'primary'], WeComplete: ['Done', 'positive']}
-            const status = statusLabels[row.statusId] || [row.statusId || '', 'grey-7']
+            // an instance of a series cancelled on its own is an EXDATE of the series' rule (mantle cancel#EventOccurrence)
+            let excluded = false
+            if (recurrence?.exdates && !instanceLink && instanceText && row.statusId !== 'WeCancelled') {
+                const values = String(recurrence.exdates).split(/[,\s]+/).filter((value) => value)
+                if (allDay) excluded = values.includes(instanceText.substring(0, 10).replace(/-/g, ''))
+                else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(instanceText)) {
+                    const keyMs = toMillis(ec.l10n.parseTimestamp(instanceText.substring(0, 16) + ':00.000', pattern))
+                    if (keyMs != null) excluded = values.includes(new Date(keyMs).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''))
+                }
+            }
+            const status = excluded ? statusLabels.WeCancelled : (statusLabels[row.statusId] || [row.statusId || '', 'grey-7'])
             const visibilityLabels = {WevAllUsers: 'Everyone', WevWorkGroup: 'Work group', WevRestricted: 'Only the people on it'}
             event = {workEffortId: workEffortId, seriesId: seriesId, isInstance: !!instanceLink, instanceStart: instanceLink ? fmt(toMillis(instanceLink.fromDate), allDay ? 'yyyy-MM-dd' : 'yyyy-MM-dd HH:mm')
                     : (instanceText ? instanceText.substring(0, allDay ? 10 : 16) : null),
-                name: row.workEffortName || L('(no title)'), statusId: row.statusId || null, statusLabel: L(status[0]), statusColor: status[1],
-                cancelled: row.statusId === 'WeCancelled', allDay: allDay, startText: startText, endText: endText, whenText: whenText,
+                name: row.workEffortName || L('(no title)'), statusId: excluded ? 'WeCancelled' : (row.statusId || null), statusLabel: L(status[0]), statusColor: status[1],
+                cancelled: row.statusId === 'WeCancelled' || excluded, excluded: excluded, allDay: allDay, startText: startText, endText: endText, whenText: whenText,
                 timeZone: recurrence?.timeZone || ec.user.timeZone || null, isRecurring: isRecurring, rrule: recurrence?.rrule || null, recurrenceText: recurrenceText,
                 location: row.location || null, joinUrl: joinUrl, infoUrl: row.infoUrl || null, description: row.description || null,
                 purposeEnumId: row.purposeEnumId || null, visibilityEnumId: row.visibilityEnumId || null,
