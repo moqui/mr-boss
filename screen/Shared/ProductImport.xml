@@ -58,17 +58,21 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <transition name="sample" read-only="true" method="get">
-        <actions>
-            <service-call name="mantle.product.ProductImportServices.get#CatalogImportSample" in-map="{kindId:kindId,organizationPartyId:organizationPartyId}" out-map="report"/>
-            <script>ec.web.sendTextResponse(report.reportCsv,'text/csv',report.filename)</script>
-        </actions>
+        <actions><script><![CDATA[
+            const report = ec.service.sync().name('mantle.product.ProductImportServices.get#CatalogImportSample')
+                .parameters({kindId:kindId, organizationPartyId:organizationPartyId}).call() || {}
+            if (ec.message.hasError()) ec.web.sendJsonResponse({})
+            else ec.web.sendTextResponse(report.reportCsv, 'text/csv', report.filename)
+        ]]></script></actions>
         <default-response type="none"/>
     </transition>
     <transition name="results" read-only="true" method="get">
-        <actions>
-            <service-call name="mantle.product.ProductImportServices.get#CatalogImportReport" in-map="{operationKey:operationKey,errorsOnly:errorsOnly}" out-map="report"/>
-            <script>ec.web.sendTextResponse(report.reportCsv,'text/csv',report.filename)</script>
-        </actions>
+        <actions><script><![CDATA[
+            const report = ec.service.sync().name('mantle.product.ProductImportServices.get#CatalogImportReport')
+                .parameters({operationKey:operationKey, errorsOnly:errorsOnly}).call() || {}
+            if (ec.message.hasError()) ec.web.sendJsonResponse({})
+            else ec.web.sendTextResponse(report.reportCsv, 'text/csv', report.filename)
+        ]]></script></actions>
         <default-response type="none"/>
     </transition>
     <actions>

@@ -138,6 +138,32 @@ feature("native import staging and source reports keep their role and owner guar
         prices.error.length > 0
     }
 })
+feature("import downloads return named failures rather than a successful empty CSV", {
+    when() {
+        const staged = as("catalog.edit", () => call(S + "stage#CatalogImport", {
+            kindId: "products",
+            organizationPartyId: "ORG_ZIZI_SERVICES",
+            sourceText: "productId,productName\nBOSS_IMPORT_REPORT_GUARD,Private report sentinel\n"
+        }))
+        const download = (user, transition, parameters) => as(user, () =>
+            ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml")
+                .renderMode("html").render("ProductImport/Index/" + transition, parameters, null), true)
+        return {
+            holder: download("catalog.edit", "results", {operationKey: staged.operationKey}),
+            otherActor: download("catalog.admin", "results", {operationKey: staged.operationKey}),
+            unknownKind: download("catalog.edit", "sample", {kindId: "not-an-import-kind", organizationPartyId: "ORG_ZIZI_SERVICES"})
+        }
+    },
+    then({holder, otherActor, unknownKind}) {
+        holder.status == 200
+        holder.output.includes("BOSS_IMPORT_REPORT_GUARD")
+        otherActor.status >= 400
+        otherActor.output.includes("Open your own catalog import")
+        !otherActor.output.includes("Private report sentinel")
+        unknownKind.status >= 400
+        unknownKind.output.includes("Import kind is not available")
+    }
+})
 feature("a price import sends its aggregate notice while suppressing per-row price notifications", {
     when() {
         as("john.doe", () =>
