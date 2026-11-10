@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     and app chips with counts; NotificationFind (reason, app, read state, date period, text); the Approvals list first (with
     bulk approve), then the other notifications (with bulk mark read). Open (marks read), mark read, mark all read, approve,
     refuse and the notification settings. The current user's own notifications only, through
-    org.moqui.impl.NotificationServices; the rows are decorated by ironstone.commons.CommonsServices.decorate#Notifications. The
+    org.moqui.ui.NotificationServices; the rows are decorated by ironstone.commons.CommonsServices.decorate#Notifications. The
     reading pane from 1440 px comes later. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Notifications" default-menu-index="9" menu-image="sym_o_notifications" menu-image-type="icon">
@@ -54,7 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
     </transition>
     <transition name="approve">
-        <service-call name="org.moqui.impl.NotificationServices.approve#NotificationMessage" in-map="{notificationMessageId:notificationMessageId}"/>
+        <service-call name="org.moqui.ui.NotificationServices.approve#NotificationMessage" in-map="{notificationMessageId:notificationMessageId}"/>
         <actions><message type="success">Approved</message></actions>
         <default-response url="."/>
     </transition>
@@ -64,7 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
     </transition>
     <transition name="refuse">
-        <service-call name="org.moqui.impl.NotificationServices.refuse#NotificationMessage" in-map="{notificationMessageId:notificationMessageId, reason:reason}"/>
+        <service-call name="org.moqui.ui.NotificationServices.refuse#NotificationMessage" in-map="{notificationMessageId:notificationMessageId, reason:reason}"/>
         <actions><message type="success">Refused</message></actions>
         <default-response url="."/>
     </transition>
@@ -81,7 +81,7 @@ along with this software (see the LICENSE.md file). If not, see
             const titles = {}
             for (const app of (shellData && Array.isArray(shellData.apps) ? shellData.apps : [])) titles[app.name] = String(app.title || app.name)
             const L = (text) => ec.l10n.localize(text)
-            const get = (parameters) => ec.service.sync().name('org.moqui.impl.NotificationServices.get#UserNotifications').parameters(parameters).call() || {}
+            const get = (parameters) => ec.service.sync().name('org.moqui.ui.NotificationServices.get#UserNotifications').parameters(parameters).call() || {}
             const decorate = (list) => Array.from(ec.service.sync().name('ironstone.commons.CommonsServices.decorate#Notifications')
                     .parameters({notificationList: list || [], appTitles: titles}).call()?.rows || [])
             // the date period of the find (the date-period fields), or its from and thru

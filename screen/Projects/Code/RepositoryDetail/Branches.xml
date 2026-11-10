@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Compare and New merge request (Compare with the branch as the source), Delete for those with the delete right (not the
     default branch; its branch rules still apply), and New branch for those who may push. A client contact (impl-projects.md P10b)
     reads the list only: no Compare or New merge request (Compare is refused it). Services: ironstone.projects.CodeServices
-    get#RepositoryBranches; org.moqui.impl.GitServices create#GitRef, delete#GitRef. -->
+    get#RepositoryBranches; org.moqui.git.GitServices create#GitRef, delete#GitRef. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Branches" default-menu-index="3" menu-image="sym_o_call_split" menu-image-type="icon">
 
@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="commitDetail"><default-response url="../../CommitDetail"/></transition>
     <transition name="createBranch">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.create#GitRef" out-map="refOut" in-map="{repositoryId:repositoryId, refName:refName, refType:'branch',
+            <service-call name="org.moqui.git.GitServices.create#GitRef" out-map="refOut" in-map="{repositoryId:repositoryId, refName:refName, refType:'branch',
                     revision:(revision || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.resource.expand('Branch ${name} made', '', {name: refName}), 'success')</script></if>
         </actions>
@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="deleteBranch">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.delete#GitRef" in-map="{repositoryId:repositoryId, refName:refName, refType:'branch'}"/>
+            <service-call name="org.moqui.git.GitServices.delete#GitRef" in-map="{repositoryId:repositoryId, refName:refName, refType:'branch'}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.resource.expand('Branch ${name} deleted', '', {name: refName}), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>

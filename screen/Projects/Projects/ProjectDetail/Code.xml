@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
             commitList = Array.from(code.commitList || [])
             tagList = Array.from(code.tagList || [])
             // codeOn off but repositories linked: show them anyway, with the note
-            if (canManage) linkOptions = Array.from(ec.service.sync().name('org.moqui.impl.GitServices.find#GitRepositories').parameters({pageNoLimit: true}).call()?.repositoryList || [])
+            if (canManage) linkOptions = Array.from(ec.service.sync().name('org.moqui.git.GitServices.find#GitRepositories').parameters({pageNoLimit: true}).call()?.repositoryList || [])
                     .filter((repo) => !repositoryList.some((linked) => linked.repositoryId === repo.repositoryId))
                     .map((repo) => ({key: repo.repositoryId, text: repo.repositoryId + (repo.description ? ' · ' + repo.description : '')}))
             newRepositoryId = String(workEffortId).toLowerCase()

@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/CatalogChoiceTransitions.xml"/>
     <transition name="storeUnit">
         <actions>
-            <service-call name="org.moqui.impl.UnitServices.store#Unit" in-map="context" out-map="result" />
+            <service-call name="org.moqui.ui.UnitServices.store#Unit" in-map="context" out-map="result" />
         </actions>
         <default-response url=".">
             <parameter name="productId" />
@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="storeConversion">
         <actions>
-            <service-call name="org.moqui.impl.UnitServices.store#UnitConversion" in-map="context" out-map="result" />
+            <service-call name="org.moqui.ui.UnitServices.store#UnitConversion" in-map="context" out-map="result" />
         </actions>
         <default-response url=".">
             <parameter name="productId" />
@@ -50,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="endConversion">
         <actions>
-            <service-call name="org.moqui.impl.UnitServices.end#UnitConversion" in-map="context" />
+            <service-call name="org.moqui.ui.UnitServices.end#UnitConversion" in-map="context" />
         </actions>
         <default-response url="." />
         <error-response url="." />

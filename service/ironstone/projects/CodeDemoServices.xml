@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
             commits and the rest, when the repository has none yet).</description>
         <in-parameters><parameter name="part" required="true"/></in-parameters>
         <actions><script><![CDATA[
-            const GIT = 'org.moqui.impl.GitServices'
+            const GIT = 'org.moqui.git.GitServices'
             const users = {john: 'john.doe', joe: 'joe.developer', bob: 'bob.developer'}
             const ids = {john: 'EX_JOHN_DOE', joe: 'ORG_ZIZI_JD', bob: 'ORG_ZIZI_BD'}
             const account = (userId) => ec.entity.find('moqui.security.UserAccount').condition('userId', userId).disableAuthz().one()
@@ -116,7 +116,7 @@ along with this software (see the LICENSE.md file). If not, see
                     try {
                         if (ec.entity.find('mantle.work.effort.WorkEffortSetting').condition({workEffortId: 'IRON', settingTypeEnumId: 'WstDocsWikiSpace'}).one() == null) {
                             const spaceId = as('john', 8.5, () => call('mantle.work.ProjectServices.create#ProjectDocsSpace', {workEffortId: 'IRON', storage: 'repository', repositoryId: 'iron'}).wikiSpaceId)
-                            const page = (who, daysAgo, pageName, pageText, versionNote) => as(who, daysAgo, () => call('org.moqui.impl.WikiServices.update#WikiPage',
+                            const page = (who, daysAgo, pageName, pageText, versionNote) => as(who, daysAgo, () => call('org.moqui.resource.WikiServices.update#WikiPage',
                                 {wikiSpaceId: spaceId, pageName, pageText, versionNote}))
                             page('john', 8, 'Getting started', '# Getting started\n\nClone the repository, load the demo and open Projects:\n\n```\ngit clone https://git.example.com/git/iron\n./moq load\n./moq run\n```\n\n'
                                 + 'Work items are keyed `IRON-n`; name one in a commit message or a branch (`IRON-7-timer`) to link it. See [Architecture](Architecture).\n', 'Getting started')
@@ -160,7 +160,7 @@ along with this software (see the LICENSE.md file). If not, see
                     as('bob', 2, () => call(`${GIT}.create#GitCommitStatus`, {repositoryId: 'iron', commitId: timerHead, state: 'failure', context: 'ci/build',
                         description: '2 tests failed', targetUrl: 'https://ci.example.com/iron/builds/43'}))
                     // the merge request, its reviewer asked without the notice a request sends
-                    const mr = as('joe', 1, () => call('org.moqui.impl.GitReviewServices.create#MergeRequest', {repositoryId: 'iron', sourceRef: 'IRON-3-expand-collapse',
+                    const mr = as('joe', 1, () => call('org.moqui.git.GitReviewServices.create#MergeRequest', {repositoryId: 'iron', sourceRef: 'IRON-3-expand-collapse',
                         targetRef: 'main', title: 'Expand and collapse rows (IRON-3)', description: 'The tree remembers which rows are open, and the arrow keys open and close them.\n\nCloses IRON-3'}))
                     const reviewer = ec.entity.makeValue('moqui.resource.GitMergeRequestReviewer')
                     reviewer.setFields({mergeRequestId: mr.mergeRequestId, userId: ids.john, statusId: 'GmrrRequested', requestedDate: ec.user.nowTimestamp}, true, null, null)

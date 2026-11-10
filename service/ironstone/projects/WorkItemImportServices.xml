@@ -72,7 +72,7 @@ along with this software (see the LICENSE.md file). If not, see
             file (and its mapping, when the file or preset changed).</description>
         <in-parameters>
             <parameter name="importId"/>
-            <parameter name="workItemFile" type="org.apache.commons.fileupload2.core.FileItem"/>
+            <parameter name="workItemFile" type="FileItem"/>
             <parameter name="presetId"/>
             <parameter name="characterSet" default-value="UTF-8"/>
             <parameter name="rootWorkEffortId"/>

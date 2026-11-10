@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Commons Notes (design-drawers-commons.md §10 Notes; style-guide §3.8 Split, §3.13 Editor, §4.8 .qvue; impl-drawers-commons.md M9):
-    the user's own notes, the pages of their private notes space (org.moqui.impl.WikiServices.ensure#UserNotesSpace, made on
+    the user's own notes, the pages of their private notes space (org.moqui.resource.WikiServices.ensure#UserNotesSpace, made on
     first use, always on database files), as a list beside the note being written. The component is Notes.qvue next to this
     file; the note open is in the URL (wikiPageId, as QuickCreate's note kind links to it). Every read and change goes through
     the JSON transitions below, services of service/ironstone/commons/KnowledgeServices.xml that check the wiki's access rule: the

@@ -68,7 +68,7 @@ spec({
             const ours = Array.from(ec.entity.find("moqui.basic.email.EmailAccount").condition("ownerUserId", "EX_JOHN_DOE").list())
                     .filter((account) => String(account.emailAddress || "").endsWith(`@${DOMAIN}`))
             for (const account of ours) {
-                call("org.moqui.impl.EmailClientServices.delete#EmailAccount", { emailAccountId: account.emailAccountId, deleteLocalCopies: true })
+                call("org.moqui.mail.EmailClientServices.delete#EmailAccount", { emailAccountId: account.emailAccountId, deleteLocalCopies: true })
                 ec.message.clearErrors()
             }
             ec.entity.find("moqui.basic.email.EmailOAuthProvider").condition("oauthProviderEnumId", PROVIDER).deleteAll()
@@ -184,17 +184,17 @@ feature("a code the provider does not take ends the sign-in with an error, which
     when() {
         const state = queryOf(post("SignIn/startSignIn", { mode: "account", emailAccountId: made.accountId }).json.authUrl || "x?state=").state
         // the popup's callback: the token endpoint is not there
-        const completed = sys(() => call("org.moqui.impl.EmailClientServices.complete#OAuthSignIn", { state: state, code: "spec-code" }))
+        const completed = sys(() => call("org.moqui.mail.EmailClientServices.complete#OAuthSignIn", { state: state, code: "spec-code" }))
         ec.message.clearErrors()
         const signInId = completed.signInId
         const status = signInId ? get("SignIn/signInStatus", { signInId }) : { json: {} }
-        const replay = sys(() => call("org.moqui.impl.EmailClientServices.complete#OAuthSignIn", { state: state, code: "spec-code" }))
+        const replay = sys(() => call("org.moqui.mail.EmailClientServices.complete#OAuthSignIn", { state: state, code: "spec-code" }))
         ec.message.clearErrors()
         const server = serverOf(accountById(made.accountId))
         // a new account's sign-in whose code is not taken makes no account
         const fresh = queryOf(post("SignIn/startSignIn", { mode: "wizard", emailAddress: `ned@${DOMAIN}`, displayName: "Ned Doe", accountKindEnumId: "EakExternal",
             oauthProviderEnumId: PROVIDER }).json.authUrl || "x?state=").state
-        const freshDone = sys(() => call("org.moqui.impl.EmailClientServices.complete#OAuthSignIn", { state: fresh, code: "spec-code" }))
+        const freshDone = sys(() => call("org.moqui.mail.EmailClientServices.complete#OAuthSignIn", { state: fresh, code: "spec-code" }))
         ec.message.clearErrors()
         return { completed, status, replay, server, freshDone, ned: accountOf(`ned@${DOMAIN}`) }
     },
@@ -262,7 +262,7 @@ feature("POP with the provider's sign-in: refused where the provider has no POP 
         const query = started.json.authUrl ? queryOf(started.json.authUrl) : {}
         const notYet = accountOf(`pop@${DOMAIN}`)
         // the provider does not take the code: no account
-        const failed = sys(() => call("org.moqui.impl.EmailClientServices.complete#OAuthSignIn", { state: query.state, code: "spec-code" }))
+        const failed = sys(() => call("org.moqui.mail.EmailClientServices.complete#OAuthSignIn", { state: query.state, code: "spec-code" }))
         ec.message.clearErrors()
         // an account to sign in later, on the provider's POP server (its row's popHost), and moved to IMAP when the wizard's choice changes
         const popId = sys(() => call(`${SETTINGS}.save#AccountConnection`, { emailAddress: `pop2@${DOMAIN}`, displayName: "Pop Two", accountKindEnumId: "EakExternal",

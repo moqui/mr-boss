@@ -17,8 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     for a disk drive the path to clone from, for a mirror the URL, the interval, the last fetch and its error, with Fetch now),
     its members with their permission (view, edit, manage), export (a folder drive as a zip, a database repository as a bare
     repository on disk) and archive. Those who manage the drive change it; members see it. Through
-    org.moqui.impl.FileServices (update#Drive, add#DriveMember, remove#DriveMember, archive#Drive, export#Drive). Devices: the
-    drive's WebDAV folder and SFTP path (org.moqui.impl.DavServices.get#SyncAddresses with the drive) and, for a
+    org.moqui.resource.FileServices (update#Drive, add#DriveMember, remove#DriveMember, archive#Drive, export#Drive). Devices: the
+    drive's WebDAV folder and SFTP path (org.moqui.resource.DavServices.get#SyncAddresses with the drive) and, for a
     version-controlled drive, its git clone addresses (GitServices.get#GitCloneUrls), which every member may clone and editors
     push to, by the drive's own permissions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="driveId" required="true"/>
 
     <transition name="updateDrive">
-        <service-call name="org.moqui.impl.FileServices.update#Drive" in-map="{driveId:driveId, driveName:driveName, description:(description || ''),
+        <service-call name="org.moqui.resource.FileServices.update#Drive" in-map="{driveId:driveId, driveName:driveName, description:(description || ''),
                 quotaBytes:(quotaMb &amp;&amp; Number(quotaMb) &gt; 0 ? Math.round(Number(quotaMb) * 1048576) : null), clearQuota:!(quotaMb &amp;&amp; Number(quotaMb) &gt; 0),
                 remoteUrl:(remoteUrl || null), fetchIntervalMinutes:(fetchIntervalMinutes ? Number(fetchIntervalMinutes) : null)}"/>
         <actions><if condition="!ec.message.hasError()"><message type="success">Saved</message></if></actions>
@@ -39,19 +39,19 @@ along with this software (see the LICENSE.md file). If not, see
             const userId = value.startsWith('group:') ? null : (value.startsWith('user:') ? value.slice(5) : (value || null))
             const userGroupId = value.startsWith('group:') ? value.slice(6) : (memberUserGroupId || null)
             if (!userId && !userGroupId) { ec.message.addValidationError(null, 'memberValue', null, ec.l10n.localize('Choose a user or a user group'), null); return }
-            ec.service.sync().name('org.moqui.impl.FileServices.add#DriveMember').parameters({driveId: driveId, userId: userId, userGroupId: userId ? null : userGroupId,
+            ec.service.sync().name('org.moqui.resource.FileServices.add#DriveMember').parameters({driveId: driveId, userId: userId, userGroupId: userId ? null : userGroupId,
                 permissionEnumId: permissionEnumId || 'RdpView'}).call()
             if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('Member saved'), 'success')
         ]]></script></actions>
         <default-response url="." parameter-map="{driveId:driveId}"/>
     </transition>
     <transition name="removeMember">
-        <service-call name="org.moqui.impl.FileServices.remove#DriveMember" in-map="{driveId:driveId, driveMemberId:driveMemberId}"/>
+        <service-call name="org.moqui.resource.FileServices.remove#DriveMember" in-map="{driveId:driveId, driveMemberId:driveMemberId}"/>
         <actions><if condition="!ec.message.hasError()"><message type="success">Member removed</message></if></actions>
         <default-response url="." parameter-map="{driveId:driveId}"/>
     </transition>
     <transition name="archiveDrive">
-        <service-call name="org.moqui.impl.FileServices.archive#Drive" in-map="{driveId:driveId, archived:(archived != 'false')}"/>
+        <service-call name="org.moqui.resource.FileServices.archive#Drive" in-map="{driveId:driveId, archived:(archived != 'false')}"/>
         <actions><if condition="!ec.message.hasError()"><message type="success">${archived != 'false' ? 'Drive archived: it is read only' : 'Drive back in use'}</message></if></actions>
         <default-response url="." parameter-map="{driveId:driveId}"/>
     </transition>
@@ -59,8 +59,8 @@ along with this software (see the LICENSE.md file). If not, see
         which clean#DriveTempFiles removes after a day) -->
     <transition name="exportZip" method="get">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.export#Drive').parameter('driveId', driveId || '').call()
-            const access = ec.message.hasError() ? null : ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.export#Drive').parameter('driveId', driveId || '').call()
+            const access = ec.message.hasError() ? null : ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
             if (!ec.message.hasError() && out?.exportLocation && access?.drive) {
                 const name = String(access.drive.driveName || 'drive').replace(/[\\/*?"<>|#%:]/g, '_') + '.zip'
                 ec.web.sendResourceResponse(out.exportLocation, false, name)
@@ -71,7 +71,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a version-controlled drive: where the bare repository is -->
     <transition name="exportGit">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.export#Drive').parameter('driveId', driveId || '').call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.export#Drive').parameter('driveId', driveId || '').call()
             if (!ec.message.hasError() && out.exportPath) ec.message.addMessage(ec.resource.expand('A bare repository to clone is at ${path} on the server', '',
                 {path: out.exportPath}), 'success')
         ]]></script></actions>
@@ -80,9 +80,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="fetchMirror">
         <actions><script><![CDATA[
             if (!ec.user.isInGroup('ADMIN')) { ec.message.addError(ec.l10n.localize('Only an administrator fetches a mirror')); return }
-            const access = ec.service.sync().name('org.moqui.impl.FileServices.get#DriveAccess').parameter('driveId', driveId || '').call()
+            const access = ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', driveId || '').call()
             if (!access.drive || !access.drive.repositoryId) { ec.message.addError(ec.l10n.localize('Drive not found')); return }
-            ec.service.sync().name('org.moqui.impl.GitServices.fetch#GitRepository').parameter('repositoryId', access.drive.repositoryId).call()
+            ec.service.sync().name('org.moqui.git.GitServices.fetch#GitRepository').parameter('repositoryId', access.drive.repositoryId).call()
             if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('Fetched'), 'success')
         ]]></script></actions>
         <default-response url="." parameter-map="{driveId:driveId}"/>
@@ -97,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <service-call name="ironstone.commons.DriveServices.get#DriveSettings" in-map="{driveId:driveId}" out-map="settings"/>
-        <service-call name="org.moqui.impl.DavServices.get#SyncAddresses" in-map="{driveId:driveId}" out-map="syncAddresses"/>
+        <service-call name="org.moqui.resource.DavServices.get#SyncAddresses" in-map="{driveId:driveId}" out-map="syncAddresses"/>
         <script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             drive = settings.drive || {}
@@ -131,7 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (syncAddresses.driveSftpPath && syncAddresses.sftpUrl) deviceRows.push({what: L('SFTP'),
                 address: syncAddresses.sftpUrl.replace(/\/$/, '') + encodeURI(syncAddresses.driveSftpPath), use: L('Scripts and file transfer apps')})
             if (drive.repositoryId) {
-                const clone = ec.service.sync().name('org.moqui.impl.GitServices.get#GitCloneUrls').parameters({repositoryId: drive.repositoryId}).call()
+                const clone = ec.service.sync().name('org.moqui.git.GitServices.get#GitCloneUrls').parameters({repositoryId: drive.repositoryId}).call()
                 if (ec.message.hasError()) ec.message.clearErrors()
                 else {
                     const write = isMirror ? L('fetch only: a mirror') : ((settings.level || 0) >= 2 ? L('clone and push') : L('clone; editors push'))

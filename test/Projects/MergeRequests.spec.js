@@ -45,7 +45,7 @@ function settle() {
         const busy = sys(() => ec.entity.find("moqui.resource.GitUpdate").condition("repositoryId", "in", ["iron", "acme-portal"])
                 .condition("ecaStatus", "in", ["pending", "running"]).count())
         if (busy == 0) return
-        sys(() => call("org.moqui.impl.GitServices.process#PendingGitUpdates", {}))
+        sys(() => call("org.moqui.git.GitServices.process#PendingGitUpdates", {}))
     }
 }
 const demoMr = () => sys(() => ec.entity.find("moqui.resource.GitMergeRequest").condition({ repositoryId: "iron", mergeRequestNum: 1 }).one())
@@ -88,9 +88,9 @@ spec({
                 }
             }
             ec.entity.find("mantle.work.effort.WorkEffortGitMergeRequest").condition({ mergeRequestId: mrId, linkSourceEnumId: "WglsExplicit" }).deleteAll()
-            for (const name of Array.from(call("org.moqui.impl.GitServices.get#GitRefs", { repositoryId: "iron", refType: "branch" }).refList).map((ref) => ref.shortName)
+            for (const name of Array.from(call("org.moqui.git.GitServices.get#GitRefs", { repositoryId: "iron", refType: "branch" }).refList).map((ref) => ref.shortName)
                     .filter((name) => name.includes("-mr-spec"))) {
-                ec.service.sync().name("org.moqui.impl.GitServices.delete#GitRef").parameters({ repositoryId: "iron", refName: name, refType: "branch" }).call()
+                ec.service.sync().name("org.moqui.git.GitServices.delete#GitRef").parameters({ repositoryId: "iron", refName: name, refType: "branch" }).call()
                 ec.entity.find("mantle.work.effort.WorkEffortGitRef").condition("repositoryId", "iron").condition("refName", "refs/heads/" + name).deleteAll()
             }
             ec.message.clearErrors()

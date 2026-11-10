@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Repositories (design-projects.md §7 Repositories; style-guide §3.2 List): the repositories the user may view
-    (org.moqui.impl.GitServices.find#GitRepositories through ironstone.projects.CodeServices.find#Repositories). Chips with their counts:
+    (org.moqui.git.GitServices.find#GitRepositories through ironstone.projects.CodeServices.find#Repositories). Chips with their counts:
     Mine (of my projects, the default), All, Mirrors and Archived, an archived one left out of the others; the columns
     repository, description, projects, storage, default branch, last change, open merge requests and the clone URLs (as text: a
     copy button wants a framework helper, impl-projects.md §7). New repository (a project's, for those who manage it; any for
@@ -80,7 +80,7 @@ along with this software (see the LICENSE.md file). If not, see
             listLabel = L(lists.find((entry) => entry[0] === list)[1])
             if (clientUser) { emptyText = text ? L('No repositories match') : L('No repository is shared with you'); return }
             projectOptions = ec.service.sync().name('ironstone.projects.WorkItemServices.get#ProjectOptions').call()?.projectList || []
-            linkOptions = Array.from(ec.service.sync().name('org.moqui.impl.GitServices.find#GitRepositories').parameters({pageNoLimit: true}).call()?.repositoryList || [])
+            linkOptions = Array.from(ec.service.sync().name('org.moqui.git.GitServices.find#GitRepositories').parameters({pageNoLimit: true}).call()?.repositoryList || [])
                     .map((repo) => ({key: repo.repositoryId, text: repo.repositoryId + (repo.description ? ' · ' + repo.description : '')}))
             const empty = {mine: 'No repository of your projects', all: 'No repositories yet', mirrors: 'No mirrors', archived: 'No archived repositories'}
             emptyText = text ? L('No repositories match') : L(empty[list])

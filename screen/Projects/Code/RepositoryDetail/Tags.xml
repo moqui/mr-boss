@@ -16,14 +16,14 @@ along with this software (see the LICENSE.md file). If not, see
     message of an annotated tag, and the project, milestone, release or work item each is linked to (by name, a release's
     version, or by hand); Link (to a key) and Remove a link for those who may push, Delete for those with the delete right, and
     New tag (annotated when given a message). Services: ironstone.projects.CodeServices get#RepositoryTags, link#RefWorkEffort,
-    unlink#RefWorkEffort; org.moqui.impl.GitServices create#GitRef, delete#GitRef. -->
+    unlink#RefWorkEffort; org.moqui.git.GitServices create#GitRef, delete#GitRef. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Tags" default-menu-index="4" menu-image="sym_o_tag" menu-image-type="icon">
 
     <transition name="commitDetail"><default-response url="../../CommitDetail"/></transition>
     <transition name="createTag">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.create#GitRef" out-map="refOut" in-map="{repositoryId:repositoryId, refName:refName, refType:'tag',
+            <service-call name="org.moqui.git.GitServices.create#GitRef" out-map="refOut" in-map="{repositoryId:repositoryId, refName:refName, refType:'tag',
                     revision:(revision || null), message:(message || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.resource.expand('Tag ${name} made', '', {name: refName}), 'success')</script></if>
         </actions>
@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="deleteTag">
         <actions>
-            <service-call name="org.moqui.impl.GitServices.delete#GitRef" in-map="{repositoryId:repositoryId, refName:refName, refType:'tag'}"/>
+            <service-call name="org.moqui.git.GitServices.delete#GitRef" in-map="{repositoryId:repositoryId, refName:refName, refType:'tag'}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ec.resource.expand('Tag ${name} deleted', '', {name: refName}), 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="repositoryId"/></default-response>

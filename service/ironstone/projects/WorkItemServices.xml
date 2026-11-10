@@ -302,7 +302,7 @@ along with this software (see the LICENSE.md file). If not, see
                 WepPlaceholder: 'sym_o_crop_free'}
             const enumLabel = (id) => id ? (ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one()?.description || id) : ''
             const statusLabel = (id) => id ? (ec.entity.find('moqui.basic.StatusItem').condition('statusId', id).useCache(true).one()?.description || id) : ''
-            const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(new Set(tasks.map((task) => task.statusId).filter((id) => id)))}).call()?.colors || {}
+            const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(new Set(tasks.map((task) => task.statusId).filter((id) => id)))}).call()?.colors || {}
             const partyName = (party) => party ? (party.organizationName || [party.firstName, party.lastName].filter((name) => name).join(' ') || party.pseudoId || party.partyId) : null
 
             // the projects and parents by name

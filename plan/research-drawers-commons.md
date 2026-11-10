@@ -913,8 +913,8 @@ There is no groupware app. The baseline is the **My Account** app (mounted at `/
 | `create#Request`, `update#Request`, `add#RequestComment`, `create#RequestContent` | Requests assigned | `component/mr-mantle/service/mantle/request/RequestServices.xml` |
 | `get#PartyContactInfo`, `store#PartyContactInfo`, `create#EmailAddress`, `create#TelecomNumber`, `create#PostalAddress`; `find#PartyDuplicates`, `merge#Parties`; `search#Party`, `create#Person`, `create#Organization` | Contacts | `component/mr-mantle/service/mantle/party/{ContactServices,DuplicateServices,PartyServices}.xml` |
 | `search#Universal`; `search#MantleFiltered`, `lookup#ById` | Search and ID lookup for the palette | `component/mr-mantle/service/mantle/search/UniversalSearchServices.xml`, `component/mr-mantle/service/mantle/GeneralServices.xml` |
-| `org.moqui.impl.WikiServices` (`get#WikiPageInfo`, `update#WikiPage`, `create#WikiSpace`, `clone#WikiPage`, `upload#WikiPageAttachment`, `set#PublishedVersion`, `get#WikiSpacePages`, `create#WikiBlog`, …) | Wiki | `base-component/framework/service/org/moqui/impl/WikiServices.xml` |
-| `org.moqui.impl.EmailServices` (`send#Email`, `send#EmailTemplate`, `send#EmailMessage`, `poll#EmailServer`, `save#EcaEmailMessage`) | Send, poll and store mail | `base-component/framework/service/org/moqui/impl/EmailServices.xml` |
+| `org.moqui.resource.WikiServices` (`get#WikiPageInfo`, `update#WikiPage`, `create#WikiSpace`, `clone#WikiPage`, `upload#WikiPageAttachment`, `set#PublishedVersion`, `get#WikiSpacePages`, `create#WikiBlog`, …) | Wiki | `base-component/framework/service/org/moqui/resource/WikiServices.xml` |
+| `org.moqui.mail.EmailServices` (`send#Email`, `send#EmailTemplate`, `send#EmailMessage`, `poll#EmailServer`, `save#EcaEmailMessage`) | Send, poll and store mail | `base-component/framework/service/org/moqui/mail/EmailServices.xml` |
 | `org.moqui.impl.UserServices` (`set#Preference`, `update#Password`, two-factor factor services) | Account and preferences | `base-component/framework/service/org/moqui/impl/UserServices.xml` |
 
 ---

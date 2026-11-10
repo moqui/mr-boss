@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- MergeRequestDetail (design-projects.md §7 MergeRequestDetail; style-guide §3.3 Detail): one merge request of a repository the
     user may view (ironstone.projects.CodeServices get#MergeRequestAccess in always-actions, so a tab loaded on its own has it,
-    impl-projects.md F18; get#MergeRequestDetail over org.moqui.impl.GitReviewServices.get#MergeRequest for the header). The title
+    impl-projects.md F18; get#MergeRequestDetail over org.moqui.git.GitReviewServices.get#MergeRequest for the header). The title
     row: the number and title, the stages of the merge request flow (Draft, Open, Merged; Open and Closed for a closed one), the
     repository, the source and target branches, the author and when it was opened. The primary action by state: Mark ready on a
     draft (its author or a maintainer), Merge when every rule is met for one who may push (the merge dialog: the method the

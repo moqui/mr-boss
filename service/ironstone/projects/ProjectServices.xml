@@ -250,7 +250,7 @@ along with this software (see the LICENSE.md file). If not, see
             const hours = (value) => ec.l10n.format(Math.round(value * 100) / 100, '#,##0.##')
             const healthColors = {WehOnTrack: 'positive', WehAtRisk: 'warning', WehOffTrack: 'negative'}
             const label = (entityName, field, id) => id ? (ec.entity.find(entityName).condition(field, id).useCache(true).one()?.description || id) : ''
-            const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(new Set(projects
+            const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(new Set(projects
                     .map((row) => row.statusId).filter((id) => id)))}).call()?.colors || {}
             const nameOf = (partyId) => {
                 if (!partyId) return ''
@@ -484,7 +484,7 @@ along with this software (see the LICENSE.md file). If not, see
             the StatusBox, the rest its short list), the next three open milestones and releases with their items done of
             total, the work items by status (get#ProjectStats taskCountByStatusMap, each with its color and the Work items tab's
             link), the top-level items with their subtrees' roll-ups (get#WorkItemTree), the time and budget for those who
-            manage (get#ProjectStats), the members, the linked repositories the user may view (org.moqui.impl.GitServices
+            manage (get#ProjectStats), the members, the linked repositories the user may view (org.moqui.git.GitServices
             find#GitRepositories with their clone URLs; none when the git hosting is not in the build) and the recent activity
             (get#ProjectActivity). Each box is read on its own: one that fails is logged and left empty.</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
@@ -547,7 +547,7 @@ along with this software (see the LICENSE.md file). If not, see
                         progress: total ? Math.round(done * 100 / total) : 0, progressText: done + '/' + total,
                         url: (type === 'WeatRelease' ? '/qapps/Projects/Projects/ReleaseDetail' : '/qapps/Projects/Projects/MilestoneDetail') + '?workEffortId=' + encodeURIComponent(plan.workEffortId)})
                 }
-                const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: overview.milestoneList.map((row) => row.statusId)}).call()?.colors || {}
+                const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: overview.milestoneList.map((row) => row.statusId)}).call()?.colors || {}
                 for (const row of overview.milestoneList) row.statusColor = colors[row.statusId] || 'grey-7'
             })
             let stats = null
@@ -556,14 +556,14 @@ along with this software (see the LICENSE.md file). If not, see
                 const byStatus = stats.taskCountByStatusMap || {}
                 const ids = Array.from(ec.entity.find('moqui.basic.StatusItem').condition('statusTypeId', 'WorkEffort').orderBy('sequenceNum').useCache(true).list())
                         .map((row) => row.statusId).filter((id) => num(byStatus[id]) > 0)
-                const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: ids}).call()?.colors || {}
+                const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: ids}).call()?.colors || {}
                 overview.statusCountList = ids.map((id) => ({statusId: id, label: statusText(id), count: num(byStatus[id]), color: colors[id] || 'grey-7',
                     url: tabUrl('&list=all&statusId=' + encodeURIComponent(id))}))
                 overview.itemCount = overview.statusCountList.reduce((sum, row) => sum + row.count, 0)
             })
             box('breakdown', () => {
                 const out = ec.service.sync().name('mantle.work.ProjectServices.get#WorkItemTree').parameters({rootWorkEffortId: workEffortId, topLevel: true}).call() || {}
-                const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(out.workItemList || [])
+                const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: Array.from(out.workItemList || [])
                         .map((row) => row.statusId)}).call()?.colors || {}
                 for (const row of Array.from(out.workItemList || []).slice(0, 12)) {
                     const estimate = num(row.totalEstimatedWorkTime)
@@ -624,10 +624,10 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!ids.length) return
                 // git hosting is a build feature: without it no repositories, and no failed call to leave the request rollback-only
                 if (!ec.service.sync().name('ironstone.projects.CodeServices.get#CodeHosting').call()?.available) return
-                const found = ec.service.sync().name('org.moqui.impl.GitServices.find#GitRepositories').parameters({repositoryIdList: ids, pageNoLimit: true}).call() || {}
+                const found = ec.service.sync().name('org.moqui.git.GitServices.find#GitRepositories').parameters({repositoryIdList: ids, pageNoLimit: true}).call() || {}
                 for (const repo of Array.from(found.repositoryList || [])) {
                     let urls = {}
-                    try { urls = ec.service.sync().name('org.moqui.impl.GitServices.get#GitCloneUrls').parameters({repositoryId: repo.repositoryId}).call() || {} }
+                    try { urls = ec.service.sync().name('org.moqui.git.GitServices.get#GitCloneUrls').parameters({repositoryId: repo.repositoryId}).call() || {} }
                     catch (err) { ec.logger.warn(`Overview of project ${workEffortId}: no clone URLs of ${repo.repositoryId}: ${err}`) }
                     overview.repositoryList.push({repositoryId: repo.repositoryId, description: repo.description || '', branch: repo.branch || '',
                         kindLabel: repo.repositoryKind === 'db' ? L('In the database') : repo.repositoryKind === 'remote' ? L('Mirror') : L('On disk'),
@@ -1114,7 +1114,7 @@ along with this software (see the LICENSE.md file). If not, see
                 parts.push(ec.resource.expand('repository ${repositoryId} made', '', {repositoryId}))
             } else if (repositoryChoice === 'link') {
                 if (!linkRepositoryId) { ec.message.addError(ec.l10n.localize('Choose the repository to link')); return }
-                const viewable = ec.service.sync().name('org.moqui.impl.GitServices.find#GitRepositories').parameters({repositoryIdList: [linkRepositoryId]}).call()?.repositoryList || []
+                const viewable = ec.service.sync().name('org.moqui.git.GitServices.find#GitRepositories').parameters({repositoryIdList: [linkRepositoryId]}).call()?.repositoryList || []
                 if (ec.message.hasError()) return
                 if (!Array.from(viewable).length) { ec.message.addError(ec.resource.expand('Repository ${linkRepositoryId} is not available', '', {linkRepositoryId})); return }
                 ec.service.sync().name('mantle.work.GitServices.add#ProjectRepository').parameters({workEffortId: workEffortId, repositoryId: linkRepositoryId}).call()
@@ -1266,7 +1266,7 @@ along with this software (see the LICENSE.md file). If not, see
             my projects (get#ProjectActivity of up to six of them, merged, ten), and my projects (the managers' those they
             manage, else those they are on; decorated, twelve). firstRun when the user sees no project. Each part stands
             alone: one that fails is logged and left empty. reviewList: the merge requests waiting for the user's review (five, last
-            updated first; org.moqui.impl.GitReviewServices.find#MergeRequests waitingForUserId, decorated by
+            updated first; org.moqui.git.GitReviewServices.find#MergeRequests waitingForUserId, decorated by
             ironstone.projects.CodeServices.decorate#MergeRequestRows), with hosting false when the build has no git hosting. timer: the
             user's running timer, and approvalList: the submitted weeks the user approves (ironstone.projects.TimeServices.get#HomeTime;
             impl-projects.md P6a), then the requested allocations the user decides (ironstone.projects.ResourceServices.get#HomeAllocations;
@@ -1312,7 +1312,7 @@ along with this software (see the LICENSE.md file). If not, see
             part('reviews', () => {
                 home.hosting = !!ec.service.sync().name('ironstone.projects.CodeServices.get#CodeHosting').call()?.available
                 if (!home.hosting || !ec.user.userId) return
-                const out = ec.service.sync().name('org.moqui.impl.GitReviewServices.find#MergeRequests').parameters({waitingForUserId: ec.user.userId, pageSize: 5}).call() || {}
+                const out = ec.service.sync().name('org.moqui.git.GitReviewServices.find#MergeRequests').parameters({waitingForUserId: ec.user.userId, pageSize: 5}).call() || {}
                 if (ec.message.hasError()) return
                 home.reviewList = ec.service.sync().name('ironstone.projects.CodeServices.decorate#MergeRequestRows').parameters({mergeRequestList: Array.from(out.mergeRequestList || [])})
                         .call()?.rowList || []
@@ -1503,7 +1503,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const statuses = Array.from(ec.entity.find('moqui.basic.StatusItem').condition('statusTypeId', 'WorkEffort').orderBy('sequenceNum').list())
             const ids = statuses.map((row) => row.statusId)
-            const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: ids}).call()?.colors || {}
+            const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: ids}).call()?.colors || {}
             const text = (id) => statuses.find((row) => row.statusId === id)?.description || id
             statusList = statuses.map((row) => ({statusId: row.statusId, description: row.description || row.statusId, sequenceNum: row.sequenceNum,
                 statusColor: row.statusColor || '', colorShown: colors[row.statusId] || 'grey-7'}))
@@ -1666,7 +1666,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const space = ec.entity.find('moqui.resource.wiki.WikiSpace').condition('wikiSpaceId', spaceId).disableAuthz().one()
                 if (space == null) docs.missing = true
                 else {
-                    const spaceAccess = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameters({wikiSpaceId: spaceId}).call() || {}
+                    const spaceAccess = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameters({wikiSpaceId: spaceId}).call() || {}
                     ec.message.clearErrors()
                     docs.wikiSpaceId = spaceId
                     docs.spaceName = space.description || spaceId
@@ -1683,7 +1683,7 @@ along with this software (see the LICENSE.md file). If not, see
                         .conditionDate('fromDate', 'thruDate', null).orderBy('repositoryId').list())) {
                     ec.message.pushErrors()
                     try {
-                        const repoAccess = ec.service.sync().name('org.moqui.impl.GitServices.get#GitRepositoryAccess').parameters({repositoryId: row.repositoryId}).call() || {}
+                        const repoAccess = ec.service.sync().name('org.moqui.git.GitServices.get#GitRepositoryAccess').parameters({repositoryId: row.repositoryId}).call() || {}
                         const repo = ec.entity.find('moqui.resource.GitRepository').condition('repositoryId', row.repositoryId).disableAuthz().one()
                         if (!ec.message.hasError() && repoAccess.canUpdate && !repoAccess.archived && repo?.repositoryKind !== 'remote')
                             docs.repositoryOptions.push({key: row.repositoryId, text: row.repositoryId + (repo?.description ? ' · ' + repo.description : '')})
@@ -1696,7 +1696,7 @@ along with this software (see the LICENSE.md file). If not, see
             for (const link of Array.from(ec.entity.find('mantle.work.effort.WikiPageWorkEffort').condition('workEffortId', workEffortId).list())) {
                 const page = ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiPageId', link.wikiPageId).disableAuthz().one()
                 if (page == null || page.wikiSpaceId === spaceId) continue
-                const pageAccess = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameters({wikiPageId: page.wikiPageId}).call() || {}
+                const pageAccess = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameters({wikiPageId: page.wikiPageId}).call() || {}
                 ec.message.clearErrors()
                 if (!pageAccess.canView) continue
                 const space = ec.entity.find('moqui.resource.wiki.WikiSpace').condition('wikiSpaceId', page.wikiSpaceId).useCache(true).disableAuthz().one()
@@ -1740,7 +1740,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'update'}).call()
             if (ec.message.hasError()) return
-            const pageAccess = ec.service.sync().name('org.moqui.impl.WikiServices.get#WikiPageAccess').parameters({wikiPageId: wikiPageId}).call() || {}
+            const pageAccess = ec.service.sync().name('org.moqui.resource.WikiServices.get#WikiPageAccess').parameters({wikiPageId: wikiPageId}).call() || {}
             if (ec.message.hasError() || !pageAccess.canView) { ec.message.clearErrors(); ec.message.addError(ec.l10n.localize('Page not found')); return }
             const page = ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiPageId', wikiPageId).disableAuthz().one()
             const title = String(page?.pagePath || wikiPageId)

@@ -43,7 +43,7 @@ function arrive(id, fields) {
         call("store#moqui.basic.email.EmailMessage", Object.assign({ emailMessageId: id, emailAccountId: SUPPORT, emailFolderId: "BOSS_DEMO_MAIL_S_INBOX",
             statusId: "ES_RECEIVED", contentType: "text/plain", messageDate: ec.user.nowTimestamp, receivedDate: ec.user.nowTimestamp, isRead: "N",
             hasAttachment: "N", rootEmailMessageId: id, messageId: `<${id}-${stamp}@walk.example>` }, fields))
-        call("org.moqui.impl.EmailClientServices.run#EmailRules", { emailAccountId: SUPPORT, emailMessageIdList: [id] })
+        call("org.moqui.mail.EmailClientServices.run#EmailRules", { emailAccountId: SUPPORT, emailMessageIdList: [id] })
     })
     return one("moqui.basic.email.EmailMessage", { emailMessageId: id })
 }

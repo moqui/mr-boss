@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     table), up to 25 files, past that a file list opening each. A client contact (impl-projects.md P10b) reads a commit of a
     repository its project shares: the work items shared with it, no Link or Unlink, and no checks (the team's CI). Services:
     ironstone.projects.CodeServices get#CommitDetail, link#CommitItem,
-    unlink#CommitItem (org.moqui.impl.GitServices get#GitCommit, get#GitCommitDiff, get#GitCommitStatuses). -->
+    unlink#CommitItem (org.moqui.git.GitServices get#GitCommit, get#GitCommitDiff, get#GitCommitStatuses). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Commit" default-menu-include="false">
 

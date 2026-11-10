@@ -77,7 +77,7 @@ function receive(fields) {
 }
 const runRules = idList =>
     system(() =>
-        invoke("org.moqui.impl.EmailClientServices.run#EmailRules", {
+        invoke("org.moqui.mail.EmailClientServices.run#EmailRules", {
             emailAccountId: ids.serviceMailAccountId,
             emailMessageIdList: idList
         })
@@ -287,7 +287,7 @@ feature("a customer's chat message becomes a case on channel ScChat, and the age
         const room = asUser(
             "joe@public.com",
             () =>
-                invoke("org.moqui.impl.ChatServices.create#Room", {
+                invoke("org.moqui.chat.ChatServices.create#Room", {
                     roomName: "Joe and service",
                     memberUserIdList: ["BOSS_CS_AGENT"]
                 }),
@@ -296,7 +296,7 @@ feature("a customer's chat message becomes a case on channel ScChat, and the age
         const sent = asUser(
             "joe@public.com",
             () =>
-                invoke("org.moqui.impl.ChatServices.send#Message", {
+                invoke("org.moqui.chat.ChatServices.send#Message", {
                     chatRoomId: room.chatRoomId,
                     body: "<p>CSCW my filter order never came</p>"
                 }),

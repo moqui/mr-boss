@@ -227,7 +227,7 @@ feature("a new version of a record's file with its note, a past one restored, a 
 
 feature("Add from Files: a copy of a drive file on the record, with its content row", {
     when() {
-        const driveId = sys(() => call("org.moqui.impl.FileServices.ensure#PersonalDrive", {})).driveId
+        const driveId = sys(() => call("org.moqui.resource.FileServices.ensure#PersonalDrive", {})).driveId
         const before = list("mantle.request.RequestContent", { requestId: "BOSS_DEMO_REQUEST" }).length
         const added = call_("addFromFiles", Object.assign({ itemsJson: JSON.stringify([{ driveId, path: "Documents/Budget 2027.csv" }]), contentTypeEnumId: "RqCntInternal" }, request), "post")
         const rows = list("mantle.request.RequestContent", { requestId: "BOSS_DEMO_REQUEST" })

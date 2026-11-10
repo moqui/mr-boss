@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     the key map overrides, the appearance preferences, the first-run setup card and the user's photo (Settings/Account; the
     face image m-avatar shows: a PartyContent PcntFaceImage of the user's party). Everything is the current user's own:
     a quick action on a task checks that the user may change it, and the notifications are read only through
-    org.moqui.impl.NotificationServices or for ec.user.userId. -->
+    org.moqui.ui.NotificationServices or for ec.user.userId. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
     <!-- ========== Today ========== -->
@@ -246,7 +246,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- ========== Notifications ========== -->
 
     <service verb="decorate" noun="Notifications">
-        <description>The rows of org.moqui.impl.NotificationServices.get#UserNotifications as the lists show them: the reason's
+        <description>The rows of org.moqui.ui.NotificationServices.get#UserNotifications as the lists show them: the reason's
             icon and label, the app's title (appTitles, from the shell data), when it came ("5 min ago", "Yesterday 3:12
             PM", "Oct 12"), whether it is unread, an approval's summary, and the link a row opens: the record's BOSS screen
             (ironstone.commons.PaletteServices.get#RecordLink) for a notification on a record or for a Mantle record-update topic,
@@ -324,7 +324,7 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
     <service verb="open" noun="Notification">
-        <description>Open a notification of the current user: marks it viewed (org.moqui.impl.NotificationServices
+        <description>Open a notification of the current user: marks it viewed (org.moqui.ui.NotificationServices
             mark#NotificationsViewed) and answers where to go, screenUrl for a screen of the shell or redirectUrl for another
             link. A notification whose record is gone, or with no link, goes to the Notifications center with a message.</description>
         <in-parameters><parameter name="notificationMessageId" required="true"/></in-parameters>
@@ -341,7 +341,7 @@ along with this software (see the LICENSE.md file). If not, see
                 notificationMessageId: row.notificationMessageId, topic: row.topic, recordEntityName: row.recordEntityName, recordId: row.recordId,
                 linkText: row.linkText, message: message, sentDate: row.sentDate, viewedDate: row.viewedDate}]}).call()
             const shown = (decorated?.rows || [])[0] || {}
-            ec.service.sync().name('org.moqui.impl.NotificationServices.mark#NotificationsViewed').parameters({notificationMessageId: notificationMessageId}).call()
+            ec.service.sync().name('org.moqui.ui.NotificationServices.mark#NotificationsViewed').parameters({notificationMessageId: notificationMessageId}).call()
             if (ec.message.hasError()) return
             // a record that is gone (under the user's filters): the center, with a message
             const keys = {'mantle.party.Party': 'partyId', 'mantle.request.Request': 'requestId', 'mantle.work.effort.WorkEffort': 'workEffortId',
@@ -373,7 +373,7 @@ along with this software (see the LICENSE.md file). If not, see
                     .filter((row) => !approvalTopics.has(row.topic) && (updateTopics.has(row.topic) === (inboxEnumId === 'NinUpdates')))
                     .map((row) => row.notificationMessageId)
             if (!ids.length) return
-            viewedCount = ec.service.sync().name('org.moqui.impl.NotificationServices.mark#NotificationsViewed')
+            viewedCount = ec.service.sync().name('org.moqui.ui.NotificationServices.mark#NotificationsViewed')
                     .parameters({notificationMessageIdList: ids}).call()?.viewedCount || 0
         ]]></script></actions>
     </service>
@@ -385,12 +385,12 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const ids = (Array.isArray(notificationMessageId) ? notificationMessageId : String(notificationMessageId).split(','))
                     .map((id) => String(id).trim()).filter((id) => id)
-            viewedCount = ids.length ? (ec.service.sync().name('org.moqui.impl.NotificationServices.mark#NotificationsViewed')
+            viewedCount = ids.length ? (ec.service.sync().name('org.moqui.ui.NotificationServices.mark#NotificationsViewed')
                     .parameters({notificationMessageIdList: ids}).call()?.viewedCount || 0) : 0
         ]]></script></actions>
     </service>
     <service verb="approve" noun="Notifications">
-        <description>Bulk approve: org.moqui.impl.NotificationServices.approve#NotificationMessage for each notification given
+        <description>Bulk approve: org.moqui.ui.NotificationServices.approve#NotificationMessage for each notification given
             (a list, or comma separated), each on its own: one that fails is logged and named, the others are approved.</description>
         <in-parameters><parameter name="notificationMessageId" required="true"/></in-parameters>
         <out-parameters><parameter name="approvedCount" type="Integer"/><parameter name="failedIds" type="List"/></out-parameters>
@@ -402,7 +402,7 @@ along with this software (see the LICENSE.md file). If not, see
             for (const id of ids) {
                 ec.message.pushErrors()
                 try {
-                    ec.service.sync().name('org.moqui.impl.NotificationServices.approve#NotificationMessage').parameters({notificationMessageId: id})
+                    ec.service.sync().name('org.moqui.ui.NotificationServices.approve#NotificationMessage').parameters({notificationMessageId: id})
                             .requireNewTransaction(true).call()
                     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
                     approvedCount++
@@ -625,7 +625,7 @@ along with this software (see the LICENSE.md file). If not, see
             a PNG, JPEG, GIF or WebP file of at most 5 MB, stored by mantle.party.PartyServices.create#PartyContent as PcntFaceImage. It takes
             the place of the photo before, whose rows and files are removed (remove#MyPhoto keepPartyContentId).</description>
         <in-parameters>
-            <parameter name="contentFile" type="org.apache.commons.fileupload2.core.FileItem" required="true"/>
+            <parameter name="contentFile" type="FileItem" required="true"/>
         </in-parameters>
         <out-parameters><parameter name="partyContentId"/></out-parameters>
         <actions><script><![CDATA[

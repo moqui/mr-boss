@@ -142,7 +142,7 @@ feature(
             const decided = asUser(
                 users.approve,
                 () =>
-                    refusal("org.moqui.impl.NotificationServices.approve#NotificationMessage", {
+                    refusal("org.moqui.ui.NotificationServices.approve#NotificationMessage", {
                         notificationMessageId: message.notificationMessageId
                     }),
                 false
@@ -153,7 +153,7 @@ feature(
             const stale = asUser(
                 users.approve,
                 () =>
-                    refusal("org.moqui.impl.NotificationServices.approve#NotificationMessage", {
+                    refusal("org.moqui.ui.NotificationServices.approve#NotificationMessage", {
                         notificationMessageId: staleMessage.notificationMessageId
                     }),
                 false

@@ -993,7 +993,7 @@ return side: authorization expiration, assignee, notes, restock fee, disposition
 | `get#AvailableInventory`, `get#AvailableForOrder`, `get#AvailableInventoryMulti` (available to promise by product, facility or store); `check#AvailableInventory` on order items | Availability lookup | `component/mr-mantle/service/mantle/product/AssetServices.xml`, `component/mr-mantle/service/mantle/order/OrderServices.xml` |
 | `get#InventoryProjectedInfo` | Projected inventory from asset, order item and production documents in the search index; no screen uses it yet | `component/mr-mantle/service/mantle/product/InventoryReportServices.xml` |
 | `find#PartyCommunicationEvents`, `create#Message`, `reply#CommunicationEvent` | Party message history and replies | `component/mr-mantle/service/mantle/party/CommunicationServices.xml` |
-| `org.moqui.impl.WikiServices` (`get#UserWikiSpaces`, `get#UserSpaceWikiPageSimpleList`, `get#PublishedWikiPageText`, …) | Article lookup for case links | `base-component/framework/service/org/moqui/impl/WikiServices.xml` |
+| `org.moqui.resource.WikiServices` (`get#UserWikiSpaces`, `get#UserSpaceWikiPageSimpleList`, `get#PublishedWikiPageText`, …) | Article lookup for case links | `base-component/framework/service/org/moqui/resource/WikiServices.xml` |
 
 No service creates or appends a case from inbound email or chat; that is the Comms
 receive path (initial-design).

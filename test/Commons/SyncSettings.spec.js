@@ -1,7 +1,7 @@
 // Commons Settings/Sync (screen/Commons/Settings/Sync.xml; design-drawers-commons.md §11 Sync; the device addresses on Calendars,
 // Contact books and a drive's settings are CalendarSettings', ContactBookSettings' and Files' renders of them): john.doe makes
 // an app password for a phone (shown once, then a device with its name), sees the addresses a device uses (the DAV server,
-// his calendars, contact books and drives, from org.moqui.impl.DavServices.get#SyncAddresses) and the steps per platform, and
+// his calendars, contact books and drives, from org.moqui.resource.DavServices.get#SyncAddresses) and the steps per platform, and
 // revokes it. The password then logs a DAV request in until it is revoked.
 // Run: ./moq test mr-boss --spec SyncSettings
 const webroot = "component://webroot/screen/webroot.xml"
@@ -37,7 +37,7 @@ function base64(text) {
     }
     return out
 }
-const davRoot = (password) => sys(() => call("org.moqui.impl.DavServices.serve#DavRequest", { method: "PROPFIND", path: "/dav/",
+const davRoot = (password) => sys(() => call("org.moqui.resource.DavServices.serve#DavRequest", { method: "PROPFIND", path: "/dav/",
     headers: { Authorization: `Basic ${base64(`john.doe:${password}`)}`, Depth: "0" } }))
 
 spec({

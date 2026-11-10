@@ -232,7 +232,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the decoration: type, status, customer and assignee
             const ids = page.map((item) => item.id)
             const statusIdsShown = Array.from(new Set(page.map((item) => item.row.statusId).filter((id) => id)))
-            const colors = ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors').parameters({statusIdList: statusIdsShown}).call()?.colors || {}
+            const colors = ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors').parameters({statusIdList: statusIdsShown}).call()?.colors || {}
             const statusLabel = (id) => { const item = id ? ec.entity.find('moqui.basic.StatusItem').condition('statusId', id).useCache(true).one() : null; return item ? (item.description || id) : (id || '') }
             const enumLabel = (id) => { const item = id ? ec.entity.find('moqui.basic.Enumeration').condition('enumId', id).useCache(true).one() : null; return item ? (item.description || id) : (id || '') }
             const byRole = {}
@@ -353,7 +353,7 @@ along with this software (see the LICENSE.md file). If not, see
                 allowedStatusIds = []
                 if (canSubmit) allowedStatusIds.push('ReqSubmitted')
                 if (canCancel) allowedStatusIds.push('ReqCancelled')
-                const statusColor = row.statusId ? (ec.service.sync().name('org.moqui.impl.StatusServices.get#StatusColors')
+                const statusColor = row.statusId ? (ec.service.sync().name('org.moqui.ui.StatusServices.get#StatusColors')
                         .parameters({statusIdList: [row.statusId]}).call()?.colors?.[row.statusId] || 'grey-7') : 'grey-7'
 
                 const seenRoles = new Set()

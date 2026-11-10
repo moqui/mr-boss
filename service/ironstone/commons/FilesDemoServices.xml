@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The files demo of IronStone Commons M8 (data/BossFilesDemoData.xml calls load#FilesDemo as the element
     ironstone.commons.FilesDemoServices.load-FilesDemo): john.doe's own drive, a shared team drive, a version-controlled drive, shares
-    and links, the trash and the record files' versions, written through org.moqui.impl.FileServices as the demo users so the
+    and links, the trash and the record files' versions, written through org.moqui.resource.FileServices as the demo users so the
     versions, their notes and authors are real, dated over the weeks before the load. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
         <description>One part of load#FilesDemo, in its own transaction.</description>
         <in-parameters><parameter name="part" required="true"/></in-parameters>
         <actions><script><![CDATA[
-            const FILES = 'org.moqui.impl.FileServices'
+            const FILES = 'org.moqui.resource.FileServices'
             const users = {john: 'john.doe', joe: 'joe.developer', bob: 'bob.developer'}
             const ids = {john: 'EX_JOHN_DOE', joe: 'ORG_ZIZI_JD', bob: 'ORG_ZIZI_BD'}
             const haveUser = (who) => ec.entity.find('moqui.security.UserAccount').condition('userId', ids[who]).disableAuthz().one() != null
@@ -182,7 +182,7 @@ along with this software (see the LICENSE.md file). If not, see
                     if (!ec.factory.hasFeature('git')) return
                     if (ec.entity.find('moqui.resource.ResourceDrive').condition('driveId', 'BOSS_DEMO_WEB').one() != null) return
                     make('moqui.resource.GitRepository', {repositoryId: 'DRIVE_BOSS_DEMO_WEB', description: 'Website', branch: 'main', repositoryKind: 'db'})
-                    call('org.moqui.impl.GitServices.init#GitRepository', {repositoryId: 'DRIVE_BOSS_DEMO_WEB'})
+                    call('org.moqui.git.GitServices.init#GitRepository', {repositoryId: 'DRIVE_BOSS_DEMO_WEB'})
                     make('moqui.resource.ResourceDrive', {driveId: 'BOSS_DEMO_WEB', driveName: 'Website', description: 'The website\'s pages, every change a commit',
                         driveKindEnumId: 'RdkShared', rootLocation: 'git://DRIVE_BOSS_DEMO_WEB/', repositoryId: 'DRIVE_BOSS_DEMO_WEB', ownerUserId: ids.john,
                         createdDate: new Date(nowMs - 20 * day)})

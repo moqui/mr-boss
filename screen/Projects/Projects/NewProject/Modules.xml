@@ -49,7 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
             repositoryOptions = []
             ec.message.pushErrors()
             try {
-                repositoryOptions = Array.from(ec.service.sync().name('org.moqui.impl.GitServices.find#GitRepositories').parameters({pageNoLimit: true}).call()?.repositoryList || [])
+                repositoryOptions = Array.from(ec.service.sync().name('org.moqui.git.GitServices.find#GitRepositories').parameters({pageNoLimit: true}).call()?.repositoryList || [])
                         .filter((repo) => !linked.includes(repo.repositoryId)).map((repo) => ({key: repo.repositoryId, text: repo.repositoryId + (repo.description ? ' · ' + repo.description : '')}))
             } catch (err) {
                 ec.logger.warn('New project modules: the repositories are not listed: ' + err)

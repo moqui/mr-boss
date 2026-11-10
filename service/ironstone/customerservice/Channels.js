@@ -509,7 +509,7 @@ function caseFromMessage(p) {
         const out =
             ec.service
                 .sync()
-                .name("org.moqui.impl.VoicemailServices.get#Voicemail")
+                .name("org.moqui.call.VoicemailServices.get#Voicemail")
                 .parameters({voicemailId: p.voicemailId})
                 .call() || {}
         ec.message.clearErrors()

@@ -131,7 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
             intakeFormUrl = intakeFormPath ? webRoot + intakeFormPath : ''
             ec.message.pushErrors()
             try {
-                const access = ec.service.sync().name('org.moqui.impl.EmailClientServices.get#EmailAccountAccess').call() || {}
+                const access = ec.service.sync().name('org.moqui.mail.EmailClientServices.get#EmailAccountAccess').call() || {}
                 intakeAccountOptions = Array.from(access.accountList || []).filter((account) => account.level >= 3 && !account.isInternal)
                         .map((account) => ({key: account.emailAccountId, text: (account.accountName || account.emailAddress) + (account.emailAddress ? ' <' + account.emailAddress + '>' : '')}))
             } catch (err) { intakeAccountOptions = [] } finally { ec.message.clearErrors(); ec.message.popErrors() }

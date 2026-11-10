@@ -76,7 +76,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <service-call name="mantle.party.ContactBookServices.get#UserContactBooks" out-map="booksOut"/>
-        <service-call name="org.moqui.impl.DavServices.get#SyncAddresses" out-map="syncAddresses"/>
+        <service-call name="org.moqui.resource.DavServices.get#SyncAddresses" out-map="syncAddresses"/>
         <script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const cf = ec.entity.conditionFactory

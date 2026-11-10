@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- PublicShare (design-drawers-commons.md §9 PublicShare; impl-drawers-commons.md R16, M8): the page of a file or folder shared
     by link, for a visitor who is not signed in, at /s/<token>: the token-route "s" of MoquiConf.xml renders it in the public
-    shell (no header, drawers or session user) after org.moqui.impl.FileServices.check#PublicShareToken accepted the token, so
+    shell (no header, drawers or session user) after org.moqui.resource.FileServices.check#PublicShareToken accepted the token, so
     an expired, revoked or unknown link never reaches this screen. The component is PublicShare.qvue next to this file: the
     item's name, the sharer and the note, the expiry, a password prompt when the link has one, then the file (preview,
     download) or the folder (its files with breadcrumbs, picture previews, a file or the whole folder as a zip) and, for a
@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the password (when the link has one), the opening counted, the grant for the calls below -->
     <transition name="open" require-session-token="false">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.open#PublicShare').parameters({token: token || '', password: password || null}).call()
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.open#PublicShare').parameters({token: token || '', password: password || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {valid: out.valid, passwordOk: out.passwordOk, grant: out.grant ?? null, share: out.share})
         ]]></script></actions>
         <default-response type="none"/>
@@ -35,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the files of the shared folder (path below it), or the shared file -->
     <transition name="files" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.list#PublicShare').parameters({token: token || '', grant: grant || null,
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.list#PublicShare').parameters({token: token || '', grant: grant || null,
                 path: path || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {fileList: out.fileList || [], uploadOnly: out.uploadOnly === true})
         ]]></script></actions>
@@ -46,7 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
         file (a folder as name.zip); after an error it sends nothing and the answer here is the error -->
     <transition name="download" method="get" read-only="true">
         <actions><script><![CDATA[
-            ec.service.sync().name('org.moqui.impl.FileServices.download#PublicShare').parameters({token: token || '', grant: grant || null,
+            ec.service.sync().name('org.moqui.resource.FileServices.download#PublicShare').parameters({token: token || '', grant: grant || null,
                 path: path || null, sendResponse: true, inline: String(inline) === 'true'}).call()
             if (ec.message.hasError()) ec.web.sendJsonResponse({})
         ]]></script></actions>
@@ -55,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the file drop: files into the shared folder (or a folder below it for an edit link), the uploader's name in the version note -->
     <transition name="upload" require-session-token="false">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('org.moqui.impl.FileServices.upload#PublicShare').parameters({token: token || '', grant: grant || null,
+            const out = ec.service.sync().name('org.moqui.resource.FileServices.upload#PublicShare').parameters({token: token || '', grant: grant || null,
                 path: path || null, fileList: contentFile == null ? null : (Array.isArray(contentFile) ? contentFile : [contentFile]),
                 uploaderName: uploaderName || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {uploadedList: out.uploadedList || []})

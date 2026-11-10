@@ -48,7 +48,7 @@ function settle() {
     while (Date.now() - started < 20000) {
         const busy = sys(() => ec.entity.find("moqui.resource.GitUpdate").condition("repositoryId", REPO).condition("ecaStatus", "in", ["pending", "running"]).count())
         if (busy == 0) return
-        sys(() => call("org.moqui.impl.GitServices.process#PendingGitUpdates", {}))
+        sys(() => call("org.moqui.git.GitServices.process#PendingGitUpdates", {}))
     }
 }
 const we = (id) => sys(() => ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", id).one())
@@ -72,7 +72,7 @@ spec({
             call("mantle.work.ProjectServices.store#ProjectSetting", { workEffortId: PROJECT, settingTypeEnumId: "WstModules", settingValue: "code,docs" })
             call("mantle.work.GitServices.create#ProjectRepository", { workEffortId: PROJECT, repositoryId: REPO, repositoryKind: "db",
                 description: "The release walk", applyDefaults: false })
-            call("org.moqui.impl.GitServices.commit#GitFiles", { repositoryId: REPO, message: "Start the walk", fileMap: {
+            call("org.moqui.git.GitServices.commit#GitFiles", { repositoryId: REPO, message: "Start the walk", fileMap: {
                 "README.md": "# The release walk\n", "src/app.js": "export const version = '1.0'\n" } })
             const task = (name, purposeEnumId) => call("mantle.work.TaskServices.create#Task", { rootWorkEffortId: PROJECT, workEffortName: name, purposeEnumId }).workEffortId
             task("Sign in with a passkey", "WepNewFeature")
@@ -89,7 +89,7 @@ spec({
     cleanupSpec() {
         sys(() => {
             ec.message.clearErrors()
-            call("org.moqui.impl.GitServices.archive#GitRepository", { repositoryId: REPO })
+            call("org.moqui.git.GitServices.archive#GitRepository", { repositoryId: REPO })
             ec.message.clearErrors()
             const project = ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", PROJECT).one()
             if (project) { project.statusId = "WeCancelled"; project.update() }

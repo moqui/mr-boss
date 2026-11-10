@@ -50,7 +50,7 @@ organization/capability boundary required here. `org.moqui.SmsServices.send#SmsM
 warning/error stub; SMS arrives with Comms C1 and C4-SMS. Nothing reads bounces or complaints for
 direct SMTP, although the `ES_BOUNCED` EmailMessage status and the email ECA mechanism exist.
 Nothing writes `TrackingCodeVisit`, `TrackingCodeOrder` or an attribution record. The framework's
-`WikiBlog` and `org.moqui.impl.WikiServices.create#WikiBlog`/`update#WikiBlog` exist with no BOSS
+`WikiBlog` and `org.moqui.resource.WikiServices.create#WikiBlog`/`update#WikiBlog` exist with no BOSS
 screen. Commons calendar, wiki review/publication, Chatter and record files exist.
 
 ## 1. Shell
@@ -826,8 +826,8 @@ the baseline: a post with new text, which creates its wiki page, and a post from
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | BlogPostFind | find | Narrow posts | title, author, wiki space, category, publish period, campaign | date-period; category and space choices | — | Wiki/WikiBlogs WikiBlogList header fields |
-| BlogPostList | list | Open and compare posts | publish date, title, author, categories, wiki space, campaign uses, public link | title links to BlogPostDetail; wiki page link; public link when the space has a `publicBlogUrl` | T.find#BlogPosts over `moqui.resource.wiki.WikiBlogFindView`, limited to spaces from existing `org.moqui.impl.WikiServices.get#UserWikiSpaces` | Wiki/WikiBlogs WikiBlogList |
-| NewBlogPost | dialog | Start a post with its text | wiki space, title, publish date, author, summary, small image, body | Knowledge body editor for the body; image upload | existing `org.moqui.impl.WikiServices.create#WikiBlog` with `blogText` | Wiki/WikiBlogs AddBlogText |
+| BlogPostList | list | Open and compare posts | publish date, title, author, categories, wiki space, campaign uses, public link | title links to BlogPostDetail; wiki page link; public link when the space has a `publicBlogUrl` | T.find#BlogPosts over `moqui.resource.wiki.WikiBlogFindView`, limited to spaces from existing `org.moqui.resource.WikiServices.get#UserWikiSpaces` | Wiki/WikiBlogs WikiBlogList |
+| NewBlogPost | dialog | Start a post with its text | wiki space, title, publish date, author, summary, small image, body | Knowledge body editor for the body; image upload | existing `org.moqui.resource.WikiServices.create#WikiBlog` with `blogText` | Wiki/WikiBlogs AddBlogText |
 | NewBlogPostFromPage | dialog | Make a post from an existing page | wiki space, wiki page, title, publish date, author, summary, small image | page lookup with server search within the space | existing `create#WikiBlog` with `wikiPageId` | Wiki/WikiBlogs AddBlogPage |
 
 `create#WikiBlog` needs either body text or a page and refuses a title outside its allowed
@@ -845,7 +845,7 @@ page is what a public blog shows.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| BlogPost | single | Maintain post metadata | title, publish date, author, summary, meta keywords, meta description (160 characters), small image, wiki space, wiki page | image upload with thumbnail; page lookup by space | existing `org.moqui.impl.WikiServices.update#WikiBlog` | Wiki/EditWikiBlog EditBlogForm |
+| BlogPost | single | Maintain post metadata | title, publish date, author, summary, meta keywords, meta description (160 characters), small image, wiki space, wiki page | image upload with thumbnail; page lookup by space | existing `org.moqui.resource.WikiServices.update#WikiBlog` | Wiki/EditWikiBlog EditBlogForm |
 | BlogPostBody | component | Write and review the body | page body, version, review state | Commons Knowledge editor (`.qvue`, co-editing) | existing `update#WikiPage`, `request#WikiPageReview`, `decide#WikiPageReview` | Commons Knowledge; Wiki/EditWikiPage EditPageForm |
 | AddCategory | dialog | Put the post in a category | category | WikiPageCategory choice | T.add#BlogCategory over `create#moqui.resource.wiki.WikiBlogCategory` | Wiki/EditWikiBlog AddCategory |
 | Categories | list | Show and remove categories | category, sent date | remove with confirmation | T.remove#BlogCategory over `delete#moqui.resource.wiki.WikiBlogCategory` | Wiki/EditWikiBlog CategoriesForm |
@@ -880,7 +880,7 @@ editing stays Commerce-owned and needs its own grant. Crosscut row:
 ### Knowledge — Context passed
 
 Mount Commons Knowledge with the authorized wiki page/space, selected campaign content link and
-existing wiki author/reviewer permissions. Use current `org.moqui.impl.WikiServices.get#WikiPageInfo`,
+existing wiki author/reviewer permissions. Use current `org.moqui.resource.WikiServices.get#WikiPageInfo`,
 `update#WikiPage`, `request#WikiPageReview` and `decide#WikiPageReview` through the Commons owner.
 Marketing cannot publish a private space merely by linking it. The existing terminal editor and
 file access rules apply. Blog post bodies use this same mount from BlogPostDetail.

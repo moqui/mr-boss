@@ -58,7 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, limit:8}"/>
         </if>
         <if condition="dashboard.panels.approvalsWaiting">
-            <service-call name="org.moqui.impl.NotificationServices.get#UserNotifications" out-map="approvalsOut"
+            <service-call name="org.moqui.ui.NotificationServices.get#UserNotifications" out-map="approvalsOut"
                     transaction="force-new" ignore-error="true"
                     in-map="{approvals:true, pageSize:8, inboxEnumId:'NinNotifications',
                         topicList:customerService.approvalTopics}"/>

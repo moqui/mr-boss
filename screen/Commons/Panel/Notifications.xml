@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the tray panel, laid out for its 400 px. The Notifications / Updates toggle with the Updates unread count, the reason and
     app chips, then Approvals waiting (Notifications only; Approve and Refuse inline, Refuse asking for a reason when the topic
     requires one), Unread and Earlier (read in the last 7 days); Mark all read of the inbox shown and Notification settings.
-    A row opens its link and marks it read. The user's own notifications only, through org.moqui.impl.NotificationServices
+    A row opens its link and marks it read. The user's own notifications only, through org.moqui.ui.NotificationServices
     (get#UserNotifications, mark#NotificationsViewed, approve# and refuse#NotificationMessage).
 
     The tab is an m-dynamic-container (m-tray-notifications) of its own: the toggle and the chips load the tab again with
@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="approve">
         <parameter name="notificationMessageId" required="true"/>
         <actions><script><![CDATA[
-            ec.service.sync().name('org.moqui.impl.NotificationServices.approve#NotificationMessage').parameters({notificationMessageId: notificationMessageId}).call()
+            ec.service.sync().name('org.moqui.ui.NotificationServices.approve#NotificationMessage').parameters({notificationMessageId: notificationMessageId}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize('Approved')}]})
         ]]></script></actions>
         <default-response type="none"/>
@@ -70,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="refuse">
         <parameter name="notificationMessageId" required="true"/>
         <actions><script><![CDATA[
-            ec.service.sync().name('org.moqui.impl.NotificationServices.refuse#NotificationMessage')
+            ec.service.sync().name('org.moqui.ui.NotificationServices.refuse#NotificationMessage')
                     .parameters({notificationMessageId: notificationMessageId, reason: reason}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize('Refused')}]})
         ]]></script></actions>
@@ -89,7 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
             for (const app of (shellData && Array.isArray(shellData.apps) ? shellData.apps : [])) titles[app.name] = String(app.title || app.name)
             appTitles = titles
             const L = (text) => ec.l10n.localize(text)
-            const get = (parameters) => ec.service.sync().name('org.moqui.impl.NotificationServices.get#UserNotifications').parameters(parameters).call() || {}
+            const get = (parameters) => ec.service.sync().name('org.moqui.ui.NotificationServices.get#UserNotifications').parameters(parameters).call() || {}
             const decorate = (list) => Array.from(ec.service.sync().name('ironstone.commons.CommonsServices.decorate#Notifications')
                     .parameters({notificationList: list || [], appTitles: titles}).call()?.rows || [])
             const filters = {inboxEnumId: inboxEnumId, reasonEnumId: reasonEnumId || null, appName: appName || null}

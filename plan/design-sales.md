@@ -580,7 +580,7 @@ The crosscut receives the added QuoteOffer/QuoteSend/QuoteResponse forms and act
   Sending by a rep opens Comms Compose with the PDF attached and the order as the filing record, so
   the mail goes from the rep's own account through `mantle.party.CommunicationServices.send#EmailDraft`.
   QuoteBatch, reminders and any send on behalf of another rep use the framework
-  `org.moqui.impl.EmailServices.send#EmailTemplate` with a registered template, recorded on the Comms
+  `org.moqui.mail.EmailServices.send#EmailTemplate` with a registered template, recorded on the Comms
   delivery ledger (X8) and filed by `EmailMessageFiling`. Template text renders with
   `fancy-locked-html`. The PDF print header carries a QR of the PASS quote link. An accepted delivery
   is not proof of customer acceptance. Partial recipient failure remains visible and retryable.

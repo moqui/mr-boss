@@ -70,7 +70,7 @@ feature("a reader sees dated packaging and resolves a pack without global unit o
                 quantityUomId: "OTH_ea",
                 changeReason: "Denied"
             }),
-            unitDenied: invoke("org.moqui.impl.UnitServices.store#Unit", {
+            unitDenied: invoke("org.moqui.ui.UnitServices.store#Unit", {
                 uomId: "BOSS_DENIED",
                 description: "Denied",
                 uomTypeEnumId: "UT_OTHER_MEASURE",
@@ -90,7 +90,7 @@ feature("a reader sees dated packaging and resolves a pack without global unit o
 feature("catalog administrator cannot write framework units or currencies and foreign products stay masked", {
     when() {
         return as("catalog.admin", () => ({
-            unit: invoke("org.moqui.impl.UnitServices.store#Unit", {
+            unit: invoke("org.moqui.ui.UnitServices.store#Unit", {
                 uomId: "BOSS_DENIED",
                 description: "Denied",
                 uomTypeEnumId: "UT_OTHER_MEASURE",

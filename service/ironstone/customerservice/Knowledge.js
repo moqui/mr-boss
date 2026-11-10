@@ -96,7 +96,7 @@ function caseKnowledge(p) {
     const organizationPartyId = parties.find(row => row.roleTypeId === "OrgInternal")?.partyId || null
     const sources = mantleKnowledge.currentSources(organizationPartyId ? [organizationPartyId] : [])
     // a linked page only when the wiki lets the user view it (a link never widens who reads a page)
-    const scope = ec.service.sync().name("org.moqui.impl.WikiServices.get#WikiViewScope").call() || {}
+    const scope = ec.service.sync().name("org.moqui.resource.WikiServices.get#WikiViewScope").call() || {}
     const viewSpaceIds = new Set(Array.from(scope.viewSpaceIdList || []))
     const hiddenPageIds = new Set(Array.from(scope.hiddenPageIdList || []))
     const linked = []
@@ -436,7 +436,7 @@ function findSources(p) {
             draft: !row.fromDate,
             fromText: row.fromDate ? dayText(row.fromDate) : L("Draft")
         }))
-    const scope = ec.service.sync().name("org.moqui.impl.WikiServices.get#WikiViewScope").call() || {}
+    const scope = ec.service.sync().name("org.moqui.resource.WikiServices.get#WikiViewScope").call() || {}
     const spaceOptions = Array.from(scope.viewSpaceIdList || [])
         .map(wikiSpaceId => ({value: wikiSpaceId, label: spaceName(wikiSpaceId)}))
         .sort((a, b) => a.label.localeCompare(b.label))

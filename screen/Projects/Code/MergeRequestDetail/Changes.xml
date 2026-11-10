@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- MergeRequestChanges (design-projects.md §7 MergeRequestChanges; style-guide §3.8 Split, §4.8 .qvue): the diff of a merge request
     with its review threads. The component is Changes.qvue next to this file; every read and change goes through the JSON
     transitions below, services of ironstone.projects.CodeServices that check the repository's view right (get#MergeRequestChanges over
-    org.moqui.impl.GitReviewServices.get#MergeRequestDiff and mantle.work.GitServices.get#ReviewThreads; comment#MergeRequest over
+    org.moqui.git.GitReviewServices.get#MergeRequestDiff and mantle.work.GitServices.get#ReviewThreads; comment#MergeRequest over
     create#ReviewComment; submit#Review; mantle.work.GitServices.resolve#ReviewThread). The diff's lines are data the component
     shows as text, never html, so nothing pushed to the repository runs in the app's origin (impl-projects.md F32). review=true
     opens the review dialog (MergeRequestDetail's Review). The terminal: ChangesTui beside this file, the files, one

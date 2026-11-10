@@ -179,7 +179,7 @@ along with this software (see the LICENSE.md file). If not, see
         <description>A note. On the record in context it is a note on its Chatter (log#RecordNote, a Comment communication
             event filed on the record), rich text (HTML, the rich-light editor) whose @ mentions (data-mention-id, a party)
             are notified; without one it is a page of the user's private notes space, markdown
-            (org.moqui.impl.WikiServices.ensure#UserNotesSpace, made on first use, then update#WikiPage), named for the title
+            (org.moqui.resource.WikiServices.ensure#UserNotesSpace, made on first use, then update#WikiPage), named for the title
             (a new name when a page has it already).</description>
         <in-parameters>
             <parameter name="title"/>
@@ -215,7 +215,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="url" from="recordLinkOut.url"/>
                 <set field="message" from="ec.resource.expand('Note added to ${recordName}', '', {recordName:(recordTitle || recordId)})"/>
             </then><else>
-                <service-call name="org.moqui.impl.WikiServices.ensure#UserNotesSpace" out-map="spaceOut"/>
+                <service-call name="org.moqui.resource.WikiServices.ensure#UserNotesSpace" out-map="spaceOut"/>
                 <if condition="ec.message.hasError()"><return/></if>
                 <set field="wikiSpaceId" from="spaceOut.wikiSpaceId"/>
                 <script><![CDATA[
@@ -228,7 +228,7 @@ along with this software (see the LICENSE.md file). If not, see
                     if (inUse(name)) name = name + ' (' + ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH.mm.ss') + ')'
                     pageName = name
                 ]]></script>
-                <service-call name="org.moqui.impl.WikiServices.update#WikiPage" out-map="pageOut"
+                <service-call name="org.moqui.resource.WikiServices.update#WikiPage" out-map="pageOut"
                         in-map="{wikiSpaceId:wikiSpaceId, pageName:pageName, wikiType:'md', pageText:noteText}"/>
                 <if condition="ec.message.hasError()"><return/></if>
                 <set field="wikiPageId" from="pageOut.wikiPageId"/>

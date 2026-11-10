@@ -9,7 +9,7 @@
 // MessageDetail are "not found".
 // Run: ./moq test mr-boss --spec Inbox
 const comms = "component://mr-boss/screen/Comms.xml"
-const MAIL = "org.moqui.impl.EmailClientServices"
+const MAIL = "org.moqui.mail.EmailClientServices"
 
 function transition(name, parameters, method) {
     const str = ec.screen.makeTest().rootScreen(comms).render(`Inbox/Mail/${name}`, parameters || {}, method || null)
@@ -427,7 +427,7 @@ feature("the palette's Messages group finds threads and mailboxes, and MessageDe
 feature("a message downloads as an .eml file, with its files", {
     requires: ["imap"],
     when() {
-        // Download .eml: the framework's export of the message (org.moqui.impl.EmailClientServices.export#EmailMessage), with its files
+        // Download .eml: the framework's export of the message (org.moqui.mail.EmailClientServices.export#EmailMessage), with its files
         const download = (id) => {
             const str = ec.screen.makeTest().rootScreen(comms).render("Inbox/MessageDetail/downloadEml", { emailMessageId: id }, null)
             ec.message.clearErrors()
@@ -507,11 +507,11 @@ feature("an invitation from outside is answered: the event goes on the calendar 
 
 feature("Save to Files copies a message's attachment into a drive folder and the message keeps its copy", {
     when() {
-        const drives = sys(() => call("org.moqui.impl.FileServices.get#UserDrives", {}))
+        const drives = sys(() => call("org.moqui.resource.FileServices.get#UserDrives", {}))
         const personal = drives.personalDriveId
-        const folder = sys(() => call("org.moqui.impl.FileServices.create#Folder", { driveId: personal, name: "Saved from mail" })).newPath
+        const folder = sys(() => call("org.moqui.resource.FileServices.create#Folder", { driveId: personal, name: "Saved from mail" })).newPath
         const saved = post("saveFiles", { store: "email", id: "BOSS_DEMO_MAIL_ACME1_A1", driveId: personal, path: folder })
-        const info = sys(() => call("org.moqui.impl.FileServices.get#ResourceInfo", { driveId: personal, path: folder + "/purchase-order-Q4.txt" }))
+        const info = sys(() => call("org.moqui.resource.FileServices.get#ResourceInfo", { driveId: personal, path: folder + "/purchase-order-Q4.txt" }))
         const still = one("moqui.basic.email.EmailMessageAttachment", { emailMessageAttachmentId: "BOSS_DEMO_MAIL_ACME1_A1" })
         const text = sys(() => ec.resource.getLocationReference(still.attachmentLocation).getText())
         const again = post("saveFiles", { store: "email", id: "BOSS_DEMO_MAIL_ACME1_A1", driveId: personal, path: folder })

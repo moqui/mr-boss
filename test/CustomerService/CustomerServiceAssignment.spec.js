@@ -37,7 +37,7 @@ feature(
                 asUser(
                     user,
                     () =>
-                        Array.from(invoke("org.moqui.impl.EmailClientServices.find#EmailTextBlocks", {}).textBlockList || []).map(
+                        Array.from(invoke("org.moqui.mail.EmailClientServices.find#EmailTextBlocks", {}).textBlockList || []).map(
                             row => row.emailTextBlockId
                         ),
                     false

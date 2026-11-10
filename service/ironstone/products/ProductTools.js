@@ -33,7 +33,7 @@ function scopeFor(parameters) {
         out.identifierTypes = opts.options?.idTypes || []
         out.unitOptions = opts.options?.units || []
         if (out.workspace === "units") {
-            Object.assign(out, call("org.moqui.impl.UnitServices.get#UnitContext", p))
+            Object.assign(out, call("org.moqui.ui.UnitServices.get#UnitContext", p))
             out.unitForm = Object.assign(out.unitForm, out.unitRows.find(r => r.uomId === p.selectedUomId) || {})
             const selected = out.conversionRows.find(r => r.uomConversionId === p.selectedConversionId)
             if (selected) out.conversionForm = Object.assign({}, selected, {fromDate: null, thruDate: null, changeReason: ""})
@@ -46,7 +46,7 @@ function scopeFor(parameters) {
                 try {
                     Object.assign(
                         out,
-                        call("org.moqui.impl.UnitServices.preview#UnitConversion", {
+                        call("org.moqui.ui.UnitServices.preview#UnitConversion", {
                             uomId: p.previewUomId,
                             toUomId: p.previewToUomId,
                             amount: p.previewAmount ?? 1,

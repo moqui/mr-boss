@@ -58,7 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
             johnNotes or joeNotes.</description>
         <in-parameters><parameter name="part" required="true"/></in-parameters>
         <actions><script><![CDATA[
-            const WIKI = 'org.moqui.impl.WikiServices'
+            const WIKI = 'org.moqui.resource.WikiServices'
             const KNOW = 'ironstone.commons.KnowledgeServices'
             const users = {john: 'john.doe', joe: 'joe.developer', bob: 'bob.developer'}
             const ids = {john: 'EX_JOHN_DOE', joe: 'ORG_ZIZI_JD', bob: 'ORG_ZIZI_BD'}
