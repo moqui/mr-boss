@@ -276,7 +276,8 @@ organization/record scope, never a map of BOSS group names or another app's laun
 permission alone does not imply read access. The group vocabulary is seed data in CX-ACCESS, not a
 parallel authorization system: the framework's capability registry (`moqui.security.CapabilityBundle`, built in impl-admin P3)
 describes each built app's groups as registered bundles, filled from this table by BossSetupData, and Admin assigns only
-those. Mantle remains independent of BOSS group and screen names.
+those; Admin › Access › Capabilities (impl-admin P9) shows them as a matrix, a launcher apart from each view, change, export
+and sensitive-value permission. Mantle remains independent of BOSS group and screen names.
 Every BOSS app requires a UserGroup (decided Nov 5, 2026; impl-drawers-commons R29): `ALL_USERS`, which
 every account holds, public ones too, grants no app root. Commons and Comms are opened by `BOSS_USERS`
 ("IronStone BOSS users"), the group every internal user is a member of; each other app by its root user

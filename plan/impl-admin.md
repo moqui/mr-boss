@@ -2045,6 +2045,169 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
 - **Usable when:** `admin.access` gives a custom group the Warehouse reader bundle with its organization filter and
   prints the review; an unsupported artifact rule shows read only.
 
+**Built Nov 10 (P9).**
+- mr-moqui (no Rust; the shared release binary):
+  - `service/org/moqui/admin/AccessServices.xml` (appended) with a new module `AccessCapabilities.js` beside `Access.js`, which now
+    gives it its helpers (`lib`): three read projections, each `ADMIN_ACCESS_VIEW`, writing and evaluating nothing.
+    - `get#Capabilities` (added: the matrix's one read; the design names only `preview#Grants` and `apply#Grants`): the registered
+      capabilities of an app as rows, one per launcher binding and per permission by its kind (launcher, view, edit, export,
+      sensitive), against at most 8 groups (an app's first 6 registered bundles when none are named); each cell granted,
+      scheduled, none or advanced (another authorization type on the artifact group), a launcher's bound filter sets and whether
+      a registered one is missing, whether the actor may grant or end it and why not, and the change proposed for it; `cellList`
+      the same cells one a row (the list twin); `unsupportedList` what the groups hold that no registered bundle describes.
+    - `get#ScopeRules`: each `EntityFilterSet` bound to a group's `ArtifactAuthz` with its source (`registered`: the group's own
+      bundle; `bundle`: another registered bundle names it, as a grant copies it; `configuration`: seed data or Tools), a page by
+      group, artifact group, filter set, state and source; the registered sets a registered binding lacks (`missing`, with
+      `canBind` and the group's grant revision); every filter set with the entities it narrows. No `filterMap` or `applyCond`.
+    - `get#GrantReview` (added): up to 60 groups (named, or an app's bundles) as of a date and time: permission grants open
+      then, app gates with their filter sets (as now), members then; sealed permissions left out and counted.
+  - `Access.js`: `preview#Grants` and `apply#Grants` take a row rule (`artifactGroupId` with `entityFilterSetId`): a filter set a
+    registered bundle the actor may assign names for that artifact group, added to the group's bindings of the registered type;
+    refused as `UNREGISTERED_SCOPE`, `SCOPE_UNBOUND` (no such binding, unless the request adds it), `SCOPE_CONFIGURED` (the
+    binding carries a filter set of its own) and `SCOPE_REMOVAL` (an end); an explicit audit row per bound rule. The grant
+    revision now covers each binding's filter sets.
+  - `data/SecurityTypeData.xml`: a second `AdminAccessServices` member row naming the three reads (the first row's name is its
+    key, so an installed database gets the new one beside it).
+  - Docs: Attack-Surface (the projections and the row-rule refusals); Remaining-Work's `org.moqui.admin` row.
+- BOSS:
+  - `service/ironstone/admin/CapabilityServices.xml` with `Capabilities.js` (new): `get#MatrixContext` (the screen's context over
+    `get#Capabilities`: columns, matrix rows and list rows with each cell's text and next proposal, the proposal's effect per
+    group from `preview#Grants`, the revisions to apply at), `apply#MatrixChanges` (the proposal group by group through
+    `apply#Grants`, each group as one change at its previewed revision in its own transaction, a refused or failed group named
+    and left proposed) and `get#AccessReview` (the review's one list, members by `get#MemberScope`, the others counted). `apply`
+    is in the client deny pattern already; no data change.
+  - Screens: `Admin/Access.xml` gains Capabilities (menu 2), RowRules (3) and AccessReview (contextual).
+    `Access/Capabilities.xml` (CapabilitySelection; ProposedChanges with Apply and its confirmation; CapabilityMatrix, a form-list
+    of up to eight group columns; CapabilityList, its twin, in place of the matrix below the `md` width and in the terminal;
+    Advanced rules, read only); `Access/RowRules.xml` (ScopeRuleFind, ScopeRules with SupportedScopeBinding's Bind dialog on a
+    missing rule, paging by the service, the filter sets); `Access/AccessReview.xml` (ReviewDate, AccessReviewList with its CSV,
+    Print in html-print). GroupDetail's header links Access review and Compare.
+  - `Admin.js`: links `Access/Capabilities`, `Access/RowRules`, `Access/AccessReview`. BossSetupData and BossUsersDemoData unchanged.
+- Specs: framework `test/AdminAccessCapabilities` (3 features, 0.25 s: a launcher granted alone leaves view and edit none, the
+  list holds the matrix's cells, an unregistered rule and permission and a sealed grant listed read only, more than 8 groups and
+  a user without the permission refused; a row rule bound only as a registered set on a registered binding at the revision,
+  with its audit row, the unregistered, removal, unbound, configured and stale cases refused, no expression in the answer; the
+  review as of now and of twenty days ago, the sealed grant left out and counted). BOSS `test/Admin/AdminCapabilities` (4
+  features, 0.6 to 0.8 s: Capabilities' one qvt render with a proposal, and the matrix context's cells equal to its list rows; a
+  launcher granted through the `applyChanges` transition with its two row rules and no permission, a privileged group of the
+  same proposal named and not changed, the identity operator and the reader refused; RowRules' one qvt render with the rule's
+  source; AccessReview's one html-print render, the sealed grant not in it, and another organization's member counted and not
+  named). Access: the screens fall under P3's `access` area (`BOSS_ADM_ACCESS`; AdminAccess unchanged). Acceptance, written and
+  not run: `acceptance/Admin/AdminCapabilitiesUsable` (4 features, the "usable when").
+- Tests run (release binary, `--nobuild`, this worktree's runtime): framework AdminAccessCapabilities, AdminAccessServices,
+  AdminSessions 12 of 12 (0.4 s); mr-boss AdminCapabilities, AdminGroups, AdminAccess, AdminUsers, AdminInvitations, ProjectsAccess
+  27 of 27; `moqui lint --screens` 132 flagged sites, as before, none in the new screens. Capabilities (qvt, tui, html; the list
+  view; no selection; the Admin app with privileged groups), RowRules (qvt, tui, html), AccessReview (qvt, tui, html,
+  html-print, csv; no selection) and GroupDetail (html) rendered once by hand without errors, not kept. Prettier clean on the
+  JavaScript. Not run: `./moq test-framework`, `./moq test-apps`, the acceptance suite; no cargo test (no Rust changed); no
+  browser (the group multi-select's post is read as a list or a comma separated text, not seen in a browser).
+- Inventories: none (the forms derive from Tools' Security screens, outside ss-inventory and usl-inventory).
+- Design edits: design-admin §2 (the AccessReview row), §5 Capabilities and RowRules (as built) and AccessReview (new), §16
+  (the review's row), §17.2 (AccessServices); design-crosscut §1.4 (one clause).
+- Findings (provisional, numbered by the lead):
+  - **F-P9-1** The design gives the matrix no read (only `preview#Grants` and `apply#Grants`) and the review no service. Built:
+    `get#Capabilities` and `get#GrantReview` in the framework, beside `get#ScopeRules`.
+  - **F-P9-2** The grant revision did not cover a binding's filter sets, so a row rule had no revision. It does now; a preview
+    taken before the change is stale once.
+  - **F-P9-3** Three demo bindings are of the registered launcher's type with another row rule: `BOSS_ADMIN_ADMIN` on
+    `BOSS_ADMIN` and `BOSS_INSIGHTS_ADMIN` on `BOSS_INSIGHTS` (ALLOW with `MANTLE_ACTIVE_ORG`, F34) and `BOSS_PROJECT_CLIENT`
+    on `BOSS_PROJECTS` (its client filter). Read as "lacking `MANTLE_USER_ORG`", Bind would have narrowed the administrator to
+    its own organizations (against §4's Nov 7 rows on F65). A binding that carries a filter set the registry does not name
+    for its artifact group is scoped on purpose: not listed as missing, `SCOPE_CONFIGURED` when asked. So no demo row offers
+    Bind; it serves an app gate granted in Tools without its rules.
+  - **F-P9-4** `ArtifactAuthzFilter` has no dates and no audit log, and removing one widens what members read: a row rule is
+    only added, with an explicit audit row; removal stays Tools'.
+  - **F-P9-5** `ArtifactAuthz` has no dates: the review's date and time apply to grants and memberships, app gates are shown as
+    they are now (the print says so).
+  - **F-P9-6** "Sealed and secret values left out" is read as: the review lists no sealed permission (counted per group), no
+    allowed IPs, preference values or filter expressions. The screens still show sealed grants, marked.
+  - **F-P9-7** A form-list's export menu (`show-csv-button`) is drawn only with a list header (pagination, `select-columns`, a
+    header dialog or saved finds); the review's list sets `select-columns`.
+  - **F-P9-8** A permission is in bundles of several apps (`PRODUCT_CATALOG_VIEW` in Products' and Warehouse's): the matrix has
+    a row per app and capability, and the grant is one row whatever app shows it. A cell is offered when any registered
+    bundle the actor may assign carries it, as `preview#Grants` decides.
+  - **F-P9-9** The registry has no "Warehouse reader" bundle; `BOSS_WAREHOUSE` (the launcher with `MANTLE_USER_ORG` and
+    `MANTLE_PRIVATE_CONTACT`, and `PRODUCT_CATALOG_VIEW`) is what the "usable when" grants.
+  - **F-P9-10** `get#GrantReview` returns every member of a group, as `get#Group` does; BOSS's `get#AccessReview` names only
+    those in the user's organizations. A direct framework caller with `ADMIN_ACCESS_VIEW` reads them all, as before.
+- Decisions: the matrix is XML (a form-list with eight hidden-when-unused columns), not a `.qvue`, and its changes are a
+  proposal carried in the screen's `changes` parameter (at most 40), previewed per group and applied per group, a refused
+  group named and left proposed (§2's batch rule; within a group P3's all-or-nothing holds); the list twin replaces the matrix
+  below `md` and in the terminal; a row rule is add-only and never completes a binding scoped on purpose; the review is one
+  flat list (permissions, app gates, members) so its print and CSV are the same rows, with members scoped as GroupDetail's;
+  the review is a screen of its own (AccessReview), linked from Capabilities and GroupDetail; no new capability or area.
+- For the lead:
+  - budget shares: framework about 0.25 s (AdminAccessCapabilities); mr-boss about 0.7 s (AdminCapabilities); no budget raised;
+  - merge: mr-moqui `SecurityTypeData.xml` (one member row right after the `AdminAccessServices` block, not at the file's end),
+    `AccessServices.xml` (appended; three descriptions changed), `Access.js` (the scope change, the revision, `lib`),
+    Attack-Surface and Remaining-Work (one paragraph, one clause); mr-boss `Admin.js` `linkPaths` rows after P8's,
+    `Access.xml` subscreens, `GroupDetail.xml` (two header links), `design-admin.md`, `design-crosscut.md` §1.4 (one clause);
+    `BossSetupData.xml`, `BossUsersDemoData.xml` and `MoquiConf.xml` are not touched, so nothing meets Insights P6 there;
+  - the user's call: F-P9-6 (should the review list sealed grants for a reviewer who holds them, or keep them out of every
+    print and export); whether the review should name members at all (built: yes, in scope); F-P9-4 (a delegated removal of a
+    row rule, refused here);
+  - for P17 (audit and access evidence): the review is a current projection, not kept; a kept, signed-off review would be
+    its record;
+  - the acceptance AdminCapabilitiesUsable to run when asked.
+
+**Review Nov 10 (P9).** A fresh review of both repositories' P9 diffs, access and scope first; fixes committed apart per repository
+("Admin P9 review: …").
+- Checked: the row rule in `preview#Grants` and `apply#Grants` (the set must exist and be named for that artifact group by a
+  registered bundle the actor may assign; only added; only on a binding of the registered type; the group refusals of P3
+  first, so a privileged group by its members only, an unregistered group and a non-delegable bundle refused; the revision
+  over each binding's filter sets, the group row locked before the preview is taken again; the audit row per bound rule; the
+  administration path as P3 counts it, through `ADMIN` membership alone, which a row rule does not touch); that a bound rule
+  only narrows (filter.rs: a find takes every filter set of the one record that authorized it, joined with AND, and a write
+  to `ArtifactAuthzFilter` moves the authorization generation); the seed and demo bindings on the twelve registered artifact
+  groups (39 rows, read from a loaded database: `ADMIN`'s and each app administrator group's are `AUTHZT_ALWAYS`, so
+  `SCOPE_UNBOUND`; `BOSS_ADMIN_ADMIN`, `BOSS_INSIGHTS_ADMIN` and `BOSS_PROJECT_CLIENT` carry a set of their own, so
+  `SCOPE_CONFIGURED`; the rest carry every registered set), and that neither the access administrator, the administrator
+  nor an `ADMIN` member is offered or allowed a Bind on any of them; `get#Capabilities`, `get#ScopeRules` and
+  `get#GrantReview` (`ADMIN_ACCESS_VIEW` in each; nothing written; no `filterMap` or `applyCond`, only whether a condition
+  applies; sealed grants out of the review and counted; no allowed IP or preference value read); BOSS `apply#MatrixChanges`
+  (Admin and `ADMIN_ACCESS_MANAGE`; the tokens by a pattern, at most 40, in `apply` as in the read; each group through
+  `apply#Grants` with authorization on and the caller's own authority, in its own transaction, a refused, failed or unknown
+  group named and left proposed; a client-made `revisions` only ever a stale revision); `get#AccessReview` (members through
+  `get#MemberScope` as GroupDetail, the others counted; no user id, no sealed grant; the print and the CSV the one list:
+  the CSV rendered by hand); the screens (`applyChanges` and `bindScope` each reach a service with its own check; the
+  identity operator is refused the three screens and the reader `apply#MatrixChanges`); `ironstone.admin.*` in the
+  client deny pattern; the second `AdminAccessServices` member row; the specs (one render a screen a mode, the transition in
+  `html` as gate 1's).
+- Fixes:
+  - **R1 (low, scope)** A row rule asked for beside the launcher it belongs to (one request, the group with no binding yet)
+    previewed as bound and was then left to the launcher's own bundle: when that bundle is another one, registering the
+    artifact group without the set or with another type, the rule was not bound though the preview said so. Now the rule is
+    a change of its own, applied after the request's bindings (`apply#Grants` writes row rules last), counted only when it
+    binds, and `SCOPE_UNBOUND` when the binding the request adds is of another type. No seed row has two bundles on one
+    artifact group; the framework spec has the case.
+  - **R2 (low)** `ignore-error` clears a refused call's message, so the three screens' `failure` was never set: more than 8
+    groups, more than 40 changes or more than 60 reviewed groups drew an empty matrix or review with no reason, and a
+    proposal over 40 could not be cleared from the screen. `get#MatrixContext` and `get#AccessReview` answer their bounds
+    as `failure` (the proposal kept), the screens show it, with Clear on Capabilities, and read any other failed call as
+    "not available". The same dead `failure` lines are in gate 1's screens (GroupDetail and others), which show a "not
+    available" state from the missing record: see For the lead.
+- Tests (release binary, `--nobuild`, this worktree's runtime): framework AdminAccessCapabilities (3 features, 0.36 s, with
+  R1's case) and AdminAccessServices 9 of 9; mr-boss AdminCapabilities (4 features, 0.6 s, with R2's bound), AdminGroups,
+  AdminAccess and ProjectsAccess 22 of 22. By hand, not kept: Capabilities with 41 changes and with 9 groups, AccessReview
+  with 61 groups (each its reason), AccessReview as CSV, the three screens as the identity operator (refused). Prettier clean.
+  Not run: `moqui lint --screens` (no Debug binary; the screen edits are three `set` lines and one link), the full suites,
+  the acceptance spec.
+- For the lead:
+  - findings: **F-P9-11** `ignore-error="true"` clears the message, so `ec.message.hasError()` after it is always false: the
+    `failure` capture gate 1's screens copy (GroupDetail, Constitution, InstanceSettings and others) is dead code; they fall
+    back to a "not available" state, so nothing is exposed, but a refusal's reason is not shown there. **F-P9-12** Ending a
+    registered launcher of a group whose binding is scoped on purpose (P3's rule, now one click in the matrix: End on
+    `BOSS_INSIGHTS_ADMIN`'s Insights launcher, or on `BOSS_ADMIN_ADMIN`'s by a member) deletes the binding with its own filter
+    sets, and the audit row keeps the type only; granting it again gives the registry's sets (`MANTLE_USER_ORG` for
+    `MANTLE_ACTIVE_ORG`). Within the access administrator's delegated authority (the same members could be given the
+    registered bundle), so left as P3 decided; refusing the end as `SCOPE_CONFIGURED`, or recording the sets in the audit
+    row, is the user's call. **F-P9-13** A binding of the registered type with no filter set at all reads as "missing"
+    and may be bound by an access administrator (it narrows a non-privileged group to its organizations); a group left
+    unfiltered on purpose in Tools is not told apart from one granted without its rules;
+  - merge: mr-moqui `Access.js` and `AdminAccessCapabilities.spec.js` only; mr-boss `Capabilities.js`,
+    `CapabilityServices.xml` (a `failure` out-parameter on two services), the three P9 screens and the spec;
+  - budget: unchanged shares (framework about 0.36 s, mr-boss about 0.6 s).
+
 ### P10 — Sign-in policy and identity providers
 
 Design §6 SignInPolicy, IdentityProviders and IdentityProviderDetail, §4 Sessions' new-device notice; ADM-ACCESS,
