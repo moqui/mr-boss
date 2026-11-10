@@ -22,8 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     and its own transitions; it needs no change here. Manufacturing mounts it at Manufacturing/WorkCenters/FacilityDetail
     (impl-manufacturing P3) with its context (ironstone.manufacturing.WorkCenterServices.get#FacilityDetail): the same header
     without Edit facility, Overview, its own Work center tab (the WorkCenter extension, capacities, alternates, the rate
-    with cost read only, and the load), Files and Conversation; the Warehouse tabs are Warehouse's only. Other apps add their
-    contexts when they are built. -->
+    with cost read only, and the load), Files and Conversation; the Warehouse tabs are Warehouse's only. The tab bar draws
+    facilityTabs, the app's tabs, since a menu lists every subscreen. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Facility"
@@ -59,6 +59,10 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <!-- the tabs of the app's context, in menu order: a Moqui Java menu lists every subscreen, so the tab bar draws this
+            list; each tab screen's condition admits the same tabs by appRoot -->
+        <set field="facilityTabs" from="appRoot == 'Manufacturing' ? ['Overview', 'WorkCenter', 'Files', 'Conversation']
+                : ['Overview', 'Children', 'Locations', 'Products', 'BoxTypes', 'Printers', 'Policies', 'Schedules', 'Files', 'Conversation']"/>
         <set field="recordFound" from="!!detail?.facility"/>
         <set field="facility" from="detail?.facility || {}"/>
         <set field="contact" from="detail?.contact || {}"/>
@@ -282,7 +286,32 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
-                <subscreens-panel id="FacilityTabs" type="tab"/>
+                <!-- As in Moqui Java a menu lists every subscreen; the tabs here are facilityTabs, the app's. -->
+                <section name="FacilityTabBar">
+                    <actions>
+                        <set field="facilityTabItems" from="Array.from(sri.getMenuItems() || []).filter(item =&gt; facilityTabs.includes(item.name))"/>
+                    </actions>
+                    <widgets>
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<div id="FacilityTabs"><q-tabs dense no-caps align="left" narrow-indicator inline-label class="text-grey-7" active-color="primary" indicator-color="primary" :model-value="$root.currentPathList[$root.currentPathList.lastIndexOf('FacilityDetail') + 1]">${facilityTabItems.map(item => '<q-tab name="' + WebUtilities.encodeHtml(item.name) + '" label="' + WebUtilities.encodeHtml(item.title || item.name) + '" @click.prevent="$root.setUrl($root.getLinkPath(' + WebUtilities.encodeHtml(JSON.stringify(item.url)) + '))"></q-tab>').join('')}</q-tabs><q-separator class="q-mb-md"></q-separator></div>]]></text>
+                        </render-mode>
+                        <section name="FacilityTabLinks" condition="sri.getRenderMode() !== 'qvt'">
+                            <widgets>
+                                <container id="FacilityTabs" style="row q-gutter-xs q-mb-sm">
+                                    <section-iterate name="FacilityTab" list="facilityTabItems" entry="tab">
+                                        <widgets>
+                                            <section name="FacilityTabActive" condition="tab.inPath">
+                                                <widgets><link url="${tab.url}" url-type="plain" link-type="anchor-button" btn-type="primary" text="${tab.title || tab.name}"/></widgets>
+                                                <fail-widgets><link url="${tab.url}" url-type="plain" link-type="anchor-button" text="${tab.title || tab.name}"/></fail-widgets>
+                                            </section>
+                                        </widgets>
+                                    </section-iterate>
+                                </container>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+                <subscreens-active/>
             </widgets>
         </section>
     </widgets>

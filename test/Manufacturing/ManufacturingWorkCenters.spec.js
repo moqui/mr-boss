@@ -181,5 +181,10 @@ feature("the Centers list shows each center's slots and load; Equipment and Equi
         facility.errors == []
         facility.output.includes("Work centers")
         !facility.output.includes("Edit facility")
+        // the tab bar draws Manufacturing's tabs, not the Warehouse ones the menu also lists
+        facility.output.includes('q-tab name="WorkCenter"')
+        facility.output.includes('q-tab name="Files"')
+        !facility.output.includes('q-tab name="Locations"')
+        !facility.output.includes('q-tab name="BoxTypes"')
     }
 })
