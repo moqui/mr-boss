@@ -6,6 +6,8 @@
 // document. Beside them are the owning apps' own screens of the record, each only where its route opens to the viewer (the
 // owner's authorization, read as Admin's destinationOpens reads it): every operational action is there, never here, and a
 // link adds no right. A record no source describes for the viewer answers as not available, whether or not it exists.
+// The mount itself (screen/Insights/Records.xml) serves nothing below a record screen but this context: no transition of the
+// shared screen and no owner's tab.
 //
 // The return to the report (design §10: permitted definition and filters, never frames or authority) is the drill's own
 // parameters, kept only when they name a definition.

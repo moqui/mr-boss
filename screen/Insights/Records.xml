@@ -21,6 +21,17 @@ along with this software (see the LICENSE.md file). If not, see
         menu-image="sym_o_folder"
         menu-image-type="icon"
         default-menu-include="false">
+    <!-- Read only by the path (P6 review): a shared screen's transitions and its owners' tabs are authorized by the screen's own
+        location, which the Insights root's inheritable grant covers as it covers any screen below it, so under this mount they
+        would be refused only by each owner service's own check. Nothing below a record screen is served here but its
+        InsightsRecord subscreen: no transition, no owner tab, for any user; the owners' links open the record in its own app. -->
+    <always-actions><script><![CDATA[
+        const recordPath = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+        const recordsAt = recordPath.indexOf('Records')
+        const belowRecord = recordsAt < 0 ? null : recordPath.slice(recordsAt + 2)
+        if (!belowRecord || belowRecord.length > 1 || (belowRecord.length === 1 && belowRecord[0] !== 'InsightsRecord'))
+            throw new Error('RECORD_READ_ONLY: Insights shows this record read only; open it from a report, and change it in the app that owns it')
+    ]]></script></always-actions>
     <subscreens default-item="OrderDetail" always-use-full-path="true">
         <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
         <subscreens-item name="Customer360" location="component://mr-boss/screen/Shared/Customer360.xml" menu-include="false"/>

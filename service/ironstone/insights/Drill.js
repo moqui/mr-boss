@@ -20,6 +20,10 @@ const recordScreens = {
     BossServiceClock: {screen: "RequestDetail", parameter: "requestId", field: "requestId"}
 }
 const refusalText = /not authorized|may not read|is not admitted|does not exist|not available/i
+// Costs and margins stay on the server (impl-insights §2 "Restricted values"; the P6 review, F-P6-9): a record's cost or margin
+// is not a drill column and not a breakdown dimension unless the viewer reads product costs (PRODUCT_COST_VIEW), whatever
+// the saved query measures. An admitted dataset has no field classes yet (F58), so the fields are known by their names.
+const restrictedField = name => /cost|margin/i.test(String(name || ""))
 
 function text(value) {
     if (value == null) return ""
@@ -92,6 +96,8 @@ function drill(p) {
     if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "A drill needs Insights read")
     const found = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     const selected = buckets(p)
+    const readsCosts = ec.user.hasPermission("PRODUCT_COST_VIEW")
+    const permitted = name => readsCosts || !restrictedField(name)
     const unavailable = reason => ({
         available: false,
         reason,
@@ -103,6 +109,8 @@ function drill(p) {
         columns: [],
         carry: {definitionId: p.definitionId}
     })
+    if (p.breakdownDimension && !permitted(p.breakdownDimension))
+        return unavailable("A breakdown by " + p.breakdownDimension + " is not available to you")
     let definition
     let answer
     ec.message.pushErrors()
@@ -150,7 +158,7 @@ function drill(p) {
         ec.message.clearErrors()
         ec.message.popErrors()
     }
-    const columns = Array.from(answer.columns || [])
+    const columns = Array.from(answer.columns || []).filter(permitted)
     // what a link back to this drill carries: the request as it was, which the drill checks again when it is opened
     const carry = {definitionId: p.definitionId}
     for (const name of [
@@ -192,7 +200,9 @@ function drill(p) {
         organizationPartyId: found.organizationPartyId,
         meaning,
         selected: Array.from(answer.selected || []),
-        dimensions: Array.from(answer.dimensions || []).map(name => ({value: name, label: name})),
+        dimensions: Array.from(answer.dimensions || [])
+            .filter(permitted)
+            .map(name => ({value: name, label: name})),
         // the panel's own buckets to choose from (no breakdown asked), and the breakdown's
         panelBuckets: selected.length
             ? []

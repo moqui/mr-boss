@@ -1,10 +1,10 @@
 // Insights' drill, record contexts, Analysis and business events (impl-insights P6; design-insights §4 Drill and business
 // annotations, §5 Analysis, §10): a reader drills a saved panel's value to the orders of their own organization, whatever the
 // request sends, and each opens Shared/OrderDetail under Insights, read only (its one qvt render: the admitted dataset's facts,
-// the return to the report, no action); another organization's order is "not available" there, as a missing one is, and the
-// order's own transitions stay the owner's to refuse. An analysis summing amounts across currencies is refused with its reason
-// until it is grouped by currency, and is saved as a library panel only by an author. A business event of the reader's
-// organization is a marker on the panel. The engine's rules are the framework's ReportDrill and ReportAnnotations, the events'
+// the return to the report, no action); another organization's order is "not available" there, as a missing one is, and nothing
+// below a record screen is served under Insights but its read-only context: no transition and no owner tab. An analysis summing
+// amounts across currencies is refused with its reason until it is grouped by currency, and is saved as a library panel only
+// by an author. A business event of the reader's organization is a marker on the panel. The engine's rules are the framework's ReportDrill and ReportAnnotations, the events'
 // records Mantle's BusinessEvents; the orders and the admitted sales dataset are InsightsDatasets'. The "usable when" scenario is
 // the acceptance InsightsDrillUsable. Run: ./moq test mr-boss --spec InsightsRecords
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -175,8 +175,9 @@ feature("OrderDetail under Insights shows the order read only with its return; a
         const other = record(users.reader, orders.services)
         const missing = record(users.reader, "INS_REC_NONE")
         const own = record(users.services, orders.services)
-        // the shared screen's own actions stay the owner's: the reader is refused them under Insights as anywhere
+        // the mount is read only by its path: a shared screen's transition and an owner's tab are refused before they run
         const approve = post(users.reader, "Records/OrderDetail/approveOrder", {orderId: orders.retail})
+        const tab = post(users.reader, "Records/Customer360/Contact", {customerPartyId: "JoeDist"})
         const approved = system(
             () => ec.entity.find("mantle.order.OrderHeader").condition("orderId", orders.retail).one().statusId
         )
@@ -185,12 +186,13 @@ feature("OrderDetail under Insights shows the order read only with its return; a
             other,
             missing,
             own,
-            approveRefused: approve.status >= 400 || approve.errors !== "",
+            approve: approve.errors,
+            tab: tab.errors,
             approved,
             unknownType: asUser(users.reader, () => refusal(RECORD, {recordType: "Anything", recordId: "X"}))
         }
     },
-    then({page, other, missing, own, approveRefused, approved, unknownType}) {
+    then({page, other, missing, own, approve, tab, approved, unknownType}) {
         page.status == 200
         page.errors.join(" | ") == ""
         page.output.includes("Order " + orders.retail)
@@ -206,7 +208,8 @@ feature("OrderDetail under Insights shows the order read only with its return; a
         !missing.recordFound
         JSON.stringify(other.sources) == JSON.stringify(missing.sources)
         own.recordFound
-        approveRefused
+        approve.includes("RECORD_READ_ONLY")
+        tab.includes("RECORD_READ_ONLY")
         approved == "OrderApproved"
         unknownType.includes("RECORD_UNAVAILABLE")
     }

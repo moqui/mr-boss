@@ -4131,7 +4131,10 @@ along with this software (see the LICENSE.md file). If not, see
         Drill: the report engine's get#Drill, a reading operation (it reads a saved panel as the viewer and each dataset by its own
         artifact and row filter), ALWAYS for the groups that read, past BOSS_INS_REPORT_ENGINE's deny; Insights' own Drill screen and
         the Records mounts are open to every Insights user by the root's ALLOW, and ironstone.insights.DrillServices check
-        INSIGHTS_VIEW. No Insights group holds a dataset's records artifact (org.moqui.report.rows.<id>): a dataset whose definition
+        INSIGHTS_VIEW. That ALLOW is inheritable, so it also covers the shared record screens' own transitions and tabs when they
+        are reached under Insights/Records: no row here can deny them without denying them in their owners' apps (a transition's
+        artifact is its screen's location, not its mount), so Records.xml refuses every path below a record screen but its
+        InsightsRecord subscreen (the P6 review). No Insights group holds a dataset's records artifact (org.moqui.report.rows.<id>): a dataset whose definition
         restricts its records gives them totals only.
         Business events: the dataset mantle-business-events (Mantle's ReportAnnotationSource over the engine's annotations, scoped
         to the viewer's organizations), view only; writing one (org.moqui.report.annotation.business) is no Insights group's, its
