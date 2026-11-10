@@ -66,9 +66,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     value-field="id" :label="t('To (people here)')"></m-drop-down>
                             <div v-else class="text-caption m-muted">{{t('To the team working on this')}}</div>
                             <m-text-line v-model="formProps.fields.subject" name="subject" :label="t('Subject')" class="q-mt-xs"></m-text-line>
-                            <m-rich-text v-if="!forClient" v-model="formProps.fields.body" name="body" light rows="2" class="q-mt-xs" :placeholder="t('Write a message… @ to mention, # for a record')"
+                            <m-rich-text v-if="!forClient" v-model="formProps.fields.body" name="body" light rows="2" class="q-mt-xs" :label="t('Message')" :placeholder="t('Write a message… @ to mention, # for a record')"
                                     :mention-url="url('searchUsers')" :record-url="url('searchRecords')"></m-rich-text>
-                            <m-rich-text v-else v-model="formProps.fields.body" name="body" light rows="2" class="q-mt-xs" :placeholder="t('Write a message to the team…')"></m-rich-text>
+                            <m-rich-text v-else v-model="formProps.fields.body" name="body" light rows="2" class="q-mt-xs" :label="t('Message')" :placeholder="t('Write a message to the team…')"></m-rich-text>
                             <div class="row items-center q-gutter-sm q-mt-xs">
                                 <q-btn type="submit" dense unelevated no-caps color="primary" icon="sym_o_send" :label="t('Send')"></q-btn>
                                 <q-btn v-if="!forClient" dense flat no-caps color="primary" icon="sym_o_mail" :label="t('Email…')" @click="openEmail">
@@ -82,7 +82,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <!-- Log note: an internal note, rich text with @ mentions -->
                     <chatter-done v-if="tab === 'log'" :key="'log' + formKeys.log" :done="afterNote">
                         <m-form :action="action('logNote')" :fields-initial="logInitial" v-slot="formProps">
-                            <m-rich-text v-model="formProps.fields.body" name="body" light rows="2" :placeholder="t('Log an internal note… @ to mention, # for a record')"
+                            <m-rich-text v-model="formProps.fields.body" name="body" light rows="2" :label="t('Internal note')" :placeholder="t('Log an internal note… @ to mention, # for a record')"
                                     :mention-url="url('searchUsers')" :record-url="url('searchRecords')"></m-rich-text>
                             <div class="row items-center q-gutter-sm q-mt-xs">
                                 <q-btn type="submit" dense unelevated no-caps color="primary" icon="sym_o_edit_note" :label="t('Log')"></q-btn>
@@ -303,7 +303,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <!-- edit a note in place: its author only (Mantle's update#RecordNote checks it) -->
                         <chatter-done v-if="editingEntry === entry.key" :key="'editEntry' + formKeys.editEntry" :done="afterEditEntry" class="q-mt-xs">
                             <m-form :action="action('editEntry')" :fields-initial="editEntryFields" v-slot="formProps">
-                                <m-rich-text v-model="formProps.fields.body" name="body" light rows="2" autofocus :placeholder="t('The note… @ to mention, # for a record')"
+                                <m-rich-text v-model="formProps.fields.body" name="body" light rows="2" autofocus :label="t('Edit note')" :placeholder="t('The note… @ to mention, # for a record')"
                                         :mention-url="url('searchUsers')" :record-url="url('searchRecords')"></m-rich-text>
                                 <div class="row items-center q-gutter-sm q-mt-xs">
                                     <q-btn type="submit" dense unelevated no-caps color="primary" icon="sym_o_check" :label="t('Save')"></q-btn>
@@ -324,7 +324,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <!-- reply in place -->
                         <chatter-done v-if="replyTo === entry.key" :key="'reply' + formKeys.reply" :done="afterReply" class="q-mt-xs">
                             <m-form :action="action('reply')" :fields-initial="replyFields" v-slot="formProps">
-                                <m-rich-text v-model="formProps.fields.body" name="body" light rows="2" autofocus :placeholder="t('Reply… @ to mention, # for a record')"
+                                <m-rich-text v-model="formProps.fields.body" name="body" light rows="2" autofocus :label="t('Reply')" :placeholder="t('Reply… @ to mention, # for a record')"
                                         :mention-url="url('searchUsers')" :record-url="url('searchRecords')"></m-rich-text>
                                 <div class="row q-gutter-sm q-mt-xs">
                                     <q-btn type="submit" dense unelevated no-caps color="primary" icon="sym_o_reply" :label="t('Reply')"></q-btn>
