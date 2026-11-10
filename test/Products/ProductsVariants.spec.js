@@ -305,14 +305,18 @@ feature("the Standard builder fallback reaches the XML twin with encoded product
             const productId = 'BOSS_PRD_VIRT&<review>"'
             const rendered = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml")
                 .renderMode("html").render("Products/VariantBuilder", {productId}, null)
-            return {rendered, productId}
+            const href = (rendered.output.match(/href="([^"]*VariantBuilderTui\?[^"]*)"/) || [])[1] || "",
+                encodedId = (href.replaceAll("&amp;", "&").match(/[?&]productId=([^&]*)/) || [])[1] || ""
+            return {rendered, productId, href, encodedId}
         })
     },
-    then({rendered, productId}) {
+    then({rendered, productId, href, encodedId}) {
         rendered.status == 200
         rendered.errorMessages.length == 0
         rendered.output.includes("Open variant setup and combination list")
-        rendered.output.includes("VariantBuilderTui?productId=" + encodeURIComponent(productId))
+        href.split("?")[0].endsWith("/Products/VariantBuilderTui")
+        encodedId == encodeURIComponent(productId)
+        decodeURIComponent(encodedId) == productId
         !rendered.output.includes(productId)
     }
 })
@@ -338,5 +342,35 @@ feature("the terminal setup shows its resolved asset type and only nonvirtual ch
         picker.value == "PtAsset"
         picker.options.some(option => option.value === "PtAsset")
         picker.options.every(option => option.value !== "PtVirtual")
+    }
+})
+
+feature("variant JSON transitions report refused requests and preserve a valid generation counterpart", {
+    when() {
+        as("john.doe", () => source("B4_API_ERRORS"))
+        return as("catalog.edit", () => {
+            const preview = call(V + "preview#VariantProducts", {productId: "B4_API_ERRORS"}),
+                parameters = {productId: "B4_API_ERRORS", previewRevision: preview.previewRevision},
+                screens = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml")
+                    .header("accept", "application/json")
+            const refused = screens.render("Products/VariantBuilder/generate",
+                {productId: parameters.productId,
+                    selectedFeatureSetsJson: JSON.stringify([preview.rows[0].productFeatureIds])}, "post")
+            ec.message.clearErrors()
+            const valid = screens.render("Products/VariantBuilder/generate", Object.assign({}, parameters, {
+                selectedFeatureSetsJson: JSON.stringify([preview.rows[0].productFeatureIds])
+            }), "post")
+            ec.message.clearErrors()
+            const missing = screens.render("Products/VariantBuilder/batch", {operationKey: "B4_API_MISSING"}, "get")
+            return {refused, valid, missing}
+        })
+    },
+    then({refused, valid, missing}) {
+        refused.status >= 400
+        JSON.parse(refused.output).errors.includes("Preview the selection before generating")
+        valid.status == 200
+        JSON.parse(valid.output).createdCount == 1
+        missing.status >= 400
+        JSON.parse(missing.output).errors.includes("Variant operation is not available")
     }
 })
