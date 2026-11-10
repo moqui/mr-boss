@@ -10,7 +10,8 @@ spec({
 })
 
 function variantPage() {
-    page.setContent(`<!doctype html><html><head><link rel="stylesheet" href="/libs/quasar/quasar.prod.css"></head>
+    page.setContent(`<!doctype html><html><head><link rel="stylesheet" href="/libs/quasar/quasar.prod.css">
+        <link rel="stylesheet" href="/css/WebrootVue.qvt.css"></head>
         <body><div id="app"></div><script src="/libs/vue/vue.global.prod.js"></script>
         <script src="/libs/quasar/quasar.umd.prod.js"></script><script src="/js/MoquiLib.js"></script>
         <script src="/js/WebrootVue.qvt.js"></script><script>
@@ -153,5 +154,43 @@ feature("leaving the component invalidates callbacks instead of refreshing a dif
         })
         assert.equal(page.evaluate(() => calls.filter(call => call.name === "preview").length), 1)
         assert.equal(page.evaluate(() => departed.summary), "")
+    }
+})
+
+feature("long complete feature keys stay within the phone-width combination list", {
+    expect() {
+        page.setViewport(390, 844)
+        readyPreview()
+        page.evaluate(async () => {
+            vm.$refs.screen.rows[0].featureKey = JSON.stringify([
+                "REVIEW_COLOR_WITH_A_LONG_IDENTIFIER",
+                "REVIEW_SIZE_WITH_A_LONG_IDENTIFIER",
+                "REVIEW_FABRIC_WITH_A_LONG_IDENTIFIER"
+            ])
+            await Vue.nextTick()
+            return true
+        })
+        assert.equal(page.locator("[data-variant-list]").count(), 1)
+        const geometry = page.evaluate(() => ({
+            client: document.documentElement.clientWidth,
+            scroll: document.documentElement.scrollWidth,
+            key: Array.from(document.querySelectorAll('[data-variant-list] .text-mono')).map(node => ({
+                client: node.clientWidth, scroll: node.scrollWidth, wrap: getComputedStyle(node).overflowWrap
+            }))
+        }))
+        assert.ok(geometry.key.length > 0 && geometry.key.every(key => key.scroll <= key.client), JSON.stringify(geometry))
+    }
+})
+
+feature("destination parameters cannot start requests while the departing variant component is still mounted", {
+    expect() {
+        readyPreview()
+        page.evaluate(async () => {
+            vm.currentPathList = ["Products", "Products", "Product360"]
+            vm.currentParameters = {productId: "CREATED_VARIANT"}
+            await settle()
+            return true
+        })
+        assert.equal(page.evaluate(() => calls.filter(call => call.name === "preview").length), 1)
     }
 })

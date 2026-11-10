@@ -1,4 +1,4 @@
-<template><div class="q-pa-sm">
+<template><div class="q-pa-sm m-wrap-anywhere">
     <m-container-box title="Build variants">
         <p>Preview the selectable features, choose complete combinations, then generate their SKUs. Existing combinations keep their product and overrides.</p>
         <div class="row q-col-gutter-sm">
@@ -57,13 +57,13 @@
 </div></template>
 <script>
 module.exports = {
-    data(){return {form:{productId:'',productTypeEnumId:'PtAsset',groups:[],copyFields:null,copyCategoryMembers:'N'},sourceOptions:[],groupOptions:[],copyFieldOptions:[],variantTypes:[{value:'PtAsset',label:'Asset'}],categoryCopyAllowed:false,filters:{},axes:[],axisX:'',axisY:'',rows:[],selected:[],revision:'',totalCount:0,pageIndex:0,pageSize:50,batchLimit:1000,busy:false,error:'',listView:false,results:[],summary:'',operationKey:'',pendingCount:0,operationTotal:0,resultPage:0,requestSeq:0,disposed:false}},
+    data(){return {form:{productId:'',productTypeEnumId:'PtAsset',groups:[],copyFields:null,copyCategoryMembers:'N'},sourceOptions:[],groupOptions:[],copyFieldOptions:[],variantTypes:[{value:'PtAsset',label:'Asset'}],categoryCopyAllowed:false,filters:{},axes:[],axisX:'',axisY:'',rows:[],selected:[],revision:'',totalCount:0,pageIndex:0,pageSize:50,batchLimit:1000,busy:false,error:'',listView:false,results:[],summary:'',operationKey:'',pendingCount:0,operationTotal:0,resultPage:0,requestSeq:0,disposed:false,requestPath:null}},
     computed:{screenPath(){return this.$root.basePath+'/'+this.$root.currentPathList.join('/')},phone(){return this.$q.screen.lt.sm},axisChoices(){return this.axes.map(a=>({value:a.enumId,label:a.description}))},extraAxes(){return this.axes.filter(a=>a.enumId!==this.axisX&&a.enumId!==this.axisY)},existingOnPage(){return this.rows.filter(r=>r.existingProductId).length}},
     methods:{
-        async request(name,params,post,path){const r=await moqui.request((path||this.screenPath)+'/'+name,{method:post?'POST':'GET',params});const out=r.json||{};if(out.errors)throw new Error(typeof out.errors==='string'?out.errors:JSON.stringify(out.errors));return out},
+        async request(name,params,post,path){const target=path||this.requestPath;if(this.disposed||target!==this.screenPath)throw new Error('Variant screen changed');const r=await moqui.request(target+'/'+name,{method:post?'POST':'GET',params});const out=r.json||{};if(out.errors)throw new Error(typeof out.errors==='string'?out.errors:JSON.stringify(out.errors));return out},
         parameters(){const p={productId:this.form.productId,productTypeEnumId:this.form.productTypeEnumId,productFeatureGroupIds:JSON.stringify(this.form.groups||[]),copyCategoryMembers:this.form.copyCategoryMembers==='Y',filterFeatureIdsJson:JSON.stringify(Object.values(this.filters).filter(Boolean))};if(this.form.copyFields!==null)p.copyFieldsJson=JSON.stringify(this.form.copyFields);return p},
         // Every continuation, including failure and cleanup, belongs to the source and request that started it.
-        begin(){const owner={seq:++this.requestSeq,path:this.screenPath,productId:this.form.productId};this.busy=true;this.error='';return owner},
+        begin(){const owner={seq:++this.requestSeq,path:this.requestPath,productId:this.form.productId};this.busy=true;this.error='';return owner},
         current(owner){return !this.disposed&&owner.seq===this.requestSeq&&owner.path===this.screenPath&&owner.productId===this.form.productId},
         cancelRequests(){this.requestSeq++;this.busy=false;this.error=''},
         clearResults(){this.results=[];this.summary='';this.pendingCount=0;this.operationTotal=0;this.resultPage=0},
@@ -71,6 +71,7 @@ module.exports = {
         invalidate(){this.cancelRequests();this.revision='';this.selected=[]},
         sourceChanged(){this.invalidate();this.clearResults();this.operationKey='';this.rows=[];this.totalCount=0;this.sourceOptions=[];this.axes=[];this.groupOptions=[];this.copyFieldOptions=[];this.form.copyFields=null;this.form.groups=[];this.form.copyCategoryMembers='N';this.filters={};this.axisX='';this.axisY=''},
         async load(page,keep){
+            if(this.disposed||this.requestPath!==this.screenPath)return false;
             const owner=this.begin(),old=this.revision,params=Object.assign(this.parameters(),{pageIndex:page,pageSize:this.pageSize});
             try{
                 const out=await this.request('preview',params,false,owner.path);if(!this.current(owner))return false;
@@ -118,7 +119,7 @@ module.exports = {
         async retry(row){if(await this.load(this.pageIndex,true)){this.selected=[row.featureKey];await this.generate()}},
         openTwin(){this.$root.setUrl(this.$root.linkBasePath+'/'+this.$root.currentPathList.slice(0,-1).concat('VariantBuilderTui').join('/')+'?productId='+encodeURIComponent(this.form.productId||''))},
         openProduct(id){this.$root.setUrl(this.$root.linkBasePath+'/'+this.$root.currentPathList.slice(0,-1).concat('Product360').join('/')+'?productId='+encodeURIComponent(id))},
-        fromParameters(){const id=this.$root.currentParameters?.productId||'';if(id!==this.form.productId){this.sourceChanged();this.form.productId=id;if(id)this.load(0)}}
-    },watch:{'$root.currentParameters':{deep:true,handler(){this.fromParameters()}}},mounted(){this.fromParameters()},beforeUnmount(){this.disposed=true;this.cancelRequests()}
+        fromParameters(){if(this.disposed||this.requestPath!==this.screenPath)return;const id=this.$root.currentParameters?.productId||'';if(id!==this.form.productId){this.sourceChanged();this.form.productId=id;if(id)this.load(0)}}
+    },watch:{'$root.currentParameters':{deep:true,handler(){this.fromParameters()}}},mounted(){this.requestPath=this.screenPath;this.fromParameters()},beforeUnmount(){this.disposed=true;this.cancelRequests()}
 };
 </script>
