@@ -490,6 +490,52 @@ feature(
     }
 )
 
+// P18 (design-admin §6 Devices; crosscut CX-DEVICE): a shared device is registered by a holder of ADMIN_ACCESS_MANAGE, for a
+// display account of an organization they administer; a display account takes no privileged group, and nothing signs in as it.
+// The screens are AdminDevices', the credential the framework's DeviceCredential.
+feature("a shared device is registered by an access administrator, only for a display account of their organizations", {
+    when() {
+        const problems = []
+        const S = "mantle.party.IdentityServices."
+        const display = (displayName, organizationPartyId, bundleGroupIdList = ["BOSS_INSIGHTS_READ"]) =>
+            system(() => invoke(S + "create#DisplayAccount", {displayName, organizationPartyId, bundleGroupIdList}))
+        const retail = display("Access spec retail wall", ids.organizationId).userId
+        const services = display("Access spec services wall", ids.otherOrganizationId).userId
+        const device = displayUserId => ({
+            deviceName: "Access spec wall",
+            routeGroupId: "INSIGHTS_PLAYLISTS",
+            parameterValue: "SpecPlaylist",
+            displayUserId,
+            issueCode: false
+        })
+        const denied = asUser(users.identity, () => refusal(S + "register#SharedDevice", device(retail)))
+        if (!denied.includes("ADMIN_ACCESS_MANAGE")) problems.push(`the identity operator registers a device: ${denied || "accepted"}`)
+        const foreign = asUser(users.access, () => invoke(S + "register#SharedDevice", device(services)))
+        if (foreign.applied !== false || foreign.reasonCode !== "DISPLAY_ACCOUNT_UNAVAILABLE")
+            problems.push(`the access administrator registers for Services' display: ${JSON.stringify(foreign)}`)
+        const own = asUser(users.access, () => invoke(S + "register#SharedDevice", device(retail)))
+        if (own.applied !== true) problems.push(`the access administrator is refused Retail's display: ${own.reason}`)
+        // an instance administrator, who could assign it to a person, gives no display account a privileged group
+        let privileged
+        try {
+            privileged = display("Access spec root wall", ids.organizationId, [ids.accessGroupId])
+        } catch (error) {
+            privileged = {applied: false}
+        }
+        ec.message.clearErrors()
+        const made = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", "display.access.spec.root.wall").count())
+        if (privileged.applied !== false || made != 0)
+            problems.push(`a display account takes a privileged group: ${JSON.stringify(privileged)}`)
+        const loginAs = asUser(users.system, () => refusal(context + "check#Record", {recordType: "user", recordId: retail, capability: "identityManage", loginAs: true}))
+        if (!loginAs.includes("display account")) problems.push(`Login as a display account: ${loginAs || "accepted"}`)
+        system(() => ec.entity.find("moqui.security.DeviceCredential").condition("deviceName", "Access spec wall").deleteAll())
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
 // P2 (impl-admin F46; design §7, §13): BOSS_USERS' non-inheritable ALLOW on SettingsHome alone. A warehouse manager in no Admin
 // group opens the settings index (its one render, html) with Warehouse's entry, gets the context of the index alone, and is
 // refused the root, Home, Health, the Settings area's other paths and every other Admin service; the grant inherits to nothing

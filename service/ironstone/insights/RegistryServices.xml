@@ -31,6 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="purpose"/>
             <parameter name="text"/>
             <parameter name="pinnedOnly" type="Boolean"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="reports" type="List"/>
@@ -38,14 +40,18 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="purposeOptions" type="List"/>
             <parameter name="unavailableOwners" type="List"/>
             <parameter name="pinRevision" type="Integer"/>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findReports', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findReports', context))"/>
             <set field="reports" from="found.reports"/>
             <set field="ownerOptions" from="found.ownerOptions"/>
             <set field="purposeOptions" from="found.purposeOptions"/>
             <set field="unavailableOwners" from="found.unavailableOwners"/>
             <set field="pinRevision" from="found.pinRevision"/>
+            <set field="refusalCode" from="found.refusalCode || null"/>
+            <set field="refusal" from="found.refusal || null"/>
         </actions>
     </service>
     <service verb="store" noun="ReportPins" allow-remote="false">
@@ -76,6 +82,8 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="entryId"/>
             <parameter name="organizationPartyId"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="entryId"/>
@@ -83,14 +91,18 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="url"/>
             <parameter name="fields" type="List"/>
             <parameter name="ownerOptions" type="List"/>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('reportOptions', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('reportOptions', context))"/>
             <set field="entryId" from="found.entryId"/>
             <set field="title" from="found.title"/>
             <set field="url" from="found.url"/>
             <set field="fields" from="found.fields"/>
             <set field="ownerOptions" from="found.ownerOptions"/>
+            <set field="refusalCode" from="found.refusalCode || null"/>
+            <set field="refusal" from="found.refusal || null"/>
         </actions>
     </service>
     <service verb="get" noun="ReportLink" allow-remote="false">
@@ -235,15 +247,47 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="kind"/>
             <parameter name="owner"/>
             <parameter name="text"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="savedReports" type="List"/>
             <parameter name="kindOptions" type="List"/>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findSavedReports', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findSavedReports', context))"/>
             <set field="savedReports" from="found.savedReports"/>
             <set field="kindOptions" from="found.kindOptions"/>
+            <set field="refusalCode" from="found.refusalCode || null"/>
+            <set field="refusal" from="found.refusal || null"/>
+        </actions>
+    </service>
+    <service verb="migrate" noun="LegacySavedFinds" allow-remote="false">
+        <description>The legacy mapping of design §13.2 (impl-insights P12), an instance administrator's (ADMIN_REQUIRED
+            otherwise) deliberate upgrade step: the saved finds (FormListFind) of Insights' lists and the schedules
+            (ScreenScheduled) of its screens, each by ID, owners, sharing and list or route, with what the mapping does: moved
+            (its list or screen was replaced by a registered one: DatasetDetail/FieldList by DatasetFields, the copied scheduled
+            finds' list by Scheduled reports' Schedules), kept, or invalid (its list is gone and nothing replaces it; SavedReports
+            shows it as not valid). Without apply nothing is written; with apply the moved ones are rewritten, and one that cannot be
+            written is answered failed and logged while the others go on. A find keeps its
+            owners, groups and fields; a field the new list lacks is named (unknownFields). No alias route is added.</description>
+        <in-parameters>
+            <parameter name="apply" type="Boolean" default="false"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="finds" type="List"><description>formListFindId, description, ownerUserIds, sharedWithGroupIds,
+                formLocation, route, action (moved, kept, invalid, failed), newFormLocation, unknownFields</description></parameter>
+            <parameter name="schedules" type="List"><description>screenScheduledId, ownerUserId, sharedWithGroupId, screenPath,
+                formListFindId, action, newScreenPath</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('migrateLegacySavedFinds', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="finds" from="found.finds"/>
+            <set field="schedules" from="found.schedules"/>
         </actions>
     </service>
     <service verb="copy" noun="SavedReport" allow-remote="false">
@@ -281,6 +325,8 @@ along with this software (see the LICENSE.md file). If not, see
             organization not theirs (ORGANIZATION_UNAVAILABLE).</description>
         <in-parameters>
             <parameter name="organizationPartyId"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="organizationPartyId"/>
@@ -299,9 +345,11 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="unavailableOwners" type="List"/>
             <parameter name="firstUse" type="Boolean"/>
             <parameter name="revision" type="Integer"/>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('getHome', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('getHome', context))"/>
             <set field="organizationPartyId" from="found.organizationPartyId"/>
             <set field="organizations" from="found.organizations"/>
             <set field="allOrganizations" from="found.allOrganizations"/>
@@ -318,6 +366,8 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="unavailableOwners" from="found.unavailableOwners"/>
             <set field="firstUse" from="found.firstUse"/>
             <set field="revision" from="found.revision"/>
+            <set field="refusalCode" from="found.refusalCode || null"/>
+            <set field="refusal" from="found.refusal || null"/>
         </actions>
     </service>
     <service verb="store" noun="HomeLayout" allow-remote="false">
@@ -351,19 +401,25 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="organizationPartyId"/>
             <parameter name="ownerApp"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="groups" type="List"/>
             <parameter name="organizationPartyId"/>
             <parameter name="asOf" type="Long"/>
             <parameter name="asOfText"/>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('attention', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('attention', context))"/>
             <set field="groups" from="found.groups"/>
             <set field="organizationPartyId" from="found.organizationPartyId"/>
             <set field="asOf" from="found.asOf"/>
             <set field="asOfText" from="found.asOfText"/>
+            <set field="refusalCode" from="found.refusalCode || null"/>
+            <set field="refusal" from="found.refusal || null"/>
         </actions>
     </service>
     <service verb="get" noun="OperationFailures" allow-remote="false">

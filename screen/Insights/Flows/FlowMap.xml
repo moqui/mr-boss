@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     print. StepDetail explains the selected step: its owner, what its worklist and count mean, its measure and report, and
     its procedure in Knowledge (ProcessStory); StepList is the same steps as one ordered list. A link or count the viewer
     may not read is absent, with nothing named. A flow editor may copy the map for an organization (CopyMap) and edit
-    their own. The map's text is shown as text only. -->
+    their own. The map's text is shown as text only. Print (P12, design §14 Business map) is this page in html-print: the same
+    version, lanes and ordered list. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Flow map" default-menu-index="1">
 
@@ -79,6 +80,11 @@ along with this software (see the LICENSE.md file). If not, see
                 counts:(flow?.countsShown === false ? 'N' : null)}"/>
         <set field="copyValues" from="{sourceDefinitionId:flowDoc?.definitionId, sourceVersion:flowDoc?.version,
                 copyTitle:flowDoc?.title, copyOrganizationPartyId:(flow?.organizationPartyId || null)}"/>
+        <!-- P12 (design §14 Business map): the same map version printed (html-print, to PDF where the server has one), with its
+            lanes in order and the ordered list of its steps, the links and counts the viewer reads -->
+        <set field="printUrl" from="'/apps/Insights/Flows/FlowMap?' + Object.entries({renderMode:'html-print', definitionId:flowDoc?.definitionId,
+                organizationPartyId:(flow?.organizationPartyId || null), counts:(flow?.countsShown === false ? 'N' : null),
+                stepId:(sel?.stepId || null)}).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
         <set field="factsText" from="flowDoc ? [flowDoc.kindText, flowDoc.organizationName, 'version ' + flowDoc.version,
                 flowDoc.sourceText, flowDoc.template ? '' : flowDoc.sharing].filter(Boolean).join(' · ') : ''"/>
     </actions>
@@ -88,6 +94,8 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col-auto row q-gutter-sm">
                 <link url="${sel?.url}" url-type="plain" text="Open ${sel?.targetTitle}" link-type="anchor-button" btn-type="primary"
                         icon="sym_o_open_in_new" condition="sel?.url"/>
+                <link url="${printUrl}" url-type="plain" text="Print" link-type="anchor-button" icon="sym_o_print" target-window="_blank"
+                        condition="flowDoc"/>
                 <link url="../FlowMapEditor" text="Edit map" link-type="anchor-button" icon="sym_o_edit" condition="flowDoc?.canEdit"
                         parameter-map="{definitionId:flowDoc?.definitionId}"/>
                 <container-dialog id="CopyMap" button-text="Copy for an organization" condition="flowDoc?.canCopy">

@@ -168,7 +168,10 @@ feature("a reader of every app sees the step's count, Commerce's own, and opens 
     when() {
         const map = asUser(users.system, () => invoke(F + "get#Map", {definitionId: mapId}))
         const approve = stepOf(map, "approve")
-        const own = asUser(users.system, () => invoke("mantle.order.StoreOperationsServices.get#StoreWorkSummary", {}))
+        // Commerce's own count, as Commerce Home reads it for him: the service is Commerce Home's, granted through its screen
+        // and not to a direct call, and scopes itself by the user's stores (COMMERCE_VIEW and the store scope), so it is
+        // called as him with the artifact check off
+        const own = asUser(users.system, () => system(() => invoke("mantle.order.StoreOperationsServices.get#StoreWorkSummary", {})))
         return {
             approve,
             expected: Number(own.counts.toApprove),
@@ -210,10 +213,13 @@ feature(
                 cases,
                 approve,
                 opened: open(users.serviceManager, cases.url),
+                // its own level and below, as the shell loads it (lastStandalone -4: from the webroot, past apps, Insights and
+                // Flows); its default subscreen, Knowledge, is a .qvue screen with no qvt, which the shell loads apart in qvue
                 story: screen(users.serviceManager, "Insights/Flows/ProcessStory", {
                     wikiPageId: pageId,
                     definitionId: mapId,
-                    stepId: "approve"
+                    stepId: "approve",
+                    lastStandalone: "-4"
                 }),
                 page: screen(users.serviceManager, "Insights/Flows/ProcessStory/Knowledge/page", {wikiPageId: pageId}, "get"),
                 readerLinks: Array.from(reader.steps).filter(step => step.url || step.countText).length,

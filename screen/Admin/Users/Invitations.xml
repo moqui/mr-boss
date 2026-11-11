@@ -72,11 +72,11 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="acceptUrl" from="revealed?.applied ? revealed.acceptUrl : null"/>
         <set field="revealRefused" from="revealInvitationId &amp;&amp; !acceptUrl ? (revealed?.reason || 'The link is not available') : null"/>
-        <service-call name="mantle.party.IdentityServices.find#Invitations" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{text:(text || null), organizationPartyId:(organizationPartyId || null), state:(state || null),
-                    pageIndex:(pageIndex || 0), pageSize:50}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#Invitations', {text:(text || null), organizationPartyId:(organizationPartyId || null), state:(state || null),
+                    pageIndex:(pageIndex || 0), pageSize:50}, 'Invitations are not available to you.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <script><![CDATA[
             const when = (value) => value ? ec.l10n.format(new Date(Number(value)), 'yyyy-MM-dd HH:mm') : ''
             invitations = Array.from(found?.invitationList || []).map(row => Object.assign({}, row, {

@@ -40,10 +40,12 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.insights.DrillServices.get#Drill" out-map="drillOut" transaction="force-new" ignore-error="true"
                 in-map="{definitionId:definitionId, panelId:panelId, queryReference:queryReference,
                     organizationPartyId:organizationPartyId, from:from, thru:thru, variablesJson:variablesJson,
-                    bucketsJson:bucketsJson, breakdownDimension:breakdownDimension, pageIndex:(pageIndex ? Number(pageIndex) : 0)}"/>
-        <set field="drillError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    bucketsJson:bucketsJson, breakdownDimension:breakdownDimension, pageIndex:(pageIndex ? Number(pageIndex) : 0),
+                    answerRefusal:true}"/>
+        <!-- a refusal is the service's answer (impl-admin F129: ignore-error clears the message) -->
+        <set field="drillError" from="drillOut?.refusal || null"/>
         <script>ec.message.clearErrors()</script>
-        <set field="drill" from="drillOut?.drill || {available:false, reason:(drillError || 'This value is not available'),
+        <set field="drill" from="(drillOut?.drill &amp;&amp; !drillOut.refusalCode ? drillOut.drill : null) || {available:false, reason:(drillError || 'This value is not available'),
                 selected:[], dimensions:[], breakdown:[], panelBuckets:[], rows:[], columns:[], carry:{definitionId:definitionId}}"/>
         <set field="meaning" from="drill.meaning"/>
         <set field="selectedText" from="Array.from(drill.selected || []).map(item =&gt; (item.sourceField || item.field) + ': ' + item.label).join(' › ')"/>

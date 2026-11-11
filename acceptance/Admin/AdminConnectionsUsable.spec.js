@@ -220,13 +220,15 @@ feature(
             })
             out.permitted = binding()
             out.after = offered()
-            // the store's and the finance users choose it and change no credential
+            // the store's and the finance users choose it and change no credential (the revision read as the administrator:
+            // get#Connection checks ADMIN_CONNECTION_VIEW itself and refuses these users, even with authorization off)
+            const revision = gateway().revision
             out.storeUser = asUser("commerce.services", () =>
                 refusal(C + "store#Connection", {
                     adapterKey: "paymentGateway",
                     connectionKey: gatewayId,
                     values: {password: "theirs"},
-                    expectedRevision: gateway().revision
+                    expectedRevision: revision
                 })
             )
             out.storeRead = asUser("commerce.services", () =>

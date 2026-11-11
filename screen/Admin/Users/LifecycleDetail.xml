@@ -56,10 +56,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="mantle.party.IdentityServices.get#Lifecycle" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{operationId:operationId}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Lifecycle', {operationId:operationId}, 'Lifecycle operation ' + operationId + ' is not available.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <set field="operation" from="found?.operation || null"/>
         <script><![CDATA[
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''

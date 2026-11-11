@@ -50,11 +50,11 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{organizationPartyId:(organizationPartyId || null), healthGroupEnumId:(healthGroupEnumId || null),
-                    state:(state || null), ownerApp:(ownerApp || null), providerKey:(providerKey || null)}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.get#Readiness', {organizationPartyId:(organizationPartyId || null), healthGroupEnumId:(healthGroupEnumId || null),
+                    state:(state || null), ownerApp:(ownerApp || null), providerKey:(providerKey || null)}, 'The checks are not available to you.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <set field="checks" from="found?.checks || []"/>
         <set field="failedText" from="(found?.failedProviders || []).join(', ')"/>
         <set field="checkedText" from="found?.checkedText || ''"/>
@@ -67,6 +67,10 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col">
                 <label text="Health" type="h5"/>
                 <label text="Checked ${checkedText}" type="p" style="text-caption m-muted q-mb-none" condition="checkedText"/>
+            </container>
+            <container style="col-auto">
+                <!-- P19: the readiness and support summary (design §16): print and redacted JSON -->
+                <link url="../SupportSummary" text="Support summary" icon="sym_o_summarize" link-type="anchor-button"/>
             </container>
         </container>
         <form-single name="ReadinessFind" transition="." map="findValues">

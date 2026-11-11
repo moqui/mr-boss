@@ -661,12 +661,111 @@ function definitionRoute(definition, capabilities) {
             : {unavailable: "Open it on a dashboard"}
     return {unavailable: "Not opened in Insights"}
 }
+// A saved find's list, by its form location (component://mr-boss/screen/<path>.xml.form_list$<form>): the screen path and the
+// form, and whether that list still exists (P12, design §13.2: a find saved on a list that was replaced is shown invalid, never
+// sent to another screen by a hidden alias).
+function findList(formLocation) {
+    const match = /^component:\/\/mr-boss\/screen\/(.+)\.xml\.form_list\$(.*)$/.exec(String(formLocation || ""))
+    if (!match) return null
+    // a dynamic form's find is kept under its name and a "#" extension (the framework's saved_find_location): the form is the name
+    const formName = match[2].replace(/#.*$/, "")
+    const text = ec.resource.getLocationReference("component://mr-boss/screen/" + match[1] + ".xml").getText()
+    const exists = text != null && (!formName || String(text).includes('form-list name="' + formName + '"'))
+    return {path: match[1], formName, exists, text: exists ? String(text) : ""}
+}
 // A saved find's screen: an mr-boss form list's screen path when it opens to the viewer, else why not.
 function findRoute(row, grants) {
-    const match = /^component:\/\/mr-boss\/screen\/(.+)\.xml\.form_list\$/.exec(String(row.formLocation || ""))
-    if (!match) return {unavailable: "The screen it was saved on is not an IronStone screen"}
-    if (!admin.destinationOpens(grants, match[1])) return {unavailable: "You cannot open the screen it was saved on"}
-    return {url: "/qapps/" + match[1] + "?formListFindId=" + encodeURIComponent(row.formListFindId)}
+    const found = findList(row.formLocation)
+    if (!found) return {unavailable: "The screen it was saved on is not an IronStone screen"}
+    if (!found.exists) return {unavailable: "Not valid: the list it was saved on was replaced, so it no longer opens", invalid: true}
+    if (!admin.destinationOpens(grants, found.path)) return {unavailable: "You cannot open the screen it was saved on"}
+    return {url: "/qapps/" + found.path + "?formListFindId=" + encodeURIComponent(row.formListFindId)}
+}
+
+// ===== legacy mapping (design §13.2; P12) =====
+// The copied report screens' lists that moved when Insights replaced them (impl-insights F20; P3's dataset fields, P7's
+// scheduled finds): a saved find on the left is rewritten to the right by migrate#LegacySavedFinds, and a schedule of the old
+// screen path to the new one. A find on any other list that is gone (the copied builder's raw document list, the legacy report
+// picker) is left as it is: SavedReports shows it as not valid.
+const legacyScreen = "component://mr-boss/screen/Insights/"
+const legacyLists = {
+    "ReportBuilder/DatasetDetail/FieldList.xml.form_list$FieldList": "ReportBuilder/DatasetFields.xml.form_list$FieldList",
+    "ReportBuilder/DatasetDetail/FieldList.xml.form_list$ConditionList": "ReportBuilder/DatasetFields.xml.form_list$ConditionList",
+    "ScheduledReports.xml.form_list$ScreenScheduledList": "ScheduledReports/Schedules.xml.form_list$ScreenScheduledList"
+}
+const legacyPaths = {
+    "Insights/ReportBuilder/DatasetDetail/FieldList": "Insights/ReportBuilder/DatasetFields",
+    "Insights/ScheduledReports": "Insights/ScheduledReports/Schedules"
+}
+// migrate#LegacySavedFinds: the saved finds of Insights' lists and the schedules of its screens, each by ID, owners, list or
+// route and sharing, with what the migration does to it (moved, kept, invalid); with apply, the moved ones are rewritten. An
+// instance administrator's (ADMIN), a deliberate step of an upgrade, never run on its own. A find keeps its owners, groups,
+// fields and description; the fields the new list does not have are named, not dropped.
+// One row's move: a row that cannot be written is named (action failed) and logged, and the others go on (failure tolerance).
+function moveLegacy(out, write, name) {
+    try {
+        write()
+    } catch (error) {
+        ec.logger.error("Legacy mapping: the " + name + " was not moved: " + (error?.message ?? error))
+        ec.message.clearErrors()
+        out.action = "failed"
+    }
+}
+function migrateLegacySavedFinds(p) {
+    if (!lib.access.systemAdmin()) denied("ADMIN_REQUIRED", "The legacy mapping is an instance administrator's upgrade step")
+    const apply = p.apply === true || p.apply === "true"
+    const finds = []
+    for (const row of Array.from(find("moqui.screen.form.FormListFind").condition("formLocation", "like", legacyScreen + "%").list())) {
+        const location = String(row.formLocation)
+        const target = legacyLists[location.substring(legacyScreen.length)]
+        const current = findList(location)
+        const owners = rows("moqui.screen.form.FormListFindUser", {formListFindId: row.formListFindId}).map(entry => entry.userId)
+        const groups = rows("moqui.screen.form.FormListFindUserGroup", {formListFindId: row.formListFindId}).map(entry => entry.userGroupId)
+        const out = {
+            formListFindId: row.formListFindId,
+            description: row.description || "",
+            ownerUserIds: owners,
+            sharedWithGroupIds: groups,
+            formLocation: location,
+            route: current ? current.path : null,
+            action: current?.exists ? "kept" : "invalid",
+            unknownFields: []
+        }
+        if (target && !current?.exists) {
+            const moved = findList(legacyScreen + target)
+            out.action = "moved"
+            out.newFormLocation = legacyScreen + target
+            out.route = moved.path
+            out.unknownFields = rows("moqui.screen.form.FormListFindField", {formListFindId: row.formListFindId})
+                .map(field => field.fieldName)
+                .filter(name => !moved.text.includes('name="' + name + '"'))
+            if (apply) moveLegacy(out, () => row.set("formLocation", out.newFormLocation).update(), "saved find " + row.formListFindId)
+        }
+        finds.push(out)
+    }
+    const schedules = []
+    for (const row of Array.from(find("moqui.screen.ScreenScheduled").condition("screenPath", "like", "%Insights/%").list())) {
+        const path = String(row.screenPath || "")
+        const at = path.indexOf("Insights/")
+        const prefix = path.substring(0, at)
+        const relative = path.substring(at).replace(/\?.*$/, "")
+        const target = legacyPaths[relative]
+        const exists = ec.resource.getLocationReference("component://mr-boss/screen/" + relative + ".xml").getText() != null
+        const out = {
+            screenScheduledId: row.screenScheduledId,
+            ownerUserId: row.userId || row.reportOwnerId || null,
+            sharedWithGroupId: row.userGroupId || null,
+            screenPath: path,
+            formListFindId: row.formListFindId || null,
+            action: exists && !target ? "kept" : target ? "moved" : "invalid"
+        }
+        if (target) {
+            out.newScreenPath = prefix + target + path.substring(at + relative.length)
+            if (apply) moveLegacy(out, () => row.set("screenPath", out.newScreenPath).update(), "schedule " + row.screenScheduledId)
+        }
+        schedules.push(out)
+    }
+    return {applied: apply, finds, schedules}
 }
 // find#SavedReports: the viewer's saved work by kind, kept apart: the report engine's dashboards, library panels, saved
 // searches and playlists the viewer reads (their own and shared with their groups; shipped definitions are in Dashboards and
@@ -739,6 +838,7 @@ function findSavedReports(p) {
                 version: null,
                 url: route.url || null,
                 unavailable: route.unavailable || "",
+                invalid: route.invalid === true,
                 canCopy: false
             })
         }
@@ -1221,7 +1321,8 @@ const operations = {
     attention,
     countOperationFailures,
     getHome,
-    storeHomeLayout
+    storeHomeLayout,
+    migrateLegacySavedFinds
 }
 ;({
     home,

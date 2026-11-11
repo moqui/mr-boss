@@ -4,9 +4,9 @@
 // - ProtocolsHome, as Ziziwork Retail's integration administrator, shows SMTP reception off (the demo sets no listener port),
 //   calendars, contacts and files as the web listener stands (ready on a running server; "configured" in a command-line run,
 //   which opens no listeners) and a protocol the build leaves out as not in the build, each apart with its reason. On the
-//   demo's package call media is built and off (impl-admin F-P12-4), so the absent ones are local speech to text and
-//   office documents; ServerConfiguration shows SMTP reception's settings read only and runs its configuration check,
-//   and a check of a public address is refused until it is confirmed.
+//   demo's package call media is built and off (impl-admin F-P12-4; on in a test run, as basic-comms' test conf sets its
+//   port), so the absent ones are local speech to text and office documents; ServerConfiguration shows SMTP reception's
+//   settings read only and runs its configuration check, and a check of a public address is refused until it is confirmed.
 // - a mail send that fails (a relay with no address) shows in MailQueue, as the operations operator, with its owner (the
 //   notice's template; the relay's link for the integration administrator, who reads the instance's own mail and is
 //   offered no action), the next step and no subject, body or address; the operator sends it
@@ -111,8 +111,10 @@ feature("ProtocolsHome tells SMTP reception that is off, the web protocols and a
         // the web protocols stand with the web listener: ready on a running server, configured in a run that opened none
         protocol(list, "dav").state == (out.read.serverStarted ? "ready" : "notStarted")
         protocol(list, "wopi").state == "absent" && protocol(list, "speechLocal").state == "absent"
-        // call media: off where the build has it (the demo's), absent where it does not; never ready on the demo
-        protocol(list, "rtc").state == (ec.factory.hasFeature("rtc") ? "disabled" : "absent")
+        // call media: absent where the build has none; where it has it, on in every test run (basic-comms' test/MoquiConf.xml
+        // sets rtc_media_port, for its call specs), so configured and not known to run in this run, which opens no listeners
+        protocol(list, "rtc").state ==
+            (ec.factory.hasFeature("rtc") ? (out.read.serverStarted ? "ready" : "notStarted") : "absent")
         new Set(["smtpIn", "dav", "wopi"].map(key => protocol(list, key).stateText)).size == 3
         opened(out.home)
         out.home.output.includes("ProtocolReadiness") && out.home.output.includes("Mail reception")

@@ -92,6 +92,15 @@ feature("the administrator allows Retail's sources an hour; a cap above the inst
             form(before, {groupRecipientCap: String(before.recipientCeiling + 1), freshnessPolicyId: "InsFpHour"}),
             "post"
         )
+        // the screen's post answers with a redirect and the refusal as its message; the service says why
+        const refused = asUser(users.admin, () =>
+            invoke(
+                C + "store#Settings",
+                Object.assign({organizationPartyId: ids.organizationId, expectedRevision: before.revision}, before.settings, {
+                    groupRecipientCap: String(before.recipientCeiling + 1)
+                })
+            )
+        )
         const afterRefusal = settings()
         const saved = screen(
             users.admin,
@@ -100,13 +109,14 @@ feature("the administrator allows Retail's sources an hour; a cap above the inst
             "post"
         )
         const reader = screen(users.reader, "Settings/AnalyticsSettings", {organizationPartyId: ids.organizationId})
-        return {page, tooMany, afterRefusal, saved, after: settings(), reader}
+        return {page, tooMany, refused, afterRefusal, saved, after: settings(), reader}
     },
-    then({page, tooMany, afterRefusal, saved, after, reader}) {
+    then({page, tooMany, refused, afterRefusal, saved, after, reader}) {
         page.status == 200 && page.errors == ""
         page.output.includes("Analytics defaults") && page.output.includes("Save settings")
         page.output.includes("Source owners") && page.output.includes("Scope and delivery")
-        tooMany.status == 200
+        tooMany.status == 302 && tooMany.errors == ""
+        refused.applied == false && refused.reasonCode == "RECIPIENT_CAP_CEILING"
         afterRefusal.revision == before.revision
         afterRefusal.settings.freshnessPolicyId == before.settings.freshnessPolicyId
         saved.errors == ""
@@ -176,18 +186,14 @@ feature(
             const suiteOrders = Object.assign({definitionId: "insights-suite", panelId: "orders"}, lastMonth)
             const dashboard = screen(users.reader, "Dashboard", Object.assign({definitionId: "insights-suite"}, lastMonth))
             // the panel's saved query, run by the engine as the reader for the same range: what the dashboard draws
-            const saved = system(() =>
-                JSON.parse(
-                    String(
-                        ec.entity.find("moqui.report.Definition").condition("definitionId", "insights-suite-orders").one()
-                            .bodyJson
-                    )
-                )
-            ).queries[0]
+            // (a shipped definition, read from the component's report directory, not a Definition row)
+            const saved = asUser(users.reader, () => invoke(R + "get#Definition", {definitionId: "insights-suite-orders"})).definition.body
+                .queries[0]
             const engine = asUser(users.reader, () => invoke(R + "run#Query", {query: Object.assign({}, saved, lastMonth)}))
             const frame = Array.from(engine.frames || [])[0] || {fields: []}
             const field = name => Array.from(frame.fields || []).find(row => row.name === name)
-            const engineOrders = Array.from(field("currencyUomId")?.values || [])
+            // the frame's fields are named by the aggregations' ids (currency, orders)
+            const engineOrders = Array.from(field("currency")?.values || [])
                 .map((currency, index) => currency + " orders " + field("orders").values[index])
                 .sort()
                 .join("; ")
@@ -215,6 +221,7 @@ feature(
         },
         then({dashboard, engineOrders, answer, services, otherOrganization, typed}) {
             dashboard.status == 200 && dashboard.errors == ""
+            engineOrders != ""
             answer.available === true
             byCurrency(
                 answer.rows.map(row => ({label: row.label, valuesText: row.valuesText.replace(/^.*?(orders \S+).*$/, "$1")}))

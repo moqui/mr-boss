@@ -168,6 +168,14 @@ the A2A server (the Java framework's `plans/A2A-Server.md`) so a remote agent re
   time for a meeting, file an email on a record, make a task from a message. A skill that
   writes yields a `write_ui` confirm; the user clicks.
 
+**Undocked** (mr-moqui `plans/Terminal-Fancy.md` §10.5, built Nov 2026). Undock, a button in the Assist header beside
+Close, moves the conversation (header, panes, thread, cards, composer: the framework's `m-assist-body`) into a floating
+window of the shell (420 by 640 at the right to start), not modal, moved and resized by pointer and keys, kept across
+navigation and reloads. Nothing is mounted again, so a run in progress, a draft and the scroll go on. The window's Dock
+puts it back in the drawer and opens it; its Close puts it back with the drawer shut. The header's Assist button and
+Mod+J show and hide whichever form is current. With Assist floated the drawer no longer pushes the page, so a canvas
+has the page's whole width. A floated Assist stays out of its own reach, as the drawer does. Below 600 px nothing floats.
+
 ### 1.4 The tray panel
 
 One panel, 400 px at the right of the canvas from 600 px and the full width below, with four
@@ -180,6 +188,14 @@ tab is a cached component fetching `/actions`). A tab's counts and lists refresh
 is down. Every item links to its record in the canvas; nothing in the tray opens a second
 panel; a quick action posts, shows its result as a notification and refreshes the tab. "Open in
 Commons" / "Open in Comms" on each tab goes to the full screen.
+
+**Undocked tabs** (mr-moqui `plans/Terminal-Fancy.md` §10.6). Undock, in the tray's strip, makes the current tab a
+floating window (400 by 560) with the tab's label and its count badge; it leaves the strip, and each tab floats on its
+own. The window's Dock puts it back and opens the tray on it; its Close puts it back in the strip and leaves the tray
+as it was. The header's Today, Chat and Notifications buttons show, raise or hide a floated tab's window in place of
+opening the tray. A floated tab refreshes as a docked one does (the `shellCounts` topic and its own), keeps its draft
+and scroll, and stays in Assist's reach; its links still open their record in the page. Esc closes the tray, never a
+window. Below 600 px nothing floats.
 
 ### 1.5 The palette and quick create
 
