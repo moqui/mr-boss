@@ -2717,6 +2717,11 @@ the owner's design.
 | Nov 10, 2026 | The access review names only the members who work for the reviewer's organizations and counts the others | The user's call (Nov 10), P9; as GroupDetail (P3) |
 | Nov 10, 2026 | A row rule is add-only for a delegated administrator: `apply#Grants` binds a registered filter set and refuses a removal (`SCOPE_REMOVAL`), which would widen access; removing one stays Tools' | The user's call (Nov 10), F122; design §5 RowRules |
 | Nov 10, 2026 | Ending a launcher binding that was scoped on purpose stays within the access administrator's delegated authority, as P3 decided: the end removes the binding's own filter sets and a later grant gives the registry's | The user's call (Nov 10), F130 |
+| Nov 10, 2026 | Admin never changes a remote's inbound authentication or inbound secret: a remote or gateway started in Admin receives by login only and takes no provider webhooks until an instance administrator sets its verification in Tools | The user's call (Nov 10), F147 (P11): the inbound route accepts any message type from whoever satisfies the remote's auth |
+| Nov 10, 2026 | A passing test of the new endpoint alone enables a repointed connection, run by the administrator who repointed it; no second person is asked for | The user's call (Nov 10), P11; design §15.3 "Endpoint change" |
+| Nov 10, 2026 | On a production instance a gateway's address must be one of its provider's hosts | The user's call (Nov 10), P11 |
+| Nov 10, 2026 | MailRelays lists every EmailServer no EmailAccount owns, so on the demo `MOQUI_LOCAL` and the apps' sending servers beside SYSTEM | The user's call (Nov 10), F151 (P11); design §9 |
+| Nov 10, 2026 | An organization or purpose record for relays and the other connection kinds waits (§7) | The user's call (Nov 10), F156 (P11) |
 
 ## 5. Open questions
 
