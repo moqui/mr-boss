@@ -114,7 +114,7 @@ Paths are relative to BOSS. Role letters are §1.1; all rows additionally requir
 | DatasetView | Insights/ReportBuilder/DatasetView | report | xml | Preview authorized detail rows | admitted dataset | own §5 | A,D | parity | dataset, filters, range |
 | Reports | Insights/Reports | list | xml | Index every permitted application report | proposed ReportCatalogEntry | own §6 | R | parity | app, report, filters |
 | SavedReports | Insights/SavedReports | list | xml | Find named analyses, saved finds and pins | Definition, FormListFind, pins (UserPreference) | own §6 | R,A | parity | type, owner, selected saved report |
-| ScheduledReports | Insights/ScheduledReports | list | xml | Manage personal and approved group delivery | ScreenScheduled | own §7; framework services | R with schedule right; S | parity | schedule filters |
+| ScheduledReports | Insights/ScheduledReports (the list is its default subscreen, `Schedules`) | list | xml | Manage personal and approved group delivery | ScreenScheduled | own §7; framework services | R with schedule right; S | parity | schedule filters |
 | ScheduledReportDetail | Insights/ScheduledReports/ScheduledReportDetail | detail | xml | Configure recipients, timing and output | ScreenScheduled | own §7 | owner/S | parity | schedule, definition, safe audience summary |
 | ReportDelivery | Insights/ScheduledReports/ReportDelivery | detail | xml | Inspect an occurrence and retry failed recipients | proposed report occurrence/delivery | own §7 | owner/S; recipient own result | new | occurrence, own delivery or safe status |
 | ManagementDigest | Insights/ManagementDigest | editor | xml | Compose a recurring management summary | report Definition | framework composition, §7 | A,S | new | definition, range, selected panels |
@@ -549,6 +549,58 @@ Retry input is `{occurrenceId, deliveryIds, expectedRevision, reason}`; recipien
 
 Period comparison and commentary distinguish facts from authored explanation; an Assist draft is reviewed under the same author permission. A digest does not add per-recipient values into a shared summary, since recipient scopes may overlap. Preferences and unsubscribe/pause use the common delivery policy. **Source:** research §§9,15. **Needs:** INS-02, INS-06, INS-09.
 
+### As built (impl-insights P7, Nov 10, 2026)
+
+- **The framework** (mr-moqui `crates/moqui-report/src/delivery.rs`, docs/tools/Monitoring.md "Report delivery"): the services
+  of §15.2's delivery row are built, with `reconcile#ReportRecipient` and `find#OwnedSchedules` beside them. The scope
+  fingerprint is a hash of what the user reads of the definition and everything it references, the documents of each dataset
+  they may read, each dataset's resolved row filter and, where a dataset's records are restricted, whether they hold them; it
+  is computed in a context of its own signed in as that user. The organization scope is in it through the organization row
+  filter of each dataset, not as a value of its own. A definition over a service source is not comparable (the service decides
+  its scope in its own code), so it is delivered to its owner alone until a service source can declare its scope.
+- **Which schedules.** One saved by `store#Schedule` (`deliveryMode` personal or group), and any report schedule whose
+  definition reads a business dataset, whatever wrote its row (the "direct calls must not bypass the business mode" of §7.3):
+  one made by Tools' `create#Schedule` is checked recipient by recipient at each run. Technical schedules are unchanged.
+- **Records.** `moqui.report.ReportScheduleRecipient`, `ReportOccurrence` (keyed by the schedule and the cron instant, or a
+  Send now) and `ReportRecipientDelivery` (unique by occurrence, recipient and channel; pending, sending, sent, skipped, failed,
+  uncertain, with a safe reason code). No row keeps a report: OwnArtifact is the report rendered again as its recipient
+  (`get#RecipientReport`), released only while their fingerprint is the one the delivery was sent under. Stored private
+  artifacts with retention wait for Admin's retention policy.
+- **The cap** is `recipientCap` on the schedule, 50 from Insights until Settings holds it (P10), held by the engine under
+  Admin's instance preference `report.groupRecipientCeiling`. A group that grows past it is sent to in user order up to the
+  cap, the rest skipped (`over-cap`).
+- **Group delivery** needs the engine's artifact `org.moqui.report.delivery.group`, which setup grants the distributor; the
+  five reading groups hold `INSIGHTS_SCHEDULE` and the engine's own-schedule operations, so every reader schedules for
+  themselves. A distributor proposes Insights readers (holders of `INSIGHTS_VIEW`) and groups they belong to; the check
+  decides. A recipient must read the report itself as well as its data: a private dashboard or digest is refused for
+  anyone else (`not-shared`) until its owner shares it with a group they are in. A named recipient who may not receive refuses the save; a group's member without an address or an active account
+  is skipped at each run instead.
+- **Retry** needs the schedule and the definition unchanged since the occurrence (else send a new occurrence) and renders
+  again: the period is the definition's relative range at the retry, not the occurrence's instant (a schedule's own time zone
+  and a pinned reporting period are not built; the scheduler's zone applies).
+- **Ownership.** A run that finds its owner inactive pauses the schedule (`owner-disabled`); Admin's lifecycle participant
+  `insights.schedules` is the engine's `find#OwnedSchedules`, `pause#OwnedSchedules` and `transfer#DefinitionOwner`
+  (`REPORT_OWNER_CHANGE`, the identity operator's and the administrator's). A transfer moves the schedule with the
+  definitions it needs that the leaving owner owns, to an owner who may schedule, reads every source and, for a group
+  schedule, may deliver to a group; it stays paused (`transfer-pending`) until the new owner resumes it, which checks the
+  recipients against the new owner's scope. An owner who is active again may resume a schedule paused for them.
+- **Legacy.** A screen schedule (`screenPath`, a saved find) the user set up for themselves is listed under Mine and its
+  timing, format and subject changed in ScheduledReportDetail, its row kept; it takes no other recipient. The framework sends
+  a screen schedule to a user group only when its screen path is a registered `ReportLegacyAdapter`, one message a member the
+  saved find is shared with; none is registered, so every legacy schedule is personal.
+- **Screens.** `Insights/ScheduledReports` is a parent whose default is the list `Schedules` (ScheduleFind with Mine, Shared
+  administration and Received; ScreenScheduledList; NewSchedule), with the hidden ScheduledReportDetail (one page of boxes,
+  not tabs: EditScreenScheduled, ReportAudience with each recipient's result, OwnPreview, ScheduleRuns) and ReportDelivery
+  (Occurrence, RecipientOutcomes with RetryRecipients as the list's selection action and Reconcile on an uncertain row,
+  OwnArtifact). `Insights/ManagementDigest` lists the digests the viewer reads, with DigestComposition as a form (name, one
+  to six dashboards the composer reads, one period, a commentary, a share group) saved through `store#Digest` as a report
+  definition of kind digest, not the framework's composition editor, and DigestPreview as the caller's own panels and file.
+  The author and the distributor compose; mr-boss ships `insights-weekly-digest` over the suite dashboard. Home's DigestPreview
+  shows the digest the user chose (Show on Home, the `InsightsDigest` preference) until Settings names an organization default
+  (P10). Period comparison is each panel's own; an Assist draft of the commentary waits for P10.
+- **The message** is the `BOSS_INSIGHTS_REPORT` template, whose link opens Insights' Dashboard; sending profiles and
+  Comms-approved templates are not built (one template, the instance's mail server).
+
 ## 8. Business alerts
 
 ### 8.1 Query, state and confidentiality
@@ -846,7 +898,7 @@ Names in this table are proposed unless explicitly marked existing. The form sum
 | `ironstone.insights.FlowMapServices` | validate#Map, get#Map, copy#Map, store#Map; §9 typed input → validated `report`/`flowmap` Definition and authorized targets/counts. Listing, versions, diff and restore are the existing ReportServices definition operations | BOSS documentation/navigation validation over framework Definitions; Commons owns linked content |
 | Existing `org.moqui.report.ReportServices` | run#Query, query#Documents, list#Datasets, get#Dataset, render#Dashboard; get#Definition, list#Definitions, save#Definition, copy#Definition, versions#Definition, get#DefinitionDiff, restore#Definition, delete#Definition, find#DefinitionUses, export#Definitions, import#Definitions; create#Annotation; preview#Report, send#Report, create#Schedule, list#Schedules, pause#Schedule, evaluate#Alerts | Framework engine, definitions and scheduling; extend contracts without BOSS role tests |
 | Proposed ReportServices dataset extensions | create/store/validate/find/index#BusinessDataset, store#BusinessDatasetFields, store#BusinessDatasetConditions; §5 inputs → admitted source/version/check results | Framework mutation/admission/index mechanics with domain-supplied `rowFilterService`; existing EntityServices and `SearchServices.index#DataFeedDocuments` used where applicable |
-| Proposed ReportServices delivery extensions | check#ReportAudience, store#Schedule, find#ReportOccurrences, get#ReportOccurrence, get#RecipientReport, retry#ReportRecipients, find#AlertDeliveries, pause#OwnedSchedules, transfer#DefinitionOwner; §7 inputs → safe status or caller-owned content | Framework audience/lease/outbox/artifact lifecycle; `pause#OwnedSchedules` and `transfer#DefinitionOwner` are callable by Admin's lifecycle coordinator (Admin §14); business mode cannot be bypassed by direct services |
+| ReportServices delivery extensions (built with impl-insights P7 but `find#AlertDeliveries`, P8's) | check#ReportAudience, store#Schedule, find#ReportOccurrences, get#ReportOccurrence, get#RecipientReport, retry#ReportRecipients, reconcile#ReportRecipient, find#AlertDeliveries, find#OwnedSchedules, pause#OwnedSchedules, transfer#DefinitionOwner; §7 inputs → safe status or caller-owned content | Framework audience/lease/outbox/artifact lifecycle; `pause#OwnedSchedules` and `transfer#DefinitionOwner` are callable by Admin's lifecycle coordinator (Admin §14); business mode cannot be bypassed by direct services |
 | Proposed `mantle.party.PartyServices.get#OrganizationRowFilter` | viewer, dataset organization field → row filter for the viewer's permitted organizations (`MANTLE_USER_ORG`, `MANTLE_ACTIVE_ORG` semantics) | Mantle; registered as a `rowFilterService` for business datasets |
 | Existing domain report service families | §6.2 registered inputs and declared outputs → rows/frames plus versioned business metadata; add missing authorization/semantics where necessary | Mantle owns calculations, dates, units, private-field projection and source evidence; BOSS owns view adapters |
 | Proposed `mantle.ledger.CashForecastServices` | get#Options, preview#Scenario, run#Forecast; §12 input → authorized source movements, scenario projection and uncertainty | Later Accounting-domain calculation, owned as INS-12 and presented in Insights |

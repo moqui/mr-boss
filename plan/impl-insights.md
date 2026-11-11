@@ -1414,6 +1414,194 @@ INS-06 (its first release), INS-11 (legacy schedules).
   ORG_ZIZI_RETAIL managers, each gets their own message, and an ORG_ZIZI_SERVICES reader is refused with the reason;
   disabling the distributor in Admin pauses it until a qualified owner accepts it; one failed delivery is retried alone.
 
+**Built Nov 10 (P7).** mr-moqui b0668cf9 and mr-boss (branch `ins/p7`; Mantle is not touched).
+- **Checked first** (P0's "The legacy data", and the plan against the code): F28 holds (one ScreenScheduled row,
+  BOSS_DEMO_MY_TASKS, john.doe's saved find of Commons Tasks, ended; no schedule names a group; the FormListFinds are list
+  views); F6 as found (`create#Schedule` copies its recipients unchecked, one comma-joined message); the instance ceiling is
+  Admin P8's `report.groupRecipientCeiling` through `get#InstancePreference` (the plan's "200 until Admin P8" is past); Admin
+  P6's owned-resource contract and `LifecycleParticipant` rows are as its Built note says.
+- **The framework** (mr-moqui `crates/moqui-report/src/delivery.rs`, `schedule.rs`; docs/tools/Monitoring.md "Report
+  delivery"; F6, INS-06, INS-11):
+  - **The scope fingerprint** (`scope`, `scope_as`): a hash of what the user reads of the definition and everything it
+    references (each named read or unread), the documents of each dataset they may read, each dataset's resolved row filter
+    (`rowFilter`, `contextFilters`, the `rowFilterService`'s answer, in a form that does not depend on the order of its
+    values) and, for a dataset whose records are restricted, whether they hold them. It is computed in a context of its own
+    signed in as that user, the owner's too, so a screen's inheritable grant or a disabled authorization never enters it. A
+    service source is not comparable.
+  - **`check#ReportAudience`**: the named users and the members in date of the named groups, each eligible or not with a
+    reason code and words (`not-shared`, `scope-differs`, `not-comparable`, `denied-source`, `inactive`, `external`,
+    `no-address`), never the other user's grants; the cap asked (50 without one) held under the instance ceiling. Recipients
+    other than the viewer need the engine's own artifact `org.moqui.report.delivery.group` (`REPORT_DELIVERY_ADMIN`, ADMIN's).
+  - **`store#Schedule`**: a business schedule of the viewer's own, email only; the server sets `deliveryMode` (personal or
+    group, recipients in `ReportScheduleRecipient`); an active group schedule is saved only when every recipient passes
+    (`RECIPIENT_REFUSED`, naming each with its code; a group's member without an address or an active account is skipped at
+    the run instead) and within the cap (`RECIPIENT_CAP`); `expectedRevision` (`STALE_REVISION`); pending deliveries of the
+    earlier revision are cancelled. `pause#Schedule` resumes a business schedule only when its recipients pass again;
+    `list#Schedules` answers the mode, recipients, revision, pause reason and last run (its earlier fields kept).
+  - **The run** (`schedule.rs` `deliver`, `delivery.rs` `send_each`): a schedule is a business one when `store#Schedule`
+    saved it or its definition reads a business dataset, whatever wrote its row, so `create#Schedule` and an entity write do
+    not bypass it. It opens a `ReportOccurrence` (keyed by the schedule and the cron instant, or a Send now; an earlier run's
+    unsettled deliveries become uncertain), and for each recipient, just before their message, checks the lease, the owner
+    and the schedule again and the recipient's fingerprint again, then sends one message to their one address or records why
+    not in a `ReportRecipientDelivery` (sent, skipped with `scope-differs` and the other safe codes, failed, uncertain by the
+    transport's `deliveryOutcome`). One recipient's failure does not stop the others. One render a locale serves every
+    recipient (`renderCount`). The owner goes first under the cap; the rest past it are `over-cap`. A technical schedule
+    takes the old path unchanged (its mail call is the one shared function).
+  - **Reads**: `find#ReportOccurrences` (the viewer's own schedules'; `received`, the deliveries to the viewer;
+    `administrative`, every owner's for a holder of `ADMIN_TRANSFER_VIEW`, status and counters without titles, for Admin
+    P16), `get#ReportOccurrence` (each recipient's outcome to the owner and that administrator; a recipient their own
+    delivery alone), `get#RecipientReport` (no row keeps a report: rendered again as the recipient, and only while their
+    fingerprint is the one the delivery was sent under; another's delivery id reads as missing).
+  - **`retry#ReportRecipients`** (failed deliveries only, at the occurrence's revision, each recipient checked again; a
+    changed schedule or definition is `DEFINITION_CHANGED`) and **`reconcile#ReportRecipient`** (an uncertain delivery
+    settled by a person as sent, or failed and so retryable).
+  - **Ownership**: a business schedule whose owner is inactive pauses at its run (`owner-disabled`); `find#OwnedSchedules`,
+    `pause#OwnedSchedules` and `transfer#DefinitionOwner` carry the owned-resource contract, for the user themselves or a
+    holder of `REPORT_OWNER_CHANGE` (new, ADMIN's). A transfer moves the schedule and the definitions it needs that the
+    leaving owner owns to an active internal user who may store a schedule, reads every source and, for a group schedule,
+    may deliver to a group (`NEW_OWNER_REFUSED`); it stays paused (`transfer-pending`), Send now and retry refused
+    (`SCHEDULE_PAUSED`), until the new owner resumes it.
+  - **Legacy** (`org.moqui.impl.ScreenServices.render#ScheduledScreen`): a screen schedule's user group is sent to only
+    when its screen path is a registered `ReportLegacyAdapter` enumeration, then one message a member the saved find is
+    shared with; the user's own delivery is as before.
+  - A report's `commentary` prints under its title. Entities: `ScreenScheduled` gains `deliveryMode`, `recipientCap`,
+    `pausedReason`, `versionNumber`; `moqui.report.ReportScheduleRecipient`, `ReportOccurrence`, `ReportRecipientDelivery`.
+    Seed: the occurrence and delivery states, `REPORT_OWNER_CHANGE`, the `ReportLegacyAdapter` type (ReportSetupData);
+    `REPORT_DELIVERY_ADMIN` (MonitoringSecurityData).
+- **BOSS services** (`service/ironstone/insights/DeliveryServices.xml` over `Delivery.js`, each `allow-remote="false"`):
+  `find#Schedules`, `get#Schedule`, `store#Schedule`, `pause#Schedules`, `send#Schedule`, `check#Audience`,
+  `find#RecipientChoices`, `get#Delivery`, `retry#Recipients`, `reconcile#Recipient`, `get#OwnReport`, `preview#Report`,
+  `get#Digest`, `store#Digest`, `store#DefaultDigest`, `get#DigestPreview`. Reading is `INSIGHTS_VIEW`, a schedule of one's
+  own `INSIGHTS_SCHEDULE`, other people `INSIGHTS_DISTRIBUTE` (a person an Insights reader, a group one the distributor
+  belongs to), a digest `INSIGHTS_AUTHOR` or `INSIGHTS_DISTRIBUTE`. The cap is 50 here until P10. Every write answers a
+  refusal as `applied` false with `reasonCode` and `reason` (the engine's codes pass through; a refusal without a code is
+  logged and shown as a plain sentence), so a screen shows it.
+- **Screens.** `Insights/ScheduledReports` (a parent; its default `Schedules`: ScheduleFind with Mine, Shared administration
+  and Received, ScreenScheduledList with Pause, Resume, Send now and a bulk pause that answers each schedule, NewSchedule),
+  the hidden `ScheduledReportDetail` (the record header, EditScreenScheduled, ReportAudience with each recipient's result,
+  OwnPreview as the caller's own panels and file, ScheduleRuns) and `ReportDelivery` (Occurrence, RecipientOutcomes with
+  RetryRecipients as the selection action and Reconcile on an uncertain row, OwnArtifact); `Insights/ManagementDigest`
+  (the digests, DigestComposition, DigestPreview, Schedule, Show on Home); Home's DigestPreview. The copied
+  ScheduledReports and its detail are replaced; john.doe's copied scheduled find is listed under Mine and its timing,
+  format and subject changed in ScheduledReportDetail, its row kept. `template/InsightsDeliveryTransitions.xml` (the
+  recipient choices, the preview file, the own report file), `template/InsightsReportEmail.xml` (the message's body).
+- **Data** (`data/BossSetupData.xml`, one block appended): BOSS_INS_LEGACY's last pattern row reloaded as a plain name (it
+  denies nothing; as F65); `INSIGHTS_SCHEDULE` for the reader, author, steward and flow groups with their capability rows;
+  `BOSS_INS_REPORT_OWN` (store, list, pause, send, retry, reconcile: ALWAYS for the five reading groups),
+  `BOSS_INS_REPORT_DELIVERY` (the three reads, the administrator too), `BOSS_INS_REPORT_DISTRIBUTE` (`check#ReportAudience`
+  and `save#Definition`, the distributor's), `BOSS_INS_GROUP_DELIVERY` (the engine's group artifact, the distributor's);
+  the `BOSS_INSIGHTS_REPORT` email template; the lifecycle participant `insights.schedules` with `REPORT_OWNER_CHANGE` and
+  `BOSS_INS_LIFECYCLE` for the identity operator and the administrator. `report/insights-weekly-digest.json` (a digest
+  over the suite dashboard). `data/BossUsersDemoData.xml` (appended): mail addresses for seven Insights demo users.
+  Insights.js: no legacy area left; four links. Registry.js: a digest opens in ManagementDigest from SavedReports.
+- **Specs.**
+  - framework `ReportAudience` (6 features, 1.0 s, `dependsOn` ReportDrill: the fixtures; a recipient whose row filter
+    differs refused at save with a code, a private report `not-shared`, the cap, the group grant, a stale revision; one
+    message a recipient with no shared address line, two renders for four recipients of two locales, a member who joined
+    after the save skipped at the run, a recipient's own delivery and report and never another's, the administrative list
+    without titles; a retry to the failed recipient alone, an uncertain one reconciled; a disabled owner's schedule paused
+    at its run, the lookup and pause, a transfer refused to one who may not schedule and to a caller without the
+    permission, accepted by a qualified owner, and resumed only once the recipients pass; a `create#Schedule` schedule
+    over a business dataset held to the check). moqui-report unit tests: `delivery::tests` (3).
+  - BOSS `InsightsDelivery` (4 features, 1.5 to 1.8 s, `dependsOn` InsightsDatasets: a reader's personal schedule and the
+    same save with another person refused, the distributor's group, the Services reader refused as an answer naming them
+    and the code, a foreign group and a person outside Insights refused, the administrator refused, the choices; Send now's
+    two messages linking to Insights, the reader's own delivery and report, the author's delivery, the schedule and a
+    Services reader refused, ScheduledReportDetail's one qvt render; a digest composed by the distributor and refused to a
+    reader, an unread dashboard and a foreign group, Home's preview; Admin's `find#OwnedResources` with the participant's
+    resource and steps, the pause, a reader refused the participant's services and as a new owner). `InsightsAccess`: the
+    menu (nine entries, every user's), `schedule` for every reading group, list#Schedules and check#ReportAudience by
+    group; its copied-screen cases removed with the screen. `AdminLifecycle` (Admin's): a disable now has Insights' pause
+    step.
+  - Acceptance, written and not run: `acceptance/Insights/InsightsDeliveryUsable` (4 features, `dependsOn`
+    InsightsDatasetsUsable: the "usable when", with a leaving and a succeeding distributor made there). The sweeps
+    `AppStructure` and `TuiRender` gain the new screens' entries; `InsightsFoundationWalk` walks the one menu.
+- **Tests run** (this worktree's Debug binary, `--nobuild`): framework ReportAudience, ReportDrill, ReportAnnotations,
+  BusinessDatasets, ScreenQvt 36 of 36 (ReportAudience 1.0 s; framework 2.3 s of 12 s for the four report specs); tools
+  ReportMounts, DocumentExport 3 of 3; BOSS InsightsDelivery, InsightsAccess, InsightsHome, InsightsCatalog,
+  InsightsDashboards, InsightsRecords (with InsightsDatasets), AdminLifecycle, AdminAccess, AdminRegistries,
+  AdminCapabilities 51 of 51. Cargo: `clippy -p moqui-report --all-targets -D warnings` clean, `test -p moqui-report` 84
+  of 84, moqui-host `--test it report_` 9 of 9 and `scheduled_reports` 1 of 1 (the technical schedule's path).
+  `moqui lint --screens`: 132 sites, as before, none in the new screens. Prettier clean on the new and changed JavaScript;
+  rustfmt on the two Rust files. Not run: `./moq test-apps`, `./moq test-framework`, any acceptance test.
+- **Rendered by hand** (throwaway probe specs, not kept): Schedules (each view, as the distributor, a reader and the
+  administrator), ScheduledReportDetail (the owner's, another's, the legacy one), ReportDelivery (the owner, a recipient, an
+  outsider), ManagementDigest (the list, a digest, a reader) and Home with a digest, each in qvt, tui and html; every
+  transition as a post, with the rows after it; the preview and own-report files; a digest's commentary in the printed
+  document; Admin's real disable of a throwaway distributor (the pause step done, the transfer step waiting, a reader
+  refused as the new owner with the reason, a second distributor accepted, Send now refused until they resumed, then two
+  messages); and a screen schedule with a group (nobody but its user without an adapter; with one, only the member the
+  find is shared with, in a message of their own).
+- **Budget shares**: framework server 1.0 s (ReportAudience); mr-boss server 1.5 to 1.8 s (InsightsDelivery; InsightsAccess
+  is as it was); no client spec.
+- Inventories: ss-inventory's MyAccount ScheduledFinds and EditScheduledFind rows are implemented. No usl-inventory row.
+- Design edits: design-insights §2 (the list's route), §7 "As built", §15.2 (the delivery row); design-admin §4.1 (the
+  participant as built). mr-moqui docs/tools/Monitoring.md ("Report delivery", Security, Upgrading) and
+  `plans/Remaining-Work.md` (the report-engine row). mr-boss README's Insights line.
+- **Findings** (provisional, for the lead to number):
+  - F-P7-1: a row filter that names the viewer's own groups (the framework's `ReportUserGroups`) differs between users of
+    different groups whose rows are the same, so they are not owner-equivalent; only users of the same groups are. Kept (the
+    design compares resolved filters); Mantle's organization policy gives every user of the same organizations one filter.
+  - F-P7-2: a service source decides its scope in its own code, which no fingerprint sees. A definition over one is not
+    comparable and goes to its owner alone; a declared scope for a service source is a framework ask.
+  - F-P7-3: a recipient must read the report itself, not only its data: a private dashboard or digest is refused for
+    everyone else. The check says `not-shared`, apart from `scope-differs`, so its owner knows to share it.
+  - F-P7-4: the Insights demo users had no mail address, so nobody could be delivered to; added. The demo has one
+    distributor, so the acceptance test makes the one who leaves and the one who takes over.
+  - F-P7-5: with the mail capture on no recipient's send can be made to fail, so the specs set a delivery to failed
+    themselves; on a transport failure `send#EmailTemplate` answers `deliveryOutcome` (retryable, permanent or uncertain)
+    and no message id, which the new path reads to tell a failure from an outcome that is not known.
+  - F-P7-6: a definition's ranges are relative to the render, and the engine has no pinned clock, so a retry renders the
+    period again and is refused when the schedule or the definition changed; a schedule has no time zone of its own (the
+    scheduler's applies). Design §7's absolute period and explicit zone are not built.
+  - F-P7-7: the engine's link in a report's message is Tools' `/apps/dashboards/Dashboard`; Insights' template rewrites
+    it to its own Dashboard. A link base on the schedule or the mount is a framework ask.
+  - F-P7-8: no report is stored, so OwnArtifact is a new render as the recipient, and "expires" and retention have nothing
+    to apply to; stored private artifacts wait for Admin's retention policy.
+  - F-P7-9: Admin's `AdminLifecycle` spec listed a disable's exact steps; Insights' participant adds a pause step to
+    every disable, so its expectation gained `pause:UlstDone`.
+  - F-P7-10: P1's `BOSS_INS_REPORT_SCHEDULE` still grants the distributor `create#Schedule` (owner mode) on an existing
+    instance and a fresh one; no Insights screen calls it and a schedule it makes over business data is checked at each
+    run. BOSS_INS_LEGACY keeps its group and its denies over a name that matches nothing.
+  - F-P7-11: the design's ScheduledReports as a list with child routes would make the list render its children (F46), so
+    it is a parent whose default is `Schedules`; ScheduledReportDetail is one page of boxes, not tabs; DigestComposition
+    is a form, not the framework's composition editor (an author still opens a digest in DashboardEditor).
+  - F-P7-12: a form posts an emptied field as no value, and the engine keeps a value not sent, so `store#Schedule` takes
+    `clearFields` and Insights' timing form says which it posted (`timingGiven`); likewise recipients (`recipientsGiven`).
+  - F-P7-13: a schedule paused for its owner's sake is resumed by that owner once they are active again, not only by a
+    new owner after a transfer (the engine has no administrator's resume).
+  - F-P7-14: P5's and P6's screens read `ec.message` after an `ignore-error` call for a failure text that is no longer
+    there; P7's screens take refusals as answers and a missing record as a not-available state. Home's own captures are
+    left as they are.
+- **Decisions** (for §4): a business schedule is one `store#Schedule` saved or one whose definition reads a business
+  dataset; group delivery is its own engine artifact; the cap is a field of the schedule a caller supplies under the
+  ceiling, 50 from Insights; no report is stored and a recipient's report is a new render under an unchanged fingerprint;
+  the administrative read is `ADMIN_TRANSFER_VIEW`'s; every reading group schedules for itself and the administrator does
+  not; the distributor saves definitions through the engine (for digests); recipients are proposed among Insights readers
+  and the distributor's own groups; a qualified owner may store a schedule, reads every source and, for a group, may
+  deliver to one; legacy schedules are personal in Insights; Home's digest is the user's own choice until P10.
+- **For the lead:**
+  - budget shares: framework 1.0 s server, mr-boss 1.8 s server;
+  - merge: BossSetupData's P7 block is one append at the end, BossUsersDemoData's too (Admin P10 appends there: keep
+    both); mr-moqui `ReportSetupData.xml` gains one block at the end, `MonitoringSecurityData.xml` one before the
+    permissions, `ReportServices.xml` the delivery services in place of the two one-line schedule services after
+    `create#Schedule`, `ScreenEntities.xml` four fields on ScreenScheduled, `ScreenServices.xml` the group block of
+    `render#ScheduledScreen`; Insights.js (areas, linkPaths), Registry.js (one branch), Home.xml (one box);
+  - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F-P7-9, one expectation) and design-admin §4.1
+    (one "As built" sentence); `acceptance/AppStructure.spec.js` and `TuiRender.spec.js` (the new screens' entries);
+  - an existing instance loads ReportSetupData, MonitoringSecurityData and BossSetupData again (Monitoring.md
+    "Upgrading"), and sets the `BOSS_INSIGHTS_REPORT` template's mail server and from address. From then on an owner-mode
+    schedule over a business dataset sends each recipient their own message and only to owner-equivalent ones, and a
+    screen schedule that names a group stops sending to the group until its path is a registered adapter;
+  - the user's call: F-P7-1 (equivalence by resolved filter, strict for group-scoped policies); F-P7-13 (an owner
+    resuming a schedule Admin paused); the distributor's `save#Definition` grant; refusing a retry after a change rather
+    than sending the changed report; legacy group schedules stopping until registered;
+  - not built: a legacy adapter registration (none is registered, so no catalog report is scheduled for a group); a
+    schedule's own time zone and the pinned reporting period; stored artifacts and expiry; sending profiles and
+    Comms-approved templates; quick create's Schedule; the delivery audit export (P12); business alerts in the
+    participant (P8); a period comparison of the digest's own; an Assist draft of the commentary (P10);
+  - `find#ReportOccurrences` with `administrative: true` is Admin P16's read (status and counters, no title, no content).
+
 ### P8 — Business alerts
 
 Design §8; INS-07 (its first release), INS-03.

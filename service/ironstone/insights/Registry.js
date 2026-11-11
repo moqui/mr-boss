@@ -650,6 +650,8 @@ function definitionRoute(definition, capabilities) {
     if (definition.type === "search") return {url: "/qapps/Insights/ReportBuilder/Explore?savedSearchId=" + id}
     if (definition.type === "report" && definition.body?.kind === "playlist")
         return {url: "/qapps/Insights/Playlists?definitionId=" + id}
+    if (definition.type === "report" && definition.body?.kind === "digest")
+        return {url: "/qapps/Insights/ManagementDigest?definitionId=" + id}
     if (definition.type === "panel")
         return capabilities.author || capabilities.datasetEdit
             ? {url: "/qapps/Insights/PanelDetail?definitionId=" + id}

@@ -1,0 +1,19 @@
+{
+  "id": "insights-weekly-digest",
+  "type": "report",
+  "title": "Weekly management digest",
+  "body": {
+    "kind": "digest",
+    "folder": "Insights",
+    "description": "The suite overview for the last seven days, as a digest to schedule for oneself or for recipients who read the same data.",
+    "commentary": "",
+    "layout": "rows",
+    "dashboards": [
+      {
+        "dashboardRef": "insights-suite",
+        "from": "now-7d",
+        "thru": "now"
+      }
+    ]
+  }
+}

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Management digest (design-insights §7 ManagementDigest; impl-insights P7, INS-06): a recurring management
+    summary. A digest is a report definition of kind digest (ironstone.insights.DeliveryServices store#Digest, saved through
+    the report engine as its composer): dashboards the composer reads, in order, one period and a short commentary, private
+    or shared with one of their own groups. DigestComposition is that form, for an author or a distributor; DigestPreview is the
+    chosen digest as the caller reads it now, each panel rendered as the viewer, with a section they may not read counted and
+    not named, and the file as it would be sent. Its schedule is an ordinary schedule of it (Scheduled reports), personal or to
+    owner-equivalent recipients: there is no separate timer, snapshot or mailer, and a digest adds nothing across recipients.
+    Show on Home sets which digest Home previews for the caller. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Management digest" default-menu-index="9" menu-image="sym_o_summarize" menu-image-type="icon">
+
+    <parameter name="definitionId"/>
+
+    <transition-include name="previewFile" location="component://mr-boss/template/InsightsDeliveryTransitions.xml"/>
+    <transition name="storeDigest" method="post">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.store#Digest" out-map="stored"
+                    in-map="{definitionId:digestDefinitionId, title:title, dashboardIds:dashboardIds, period:period, commentary:commentary,
+                        userGroupId:userGroupId, expectedVersion:expectedVersion}"/>
+            <script>ec.message.addMessage(stored.applied ? 'Digest saved' : stored.reason, stored.applied ? 'success' : 'danger')</script>
+            <set field="definitionId" from="stored.applied ? stored.definitionId : digestDefinitionId"/>
+        </actions>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+    </transition>
+    <transition name="showOnHome" method="post">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.store#DefaultDigest" in-map="{definitionId:homeDefinitionId}" out-map="stored"/>
+            <script>ec.message.addMessage(stored.applied ? (stored.definitionId ? 'Home now previews this digest' : 'Home previews no digest')
+                : stored.reason, stored.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="ironstone.insights.DeliveryServices.get#Digest" in-map="{definitionId:definitionId}" out-map="found"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="unavailable" from="!found?.digests"/>
+        <set field="digestList" from="found?.digests || []"/>
+        <set field="digest" from="found?.digest || null"/>
+        <set field="digestSections" from="found?.sections || []"/>
+        <set field="options" from="found?.options || {dashboards:[], periods:[], groups:[]}"/>
+        <set field="canCompose" from="!!found?.canCompose"/>
+        <set field="newValues" from="{period:'now-7d'}"/>
+        <set field="editValues" from="digest ? Object.assign({}, digest, {digestDefinitionId:digest.definitionId}) : {}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="${digest ? digest.title : 'Management digest'}" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none" condition="digest"
+                        text="${digest?.periodText} · ${digest?.dashboardCount} ${digest?.dashboardCount == 1 ? 'dashboard' : 'dashboards'} · ${digest?.sharedText}${digest?.isDefault ? ' · on your Home' : ''}"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${sharedLinks['ScheduledReports/Schedules']}" text="Schedule" link-type="anchor-button" btn-type="primary" icon="sym_o_schedule"
+                        condition="digest &amp;&amp; found.canSchedule" parameter-map="{definitionId:digest?.definitionId, _openDialog:'NewSchedule'}"/>
+                <container-dialog id="NewDigest" button-text="New digest" icon="sym_o_add" type="${digest ? 'default' : 'primary'}" condition="canCompose">
+                    <form-single name="DigestComposition" transition="storeDigest" map="newValues">
+                        <field name="title"><default-field title="Name"><text-line size="50"/></default-field></field>
+                        <field name="dashboardIds"><default-field title="Dashboards" tooltip="One to six dashboards you may read, in the order chosen">
+                            <drop-down allow-multiple="true"><list-options list="options.dashboards" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="period"><default-field title="Period">
+                            <drop-down><list-options list="options.periods" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="commentary"><default-field title="Commentary" tooltip="Your own words: an explanation, not a number">
+                            <text-area rows="4" cols="60"/></default-field></field>
+                        <field name="userGroupId"><default-field title="Share with" tooltip="Leave it empty to keep the digest private. A group reads the digest; each person still sees only the data they may read.">
+                            <drop-down allow-empty="true"><list-options list="options.groups" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="save"><default-field><submit text="Save digest"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="EditDigest" button-text="Edit" icon="sym_o_edit" condition="digest?.own &amp;&amp; canCompose">
+                    <form-single name="EditDigestForm" extends="DigestComposition" map="editValues">
+                        <field name="digestDefinitionId"><default-field><hidden/></default-field></field>
+                        <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <link url="showOnHome" link-type="hidden-form" text="Show on Home" condition="digest &amp;&amp; !digest.isDefault"
+                        parameter-map="{definitionId:digest?.definitionId, homeDefinitionId:digest?.definitionId}"/>
+                <link url="showOnHome" link-type="hidden-form" text="Remove from Home" condition="digest?.isDefault"
+                        parameter-map="{definitionId:digest?.definitionId, homeDefinitionId:''}"/>
+            </container>
+        </container>
+
+        <label type="p" style="m-muted" text="Digests are shown to Insights readers." condition="unavailable"/>
+        <section name="DigestPreviewBox" condition="digest"><widgets>
+            <container-box>
+                <box-header title="Your preview"/>
+                <box-toolbar>
+                    <link url="previewFile" text="Download as PDF" link-type="anchor" target-window="_blank"
+                            parameter-map="{definitionId:digest?.definitionId, renderMode:'pdf'}"/>
+                </box-toolbar>
+                <box-body>
+                    <label type="p" style="m-muted" text="The digest as you read it now, for ${digest?.periodText.toLowerCase()}. Each person it is delivered to is checked to read the same."/>
+                    <label type="p" text="${digest?.commentary}" condition="digest?.commentary"/>
+                    <label type="p" style="text-warning" condition="found.missingCount"
+                            text="${found.missingCount} ${found.missingCount == 1 ? 'section is' : 'sections are'} not shown: you may not read ${found.missingCount == 1 ? 'it' : 'them'}."/>
+                    <section-iterate name="DigestSections" list="digestSections" entry="digestSection"><widgets>
+                        <label text="${digestSection.title}" type="h6"/>
+                        <section-iterate name="DigestPreview" list="digestSection.panels" entry="digestPanel"><widgets>
+                            <report-embed definition-id="${digestPanel.definitionId}" panel-id="${digestPanel.panelId}"
+                                    from="${digestPanel.from}" thru="${digestPanel.thru}"/>
+                        </widgets></section-iterate>
+                    </widgets></section-iterate>
+                </box-body>
+            </container-box>
+        </widgets></section>
+
+        <section name="DigestsBox" condition="!unavailable"><widgets>
+            <container-box>
+                <box-header title="Digests"/>
+                <box-body>
+                    <label type="p" style="m-muted" condition="!digestList.length"
+                            text="${canCompose ? 'No digest yet. Compose one with New digest: choose the dashboards, a period and a few words.' : 'No digest is shared with you yet.'}"/>
+                </box-body>
+                <box-body-nopad>
+                    <form-list name="DigestList" list="digestList" skip-form="true" paginate="false" condition="digestList.length">
+                        <field name="title"><default-field title="Digest">
+                            <link url="." text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
+                        </default-field></field>
+                        <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                        <field name="dashboardCount"><default-field title="Dashboards" align="right"><display/></default-field></field>
+                        <field name="sharedText"><default-field title="Sharing"><display text="${own ? 'Yours' : 'Shared with you'} · ${sharedText}"/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="title"/></column>
+                            <column><field-ref name="periodText"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

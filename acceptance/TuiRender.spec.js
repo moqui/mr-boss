@@ -74,6 +74,7 @@ const demoParameters = {
     "Insights/ReportBuilder/DatasetFields": { datasetId: "boss-service-clocks" },
     "Insights/ReportBuilder/DatasetView": { datasetId: "boss-service-clocks" },
     "Insights/ScheduledReports/ScheduledReportDetail": { screenScheduledId: "BOSS_DEMO_MY_TASKS" },
+    "Insights/ScheduledReports/ReportDelivery": { occurrenceId: "NONE" },
     "Chatter": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
     "RecordFiles": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
 }
