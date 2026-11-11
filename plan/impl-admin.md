@@ -5257,6 +5257,30 @@ review: …"); Mantle and BOSS unchanged.
   61 of 61 features passed; framework AdminAccessServices 6 of 6. For the lead: several `--spec` flags run only the last;
   the `Array.from` behaviour of a service's list in `then` is worth a look in the testkit.
 
+- **Final suites (Nov 11, on master after Admin P1–P19, Insights P1–P12, both acceptance fix branches, the framework
+  follow-ups and the upstream pulls merged; the release binary rebuilt; nothing else running).** Run once, at the end of
+  the build (the user's call: no full suites per wave after gate 1).
+  - `./moq test-framework`: the moq script tests, the demo specs and every client suite passed (webroot 423, dev-aide 48,
+    framework, basic-comms and example 155). The framework specs passed 516 of 517: the one failure is the tools
+    component's LoadRunner (`cannot compare null with 0` on a server sample), failing since the upstream Tools-apps pull
+    and not this build's. Cargo passed in the first final run (F38's long-failing test is gone upstream); in the
+    rerun one moqui-git test, `large_objects_are_content_blobs_streamed_in_and_out`, failed on a reset local
+    connection (`curl 56 Recv failure`) and passed alone. Feature time: framework 16.8 s of 12 s (this build's
+    eighteen framework specs 4.4 s; gate 1 measured 10.8 s, the rest is upstream's), tools 4.1 s of 4 s and dev-aide 41.6 s
+    of 30 s (neither this build's), basic-comms 6.0 of 8 s, webroot client 43.2 of 44 s. No budget raised: the user's call.
+  - `mail_capture_sends=true ./moq test-apps`: 3,526 server and 35 client features, all passed (after the two full-run
+    order dependences the first final run found were fixed in their specs: IdentityAudit matched an instance-level
+    SystemMessage row whose sequenced id equals the spec's user id, mr-mantle 08448e42; AdminGroups' member choice is one
+    page of 30, filled by other specs' staff, mr-boss 68c2212d; neither a product defect). Feature time mr-mantle 362.8 of
+    393 s, mr-boss 239.5 of 264 s server and 59.9 of 57 s client (no mr-boss client spec changed in this build; Admin's
+    and Insights' walks 2.9 s each, as at gate 1), mr-pass 13.6 of 20 s server and 6.7 of 9 s client. No budget raised.
+  - `moqui lint --screens`: clean of this build's screens.
+  - `mail_capture_sends=true ./moq accept mr-boss`, after the two acceptance fix branches: server 600 of 602, client 174 of
+    175. Failing: WarehouseServerStatic (AssetDetail's Move link made a screen path from an expression by mr-boss
+    35223fd6, Nov 10, before this build; the user's call: keep the screen path and unmark Files and Notes, or a plain link
+    again); ManufacturingScheduleWalk's drag (the one that failed once at gate 1 and passed on reruns; not this build's);
+    InsightsCatalogUsable's order count against OnlineSales in the full run only (impl-insights P12's acceptance note).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-admin.md or
