@@ -3128,7 +3128,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   attempt over a later attempt. So the user's instinct is the standard one for a record with no attempt rows: the
   settlement is of one send and ends when the next begins. The fuller form of the principle is an attempt record per
   send that carries its own settlement (Mantle's ledger has one, which is why a ledger message never had F179); not
-  built, F-P12G-1.
+  built, F199.
 - Decided and built: the mail service clears the settlement when a send of a stored message begins, and in the same
   write marks a message that was known not sent uncertain, for every caller. The send begins when the letter is handed to
   the transport: a refusal before that (no body, no address, no server, a host not allowed, no recipient in an allowed
@@ -3173,20 +3173,20 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   ReportDrill, 52 of 52 (7.2 s). Prettier clean on the two JavaScript files. BasicComms has no spec of `resend`. Not run: the suites, the
   acceptance tests, `moqui-host`'s SMTP and edge integration tests (they call `send#EmailMessage` on new messages).
 - Findings (provisional):
-  - **F-P12G-1** The settlement is fields on the message, so only the last one is on the row and the earlier ones are
+  - **F199** The settlement is fields on the message, so only the last one is on the row and the earlier ones are
     in the audit log. The established form is a record per attempt with its own outcome and settlement (the ledger's
     shape). Not built: one clear at the start of a send gives the same truth on the row for far less; the user's call if
     the queue should ever show a message's attempts.
-  - **F-P12G-2** A send from outside the queue (BasicComms' resend, Marble's `sendEmailMessage` transitions) still asks
+  - **F200** A send from outside the queue (BasicComms' resend, Marble's `sendEmailMessage` transitions) still asks
     for no decision on an uncertain or settled message, and may send one reported delivered. Left open by the user's
     Nov 10 call; what changed is the state afterwards.
-  - **F-P12G-3** `begin_send` leaves `sendError` as the last failure's text, so a message resent from outside the queue
+  - **F201** `begin_send` leaves `sendError` as the last failure's text, so a message resent from outside the queue
     and lost part way reads "May have been sent" beside the error of the send before; and a retry whose send is refused
     before it begins keeps the claim's text ("A retry of this message began...") beside "Settled: reported not
     delivered". Cosmetic; a text of the mail service's own at the start of a send, cleared with Sent, would close both.
-  - **F-P12G-4** A mail account's message is outside this (the mail client's claim is its start, and it is never
+  - **F202** A mail account's message is outside this (the mail client's claim is its start, and it is never
     settled here): settlement fields found on one, which no service writes, would not be cleared by a send.
-  - **F-P12G-5** A message already Sent that is sent again from outside the queue and fails keeps `ES_SENT` with a
+  - **F203** A message already Sent that is sent again from outside the queue and fails keeps `ES_SENT` with a
     `sendOutcome` (as before this change); the queue reads it as Sent. Its settlement, if any, is cleared.
 - Decisions: clear at the start, not with the result; the start is the hand-over to the transport, so a refusal before
   it keeps the settlement; one mechanism, in the mail service, and the queue's claim relies on it; the same write marks
@@ -3200,7 +3200,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   - other files: `crates/moqui-mail/src/implementation.rs` and `implementation_tests.rs`, `BasicEntities.xml` (the
     `EmailMessage` comment and one description), `AdminMailOutcomes.spec.js`, Attack-Surface, Parity-Diffs (one row);
     mr-boss `plan/design-admin.md` (§9 MailQueue, one sentence replaced) and this note;
-  - the user's calls: F-P12G-1 (attempt records), F-P12G-2 (stands as decided), F-P12G-3 (whether to tidy the texts);
+  - the user's calls: F199 (attempt records), F200 (stands as decided), F201 (whether to tidy the texts);
   - budget shares unchanged (no feature added).
 
 **Review Nov 10 (P12 follow-up, F179).**
@@ -3230,12 +3230,12 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
 - For the lead, open:
   - a send from outside the queue takes no claim, so a person can settle an uncertain message in the queue while
     BasicComms' resend of it is in the transport: the begin read no settlement and the row keeps one of the send before
-    (read as Sent if it went; as settled if that send ended uncertain). Part of F-P12G-2; closing it needs the resend to
+    (read as Sent if it went; as settled if that send ended uncertain). Part of F200; closing it needs the resend to
     take the queue's claim, or the settlement cleared with the result too.
   - two sends of one message at once from outside the queue can leave `sendOutcome` uncertain on a Sent row (the
-    second's begin after the first's result); the queue reads Sent. With F-P12G-5.
+    second's begin after the first's result); the queue reads Sent. With F203.
   - a queue retry of a message that was retryable and is refused before the begin (its server removed since) is left
-    uncertain with the claim's text, though nothing was sent (as before this change; F-P12G-3).
+    uncertain with the claim's text, though nothing was sent (as before this change; F201).
 
 ### P13 — System messages and recovery
 
@@ -3748,7 +3748,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note. P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
