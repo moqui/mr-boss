@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Business flows › Flow map (design-insights §9 FlowMap; impl-insights P9, F26): a flow map as the viewer reads it
+    (ironstone.insights.FlowMapServices.get#Map, which validates the stored map against the registrations at every read).
+    MapContext chooses the map, the organization a template's counts are for (an organization's map keeps its own) and
+    whether counts show. ProcessLanes is the map's body: each lane a column of its steps in order, each with its count (its
+    owner's own count, opening the list that produced it), what it leads to, and Information where there is nothing to
+    open. The framework's node-graph panel is not used: it has no groups, names or links of its own (impl-insights F26,
+    design §17 Q1), so the lanes are these widgets, which stack at phone width and read in order in the terminal and in
+    print. StepDetail explains the selected step: its owner, what its worklist and count mean, its measure and report, and
+    its procedure in Knowledge (ProcessStory); StepList is the same steps as one ordered list. A link or count the viewer
+    may not read is absent, with nothing named. A flow editor may copy the map for an organization (CopyMap) and edit
+    their own. The map's text is shown as text only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Flow map" default-menu-index="1">
+
+    <parameter name="definitionId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="stepId"/>
+    <parameter name="counts"/>
+
+    <transition name="copyMap" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.copy#Map" out-map="copied"
+                    in-map="{sourceDefinitionId:sourceDefinitionId, sourceVersion:sourceVersion, organizationPartyId:copyOrganizationPartyId,
+                        title:copyTitle, userGroupId:(copyUserGroupId || null)}"/>
+            <script>ec.message.addMessage(copied.applied ? 'Copied: rename its steps and link your procedures' : copied.reason,
+                copied.applied ? 'success' : 'danger')</script>
+            <set field="definitionId" from="copied.applied ? copied.definitionId : sourceDefinitionId"/>
+        </actions>
+        <conditional-response url="../FlowMapEditor" condition="copied?.applied"><parameter name="definitionId"/></conditional-response>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+    </transition>
+    <transition name="setDefault" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.store#DefaultMap" in-map="{definitionId:definitionId}" out-map="stored"/>
+            <script>ec.message.addMessage(stored.applied ? 'Business flows now opens on this map for you' : stored.reason,
+                stored.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+    </transition>
+
+    <actions>
+        <!-- a member of the root group alone reads nothing in Insights: told so, as on Home. A map that is not the viewer's
+            answers nothing (the service refuses), and the page says it is not available -->
+        <if condition="insights.capabilities.view">
+            <service-call name="ironstone.insights.FlowMapServices.get#Map" out-map="flow" transaction="force-new" ignore-error="true"
+                    in-map="{definitionId:(definitionId || null), organizationPartyId:(organizationPartyId || null), stepId:(stepId || null),
+                        counts:(counts || null)}"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="ironstone.insights.FlowMapServices.find#Maps" out-map="mapList" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="flowDoc" from="flow?.map || null"/>
+        <set field="lanes" from="flow?.lanes || []"/>
+        <set field="flowSteps" from="flow?.steps || []"/>
+        <set field="sel" from="flow?.selectedStep || null"/>
+        <set field="mapOptions" from="Array.from(mapList?.maps || []).map(row =&gt; ({value:row.definitionId, label:row.title + ' (' +
+                (row.template ? row.kindText : row.organizationName) + ')'}))"/>
+        <set field="scopeOptions" from="flow?.organizations || []"/>
+        <set field="copyOrganizations" from="mapList?.organizations || []"/>
+        <set field="copyGroups" from="mapList?.groups || []"/>
+        <set field="countOptions" from="[{value:'Y', label:'Shown'}, {value:'N', label:'Hidden'}]"/>
+        <set field="contextValues" from="{definitionId:flowDoc?.definitionId, organizationPartyId:flow?.organizationPartyId,
+                counts:(flow?.countsShown === false ? 'N' : 'Y')}"/>
+        <set field="stepLink" from="{definitionId:flowDoc?.definitionId, organizationPartyId:(scopeOptions.length ? flow?.organizationPartyId : null),
+                counts:(flow?.countsShown === false ? 'N' : null)}"/>
+        <set field="copyValues" from="{sourceDefinitionId:flowDoc?.definitionId, sourceVersion:flowDoc?.version,
+                copyTitle:flowDoc?.title, copyOrganizationPartyId:(flow?.organizationPartyId || null)}"/>
+        <set field="factsText" from="flowDoc ? [flowDoc.kindText, flowDoc.organizationName, 'version ' + flowDoc.version,
+                flowDoc.sourceText, flowDoc.template ? '' : flowDoc.sharing].filter(Boolean).join(' · ') : ''"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="${flowDoc ? flowDoc.title : 'Business flows'}" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${sel?.url}" url-type="plain" text="Open ${sel?.targetTitle}" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_open_in_new" condition="sel?.url"/>
+                <link url="../FlowMapEditor" text="Edit map" link-type="anchor-button" icon="sym_o_edit" condition="flowDoc?.canEdit"
+                        parameter-map="{definitionId:flowDoc?.definitionId}"/>
+                <container-dialog id="CopyMap" button-text="Copy for an organization" condition="flowDoc?.canCopy">
+                    <label type="p" style="m-muted" text="Your copy is yours to change: rename its steps, choose their worklists and link your procedures. It records what it was copied from; a later change of this map leaves your copy as it is."/>
+                    <form-single name="CopyMapForm" transition="copyMap" map="copyValues">
+                        <field name="sourceDefinitionId"><default-field><hidden/></default-field></field>
+                        <field name="sourceVersion"><default-field><hidden/></default-field></field>
+                        <field name="copyTitle"><default-field title="Name"><text-line size="50"/></default-field></field>
+                        <field name="copyOrganizationPartyId"><default-field title="Organization">
+                            <drop-down><list-options list="copyOrganizations" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="copyUserGroupId"><default-field title="Share with" tooltip="One of your groups; its members who see the organization read the map. Empty keeps it private.">
+                            <drop-down allow-empty="true"><list-options list="copyGroups" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="copy"><default-field><submit text="Copy map"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <link url="setDefault" link-type="hidden-form" text="Open here by default" condition="flowDoc &amp;&amp; !flowDoc.isDefault"
+                        parameter-map="{definitionId:flowDoc?.definitionId}"/>
+            </container>
+        </container>
+
+        <label text="Business flows are shown to Insights readers." type="p" style="m-muted" condition="!insights.capabilities.view"/>
+        <section name="MapNotAvailable" condition="insights.capabilities.view &amp;&amp; !flowDoc"><widgets>
+            <label text="This flow map is not available." type="p"/>
+            <link url="../FlowMaps" text="All maps" link-type="anchor"/>
+        </widgets></section>
+
+        <section name="MapBody" condition="flowDoc"><widgets>
+            <!-- MapContext -->
+            <form-single name="MapContext" transition="." map="contextValues">
+                <field name="definitionId"><default-field title="Map">
+                    <drop-down><list-options list="mapOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field></field>
+                <field name="organizationPartyId">
+                    <conditional-field condition="scopeOptions.length" title="Counts for">
+                        <drop-down allow-empty="${insights.allOrganizations || scopeOptions.length > 1}"><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+                    </conditional-field>
+                    <default-field><ignored/></default-field>
+                </field>
+                <field name="counts"><default-field title="Counts">
+                    <drop-down><list-options list="countOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field></field>
+                <field name="apply"><default-field><submit text="Apply"/></default-field></field>
+                <field-layout><field-row-big><field-ref name="definitionId"/><field-ref name="organizationPartyId"/><field-ref name="counts"/>
+                    <field-ref name="apply"/></field-row-big></field-layout>
+            </form-single>
+            <label text="${factsText}. ${flow.countsText} A count is its own list's and counts are not added together; an arrow is the usual next step, not a promise that every case takes it." type="p" style="m-muted"/>
+            <label text="${flowDoc.description}" type="p" condition="flowDoc.description"/>
+            <label text="${flowDoc.sourceChangedText}" type="p" style="text-warning" condition="flowDoc.sourceChangedText"/>
+            <label type="p" style="text-warning" condition="flow.problemCount"
+                    text="${flow.problemCount} ${flow.problemCount == 1 ? 'reference of this map is' : 'references of this map are'} not registered, so ${flow.problemCount == 1 ? 'its step reads' : 'their steps read'} as information. The editor names each."/>
+
+            <!-- ProcessLanes: each lane a column of its steps in order -->
+            <container style="row q-col-gutter-md">
+                <section-iterate name="ProcessLanes" list="lanes" entry="lane"><widgets>
+                    <container style="col-12 col-sm-6 col-md">
+                        <container-box>
+                            <box-header title="${lane.title}"/>
+                            <box-body>
+                                <label text="${lane.description}" type="p" style="text-caption m-muted" condition="lane.description"/>
+                                <label text="No step yet." type="p" style="text-caption m-muted" condition="!lane.steps.length"/>
+                                <section-iterate name="LaneSteps" list="lane.steps" entry="laneStep"><widgets>
+                                    <container style="q-mb-md">
+                                        <container>
+                                            <link url="." text="${laneStep.title}" link-type="anchor" style="text-weight-medium"
+                                                    parameter-map="Object.assign({stepId:laneStep.stepId}, stepLink)"/>
+                                        </container>
+                                        <link url="${laneStep.countUrl}" url-type="plain" text="${laneStep.countTitle}" badge="${laneStep.countText}"
+                                                link-type="anchor" condition="laneStep.countUrl"/>
+                                        <label text="${laneStep.countTitle}: ${laneStep.countText}" type="div" style="text-caption text-warning"
+                                                condition="laneStep.countFailed"/>
+                                        <label text="${laneStep.stateText}" type="div" style="text-caption m-muted" condition="laneStep.stateText"/>
+                                        <label text="Then: ${laneStep.nextText}" type="div" style="text-caption m-muted" condition="laneStep.nextText"/>
+                                    </container>
+                                </widgets></section-iterate>
+                            </box-body>
+                        </container-box>
+                    </container>
+                </widgets></section-iterate>
+            </container>
+
+            <container style="row q-col-gutter-md">
+                <!-- StepDetail -->
+                <container style="col-12 col-md-5">
+                    <container-box>
+                        <box-header title="${sel ? sel.title : 'Step'}"/>
+                        <box-body>
+                            <label text="Choose a step to read what it means, where its work waits and its procedure." type="p" style="m-muted" condition="!sel"/>
+                            <section name="StepDetail" condition="sel"><widgets>
+                                <label text="${sel.laneTitle}${sel.ownerName &amp;&amp; sel.ownerName != sel.laneTitle ? ' · ' + sel.ownerName : ''}${sel.stateText ? ' · ' + sel.stateText : ''}" type="p" style="text-caption m-muted"/>
+                                <label text="${sel.description}" type="p" condition="sel.description"/>
+                                <label text="Then: ${sel.nextText}" type="p" style="m-muted" condition="sel.nextText"/>
+                                <section name="StepWorklist" condition="sel.url"><widgets>
+                                    <label text="${sel.targetTitle}: ${sel.targetMeaning}" type="p"/>
+                                </widgets></section>
+                                <section name="StepCount" condition="sel.countText"><widgets>
+                                    <label text="${sel.countTitle}: ${sel.countText}. ${sel.countMeaning} ${sel.countScope ? 'Scope: ' + sel.countScope + '.' : ''} ${sel.countMessage}" type="p"/>
+                                    <link url="${sel.countUrl}" url-type="plain" text="Open the list that is counted" link-type="anchor" condition="sel.countUrl"/>
+                                </widgets></section>
+                                <label text="Measure: ${sel.measureText}" type="p" condition="sel.measureText"/>
+                                <container style="row q-gutter-sm">
+                                    <link url="${sel.reportUrl}" url-type="plain" text="Report: ${sel.reportTitle}" link-type="anchor" icon="sym_o_summarize"
+                                            condition="sel.reportUrl"/>
+                                    <link url="${sel.articleUrl}" url-type="plain" text="Read procedure: ${sel.articleTitle}" link-type="anchor"
+                                            icon="sym_o_menu_book" condition="sel.articleUrl"/>
+                                </container>
+                                <label text="This step has nothing to open for you here; it explains the flow." type="p" style="m-muted" condition="!sel.live"/>
+                            </widgets></section>
+                        </box-body>
+                    </container-box>
+                </container>
+                <!-- StepList: the same steps as one ordered list -->
+                <container style="col-12 col-md-7">
+                    <container-box>
+                        <box-header title="Steps in order"/>
+                        <box-body-nopad>
+                            <form-list name="StepList" list="flowSteps" skip-form="true" paginate="false">
+                                <field name="position"><default-field title="#"><display/></default-field></field>
+                                <field name="title"><default-field title="Step">
+                                    <link url="." text="${title}" link-type="anchor" parameter-map="Object.assign({stepId:stepId}, stepLink)"/>
+                                </default-field></field>
+                                <field name="laneTitle"><default-field title="Lane"><display/></default-field></field>
+                                <field name="countText"><default-field title="Waiting"><display text="${countText || stateText}"/></default-field></field>
+                                <field name="open"><default-field title="">
+                                    <link url="${url}" url-type="plain" text="${targetTitle}" link-type="anchor" condition="url"/>
+                                </default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="title"/><field-ref name="laneTitle"/></column>
+                                    <column><field-ref name="countText"/><field-ref name="open"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad>
+                    </container-box>
+                </container>
+            </container>
+        </widgets></section>
+    </widgets>
+</screen>

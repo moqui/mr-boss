@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ConnectionDetail (design-admin §8.1, §8 ConnectionDetail; style-guide §3.3 Detail; impl-admin P11): one connection of a
+    registered kind (a payment, shipping or tax gateway, a remote system, a mail sign-in provider, a network printer), read
+    from org.moqui.admin.ConfigurationServices.get#Connection and changed through store#Connection at the revision read.
+    NativeConnection is the kind's own form: its settings and its secrets, a secret entered and never shown; a change of an
+    endpoint setting needs the secrets entered again, else the stored ones are cleared, and either way the connection is
+    disabled until a test of it passes (test#Connection), which enables it. OrganizationAvailability, for a payment gateway,
+    permits its use by an internal organization the administrator administers, dated and enabled, through Mantle's
+    store#PaymentGatewayOrganization (never deleted: one in use is ended from now on); Accounting and Commerce choose among the
+    permitted gateways and change neither this nor a credential. ConnectionChecks shows the last test's checks, Consumers where
+    the connection is used. Reading needs ADMIN_CONNECTION_VIEW and a change or a test ADMIN_CONNECTION_MANAGE: the services
+    check them, and every refusal comes back as a reason shown here. The shared parts are template/AdminConnectionParts.xml. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Connection" default-menu-include="false">
+    <parameter name="adapterKey" required="true"/>
+    <parameter name="connectionKey" required="true"/>
+
+    <transition-include name="storeConnection" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+    <transition-include name="testConnection" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+    <transition-include name="setEnabled" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+    <!-- a payment gateway's use by an organization: permit, change the dates, enable or disable, or end it (remove) -->
+    <transition name="storeAvailability">
+        <actions>
+            <service-call name="mantle.account.GatewayConnectionServices.store#PaymentGatewayOrganization" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, paymentGatewayConfigId:connectionKey, expectedRevision:(bindingRevision || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), isEnabled:(isEnabled || null), remove:(remove === 'Y'),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? (stored.reason || (stored.active ? 'The organization may use the gateway' : 'Saved: the organization may not use the gateway now')) : stored.reason,
+                    !stored.applied || stored.reason ? 'warning' : 'success')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></default-response>
+        <error-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></error-response>
+    </transition>
+
+    <!-- a mail relay is MailRelayDetail's: this screen and its transitions answer the kinds of the Connections list -->
+    <always-actions><if condition="adapterKey === 'relay'"><set field="adapterKey" value="none"/></if></always-actions>
+    <actions>
+        <set field="kindTitle" value="Connection"/>
+        <set field="listPath" value="../Connections"/>
+        <set field="listTitle" value="Connections"/>
+        <set field="detailPath" value="."/>
+    </actions>
+    <widgets>
+        <section-include name="ConnectionPrepare" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section-include name="ConnectionUnavailable" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section-include name="ConnectionHeader" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section-include name="NativeConnectionBox" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section name="OrganizationAvailabilityBox" condition="recordFound &amp;&amp; found.adapter?.organizationBinding">
+            <actions>
+                <set field="availabilityRows" from="(connection.organizationList || []).map(row =&gt; Object.assign({}, row, {
+                        fromText: row.fromDate ? ec.l10n.format(Date.parse(row.fromDate), 'yyyy-MM-dd') : '',
+                        thruText: row.thruDate ? ec.l10n.format(Date.parse(row.thruDate), 'yyyy-MM-dd') : '',
+                        useText: [row.paymentMethodCount ? row.paymentMethodCount + (row.paymentMethodCount === 1 ? ' payment method' : ' payment methods') : '',
+                            row.storeCount ? row.storeCount + (row.storeCount === 1 ? ' store' : ' stores') : ''].filter(Boolean).join(', ') || 'Not used yet'}))"/>
+                <set field="permitValues" from="{adapterKey: adapterKey, connectionKey: connectionKey, isEnabled: 'true'}"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Organizations"/>
+                    <box-toolbar>
+                        <section name="PermitOrganizationSection" condition="canManage &amp;&amp; (connection.organizationOptions || []).length">
+                            <widgets>
+                                <container-dialog id="PermitOrganization" button-text="Permit an organization" icon="sym_o_add" title="Permit ${connection.name} for an organization">
+                                    <label type="p" style="m-muted" text="The organization's finance and store administrators may then choose this gateway. They cannot change its credentials."/>
+                                    <form-single name="PermitOrganization" transition="storeAvailability" map="permitValues">
+                                        <field name="adapterKey"><default-field><hidden/></default-field></field>
+                                        <field name="connectionKey"><default-field><hidden/></default-field></field>
+                                        <field name="isEnabled"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId">
+                                            <default-field title="Organization">
+                                                <drop-down><list-options list="connection.organizationOptions || []" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                                        <field name="thruDate"><default-field title="Until" tooltip="Empty keeps it open"><date-time/></default-field></field>
+                                        <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log beside the change"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Permit"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!availabilityRows.length"
+                                text="No organization you administer may use this gateway yet. Until one is permitted, Accounting and Commerce do not offer it."/>
+                        <label type="p" style="text-caption m-muted" condition="connection.otherOrganizationCount"
+                                text="${connection.otherOrganizationCount} more ${connection.otherOrganizationCount === 1 ? 'organization that you do not administer has' : 'organizations that you do not administer have'} a binding."/>
+                        <form-list name="OrganizationAvailability" list="availabilityRows" skip-form="true" paginate="false">
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="useText"><default-field title="Used by"><display/></default-field></field>
+                            <field name="change">
+                                <conditional-field condition="canManage &amp;&amp; active" title="">
+                                    <link url="storeAvailability" text="End" btn-type="danger" icon="sym_o_event_busy" link-type="hidden-form-link"
+                                            confirmation="End ${organizationName}'s use of ${connection.name} now? It is offered to them no more. ${useText === 'Not used yet' ? '' : 'What still names it (' + useText + ') keeps it for what was started and takes nothing new through it.'}"
+                                            parameter-map="{adapterKey:adapterKey, connectionKey:connectionKey, organizationPartyId:organizationPartyId, bindingRevision:revision, remove:'Y'}"/>
+                                </conditional-field>
+                                <conditional-field condition="canManage &amp;&amp; !active" title="">
+                                    <link url="storeAvailability" text="Permit again" icon="sym_o_event_available" link-type="hidden-form-link"
+                                            confirmation="Permit ${organizationName} to use ${connection.name} again, from now?"
+                                            parameter-map="{adapterKey:adapterKey, connectionKey:connectionKey, organizationPartyId:organizationPartyId, bindingRevision:revision, isEnabled:'true'}"/>
+                                </conditional-field>
+                                <default-field title=""><display text=""/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="organizationName"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="useText"/><field-ref name="change"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section-include name="ConnectionChecksBox" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section-include name="ConnectionConsumersBox" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+    </widgets>
+</screen>

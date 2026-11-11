@@ -176,7 +176,15 @@ const linkPaths = [
     "ScheduledReports/Schedules",
     "ScheduledReports/ScheduledReportDetail",
     "ScheduledReports/ReportDelivery",
-    "ManagementDigest"
+    "ManagementDigest",
+    // P8: business alerts (design §8)
+    "Alerts/Rules",
+    "Alerts/AlertDetail",
+    // P9: business flow maps (design §9)
+    "Flows/FlowMap",
+    "Flows/FlowMaps",
+    "Flows/FlowMapEditor",
+    "Flows/ProcessStory"
 ]
 // The record screens with tabs: under Insights their one subscreen is InsightsRecord (Shared/InsightsRecord.xml), which the
 // links name, since a screen's default tab is chosen before the app's context is known.
@@ -184,8 +192,9 @@ const tabbedRecords = ["Records/Customer360", "Records/Supplier360", "Records/Pr
 // The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
 // (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
 // authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or
-// save; Insights mounts no alert rules (P8), log context or definition import (P12), and shares from its Dashboard
-// (ShareDashboard), so the editor keeps a definition's group as it is.
+// save; a panel's New alert rule opens Insights' own AlertDetail (P8) for one who may set an alert (INSIGHTS_AUTHOR or
+// INSIGHTS_DISTRIBUTE), never Tools' AlertRule with its contact points; Insights mounts no log context or definition import
+// (P12), and shares from its Dashboard (ShareDashboard), so the editor keeps a definition's group as it is.
 function reportLinks(capabilities) {
     const authors = capabilities.author || capabilities.datasetEdit
     return {
@@ -196,7 +205,7 @@ function reportLinks(capabilities) {
         explore: "//Insights/ReportBuilder/Explore",
         split: "//Insights/ReportBuilder/Split",
         playlist: "//Insights/Playlists",
-        alertRule: null,
+        alertRule: capabilities.author || capabilities.distribute ? "//Insights/Alerts/AlertDetail" : null,
         logContext: null,
         share: "//Insights/Dashboard",
         // P6: each panel's menu offers Drill, Insights' own screen over the engine's get#Drill

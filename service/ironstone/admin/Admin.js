@@ -73,6 +73,10 @@ const areas = {
     // P10: Security (SignInPolicy, IdentityProviders, IdentityProviderDetail) for the access, configuration and integration
     // administrators and the administrator (BOSS_ADM_SECURITY)
     security: "Security",
+    // P11: Integrations (Connections, ConnectionDetail) and Mail and protocols (MailRelays, MailRelayDetail) for the
+    // integration administrator and the administrator (BOSS_ADM_INTEGRATIONS, BOSS_ADM_PROTOCOLS)
+    integrations: "Integrations",
+    protocols: "Protocols",
     organizations: "Settings/Organizations",
     operations: "Operations",
     agents: "Agents",
@@ -294,6 +298,11 @@ const linkPaths = [
     "Security/SignInPolicy",
     "Security/IdentityProviders",
     "Security/IdentityProviderDetail",
+    // P11: connections and mail relays
+    "Integrations/Connections",
+    "Integrations/ConnectionDetail",
+    "Protocols/MailRelays",
+    "Protocols/MailRelayDetail",
     "Agents/Home",
     "System",
     "Developer/Home"

@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights' business alerts (design-insights §8, Alerts, AlertDetail; impl-insights P8, INS-07; Alerts.js): Insights'
+    permissions, topic, template, link, cap, names and words over the report engine's owner-equivalent alerts
+    (org.moqui.report.ReportServices save#Definition for an alert rule with an audience, check#ReportAudience, get#AlertState,
+    find#AlertDeliveries; mr-moqui docs/tools/Monitoring.md "Business alerts"). Every write answers a refusal as applied false
+    with reasonCode and reason. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Alerts" allow-remote="false">
+        <description>Alerts' lists for an Insights reader (INSIGHTS_VIEW_REQUIRED otherwise). view mine: the rules the caller owns, each with
+            its condition, audience and the most severe state of its series (No data and Error say the health is not known);
+            received: the rules that told the caller, each with the caller's own delivery, for every reader; templates: the
+            shipped rules, each over a dataset the caller reads or not. mine and templates are an author's or a distributor's
+            (INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE); any other caller gets received. A state is read through the engine, which
+            answers it to the owner and to a recipient whose access equals the owner's.</description>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="state"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="view"/>
+            <parameter name="alerts" type="List"/>
+            <parameter name="received" type="List"/>
+            <parameter name="templates" type="List"/>
+            <parameter name="canAuthor" type="Boolean"/>
+            <parameter name="canDistribute" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('findAlerts', context)"/>
+            <set field="view" from="found.view"/>
+            <set field="alerts" from="found.alerts"/>
+            <set field="received" from="found.received"/>
+            <set field="templates" from="found.templates"/>
+            <set field="canAuthor" from="found.canAuthor"/>
+            <set field="canDistribute" from="found.canDistribute"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Alert" allow-remote="false">
+        <description>One alert rule the caller reads (ALERT_UNAVAILABLE for none, Tools' or another's unshared): its basis (the saved
+            query's source, measure, reduction, condition, range and interval), its audience by id for its owner, each
+            recipient's result from the engine's audience check for an owner who may distribute (may be told, or a reason in
+            words, never the other person's grants), the caller's own state of each series with its value (for the owner, or
+            a recipient whose access equals the owner's; otherwise stateNote says why not), and the deliveries: each
+            recipient's last outcome for the owner, the caller's own otherwise, never a value. Without definitionId, with a
+            dashboard and a panel the caller reads: the draft of a new rule over that panel's saved query (creating true), for
+            an author or a distributor (INSIGHTS_ALERT_REQUIRED; PANEL_UNAVAILABLE, PANEL_NOT_MEASURED).</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="dashboardId"/>
+            <parameter name="panelId"/>
+            <parameter name="queryIndex"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="creating" type="Boolean"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canCopy" type="Boolean"/>
+            <parameter name="canDistribute" type="Boolean"/>
+            <parameter name="options" type="Map"/>
+            <parameter name="alert" type="Map"/>
+            <parameter name="audience" type="List"/>
+            <parameter name="audienceNote"/>
+            <parameter name="states" type="List"/>
+            <parameter name="stateNote"/>
+            <parameter name="deliveries" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('getAlert', context)"/>
+            <set field="creating" from="found.creating"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="canCopy" from="found.canCopy"/>
+            <set field="canDistribute" from="found.canDistribute"/>
+            <set field="options" from="found.options"/>
+            <set field="alert" from="found.alert"/>
+            <set field="audience" from="found.audience"/>
+            <set field="audienceNote" from="found.audienceNote"/>
+            <set field="states" from="found.states"/>
+            <set field="stateNote" from="found.stateNote"/>
+            <set field="deliveries" from="found.deliveries"/>
+        </actions>
+    </service>
+    <service verb="store" noun="Alert" allow-remote="false">
+        <description>Create or change an alert rule of the caller's own (INSIGHTS_ALERT_REQUIRED: authoring or the distribute permission;
+            ALERT_NOT_OWNED for another's). New: over the saved query of a panel the caller reads (dashboardId, panelId,
+            queryIndex), saved paused until activated. With basisGiven Y (and always when new) the basis: the name, the measure (one of the query's), the reduction,
+            the condition (above or below a threshold with an optional recovery threshold; inside or outside a range), the
+            range read (window), the interval and the pending and keep-firing durations. With audienceGiven Y (and always when
+            new): audienceKind personal, or group with recipientUserIds and recipientGroupIds, emailChannel Y to also send to
+            each recipient's account address, and userGroupId, one of the caller's own groups the rule is shared with
+            (SHARE_GROUP_UNAVAILABLE). Other people need INSIGHTS_DISTRIBUTE (INSIGHTS_DISTRIBUTE_REQUIRED), a person must be an
+            Insights reader (RECIPIENT_UNAVAILABLE) and a group one the caller belongs to (RECIPIENT_GROUP_UNAVAILABLE). The
+            topic, the email template, the link and the cap of 50 are Insights'; no address, webhook or contact point is taken.
+            The report engine sets the mode and, for an active rule, refuses a recipient whose access differs from the caller's
+            (RECIPIENT_REFUSED), an audience over the cap (RECIPIENT_CAP) and a stale version. A refusal is the answer.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="dashboardId"/>
+            <parameter name="panelId"/>
+            <parameter name="queryIndex"/>
+            <parameter name="title"/>
+            <parameter name="valueField"/>
+            <parameter name="reduce"/>
+            <parameter name="conditionType"/>
+            <parameter name="threshold"/>
+            <parameter name="minimum"/>
+            <parameter name="maximum"/>
+            <parameter name="recoveryThreshold"/>
+            <parameter name="window"/>
+            <parameter name="intervalSeconds"/>
+            <parameter name="pendingSeconds"/>
+            <parameter name="keepFiringSeconds"/>
+            <parameter name="basisGiven"/>
+            <parameter name="audienceGiven"/>
+            <parameter name="audienceKind"/>
+            <parameter name="recipientUserIds" type="List"/>
+            <parameter name="recipientGroupIds" type="List"/>
+            <parameter name="emailChannel"/>
+            <parameter name="userGroupId"/>
+            <parameter name="expectedVersion"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Long"/>
+            <parameter name="paused" type="Boolean"/>
+            <parameter name="deliveryMode"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('storeAlert', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+            <set field="paused" from="found.paused"/>
+            <set field="deliveryMode" from="found.deliveryMode"/>
+        </actions>
+    </service>
+    <service verb="copy" noun="Alert" allow-remote="false">
+        <description>The caller's own copy of a shipped alert rule, or of one shared with them (INSIGHTS_ALERT_REQUIRED; ALERT_UNAVAILABLE;
+            DATASET_UNAVAILABLE when its dataset is not admitted for the caller): for the caller alone, without the source's
+            contact points, with the source and its version recorded, and paused until the caller activates it.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="title"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Long"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('copyAlert', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+        </actions>
+    </service>
+    <service verb="pause" noun="Alerts" allow-remote="false">
+        <description>Pause, or with paused false activate, one or several rules of the caller's own (definitionIds), each with its own result.
+            An activation first runs the rule's reading as the caller (ALERT_READING_UNAVAILABLE when the source cannot be read
+            or does not answer completely), then saves it active, which is the engine's check of the owner's sources and of
+            every recipient (RECIPIENT_REFUSED, RECIPIENT_CAP): a rule waiting for its new owner, or copied and not yet
+            validated, tells nobody until this passes.</description>
+        <in-parameters>
+            <parameter name="definitionIds" type="List"/>
+            <parameter name="paused"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="results" type="List"/>
+            <parameter name="appliedCount" type="Integer"/>
+            <parameter name="paused" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('pauseAlerts', context)"/>
+            <set field="results" from="found.results"/>
+            <set field="appliedCount" from="found.appliedCount"/>
+            <set field="paused" from="found.paused"/>
+        </actions>
+    </service>
+    <service verb="test" noun="Alert" allow-remote="false">
+        <description>The rule's reading run now as the caller (an author or a distributor who reads the rule): whether it can be evaluated
+            and how many series it has. It changes no state and tells nobody.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="seriesCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('testAlert', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="seriesCount" from="found.seriesCount"/>
+        </actions>
+    </service>
+    <service verb="delete" noun="Alert" allow-remote="false">
+        <description>Delete a rule of the caller's own with its state, its deliveries and its versions (ALERT_NOT_OWNED for another's or a
+            shipped one).</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Alerts.js').execute('deleteAlert', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+        </actions>
+    </service>
+</services>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Business alerts (design-insights §8 Alerts, AlertDetail; impl-insights P8, INS-07): the list (Rules, the default:
+    Mine, Received and Templates) with the hidden AlertDetail. Every Insights user opens it (Received and one's own state are
+    every reader's); each transition reaches ironstone.insights.AlertServices, which checks INSIGHTS_AUTHOR or
+    INSIGHTS_DISTRIBUTE itself, and the report engine checks its own grants, the rule's sources and each recipient. Tools'
+    Alerts, its contact points, webhooks and addresses are not mounted. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Business alerts" default-menu-index="10" menu-image="sym_o_notifications_active" menu-image-type="icon">
+    <subscreens default-item="Rules" always-use-full-path="true">
+        <subscreens-item name="Rules" location="component://mr-boss/screen/Insights/Alerts/Rules.xml" menu-include="false"/>
+        <subscreens-item name="AlertDetail" location="component://mr-boss/screen/Insights/Alerts/AlertDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets><subscreens-active/></widgets>
+</screen>

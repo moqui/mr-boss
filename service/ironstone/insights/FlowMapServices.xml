@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights' business flow maps (design-insights §9, FlowMaps, FlowMap, FlowMapEditor, ProcessStory; impl-insights P9, INS-08;
+    FlowMaps.js): clickable documentation of the suite's customer, internal and supplier flows, each a report engine
+    definition of type report and kind flowmap (the shipped templates report/insights-flowmap-*.json, and an organization's
+    copies), so listing, versions, diff and restore are the engine's own operations, called here as the viewer. A step names
+    registrations only (ironstone.insights.FlowTarget with typed parameters, AttentionProvider, MetricRegistration,
+    ReportCatalogEntry) and a Knowledge page; each is checked when a map is saved and again when it is read, and answered to
+    a viewer only as far as its owner lets them. Reading is every Insights reader's (INSIGHTS_VIEW); copying and changing a
+    map are a flow editor's (INSIGHTS_FLOW_EDIT), on their own map, with the version read. Every write answers a refusal as
+    applied false with reasonCode and reason. Nothing here completes a task or changes a business record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Maps" allow-remote="false">
+        <description>The flow maps an Insights reader reads (INSIGHTS_VIEW_REQUIRED otherwise): the suite templates and the maps of the
+            organizations they see that the report engine lets them read (their own, and those shared with their groups), each with
+            its organization, what it was copied from and at which version, its version and sharing, and whether the caller may
+            change or copy it. Filtered by organization (its maps and the templates; one not the caller's is refused,
+            ORGANIZATION_UNAVAILABLE), kind (template or copy) and text. With the organizations and the caller's own groups a
+            copy may be made for and shared with.</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="kind"/>
+            <parameter name="text"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="maps" type="List"/>
+            <parameter name="canCopy" type="Boolean"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="groups" type="List"/>
+            <parameter name="kindOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('findMaps', context)"/>
+            <set field="maps" from="found.maps"/>
+            <set field="canCopy" from="found.canCopy"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="groups" from="found.groups"/>
+            <set field="kindOptions" from="found.kindOptions"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Map" allow-remote="false">
+        <description>A flow map as the caller reads it (MAP_UNAVAILABLE for none, another kind of definition, one the engine does not let
+            them read or one of an organization they do not see): its lanes with their steps, the same steps as one ordered list,
+            the handoffs as edge rows (source, target, their names and lanes and the source's count) and the selected step.
+            Without definitionId: the caller's default map, else one of the organization in scope, else the suite's customer flow.
+            The body is validated against the registrations here, whatever saved it: a step whose worklist, parameter, count,
+            measure or report is not registered answers without it (stateText Information), and its problems are listed for a
+            flow editor only. A worklist link is answered only when its route opens to the caller's own groups, a count is its
+            owner's count service called as the caller (left out when the owner refuses; Unavailable when it fails, that step's
+            alone), a report by its owner's catalogue and a Knowledge page only when the caller's own grants open Commons
+            Knowledge and the wiki lets them read it. A template's counts are for the organization asked (one of the caller's);
+            an organization's map keeps its own. counts false leaves the counts out.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="stepId"/>
+            <parameter name="counts"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="map" type="Map"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="lanes" type="List"/>
+            <parameter name="steps" type="List"/>
+            <parameter name="edges" type="List"/>
+            <parameter name="selectedStep" type="Map"/>
+            <parameter name="countsShown" type="Boolean"/>
+            <parameter name="countsText"/>
+            <parameter name="problems" type="List"/>
+            <parameter name="problemCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('getMap', context)"/>
+            <set field="map" from="found.map"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="lanes" from="found.lanes"/>
+            <set field="steps" from="found.steps"/>
+            <set field="edges" from="found.edges"/>
+            <set field="selectedStep" from="found.selectedStep"/>
+            <set field="countsShown" from="found.countsShown"/>
+            <set field="countsText" from="found.countsText"/>
+            <set field="problems" from="found.problems"/>
+            <set field="problemCount" from="found.problemCount"/>
+        </actions>
+    </service>
+    <service verb="validate" noun="Map" allow-remote="false">
+        <description>Check a flow map body (map), or a map the caller reads (definitionId), against the registrations, for a flow editor
+            (FLOW_EDIT_REQUIRED): each problem with its reasonCode, message, stepId and field (an unregistered worklist, count,
+            measure or report; a parameter the worklist does not take, a value outside its choices, the organization set on a
+            step; text holding a template expression or too long; ids that are missing, repeated or not in the map). store#Map
+            and copy#Map run the same check and refuse a body with a problem; get#Map runs it at every read.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="map" type="Map"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="valid" type="Boolean"/>
+            <parameter name="problems" type="List"/>
+            <parameter name="laneCount" type="Integer"/>
+            <parameter name="stepCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('validateMap', context)"/>
+            <set field="valid" from="found.valid"/>
+            <set field="problems" from="found.problems"/>
+            <set field="laneCount" from="found.laneCount"/>
+            <set field="stepCount" from="found.stepCount"/>
+        </actions>
+    </service>
+    <service verb="copy" noun="Map" allow-remote="false">
+        <description>A flow editor's own copy of a map they read, for one of their organizations (ORGANIZATION_REQUIRED,
+            ORGANIZATION_UNAVAILABLE), under its own title, private or shared with one of their own groups
+            (SHARE_GROUP_UNAVAILABLE): the copy records its source and the source's version (sourceVersion given must be the
+            source's current one, SOURCE_CHANGED), keeps the source's registered references and is saved through the report
+            engine as the caller. Nothing of the source's sharing, and no page's permission, goes with it; a later change of the
+            source leaves the copy as it is.</description>
+        <in-parameters>
+            <parameter name="sourceDefinitionId"/>
+            <parameter name="sourceVersion" type="Integer"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="title"/>
+            <parameter name="userGroupId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('copyMap', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+        </actions>
+    </service>
+    <service verb="store" noun="Map" allow-remote="false">
+        <description>Change the caller's own map (design §9 FlowMapEditor's input), a flow editor's (FLOW_EDIT_REQUIRED; MAP_READ_ONLY for a
+            template, MAP_NOT_OWNED for another's, MAP_CHANGED for a stale expectedVersion): with title, the name, description
+            and sharing together (userGroupId one of the caller's own groups, none: private); with lanes or steps, the whole
+            list ({laneId, title, description, sequenceNum}; {stepId, laneId, title, description, sequenceNum,
+            targetRegistrationId, targetParameters, countProviderKey, countMetricId, catalogEntryId, wikiPageId, next}). The
+            body is validated as validate#Map does and refused with its first problem; a Knowledge page newly named must be one
+            the caller reads (PAGE_UNAVAILABLE). The organization is not changed (ORGANIZATION_FIXED). Saved through the report
+            engine as a new version.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+            <parameter name="title"/>
+            <parameter name="description"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="userGroupId"/>
+            <parameter name="lanes" type="List"/>
+            <parameter name="steps" type="List"/>
+            <parameter name="versionNote"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('storeMap', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+        </actions>
+    </service>
+    <service verb="store" noun="MapLane" allow-remote="false">
+        <description>One lane of the caller's own map: added (no laneId; its id is made from its title and never changes), renamed,
+            moved up or down (move), or removed once it holds no step (LANE_IN_USE names how many). The same checks and
+            refusals as store#Map.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+            <parameter name="laneId"/>
+            <parameter name="title"/>
+            <parameter name="description"/>
+            <parameter name="move"/>
+            <parameter name="remove" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('storeMapLane', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+        </actions>
+    </service>
+    <service verb="store" noun="MapStep" allow-remote="false">
+        <description>One step of the caller's own map: added at the end of its lane (no stepId; its id is made from its title and never
+            changes), changed (its lane, name, description, registered worklist with its parameters as a map or as
+            name=value&amp;name=value text, registered count, measure and report, Knowledge page and the steps it leads to),
+            moved up or down within its lane (move), or removed. The same checks and refusals as store#Map.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+            <parameter name="stepId"/>
+            <parameter name="laneId"/>
+            <parameter name="title"/>
+            <parameter name="description"/>
+            <parameter name="targetRegistrationId"/>
+            <parameter name="targetParameters" type="Map"/>
+            <parameter name="targetParametersText"/>
+            <parameter name="countProviderKey"/>
+            <parameter name="countMetricId"/>
+            <parameter name="catalogEntryId"/>
+            <parameter name="wikiPageId"/>
+            <parameter name="nextStepIds"/>
+            <parameter name="move"/>
+            <parameter name="remove" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('storeMapStep', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+        </actions>
+    </service>
+    <service verb="restore" noun="Map" allow-remote="false">
+        <description>An earlier version of the caller's own map made the current one again, as a new version (the report engine's
+            restore), for a flow editor at the version read (MAP_CHANGED; VERSION_UNAVAILABLE). get#Map validates what it
+            restores as any other body.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+            <parameter name="expectedVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('restoreMap', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+        </actions>
+    </service>
+    <service verb="delete" noun="Map" allow-remote="false">
+        <description>Retire the caller's own map with its versions (a flow editor's; a template and another's map are refused). The
+            report engine refuses one another definition still references.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="title"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('deleteMap', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="title" from="found.title"/>
+        </actions>
+    </service>
+    <service verb="store" noun="DefaultMap" allow-remote="false">
+        <description>The map Business flows opens for the caller: one they read (MAP_UNAVAILABLE), or none to clear it. A
+            UserPreference only; it grants nothing.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('storeDefaultMap', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+        </actions>
+    </service>
+    <service verb="get" noun="MapEditor" allow-remote="false">
+        <description>A map as a flow editor works on it (FLOW_EDIT_REQUIRED; MAP_UNAVAILABLE): its identity and whether the caller may
+            change it (their own; otherwise read only, to copy), its lanes and steps with each stored reference and what is
+            wrong with it, the registered worklists (with the parameters each takes), counts, measures and reports to choose
+            from, the caller's groups, its versions (the report engine's) and, for diffVersion, what that version changed.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="diffVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="map" type="Map"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="lanes" type="List"/>
+            <parameter name="steps" type="List"/>
+            <parameter name="problems" type="List"/>
+            <parameter name="options" type="Map"/>
+            <parameter name="targetParameters" type="List"/>
+            <parameter name="versions" type="List"/>
+            <parameter name="diffVersion" type="Integer"/>
+            <parameter name="changes" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('getMapEditor', context)"/>
+            <set field="map" from="found.map"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="lanes" from="found.lanes"/>
+            <set field="steps" from="found.steps"/>
+            <set field="problems" from="found.problems"/>
+            <set field="options" from="found.options"/>
+            <set field="targetParameters" from="found.targetParameters"/>
+            <set field="versions" from="found.versions"/>
+            <set field="diffVersion" from="found.diffVersion"/>
+            <set field="changes" from="found.changes"/>
+        </actions>
+    </service>
+    <service verb="find" noun="MapPages" allow-remote="false">
+        <description>The Knowledge pages a flow editor may link a step to, by text (term) and the selected page (selected), each a
+            value and label: the wiki's own search as the caller, so never a page they may not view; none for a caller whose
+            own grants do not open Commons Knowledge.</description>
+        <in-parameters>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="pages" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('findMapPages', context)"/>
+            <set field="pages" from="found.pages"/>
+        </actions>
+    </service>
+    <service verb="get" noun="StoryAccess" allow-remote="false">
+        <description>Whether the caller's own grants open Commons Knowledge (opens): what Insights' ProcessStory mount asks before it
+            serves the Knowledge screen or any transition below it, since the Insights root's grant would otherwise cover them.
+            False for a caller without Insights read.</description>
+        <out-parameters>
+            <parameter name="opens" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/FlowMaps.js').execute('storyAccess', context)"/>
+            <set field="opens" from="found.opens"/>
+        </actions>
+    </service>
+</services>

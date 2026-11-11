@@ -970,6 +970,14 @@ const operations = {
     digestPreview
 }
 ;({
+    // P8: the engine call, a write's answer, the proposable recipients and the display helpers, for Alerts.js
+    engine,
+    attempt,
+    proposable,
+    userNames,
+    groupNames,
+    dateText,
+    deliveryStates,
     execute: (op, parameters) => {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown Insights delivery operation " + op)
         return operations[op](parameters || {})

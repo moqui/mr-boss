@@ -1,0 +1,198 @@
+{
+  "id": "insights-flowmap-customer",
+  "type": "report",
+  "title": "Customer flow",
+  "body": {
+    "kind": "flowmap",
+    "folder": "Insights",
+    "description": "From a customer finding us to a paid order and the service after it: who does each step, where its work waits and where to read more. Copy it for your organization to rename steps and link your own procedures.",
+    "templateVersion": 1,
+    "lanes": [
+      {
+        "laneId": "customer",
+        "title": "Customer",
+        "description": "What the customer does.",
+        "sequenceNum": 1
+      },
+      {
+        "laneId": "selling",
+        "title": "Sales and stores",
+        "description": "Quoting, the stores and their orders.",
+        "sequenceNum": 2
+      },
+      {
+        "laneId": "fulfilment",
+        "title": "Warehouse",
+        "description": "Picking, packing, shipping and returned goods.",
+        "sequenceNum": 3
+      },
+      {
+        "laneId": "money",
+        "title": "Accounting",
+        "description": "Invoices, payments and refunds.",
+        "sequenceNum": 4
+      },
+      {
+        "laneId": "care",
+        "title": "Customer service",
+        "description": "Cases, returns and warranty.",
+        "sequenceNum": 5
+      }
+    ],
+    "steps": [
+      {
+        "stepId": "find-us",
+        "laneId": "customer",
+        "title": "Finds us",
+        "sequenceNum": 1,
+        "description": "Campaigns, the website and referrals bring a customer in. Marketing's campaigns and visits are not part of this installation yet, so this step is information only.",
+        "next": [
+          "quote",
+          "shop"
+        ]
+      },
+      {
+        "stepId": "quote",
+        "laneId": "selling",
+        "title": "Quote and negotiate",
+        "sequenceNum": 1,
+        "description": "A salesperson qualifies the opportunity and sends a quote. The Sales app is not part of this installation yet, so this step is information only.",
+        "next": [
+          "order"
+        ]
+      },
+      {
+        "stepId": "shop",
+        "laneId": "selling",
+        "title": "Shops in a store",
+        "sequenceNum": 2,
+        "description": "The customer fills a cart in one of the stores. Open carts are those not checked out yet.",
+        "targetRegistrationId": "Commerce.Carts",
+        "countProviderKey": "Commerce.OpenCarts",
+        "next": [
+          "order"
+        ]
+      },
+      {
+        "stepId": "order",
+        "laneId": "selling",
+        "title": "Places an order",
+        "sequenceNum": 3,
+        "description": "Checkout places the order; an order taken by a salesperson joins here. Orders are counted when placed, by the selling organization.",
+        "targetRegistrationId": "Commerce.Orders",
+        "countMetricId": "Sales.Orders",
+        "catalogEntryId": "Commerce.OnlineSales",
+        "next": [
+          "payment"
+        ]
+      },
+      {
+        "stepId": "payment",
+        "laneId": "selling",
+        "title": "Payment checked",
+        "sequenceNum": 4,
+        "description": "An order whose payment was not authorized is held until the customer pays or the hold is released.",
+        "targetRegistrationId": "Commerce.Orders",
+        "targetParameters": {
+          "attention": "paymentHold"
+        },
+        "countProviderKey": "Commerce.PaymentHolds",
+        "next": [
+          "approve"
+        ]
+      },
+      {
+        "stepId": "approve",
+        "laneId": "selling",
+        "title": "Order approved",
+        "sequenceNum": 5,
+        "description": "A placed order waits for approval before the warehouse sees it.",
+        "targetRegistrationId": "Commerce.Orders",
+        "targetParameters": {
+          "statusId": "OrderPlaced"
+        },
+        "countProviderKey": "Commerce.ToApprove",
+        "next": [
+          "pick"
+        ]
+      },
+      {
+        "stepId": "pick",
+        "laneId": "fulfilment",
+        "title": "Pick and pack",
+        "sequenceNum": 1,
+        "description": "Approved orders are released to picklists, picked from their locations and packed.",
+        "targetRegistrationId": "Warehouse.Picklists"
+      },
+      {
+        "stepId": "ship",
+        "laneId": "fulfilment",
+        "title": "Ship",
+        "sequenceNum": 2,
+        "description": "Packed shipments are labelled and handed to the carrier; shipping an order issues its stock.",
+        "targetRegistrationId": "Warehouse.Shipments",
+        "next": [
+          "invoice"
+        ]
+      },
+      {
+        "stepId": "returned-goods",
+        "laneId": "fulfilment",
+        "title": "Returned goods received",
+        "sequenceNum": 3,
+        "description": "Goods sent back are received and inspected against their return authorization.",
+        "targetRegistrationId": "Warehouse.Returns",
+        "next": [
+          "refund"
+        ]
+      },
+      {
+        "stepId": "invoice",
+        "laneId": "money",
+        "title": "Invoice",
+        "sequenceNum": 1,
+        "description": "Shipping an order invoices it. Invoiced revenue is the posted invoices of the period, each currency apart.",
+        "targetRegistrationId": "Accounting.Invoices",
+        "countMetricId": "Accounting.InvoicedRevenue"
+      },
+      {
+        "stepId": "paid",
+        "laneId": "money",
+        "title": "Payment received",
+        "sequenceNum": 2,
+        "description": "Payments are applied to their invoices; what stays open ages in the receivables aging.",
+        "targetRegistrationId": "Accounting.Payments",
+        "catalogEntryId": "Accounting.Aging"
+      },
+      {
+        "stepId": "refund",
+        "laneId": "money",
+        "title": "Refund or credit",
+        "sequenceNum": 3,
+        "description": "An accepted return is refunded or credited against the customer's account.",
+        "targetRegistrationId": "Accounting.Payments"
+      },
+      {
+        "stepId": "case",
+        "laneId": "care",
+        "title": "Help and questions",
+        "sequenceNum": 1,
+        "description": "A question or a problem becomes a case, worked in its queue under its service level.",
+        "targetRegistrationId": "CustomerService.Cases",
+        "countMetricId": "CustomerService.Backlog",
+        "catalogEntryId": "CustomerService.CaseVolumes"
+      },
+      {
+        "stepId": "return",
+        "laneId": "care",
+        "title": "Return or exchange",
+        "sequenceNum": 2,
+        "description": "A return is authorized under the store's return policy and the customer sends the goods back.",
+        "targetRegistrationId": "CustomerService.Returns",
+        "next": [
+          "returned-goods"
+        ]
+      }
+    ]
+  }
+}

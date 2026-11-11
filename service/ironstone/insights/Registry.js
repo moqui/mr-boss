@@ -652,6 +652,9 @@ function definitionRoute(definition, capabilities) {
         return {url: "/qapps/Insights/Playlists?definitionId=" + id}
     if (definition.type === "report" && definition.body?.kind === "digest")
         return {url: "/qapps/Insights/ManagementDigest?definitionId=" + id}
+    // P9: a flow map opens in Business flows (get#Map checks its organization again)
+    if (definition.type === "report" && definition.body?.kind === "flowmap")
+        return {url: "/qapps/Insights/Flows/FlowMap?definitionId=" + id}
     if (definition.type === "panel")
         return capabilities.author || capabilities.datasetEdit
             ? {url: "/qapps/Insights/PanelDetail?definitionId=" + id}
@@ -687,13 +690,17 @@ function findSavedReports(p) {
         for (const definition of definitions) {
             if (definition.readOnly || !savedTypes.includes(definition.type) || !wanted(definition.type)) continue
             if (!matches(definition.title)) continue
+            // an organization's flow map (P9) is listed for those who see its organization, as get#Map answers it
+            const flowMap = definition.type === "report" && definition.body?.kind === "flowmap"
+            if (flowMap && !insights.sees(userScope, definition.body.organizationPartyId)) continue
             const mine = definition.ownerId === ec.user.userId
             if (p.owner === "mine" && !mine) continue
             if (p.owner === "shared" && mine) continue
             const route = definitionRoute(definition, can)
             out.push({
                 kind: definition.type,
-                kindName: kindNames[definition.type],
+                kindName: flowMap ? "Flow map" : kindNames[definition.type],
+                flowMap,
                 id: definition.id,
                 title: definition.title || definition.id,
                 ownerText: mine ? "You" : "Shared",
@@ -701,7 +708,8 @@ function findSavedReports(p) {
                 version: definition.version,
                 url: route.url || null,
                 unavailable: route.unavailable || "",
-                canCopy: !!can.author
+                // a flow map is copied in Business flows, by a flow editor (copy#Map records its source)
+                canCopy: !!can.author && !flowMap
             })
         }
     }
@@ -783,6 +791,8 @@ function copySavedReport(p) {
     const source = engine(R + "get#Definition", {definitionId: p.definitionId}).definition
     if (!savedTypes.includes(source.type))
         denied("COPY_UNAVAILABLE", "Only dashboards, panels, searches and reports are copied here")
+    if (source.type === "report" && source.body?.kind === "flowmap")
+        denied("COPY_UNAVAILABLE", "A flow map is copied in Business flows")
     if (!blank(p.expectedVersion) && Number(p.expectedVersion) !== Number(source.version || 0))
         denied("DEFINITION_CHANGED", "It changed since you read it; reload and try again")
     const newId =
@@ -819,19 +829,23 @@ function searchRecords(p) {
     const shipped = []
     try {
         const text = String(p.text).trim().toLowerCase()
-        for (const definition of Array.from(engine(R + "list#Definitions", {definitionType: "dashboard"}).definitions || [])) {
+        // the shipped business dashboards and, P9, the suite's flow-map templates
+        for (const definition of Array.from(engine(R + "list#Definitions", {}).definitions || [])) {
             if (!definition.readOnly || definition.component === "tools") continue
+            const flowMap = definition.type === "report" && definition.body?.kind === "flowmap"
+            if (definition.type !== "dashboard" && !flowMap) continue
             if (
                 String(definition.title || "")
                     .toLowerCase()
                     .includes(text)
             )
                 shipped.push({
-                    kind: "dashboard",
-                    kindName: "Dashboard",
+                    kind: definition.type,
+                    flowMap,
+                    kindName: flowMap ? "Flow map" : "Dashboard",
                     id: definition.id,
                     title: definition.title,
-                    url: "/qapps/Insights/Dashboard?definitionId=" + encodeURIComponent(definition.id)
+                    url: definitionRoute(definition, userScope.capabilities).url
                 })
         }
     } catch (error) {
@@ -845,7 +859,7 @@ function searchRecords(p) {
             .map(row => ({
                 title: row.title,
                 subtitle: "Insights · " + row.kindName,
-                icon: row.kind === "dashboard" ? "sym_o_dashboard" : "sym_o_saved_search",
+                icon: row.flowMap ? "sym_o_account_tree" : row.kind === "dashboard" ? "sym_o_dashboard" : "sym_o_saved_search",
                 recordEntity: "moqui.report.Definition",
                 recordId: row.id,
                 url: row.url
@@ -899,7 +913,8 @@ const refusesCount = text => refusalText.test(text) || /\b[A-Z]+(?:_[A-Z]+)*_REQ
 // get#Attention: each registered provider as the viewer (design §3): one whose route does not open to the viewer, whose
 // permission they lack, whose owner refuses them or answers them no count is left out, naming nothing; one whose count fails
 // is named on its own card and the others go on. Providers sharing a count call (an owner's Home summary) share one call. The
-// counts are grouped by owner and never added into a total: the same work can be in more than one worklist.
+// counts are grouped by owner and never added into a total: the same work can be in more than one worklist. providerKeys (a
+// flow map's steps, FlowMaps.js; no service parameter) keeps the board to those providers, so only their owners are called.
 function attention(p) {
     viewer()
     const context = insights.execute("context", {appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
@@ -921,8 +936,10 @@ function attention(p) {
         return answers.get(key)
     }
     const groups = []
+    const onlyKeys = Array.isArray(p.providerKeys) ? new Set(p.providerKeys.map(String)) : null
     for (const provider of attentionProviders()) {
         if (!blank(p.ownerApp) && provider.ownerApp !== p.ownerApp) continue
+        if (onlyKeys && !onlyKeys.has(provider.providerKey)) continue
         try {
             if (blank(provider.routePath) || !admin.destinationOpens(grants, provider.routePath)) continue
             if (provider.requiredPermission && !lib.access.has(provider.requiredPermission)) continue
@@ -1202,6 +1219,14 @@ const operations = {
 }
 ;({
     home,
+    // P9: the registries, the catalog reader, a metric's registration and the attention board, for FlowMaps.js
+    registered,
+    catalogEntries,
+    metricRegistrations,
+    attentionProviders,
+    reader,
+    attention,
+    ownerNames,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights registry operation " + op)
         return operations[op](parameters || {})

@@ -3,7 +3,7 @@
   "type": "alert",
   "title": "Checkout failures",
   "body": {
-    "description": "Fires when store checkouts failed in the last hour (a payment declined, a placement refused), by store. It reads every organization's checkouts, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "description": "Fires when store checkouts failed in the last hour (a payment declined, a placement refused), by store, among the stores its owner reads. A template: copy it in Insights › Business alerts, set the threshold and the audience, then activate it.",
     "query": {
       "datasetId": "boss-commerce-checkouts",
       "from": "now-1h",
@@ -49,16 +49,6 @@
     "labels": {
       "team": "commerce",
       "severity": "warning"
-    },
-    "contactPoints": [
-      {
-        "id": "administrators",
-        "type": "notification",
-        "topic": "ReportAlert",
-        "userGroupId": "ADMIN",
-        "groupWaitSeconds": 0,
-        "repeatSeconds": 3600
-      }
-    ]
+    }
   }
 }
