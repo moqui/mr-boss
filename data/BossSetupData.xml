@@ -4962,7 +4962,7 @@ along with this software (see the LICENSE.md file). If not, see
         organizations the reader administers; the administrator's MANTLE_ACTIVE_ORG every one with none active). It has no
         transition that writes. Its reads check ADMIN_AUDIT_VIEW themselves (ironstone.admin.AuditServices, the framework's
         org.moqui.admin.AuditServices and Mantle's find#IdentityChanges), so the area's inheritable ALWAYS is not what
-        decides one. The audit reader holds no other Admin area, no System and no Dashboards grant. -->
+        decides one. The audit reader holds no other Admin area, no System, no Dashboards and no dataset grant. -->
     <artifactGroups artifactGroupId="BOSS_ADM_AUDIT" description="Admin audit">
         <artifacts artifactName="component://mr-boss/screen/Admin/Audit.xml" artifactTypeEnumId="AT_XML_SCREEN"
                 inheritAuthz="Y"/>
@@ -4979,16 +4979,10 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- The access log dataset (report/admin-access-log.json; design-admin §12 AccessLog, ADM-REPORTS): the log lines of the
         report engine's and monitoring's audit targets, by the dataset's own row filter, and of the reader's organizations'
-        people, by its row-filter service. Its artifact is granted to the audit reader and the administrator, view only:
-        the engine checks it as the viewer's own grant on every read of the dataset, so they need no grant of the telemetry
-        datasets (org.moqui.report.dataset.otel_logs stays Tools'), of System or of Dashboards, and read no other log line.
-        A telemetry index has no DataDocument, so there is no DataDocumentUserGroup row to add. Never grant this to a
-        group as part of a wider dataset pattern. -->
-    <artifactGroups artifactGroupId="BOSS_ADM_ACCESS_LOG" description="Admin: the access log dataset">
-        <artifacts artifactName="org.moqui.report.dataset.admin-access-log" artifactTypeEnumId="AT_SERVICE"/>
-        <authz artifactAuthzId="BOSS_ADM_ACCESS_LOG_AUDIT" userGroupId="BOSS_ADMIN_AUDIT"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
-        <authz artifactAuthzId="BOSS_ADM_ACCESS_LOG_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
-    </artifactGroups>
+        people, by its row-filter service. Its artifact (org.moqui.report.dataset.admin-access-log) is granted to no group,
+        on purpose (P17 review): a dataset has no field list, so a grant of it lets its holder read each line whole through
+        the engine (Explore, a panel, an export, an agent's tools) wherever they may call it, a scheduled export's
+        addresses and a runtime setting's value with it. ironstone.admin.AuditServices.get#AccessLog checks
+        ADMIN_AUDIT_VIEW under Admin and reads the dataset itself, answering only its safe fields. Never grant the
+        artifact to a group, alone or as part of a wider dataset pattern. -->
 </entity-facade-xml>

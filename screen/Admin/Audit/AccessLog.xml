@@ -14,13 +14,13 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- AccessLog (design-admin §12 AccessLog, §16 "Audit evidence"; style-guide §3.2 List; impl-admin P17): who requested or
     received report output, and what was done in monitoring, from the shipped dataset admin-access-log (the log lines of the
-    report engine's and monitoring's audit targets and no other line), read by the report engine as the user through
-    ironstone.admin.AuditServices.get#AccessLog. AccessFind: the source and a range of dates; a row's own links narrow to its
+    report engine's and monitoring's audit targets and no other line), read by the report engine for
+    ironstone.admin.AuditServices.get#AccessLog alone (the dataset is granted to no group). AccessFind: the source and a range of dates; a row's own links narrow to its
     actor, what it was about or its trace. No search of a line's text. AccessEvidence: when, the source, what was done, who,
     what it was about, the kind and format, the counts, the outcome and the reason; a line's other attributes (a value, the
     addresses a report went to) are never shown. A reader of some organizations reads the lines of those organizations'
-    people. The print and the CSV are the same projection, one bounded page of it. Reading needs ADMIN_AUDIT_VIEW and the
-    dataset's own grant; raw logs, traces and replay keep their own grants in System › Monitor. -->
+    people; one whose organizations hold more than 5,000 accounts is told the log is not narrowed that far. The print and
+    the CSV are the same projection, one bounded page of it. Reading needs ADMIN_AUDIT_VIEW; raw logs, traces and replay keep their own grants in System › Monitor. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Access log" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <parameter name="source"/>

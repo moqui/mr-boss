@@ -17,8 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     org.moqui.admin.AuditServices.find#Changes (registered projections only; a record of an organization found by its
     owner within the user's scope; a secret never a value); this adds BOSS's own, a record's place as a route that opens to
     the user. Access evidence is the report engine's own read (org.moqui.report.ReportServices.query#Documents) of the
-    shipped dataset admin-access-log, called as the user so the dataset's artifact and row filters decide; this answers of
-    each line only the fields named here, never its other attributes. Each checks ADMIN_AUDIT_VIEW under Admin. -->
+    shipped dataset admin-access-log, which is granted to no group: get#AccessLog checks the permission and reads it past its
+    artifact, under the dataset's row filters; this answers of each line only the fields named here, never its other
+    attributes. Each checks ADMIN_AUDIT_VIEW under Admin. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="find" noun="ChangeEvidence" allow-remote="false">
         <description>Admin's AuditChanges: the framework's find#Changes with its filters (category, auditProjectionId,
@@ -59,7 +60,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="AccessLog" allow-remote="false">
         <description>Admin's AccessLog: the lines of the dataset admin-access-log (the report engine's and monitoring's
-            audit lines, read by ReportServices.query#Documents as the user), newest first, each as its safe fields only:
+            audit lines, read by ReportServices.query#Documents after this service's own check), newest first, each as its safe fields only:
             when, the source (reports or monitoring), what was done (the line's own fixed text), who (the line's user
             or the signed-in user it was written under), what it was about (a definition, schedule, occurrence, rule,
             incident, decision, action or setting, by id), the kind and format, counts (rows, recipients as a number,
@@ -99,7 +100,8 @@ along with this software (see the LICENSE.md file). If not, see
             dataset's own fixed filter of the two audit targets: a reader who administers every organization reads every
             line; any other reader the lines written under a user who works for an organization they administer (the
             line's user.id), so one organization's audit reader does not read what another's people exported; a viewer
-            without ADMIN_AUDIT_VIEW under Admin, or with more accounts in scope than maxUsers, matches nothing. The
+            without ADMIN_AUDIT_VIEW under Admin, or with more accounts in scope than maxUsers (5,000), matches nothing
+            (get#AccessLog says so in unavailable). The
             engine calls it with the signed-in viewer: another userId is refused.</description>
         <in-parameters>
             <parameter name="userId"/>

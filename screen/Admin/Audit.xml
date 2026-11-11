@@ -18,8 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     the audit reader needs no other Admin group, no System and no Dashboards grant. The area's grant is an inheritable
     ALWAYS, as every app area's, so it is not what decides a read: ironstone.admin.AuditServices check ADMIN_AUDIT_VIEW,
     the framework's org.moqui.admin.AuditServices answers only registered projections within the user's scope and never
-    a secret's value, and the access log is the report engine's read of the dataset admin-access-log under the user's
-    own grant of it and its row filters. Nothing is changed here: the area has no transition that writes. -->
+    a secret's value, and the access log is the report engine's read of the dataset admin-access-log for get#AccessLog alone
+    (the dataset is granted to no group), under its row filters. Nothing is changed here: the area has no transition that writes. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Audit" default-menu-index="10" menu-image="sym_o_policy" menu-image-type="icon">
     <subscreens default-item="AuditChanges" always-use-full-path="true">

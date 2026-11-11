@@ -7,15 +7,19 @@
 // that screen opens to the user.
 //
 // Access evidence is the report engine's own read of the shipped dataset admin-access-log (report/admin-access-log.json: the
-// log lines of the two audit targets, moqui.report.audit and moqui.monitor.audit, by the dataset's fixed row filter), called as
-// the user: the dataset's own artifact (granted to the audit reader and the administrator) and its row filters decide, in the
-// engine, for every way the dataset is read. A line is answered here as the fields below and nothing else of it: a line's
-// attributes may hold a setting's value or the addresses a report went to, and those are counted or left out. A request
-// narrows the lines by structured filters of whole values, never by a query text.
+// log lines of the two audit targets, moqui.report.audit and moqui.monitor.audit, by the dataset's fixed row filter). The
+// dataset's artifact is granted to no group (P17 review): a dataset has no field list, so whoever may read it through the
+// engine (Explore, a panel, an export, an agent's tools) reads each line whole, a scheduled export's addresses and a runtime
+// setting's value with it. So accessLog checks ADMIN_AUDIT_VIEW under Admin itself and then reads the dataset with
+// authorization off, this one dataset by its fixed id with the filters built here; the dataset's row filter and its
+// row-filter service are part of the engine's resolution of it and hold as for any read. A line is answered here as the
+// fields below and nothing else of it: addresses are counted and values left out. A request narrows the lines by structured
+// filters of whole values, never by a query text.
 //
 // Whose lines. The dataset's row-filter service (accessLogRowFilter) keeps a reader to the lines written under a user who
 // works for an organization the reader administers; a reader who administers every organization (the administrator with none
 // active, an instance administrator) reads every line, the ones no user wrote too (a schedule's run, another server's change).
+// A reader of some organizations with more than maxUsers accounts in them is answered no line, and told so.
 const adminLib = () => ec.resource.script("component://mr-boss/service/ironstone/admin/Admin.js")
 const DATASET = "admin-access-log"
 const pageSize = 50
@@ -223,7 +227,17 @@ function accessLog(p) {
             ? "What the people of the organizations you administer did"
             : "Every line, the ones no person wrote too"
     }
-    // the engine's own read, as the user: the dataset's artifact and its row filters decide there
+    // past maxUsers accounts in scope the row filter matches nothing: said, so an empty list is not read as "nothing happened"
+    if (lineScope(userScope).over)
+        return Object.assign(options, pagingOf("accessList", 0, pageIndex, size, 0), {
+            accessList: [],
+            truncated: false,
+            unavailable:
+                "The organizations you administer have more than " +
+                maxUsers +
+                " user accounts, and the access log is not narrowed to that many: it is read by an administrator of every organization"
+        })
+    // the engine's own read of the one dataset, past its artifact after the check above (auditScope): its row filters decide
     let found = null
     let failure = ""
     ec.message.pushErrors()
@@ -241,6 +255,7 @@ function accessLog(p) {
                     pageIndex,
                     pageSize: size
                 })
+                .disableAuthz()
                 .call() || {}
         if (ec.message.hasError()) failure = ec.message.getErrorsString()
     } catch (error) {
@@ -292,17 +307,12 @@ function accessLog(p) {
     })
 }
 
-// The dataset's row-filter service: every line for a reader of every organization, else the lines written under a user of the
-// organizations administered; nothing for anyone else.
-function accessLogRowFilter(p) {
-    const nothing = {filter: {bool: {none: [{match_all: {}}]}}}
-    if (!ec.user.userId) return nothing
-    if (text(p.userId) && text(p.userId) !== ec.user.userId)
-        throw new Error("The access log row filter is computed for the signed-in user only")
-    const userScope = adminLib().scope()
-    if (!userScope.read || !userScope.capabilities.auditView) return nothing
-    if (!userScope.ownerIds) return {filter: {match_all: {}}}
-    if (!userScope.ownerIds.length) return nothing
+// Whose lines a reader of Admin's audit evidence reads: all (every line), userIds (the accounts of the organizations
+// administered), over (more of them than a filter is built for: no line) or none.
+function lineScope(userScope) {
+    if (!userScope.read || !userScope.capabilities.auditView) return {none: true}
+    if (!userScope.ownerIds) return {all: true}
+    if (!userScope.ownerIds.length) return {none: true}
     const userIds = Array.from(
         new Set(
             Array.from(
@@ -317,14 +327,25 @@ function accessLogRowFilter(p) {
             ).map(row => row.userId)
         )
     )
-    if (!userIds.length) return nothing
-    if (userIds.length > maxUsers) {
+    if (!userIds.length) return {none: true}
+    return userIds.length > maxUsers ? {over: true} : {userIds}
+}
+// The dataset's row-filter service: every line for a reader of every organization, else the lines written under a user of the
+// organizations administered; nothing for anyone else. It decides by the signed-in user's own Admin scope and permission,
+// whatever authorization it is called under.
+function accessLogRowFilter(p) {
+    const nothing = {filter: {bool: {none: [{match_all: {}}]}}}
+    if (!ec.user.userId) return nothing
+    if (text(p.userId) && text(p.userId) !== ec.user.userId)
+        throw new Error("The access log row filter is computed for the signed-in user only")
+    const lines = lineScope(adminLib().scope())
+    if (lines.all) return {filter: {match_all: {}}}
+    if (lines.over)
         ec.logger.error(
             "Access log: more than " + maxUsers + " accounts in the scope of " + ec.user.username + "; no line is answered"
         )
-        return nothing
-    }
-    return {filter: {field: {name: "user.id", op: "in", values: userIds}}}
+    if (!lines.userIds) return nothing
+    return {filter: {field: {name: "user.id", op: "in", values: lines.userIds}}}
 }
 
 const operations = {changeEvidence, accessLog, accessLogRowFilter}

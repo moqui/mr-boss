@@ -3,7 +3,8 @@
 // relay credential's replacement with the actor and the reason and no secret; reads the changes of the people of its own
 // organization and none of another's; and reads the access log as the lines of the report engine's and monitoring's audit
 // targets written under its own organization's people, their addresses counted and their values left out, and no other log
-// line whatever is asked of the dataset. One html render each of AuditChanges and AccessLog (their lists' rows are in the
+// line whatever is asked of the dataset; the dataset itself is granted to no group, so the engine answers its whole lines to
+// no Admin group. One html render each of AuditChanges and AccessLog (their lists' rows are in the
 // html). The framework's rules are its AdminAuditChanges spec, the organization scope of changes Mantle's IdentityAudit.
 // Run: ./moq test mr-boss --spec AdminAudit
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
@@ -37,7 +38,7 @@ function invoke(name, parameters = {}) {
 // with artifact authorization on: Admin's services are the root user group's, and each checks the user's own permission
 const as = (username, name, parameters = {}) => asUser(username, () => invoke(name, parameters))
 // the report engine's own read, with authorization on, for an Admin user who may also call the engine (the spec's own
-// grant of the one operation to the root user group, as an Insights group's is): the dataset's artifact is checked as the
+// grant of its read operations to the root user group, as an Insights group's is): the dataset's artifact is checked as the
 // user's own grant, never an inherited one, and its row filters are the dataset's
 const ENGINE = "SPEC_ADM_AUD_ENGINE"
 const engine = (username, parameters) =>
@@ -84,6 +85,13 @@ spec({
                 artifactGroupId: ENGINE,
                 artifactTypeEnumId: "AT_SERVICE",
                 artifactName: "org.moqui.report.ReportServices.query#Documents",
+                nameIsPattern: "N",
+                inheritAuthz: "N"
+            })
+            make("moqui.security.ArtifactGroupMember", {
+                artifactGroupId: ENGINE,
+                artifactTypeEnumId: "AT_SERVICE",
+                artifactName: "org.moqui.report.ReportServices.run#Query",
                 nameIsPattern: "N",
                 inheritAuthz: "N"
             })
@@ -277,16 +285,28 @@ feature("the access log is the audit lines of the reader's own people and no oth
         out.bySubject = as(users.audit, A + "get#AccessLog", {subject: "spec-adm-aud-services-payroll"})
         out.adminLog = as(users.admin, A + "get#AccessLog", {subject: "spec-adm-aud-services-payroll"})
         out.dataOperator = as(users.data, A + "get#AccessLog", {})
-        // the engine itself as the audit reader: the telemetry dataset is not theirs, and the access log dataset keeps its
-        // filters whatever the request asks (a query text, a query, a negated filter, a retrieval mode, a row filter)
+        // the engine itself, for an Admin user who may also call it (as with an Insights group): the dataset is granted to no
+        // group, so the audit reader does not read its whole lines there, by documents or by an aggregate of an
+        // attribute (the administrator is denied the engine itself, as every Admin group but System's); nor the telemetry dataset
         out.rawLogs = engine(users.audit, {datasetId: "otel_logs"})
+        out.auditEngine = engine(users.audit, {datasetId: DATASET})
+        out.auditValues = as(users.audit, "org.moqui.report.ReportServices.run#Query", {
+            query: {
+                datasetId: DATASET,
+                from: "now-1d",
+                thru: "now+1h",
+                aggregations: [{id: "value", type: "terms", role: "x-axis", params: {field: "attributes.value", size: 10}}]
+            }
+        })
+        out.dataEngine = engine(users.data, {datasetId: DATASET})
+        // an instance administrator holds every dataset's artifact (Tools'): the access log dataset keeps its own filter
+        // whatever the request asks (a query text, a query, a negated filter, a definition's own keys)
         out.widened = [
             {queryString: "spec-adm-aud OR scope_name:moqui.spec.other OR *"},
             {query: {match_all: {}}},
             {filters: [{negated: true, query: {field: {name: "scope_name", op: "eq", value: "moqui.report.audit"}}}]},
             {rowFilter: {match_all: {}}, rowFilterService: "", indexName: "otel_logs"}
-        ].map(request => engine(users.audit, Object.assign({datasetId: DATASET}, request)))
-        out.dataEngine = engine(users.data, {datasetId: DATASET})
+        ].map(request => engine(users.system, Object.assign({datasetId: DATASET}, request)))
         // the row filter is the signed-in viewer's own
         out.otherFilter = as(users.audit, A + "get#AccessLogRowFilter", {userId: "BOSS_ADM_ADMIN"})
         // AccessLog's one render, in html
@@ -313,14 +333,15 @@ feature("the access log is the audit lines of the reader's own people and no oth
         out.bySubject.accessListCount === 0
         out.adminLog.accessListCount === 1
         has(out.dataOperator.error, /ADMIN_AUDIT_VIEW is required/)
-        // the engine: no telemetry dataset for the audit reader, no access log dataset for another group
+        // the engine: no telemetry dataset and no access log dataset for the audit reader or another group
         has(out.rawLogs.error, /otel_logs/)
+        has(out.auditEngine.error, /admin-access-log/) && !out.auditEngine.hits
+        has(out.auditValues.error, /admin-access-log/) && !JSON.stringify(out.auditValues).includes(VALUE)
         has(out.dataEngine.error, /admin-access-log/)
-        // whatever is asked, only the two audit targets' lines of the reader's own people
+        // whatever is asked by who holds its artifact, only the two audit targets' lines
         out.widened.every(found => found.error === "")
         out.widenedBodies.length > 0
         out.widenedBodies.every(body => body === "report data exported" || body === "runtime setting set")
-        !JSON.stringify(out.widened).includes("spec-adm-aud-services-payroll")
         !JSON.stringify(out.widened).includes("ordinary line")
         has(out.otherFilter.error, /signed-in user only/)
         out.page.status === 200 && out.page.errors.join("\n") === ""
