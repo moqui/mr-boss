@@ -270,7 +270,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | built and reviewed Nov 7, merged |
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | built and reviewed Nov 10, merged |
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | built and reviewed Nov 10, merged |
-| P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | — |
+| P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | built and reviewed Nov 10, merged |
 | P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | — |
 | P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | — |
 | P13 System messages and recovery | mr-moqui, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | — |
@@ -2313,42 +2313,42 @@ ADM-CONNECTIONS, ADM-LIFECYCLE (the notice).
   SignInPolicy, IdentityProviders and IdentityProviderDetail (as built), §16 (the notice's row), §17.2 (IdentityServices,
   AccessServices, ConfigurationServices, the provider records), §19 Q6.
 - Findings (provisional, numbered by the lead):
-  - **F-P10-1** The sign-in's account sync (sso.rs, as Java's) writes with authorization off, which the privileged-group and
+  - **F132** The sign-in's account sync (sso.rs, as Java's) writes with authorization off, which the privileged-group and
     sealed-permission EECAs skip: it linked an existing account by the provider's username alone, gave any group a role map
     named, and ended every current group no mapped role named at each sign-in, an administrator's `ADMIN` membership included.
     Done in Rust (above; Parity-Diffs P8c-18, P8c-19), so the rules hold whoever wrote the rows, Tools included.
-  - **F-P10-2** `UserAccount.externalUserId` is not scoped to a provider: every enabled provider signs in every linked account
+  - **F133** `UserAccount.externalUserId` is not scoped to a provider: every enabled provider signs in every linked account
     whose id it asserts, so whoever configures or runs one provider speaks for all linked accounts. Built: enabling is the access
     administrator's and refused while a linked account holds access beyond the actor's. A link record per provider is a
     framework ask.
-  - **F-P10-3** The server signs in by OpenID Connect and OAuth 2; a SAML flow answers "not available in this port". SAML rows are
+  - **F134** The server signs in by OpenID Connect and OAuth 2; a SAML flow answers "not available in this port". SAML rows are
     listed and their fields kept (passwords write-only), cannot pass a test or be enabled, and NewProvider offers no SAML.
-  - **F-P10-4** (F110) The sign-in policy is literal conf attributes: `InstanceSetting.confAttribute` and a Rust read of a fixed
+  - **F135** (F110) The sign-in policy is literal conf attributes: `InstanceSetting.confAttribute` and a Rust read of a fixed
     list. A general masked projection of conf attributes stays unbuilt.
-  - **F-P10-5** The plan's "role maps through `preview#Grants`": a role map gives a membership, so it is checked by the grant
+  - **F136** The plan's "role maps through `preview#Grants`": a role map gives a membership, so it is checked by the grant
     proposal's rules (as P4's comment foresaw), and never a privileged or sealed-granting group even for a member or a holder
     (as invitations, P5).
-  - **F-P10-6** A test cannot prove the client secret: no token is asked for without a person signing in. An OAuth provider with
+  - **F137** A test cannot prove the client secret: no token is asked for without a person signing in. An OAuth provider with
     its endpoints given starts with no request at all, so its test checks completeness only; an OIDC test reads the discovery
     document (the request a sign-in makes, to a URL the integration administrator chose: `https` only, an internal host
     accepted, the answer pass or fail with the host's text).
-  - **F-P10-7** `AuthFlowFieldMap.srcFieldName` is evaluated as an expression by the sign-in, as `dstFieldExpression` and a mapping
+  - **F138** `AuthFlowFieldMap.srcFieldName` is evaluated as an expression by the sign-in, as `dstFieldExpression` and a mapping
     service are. A delegated mapping is a plain claim name (letters, digits, underscores) onto four account fields; a
     namespaced claim (a URL, a dotted path) and anything computed stay Tools', and such a provider's mappings are read only.
-  - **F-P10-8** Login history is one row a minute for a user (login.rs), so a second sign-in within the minute is not checked;
+  - **F139** Login history is one row a minute for a user (login.rs), so a second sign-in within the minute is not checked;
     a key sign-in writes history too and is checked as any other.
-  - **F-P10-9** A notification whose email cannot be sent marks its sender's transaction rollback-only (the mail service's error),
+  - **F140** A notification whose email cannot be sent marks its sender's transaction rollback-only (the mail service's error),
     though the notification itself is kept. The notice runs in a transaction of its own; on an instance with no sender address
     each notice logs an error. The framework's (open).
-  - **F-P10-10** The framework has no account screen, so its topic has no link; mr-boss sets it to Commons Account, which lists
+  - **F141** The framework has no account screen, so its topic has no link; mr-boss sets it to Commons Account, which lists
     the last ten sessions of thirty days with Sign out, not the one session.
-  - **F-P10-11** Removing a role mapping leaves the memberships it gave (the group is the provider's no more); the confirmation
+  - **F142** Removing a role mapping leaves the memberships it gave (the group is the provider's no more); the confirmation
     says so and an access administrator ends them.
-  - **F-P10-12** One artifact group for the Security area: an integration administrator opens SignInPolicy and a configuration
+  - **F143** One artifact group for the Security area: an integration administrator opens SignInPolicy and a configuration
     administrator IdentityProviders, each told it is not available to them. The reader holds none of it.
-  - **F-P10-13** `moqui test` installed no SSO client (only a server did), so a spec could test no provider; the fixture
+  - **F144** `moqui test` installed no SSO client (only a server did), so a spec could test no provider; the fixture
     installs it now. F37 (ProjectsAccess on a Debug binary) did not recur: 8 of 8.
-  - **F-P10-14** InstanceSettings' ConfigurationSources also lists the 13 sign-in policy rows, since it lists every setting.
+  - **F145** InstanceSettings' ConfigurationSources also lists the 13 sign-in policy rows, since it lists every setting.
 - Decisions: the parts of a provider by permission (configuration the integration administrator's; role mappings, link rule,
   default group and enabling the access administrator's); a provider is tested, then enabled, as two acts; the link rule defaults
   to never; an account in a privileged or sealed-granting group is linked by an administrator only; a change of the token
@@ -2373,9 +2373,9 @@ ADM-CONNECTIONS, ADM-LIFECYCLE (the notice).
     `design-admin.md`; P11 appends its connection part after the identity providers' in `ConfigurationServices.xml` and may
     reuse the endpoint-change shape (a fingerprint of the endpoint fields, the test mark);
   - the user's call: who enables a provider (built: `ADMIN_ACCESS_MANAGE`, never the integration administrator alone) and
-    the `HELD_BEYOND` rule; the link rule's default (never) and that no username-only rule is offered; F-P10-2 (a link per
-    provider); F-P10-3 (SAML: a client in the framework, or the type dropped from the design); the notice's network (/24, /48)
-    and no notice on a first sign-in; F-P10-9 (the mail failure marking the transaction); F-P10-12 (one area, or one per
+    the `HELD_BEYOND` rule; the link rule's default (never) and that no username-only rule is offered; F133 (a link per
+    provider); F134 (SAML: a client in the framework, or the type dropped from the design); the notice's network (/24, /48)
+    and no notice on a first sign-in; F140 (the mail failure marking the transaction); F143 (one area, or one per
     audience);
   - the acceptance AdminSecurityUsable to run when asked (it needs the network).
 
@@ -2403,7 +2403,7 @@ and `sso.rs`, `moqui-host` `sso.rs`, `moqui-lib` `http.rs`), and two entity fiel
   groups hold nothing: AdminAccess); the specs (one qvt render a screen, the transitions in `html`, no request leaves the
   machine; the acceptance one reads a public discovery document).
 - Fixes:
-  - **R1 (high, F-P10-2).** A provider's id was the whole link: any enabled provider that asserted an id signed in the account
+  - **R1 (high, F133).** A provider's id was the whole link: any enabled provider that asserted an id signed in the account
     carrying it. That is not only a second provider's operator or configurer taking another provider's accounts (the
     `HELD_BEYOND` check at enabling bounded privileged accounts linked then, not ones linked or promoted later, and no
     ordinary account); an id is unique at its provider only, so two providers' users with the same id shared an account with
@@ -2424,7 +2424,7 @@ and `sso.rs`, `moqui-host` `sso.rs`, `moqui-lib` `http.rs`), and two entity fiel
     discovery document that does not parse is reported by the kind of error and its position. The detail screen says so.
   - **R3 (medium).** The sync linked a closed account, changed its fields and gave it groups before the login refused it.
     Fixed: an account disabled for good or ended is refused before anything is written.
-  - **R4 (low, F-P10-7).** A plain claim name was still evaluated as an expression by the sign-in, so a name of the script
+  - **R4 (low, F138).** A plain claim name was still evaluated as an expression by the sign-in, so a name of the script
     context or of the engine (`ec`, `globalThis`) gave its text as the account field. Fixed: a source that is a plain name,
     with no expression, is the claim of that name and nothing else; only an expression (Tools') is evaluated.
   - **R5 (low).** The grant cache's key left the secret out (the configuration's `Debug` redacts it), so a replaced secret was
@@ -2440,11 +2440,11 @@ and `sso.rs`, `moqui-host` `sso.rs`, `moqui-lib` `http.rs`), and two entity fiel
 - For the lead:
   - merge: `SecurityEntities.xml` gains `UserAccount.externalAuthFlowId` and `AuthFlow.allowPrivateNetwork` (a database made before needs
     the two columns); `moqui-lib` `http.rs` makes `PublicOnly` public; the shared release binary needs these too;
-  - F-P10-2 is closed by R1 rather than left as a framework ask; what is left of it for the user: an account that names no
+  - F133 is closed by R1 rather than left as a framework ask; what is left of it for the user: an account that names no
     provider is still taken by the first provider that signs in with its id (ordinary accounts with several providers, any
     account with one), so an administrator who links an account by hand in Tools should set both fields, and Admin has no
     screen for that yet (UserDetail shows no link);
-  - F-P10-6 changes with R2: on a production instance a delegated provider cannot be on the instance's own network until an
+  - F137 changes with R2: on a production instance a delegated provider cannot be on the instance's own network until an
     instance administrator sets `allowPrivateNetwork` in Tools (Admin offers no control for it, by design). The user's call:
     whether that default is right for a non-production instance too (built: allowed there, as the worker's `http` rule);
   - still open, not changed: whoever enables a provider vouches for its endpoint over every account it signs in that is not
@@ -2452,7 +2452,7 @@ and `sso.rs`, `moqui-host` `sso.rs`, `moqui-lib` `http.rs`), and two entity fiel
     it: the worker's user's-call item stands); a test passes from the client's cached grant for up to six hours without
     asking the provider again; `store#IdentityProvider` takes no operation key, so a repeated NewProvider with no id makes
     two disabled providers (as gate 1's creates); an email address mapped from a claim is not checked as verified (it is
-    refused when another account has it); F-P10-3, F-P10-9 and F-P10-12 as the Built note has them.
+    refused when another account has it); F134, F140 and F143 as the Built note has them.
 
 ### P11 — Connections and mail relays
 
@@ -2728,7 +2728,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
