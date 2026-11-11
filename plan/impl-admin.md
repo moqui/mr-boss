@@ -1,5 +1,8 @@
 # IronStone BOSS — Admin implementation
 
+Nov 11, 2026 — gate 4 built: P15–P17 (stage 4), Admin's data and audit, each phase reviewed by a fresh agent and merged on
+its focused specs. Next: stage 5: P18 (shared devices), Insights P11 (wall displays) and the two Finish phases, then the
+full suites.
 Nov 10, 2026 — gate 3 built: P8–P14 (stage 3), Admin's configuration and operations, beside Insights' stage 2 (impl-insights
 P6–P10, gate 2), each phase reviewed by a fresh agent and merged on its focused specs; the full suites run once at the end
 of the build (the user's call). Next: stage 4 (P15–P17), Admin's data and audit.
@@ -4868,6 +4871,7 @@ the owner's design.
 | Nov 11, 2026 | Admin's backup request is bounded (30 minutes after the last run or request, three requests a day): a BOSS rule for its delegated backup operator. System and Tools generally carry no restriction of this kind for the instance administrator | The user's call (Nov 11), P16; design §11 Backups |
 | Nov 11, 2026 | Admin's export bounds stand (5,000 rows and 2 MiB by default, at most 50,000 rows and 16 MiB). Larger volumes are not a BOSS export: in the BOSS apps that is "contact a system administrator", who has the tools for volume (Tools' ETL, snapshots and data export, and for some a direct database connection) | The user's call (Nov 11), F246 (P16); design §11 DataExport |
 | Nov 11, 2026 | In BOSS the data operator exports only a contact book they may themselves view: an export target adds no right to read | The user's call (Nov 11), confirming F249 (P16) |
+| Nov 11, 2026 | The access log dataset's artifact is granted to no group: `ironstone.admin.AuditServices.get#AccessLog` checks `ADMIN_AUDIT_VIEW` and reads the one dataset itself, under both row filters, so a line is never read whole through the engine (a dataset has no field list, and a holder with an Insights group read recipient addresses and setting values). The audit reader therefore cannot chart the access log in Insights | P17 review, F272; over the plan's and design §12's grant to `BOSS_ADMIN_AUDIT`; design §12 changed |
 
 ## 5. Open questions
 
