@@ -193,10 +193,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="mantle.party.IdentityServices.get#Account" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{userId:userId}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Account', {userId:userId}, 'User ' + userId + ' is not available.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <set field="account" from="found?.account || null"/>
         <if condition="account">
             <service-call name="mantle.party.IdentityServices.get#AccountHistory" out-map="history" transaction="force-new" ignore-error="true"
@@ -209,11 +209,10 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <!-- a lifecycle operation's review (P6): what it would do, and what the account owns that waits for a new owner -->
         <if condition="account &amp;&amp; previewKind">
-            <service-call name="mantle.party.IdentityServices.preview#Lifecycle" out-map="preview" transaction="force-new" ignore-error="true"
-                    in-map="{userId:userId, kind:previewKind, organizationPartyId:(previewOrganizationPartyId || null),
-                        effectiveDate:(previewEffectiveDate || null)}"/>
-            <set field="previewFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-            <script>ec.message.clearErrors()</script>
+            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.preview#Lifecycle', {userId:userId, kind:previewKind, organizationPartyId:(previewOrganizationPartyId || null),
+                        effectiveDate:(previewEffectiveDate || null)}, 'The change could not be reviewed.')"/>
+            <set field="preview" from="called.out"/>
+            <set field="previewFailure" from="called.failure"/>
             <if condition="preview?.movesResources">
                 <service-call name="ironstone.admin.LifecycleServices.find#OwnedResources" out-map="owned" transaction="force-new"
                         ignore-error="true" in-map="{userId:userId}"/>

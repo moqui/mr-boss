@@ -103,3 +103,35 @@ feature("a delegated access administrator changes a member within a registered b
         after.length == 1 && after[0].thruDate != null
     }
 })
+
+// F129 (P19): a screen's read keeps a refusal's reason, which a service-call with ignore-error clears; an error that is not a
+// refusal shows only the screen's own words
+feature("a screen's refused read is shown as its reason, and any other failure as the screen's own words", {
+    when() {
+        const calls = ec.resource.script("component://mr-boss/service/ironstone/admin/AdminCalls.js")
+        return {
+            refused: asUser(users.identity, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
+            allowed: asUser(users.access, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
+            broken: asUser(users.access, () => calls.read(access + "get#Group", {}, "Group is not available.")),
+            // an exception's text with a prefix like a code is never shown as a reason (review)
+            exceptions: [
+                "error returned from database: ERROR: relation \"user_account\" does not exist",
+                "URL: http://10.0.0.5:8080/internal refused",
+                "RECORD_UNAVAILABLE: " + "x".repeat(400)
+            ].map(text => calls.reasonOf(text)),
+            coded: calls.reasonOf("Error: RECORD_UNAVAILABLE: Group G is not available"),
+            errorsAfter: ec.message.hasError()
+        }
+    },
+    then({refused, allowed, broken, exceptions, coded, errorsAfter}) {
+        exceptions.every(reason => reason == null)
+        coded == "Group G is not available"
+        refused.out == null
+        refused.failure.includes("ADMIN_ACCESS_VIEW")
+        !refused.failure.includes("PERMISSION_DENIED")
+        allowed.failure == null
+        allowed.out.groupList.length > 0
+        broken.failure == "Group is not available."
+        errorsAfter == false
+    }
+})
