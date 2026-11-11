@@ -2255,7 +2255,7 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
   and requests its refresh; Assist answers "orders last month by currency" with the dashboard's numbers and an MCP
   client is refused a cost dataset.
 
-**Built Nov 10 (P10).** mr-boss, branch `ins/p10` (one repository; no framework or Mantle change).
+**Built Nov 10 (P10).** mr-boss 2729337a (branch `ins/p10`; one repository, no framework or Mantle change).
 - **Checked first** (the plan against the code as it is):
   - the cap: the engine takes a schedule's or a rule's own `recipientCap` (`delivery.rs` `caps`: 50 without one, held to
     1..ceiling, the ceiling `get#InstancePreference` `report.groupRecipientCeiling`), and BOSS passed the constant 50 from
