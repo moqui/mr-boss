@@ -308,7 +308,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | built and reviewed Nov 11, merged |
 | P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | built and reviewed Nov 11, merged |
 | P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | built and reviewed Nov 11, merged |
-| P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | — |
+| P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | built and reviewed Nov 11, merged |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | — |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | — |
 | P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | — |
@@ -1379,7 +1379,7 @@ Design §12 ApprovalPolicies, Lookups, §13 Approvals, §5 PositionDetail's Requ
 - Design edits: design-people (header; §1.2 Approvals, `g a` and Settings' tabs; §5 PositionDetail's Requisition as built; §12
   ApprovalPolicies and Lookups as built and the topic's handlers; §13 Approvals as built); design-admin §14 (People's participant as
   built); design-drawers-commons §4 (the `PeoplePositionApproval` row: its approve and refuse handlers).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F110 to F116 in order:
   - a topic's service gets no action from `decide#NotificationMessage`, so design §12's one decision service per topic cannot be both
     services: P5 names `approve#` and `refuse#PositionApproval` over `decide#PositionApproval`, and each later People topic needs the same
     pair (design-drawers-commons' table, written for the position topic only, says otherwise for the others);
@@ -1474,7 +1474,7 @@ self-approval, authority, revisions and scope first; fixes committed apart per r
     `thruDate` became `Enumeration.thruDate` in place of the member's: the enumeration's `alias-all` excludes it. Nothing reads
     the view today.
   - Small: the supersession feature's `then` named an `unread` its `when` does not return.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F117 to F120 in order:
   - a request's decisions are matched to its route's steps by sequence number, so a rule change after an approval that leaves
     only steps already approved leaves the request waiting with no step and no notice: never approved, but stuck until another
     rule change, and a request cannot be withdrawn yet;
@@ -2252,7 +2252,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
