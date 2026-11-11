@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Business alerts › an alert (design-insights §8 AlertDetail; impl-insights P8, INS-07), for anyone who reads the
+    rule (ironstone.insights.AlertServices get#Alert; another's unshared rule or none is "not available"); its owner, an author
+    or a distributor, changes it. BusinessAlertBasis: the reading (the saved query's source, the measure, the reduction, the
+    range), the condition and its timing. AlertAudience: the owner alone, or people and groups with each recipient's result
+    from the engine's check (may be told, or the reason in words; never the other person's grants), the channels (in the app,
+    and the account's email address) and the group the rule is shared with; no address, webhook or contact point.
+    OwnAlertState: the state of each series as the caller may read it, with the value for the owner and a recipient whose
+    access equals the owner's; No data and Error are not Normal. AlertDeliveryStatus: each recipient's last outcome for the
+    owner, the caller's own otherwise, with a safe reason and no value. The primary action is Activate while the rule is
+    inactive, which runs the reading as the owner and has the engine check every recipient. With a dashboard and a panel and
+    no rule (a panel's New alert rule), the same basis form creates a rule over that panel's saved query. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Business alert" default-menu-include="false">
+
+    <parameter name="definitionId"/>
+    <parameter name="dashboardId"/>
+    <parameter name="panelId"/>
+    <parameter name="queryIndex"/>
+
+    <transition-include name="recipientChoices" location="component://mr-boss/template/InsightsDeliveryTransitions.xml"/>
+    <transition name="storeAlert" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AlertServices.store#Alert" out-map="stored"
+                    in-map="{definitionId:definitionId, dashboardId:dashboardId, panelId:panelId, queryIndex:queryIndex, title:title,
+                        valueField:valueField, reduce:reduce, conditionType:conditionType, threshold:threshold, minimum:minimum,
+                        maximum:maximum, recoveryThreshold:recoveryThreshold, window:window, intervalSeconds:intervalSeconds,
+                        pendingSeconds:pendingSeconds, keepFiringSeconds:keepFiringSeconds, basisGiven:'Y', expectedVersion:expectedVersion}"/>
+            <script>ec.message.addMessage(stored.applied ? (stored.paused ? 'Alert saved. It is inactive until you activate it' : 'Alert saved')
+                : stored.reason, stored.applied ? 'success' : 'danger')</script>
+            <if condition="stored.applied"><set field="definitionId" from="stored.definitionId"/></if>
+        </actions>
+        <conditional-response url="." condition="stored?.applied"><parameter name="definitionId"/></conditional-response>
+        <default-response url="."/>
+    </transition>
+    <transition name="storeAudience" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AlertServices.store#Alert" out-map="stored"
+                    in-map="{definitionId:definitionId, audienceGiven:'Y', audienceKind:audienceKind, recipientUserIds:recipientUserIds, recipientGroupIds:recipientGroupIds,
+                        emailChannel:emailChannel, userGroupId:userGroupId, expectedVersion:expectedVersion}"/>
+            <script>ec.message.addMessage(stored.applied ? (stored.deliveryMode === 'group' ? 'Audience saved: each recipient is checked before every notification'
+                : 'The alert now tells you alone') : stored.reason, stored.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="pauseAlert" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AlertServices.pause#Alerts" in-map="{definitionIds:definitionId, paused:paused}" out-map="pausedOut"/>
+            <script>for (const result of pausedOut.results) ec.message.addMessage(result.applied ? (pausedOut.paused ? 'Alert paused'
+                : 'Alert activated') : result.reason, result.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="testAlert" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AlertServices.test#Alert" in-map="{definitionId:definitionId}" out-map="tested"/>
+            <script>ec.message.addMessage(tested.applied ? 'The reading ran as you: ' + tested.seriesCount + (tested.seriesCount === 1 ? ' series' : ' series')
+                + '. Nothing was sent.' : tested.reason, tested.applied ? 'success' : 'warning')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="copyAlert" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AlertServices.copy#Alert" in-map="{definitionId:sourceDefinitionId}" out-map="copied"/>
+            <script>ec.message.addMessage(copied.applied ? 'Copied: set its threshold and audience, then activate it' : copied.reason,
+                copied.applied ? 'success' : 'danger')</script>
+            <if condition="copied.applied"><set field="definitionId" from="copied.definitionId"/></if>
+        </actions>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+    </transition>
+    <transition name="deleteAlert" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AlertServices.delete#Alert" in-map="{definitionId:definitionId}" out-map="deleted"/>
+            <script>ec.message.addMessage(deleted.applied ? 'Alert deleted' : deleted.reason, deleted.applied ? 'success' : 'danger')</script>
+        </actions>
+        <conditional-response url="../Rules" condition="deleted?.applied"/>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+        <!-- another's unshared rule, or none, reads as not available, without failing the page -->
+        <service-call name="ironstone.insights.AlertServices.get#Alert" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{definitionId:definitionId, dashboardId:dashboardId, panelId:panelId, queryIndex:queryIndex}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!found?.alert"/>
+        <set field="alert" from="found?.alert || {}"/>
+        <set field="options" from="found?.options || {conditions:[], reductions:[], windows:[], intervals:[], groups:[], measures:[], queries:[]}"/>
+        <set field="creating" from="!!found?.creating"/>
+        <set field="canEdit" from="!!found?.canEdit"/>
+        <set field="canDistribute" from="!!found?.canDistribute"/>
+        <set field="audience" from="found?.audience || []"/>
+        <set field="states" from="found?.states || []"/>
+        <set field="deliveries" from="found?.deliveries || []"/>
+        <set field="windowOptions" from="(alert.window || creating ? [] : [{value:'', label:'As saved: ' + (alert.windowText || '')}]).concat(options.windows)"/>
+        <set field="intervalOptions" from="options.intervals.some(row =&gt; row.value === alert.intervalSeconds) ? options.intervals
+                : [{value:String(alert.intervalSeconds || ''), label:'As saved: every ' + alert.intervalSeconds + ' seconds'}].concat(options.intervals)"/>
+        <set field="audienceOptions" from="[{value:'personal', label:'Only me'}].concat(canDistribute ? [{value:'group', label:'People and groups'}] : [])"/>
+        <set field="yesNo" from="[{value:'N', label:'In the app only'}, {value:'Y', label:'In the app and by email'}]"/>
+    </actions>
+    <widgets>
+        <section name="AlertUnavailable" condition="!recordFound"><widgets>
+            <label text="Alert not available" type="h5"/>
+            <label type="p" text="This alert does not exist or is not shared with you."/>
+            <link url="../Rules" text="Back to business alerts" link-type="anchor"/>
+        </widgets></section>
+        <section name="AlertRecord" condition="recordFound"><widgets>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <label text="${alert.title}" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="${alert.sourceText}${creating ? '' : ' · fires when ' + alert.conditionText + ' · tells ' + alert.audienceText}${alert.ownerName ? ' · owner ' + alert.ownerName : ''}"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${alert.stateColor}">${
+                            WebUtilities.encodeHtml(alert.stateText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: alert.stateText})}]]></text>
+                        <text type="html">${alert.stateText}</text>
+                    </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label type="p" style="q-mb-none" text="${alert.description}" condition="alert.description"/>
+                        <label type="p" style="q-mb-none" text="${alert.lastText ? 'Last evaluated ' + alert.lastText : ''}" condition="alert.lastText"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <link url="pauseAlert" link-type="hidden-form" text="Activate" btn-type="primary" icon="sym_o_play_arrow"
+                                condition="canEdit &amp;&amp; !creating &amp;&amp; alert.paused"
+                                confirmation="Activate ${alert.title}? Its reading is run as you, and ${alert.audienceText} is checked first."
+                                parameter-map="{definitionId:definitionId, paused:'false'}"/>
+                        <link url="copyAlert" link-type="hidden-form" text="Copy" btn-type="primary" icon="sym_o_content_copy"
+                                condition="found.canCopy &amp;&amp; !canEdit &amp;&amp; !creating"
+                                confirmation="Copy ${alert.title}? Your copy tells you alone and stays inactive until you activate it."
+                                parameter-map="{sourceDefinitionId:definitionId}"/>
+                        <link url="testAlert" link-type="hidden-form" text="Test" icon="sym_o_science" condition="canEdit &amp;&amp; !creating"
+                                parameter-map="{definitionId:definitionId}"/>
+                        <link url="pauseAlert" link-type="hidden-form" text="Pause" icon="sym_o_pause" condition="canEdit &amp;&amp; !creating &amp;&amp; !alert.paused"
+                                confirmation="Pause ${alert.title}? It is not evaluated and tells nobody until activated again."
+                                parameter-map="{definitionId:definitionId, paused:'true'}"/>
+                        <link url="deleteAlert" link-type="hidden-form" text="Delete" icon="sym_o_delete" condition="canEdit &amp;&amp; !creating"
+                                confirmation="Delete ${alert.title} with its state and its delivery history? ${alert.audienceText} is no longer told."
+                                parameter-map="{definitionId:definitionId}"/>
+                        <link url="../Rules" text="All alerts" link-type="anchor"/>
+                    </container>
+                </container>
+            </container>
+
+            <container style="row q-col-gutter-md">
+                <container style="col-12 col-md-6">
+                    <container-box>
+                        <box-header title="Reading and condition"/>
+                        <box-body>
+                            <label type="p" style="m-muted" condition="creating" text="The alert watches this panel's saved query, read as you. It is saved inactive: activate it once its condition and audience are right."/>
+                            <form-single name="BusinessAlertBasis" transition="storeAlert" map="alert">
+                                <field name="definitionId"><default-field><hidden/></default-field></field>
+                                <field name="dashboardId"><default-field><hidden/></default-field></field>
+                                <field name="panelId"><default-field><hidden/></default-field></field>
+                                <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                                <field name="title">
+                                    <conditional-field condition="canEdit" title="Name"><text-line size="50"/></conditional-field>
+                                    <default-field title="Name"><display/></default-field>
+                                </field>
+                                <field name="queryIndex">
+                                    <conditional-field condition="creating &amp;&amp; options.queries.length &gt; 1" title="Query">
+                                        <drop-down><list-options list="options.queries" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
+                                <field name="valueField">
+                                    <conditional-field condition="canEdit" title="Measure" tooltip="One of the query's measures; empty watches each of them">
+                                        <drop-down allow-empty="true"><list-options list="options.measures" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="Measure"><display/></default-field>
+                                </field>
+                                <field name="reduce">
+                                    <conditional-field condition="canEdit" title="Of each series">
+                                        <drop-down><list-options list="options.reductions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="Of each series"><display/></default-field>
+                                </field>
+                                <field name="window">
+                                    <conditional-field condition="canEdit" title="Range read">
+                                        <drop-down><list-options list="windowOptions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="Range read"><display text="${alert.windowText}"/></default-field>
+                                </field>
+                                <field name="conditionType">
+                                    <conditional-field condition="canEdit" title="Fires when it is">
+                                        <drop-down><list-options list="options.conditions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="Fires when it is"><display text="${alert.conditionText}"/></default-field>
+                                </field>
+                                <field name="threshold">
+                                    <conditional-field condition="canEdit" title="Threshold" tooltip="For above and below"><text-line size="12"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="recoveryThreshold">
+                                    <conditional-field condition="canEdit" title="Recovers at" tooltip="Optional: the value it must pass to stop firing"><text-line size="12"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="minimum">
+                                    <conditional-field condition="canEdit" title="Range from" tooltip="For inside and outside a range"><text-line size="12"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="maximum">
+                                    <conditional-field condition="canEdit" title="Range to"><text-line size="12"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="intervalSeconds">
+                                    <conditional-field condition="canEdit" title="Evaluated">
+                                        <drop-down><list-options list="intervalOptions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="Evaluated"><display text="every ${alert.intervalSeconds} seconds"/></default-field>
+                                </field>
+                                <field name="pendingSeconds">
+                                    <conditional-field condition="canEdit" title="Pending seconds" tooltip="How long the condition must hold before it fires"><text-line size="8"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="keepFiringSeconds">
+                                    <conditional-field condition="canEdit" title="Keep firing seconds" tooltip="How long it stays firing after the condition ends"><text-line size="8"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="save">
+                                    <conditional-field condition="canEdit"><submit text="${creating ? 'Create alert' : 'Save'}"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="title"/>
+                                    <field-ref name="queryIndex"/>
+                                    <field-row><field-ref name="valueField"/><field-ref name="reduce"/></field-row>
+                                    <field-row><field-ref name="window"/><field-ref name="intervalSeconds"/></field-row>
+                                    <field-row><field-ref name="conditionType"/><field-ref name="threshold"/></field-row>
+                                    <field-row><field-ref name="minimum"/><field-ref name="maximum"/></field-row>
+                                    <field-row><field-ref name="recoveryThreshold"/><field-ref name="pendingSeconds"/></field-row>
+                                    <field-ref name="keepFiringSeconds"/>
+                                    <field-ref name="save"/>
+                                </field-layout>
+                            </form-single>
+                        </box-body>
+                    </container-box>
+                </container>
+                <container style="col-12 col-md-6">
+                    <section name="AudienceBox" condition="!creating &amp;&amp; !alert.template"><widgets>
+                        <container-box>
+                            <box-header title="Audience"/>
+                            <box-toolbar>
+                                <container-dialog id="EditAudience" button-text="Change audience" condition="canEdit">
+                                    <label type="p" style="m-muted" text="Each person, and every member of each group, is checked when the alert is active and again before every notification: it tells only those who may read exactly what you read, each separately. Share the alert with a group they are in so they can open it."/>
+                                    <form-single name="AlertAudience" transition="storeAudience" map="alert">
+                                        <field name="definitionId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                                        <field name="audienceKind"><default-field title="Tell">
+                                            <radio><list-options list="audienceOptions" key="${value}" text="${label}"/></radio>
+                                        </default-field></field>
+                                        <field name="recipientUserIds">
+                                            <conditional-field condition="canDistribute" title="People" tooltip="Insights readers">
+                                                <drop-down allow-multiple="true" allow-empty="true">
+                                                    <dynamic-options transition="recipientChoices" server-search="true" min-length="0"/>
+                                                </drop-down>
+                                            </conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="recipientGroupIds">
+                                            <conditional-field condition="canDistribute" title="Groups" tooltip="A group you belong to; every member is checked">
+                                                <drop-down allow-multiple="true" allow-empty="true"><list-options list="options.groups" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="userGroupId">
+                                            <conditional-field condition="canDistribute" title="Shared with" tooltip="The group that may open this alert; sharing gives no data">
+                                                <drop-down allow-empty="true"><list-options list="options.groups" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="emailChannel"><default-field title="How" tooltip="Email goes to each recipient's own account address">
+                                            <radio><list-options list="yesNo" key="${value}" text="${label}"/></radio>
+                                        </default-field></field>
+                                        <field name="save"><default-field><submit text="Save audience"
+                                                confirmation="Save this audience of ${alert.title}? Each recipient is checked; one who may not read what you read refuses the save while the alert is active."/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" text="${alert.audienceKind == 'group' ? 'Tells ' + alert.audienceText + ', each in a notification of their own' : 'Tells its owner alone'}${alert.emailChannel == 'Y' ? ', in the app and by email.' : ', in the app.'}"/>
+                                <label type="p" style="m-muted" text="${found.audienceNote}" condition="found.audienceNote"/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="AudienceResults" list="audience" skip-form="true" paginate="false" condition="audience.length">
+                                    <field name="recipientName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="viaText"><default-field title="How"><display/></default-field></field>
+                                    <field name="resultText"><default-field title="Result">
+                                        <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${resultColor}">${
+                            WebUtilities.encodeHtml(resultText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: resultText})}]]></text>
+                        <text type="html">${resultText}</text>
+                    </render-mode>
+                                    </default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="recipientName"/></column>
+                                        <column><field-ref name="resultText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets></section>
+                </container>
+            </container>
+
+            <section name="StateBoxes" condition="!creating"><widgets>
+                <container-box>
+                    <box-header title="State"/>
+                    <box-body>
+                        <label type="p" style="m-muted" text="The state of each series as its owner reads it. No data and Error mean the health is not known, never Normal."/>
+                        <label type="p" text="${found.stateNote}" condition="found.stateNote"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="OwnAlertState" list="states" skip-form="true" paginate="false" condition="states.length">
+                            <field name="seriesText"><default-field title="Series"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State">
+                                <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                            </default-field></field>
+                            <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                            <field name="sinceText"><default-field title="Since"><display/></default-field></field>
+                            <field name="evaluatedText"><default-field title="Evaluated"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="seriesText"/><field-ref name="valueText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="sinceText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Deliveries"/>
+                    <box-body>
+                        <label type="p" style="m-muted" text="${canEdit ? 'Each recipient was told separately; this is the last outcome of each. A failed notification is tried again at the next evaluation.' : 'Your own notifications of this alert.'}"/>
+                        <label type="p" style="m-muted" text="Nobody has been told yet." condition="!deliveries.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="AlertDeliveryStatus" list="deliveries" skip-form="true" paginate="false" condition="deliveries.length">
+                            <field name="recipientName"><default-field title="Recipient"><display/></default-field></field>
+                            <field name="toldText"><default-field title="Told"><display text="${toldText} · ${channelText}"/></default-field></field>
+                            <field name="stateText"><default-field title="Outcome">
+                                <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                        <text type="html">${stateText}</text>
+                    </render-mode>
+                            </default-field></field>
+                            <field name="reasonText"><default-field title="Why"><display/></default-field></field>
+                            <field name="attemptText"><default-field title="When"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="recipientName"/><field-ref name="toldText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="reasonText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+        </widgets></section>
+    </widgets>
+</screen>

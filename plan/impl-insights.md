@@ -1710,6 +1710,178 @@ Design §8; INS-07 (its first release), INS-03.
   adds an equivalent colleague, and each gets their own notification with the value; the ORG_ZIZI_SERVICES reader
   cannot be added; a source outage shows Error, not recovered.
 
+**Built Nov 10 (P8).** mr-moqui c8ed67a7 and mr-boss (branch `ins/p8`; Mantle is not touched).
+- **Checked first** (the plan against the code): F8 as found (a rule runs as its owner, alert.rs `evaluate_rule`; its contacts
+  are a notification to a user or a whole group on `ReportAlert`, an email to `toAddresses` and a webhook; the link is Tools'
+  `/apps/dashboards/Alerts`; 500 series). P7's pieces are as its notes say and are reused as they are: `judge` and `scope_as`
+  (the fingerprint with R2's viewer-scoped datasets and R3's implicit sources), `expand`, `audience`, `refuse`, `caps`, the
+  group artifact, `owner_authority`, the delivery states. The five shipped templates each carried one contact point, a
+  notification to `ADMIN` as a group. The Insights reading groups read mr-boss's five admitted datasets by P3's grants, each
+  their own organizations' rows, so a Retail distributor reads Customer Service's breaches and can copy its template.
+- **The framework** (mr-moqui `crates/moqui-report/src/alert_delivery.rs`, with edits to `alert.rs`, `delivery.rs`,
+  `definitions.rs` and `business.rs`; docs/tools/Monitoring.md "Business alerts"; F8, INS-07):
+  - **A business rule** names an `audience` or reads a dataset whose rows depend on the viewer (`delivery::body_reads_business`,
+    the same test as a schedule's), whatever wrote its row. `save#Definition` (and so restore, the editors and a pulled git
+    file) refuses its contact points, shared contact references and any audience field but the known ones
+    (`BUSINESS_CONTACT_REFUSED`, `BUSINESS_AUDIENCE_REFUSED`), keeps `recipientUserIds`, `recipientGroupIds`, `channels`
+    (`notification`, `email`), `topic`, `emailTemplateId` (both must exist), `recipientCap`, `groupBy`, `groupWaitSeconds` and
+    `repeatSeconds`, and sets `deliveryMode` itself. After the row is written and before the save commits, the audience is
+    checked by P7's `audience` against the rule as it stands: an active rule with a blocking recipient or over the cap is
+    refused (`RECIPIENT_REFUSED`, `RECIPIENT_CAP`; `GROUP_DELIVERY_DENIED` without the group artifact), a paused one may be
+    saved to be mended. `check#ReportAudience` takes an alert rule. `detailLink` (a plain path on this server) is where a
+    rule's notifications link, for any rule.
+  - **The evaluation** is the one there was, once, as the owner. For a business rule the contacts are one a channel of its
+    audience, never what its row holds; each notification group goes through `Pass::send`: the audience expanded, the owner
+    first under the cap, each recipient judged again (one verdict a recipient a pass) and told separately on the topic as that
+    one user, or at their own account address; `scope-differs` and the other safe codes skip, a failure is recorded and puts
+    the group back for the next pass, and a recipient whose row says they were told this state within the repeat interval is
+    passed over. A stale source (the index older than its fields, `business::index_stale`) is Error. A business rule's state
+    changes write no `monitor_annotations` marker and open no incident, and its notification row keeps no payload. An owner
+    who cannot sign in pauses the rule (`owner-disabled`) instead of failing every minute. Technical rules take the old
+    path: the one changed line for them is `AlertInstance.lastValue`.
+  - **Copies** (`copy#Definition`, `import#Definitions`) of a business rule drop its contact points and are saved paused
+    (`not-validated`); activating is the owner's save with `paused` false.
+  - **Reads**: `get#AlertState` (each series' labels, state, times and last value to the owner and to a recipient of the
+    audience whose fingerprint equals the owner's now; a reason code otherwise; a non-business rule to a reader of the rule
+    and its sources) and `find#AlertDeliveries` (the owner's rules with recipients by name; `received`; `administrative` for
+    `ADMIN_TRANSFER_VIEW` as counters by rule with no title, series, recipient or value).
+  - **Ownership**: `find#OwnedAlertRules`, `pause#OwnedAlertRules`, `transfer#AlertRuleOwner` (the owned-resource contract;
+    `REPORT_OWNER_CHANGE`; the new owner active, internal, holding `save#Definition`, reading the sources and, for a group
+    audience, the group artifact; paused `transfer-pending` until they save it active). `definitions::engine_revise` is the
+    engine's own versioned change of a definition for these.
+  - Entities: `moqui.report.AlertRecipientDelivery` (unique by rule, channel, group and recipient); `AlertInstance.lastValue`.
+    No seed data: the delivery states are P7's and `ADMIN` holds the new services by `DASHBOARDS_APP`'s pattern.
+- **BOSS services** (`service/ironstone/insights/AlertServices.xml` over `Alerts.js`, each `allow-remote="false"`):
+  `find#Alerts`, `get#Alert`, `store#Alert`, `copy#Alert`, `pause#Alerts`, `test#Alert`, `delete#Alert`. Reading is
+  `INSIGHTS_VIEW` (the alerts one received, one's own state); setting, copying, changing, activating and deleting need
+  `INSIGHTS_AUTHOR` or `INSIGHTS_DISTRIBUTE` (`INSIGHTS_ALERT_REQUIRED`); other people `INSIGHTS_DISTRIBUTE` (a person an
+  Insights reader, a group one the distributor belongs to: Delivery.js's `proposable`, now exported with its engine call and
+  display helpers). The topic, template, link and cap are constants here. A new rule is the saved query of a panel the caller
+  reads (never a typed query), with the panel's `business` descriptor; it and a copy start paused, and Activate runs the
+  reading as the caller (`run#Query`) before the engine's save. Every write answers a refusal as `applied` false.
+- **Screens.** `Insights/Alerts` (a parent, "Business alerts", after Management digest; its default `Rules`: AlertFind with
+  Mine, Received and Templates, the list with Pause, Activate, Delete and a bulk pause, Templates with Copy) and the hidden
+  `AlertDetail` (the record header with Activate as the primary action while inactive, Test, Pause, Delete, Copy for a rule
+  that is not the caller's; BusinessAlertBasis; AlertAudience in a dialog with each recipient's result beside it;
+  OwnAlertState; AlertDeliveryStatus). With `dashboardId` and `panelId` and no rule it is New alert from a panel, which the
+  framework panel menu's New alert rule opens (`reportLinks.alertRule`, null for one who may set none).
+  `template/InsightsAlertEmail.xml` is the email's body.
+- **Data** (`data/BossSetupData.xml`, one block appended): the `InsightsBusinessAlert` topic (private, Notifications); the
+  `BOSS_INSIGHTS_ALERT` email template; `BOSS_INS_ALERT_READ` (`get#AlertState`, `find#AlertDeliveries`: ALWAYS for the five
+  reading groups and the administrator), `BOSS_INS_ALERT_DISTRIBUTE` (`delete#Definition`, the distributor's own rules); the
+  lifecycle participant `insights.alerts` with `BOSS_INS_ALERT_LIFECYCLE` for the identity operator and the administrator.
+  The four shipped templates (`report/boss-service-sla-breach.json`, `boss-commerce-*.json`) lose their contact point and
+  say how they are used. Insights.js: `reportLinks.alertRule`, two links.
+- **Specs.**
+  - framework `BusinessAlerts` (4 features, 0.85 s, `dependsOn` ReportAudience: a contact point, an address, a webhook
+    channel and a bad link refused, a narrower recipient and the cap refused at save, the group grant, a personal rule's
+    mode, `check#ReportAudience` for a rule; one evaluation and three notifications of one user each with the value and the
+    rule's link, a narrower member who joined later skipped `scope-differs`, a disabled one `inactive`, no value in the
+    delivery rows or the administrative list, a recipient's state and a non-equivalent reader's refusal; the same state not
+    told twice, a stale source Error for every series and told as Error, an empty result No Data; a copy paused, an owner who
+    cannot sign in paused at the evaluation, the lookup, pause and transfer with their refusals, a resume refused until the
+    recipients pass the new owner's check). moqui-report unit tests: `alert_delivery::tests` (3).
+  - BOSS `InsightsAlerts` (3 features, 1.5 to 2.0 s, `dependsOn` InsightsDatasets: a reader refused, an author's rule from
+    a panel inactive and personal and refused other people, the distributor's group audience activated, the Services reader
+    refused as an answer naming them and the code, a foreign group, another's rule and a private one; one evaluation's
+    notifications to the two named on Insights' topic with the link and the value, a recipient's own state and delivery, the
+    Services reader's none, AlertDetail's one qvt render; the five templates, one unreadable, the breach template copied
+    inactive without a contact point, a fractional threshold, the activation, Admin's `find#OwnedResources` with the
+    participant, a reader refused its services and as a new owner, the delete). `InsightsAccess`: the menu (ten entries),
+    `get#AlertState` for a reader and `find#OwnedAlertRules` refused to the distributor. `AdminLifecycle` (Admin's): a disable
+    now has a second pause step.
+  - Acceptance, written and not run: `acceptance/Insights/InsightsAlertsUsable` (4 features: the "usable when", with a
+    breach made on a Retail case's clock and the rule deleted at the end). The sweeps `AppStructure` and `TuiRender` gain the
+    new screens' entries; `InsightsFoundationWalk` walks the one menu.
+- **Tests run** (this worktree's Debug binary, `--nobuild`): framework BusinessAlerts, ReportAudience, ReportDrill,
+  ReportAnnotations, BusinessDatasets 23 of 23 (framework 3.1 s of 12 s for the five); BOSS InsightsAlerts, InsightsAccess,
+  InsightsDelivery, InsightsDashboards, InsightsHome (with InsightsDatasets), AdminLifecycle, AdminRegistries,
+  CustomerServiceReports, CommerceReports 39 of 39. Cargo: `clippy -p moqui-report --all-targets -D warnings` clean,
+  `test -p moqui-report` 89 of 89, moqui-host `--test it report_` 9 of 9 (the technical rules' path: timers, workers, real SMTP and webhooks). `moqui lint --screens`: 132 sites, as before,
+  none in the new screens. Prettier clean on the new and changed JavaScript; rustfmt on the Rust files changed. Not run:
+  `./moq test-apps`, `./moq test-framework`, any acceptance test.
+- **Rendered by hand** (a throwaway probe spec, not kept): Rules (Mine as the distributor in qvt, tui and html; Templates;
+  Received as a reader and as the administrator), AlertDetail (the owner's in the three modes, a recipient's, the Services
+  reader's, a template, a missing one, New from a panel as an author and refused to a reader), the Dashboard panel menu's
+  link for an author and none for a reader; every transition as a post with the rows after it (create from a panel with a
+  range condition, Test, the audience with email, a group refused to an author, activate, pause, delete, copy from the list
+  and from the detail, a reader's pause and delete refused); and the email channel with the mail capture: a body that did
+  not render was recorded as failed for each recipient and tried again, then one message each ("currency USD — Firing: 8").
+- **Budget shares**: framework server 0.85 s (BusinessAlerts); mr-boss server 1.5 to 2.0 s (InsightsAlerts; InsightsAccess
+  gains two calls); no client spec.
+- Inventories: no ss-inventory or usl-inventory row is P8's.
+- Design edits: design-insights §2 (the list's route), §8 "As built", §15.1 (INS-07), §15.2 (the delivery row);
+  design-admin §4.1 (the participant as built). mr-moqui docs/tools/Monitoring.md ("Business alerts", Security, Upgrading)
+  and `plans/Remaining-Work.md` (the report-engine row). mr-boss README's Insights line.
+- **Findings** (provisional, for the lead to number):
+  - F-P8-1: the shipped templates told `ADMIN` as a group in one notification with the owner's values. mr-boss's four
+    lose the contact point. Mantle's `mantle-sales-daily-floor` still has one in its file (mr-mantle is read only here): the
+    engine drops it from a copy and never delivers to one, so it is harmless; removing it and its "contact points" wording is
+    Mantle's.
+  - F-P8-2: the owner is told only when named, or alone when nobody is, as a schedule's owner is (P7): "adds an equivalent
+    colleague" names both. Kept for one rule in both.
+  - F-P8-3: a recipient must read the rule itself (F90's `not-shared`), so a group audience's rule is shared with a group
+    its recipients are in; AlertAudience's form carries the share group. A rule its audience reads without a share would
+    need the engine to treat an audience as a reading grant.
+  - F-P8-4: the engine had no per-recipient memory of a notification, so a group put back after one failure would have
+    told everyone again; `AlertRecipientDelivery` keeps the state each recipient was told. It keeps each recipient's last
+    outcome only, an alert email's outcome is sent or failed (the alert contact sender does not tell "not known" apart, as
+    P7's report mail does), and there is no manual retry or reconciliation: a failure is tried again at each evaluation.
+  - F-P8-5: "stale" as the engine can know it is the index older than its fields. A feed that has stopped indexing leaves
+    the last documents in place and the rule reads them as current; index lag is P10's readiness, and a rule that reads it
+    is a framework ask.
+  - F-P8-6: `AlertInstance` kept no reading, so OwnAlertState had no value to show; `lastValue` is written for every rule.
+  - F-P8-7: an alert's history was its markers in `monitor_annotations` (any reader of that dataset) and Monitor's
+    incidents. A business rule writes neither, so its history is its state and each recipient's last delivery; design §8's
+    history, annotations and scoped drill in OwnAlertState are not built.
+  - F-P8-8: a series pruned after going missing is told as Normal with no value and `pruned` true (the engine's rule for
+    every alert). Design §8.1 asks for a neutral explanation: a wording of its own in the notification is a framework ask.
+  - F-P8-9: the engine answers a fractional number of a definition's body to a script as a decimal, which `Number()`
+    refuses, and `JSON.stringify` does not write as a number. Alerts.js and the email template read them through their text
+    and `clone` writes them as numbers; any script that changes and saves a definition body with a fractional number has the
+    same hazard.
+  - F-P8-10: a rule made from a panel reads its owner's whole scope: the panel's dashboard variables (Insights' fixed
+    organization) do not exist in a rule. "For their queue" is the series of the queues the owner reads; a rule narrowed to
+    one organization or queue needs a filter on its query, which BusinessAlertBasis does not offer.
+  - F-P8-11: `AdminLifecycle` (Admin's) lists a disable's exact steps; the second participant adds a second
+    `pause:UlstDone` (as F96).
+  - F-P8-12: alert.rs is 1,531 lines with P8's fifty (Practices-Rust §2's 1,500): its contact sending and shared-item
+    validation can move to a module of their own; not done here, to keep the diff the phase's.
+  - F-P8-13: `get#AlertState` is a new read; Tools' Alerts still lists `AlertInstance` by entity for its `ADMIN` users, a
+    business rule's series labels among them.
+- **Decisions** (for §4): a business rule is one with an audience or over a viewer-scoped dataset, whatever wrote it; an
+  audience replaces contact points and anything else refuses the save rather than being dropped; the channels are the in-app
+  notification and the account's email; the owner is told when named; a copy and an import are paused until their owner's
+  save activates them; a business rule writes no shared marker and opens no incident; a stale index is Error; the
+  administrative read is `ADMIN_TRANSFER_VIEW`'s, counters only; alert rules are a second lifecycle participant with
+  services of their own (a participant has one resource parameter); setting an alert is the author's and the distributor's,
+  not every reader's; Insights names the topic, the template, the link and the cap, and sets no grouping wait; AlertDetail is
+  Insights' own screen over the saved query of a panel, not a mount of Tools' AlertRule; the shipped templates carry no
+  contact point.
+- **For the lead:**
+  - budget shares: framework 0.85 s server, mr-boss 2.0 s server;
+  - merge: BossSetupData's P8 block is one append at the end (Admin P11 appends there: keep both); mr-moqui
+    `ReportEntities.xml` gains one field on AlertInstance and one entity at the end, `ReportServices.xml` five services
+    before `preview#Report` and one sentence of `check#ReportAudience`; no framework seed file changes; Insights.js
+    (`reportLinks`, `linkPaths`), Delivery.js (its exports), InsightsSpecLib (`readerMenu`);
+  - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F-P8-11, one expectation) and design-admin §4.1
+    (one "As built" sentence in place of "Alert rules join with Insights P8"); `acceptance/AppStructure.spec.js` and
+    `TuiRender.spec.js` (the new screens' entries);
+  - an existing instance: the entity check adds the table and the field; load BossSetupData again and set the
+    `BOSS_INSIGHTS_ALERT` template's mail server and from address. From then on a saved rule over a business dataset tells
+    its owner alone in the app until it is saved with an audience, its stored contact points are not delivered to, and a save
+    that still names one is refused (Monitoring.md "Upgrading");
+  - the user's call: who sets a personal alert (built: the author and the distributor; design §7.1 would let every reader
+    with `INSIGHTS_SCHEDULE`, which P7 gave every reading group: open with P7's question, and one line in Alerts.js's
+    `author` either way); F-P8-2 (the owner told only when named); F-P8-3 (a recipient must read the rule); a business rule
+    leaving no marker on the time series (F-P8-7); the distributor's `delete#Definition` (their own definitions only);
+  - Mantle's: F-P8-1 (its template's contact point and wording);
+  - not built: silences, mute timings and shared contact points in Insights (Tools' AlertShared is not mounted); "Send test
+    to me"; a registered metric picker (the basis is a panel's saved query with its descriptor); a filter of the rule's own
+    (F-P8-10); a delivery history and a manual retry (F-P8-4); sending profiles; alerts to a chat room (design §17 Q4);
+    recipient evaluation (§8.1 later); an Insights Settings cap (P10); the delivery audit export (P12);
+  - `find#AlertDeliveries` with `administrative: true` is Admin P16's read (counters by rule, no title, no value).
+
 ### P9 — Flow maps
 
 Design §9; INS-08.

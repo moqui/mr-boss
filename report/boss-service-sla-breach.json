@@ -3,7 +3,7 @@
   "type": "alert",
   "title": "Service level breaches",
   "body": {
-    "description": "Fires when cases breached their service level in the last hour, by queue. It reads every organization's clocks, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "description": "Fires when cases breached their service level in the last hour, by queue, among the organizations its owner reads. A template: copy it in Insights › Business alerts, set the threshold and the audience, then activate it.",
     "query": {
       "datasetId": "boss-service-breaches",
       "from": "now-1h",
@@ -48,16 +48,6 @@
     "labels": {
       "team": "customer-service",
       "severity": "warning"
-    },
-    "contactPoints": [
-      {
-        "id": "administrators",
-        "type": "notification",
-        "topic": "ReportAlert",
-        "userGroupId": "ADMIN",
-        "groupWaitSeconds": 0,
-        "repeatSeconds": 3600
-      }
-    ]
+    }
   }
 }
