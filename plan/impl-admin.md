@@ -5267,7 +5267,7 @@ review: …"); Mantle and BOSS unchanged.
     rerun one moqui-git test, `large_objects_are_content_blobs_streamed_in_and_out`, failed on a reset local
     connection (`curl 56 Recv failure`) and passed alone. Feature time: framework 16.8 s of 12 s (this build's
     eighteen framework specs 4.4 s; gate 1 measured 10.8 s, the rest is upstream's), tools 4.1 s of 4 s and dev-aide 41.6 s
-    of 30 s (neither this build's), basic-comms 6.0 of 8 s, webroot client 43.2 of 44 s. No budget raised: the user's call.
+    of 30 s (neither this build's), basic-comms 6.0 of 8 s, webroot client 43.2 of 44 s. The user agreed (Nov 11) to raise the framework server budget by this build's 4.4 s, rounded up: 12 to 17 s (mr-moqui framework test/budget).
   - `mail_capture_sends=true ./moq test-apps`: 3,526 server and 35 client features, all passed (after the two full-run
     order dependences the first final run found were fixed in their specs: IdentityAudit matched an instance-level
     SystemMessage row whose sequenced id equals the spec's user id, mr-mantle 08448e42; AdminGroups' member choice is one
