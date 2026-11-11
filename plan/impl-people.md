@@ -307,7 +307,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | built and reviewed Nov 11, merged |
 | P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | built and reviewed Nov 11, merged |
 | P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | built and reviewed Nov 11, merged |
-| P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | — |
+| P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | built and reviewed Nov 11, merged |
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | — |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | — |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | — |
@@ -1144,7 +1144,7 @@ P3's units.
   (`store#PositionHolder` has none until P6). ss-inventory has no HumanRes position or grade form (its two HumanRes rows are the rates, P10).
 - Design edits: design-people (header; §1.2 the Staffing group and `g s`; §5 the holders, vacancy, readers and the grades' lane, and
   JobClasses, JobClassDetail, Positions, PositionDetail and PayGrades as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F100 to F105 in order:
   - a seat's occupancy has two records in the code: the design's dated `EmplPositionParty` rows (Manufacturing's shop floor and Projects'
     resources read them) and `Employment.emplPositionId` (`create#Employment` takes it; TimeServices' rate lookup, Commons' contact card and
     P2's directory read it). P4 reads both, the occupancy row winning, and writes only the row (`store#PositionHolder`); P6's hire and change
@@ -1225,7 +1225,7 @@ lane first; fixes committed apart per repository ("People P4 review: …"; mr-ma
     `Employment.emplPositionId` until P6.
   - The user's call 2: design-people §1.1 now says a pay grade is changed with `PAYROLL_VIEW` and `PAYROLL_EDIT` alone and
     `PEOPLE_CONFIGURE` is for P22's components, structures and groups; the worker's holder-records finding is a note in P6.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F106 to F109 in order:
   - a manager (`PEOPLE_TEAM_VIEW` alone) reads their department's seats and each seat's class title, but `find#JobClasses` and
     `get#JobClass` admit staff readers only, so PositionDetail's link to the class is "not open" to them;
   - the job title of an ended employment in Employee360's history and OrgChart's members as of an earlier date read the seat
@@ -2019,7 +2019,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
