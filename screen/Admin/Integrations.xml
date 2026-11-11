@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Integrations area of IronStone Admin (design-admin §1.2, §8; impl-admin P11): Connections, the infrastructure
+    connections of the registered kinds (the default), and ConnectionDetail, one connection's configuration, organizations,
+    test and uses (contextual). Message types and system messages join it later (P13). For the integration administrator and
+    the administrator (BOSS_ADM_INTEGRATIONS): the framework's services check ADMIN_CONNECTION_VIEW and
+    ADMIN_CONNECTION_MANAGE whatever opens the screens, and Mantle's store#PaymentGatewayOrganization the organization too. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Integrations" default-menu-index="6" menu-image="sym_o_hub" menu-image-type="icon">
+    <subscreens default-item="Connections" always-use-full-path="true">
+        <subscreens-item name="Connections" location="component://mr-boss/screen/Admin/Integrations/Connections.xml" menu-title="Connections"
+                menu-index="1"/>
+        <subscreens-item name="ConnectionDetail" location="component://mr-boss/screen/Admin/Integrations/ConnectionDetail.xml"
+                menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="AdminIntegrationsPanel" type="tab"/>
+    </widgets>
+</screen>

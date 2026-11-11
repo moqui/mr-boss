@@ -192,6 +192,17 @@ const demoRecords = {
     "Insights/ScheduledReports/ScheduledReportDetail": { parameters: { screenScheduledId: "BOSS_DEMO_MY_TASKS" }, text: "Open tasks" },
     "Insights/ScheduledReports/ReportDelivery": { parameters: { occurrenceId: "NONE" }, text: "Delivery not available" },
     "Insights/ManagementDigest": { text: "Weekly management digest" },
+    // Insights P8: Business alerts (the list, and a shipped template in AlertDetail)
+    "Insights/Alerts": { text: "Business alerts" },
+    "Insights/Alerts/Rules": { text: "Business alerts" },
+    "Insights/Alerts/AlertDetail": { parameters: { definitionId: "boss-service-sla-breach" }, text: "Service level breaches" },
+    // Insights P9: Business flows (the suite's supplier flow, the maps, a template in the editor, read only, and the
+    // return link of a step's procedure; the Knowledge screen under ProcessStory is Commons')
+    "Insights/Flows": { text: "Customer flow" },
+    "Insights/Flows/FlowMap": { parameters: { definitionId: "insights-flowmap-supplier", stepId: "order" }, text: "Raise the order" },
+    "Insights/Flows/FlowMaps": { text: "Suite template" },
+    "Insights/Flows/FlowMapEditor": { parameters: { definitionId: "insights-flowmap-internal" }, text: "A suite template is not changed" },
+    "Insights/Flows/ProcessStory": { parameters: { definitionId: "insights-flowmap-customer", stepId: "order" }, text: "Back to Customer flow" },
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list
     // (Time/TimeEntries) john.doe's time
     // Projects P2: Home, the project list (the default of Projects), the NewProject wizard and its steps (the fragment is the

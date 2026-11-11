@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The body of a business alert Insights sends to one recipient's own account address (the BOSS_INSIGHTS_ALERT email template;
+    impl-insights P8, design-insights §8.1): the rule's name, the state of each series told with the recipient's own permitted
+    value (the recipient was checked to read what the owner reads), and a link to AlertDetail in Insights, which shows their
+    own state after sign-in. No data and Error are said as not known. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="title" default-value="Business alert"/>
+    <parameter name="link"/>
+    <parameter name="events"/>
+    <actions><script><![CDATA[
+        const words = {Firing: 'Firing', Normal: 'Normal', Pending: 'Pending', Recovering: 'Recovering', NoData: 'No data (not known)', Error: 'Error (not known)'}
+        alertLink = link ? String(link) : ''
+        if (alertLink.startsWith('/') && typeof webHostName !== 'undefined' && webHostName)
+            alertLink = 'https://' + String(webHostName).replace(/^https?:\/\//, '').replace(/\/$/, '') + alertLink
+        alertLines = Array.from(events || []).slice(0, 50).map(event => {
+            const labels = Object.entries(event.labels || {}).filter(([name]) => name !== 'field' && name !== 'rule')
+                .map(([name, value]) => name + ' ' + value).join(', ')
+            const state = Object.hasOwn(words, String(event.state)) ? words[String(event.state)] : 'Not known'
+            const reading = event.value == null || event.state === 'NoData' || event.state === 'Error' ? '' : ': ' + Math.round(Number(String(event.value)) * 100) / 100
+            return (labels ? labels + ' — ' : '') + state + reading
+        })
+    ]]></script></actions>
+    <widgets><render-mode>
+        <text type="html,html-print"><![CDATA[
+<html><body><h2>${html(title)}</h2>
+<ul><#list alertLines as line><li>${html(line)}</li></#list></ul>
+<#if alertLink><p><a href="${html(alertLink)}">Open it in Insights</a></p></#if>
+<p>This was sent to you alone, as you may read what its owner reads; opening it in Insights shows your own current state.</p></body></html>
+        ]]></text>
+        <text type="text"><![CDATA[${title}
+<#list alertLines as line>${line}
+</#list>${alertLink}
+This was sent to you alone, as you may read what its owner reads.
+        ]]></text>
+    </render-mode></widgets>
+</screen>

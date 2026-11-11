@@ -1,0 +1,170 @@
+{
+  "id": "insights-flowmap-supplier",
+  "type": "report",
+  "title": "Supplier flow",
+  "body": {
+    "kind": "flowmap",
+    "folder": "Insights",
+    "description": "From a need to buy to a paid supplier bill: who does each step, where its work waits and where to read more. Copy it for your organization to rename steps and link your own procedures.",
+    "templateVersion": 1,
+    "lanes": [
+      {
+        "laneId": "buying",
+        "title": "Purchasing",
+        "description": "Requests, sourcing and orders.",
+        "sequenceNum": 1
+      },
+      {
+        "laneId": "supplier",
+        "title": "Supplier",
+        "description": "What the supplier does.",
+        "sequenceNum": 2
+      },
+      {
+        "laneId": "dock",
+        "title": "Warehouse",
+        "description": "Receiving, putaway and returns.",
+        "sequenceNum": 3
+      },
+      {
+        "laneId": "payables",
+        "title": "Accounting",
+        "description": "Bills and payments.",
+        "sequenceNum": 4
+      }
+    ],
+    "steps": [
+      {
+        "stepId": "need",
+        "laneId": "buying",
+        "title": "Request to buy",
+        "sequenceNum": 1,
+        "description": "A need becomes a purchase request, from a person or from a reorder rule.",
+        "targetRegistrationId": "Purchasing.Requests"
+      },
+      {
+        "stepId": "source",
+        "laneId": "buying",
+        "title": "Ask for quotes",
+        "sequenceNum": 2,
+        "description": "Suppliers are asked to quote; quotes are compared and awarded before they expire.",
+        "targetRegistrationId": "Purchasing.Quotes",
+        "targetParameters": {
+          "view": "expiring"
+        },
+        "countProviderKey": "Purchasing.QuotesExpiring"
+      },
+      {
+        "stepId": "order",
+        "laneId": "buying",
+        "title": "Raise the order",
+        "sequenceNum": 3,
+        "description": "A purchase order is drafted and submitted for approval.",
+        "targetRegistrationId": "Purchasing.Orders",
+        "targetParameters": {
+          "view": "draft"
+        },
+        "countProviderKey": "Purchasing.DraftOrders",
+        "catalogEntryId": "Purchasing.Commitments"
+      },
+      {
+        "stepId": "send",
+        "laneId": "buying",
+        "title": "Send to the supplier",
+        "sequenceNum": 4,
+        "description": "An approved order is sent to the supplier.",
+        "targetRegistrationId": "Purchasing.Orders",
+        "targetParameters": {
+          "view": "unsent"
+        },
+        "countProviderKey": "Purchasing.ApprovedNotSent",
+        "next": [
+          "acknowledge"
+        ]
+      },
+      {
+        "stepId": "acknowledge",
+        "laneId": "supplier",
+        "title": "Supplier acknowledges",
+        "sequenceNum": 1,
+        "description": "The supplier confirms quantities and dates; an order not acknowledged is followed up.",
+        "targetRegistrationId": "Purchasing.Acknowledgements",
+        "targetParameters": {
+          "view": "unacknowledged"
+        },
+        "countProviderKey": "Purchasing.Unacknowledged"
+      },
+      {
+        "stepId": "supplier-ships",
+        "laneId": "supplier",
+        "title": "Supplier ships",
+        "sequenceNum": 2,
+        "description": "The supplier ships against the order. This is the supplier's own work, so this step is information only.",
+        "next": [
+          "receive"
+        ]
+      },
+      {
+        "stepId": "receive",
+        "laneId": "dock",
+        "title": "Receive",
+        "sequenceNum": 1,
+        "description": "Deliveries are received at the dock against their order and inspected.",
+        "targetRegistrationId": "Warehouse.Receipts",
+        "countProviderKey": "Warehouse.Receiving"
+      },
+      {
+        "stepId": "putaway",
+        "laneId": "dock",
+        "title": "Put away",
+        "sequenceNum": 2,
+        "description": "Received stock is put away to its locations.",
+        "targetRegistrationId": "Warehouse.Putaway",
+        "next": [
+          "bill"
+        ]
+      },
+      {
+        "stepId": "send-back",
+        "laneId": "dock",
+        "title": "Return to supplier",
+        "sequenceNum": 3,
+        "description": "Rejected or surplus goods go back to the supplier under a return authorization.",
+        "targetRegistrationId": "Purchasing.SupplierReturns"
+      },
+      {
+        "stepId": "bill",
+        "laneId": "payables",
+        "title": "Bill arrives",
+        "sequenceNum": 1,
+        "description": "The supplier's bill is entered and waits for approval.",
+        "targetRegistrationId": "Accounting.Bills",
+        "targetParameters": {
+          "queue": "review"
+        },
+        "countProviderKey": "Accounting.BillsAwaitingApproval"
+      },
+      {
+        "stepId": "match",
+        "laneId": "payables",
+        "title": "Match to order and receipt",
+        "sequenceNum": 2,
+        "description": "A bill that does not match its order or receipt is held until the difference is settled.",
+        "targetRegistrationId": "Purchasing.MatchExceptions",
+        "targetParameters": {
+          "view": "held"
+        },
+        "countProviderKey": "Purchasing.HeldBills"
+      },
+      {
+        "stepId": "pay",
+        "laneId": "payables",
+        "title": "Pay",
+        "sequenceNum": 3,
+        "description": "Approved bills are paid in payment runs.",
+        "targetRegistrationId": "Accounting.PaymentRuns",
+        "catalogEntryId": "Purchasing.Spend"
+      }
+    ]
+  }
+}

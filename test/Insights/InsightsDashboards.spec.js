@@ -142,7 +142,7 @@ feature(
             // the fixed organization, never the forged one
             board.output.includes(ids.organizationId)
             !board.output.includes(ids.otherOrganizationId)
-            // the dashboard's links are Insights' screens, never the Tools Dashboards app; no alert rules in Insights
+            // the dashboard's links are Insights' screens, never the Tools Dashboards app or its alert rules
             board.output.includes("/Insights/DashboardEditor")
             board.output.includes("/Insights/ReportBuilder/Explore")
             !board.output.includes("/dashboards/Definition")

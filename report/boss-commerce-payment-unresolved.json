@@ -3,7 +3,7 @@
   "type": "alert",
   "title": "Long-unresolved payment attempts",
   "body": {
-    "description": "Fires when store payment attempts started a day to an hour ago are still authorizing or pending at the provider, by store. It reads every organization's attempts, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "description": "Fires when store payment attempts started a day to an hour ago are still authorizing or pending at the provider, by store, among the stores its owner reads. A template: copy it in Insights › Business alerts, set the threshold and the audience, then activate it.",
     "query": {
       "datasetId": "boss-commerce-payment-attempts",
       "from": "now-1d",
@@ -49,16 +49,6 @@
     "labels": {
       "team": "commerce",
       "severity": "warning"
-    },
-    "contactPoints": [
-      {
-        "id": "administrators",
-        "type": "notification",
-        "topic": "ReportAlert",
-        "userGroupId": "ADMIN",
-        "groupWaitSeconds": 0,
-        "repeatSeconds": 3600
-      }
-    ]
+    }
   }
 }

@@ -56,7 +56,8 @@ EditPageForm (this replaces the earlier notes that left them for future Publishi
 pages are the PASS app Support, so `ServicePortal/*` paths are now `PASS:Support/*`. Maintenance
 adds its WorkOrderDetail assignments, Facilities tree and DueMaintenance reading to the forms they
 derive from. The People, Maintenance, Admin and Insights screen renames had no paths here; the
-Marble dashboard has no form row (Insights maps it to `Insights/Flows/FlowMap`). **Implemented in**
+Marble dashboard has no form row (Insights maps it to `Insights/Flows/FlowMap`, built in impl-insights P9: its three
+actors are the suite's customer, internal and supplier flow maps). **Implemented in**
 is unchanged.
 
 ## MyAccount (49 forms)
@@ -478,12 +479,12 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditPaymentGateway | EditPaymentGatewayForm | Admin/Integrations/ConnectionDetail |  |
-| FindPaymentGateway | NewPaymentGatewayForm | Admin/Integrations/Connections |  |
-| FindPaymentGateway | PaymentGatewaysForm | Admin/Integrations/Connections |  |
-| EditShippingGateway | EditShippingGatewayForm | Admin/Integrations/ConnectionDetail |  |
-| FindShippingGateway | NewShippingGatewayForm | Admin/Integrations/Connections |  |
-| FindShippingGateway | ShippingGatewaysForm | Admin/Integrations/Connections |  |
+| EditPaymentGateway | EditPaymentGatewayForm | Admin/Integrations/ConnectionDetail |Admin/Integrations/ConnectionDetail#NativeConnection (the payment gateway kind's fields; service names are the provider type's, never entered) |
+| FindPaymentGateway | NewPaymentGatewayForm | Admin/Integrations/Connections |Admin/Integrations/Connections#NewConnection (a registered provider type) |
+| FindPaymentGateway | PaymentGatewaysForm | Admin/Integrations/Connections |Admin/Integrations/Connections#ConnectionList |
+| EditShippingGateway | EditShippingGatewayForm | Admin/Integrations/ConnectionDetail |Admin/Integrations/ConnectionDetail#NativeConnection (the shipping gateway kind's fields; carriers, methods and options stay Warehouse's) |
+| FindShippingGateway | NewShippingGatewayForm | Admin/Integrations/Connections |Admin/Integrations/Connections#NewConnection (a registered provider type) |
+| FindShippingGateway | ShippingGatewaysForm | Admin/Integrations/Connections |Admin/Integrations/Connections#ConnectionList |
 
 ## HumanRes (2 forms)
 

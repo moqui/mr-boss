@@ -4082,7 +4082,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the client deny pattern (BOSS_PROJECTS_INTERNAL, impl-admin F14): P6's new write verb, transfer
         (ironstone.admin.LifecycleServices transfer#OwnedResource, transfer#Assignments) -->
     <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL">
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(transfer)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
     </artifactGroups>
 
@@ -4407,4 +4407,264 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_LIFECYCLE_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+
+    <!-- Admin P11 (design-admin §8 Connections and ConnectionDetail, §9 MailRelays and MailRelayDetail; impl-admin P11): the
+        Integrations area (Connections, ConnectionDetail) and the Mail and protocols area (MailRelays, MailRelayDetail), the
+        integration administrator's and the administrator's, denied to the root group as the other areas. The grants open
+        navigation and lend the organization filters a payment gateway's organizations are read and permitted under; a
+        connection is read with ADMIN_CONNECTION_VIEW and changed or tested with ADMIN_CONNECTION_MANAGE, checked by
+        org.moqui.admin.ConfigurationServices and mantle.account.GatewayConnectionServices whatever opens the screens. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_INTEGRATIONS" description="Admin connections">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_INTEG" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ADM_PROTOCOLS" description="Admin mail relays and protocols">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Protocols.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_INTEG" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin's settings index entries of P11 (design §14.2), each shown to a user its screen opens to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.connections" version="1" ownerApp="Admin" title="Connections"
+            description="The payment, shipping and tax gateways, remote systems, mail sign-in providers and printers this instance reaches, with their addresses and credentials, and the organizations a payment gateway is permitted for"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Integrations/Connections"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="111"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.mailRelays" version="1" ownerApp="Admin" title="Mail relays"
+            description="The outgoing mail servers the instance sends its own mail through"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/MailRelays"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
+    <!-- Insights P8 (impl-insights P8; design-insights §8, §1.1; INS-07): business alerts. No screen grant is added: the root's
+        ALLOW opens Business alerts (the list and AlertDetail), each transition reaches an ironstone.insights AlertServices
+        operation that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself (reading one's own state and deliveries is every
+        reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. A rule is
+        saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
+        (BOSS_INS_REPORT_DISTRIBUTE): the engine holds a rule over business data to an audience in place of contact points and
+        checks every recipient (mr-moqui crates/moqui-report/src/alert_delivery.rs); telling anyone but oneself needs the
+        engine's group delivery artifact, the distributor's (BOSS_INS_GROUP_DELIVERY). Alert evaluation stays the engine's job
+        (BOSS_INS_REPORT_TOOLS). -->
+    <!-- The business-alert topic (design §8.1): private, in Notifications, where someone is expected to act; its message is
+        the rule and series ids, the state and the recipient's own permitted value, sent to one user at a time. The engine's
+        ReportAlert topic (Updates) stays Tools' technical alerts'. -->
+    <moqui.security.user.NotificationTopic topic="InsightsBusinessAlert" inboxEnumId="NinNotifications" description="Business alerts"
+            linkTemplate="/qapps/Insights/Alerts/AlertDetail?definitionId=${ruleId}" showAlert="Y" persistOnSend="Y"
+            receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="warning"/>
+    <!-- The message of an alert sent to a recipient's own account address: the state, the series and a link to AlertDetail -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="BOSS_INSIGHTS_ALERT" description="Insights business alert" emailServerId="SYSTEM"
+            emailTypeEnumId="EMT_SCREEN_RENDER" bodyScreenLocation="component://mr-boss/template/InsightsAlertEmail.xml"
+            webappName="webroot" fromAddress="" fromName="" subject="Alert: ${title}" sendPartial="Y"/>
+    <!-- Reading an alert's state and deliveries, every reading group's and the administrator's: the engine answers a state to
+        the rule's owner and to a recipient whose scope is the owner's, a delivery to its owner or its recipient, and the
+        administrative counters to a holder of ADMIN_TRANSFER_VIEW. -->
+    <artifactGroups artifactGroupId="BOSS_INS_ALERT_READ" description="Insights: reading alert states and deliveries">
+        <artifacts artifactName="org.moqui.report.ReportServices.get#AlertState" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.find#AlertDeliveries" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The distributor deletes a rule (or a digest) of their own: the engine deletes only the owner's definition -->
+    <artifactGroups artifactGroupId="BOSS_INS_ALERT_DISTRIBUTE" description="Insights: a distributor's own alert rules">
+        <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_DISTRIBUTE_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Admin's lifecycle (impl-admin P6; design-admin §14 Lifecycle participant, design-insights §7.1 Ownership): the alert
+        rules a user owns, beside their schedules (insights.schedules). Offboarding pauses them and hands each to a new owner,
+        who must be able to save rules, read its sources and, for a group audience, deliver to a group; the rule stays paused
+        until that owner activates it, which checks every recipient against the new owner's scope. The services check
+        REPORT_OWNER_CHANGE for another user's rules. The caller gains no state and no value. -->
+    <ironstone.admin.LifecycleParticipant participantKey="insights.alerts" version="1" ownerApp="Insights" title="Business alerts"
+            description="The alert rules the user owns, paused when access ends and handed to a new owner who passes the same recipient check."
+            resourceKind="alert" lookupService="org.moqui.report.ReportServices.find#OwnedAlertRules"
+            transferService="org.moqui.report.ReportServices.transfer#AlertRuleOwner" resourceParameter="definitionId"
+            pauseService="org.moqui.report.ReportServices.pause#OwnedAlertRules" requiredPermission="REPORT_OWNER_CHANGE" sequenceNum="61"/>
+    <artifactGroups artifactGroupId="BOSS_INS_ALERT_LIFECYCLE" description="Insights: the lifecycle participant's alert rule operations">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#OwnedAlertRules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pause#OwnedAlertRules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.transfer#AlertRuleOwner" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_LIFECYCLE_IDENTITY" userGroupId="BOSS_ADMIN_IDENTITY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_LIFECYCLE_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Insights P9 (impl-insights P9, §4; design-insights §9; INS-08): business flow maps. No screen grant is added: the root's
+        ALLOW opens Business flows (FlowMap, FlowMaps and the hidden FlowMapEditor and ProcessStory), each transition reaches an
+        ironstone.insights FlowMapServices operation that checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT and the map's organization
+        and owner itself, and ProcessStory serves Commons Knowledge only to a user whose own grants open it. A flow map is a
+        report engine definition (type report, kind flowmap): reading one is every reading group's (BOSS_INS_REPORT_READ).
+        The flow editor holds no engine authoring operation (the P9 review; design §1.1: maps, not playlists, searches or
+        dashboards): the engine's save, restore and delete stay denied to them (BOSS_INS_REPORT_ENGINE) wherever an Insights
+        screen calls one. The grant is on FlowMapServices' six writing operations instead, an inheritable ALWAYS, so the
+        engine call each makes after its own checks (INSIGHTS_FLOW_EDIT, a flow map, its organization, its owner, the version
+        read, the body validated) passes the deny, and the engine still holds the save to the definition's owner. Nothing
+        else those operations call is denied to the group (the engine's reads are its own, the wiki decides a page by its
+        rows), and a reader who calls one is refused by the operation itself. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_FLOW" description="Insights: a flow editor's own flow maps">
+        <artifacts artifactName="ironstone.insights.FlowMapServices.copy#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.store#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.store#MapLane" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.store#MapStep" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.restore#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.delete#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_FLOW_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The flow targets (ironstone.insights.FlowTarget): the built apps' worklist routes a map's step may open, each with the
+        parameters it takes (owner contracts, each in its owner's design; a registration grants nothing, the link is answered
+        only to a viewer whose own groups open the route). A choice parameter takes one of its listed values; an organization
+        parameter is the organization in the map's scope, set when the map is read. Sales, Marketing, People and Maintenance
+        register theirs when they are built; until then their steps are information. -->
+    <!-- Commerce (owner contract, design-commerce §3): the store work lists -->
+    <ironstone.insights.FlowTarget targetId="Commerce.Orders" version="1" ownerApp="Commerce" title="Store orders"
+            description="Store orders, by status or by what needs attention."
+            routePath="Commerce/Orders/Orders"
+            parameterContract='{"statusId":{"type":"choice","values":["OrderPlaced","OrderApproved","OrderProcessing","OrderSent","OrderHold","OrderCompleted","OrderCancelled"]},"attention":{"type":"choice","values":["paymentHold","hold","cancelRequest","stuck","notice"]}}' sequenceNum="10"/>
+    <ironstone.insights.FlowTarget targetId="Commerce.Carts" version="1" ownerApp="Commerce" title="Carts"
+            description="Carts customers have open in the stores."
+            routePath="Commerce/Orders/Carts" sequenceNum="20"/>
+    <ironstone.insights.FlowTarget targetId="Commerce.Returns" version="1" ownerApp="Commerce" title="Store returns"
+            description="Returns customers asked for in the stores."
+            routePath="Commerce/Orders/Returns" sequenceNum="30"/>
+    <!-- Customer Service (owner contract, design-customer-service §3): cases and returns -->
+    <ironstone.insights.FlowTarget targetId="CustomerService.Cases" version="1" ownerApp="CustomerService" title="Cases"
+            description="Customer cases, by the saved view."
+            routePath="CustomerService/Cases/Cases"
+            parameterContract='{"view":{"type":"choice","values":["mine","unassigned","waiting","needsResponse","slaRisk","resolved","all"]}}' sequenceNum="40"/>
+    <ironstone.insights.FlowTarget targetId="CustomerService.Returns" version="1" ownerApp="CustomerService" title="Returns"
+            description="Return authorizations."
+            routePath="CustomerService/Returns/Returns" sequenceNum="50"/>
+    <!-- Warehouse (owner contract, design-warehouse §14): the floor's lists, each for the selected facility -->
+    <ironstone.insights.FlowTarget targetId="Warehouse.Picklists" version="1" ownerApp="Warehouse" title="Picklists"
+            description="Picklists to pick and pack."
+            routePath="Warehouse/Picking/Picklists" sequenceNum="60"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Shipments" version="1" ownerApp="Warehouse" title="Shipments"
+            description="Outgoing shipments to pack and ship."
+            routePath="Warehouse/Shipping/Shipments" sequenceNum="70"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Receipts" version="1" ownerApp="Warehouse" title="Receiving"
+            description="Purchase receipts expected at the dock."
+            routePath="Warehouse/Receiving/Receipts" sequenceNum="80"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Putaway" version="1" ownerApp="Warehouse" title="Putaway"
+            description="Received stock waiting to be put away."
+            routePath="Warehouse/Receiving/Putaway" sequenceNum="90"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Returns" version="1" ownerApp="Warehouse" title="Returns"
+            description="Customer and supplier returns on the floor."
+            routePath="Warehouse/Returns/Returns" sequenceNum="100"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Inventory" version="1" ownerApp="Warehouse" title="Inventory"
+            description="Stock on hand by product, lot and location."
+            routePath="Warehouse/Inventory/Assets" sequenceNum="110"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Transfers" version="1" ownerApp="Warehouse" title="Transfers"
+            description="Stock moving between facilities."
+            routePath="Warehouse/Transfers/Transfers" sequenceNum="120"/>
+    <ironstone.insights.FlowTarget targetId="Warehouse.Counts" version="1" ownerApp="Warehouse" title="Counts"
+            description="Stock counts planned and in progress."
+            routePath="Warehouse/Counts/Counts" sequenceNum="130"/>
+    <!-- Accounting (owner contract, design-accounting §13): the finance lists, each for the organization in the map's scope -->
+    <ironstone.insights.FlowTarget targetId="Accounting.Invoices" version="1" ownerApp="Accounting" title="Customer invoices"
+            description="Receivable invoices."
+            routePath="Accounting/Receivables/Invoices"
+            parameterContract='{"organizationPartyId":{"type":"organization"}}' sequenceNum="140"/>
+    <ironstone.insights.FlowTarget targetId="Accounting.Payments" version="1" ownerApp="Accounting" title="Payments"
+            description="Payments received and made."
+            routePath="Accounting/Payments/Payments"
+            parameterContract='{"organizationPartyId":{"type":"organization"}}' sequenceNum="150"/>
+    <ironstone.insights.FlowTarget targetId="Accounting.Bills" version="1" ownerApp="Accounting" title="Supplier bills"
+            description="Payable bills, by queue."
+            routePath="Accounting/Payables/Bills"
+            parameterContract='{"queue":{"type":"choice","values":["incoming","review","held","approved","due","overdue","credits","expenses","all"]},"organizationPartyId":{"type":"organization"}}' sequenceNum="160"/>
+    <ironstone.insights.FlowTarget targetId="Accounting.PaymentRuns" version="1" ownerApp="Accounting" title="Payment runs"
+            description="Runs that pay approved bills."
+            routePath="Accounting/Payables/PaymentRuns"
+            parameterContract='{"organizationPartyId":{"type":"organization"}}' sequenceNum="170"/>
+    <ironstone.insights.FlowTarget targetId="Accounting.JournalEntries" version="1" ownerApp="Accounting" title="Journal entries"
+            description="Ledger entries, draft or posted."
+            routePath="Accounting/GeneralLedger/JournalEntries"
+            parameterContract='{"isPosted":{"type":"choice","values":["Y","N"]},"organizationPartyId":{"type":"organization"}}' sequenceNum="180"/>
+    <ironstone.insights.FlowTarget targetId="Accounting.Periods" version="1" ownerApp="Accounting" title="Fiscal periods"
+            description="The periods to close."
+            routePath="Accounting/PeriodClose/Periods"
+            parameterContract='{"organizationPartyId":{"type":"organization"}}' sequenceNum="190"/>
+    <!-- Purchasing (owner contract, design-purchasing §11): the buyer's lists -->
+    <ironstone.insights.FlowTarget targetId="Purchasing.Requests" version="1" ownerApp="Purchasing" title="Purchase requests"
+            description="Requests to buy."
+            routePath="Purchasing/Requests/PurchaseRequests" sequenceNum="200"/>
+    <ironstone.insights.FlowTarget targetId="Purchasing.Quotes" version="1" ownerApp="Purchasing" title="Supplier quotes"
+            description="Quotes received from suppliers."
+            routePath="Purchasing/Sourcing/Quotes"
+            parameterContract='{"view":{"type":"choice","values":["expiring"]}}' sequenceNum="210"/>
+    <ironstone.insights.FlowTarget targetId="Purchasing.Orders" version="1" ownerApp="Purchasing" title="Purchase orders"
+            description="Purchase orders, by view."
+            routePath="Purchasing/Orders/PurchaseOrders"
+            parameterContract='{"view":{"type":"choice","values":["draft","approval","unsent","open","late","held","closed","unbilled","dropship"]}}' sequenceNum="220"/>
+    <ironstone.insights.FlowTarget targetId="Purchasing.Acknowledgements" version="1" ownerApp="Purchasing" title="Acknowledgements"
+            description="Sent orders and the suppliers' acknowledgements."
+            routePath="Purchasing/Orders/Acknowledgements"
+            parameterContract='{"view":{"type":"choice","values":["unacknowledged"]}}' sequenceNum="230"/>
+    <ironstone.insights.FlowTarget targetId="Purchasing.Receipts" version="1" ownerApp="Purchasing" title="Expected receipts"
+            description="Purchase order lines to be received."
+            routePath="Purchasing/Receiving/Receipts"
+            parameterContract='{"view":{"type":"choice","values":["late"]}}' sequenceNum="240"/>
+    <ironstone.insights.FlowTarget targetId="Purchasing.MatchExceptions" version="1" ownerApp="Purchasing" title="Bill match exceptions"
+            description="Supplier bills that do not match their order or receipt."
+            routePath="Purchasing/Bills/MatchExceptions"
+            parameterContract='{"view":{"type":"choice","values":["held"]}}' sequenceNum="250"/>
+    <ironstone.insights.FlowTarget targetId="Purchasing.SupplierReturns" version="1" ownerApp="Purchasing" title="Supplier returns"
+            description="Goods going back to suppliers."
+            routePath="Purchasing/Returns/SupplierReturns" sequenceNum="260"/>
+    <!-- Manufacturing (owner contract, design-manufacturing §9): the production lists -->
+    <ironstone.insights.FlowTarget targetId="Manufacturing.WorkOrders" version="1" ownerApp="Manufacturing" title="Work orders"
+            description="Work orders, open, in progress or late."
+            routePath="Manufacturing/WorkOrders/Find"
+            parameterContract='{"statusId":{"type":"choice","values":["WeInProgress"]},"late":{"type":"choice","values":["Y"]}}' sequenceNum="270"/>
+    <ironstone.insights.FlowTarget targetId="Manufacturing.Schedule" version="1" ownerApp="Manufacturing" title="Production schedule"
+            description="The plant's schedule."
+            routePath="Manufacturing/Planning/ProductionSchedule" sequenceNum="280"/>
+    <!-- Products (owner contract, design-products §1.3): the catalog lists -->
+    <ironstone.insights.FlowTarget targetId="Products.Products" version="1" ownerApp="Products" title="Products"
+            description="The product catalog, by list."
+            routePath="Products/Products"
+            parameterContract='{"list":{"type":"choice","values":["activeSkus","variants","discontinuingSoon"]}}' sequenceNum="290"/>
+    <ironstone.insights.FlowTarget targetId="Products.PriceLists" version="1" ownerApp="Products" title="Price lists"
+            description="Price lists and their versions."
+            routePath="Products/Prices/PriceLists" sequenceNum="300"/>
+    <!-- Projects (owner contract, design-projects §11): the project lists -->
+    <ironstone.insights.FlowTarget targetId="Projects.Projects" version="1" ownerApp="Projects" title="Projects"
+            description="Projects and their health."
+            routePath="Projects/Projects/List" sequenceNum="310"/>
+    <ironstone.insights.FlowTarget targetId="Projects.WorkItems" version="1" ownerApp="Projects" title="Work items"
+            description="Tasks and other work items."
+            routePath="Projects/WorkItems/List" sequenceNum="320"/>
+    <ironstone.insights.FlowTarget targetId="Projects.Timesheets" version="1" ownerApp="Projects" title="Timesheets"
+            description="Timesheets, yours or those you approve."
+            routePath="Projects/Time/Timesheets"
+            parameterContract='{"list":{"type":"choice","values":["toApprove"]}}' sequenceNum="330"/>
+    <ironstone.insights.FlowTarget targetId="Projects.Requests" version="1" ownerApp="Projects" title="Requests"
+            description="Requests taken in for projects."
+            routePath="Projects/Requests/List" sequenceNum="340"/>
 </entity-facade-xml>

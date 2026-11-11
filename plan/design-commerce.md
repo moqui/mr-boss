@@ -1086,7 +1086,10 @@ tax engine here.
 **Payment choices.** PaymentGateways offers only gateways in the store organization's enabled
 `mantle.account.method.PaymentGatewayOrganization` rows (`isEnabled`, current from/thru); Admin
 Connections owns the gateway configuration and Commerce owns only the store binding and its
-selection (Z4, R-COM-08). Readiness refuses any other binding. Payment methods expose
+selection (Z4, R-COM-08). The rows are written by Mantle's
+`mantle.account.GatewayConnectionServices.store#PaymentGatewayOrganization` from Admin's ConnectionDetail
+(impl-admin P11): a binding is dated, never deleted, and one a store still names is ended from then on, so the
+store keeps its gateway for what was started and CheckoutSettings offers it no more. Readiness refuses any other binding. Payment methods expose
 hosted/tokenized provider capabilities, including recurring/off-session support, without
 collecting raw card data; RecurringPolicy accepts an offer only when the store's gateway has the
 off-session capability of the first adapter Shop §8.1 names. Readiness refuses unsupported
