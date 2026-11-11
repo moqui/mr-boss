@@ -47,7 +47,10 @@ feature("an author shares a playlist with the wall displays, and a display accou
                 invoke(reports + "save#Definition", {definition, note: "Wall display spec"})
             }
             const board = (id, title) => ({id, type: "dashboard", title, body: {panels: {note: {title, visualization: "text", text: title}}, layout: {type: "autoGrid"}}})
-            save(board("SPEC_WALL_SHOWN", "Spec floor board"))
+            // the shown board also has a panel whose query fails: a wall shows it as not available, not the failure's text
+            const shown = board("SPEC_WALL_SHOWN", "Spec floor board")
+            shown.body.panels.broken = {title: "Broken", visualization: "table", queries: [{refId: "A", datasetId: "otel_spans"}]}
+            save(shown)
             save(board("SPEC_WALL_PRIVATE", "Spec private board"))
             save(board("SPEC_WALL_ALSO", "Spec other board"))
             const playlist = (id, dashboards) => ({id, type: "report", title: id, body: {kind: "playlist", seconds: 20, playlist: dashboards.map(definitionId => ({definitionId}))}})
@@ -100,7 +103,8 @@ feature("the device plays its registered playlist on the bare page as its displa
             html: request("apps/Insights/WallDisplay", {}, cookie),
             // the browser asks for another playlist: the registration's is played
             island: request("apps/Insights/WallDisplay", {definitionId: "SPEC_WALL_OTHER"}, cookie, "qvt"),
-            first: request("apps/Insights/WallDisplay/data", {definitionId: "SPEC_WALL_OTHER", index: "0"}, cookie),
+            // and another playlist and a range of decades: the registration's playlist over the page's own 30 days
+            first: request("apps/Insights/WallDisplay/data", {definitionId: "SPEC_WALL_OTHER", index: "0", from: "now-30y", thru: "now"}, cookie),
             hidden: request("apps/Insights/WallDisplay/data", {index: "1"}, cookie),
             playlists: request("apps/Insights/Playlists", {}, cookie),
             playlistData: request("apps/Insights/Playlists/data", {index: "0"}, cookie),
@@ -120,7 +124,10 @@ feature("the device plays its registered playlist on the bare page as its displa
         island.output.includes("definitionId=" + playlistId) && !island.output.includes("SPEC_WALL_OTHER")
         island.output.includes("SPEC_WALL_SHOWN") && !island.output.includes("SPEC_WALL_PRIVATE") && !island.output.includes("SPEC_WALL_ALSO")
         // the data of the registered playlist's dashboard by its index; the private one refused as the display account
-        first.status == 200 && JSON.parse(first.output).dashboard.definitionId == "SPEC_WALL_SHOWN"
+        const data = JSON.parse(first.output).dashboard
+        first.status == 200 && data.definitionId == "SPEC_WALL_SHOWN"
+        Date.now() - Date.parse(data.range.from) < 32 * 86400000
+        data.panels.broken.notices.length == 1 && data.panels.broken.notices[0].message == "This panel is not available to this display."
         hidden.errors != "" && !outside(hidden) && !hidden.output.includes("Spec private board")
         // nothing else of Insights, nor the shell
         outside(playlists) && outside(playlistData) && outside(dashboard) && outside(shell)

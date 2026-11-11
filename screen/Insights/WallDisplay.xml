@@ -17,14 +17,14 @@ along with this software (see the LICENSE.md file). If not, see
     transition and nothing else. A page of its own rather than the /qapps shell, which a device may not load (impl-admin F285):
     standalone, the html mode is a bare document (no navigation, menu, account or instance header) that loads the qvt client's
     files and mounts this screen's qvt render as an island (WebrootPublic.qvt.js), which is m-report-playlist in kiosk mode:
-    each dashboard of the playlist in turn at the playlist's seconds, its panels' frames from the data transition (the
-    framework Playlist's: a dashboard of the stored playlist by its index, rendered as the viewer), a dashboard refreshed at
-    each turn even when it is the only one, a refused request (a revoked or stopped device) reloading the page into the
-    framework's plain refusal page.
+    each dashboard of the playlist in turn at the playlist's seconds, its panels' frames from the data transition (below:
+    a dashboard of the stored playlist by its index, over the page's own range, rendered as the viewer), a dashboard refreshed
+    at each turn even when it is the only one, a refused request (a revoked or stopped device) or a changed playlist reloading
+    the page (at most once a minute), a refused device's into the framework's plain refusal page.
     On a device the playlist is the registration's (the framework puts the registered definitionId over whatever the browser
     sends) and everything runs as the device's display account, which needs no Insights root grant (BOSS_INSIGHTS_DISPLAY opens
     this screen and its data transition alone; BOSS_INSIGHTS_READ gives the reading): a dashboard it may not read is left out and
-    logged by name, and a panel without data or not available to it says so (render#Dashboard's notices). A signed-in Insights
+    logged by name, and a panel not available to it says so, its failure logged. A signed-in Insights
     user opens it too (Playlists' Play full screen), as themselves. Nothing here writes. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Wall display" default-menu-include="false" standalone="true" history="false"
@@ -32,8 +32,48 @@ along with this software (see the LICENSE.md file). If not, see
 
     <parameter name="definitionId"/>
 
-    <!-- {dashboard, frames} of the dashboard at index in the stored playlist, as the viewer; read only -->
-    <transition-include name="data" location="component://tools/screen/Dashboards/Playlist.xml"/>
+    <!-- {dashboard, frames} of the dashboard at index in the stored playlist, as the viewer; read only. The framework Playlist's
+        data transition, with what a display's request may not choose taken away (P11 review): the range is the page's own
+        (now-30d to now), not the request's from and thru, so an unattended browser cannot make every panel query years; only
+        a dashboard of the playlist is rendered; and a panel's failure is shown as "not available" with its text logged, not
+        shown on a wall, nor any query inspection. Any failure answers one fixed message. -->
+    <transition name="data" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const notAvailable = 'This dashboard is not available to this display.'
+            const requested = typeof index === 'undefined' ? null : index
+            let answer = null
+            ec.message.pushErrors()
+            try {
+                const playlist = ec.service.sync().name('org.moqui.report.ReportServices.get#Definition').parameters({definitionId}).call()?.definition
+                const items = !ec.message.hasError() && playlist?.type === 'report' && playlist.body?.kind === 'playlist'
+                    ? Array.from(playlist.body.playlist || []).slice(0, 50) : []
+                const at = Number(requested || 0)
+                const id = Number.isInteger(at) && at >= 0 && at < items.length ? items[at]?.definitionId : null
+                const dashboard = id ? ec.service.sync().name('org.moqui.report.ReportServices.get#Definition').parameters({definitionId: id}).call()?.definition : null
+                const output = !ec.message.hasError() && dashboard?.type === 'dashboard'
+                    ? ec.service.sync().name('org.moqui.report.ReportServices.render#Dashboard').parameters({definitionId: id, from: 'now-30d', thru: 'now'}).call()?.dashboard
+                    : null
+                if (output && !ec.message.hasError()) {
+                    const shown = (notices, panelId) => Array.from(notices || []).filter(notice => notice?.level === 'error').map(notice => {
+                        ec.logger.warn('Wall display playlist ' + definitionId + ' dashboard ' + id + (panelId ? ' panel ' + panelId : '') + ': ' + String(notice.message || notice.code || ''))
+                        return {level: 'error', complete: false, message: ec.l10n.localize('This panel is not available to this display.')}
+                    })
+                    const frames = {}
+                    for (const [panelId, panel] of Object.entries(output.panels || {})) {
+                        frames[panelId] = panel.frames || []
+                        panel.notices = shown(panel.notices, panelId)
+                        delete panel.inspection; delete panel.requests
+                    }
+                    output.notices = shown(output.notices, null)
+                    output.definitionId = id; output.absoluteTime = output.range
+                    answer = {dashboard: output, frames}
+                } else ec.logger.warn('Wall display playlist ' + definitionId + ' item ' + requested + ' unavailable: ' + ec.message.getErrorsString())
+            } catch (error) { ec.logger.warn('Wall display playlist ' + definitionId + ' item ' + requested + ' unavailable: ' + String(error)) }
+            finally { ec.message.clearErrors(); ec.message.popErrors() }
+            if (!answer) throw new Error(notAvailable)
+            ec.web.sendJsonResponse(answer)
+        ]]></script></actions><default-response type="none"/>
+    </transition>
 
     <actions>
         <script><![CDATA[
@@ -45,7 +85,7 @@ along with this software (see the LICENSE.md file). If not, see
                     const definition = ec.service.sync().name('org.moqui.report.ReportServices.get#Definition').parameters({definitionId}).call()?.definition
                     if (!ec.message.hasError() && definition?.type === 'report' && definition.body?.kind === 'playlist') {
                         playlistTitle = definition.title || definition.id
-                        playlistSeconds = Number(definition.body.seconds) || 30
+                        playlistSeconds = Math.min(3600, Math.max(5, Math.round(Number(definition.body.seconds) || 30)))
                         playlistItems = Array.from(definition.body.playlist || []).slice(0, 50)
                     }
                 } catch (error) { ec.logger.error('Wall display playlist ' + definitionId + ' unavailable: ' + String(error)) }

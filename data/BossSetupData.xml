@@ -4998,7 +4998,7 @@ along with this software (see the LICENSE.md file). If not, see
         in the Security area (BOSS_ADM_SECURITY above), whose services check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE. -->
     <!-- Insights P11 (impl-insights P11; design-insights §4 Playlists, crosscut CX-DEVICE): the route group's members, the wall
         display's page and nothing else. A wall display opens Insights' WallDisplay (homePath; the bare page, its qvt island and its
-        tui twin, all the screen's own render) and calls its data transition (the framework Playlist's: a dashboard of the stored
+        tui twin, all the screen's own render) and calls its data transition (the framework Playlist's over a fixed range: a dashboard of the stored
         playlist by its index, read only); the qvt client's files are static and need no member. The /qapps shell, Playlists and
         the Dashboard screens are not members (impl-admin F285): the page needs none of them. The members are in a new artifact
         group, BOSS_DEV_INS_WALL, which the route group names instead of P18's BOSS_DEV_INS_PLAYLISTS (Playlists and its data
