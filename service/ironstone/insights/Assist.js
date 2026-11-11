@@ -17,7 +17,8 @@
 //
 // What may be asked at all is decided by the dataset's class (ironstone.insights.DatasetClass, each owner's seed row):
 // - business operations: Assist and MCP; a field that names a cost or a margin is left out of the choices and refused as a
-//   measure, group or filter, for an MCP client always and for Assist unless the viewer holds PRODUCT_COST_VIEW;
+//   measure, group or filter, and a saved panel that reads one is refused, for an MCP client always and for Assist unless
+//   the viewer holds PRODUCT_COST_VIEW;
 // - costs and margins: Assist only, for a viewer who holds PRODUCT_COST_VIEW; never an MCP client (design §1.2: "an MCP tool
 //   never reads a cost or People dataset");
 // - People and payroll: neither;
@@ -36,6 +37,7 @@ const analysis = ec.resource.script("component://mr-boss/service/ironstone/insig
 const drill = ec.resource.script("component://mr-boss/service/ironstone/insights/Drill.js")
 const {one, rows, denied, reasonCode} = lib
 
+const ENGINE = "org.moqui.report.ReportServices."
 const CLASS = "ironstone.insights.DatasetClass"
 const OPERATIONS = "InsDcOperations"
 const COST = "InsDcCost"
@@ -169,14 +171,79 @@ const valueText = (field, value) => {
     }
     return String(value)
 }
+// The saved panel a request names, as the engine will read it: a library panel's body, or a dashboard's panel by its own key
+// (the library panel it references, read as the viewer). A dashboard that repeats panels has copies only once it renders, so
+// its panels are not read here.
+function readDefinition(definitionId) {
+    ec.message.pushErrors()
+    try {
+        return insights.asViewerApart(ENGINE + "get#Definition", {definitionId}).definition || null
+    } catch (error) {
+        // one the viewer does not read answers as one that is not there
+        return null
+    } finally {
+        ec.message.clearErrors()
+        ec.message.popErrors()
+    }
+}
+function savedPanel(definitionId, panelId) {
+    const definition = definitionId ? readDefinition(definitionId) : null
+    let body = null
+    let dashboard = null
+    if (definition?.type === "panel") body = definition.body
+    else if (definition?.type === "dashboard") {
+        dashboard = definition.body || {}
+        if (/"repeat"\s*:/.test(JSON.stringify([dashboard.panels, dashboard.layout]) || ""))
+            denied("PANEL_UNAVAILABLE", "A repeated panel is not read here; open its dashboard")
+        const panels = dashboard.panels
+        const entry = panels && typeof panels === "object" && panelId && Object.hasOwn(panels, panelId) ? panels[panelId] : null
+        body = entry && typeof entry.panelRef === "string" ? readDefinition(entry.panelRef)?.body : entry
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body))
+        denied("PANEL_UNAVAILABLE", "This panel is not available to you")
+    return {body, dashboard}
+}
+// What a saved panel reads, checked before it is run (the P10 review, R1). A panel's result is the frames of every one of its
+// queries together, renamed as its author chose (an aggregation's id, a transformation's name), so neither the one dataset a
+// drill answers nor a frame's field names say what was read: every dataset any of its queries names is held to its class,
+// and a panel that names a cost or margin field anywhere in its queries, transformations or its dashboard's filters and
+// variables is refused unless the surface reads costs for the viewer. A query that names no dataset (the engine's telemetry
+// default) or takes a name from a variable is not a business panel.
+function checkPanel(saved, surface) {
+    const queries = Array.isArray(saved.body.queries) ? saved.body.queries : []
+    const datasetIds = new Set()
+    const walk = (query, depth) => {
+        if (!query || typeof query !== "object" || Array.isArray(query) || depth > 8)
+            denied("PANEL_UNAVAILABLE", "This panel's query cannot be read here")
+        const composed = Array.isArray(query.queries)
+        if (query.datasetId != null || !composed) {
+            if (typeof query.datasetId !== "string" || !query.datasetId) classed(null, surface)
+            datasetIds.add(query.datasetId)
+        }
+        if (composed) for (const child of query.queries) walk(child, depth + 1)
+    }
+    for (const query of queries) walk(query, 0)
+    if (!datasetIds.size) classed(null, surface)
+    const read = JSON.stringify([queries, saved.body.transformations, saved.body.footer]) || ""
+    // "$name" anywhere a query reads is a variable's value at run time: a dataset or a field that cannot be checked here
+    if (/"\$/.test(read)) denied("PANEL_UNAVAILABLE", "This panel's query takes a name from a variable, so it is not read here")
+    for (const datasetId of datasetIds) classed(datasetId, surface)
+    const scoped = JSON.stringify([saved.dashboard?.filters, saved.dashboard?.variables]) || ""
+    if (!readsCosts(surface) && (restrictedField.test(read) || restrictedField.test(scoped)))
+        denied("FIELD_RESTRICTED", "This panel reads a cost or margin field, which is not read here")
+}
 // run#PanelQuery, run#OperationsPanel: a saved panel's own result as its dashboard shows it to the viewer, by the
-// definition (a dashboard with panelId, or a library panel) and the range; nothing else is taken. The panel's dataset is
-// held to its class, and a cost or margin measure is left out of the rows unless the surface reads costs for the viewer.
+// definition (a dashboard with panelId, or a library panel) and the range; nothing else is taken. Every dataset the panel's
+// queries name is held to its class and a panel that reads a cost or margin field is refused unless the surface reads costs
+// for the viewer (checkPanel), before anything is run.
 function panel(p, surface) {
     reader()
     const refused = (refusedCode, reason) => ({available: false, refusedCode, reason, rows: [], notices: []})
     let answer
     try {
+        // the organization first, so a forged one is refused as such whatever the panel
+        insights.context({appRoot: "Insights", organizationPartyId: text(p.organizationPartyId) || null})
+        checkPanel(savedPanel(text(p.definitionId), text(p.panelId)), surface)
         answer = drill.execute("drill", {
             definitionId: text(p.definitionId),
             panelId: text(p.panelId) || null,
@@ -193,20 +260,17 @@ function panel(p, surface) {
         return refused(code, String(error.message).replace(/^[A-Z][A-Z0-9_]+: /, ""))
     }
     const rowsOut = []
-    let left = 0
     for (const frame of answer.panelFrames) {
         const fields = Array.from(frame.fields || [])
         const groups = fields.filter(field => field.config?.bucket)
         const measures = fields.filter(field => !field.config?.bucket && !["other", "missing"].includes(field.name))
-        left += measures.filter(field => !open(field.name, surface)).length
-        const shown = measures.filter(field => open(field.name, surface))
         const length = Math.max(0, ...fields.map(field => Array.from(field.values || []).length))
         for (let index = 0; index < length && rowsOut.length < 200; index++)
             rowsOut.push({
                 label: groups
                     .map(field => valueText(field, field.config.bucket.labels?.[index] ?? field.values[index]))
                     .join(" · "),
-                valuesText: shown
+                valuesText: measures
                     .map(field => {
                         const unit = field.config?.units?.[index] || field.unit || ""
                         return field.name + " " + valueText(field, field.values[index]) + (unit ? " " + unit : "")
@@ -235,7 +299,7 @@ function panel(p, surface) {
                   rules: meaning.rules
               }
             : null,
-        notices: left ? ["Cost and margin measures of this panel are not shown here"] : []
+        notices: []
     }
 }
 

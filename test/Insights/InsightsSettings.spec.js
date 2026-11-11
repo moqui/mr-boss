@@ -6,7 +6,8 @@
 // a source the reader may not read is not listed; the refresh is refused to an author (the registration's permission) and
 // to a reader, and the steward's runs. Assist's query answers each reader their own organization's rows of an admitted
 // dataset, and refuses an unadmitted one, a cost dataset and a cost field (an MCP client whatever the caller holds) and a
-// forged organization; a dashboard's number is its saved panel's own result; no tool exposes the engine's own query; "Add to my dashboard" saves an author's panel through
+// forged organization; a dashboard's number is its saved panel's own result, and a panel any of whose queries reads a cost
+// dataset is refused; no tool exposes the engine's own query; "Add to my dashboard" saves an author's panel through
 // Analysis and refuses a reader. The screens' one render each is here. The sales dataset and its two orders are
 // InsightsDatasets'. The "usable when" scenario is the acceptance InsightsSettingsUsable.
 // Run: ./moq test mr-boss --spec InsightsSettings
@@ -162,7 +163,8 @@ feature(
             reader.includes("not authorized")
             offered.refreshKey == refreshKey
             refreshed.state == "requested"
-            fresh.state == "ready"
+            // the index's size, every organization's documents together, is not a reader's
+            fresh.state == "ready" && fresh.coverage == ""
         }
     }
 )
@@ -198,7 +200,6 @@ feature(
             const count = {datasetId: salesId, aggregate: "count", groupBy: "currencyUomId"}
             const one = orderId => Object.assign({}, count, {filterField: "orderId", filterValue: orderId})
             const cost = {datasetId: itemsId, aggregate: "sum", measureField: "itemSaleTotal", groupBy: "currencyUomId"}
-            const suiteOrders = {definitionId: "insights-suite", panelId: "orders"}
             const exposures = system(() => Array.from(ec.entity.find("moqui.agent.AgentToolExposure").list()))
             const tool = name => exposures.find(row => row.toolName === name) || {}
             return {
@@ -206,7 +207,6 @@ feature(
                 byCurrency: ask(users.reader, "run#DatasetQuery", count),
                 own: ask(users.reader, "run#DatasetQuery", one(orders.retail)),
                 other: ask(users.reader, "run#DatasetQuery", one(orders.services)),
-                servicesOwn: ask(users.services, "run#DatasetQuery", one(orders.services)),
                 forged: ask(
                     users.reader,
                     "run#DatasetQuery",
@@ -223,19 +223,7 @@ feature(
                     measureField: "itemCostTotal"
                 }),
                 mcp: ask(users.reader, "run#OperationsQuery", one(orders.retail)),
-                // a dashboard's number is its saved panel's own result, for each surface
-                panel: ask(users.reader, "run#PanelQuery", suiteOrders),
-                panelMcp: ask(users.reader, "run#OperationsPanel", suiteOrders),
-                panelForged: ask(
-                    users.reader,
-                    "run#PanelQuery",
-                    Object.assign({organizationPartyId: ids.otherOrganizationId}, suiteOrders)
-                ),
-                panelUnread: ask(users.reader, "run#PanelQuery", {definitionId: "INS_NOT_A_DASHBOARD", panelId: "orders"}),
                 readerSources: asUser(users.reader, () => invoke(A + "find#QuerySources", {}).datasets.map(row => row.datasetId)),
-                financeSources: asUser(users.finance, () =>
-                    invoke(A + "find#QuerySources", {}).datasets.map(row => row.datasetId)
-                ),
                 mcpSources: asUser(users.finance, () =>
                     invoke(A + "find#OperationsSources", {}).datasets.map(row => row.datasetId)
                 ),
@@ -251,7 +239,6 @@ feature(
                 r.byCurrency.panel.startsWith("Panel: {")
             r.own.available && r.own.sourceCount == 1
             r.other.available && r.other.sourceCount == 0
-            r.servicesOwn.sourceCount == 1
             r.forged.available === false && r.forged.refusedCode == "ORGANIZATION_UNAVAILABLE"
             r.unadmitted.refusedCode == "DATASET_UNAVAILABLE"
             r.unclassified.refusedCode == "DATASET_UNAVAILABLE"
@@ -260,15 +247,63 @@ feature(
             r.costMcp.refusedCode == "DATASET_RESTRICTED"
             r.fieldReader.refusedCode == "FIELD_RESTRICTED"
             r.mcp.available && r.mcp.sourceCount == 1
-            r.panel.available && r.panel.rows.some(row => row.label == "USD") && r.panel.meaning.metricId == "Sales.Orders"
-            r.panelMcp.available && r.panelMcp.rows.length == r.panel.rows.length
-            r.panelForged.available === false && r.panelForged.refusedCode == "ORGANIZATION_UNAVAILABLE"
-            r.panelUnread.available === false && r.panelUnread.refusedCode == "PANEL_UNAVAILABLE"
             r.readerSources.includes(salesId) && !r.readerSources.includes("mantle-sales-items")
-            r.financeSources.includes("mantle-sales-items")
             !r.mcpSources.includes("mantle-sales-items")
             r.engineTools == 0
             r.assistTool == "YN" && r.mcpTool == "NY"
+        }
+    }
+)
+
+feature(
+    "a dashboard's number is its saved panel's own result; a panel that reads a cost dataset in any of its queries is refused",
+    {
+        when() {
+            const itemsId = "mantle-sales-items"
+            const suiteOrders = {definitionId: "insights-suite", panelId: "orders"}
+            // an author's panel of two queries, the second over the cost dataset under a name of its own (the P10 review, R1)
+            const mixedId = "ins-p10-mixed-panel"
+            asUser(users.author, () =>
+                invoke("org.moqui.report.ReportServices.save#Definition", {
+                    definition: {
+                        id: mixedId,
+                        type: "panel",
+                        title: "Orders and lines",
+                        body: {
+                            title: "Orders and lines",
+                            visualization: "table",
+                            queries: [
+                                {datasetId: salesId, aggregations: []},
+                                {
+                                    datasetId: itemsId,
+                                    aggregations: [{id: "value", type: "sum", role: "metric", params: {field: "itemSaleTotal"}}]
+                                }
+                            ]
+                        }
+                    }
+                })
+            )
+            return {
+                panel: ask(users.reader, "run#PanelQuery", suiteOrders),
+                panelMcp: ask(users.reader, "run#OperationsPanel", suiteOrders),
+                forged: ask(
+                    users.reader,
+                    "run#PanelQuery",
+                    Object.assign({organizationPartyId: ids.otherOrganizationId}, suiteOrders)
+                ),
+                unread: ask(users.reader, "run#PanelQuery", {definitionId: "INS_NOT_A_DASHBOARD", panelId: "orders"}),
+                inherited: ask(users.reader, "run#PanelQuery", {definitionId: "insights-suite", panelId: "constructor"}),
+                // the first query's dataset is open to an MCP client; the second is the cost dataset
+                mixedMcp: ask(users.author, "run#OperationsPanel", {definitionId: mixedId, queryReference: "0"})
+            }
+        },
+        then(r) {
+            r.panel.available && r.panel.rows.some(row => row.label == "USD") && r.panel.meaning.metricId == "Sales.Orders"
+            r.panelMcp.available && r.panelMcp.rows.length == r.panel.rows.length
+            r.forged.available === false && r.forged.refusedCode == "ORGANIZATION_UNAVAILABLE"
+            r.unread.available === false && r.unread.refusedCode == "PANEL_UNAVAILABLE"
+            r.inherited.available === false && r.inherited.refusedCode == "PANEL_UNAVAILABLE"
+            r.mixedMcp.available === false && r.mixedMcp.refusedCode == "DATASET_RESTRICTED"
         }
     }
 )

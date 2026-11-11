@@ -299,7 +299,7 @@ function exportDataset(p) {
 // passing is ready, waiting for review a warning naming what fails, unavailable unavailable; the watermark is its index's last
 // build. A dataset the viewer may neither read nor steward is refused, so the registry leaves it out.
 function readiness(p) {
-    insights.required()
+    const can = insights.required().capabilities
     const datasetId = String(p.providerKey || "").startsWith(providerPrefix) ? p.providerKey.slice(providerPrefix.length) : ""
     const row = described(datasetId)
     const state = row.status === "admitted" ? "ready" : row.status === "unavailable" ? "unavailable" : "warning"
@@ -319,7 +319,12 @@ function readiness(p) {
                 message,
                 // the index's last build, as the stamp Admin's providers answer
                 watermark: lastIndexed(datasetId),
-                coverage: row.lastIndexedCount != null ? row.lastIndexedCount + " documents at the last rebuild" : ""
+                // the index's size is every organization's documents together: the author's and the steward's to read, not
+                // a reader's, who reads the source's freshness (the P10 review, R4)
+                coverage:
+                    row.lastIndexedCount != null && (can.author || can.datasetView || can.datasetEdit)
+                        ? row.lastIndexedCount + " documents at the last rebuild"
+                        : ""
             }
         ]
     }

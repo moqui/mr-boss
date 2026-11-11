@@ -196,12 +196,12 @@ const capOf = (values, ceiling) => {
     return Math.min(Number.isInteger(cap) && cap > 0 ? cap : fallbackCap, ceiling)
 }
 // The group recipient cap a schedule or an alert rule is saved and checked with: the cap of the organization the caller works
-// in (the active one), else the lowest of the caller's organizations, never above the instance ceiling, which the engine
-// holds it under as well. The administrator of every organization with none active gets the type's default.
+// in (the active one), else the lowest of the organizations in the caller's scope (every internal one for the administrator
+// of all with none active: the P10 review, R3), never above the instance ceiling, which the engine holds it under as well.
 function recipientCap(userScope = scope()) {
     const ceiling = recipientCeiling()
     const active = userScope.activeOrganizationPartyId
-    const ids = active ? [active] : Array.from(userScope.ownerIds || []).slice(0, 50)
+    const ids = active ? [active] : organizationIds(userScope).slice(0, 50)
     return Math.min(...(ids.length ? ids : [null]).map(partyId => capOf(organizationSettings(partyId).values, ceiling)))
 }
 // The organization's display zone and week start as the engine's calendar bucket parameters (time_zone, and offset for a

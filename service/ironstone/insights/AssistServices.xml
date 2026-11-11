@@ -170,10 +170,12 @@ along with this software (see the LICENSE.md file). If not, see
             dashboard's definitionId and the panel's panelId (or a library panel's definitionId), a range (the last 30 days
             when empty) and one of the user's organizations; never a query. The engine runs the panel as the dashboard does
             (its saved filters and exclusions, the organization in scope, each dataset's admission and row filter), so the
-            numbers are the dashboard's, with the panel's registered meaning. The panel's dataset is held to its class
-            (DATASET_RESTRICTED for costs without PRODUCT_COST_VIEW, DATASET_UNAVAILABLE without a class) and a cost or
-            margin measure is left out unless the user holds PRODUCT_COST_VIEW. A panel or organization the user does not
-            read answers available false (PANEL_UNAVAILABLE, ORGANIZATION_UNAVAILABLE). No record is returned.</description>
+            numbers are the dashboard's, with the panel's registered meaning. Before it runs, every dataset the panel's
+            queries name is held to its class (DATASET_RESTRICTED for costs without PRODUCT_COST_VIEW, DATASET_UNAVAILABLE
+            without a class or for a query that names no dataset) and a panel that reads a cost or margin field is refused
+            (FIELD_RESTRICTED) unless the user holds PRODUCT_COST_VIEW. A panel or organization the user does not read, a
+            repeated panel and one whose query takes a name from a variable answer available false (PANEL_UNAVAILABLE,
+            ORGANIZATION_UNAVAILABLE). No record is returned.</description>
         <implements service="ironstone.insights.AssistServices.define#PanelRequest"/>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('assistPanel', context)"/>
@@ -193,8 +195,9 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="run" noun="OperationsPanel" allow-remote="false">
         <description>For an MCP client (insights_operations_panel): run#PanelQuery's saved panel over a business
-            operations dataset only, as the user. A panel over a cost, People or unclassified dataset is refused
-            (DATASET_RESTRICTED, DATASET_UNAVAILABLE) and a cost or margin measure is left out, whatever the user holds.</description>
+            operations dataset only, as the user. A panel any of whose queries reads a cost, People or unclassified
+            dataset (DATASET_RESTRICTED, DATASET_UNAVAILABLE) or a cost or margin field (FIELD_RESTRICTED) is refused,
+            whatever the user holds.</description>
         <implements service="ironstone.insights.AssistServices.define#PanelRequest"/>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('operationsPanel', context)"/>

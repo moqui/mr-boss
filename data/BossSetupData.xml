@@ -4784,7 +4784,7 @@ along with this software (see the LICENSE.md file). If not, see
             classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
     <moqui.agent.AgentToolExposure toolName="insights_operations_panel" serviceName="ironstone.insights.AssistServices.run#OperationsPanel"
             title="Read a business operations panel"
-            description="run#OperationsPanel: a saved panel's own numbers as its dashboard shows them to the user, by the dashboard's definitionId and the panel's panelId (or a library panel's definitionId), with from, thru and organizationPartyId for one of the user's organizations. Panels over cost, margin, People or payroll data are refused, and cost and margin measures are left out, whatever the user holds."
+            description="run#OperationsPanel: a saved panel's own numbers as its dashboard shows them to the user, by the dashboard's definitionId and the panel's panelId (or a library panel's definitionId), with from, thru and organizationPartyId for one of the user's organizations. A panel that reads cost, margin, People or payroll data in any of its queries is refused, whatever the user holds."
             classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
     <moqui.agent.AgentToolExposure toolName="insights_operations_datasets" serviceName="ironstone.insights.AssistServices.find#OperationsSources"
             title="Business operations datasets"

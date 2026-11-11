@@ -2423,6 +2423,90 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
   - the Assist prerequisites of design §1.2 stay open (Remaining-Work): the active-organization user-facts provider, so a
     question without an organization is answered for the caller's organizations together, and the per-field AI opt-out.
 
+**Review Nov 10 (P10).** Fresh review of mr-boss 2729337a and 202d9f2b; fixes in mr-boss ("Insights P10 review: …") and
+this note (branch `ins/p10`).
+- Checked and kept:
+  - **The typed query tools** (`run#DatasetQuery`, `run#OperationsQuery`, `find#QuerySources`, `find#OperationsSources`):
+    only the eleven typed choices are read from a request; the dataset is classed before anything else (no row, a disabled
+    row or a People row answers `DATASET_UNAVAILABLE`; a cost row needs the Assist surface and `PRODUCT_COST_VIEW`), then
+    `Analysis.js run` finds it among `find#BusinessDatasets {status: admitted}` as the viewer, takes every field from the
+    dataset's own list (`find`, never an index into an object), and the engine's `run#Query` runs as the viewer with no
+    authorization switched off anywhere on the path (`asViewer`, `asViewerApart` are plain service calls; the engine's
+    operations are denied to the root group and pass only by each capability group's ALWAYS, so the inheritable
+    `ironstone.insights` grant does not carry them). An organization is checked by `insights.context` (forged or not:
+    `ORGANIZATION_UNAVAILABLE`) and only adds a filter under the row filter. 500 rows at most, 20 terms a group. The
+    surface is the service, not a parameter. The cost name rule is Drill.js's own expression (`/cost|margin/i`); no shipped
+    operations dataset has a field it would have to catch (sales orders, inventory, the Commerce and Customer Service
+    ones carry none), and the one cost dataset (sales items) is closed by its class, so the rule only matters for a
+    steward's new dataset, which has no class until its owner gives one.
+  - **`get#Metric` and `find#Reports` as tools**: wording and navigation only; a definition is read as the viewer, a
+    measure's `requiredPermission` is checked, an inherited panel key finds no measure.
+  - **The exposure rows**: eight, all `AgclRead` (the row's class is the one the catalog uses, so each runs fenced),
+    `previewMode` none; the three Assist number tools `exposeMcp` N, their twins `exposeAssistant` N; no row names an
+    engine service. A tool is offered to a user who holds the service (the root group's `ironstone.insights` pattern), so
+    the administrator, outside that group, gets none (F-P10-13: as their role). The descriptions, the skill and the
+    prompts name no field, dataset or person that is restricted and tell the model to give a refusal as the answer.
+  - **Add to my dashboard**: own names of the choice list only, each a short scalar; the class and the name rule, then
+    `store#Analysis` as the caller in its own transaction (author check, dataset, fields, the guards by running it, a
+    private panel, a dashboard only when the caller owns it). A filter value is data to the engine (a whole-string
+    `$name` would be the viewer's own dashboard variable, as from Analysis); the title is the user's own field. The
+    answer's text is never rendered back by the screen.
+  - **`store#Settings`**: `INSIGHTS_SETTINGS_EDIT` through the root grant, the organization through `insights.context`
+    (the administrator's active organization, or any internal one with none active; anyone else's own), the revision over
+    the organization's own rows of the seven types whoever wrote them, each value from a list read for the saver (ids,
+    the server's zones, the two enumerations, a whole number from 1 to the ceiling): no free text is stored, so nothing
+    is expanded later. The cap type has no pattern, so Admin's OrganizationDefaults shows it and cannot change it. No
+    Insights screen or service takes a cap from a request: Delivery.js and Alerts.js set `insights.recipientCap()` at
+    every save and audience check, and a default dashboard, map or digest is used only where the viewer reads it (the
+    map through FlowMaps' own `readableMaps`; a user's own default stays P9's `store#DefaultMap`).
+  - **DataReadiness for a reader** (F-P10-5, F-P10-6): `get#Readiness` answers a provider only with its
+    `requiredPermission` and each Insights provider only a dataset the engine lists to the viewer (admitted and theirs to
+    read; the spec's unadmitted inventory is absent); a row is the source's title, state, last rebuild, lag and expected
+    frequency. `request#Refresh` checks the registration's `INSIGHTS_DATASET_EDIT` before the owner's service, which
+    takes the dataset from the registration and runs `index#BusinessDataset` as the viewer; a reader calling it directly
+    is not authorized, and through the transition gets `REFRESH_DENIED`; the transition takes `insights.` keys only. The
+    engine's `find#BusinessDatasets`, now the reading groups' too, answers a non-steward only admitted datasets they read.
+  - Admin's `Registry.js` `present`: `lagMinutes` beside `lagText`, null without a watermark; AdminRegistries passes.
+- Fixes:
+  - **R1, High.** `run#PanelQuery` and `run#OperationsPanel` classed one dataset and returned every query's frames. The
+    engine's drill answers the dataset of the one query a request refers to (`queryReference`, the first by default) and
+    `panelFrames` is the result of all of the panel's queries together, so a panel whose first query reads sales orders
+    and whose second reads sales items gave an MCP client the cost dataset's sums, whatever the class said (confirmed by
+    running it: `available` true before the fix). The measure filter did not hold either: a frame's field is named by the
+    aggregation's id or a transformation's name, which the panel's author chooses, not by the dataset field, so "a cost
+    or margin measure is left out" was true only for an author who named it so. Now the saved panel is read first, as the
+    viewer (the dashboard's panel by its own key, or the library panel it references), and checked before anything runs:
+    every dataset any of its queries names is held to its class, a query that names none (the engine's telemetry default)
+    is refused, a name taken from a variable (`"$…"`) or a repeated panel is not read by a tool, and a cost or margin
+    name anywhere in the queries, transformations, footer or the dashboard's filters and variables is `FIELD_RESTRICTED`
+    unless the surface reads costs for the viewer. The left-out-measure code is gone. Spec case added.
+  - **R2, Low.** A forged organization on a panel is refused before the panel is read (it was, by the drill; kept first
+    so the answer does not depend on the panel).
+  - **R3, Low.** `recipientCap` for a viewer of every organization with none active (ADMIN, the administrator) took the
+    type's default, which can be above an organization's own cap; it is now the lowest of the organizations in scope, as
+    F-P10-11 has it for everyone else.
+  - **R4, Low.** A dataset's readiness told every reader "N documents at the last rebuild", the index's size over every
+    organization. The count is now the author's and the steward's; a reader's row has freshness only. Spec assertion added.
+- Spec: `InsightsSettings` is 7 features, 2.3 s, the slowest 0.60 s (the Assist feature had grown to 1.06 s with the
+  panel cases; they are a feature of their own, and three redundant reads were dropped). One render a screen, no second mode.
+- Tests (the shared release binary, `--nobuild`, this phase's runtime): InsightsSettings, InsightsDatasets,
+  InsightsAccess, InsightsDelivery, InsightsAlerts, InsightsHome and AdminRegistries, 33 of 33; InsightsSettings again
+  after the last edit. Prettier clean. Not run: the acceptance suite, the full suites, a live Assist or MCP turn.
+- For the lead:
+  - user's call, as the worker left them: readers reading DataReadiness (now freshness only, R4); every reading group
+    holding `INSIGHTS_SCHEDULE`; a lowered cap reaching a schedule at its next save;
+  - the organization's cap is BOSS's to apply (F-P10-1): the engine's `store#Schedule` and a rule's definition, which the
+    reading and authoring groups hold directly, are held to the instance ceiling only. No Insights screen passes them a
+    cap, but an organization cap the engine enforces needs the schedule to carry its organization (framework, with F118);
+  - a tool's saved panel is now refused where it could have answered in part (a mixed panel, a variable in a query, a
+    repeat): an attribution of frames to datasets in the engine's drill answer would let it answer the open part
+    (framework ask; no shipped panel is affected);
+  - the name rule stays a stopgap for field classes (F58, F83): a cost a steward names otherwise in an operations dataset
+    is not caught; the class row is the owner's statement that the dataset holds none;
+  - a reader's readiness read logs an ERROR for each dataset they may not read (`RECORD_UNAVAILABLE`, from P3's check);
+    noise, not a fault;
+  - design-insights §1.2 "As built" gains the panel check (one sentence).
+
 ### P11 — Wall displays on shared devices
 
 Design §4 Playlists with CX-DEVICE; design-admin §6 Devices and §14 shared-device registration; INS-04, Admin's
