@@ -17,27 +17,27 @@ along with this software (see the LICENSE.md file). If not, see
     own groups open (ironstone.admin.ContextServices.get#AppAccess), and for those who open Monitor the telemetry sources
     (org.moqui.monitor.MonitorServices.get#SourceStatus, which checks the telemetry dataset's own grant) and the open incidents
     (list#Incidents, MONITOR_INCIDENT), each opening Monitor; a summary that cannot be read is left out and the others still
-    show. MONITOR_APP, MONITOR_INCIDENT, MONITOR_RECOVER and MONITOR_REPLAY stay independent: an Admin grant opens none. -->
+    show. SYSTEM_APP (Monitor is a section of System), MONITOR_INCIDENT, MONITOR_RECOVER and MONITOR_REPLAY stay independent: an Admin grant opens none. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Monitoring" menu-image="sym_o_monitoring" menu-image-type="icon">
     <actions>
         <service-call name="ironstone.admin.ContextServices.get#AppAccess" in-map="{appRoot:appRoot}" out-map="appAccess"/>
         <set field="apps" from="appAccess.apps || {}"/>
         <set field="destinations" from="[
-                {name: 'Overview', purpose: 'Service health, throughput and errors', app: 'monitor', url: '/qapps/monitor'},
-                {name: 'Operations', purpose: 'Business operations and their outcomes', app: 'monitor', url: '/qapps/monitor/Operations'},
-                {name: 'Traces', purpose: 'Requests and jobs as traces', app: 'monitor', url: '/qapps/monitor/Traces'},
-                {name: 'Logs', purpose: 'Logs by service, level and trace', app: 'monitor', url: '/qapps/monitor/Logs'},
-                {name: 'Errors', purpose: 'Errors grouped by cause', app: 'monitor', url: '/qapps/monitor/Errors'},
-                {name: 'Sources', purpose: 'Telemetry sources and their keys', app: 'monitor', url: '/qapps/monitor/Sources'},
-                {name: 'Checks', purpose: 'Synthetic checks and scrape targets', app: 'monitor', url: '/qapps/monitor/Checks'},
-                {name: 'Releases', purpose: 'Releases and their regressions', app: 'monitor', url: '/qapps/monitor/Releases'},
-                {name: 'Incidents', purpose: 'Incidents, their causes and timeline', app: 'monitor', url: '/qapps/monitor/Incidents'},
-                {name: 'Recovery', purpose: 'Recovery actions and their approval', app: 'monitor', url: '/qapps/monitor/Recovery'},
+                {name: 'Overview', purpose: 'Service health, throughput and errors', app: 'system', url: '/qapps/system/Monitor'},
+                {name: 'Operations', purpose: 'Business operations and their outcomes', app: 'system', url: '/qapps/system/Monitor/Operations'},
+                {name: 'Traces', purpose: 'Requests and jobs as traces', app: 'system', url: '/qapps/system/Monitor/Traces'},
+                {name: 'Logs', purpose: 'Logs by service, level and trace', app: 'system', url: '/qapps/system/Monitor/Logs'},
+                {name: 'Errors', purpose: 'Errors grouped by cause', app: 'system', url: '/qapps/system/Monitor/Errors'},
+                {name: 'Sources', purpose: 'Telemetry sources and their keys', app: 'system', url: '/qapps/system/Monitor/Sources'},
+                {name: 'Checks', purpose: 'Synthetic checks and scrape targets', app: 'system', url: '/qapps/system/Monitor/Checks'},
+                {name: 'Releases', purpose: 'Releases and their regressions', app: 'system', url: '/qapps/system/Monitor/Releases'},
+                {name: 'Incidents', purpose: 'Incidents, their causes and timeline', app: 'system', url: '/qapps/system/Monitor/Incidents'},
+                {name: 'Recovery', purpose: 'Recovery actions and their approval', app: 'system', url: '/qapps/system/Monitor/Recovery'},
                 {name: 'Dashboards', purpose: 'Dashboards and reports', app: 'dashboards', url: '/qapps/dashboards'},
                 {name: 'Alerts', purpose: 'Alert rules, contact points and silences', app: 'dashboards', url: '/qapps/dashboards/Alerts'}
             ].filter(destination =&gt; apps[destination.app])"/>
-        <if condition="apps.monitor">
+        <if condition="apps.system">
             <service-call name="org.moqui.monitor.MonitorServices.get#SourceStatus" out-map="status" transaction="force-new"
                     ignore-error="true"/>
             <script>ec.message.clearErrors()</script>
@@ -91,7 +91,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <form-list name="OpenIncidents" list="incidents" skip-form="true" paginate="false">
                         <field name="title">
                             <default-field title="Incident">
-                                <link url="/qapps/monitor/IncidentDetail" url-type="plain" text="${title || incidentId}" link-type="anchor"
+                                <link url="/qapps/system/Monitor/IncidentDetail" url-type="plain" text="${title || incidentId}" link-type="anchor"
                                         parameter-map="{incidentId:incidentId}"/>
                             </default-field>
                         </field>

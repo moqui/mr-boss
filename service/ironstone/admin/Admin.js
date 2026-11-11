@@ -23,11 +23,11 @@ const rootLocation = "component://mr-boss/screen/Admin.xml"
 const settingsIndexLocation = "component://mr-boss/screen/Admin/Settings/SettingsHome.xml"
 const areaLocation = area => "component://mr-boss/screen/Admin/" + area + ".xml"
 const choiceLimit = 30
-// the framework app roots whose own grants open the tools an Admin screen links (Tools ToolsSecurityData, MonitoringSecurityData)
+// the framework app roots whose own grants open the tools an Admin screen links (Tools ToolsSecurityData, MonitoringSecurityData);
+// Monitor is a section of System (system/Monitor) and opens by System's grant
 const appLocations = {
     system: "component://tools/screen/System.xml",
     tools: "component://tools/screen/Tools.xml",
-    monitor: "component://tools/screen/Monitor.xml",
     dashboards: "component://tools/screen/Dashboards.xml"
 }
 // Mantle's identity scope: an identity as the caller may administer it, and the staff accounts in scope, each by the filtered
@@ -166,7 +166,7 @@ function areaGrant(grants, area) {
     const found = screenGrants(areaLocation(area), grants.authzRows)
     return found.found ? found.allowed.length > 0 : true
 }
-// A framework app the user's own groups open (System, Tools, Monitor, Dashboards), by its own grant only: an Admin grant never
+// A framework app the user's own groups open (System, Tools, Dashboards), by its own grant only: an Admin grant never
 // opens it (impl-admin F2).
 function appGrant(grants, app) {
     if (grants.systemAdmin) return true
@@ -174,13 +174,12 @@ function appGrant(grants, app) {
 }
 
 // Whether a destination, a path under /qapps, opens to the user: a framework app's route (Admin › System and system/ by System's
-// own grant, tools/, monitor/ and dashboards/ by theirs) or a BOSS screen path, each screen of it a file under mr-boss's screen
+// own grant, Monitor with it as system/Monitor, tools/ and dashboards/ by theirs) or a BOSS screen path, each screen of it a file under mr-boss's screen
 // directory, checked as the framework checks the path. A registry's link is shown only when it opens.
 const appRoutes = [
     ["Admin/System", "system"],
     ["system", "system"],
     ["tools", "tools"],
-    ["monitor", "monitor"],
     ["dashboards", "dashboards"]
 ]
 function destinationOpens(grants, path) {

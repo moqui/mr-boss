@@ -82,8 +82,8 @@ function removeSpecData() {
 }
 // Whether a route names a screen: its file, or a subscreens-item of its parent screen (a Shared screen mounted there).
 function screenExists(route) {
-    const base = route.startsWith("monitor/") ? "component://tools/screen/Monitor/" : "component://mr-boss/screen/"
-    const path = route.startsWith("monitor/") ? route.substring(8) : route
+    const base = route.startsWith("system/Monitor/") ? "component://tools/screen/System/Monitor/" : "component://mr-boss/screen/"
+    const path = route.startsWith("system/Monitor/") ? route.substring(15) : route
     if (ec.resource.getLocationReference(base + path + ".xml").getExists()) return true
     const parts = path.split("/")
     const parent = ec.resource.getLocationReference(base + parts.slice(0, -1).join("/") + ".xml")
