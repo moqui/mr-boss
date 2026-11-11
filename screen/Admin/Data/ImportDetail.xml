@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ImportDetail (design-admin §11 ImportDetail; style-guide §3.3 Detail; impl-admin P15): one import of a target whose batch
+    is read through the import contract (kept by the framework, or its owner's, as Products' catalog). ImportSummary: the
+    target and its version, the file and its content hash, the organization, the state, the counts, who staged it and when.
+    ImportResults: each row with its result, reason, what it made and the attempts, all or only those that need attention,
+    the results and the errors as files (a cell a spreadsheet would read as a formula is written as text), and the retry of
+    failed rows: the rows named, or every failed row, each validated again and applied on its own by
+    org.moqui.admin.DataTransferServices.retry#ImportItems, which never applies an applied row again. Read by who staged the
+    import and those its target admits; anyone else is told it is not available. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Import" default-menu-include="false">
+    <parameter name="targetId" required="true"/>
+    <parameter name="operationKey" required="true"/>
+    <parameter name="pageIndex"/>
+    <parameter name="errorsOnly"/>
+
+    <transition name="retry">
+        <actions>
+            <service-call name="ironstone.shared.DataImportServices.get#ImportMount" in-map="{appRoot:appRoot, targetId:targetId}" out-map="mounted"/>
+            <script>if (!mounted.importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <service-call name="org.moqui.admin.DataTransferServices.retry#ImportItems" out-map="result"
+                    in-map="{targetId:targetId, operationKey:operationKey, itemSeqIdList:(retryRowIds ? [retryRowIds] : null)}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const rows = Array.from(result?.resultList || [])
+                    const refused = rows.filter(row => !row.applied)
+                    if (result?.appliedCount) ec.message.addMessage(result.appliedCount + ' rows applied', 'success')
+                    if (!rows.length) ec.message.addMessage(result?.reason || 'Nothing was retried', 'warning')
+                    for (const row of refused.slice(0, 5)) ec.message.addMessage('Row ID ' + row.itemSeqId + ': ' + (row.reason || 'not applied'), 'warning')
+                    if (refused.length > 5) ec.message.addMessage((refused.length - 5) + ' more rows were not applied', 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="targetId"/><parameter name="operationKey"/></default-response>
+        <error-response url="."><parameter name="targetId"/><parameter name="operationKey"/></error-response>
+    </transition>
+
+    <actions>
+        <set field="onlyErrors" from="errorsOnly == 'true' || errorsOnly === true"/>
+        <service-call name="ironstone.shared.DataImportServices.get#ImportContext" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, targetId:targetId, operationKey:operationKey, pageIndex:(pageIndex || 0), errorsOnly:onlyErrors}"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="available" from="!!found?.hasImport &amp;&amp; !!found?.state"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            // in the server's time zone, as Imports' list
+            const zone = found?.timeZone || 'UTC'
+            const when = value => value == null ? '' : ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm', null, zone)
+            const stateTexts = {staged: 'Staged', mapped: 'Mapped', validated: 'Validated', applying: 'Applying', complete: 'Complete', partial: 'Partly applied'}
+            detail = found || {}
+            importTarget = detail.importTarget || {}
+            importMount = detail.importMount || {}
+            summary = {
+                targetText: (importTarget.title || targetId) + (importTarget.targetVersion ? ' (version ' + importTarget.targetVersion + ')' : '') + (importTarget.ownerApp ? ' · ' + importTarget.ownerApp : ''),
+                fileText: [detail.filename, detail.kindDescription && detail.kindDescription !== importTarget.title ? detail.kindDescription : null].filter(Boolean).join(' · '),
+                hashText: String(detail.fileHash || '').slice(0, 16),
+                organizationName: detail.organizationName || '',
+                stateText: stateTexts[detail.state] || detail.state || '',
+                countText: (detail.rowCount || 0) + ' rows · ' + (detail.appliedCount || 0) + ' applied · ' + (detail.errorCount || 0) + ' need attention' + (detail.skippedCount ? ' · ' + detail.skippedCount + ' skipped' : '') + (detail.validCount ? ' · ' + detail.validCount + ' ready, not applied' : ''),
+                userName: detail.userName || '',
+                periodText: [when(detail.stagedDate) ? 'staged ' + when(detail.stagedDate) : '', when(detail.appliedDate) ? 'applied ' + when(detail.appliedDate) : '', when(detail.completedDate) ? 'completed ' + when(detail.completedDate) : ''].filter(Boolean).join(' · ') + ' (' + zone + ')',
+                lastError: detail.lastError || ''}
+            resultRows = Array.from(detail.previewRows || []).map(row => Object.assign({}, row, {
+                outcomeText: [row.resultText, row.resultRecordId].filter(Boolean).join(' · '),
+                reasonText: row.errorMessage || row.warningText || ''}))
+            rowsPageIndex = Number(detail.pageIndex || 0)
+            rowsPageSize = Number(detail.pageSize || 50)
+            rowsShown = Number(detail.shownCount ?? detail.rowCount ?? 0)
+            canRetry = !!detail.canEdit && Number(detail.failedCount || 0) > 0
+            wizardOpen = !!detail.canEdit && ['staged', 'mapped', 'validated'].includes(detail.state)
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="${available ? (summary.fileText || 'Import') : 'Import'}" type="h5"/></container>
+            <container style="col-auto"><link url="../Imports" text="Imports" icon="sym_o_list"/></container>
+        </container>
+        <label type="p" style="text-negative" condition="!available" text="This import is not available to you."/>
+        <section name="ImportDetailSection" condition="available">
+            <widgets>
+                <container-box>
+                    <box-header title="Summary"/>
+                    <box-toolbar>
+                        <link url="../DataImport" text="Continue in the wizard" link-type="anchor-button" icon="sym_o_upload_file" condition="wizardOpen" parameter-map="{targetId:targetId, operationKey:operationKey}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <form-single name="ImportSummary" map="summary">
+                            <field name="targetText"><default-field title="Target"><display/></default-field></field>
+                            <field name="fileText"><default-field title="File"><display/></default-field></field>
+                            <field name="hashText"><default-field title="Content hash" tooltip="The start of the SHA-256 of what was staged"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="countText"><default-field title="Rows"><display/></default-field></field>
+                            <field name="userName"><default-field title="Staged by"><display/></default-field></field>
+                            <field name="periodText"><default-field title="When"><display/></default-field></field>
+                            <field name="lastError"><default-field title="Attention"><display/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="targetText"/><field-ref name="fileText"/></field-row>
+                                <field-row><field-ref name="organizationName"/><field-ref name="stateText"/></field-row>
+                                <field-row><field-ref name="countText"/><field-ref name="lastError"/></field-row>
+                                <field-row><field-ref name="userName"/><field-ref name="periodText"/></field-row>
+                                <field-ref name="hashText"/>
+                            </field-layout>
+                        </form-single>
+                        <label text="The staged rows of this import were removed after its retention; its outcomes are kept." type="p" style="m-muted" condition="!!detail.purged"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Results"/>
+                    <box-toolbar>
+                        <link url="." text="Rows that need attention" link-type="anchor-button" icon="sym_o_report" condition="!onlyErrors" parameter-map="{targetId:targetId, operationKey:operationKey, errorsOnly:true}"/>
+                        <link url="." text="All rows" link-type="anchor-button" icon="sym_o_list" condition="onlyErrors" parameter-map="{targetId:targetId, operationKey:operationKey}"/>
+                        <link url="${importMount.downloadBase}/results" url-type="plain" text="All results CSV" link-type="anchor-button" icon="sym_o_download" parameter-map="{targetId:targetId, operationKey:operationKey, errorsOnly:false}"/>
+                        <link url="${importMount.downloadBase}/results" url-type="plain" text="Error CSV" link-type="anchor-button" icon="sym_o_download" parameter-map="{targetId:targetId, operationKey:operationKey, errorsOnly:true}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <section name="RetrySection" condition="canRetry">
+                            <widgets>
+                                <form-single name="RetryImportItems" transition="retry">
+                                    <field name="targetId"><default-field title=""><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field title=""><hidden/></default-field></field>
+                                    <field name="retryRowIds">
+                                        <default-field title="Only these row IDs" tooltip="Leave empty to retry every failed row"><text-line size="30"/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Retry failed rows">
+                                            <submit confirmation="Retry the failed rows of ${importTarget.title}? Each is checked again and applied on its own; a row already applied is not applied again."/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout><field-row-big><field-ref name="retryRowIds"/><field-ref name="submitButton"/></field-row-big></field-layout>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <label type="p" style="m-muted" condition="!resultRows.length" text="${onlyErrors ? 'No row needs attention.' : 'No rows.'}"/>
+                        <form-list name="ImportResults" list="resultRows" skip-form="true" paginate="false">
+                            <field name="itemSeqId"><default-field title="Row ID"><display/></default-field></field>
+                            <field name="rowNumber"><default-field title="File row"><display/></default-field></field>
+                            <field name="result"><default-field title="Result"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="proposedText"><default-field title="Values"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="outcomeText"><default-field title="Made"><display/></default-field></field>
+                            <field name="attemptCount"><default-field title="Attempts"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="itemSeqId"/><field-ref name="result"/><field-ref name="outcomeText"/></column>
+                                <column><field-ref name="sourceText"/><field-ref name="reasonText"/></column>
+                            </columns>
+                        </form-list>
+                        <container style="row items-center q-gutter-sm">
+                            <link url="." text="Previous rows" link-type="anchor-button" icon="sym_o_chevron_left" condition="rowsPageIndex &gt; 0" parameter-map="{targetId:targetId, operationKey:operationKey, errorsOnly:(onlyErrors ? true : null), pageIndex:rowsPageIndex - 1}"/>
+                            <label text="Rows ${rowsShown ? rowsPageIndex * rowsPageSize + 1 : 0}–${rowsPageIndex * rowsPageSize + resultRows.length} of ${rowsShown}" type="span" style="m-muted"/>
+                            <link url="." text="Next rows" link-type="anchor-button" icon="sym_o_chevron_right" condition="(rowsPageIndex + 1) * rowsPageSize &lt; rowsShown" parameter-map="{targetId:targetId, operationKey:operationKey, errorsOnly:(onlyErrors ? true : null), pageIndex:rowsPageIndex + 1}"/>
+                        </container>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

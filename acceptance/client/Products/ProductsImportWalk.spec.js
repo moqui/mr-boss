@@ -32,12 +32,12 @@ feature("an editor maps a file, reviews valid and invalid rows, applies and resu
         const p = browser.newPage({user: "catalog.edit", viewport: {width: 1280, height: 1100}, timeout: 30})
         p.allowProblems(/userPhoto\?userId=/)
         p.goto("/qapps/Products/ProductImport").status == 200
-        p.waitFor(() => !!document.querySelector("#CatalogImportUpload"))
+        p.waitFor(() => !!document.querySelector("#ImportUpload"))
         p.fill(
-            "#CatalogImportUpload textarea[name=sourceText]",
+            "#ImportUpload textarea[name=sourceText]",
             "Code,Name\nBOSS_BROWSER_IMPORT,Imported browser product\nBOSS_BROWSER_INVALID,\n"
         )
-        p.locator("#CatalogImportUpload").getByRole("button", {name: "Stage import", exact: true}).click()
+        p.locator("#ImportUpload").getByRole("button", {name: "Stage import", exact: true}).click()
         p.waitFor(
             () =>
                 Array.from(document.querySelectorAll("button")).filter(e => e.innerText.includes("Save column mapping"))
@@ -56,8 +56,8 @@ feature("an editor maps a file, reviews valid and invalid rows, applies and resu
         p.getByLabel("Catalog field", {exact: true}).nth(1).click()
         p.getByRole("option", {name: "Product name", exact: true}).click()
         p.getByRole("button", {name: "Save column mapping", exact: true}).nth(1).click()
-        p.waitFor(() => !!document.querySelector("#ValidateCatalogImport"))
-        p.locator("#ValidateCatalogImport").getByRole("button", {name: "Validate mapped rows", exact: true}).click()
+        p.waitFor(() => !!document.querySelector("#ImportPreview"))
+        p.locator("#ImportPreview").getByRole("button", {name: "Validate mapped rows", exact: true}).click()
         p.waitFor(() => document.querySelector(".q-page")?.innerText.includes("1 ready"))
         p.text().includes("Product name is required")
         p.evaluate(() => {
@@ -74,11 +74,11 @@ feature("an editor maps a file, reviews valid and invalid rows, applies and resu
             }
             return true
         }) == true
-        p.locator("#ApplyCatalogImport").getByRole("button", {name: "Apply reviewed valid rows", exact: true}).click()
+        p.locator("#ImportApply").getByRole("button", {name: "Apply reviewed valid rows", exact: true}).click()
         p.waitFor(() => document.querySelector(".q-page")?.innerText.includes("1 applied"))
         p.goto("/qapps/Products/ProductImport?operationKey=" + key).status == 200
         p.text().includes("1 applied")
-        p.locator("#ApplyCatalogImport").count() == 0
+        p.locator("#ImportApply").count() == 0
         const download = p.getByRole("link", {name: "Error CSV", exact: false}).attribute("href")
         download.includes("/apps/Products/ProductImport/Index/results")
         const s = session({user: "catalog.edit"}),

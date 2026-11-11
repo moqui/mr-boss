@@ -434,7 +434,7 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="component://mr-boss/screen/(Commons|Comms)(\.xml|/.*)"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="component://mr-boss/screen/Shared/(StandardCosts|CostRollup|CostHistory|InventoryValuation|Documents|DocumentDetail|CategoryContent|Translations|Units|Packaging|Labels|IdentificationTypes|CatalogChecks|ProductImport)\.xml" artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/(StandardCosts|CostRollup|CostHistory|InventoryValuation|Documents|DocumentDetail|CategoryContent|Translations|Units|Packaging|Labels|IdentificationTypes|CatalogChecks|DataImport)\.xml" artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- every write of an IronStone app service, by its verb: every verb but the reads (get, find, search, check, clean, decorate,
             describe, list, lookup, match, parse, suggest), which test/Projects/ProjectsAccess.spec.js checks against every service file. The
             pattern names the app packages and any depth under them. A new app directory is not denied until its name is added here.
@@ -4877,4 +4877,43 @@ along with this software (see the LICENSE.md file). If not, see
             description="What people are notified about and how each topic is delivered when a person chose nothing, for the topics their owners registered"
             settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Operations/Topics"
             viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="116"/>
+
+    <!-- Admin P15 (impl-admin P15; design-admin §2, §11): the Data area (Imports, DataImport, ImportDetail) for the data
+        operator and the administrator. The area is denied to the root group and opened whole to the two, with the root's
+        filter sets: its screens' transitions reach the framework's org.moqui.admin.DataTransferServices (and
+        ironstone.shared.DataImportServices over it), which check ADMIN_TRANSFER_VIEW, each target's registered permissions
+        and scope, and call a target's owner as the user, whose own permission and organization checks decide. The data
+        operator's group holds the two transfer permissions only: importing a target also needs that target's own domain
+        permission, through a group of the user's (design §1.1; impl-admin §4, the user's call whether BOSS_ADMIN_DATA
+        should carry any of them). -->
+    <artifactGroups artifactGroupId="BOSS_ADM_DATA" description="Admin data">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Data.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_DATA_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_DATA_DATA" userGroupId="BOSS_ADMIN_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_DATA_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The staff-invitations import target is Mantle's (mr-mantle data/PartyInvitationData.xml). BOSS adds what its own
+        single invitation always includes (impl-admin §4: IronStone BOSS users in every invitation), as a value the
+        registration fixes for every row, never a column. -->
+    <moqui.server.TransferTarget targetId="staffInvitations"
+            fixedValuesJson="{&quot;alwaysBundleGroupIds&quot;:&quot;BOSS_USERS&quot;}"/>
+    <!-- The owner wizards that keep no run record yet (impl-admin F13, F43): listed as import targets with their place and no
+        runs, until Commons' contact import and Projects' work-item import keep one (impl-admin §7). Nothing is staged or
+        applied through these rows. -->
+    <moqui.server.TransferTarget targetId="commonsContacts" direction="import" targetMode="wizard" title="Contacts"
+            description="Contacts from a vCard or CSV file, into a personal or a shared contact book, in Commons' own wizard"
+            effectsNote="Each contact is created or merged by Commons' contact import; no run is kept yet."
+            ownerApp="Commons" targetVersion="1" ownerRoute="commonsContactImport" sequenceNum="50"/>
+    <moqui.server.TransferTarget targetId="projectsWorkItems" direction="import" targetMode="wizard" title="Work items"
+            description="Tasks and other work items of a project from a CSV file, in Projects' own wizard"
+            effectsNote="Each row becomes a work item of the chosen project; no run is kept yet."
+            ownerApp="Projects" targetVersion="1" ownerRoute="projectsWorkItemImport" sequenceNum="51"/>
 </entity-facade-xml>

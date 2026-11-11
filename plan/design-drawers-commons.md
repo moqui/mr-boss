@@ -796,7 +796,8 @@ fields are the full field lists.
   registers it as an owner wizard in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
   (Commons, contacts in vCard and CSV), providing `get#` for its runs, so Admin Imports lists them.
   It does not mount Shared/DataImport, since its options step (book, groups, personal or directory)
-  is its own.
+  is its own. Registered (impl-admin P15) as the target `commonsContacts` with its place and no runs:
+  the import keeps a draft per user and no run record yet (impl-admin F13).
 
 ### Duplicates
 

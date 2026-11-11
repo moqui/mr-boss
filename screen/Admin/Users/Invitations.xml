@@ -98,6 +98,10 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto">
                 <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" condition="canInvite"/>
+                <!-- the bulk invite (design §4; impl-admin P15): the shared import wizard with the staff-invitations target, for
+                    a user who also opens the Data area and holds ADMIN_TRANSFER_RUN -->
+                <link url="${sharedLinks['Data/DataImport']}" text="Invite from a file" icon="sym_o_upload_file" parameter-map="{targetId:'staffInvitations'}"
+                        condition="canInvite &amp;&amp; !!admin?.capabilities?.data &amp;&amp; !!admin?.capabilities?.transferRun"/>
             </container>
         </container>
 

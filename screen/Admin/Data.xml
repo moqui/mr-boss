@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Data area of IronStone Admin (design-admin §1.2, §11; impl-admin P15): Imports, the runs of every registered import
+    target (the default), DataImport, the shared import wizard mounted for the target a request names (Shared/DataImport), and
+    ImportDetail, one import's summary and results with the retry of failed rows. For the data operator and the administrator
+    (BOSS_ADM_DATA, the whole area). The area's grant is an inheritable ALWAYS, as every app area's: it authorizes the
+    artifacts below it, an owner's registered services too, so it is not what decides an import. Every read and step is the
+    framework's org.moqui.admin.DataTransferServices, which checks ADMIN_TRANSFER_VIEW, each target's own permissions and
+    scope, and calls an owner's service as the user; that service checks its own permission and scope itself (a target
+    whose services did not would be open to this area's users: impl-admin P15 Review). Exports and backups are added by
+    P16. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Data" default-menu-index="9" menu-image="sym_o_swap_vert" menu-image-type="icon">
+    <subscreens default-item="Imports" always-use-full-path="true">
+        <subscreens-item name="Imports" location="component://mr-boss/screen/Admin/Data/Imports.xml" menu-title="Imports" menu-index="1"/>
+        <subscreens-item name="DataImport" location="component://mr-boss/screen/Shared/DataImport.xml" menu-title="Import" menu-index="2"/>
+        <subscreens-item name="ImportDetail" location="component://mr-boss/screen/Admin/Data/ImportDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="AdminDataPanel" type="tab"/>
+    </widgets>
+</screen>

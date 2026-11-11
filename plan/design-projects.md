@@ -1192,7 +1192,8 @@ wrote rows directly and is fixed in Mantle in this pass.
 - **Admin's import catalog (Nov 1, 2026; review Z2).** WorkItemImport keeps its wizard and registers it
   as an owner wizard in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
   (Projects, work items), providing `get#` for its runs so Admin Imports lists them; it does not
-  mount Shared/DataImport.
+  mount Shared/DataImport. Registered (impl-admin P15) as the target `projectsWorkItems` with its place
+  and no runs: the import keeps a draft per user and no run record yet (impl-admin F13, F43).
 - **As built (P4c):** `WorkItems/Import.xml` and its steps in `Import/`, the draft in the user's own folder
   (`ironstone.projects.WorkItemImportServices`, as ContactImport's). Source takes the project (one the manager works in). Mapping is a
   field to a column rather than a column to a field (an export with a hundred columns would be a hundred fields): the targets
