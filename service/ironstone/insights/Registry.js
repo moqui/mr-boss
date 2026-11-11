@@ -667,9 +667,11 @@ function definitionRoute(definition, capabilities) {
 function findList(formLocation) {
     const match = /^component:\/\/mr-boss\/screen\/(.+)\.xml\.form_list\$(.*)$/.exec(String(formLocation || ""))
     if (!match) return null
+    // a dynamic form's find is kept under its name and a "#" extension (the framework's saved_find_location): the form is the name
+    const formName = match[2].replace(/#.*$/, "")
     const text = ec.resource.getLocationReference("component://mr-boss/screen/" + match[1] + ".xml").getText()
-    const exists = text != null && (!match[2] || String(text).includes('form-list name="' + match[2] + '"'))
-    return {path: match[1], formName: match[2], exists, text: exists ? String(text) : ""}
+    const exists = text != null && (!formName || String(text).includes('form-list name="' + formName + '"'))
+    return {path: match[1], formName, exists, text: exists ? String(text) : ""}
 }
 // A saved find's screen: an mr-boss form list's screen path when it opens to the viewer, else why not.
 function findRoute(row, grants) {
@@ -699,6 +701,16 @@ const legacyPaths = {
 // route and sharing, with what the migration does to it (moved, kept, invalid); with apply, the moved ones are rewritten. An
 // instance administrator's (ADMIN), a deliberate step of an upgrade, never run on its own. A find keeps its owners, groups,
 // fields and description; the fields the new list does not have are named, not dropped.
+// One row's move: a row that cannot be written is named (action failed) and logged, and the others go on (failure tolerance).
+function moveLegacy(out, write, name) {
+    try {
+        write()
+    } catch (error) {
+        ec.logger.error("Legacy mapping: the " + name + " was not moved: " + (error?.message ?? error))
+        ec.message.clearErrors()
+        out.action = "failed"
+    }
+}
 function migrateLegacySavedFinds(p) {
     if (!lib.access.systemAdmin()) denied("ADMIN_REQUIRED", "The legacy mapping is an instance administrator's upgrade step")
     const apply = p.apply === true || p.apply === "true"
@@ -727,10 +739,7 @@ function migrateLegacySavedFinds(p) {
             out.unknownFields = rows("moqui.screen.form.FormListFindField", {formListFindId: row.formListFindId})
                 .map(field => field.fieldName)
                 .filter(name => !moved.text.includes('name="' + name + '"'))
-            if (apply) {
-                row.set("formLocation", out.newFormLocation)
-                row.update()
-            }
+            if (apply) moveLegacy(out, () => row.set("formLocation", out.newFormLocation).update(), "saved find " + row.formListFindId)
         }
         finds.push(out)
     }
@@ -752,10 +761,7 @@ function migrateLegacySavedFinds(p) {
         }
         if (target) {
             out.newScreenPath = prefix + target + path.substring(at + relative.length)
-            if (apply) {
-                row.set("screenPath", out.newScreenPath)
-                row.update()
-            }
+            if (apply) moveLegacy(out, () => row.set("screenPath", out.newScreenPath).update(), "schedule " + row.screenScheduledId)
         }
         schedules.push(out)
     }

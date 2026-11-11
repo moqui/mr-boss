@@ -425,7 +425,10 @@ function answering(parameters, read) {
         const text = String(error?.message ?? error ?? "")
         const code = lib.reasonCode(error)
         ec.message.clearErrors()
-        if (code) return {refusalCode: code, refusal: text.replace(/^[A-Z][A-Z0-9_]+:\s*/, "")}
+        // a refusal's code has an underscore (every Insights and engine refusal's does), so an exception's text with a
+        // code-like prefix (a database's ERROR:, URL:, JSON:) is a failure, never shown (as Admin's AdminCalls.read, P19 review)
+        if (code && code.includes("_"))
+            return {refusalCode: code, refusal: text.replace(/^(Error:\s*)?[A-Z][A-Z0-9_]+:\s*/, "").substring(0, 300)}
         ec.logger.warn("Insights read refused or failed for " + ec.user.username + ": " + text)
         return {
             refusalCode: "FAILED",

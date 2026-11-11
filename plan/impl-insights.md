@@ -3041,6 +3041,78 @@ With Admin P19.
   - The acceptance suite: InsightsReviewWalk, InsightsTui and InsightsServerStatic are new and unrun; InsightsReviewWalk
     creates a display account and device per run (revoked at its end) and an alert rule and flow map copy (removed).
 
+**Review Nov 11 (P12).** Fresh review of mr-moqui e81b6c1b and mr-boss fcad146e; fixes in mr-boss ("Insights P12 review: …")
+and this note (branch `ins/p12`).
+- Checked and kept:
+  - **The record panels under Insights (F-P12-1)**, by URL (a throwaway spec, deleted) as insights.reader with their
+    `BOSS_USERS` membership ended: every Chatter transition tried (chatterData, timeline, searchRecords, downloadFile, logNote,
+    sendMessage, deleteEntry), ChatterTui, and RecordFiles' upload, download, remove, addFromFiles, the file picker's
+    pickerData and RecordFilesTui are refused `RECORD_PANEL_UNAVAILABLE` before the transition runs; with the membership each
+    reaches its own service (a validation error for the missing input). The check is the server's, at every request, in the
+    root's always-actions on the resolved path: a render-mode suffix (`Chatter.qvt`) is resolved to `Chatter` before it,
+    subscreen names are matched exactly, Insights has no no-sub-path wrapper, `/qapps/Insights/…` is the shell (no transition
+    runs), and no other path reaches the two screens below Insights (Records' mounts serve no transition, P6; ProcessStory's
+    Knowledge its own check, P9). A device's request skips it; its route group admits WallDisplay alone.
+  - **`answerRefusal`**, probed on the services refused (get#Home and get#Attention for another organization, as the reader
+    and the Services reader; get#ReportOptions of an unknown entry; get#AnalysisOptions and get#AnalysisResult as a reader):
+    every data out-parameter is null beside `refusalCode` and `refusal`, and the refusal is the default's own message without
+    its code, so a caller learns nothing the error did not carry; without the flag each fails as before. Of the eight only
+    `find#Reports` is an agent tool (Assist and MCP); with the flag it answers the same code and text, and any other failure
+    a fixed sentence. Each screen shows the refusal or a fixed sentence and drops the answer's data (`!refusalCode`).
+  - **`export#DeliveryAudit`**: the owner every recipient's row, a recipient their own (F-P12-5: the name is the caller's own
+    account's, which they read anyway; the owner's rows carry the names ReportDelivery already shows them); the columns are
+    the run's title, date, kind, mode and state and each recipient's name, result, safe reason, attempt and count, no address
+    or content; audited through `audit#Export` (kind, format, row count; the engine's audit names no run, as Explore's);
+    a cell beginning `=`, `+`, `-`, `@`, tab or CR made text; bounded by the run's recipients (the organization's cap under
+    the instance ceiling); another's run refused `DELIVERY_UNAVAILABLE` (InsightsDelivery). The GET transition's audit
+    write is allowed (the read fence is an agent render's only).
+  - **`migrate#LegacySavedFinds`**: ADMIN only (`access.systemAdmin`, the `ADMIN` group), not remote; an inventory unless
+    `apply`; it writes only a find on one of the three replaced lists whose list is gone and a schedule of the two replaced
+    paths. A second apply changes nothing: a moved find's new location is not a replaced list and exists (kept), a moved
+    schedule's new path is not a replaced path (kept). SavedReports shows a find on a list that is gone "Not valid" with no
+    link; no alias route.
+  - **FlowMap's Print**: html-print escapes the map's text (a map titled with `&` and quotes rendered `&amp;`, `&quot;`; a
+    title refuses `<` and `>` at input); the link's parameters are encoded.
+  - **One group**: Dashboard's Share dialog names the current group before a choice; Playlists asks, naming the other group,
+    before Share with wall displays; both post to `share#Dashboard`, which checks authoring and the owner
+    (`DASHBOARD_NOT_OWNED`). Playlists reads the descriptions of only the groups its listed playlists are shared with.
+  - **The acceptance specs** (read, not run; their services and parameters checked against the definitions): TuiRender sweeps
+    no Insights screen and keeps no Insights parameter; InsightsTui walks every Insights screen file but WallDisplay and
+    Records, and the ten record mounts in Insights' read-only context (the same files TuiRender's Shared sweep renders
+    outside it); InsightsServerStatic checks each plain XML screen once. InsightsReviewWalk covers design §13.3 and §8 as the
+    phase lists: rows and a forged filter, terms (the value counts), the export, dashboards and an embed with forged
+    variables, Home, its layout and the context, drill and a record of another organization, costs through Assist and MCP,
+    Assist for another organization, a schedule's audience and an alert rule's, the palette, saved reports, flow maps, the
+    alias attack and the wall display. It does not call `store#Schedule` itself (`check#Audience` is the engine's same
+    check) and does not assert F-P12-3.
+  - **F-P12-3, on the current code** (mr-boss master has no Insights change since the branch's base; the engine is master's
+    release binary): with `mantle-sales-items` admitted, insights.reader (no `PRODUCT_COST_VIEW`) read `itemCostTotal`,
+    `itemMarginTotal` and each issuance's `acquireCost`, `issuedCostTotal` and margins in `query#Documents`' rows, and a
+    `run#Query` sum of `itemCostTotal`; insights.author (no `PRODUCT_COST_VIEW`) was offered the cost and margin fields among
+    Analysis' measures and ran a sum of `itemCostTotal` by currency. A panel's own aggregate is the same `run#Query`. Assist
+    and MCP refuse it (InsightsSettings). It holds as written; nothing changed.
+  - **Records**: design §2's Impl column, §4, §13.2 and §14 match the code; the inventories' rows; the README sentence; the
+    Remaining-Work row.
+- Fixes:
+  - **R1, Low.** `Insights.js answering` took any `WORD:` prefix for a refusal's code, so an exception's text beginning
+    `ERROR:` (a database's), `URL:` or `JSON:` reached the screen as a reason. A refusal's code now has an underscore (every
+    Insights and engine refusal's does) and its text is at most 300 characters; anything else is `FAILED` with a fixed
+    sentence, as Admin P19's review made `AdminCalls.read`.
+  - **R2, Low.** `Registry.js findList` compared a dynamic form's find location (`…form_list$Name#extension`, the framework's
+    `saved_find_location`) with the form's name, so such a find would show "Not valid" in SavedReports (no mr-boss list is
+    dynamic today). The extension is dropped before the check.
+  - **R3, Low.** `migrate#LegacySavedFinds` wrote its rows in a loop with no tolerance: a row that cannot be written is now
+    answered `failed` and logged by its id, and the others go on (AGENTS.md).
+  - **R4, Low.** InsightsTui's second feature rendered FlowMap, AlertDetail and Settings again in tui; it now reads the
+    sweep's renders, so each screen is rendered once per mode.
+- Tests: InsightsRecords, InsightsCatalog, InsightsDelivery, InsightsHome, InsightsDashboards (and InsightsDatasets, their
+  dependency): 28 of 28, 5.6 s of feature time, release binary. No screen changed, so no lint; no acceptance test, no suite.
+- For the lead:
+  - Budgets: unchanged.
+  - The user's call: F-P12-3 confirmed on the current code (above); §5's wall sharing across organizations as the Built note.
+  - Merge: the README's "They are built in one order, and the rest of each is next" now follows "Insights is built"; worth a
+    word when Admin P19's sentence is merged beside it.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-insights.md

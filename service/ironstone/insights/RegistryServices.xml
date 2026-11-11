@@ -270,7 +270,8 @@ along with this software (see the LICENSE.md file). If not, see
             (ScreenScheduled) of its screens, each by ID, owners, sharing and list or route, with what the mapping does: moved
             (its list or screen was replaced by a registered one: DatasetDetail/FieldList by DatasetFields, the copied scheduled
             finds' list by Scheduled reports' Schedules), kept, or invalid (its list is gone and nothing replaces it; SavedReports
-            shows it as not valid). Without apply nothing is written; with apply the moved ones are rewritten. A find keeps its
+            shows it as not valid). Without apply nothing is written; with apply the moved ones are rewritten, and one that cannot be
+            written is answered failed and logged while the others go on. A find keeps its
             owners, groups and fields; a field the new list lacks is named (unknownFields). No alias route is added.</description>
         <in-parameters>
             <parameter name="apply" type="Boolean" default="false"/>
@@ -278,7 +279,7 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters>
             <parameter name="applied" type="Boolean"/>
             <parameter name="finds" type="List"><description>formListFindId, description, ownerUserIds, sharedWithGroupIds,
-                formLocation, route, action (moved, kept, invalid), newFormLocation, unknownFields</description></parameter>
+                formLocation, route, action (moved, kept, invalid, failed), newFormLocation, unknownFields</description></parameter>
             <parameter name="schedules" type="List"><description>screenScheduledId, ownerUserId, sharedWithGroupId, screenPath,
                 formListFindId, action, newScreenPath</description></parameter>
         </out-parameters>

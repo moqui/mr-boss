@@ -8,6 +8,9 @@
 // Run: ./moq accept mr-boss --spec InsightsTui
 const root = "component://mr-boss/screen/Insights.xml"
 let screens
+// the sweep's renders of the twins the second feature reads, so no screen is rendered twice in tui
+const twins = ["Flows/FlowMap", "Alerts/AlertDetail", "Settings"]
+const kept = {}
 
 // the id parameters of the screens that open on one demo record (as AppStructure's demoRecords)
 const parameters = {
@@ -105,6 +108,7 @@ feature("every Insights screen and record mount renders in tui as a model docume
         const failures = []
         for (const path of screens) {
             const got = tui(path, parameters[path])
+            if (twins.includes(path)) kept[path] = got
             if (got.status != 200 || got.errors) failures.push(`${path}: status ${got.status}, ${got.errors}`)
             else if (!got.doc || got.doc.v != 1) failures.push(`${path}: not a TUI document: ${got.output.substring(0, 160)}`)
             else if (got.nodeErrors.length) failures.push(`${path}: ${got.nodeErrors.join(" | ")}`)
@@ -119,12 +123,14 @@ feature("every Insights screen and record mount renders in tui as a model docume
 })
 
 // the twins show their data: a flow map's lanes and steps, the alert list's heading and template, the organization's settings
+// (read from the sweep's renders above)
 feature("the twins show the demo's data: the supplier flow's steps, the shipped alert rule, Retail's settings", {
     when() {
+        const none = {nodeErrors: ["not rendered by the sweep"], output: ""}
         return {
-            flow: tui("Flows/FlowMap", parameters["Flows/FlowMap"]),
-            alert: tui("Alerts/AlertDetail", parameters["Alerts/AlertDetail"]),
-            settings: tui("Settings", parameters.Settings)
+            flow: kept["Flows/FlowMap"] || none,
+            alert: kept["Alerts/AlertDetail"] || none,
+            settings: kept.Settings || none
         }
     },
     then({flow, alert, settings}) {
