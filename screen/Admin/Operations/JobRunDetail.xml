@@ -31,7 +31,6 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- ignore-error clears a refusal's message -->
         <set field="recordFound" from="!!found?.run"/>
         <script>ec.message.clearErrors()</script>
-        <service-call name="ironstone.admin.ContextServices.get#AppAccess" in-map="{appRoot:appRoot}" out-map="appAccess"/>
         <script><![CDATA[
             const colors = {failed: 'negative', itemsFailed: 'deep-orange', stopped: 'deep-orange', running: 'info', waiting: 'info', succeeded: 'positive'}
             const itemColors = {failed: 'negative', uncertain: 'deep-orange', waiting: 'info', done: 'positive'}
@@ -39,8 +38,9 @@ along with this software (see the LICENSE.md file). If not, see
             const duration = value => value == null ? '' : value < 1000 ? value + ' ms' : value < 120000 ? Math.round(value / 1000) + ' s' : Math.round(value / 60000) + ' min'
             run = found?.run || {}
             stateColor = colors[run.state] || 'grey-7'
-            // Monitor is a section of System and opens by System's own grant: the link is shown to those it opens to
-            traceOpen = !!appAccess?.apps?.system && !!run.traceId
+            // Monitor is a section of System and opens by System's own grant: the link is shown to those it opens to, asked of
+            // the user's own authorization records, since this area's inheritable grant would answer the stack's question for everyone
+            traceOpen = ec.artifactExecution.isPermittedOwn('component://tools/screen/System.xml') && !!run.traceId
             evidence = recordFound ? [
                 {label: 'Job', value: run.title + (run.title !== run.jobName ? ' (' + run.jobName + ')' : '')},
                 {label: 'Owner', value: run.ownerApp || 'Not registered'},

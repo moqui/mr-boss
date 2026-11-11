@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.get#EffectiveSettings', {}, 'The instance settings are not available to you.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.get#EffectiveSettings', {}, 'The instance settings are not available to you.')"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <script><![CDATA[

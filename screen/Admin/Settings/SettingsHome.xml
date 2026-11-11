@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="settingsGroupEnumId"/>
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.find#Settings', {text:(text || null), ownerApp:(ownerApp || null), settingsGroupEnumId:(settingsGroupEnumId || null)}, 'The settings index is not available to you.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.find#Settings', {text:(text || null), ownerApp:(ownerApp || null), settingsGroupEnumId:(settingsGroupEnumId || null)}, 'The settings index is not available to you.')"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="entries" from="found?.entries || []"/>

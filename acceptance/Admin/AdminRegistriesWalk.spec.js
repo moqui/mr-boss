@@ -79,7 +79,7 @@ feature("the settings index opens Warehouse's settings for a warehouse manager, 
         const user = outsiders.warehouseManager
         return {
             index: asUser(user, () => lib.page("Settings/SettingsHome", {}, "html")),
-            areas: ["Home", "Operations", "Agents", "System", "Developer"].filter(area =>
+            areas: ["Home", "Operations", "Agents", "System"].filter(area =>
                 opened(asUser(user, () => lib.page(area, {}, "html")))
             ),
             warehouseSettings: asUser(user, () => appPage("Warehouse", "Settings/Index")),

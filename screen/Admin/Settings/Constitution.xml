@@ -141,7 +141,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="consFailure" from="null"/>
         <if condition="scopeAvailable">
             <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.ConstitutionServices.get#Constitution',
+            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.ConstitutionServices.get#Constitution',
                     {scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope), locale:(locale || null),
                         includeDocument:(isGlobal &amp;&amp; canEdit)}, 'The Constitution is not available to you.')"/>
             <set field="cons" from="called.out"/>

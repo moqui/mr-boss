@@ -25,9 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
     MailQueue and ServerConfiguration in P12, those three the operations operator's too, BOSS_ADM_PROTOCOLS_OPS), the integration
     administrator's and the administrator's (BOSS_ADM_INTEGRATIONS, BOSS_ADM_PROTOCOLS); 8 Operations
     (Health in P2, Monitoring in P1, the jobs with their phase); 11 Agents; 12 System, the framework's Tools System screens for ADMIN alone
-    (impl-admin F2: BOSS_ADMIN and BOSS_ADMIN_ADMIN are denied System.xml, so Tools' SYSTEM_APP grant decides); 13 Developer
-    tools. Operations is the reader's, the operations operator's and the administrator's; Agents and Developer tools the
-    administrator's (BOSS_ADM_<Area>). The other areas of design §1.2 (Security, Settings, Integrations, Mail and
+    (impl-admin F2: BOSS_ADMIN and BOSS_ADMIN_ADMIN are denied System.xml, so Tools' SYSTEM_APP grant decides).
+    Operations is the reader's, the operations operator's and the administrator's; Agents the
+    administrator's (BOSS_ADM_<Area>). The framework's tools are linked at their own app (Home's Tools link), not listed here. The other areas of design §1.2 (Security, Settings, Integrations, Mail and
     protocols, Data, Audit and privacy) and Settings' other screens are added by the phases that build them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Admin" menu-image="sym_o_admin_panel_settings" menu-image-type="icon">
@@ -38,6 +38,9 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
         <service-call name="ironstone.admin.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="admin"/>
         <set field="sharedLinks" from="admin.sharedLinks"/>
+        <!-- the framework's administration screens shown under this root (the Tools System screens mounted or included in the
+            areas; tools template/AdminMount.js): where their links go here. Set here so that their transitions read it too -->
+        <set field="adminMount" from="admin.mount"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -78,7 +81,6 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g o" label="Monitoring" screen="Admin/Operations/Monitoring"/>
             <key keys="g n" label="Agents" screen="Admin/Agents/Home"/>
             <key keys="g y" label="System" screen="Admin/System"/>
-            <key keys="g d" label="Developer tools" screen="Admin/Developer/Home"/>
         </keymap>
     </shell-providers>
 

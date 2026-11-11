@@ -114,7 +114,7 @@ feature("a delegated access administrator changes a member within a registered b
 // refusal shows only the screen's own words
 feature("a screen's refused read is shown as its reason, and any other failure as the screen's own words", {
     when() {
-        const calls = ec.resource.script("component://mr-boss/service/ironstone/admin/AdminCalls.js")
+        const calls = ec.resource.script("component://framework/service/org/moqui/admin/AdminCalls.js")
         return {
             refused: asUser(users.identity, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
             allowed: asUser(users.access, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),

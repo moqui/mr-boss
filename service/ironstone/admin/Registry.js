@@ -927,7 +927,7 @@ function supportSummary(p) {
     if (!ec.user.hasPermission("ADMIN_OVERVIEW_VIEW")) denied("PERMISSION_DENIED", "ADMIN_OVERVIEW_VIEW is required")
     const redacted = p.redacted === true || p.redacted === "true" || p.redacted === "Y"
     const clean = value => (value == null ? value : redacted ? String(value).replace(addressPattern, "[address]") : String(value))
-    const calls = ec.resource.script("component://mr-boss/service/ironstone/admin/AdminCalls.js")
+    const calls = ec.resource.script("component://framework/service/org/moqui/admin/AdminCalls.js")
     const section = (name, parameters, fallback) => calls.read(name, parameters, fallback)
     // the instance
     const named = section("org.moqui.admin.ConfigurationServices.get#InstancePreference", {settingKey: "instance.displayName"})

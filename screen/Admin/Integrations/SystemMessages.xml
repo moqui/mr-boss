@@ -124,7 +124,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="reviewRows" from="[]"/>
         <if condition="reviewing">
             <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.OperationServices.preview#Recovery',
+            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.OperationServices.preview#Recovery',
                     {targetKind:'SystemMessage', targetIdList:bulkChosen.slice(0, 25)}, 'The messages could not be reviewed')"/>
             <set field="previewed" from="called.out"/>
             <script><![CDATA[

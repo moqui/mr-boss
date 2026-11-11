@@ -2189,9 +2189,9 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Admin areas for their capability groups only (impl-admin P1; impl-commerce F45's pattern): each denies the root user group
         BOSS_ADMIN and allows its groups, with the root's filter sets. Home is every Admin user's; Operations (Monitoring in P1)
-        the administrative reader's, the operations operator's and the administrator's; Agents and Developer tools the
-        administrator's (AgentsHome and DeveloperHome then check AgentAdmin and each tool's own grant). Admin.js reads these
-        authorizations as the operations, agents and developer capabilities. A later phase that adds an area, or opens one to
+        the administrative reader's, the operations operator's and the administrator's; Agents the
+        administrator's (AgentsHome then checks AgentAdmin). Admin.js reads these
+        authorizations as the operations and agents capabilities. A later phase that adds an area, or opens one to
         another group, adds its rows here. -->
     <artifactGroups artifactGroupId="BOSS_ADM_OPERATIONS">
         <artifacts artifactName="component://mr-boss/screen/Admin/Operations.xml" artifactTypeEnumId="AT_XML_SCREEN"
@@ -2217,16 +2217,6 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_ADM_AGENTS_DENY" userGroupId="BOSS_ADMIN"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_ADM_AGENTS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
-                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
-            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-    </artifactGroups>
-    <artifactGroups artifactGroupId="BOSS_ADM_DEVELOPER">
-        <artifacts artifactName="component://mr-boss/screen/Admin/Developer.xml" artifactTypeEnumId="AT_XML_SCREEN"
-                inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_ADM_DEVELOPER_DENY" userGroupId="BOSS_ADMIN"
-                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_ADM_DEVELOPER_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>

@@ -245,15 +245,16 @@ feature("Home shows the reader's shortcuts, what needs attention, the setup chec
         home.output.includes("Health")
         home.output.includes("Monitoring")
         home.output.includes("Settings")
-        !home.output.includes("Developer tools")
+        // the framework's Tools are linked only to a user their own grant opens them to (an Admin grant opens none)
+        !home.output.includes("/qapps/tools")
         !home.output.includes("Not configured")
         !home.output.includes("Setup and health summaries are shown to administrative readers.")
     }
 })
 
-// Agents and Developer tools each alias their home file as Home; the file the directory adds is left out of the tabs
+// Agents aliases its home file as Home; the file the directory adds is left out of the tabs
 // (default-menu-include), and AgentsHome's destinations are screen paths under Admin (sharedLinks), not plain URLs.
-feature("Agents and Developer tools show one tab each, and AgentsHome's destinations open under Admin", {
+feature("Agents shows one tab, and AgentsHome's destinations open under Admin", {
     when() {
         const root = "component://webroot/screen/webroot.xml"
         const tabs = area =>
@@ -271,11 +272,10 @@ feature("Agents and Developer tools show one tab each, and AgentsHome's destinat
             ec.message.clearErrors()
             return {output, errors}
         })
-        return {agentTabs: tabs("Agents"), developerTabs: tabs("Developer"), agents}
+        return {agentTabs: tabs("Agents"), agents}
     },
-    then({agentTabs, developerTabs, agents}) {
+    then({agentTabs, agents}) {
         agentTabs == ["Home"]
-        developerTabs == ["Home"]
         agents.errors == []
         agents.output.includes('href="/apps/Admin/Settings/Constitution"')
         !agents.output.includes('class="disabled"')

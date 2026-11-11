@@ -127,11 +127,11 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('ironstone.admin.ContextServices.check#Record', {appRoot:appRoot, recordType:'group', recordId:userGroupId}, 'Group ' + userGroupId + ' is not available.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.ContextServices.check#Record', {appRoot:appRoot, recordType:'group', recordId:userGroupId}, 'Group ' + userGroupId + ' is not available.')"/>
         <set field="record" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <if condition="!failure">
-            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.get#Group', {userGroupId:userGroupId, includeOptions:true}, 'Group ' + userGroupId + ' is not available.')"/>
+            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.get#Group', {userGroupId:userGroupId, includeOptions:true}, 'Group ' + userGroupId + ' is not available.')"/>
             <set field="found" from="called.out"/>
             <set field="failure" from="called.failure"/>
         </if>
@@ -171,7 +171,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="grantList" from="[{action:grantAction, bundleGroupId:(grantBundleGroupId || null),
                     userPermissionId:(grantItem?.startsWith('p:') ? grantItem.slice(2) : null),
                     artifactGroupId:(grantItem?.startsWith('a:') ? grantItem.slice(2) : null)}]"/>
-            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.preview#Grants', {userGroupId:userGroupId, grantList:grantList}, 'The change could not be reviewed.')"/>
+            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.preview#Grants', {userGroupId:userGroupId, grantList:grantList}, 'The change could not be reviewed.')"/>
             <set field="preview" from="called.out"/>
             <set field="previewFailure" from="called.failure"/>
         </if>

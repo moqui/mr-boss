@@ -41,6 +41,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="sharedLinks" type="Map"/>
             <parameter name="linkBase" type="String"/>
             <parameter name="webBase" type="String"/>
+            <parameter name="mount" type="Map"><description>The mount of the framework's administration screens under this
+                root (adminMount; tools template/AdminMount.js): the routes of its links. Data only.</description></parameter>
         </out-parameters>
         <actions>
             <set field="module" value="component://mr-boss/service/ironstone/admin/Admin.js"/>
@@ -53,6 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="sharedLinks" from="shared.sharedLinks"/>
             <set field="linkBase" from="shared.linkBase"/>
             <set field="webBase" from="shared.webBase"/>
+            <set field="mount" from="shared.mount"/>
         </actions>
     </service>
     <service verb="check" noun="Record" allow-remote="false">
@@ -136,19 +139,6 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="module" value="component://mr-boss/service/ironstone/admin/Admin.js"/>
             <set field="found" from="ec.resource.script(module).execute('search', context)"/>
             <set field="rows" from="found.rows"/>
-        </actions>
-    </service>
-    <service verb="get" noun="AppAccess" allow-remote="false">
-        <description>Which framework apps the user's own groups open (system, tools, monitor, dashboards), by each app's own
-            grant: an Admin grant opens none of them. For the Monitoring and Agents landings' links. Refuses a user without
-            Admin.</description>
-        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
-        <out-parameters>
-            <parameter name="apps" type="Map"/>
-        </out-parameters>
-        <actions>
-            <set field="module" value="component://mr-boss/service/ironstone/admin/Admin.js"/>
-            <set field="apps" from="ec.resource.script(module).execute('appAccess', context)"/>
         </actions>
     </service>
     <service verb="get" noun="MemberScope" allow-remote="false">

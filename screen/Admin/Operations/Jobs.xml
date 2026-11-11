@@ -35,7 +35,6 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- ignore-error clears a refusal's message -->
         <set field="available" from="!!found?.jobList"/>
         <script>ec.message.clearErrors()</script>
-        <service-call name="ironstone.admin.ContextServices.get#AppAccess" in-map="{appRoot:appRoot}" out-map="appAccess"/>
         <script><![CDATA[
             const colors = {failing: 'negative', late: 'deep-orange', invalid: 'negative', running: 'info', requested: 'info', due: 'info', scheduled: 'positive'}
             jobs = Array.from(found?.jobList || []).map(row => Object.assign({}, row, {
@@ -53,7 +52,8 @@ along with this software (see the LICENSE.md file). If not, see
             findValues = {state: state || 'all', ownerApp: ownerApp, term: term}
             summaryText = available ? [found.failingCount + ' failing', found.lateCount + ' late', found.pausedCount + ' paused',
                 found.queuedCallCount ? found.queuedCallCount + ' queued calls waiting' : ''].filter(Boolean).join(' · ') : ''
-            alertsOpen = !!appAccess?.apps?.dashboards
+            // Dashboards by the user's own grant on its root: this area's inheritable grant would answer for everyone
+            alertsOpen = ec.artifactExecution.isPermittedOwn('component://tools/screen/Dashboards.xml')
         ]]></script>
     </actions>
     <widgets>

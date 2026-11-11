@@ -7,15 +7,13 @@
 // Run: ./moq accept mr-boss --spec AdminFoundationWalk
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, refusal, shell} = lib
-const areas = ["Home", "Operations", "Agents", "System", "Developer"]
+const areas = ["Home", "Operations", "Agents", "System"]
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 // every ironstone.admin service a screen calls, with parameters it accepts from a user who has Admin
 const adminServices = [
     ["ironstone.admin.ContextServices.get#SharedContext", {}],
     ["ironstone.admin.ContextServices.check#Record", {recordType: "organization", recordId: ids.organizationId}],
-    ["ironstone.admin.ContextServices.get#Choices", {choice: "organizations"}],
-    ["ironstone.admin.ContextServices.get#AppAccess", {}],
-    ["ironstone.admin.RegistryServices.find#ToolLinks", {}]
+    ["ironstone.admin.ContextServices.get#Choices", {choice: "organizations"}]
 ]
 // A direct entity create's refusal as the current user: "" when it is stored, else its message.
 function entityRefusal(entityName, fields) {

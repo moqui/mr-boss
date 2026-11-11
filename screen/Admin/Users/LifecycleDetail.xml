@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Lifecycle', {operationId:operationId}, 'Lifecycle operation ' + operationId + ' is not available.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Lifecycle', {operationId:operationId}, 'Lifecycle operation ' + operationId + ' is not available.')"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="operation" from="found?.operation || null"/>

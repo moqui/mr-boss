@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.get#SupportSummary',
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.get#SupportSummary',
                 {redacted:false}, 'The support summary is not available to you.')"/>
         <set field="failure" from="called.failure"/>
         <set field="summary" from="called.out?.summary || null"/>

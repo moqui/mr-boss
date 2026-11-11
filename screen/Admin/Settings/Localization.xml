@@ -62,10 +62,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="wantMissing" from="missing == 'true' || missing == 'Y'"/>
         <set field="pageSize" from="50"/>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="kind == 'messages' ? ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.find#LocalizedMessages',
+        <set field="called" from="kind == 'messages' ? ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.find#LocalizedMessages',
                 {locale:(locale || null), text:(text || null), missing:wantMissing, pageIndex:(pageIndex || 0), pageSize:pageSize},
                 'The translations are not available to you.')
-            : ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.find#LocalizedEntityFields',
+            : ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.ConfigurationServices.find#LocalizedEntityFields',
                 {targetKey:(targetKey || null), locale:(locale || null), text:(text || null), missing:wantMissing, pageIndex:(pageIndex || 0),
                     pageSize:pageSize}, 'The translations are not available to you.')"/>
         <set field="found" from="called.out"/>

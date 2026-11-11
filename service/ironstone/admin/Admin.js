@@ -1,6 +1,6 @@
 // The Admin app's context (impl-admin §2, P1; design-admin §1.1, §17.2): who may open Admin, the organizations they may
 // administer, their capabilities, the record checks every Admin screen and mount runs before a framework or Mantle service, the
-// drop-downs, the palette and the developer tool links. UserAccount, UserGroup and the security records carry no organization:
+// drop-downs, the palette and the mount of the framework's administration screens. UserAccount, UserGroup and the security records carry no organization:
 // an identity is in scope by Mantle's identity scope (Identity.js), the find on mantle.party.UserAccountOrganization (an
 // account with each internal organization its party works for) under the organization entity filters of the authorization
 // the call runs under (impl-admin §4, the P4 follow-up), with no organization math here; the framework org.moqui.admin and
@@ -13,7 +13,7 @@
 // Later phases extend the tables below rather than the functions: capabilityPermissions (a capability from a Moqui
 // permission), areas (the menu areas whose authorization is a capability), recordKinds (a kind of record: its read, the
 // capability that reads it and, once built, its screen), searchFinds (the palette), choiceSources (the drop-downs), linkPaths
-// (sharedLinks) and toolRoutes (DeveloperHome's framework tools).
+// (sharedLinks) and mountRoutes (where the framework's administration screens link under this root).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {find, one, rows, denied, call} = lib
 const access = lib.access
@@ -61,7 +61,7 @@ const capabilityPermissions = {
     agentAdmin: "AgentAdmin"
 }
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_ADM_<Area>): Operations for the reader,
-// the operations operator and the administrator; Agents and Developer tools for the administrator. Home is every Admin user's;
+// the operations operator and the administrator; Agents for the administrator. Home is every Admin user's;
 // System (the Tools System screens) is ADMIN's alone, by Tools' own grant (impl-admin F2), so it is the system capability
 // below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the
 // administrator; P4 Users (Users, UserDetail, Sessions) for the identity operator and the administrator; P7 Settings' Organizations,
@@ -91,8 +91,7 @@ const areas = {
     data: "Data",
     // P17: Audit (AuditChanges, AccessLog) for the audit reader and the administrator (BOSS_ADM_AUDIT)
     audit: "Audit",
-    agents: "Agents",
-    developer: "Developer"
+    agents: "Agents"
 }
 
 // ===== scope =====
@@ -346,9 +345,15 @@ const linkPaths = [
     // P19: the readiness and support summary
     "Operations/SupportSummary",
     "Agents/Home",
-    "System",
-    "Developer/Home"
+    "System"
 ]
+// The mount of the framework's administration screens under this root (adminMount; tools template/AdminMount.js, mr-moqui
+// plans/Admin-Screens-Down.md): where a link to a record goes here, by the key its registration or the framework's screen
+// names. Data only, never authority: a screen shown here still asks its service. A user's page is Admin's own, the staff
+// identity in the organizations administered, not System's account record.
+const mountRoutes = {
+    user: {url: "//Admin/Users/UserDetail", idParameter: "userId"}
+}
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")
     const found = scope()
@@ -362,7 +367,8 @@ function sharedContext(p) {
             appRoot: "Admin",
             linkBase: "//Admin",
             webBase: "/qapps/Admin",
-            sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"}
+            sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"},
+            mount: {routes: {user: null}}
         }
     const userScope = required(found)
     return {
@@ -373,7 +379,8 @@ function sharedContext(p) {
         appRoot: "Admin",
         linkBase: "//Admin",
         webBase: "/qapps/Admin",
-        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Admin/" + path]))
+        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Admin/" + path])),
+        mount: {routes: mountRoutes}
     }
 }
 
@@ -752,75 +759,6 @@ function choices(p) {
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 
-// ===== developer tools =====
-// The framework tools DeveloperHome links (design §13 DeveloperHome): each by its app (whose own grant opens it, never an Admin
-// one), its route under that app (System's under Admin › System, where an instance administrator opens it; the others at their
-// own app) and the permission its screen checks besides the app's grant, if any. Each keeps its own checks and environment
-// restrictions when opened; Admin adds no raw shell, service-run field or database restore.
-const toolRoutes = [
-    {tool: "Entity data", purpose: "Find, view and edit entity records", app: "tools", path: "Data/Grid"},
-    {tool: "Data views", purpose: "Saved views over entity data", app: "tools", path: "Data/Views"},
-    {tool: "Data export", purpose: "Export entity data as XML, JSON or CSV", app: "tools", path: "Data/Export"},
-    {tool: "Data load", purpose: "Load entity data files", app: "tools", path: "Data/Load"},
-    {tool: "Snapshots", purpose: "Database snapshots and their restore checks", app: "tools", path: "Data/Snapshots"},
-    {tool: "Data documents", purpose: "Data documents, feeds and search", app: "system", path: "DataDocument"},
-    {tool: "Status flows", purpose: "Status items and their transitions", app: "tools", path: "StatusFlows"},
-    {tool: "Entities", purpose: "Entity definitions, tables and indexes", app: "tools", path: "Schema"},
-    {tool: "Services", purpose: "Service reference and a service run", app: "tools", path: "Service"},
-    {
-        tool: "Load testing",
-        purpose: "Load scripts run against this server or another, and their runs",
-        app: "tools",
-        path: "Load/Scripts",
-        permission: "LOAD_RUNNER"
-    },
-    {tool: "SQL runner", purpose: "Run SQL statements", app: "tools", path: "Sql", permission: "SQL_RUNNER_WEB"},
-    {
-        tool: "Database",
-        purpose: "Database server, tables and statement statistics",
-        app: "tools",
-        path: "Database",
-        permission: "DATABASE_ADMIN"
-    },
-    {tool: "ETL", purpose: "Mappings, value maps and runs", app: "tools", path: "Etl"},
-    {tool: "Caches", purpose: "Cache statistics and clearing", app: "system", path: "Cache"},
-    {tool: "Resources", purpose: "Git repositories and resources", app: "system", path: "Resource"},
-    {tool: "Print", purpose: "Printers and print jobs", app: "system", path: "Print"},
-    {tool: "Instances", purpose: "Hosted instances", app: "system", path: "Instance"},
-    {tool: "Configuration", purpose: "The effective configuration", app: "system", path: "Conf"},
-    {tool: "Components", purpose: "Installed components", app: "system", path: "Components"}
-]
-const appNames = {system: "System", tools: "Tools"}
-const toolUrl = route => (route.app === "system" ? "/qapps/Admin/System/" : "/qapps/" + route.app + "/") + route.path
-// find#ToolLinks: the tools the user may open, each checked with its app's own grant and its permission; the others are left
-// out (design §13: omit unauthorized actions). Not an Admin capability: the user's own Tools grants decide.
-function toolLinks() {
-    const userScope = required()
-    const grants = userScope.grants
-    const links = []
-    for (const route of toolRoutes) {
-        try {
-            if (route.app === "system" ? !userScope.capabilities.system : !appGrant(grants, route.app)) continue
-            if (route.permission && !access.has(route.permission)) continue
-            links.push({
-                tool: route.tool,
-                purpose: route.purpose,
-                appName: appNames[route.app],
-                permission: route.permission || "",
-                url: toolUrl(route)
-            })
-        } catch (error) {
-            ec.logger.error("Admin tool link " + route.tool + " not checked: " + error.message)
-        }
-    }
-    return {links}
-}
-// The framework apps the user's own groups open, for the Monitoring and Agents landings' links (monitor, dashboards, system).
-function appAccess() {
-    const userScope = required()
-    return Object.fromEntries(Object.keys(appLocations).map(app => [app, appGrant(userScope.grants, app)]))
-}
-
 // get#MemberScope (P3): which of a group's members the user may change, the users of the organizations they administer (every
 // one for the administrator), and how many are outside; a member outside the scope is counted, never named.
 function memberScope(p) {
@@ -839,7 +777,7 @@ function memberScope(p) {
     return {inScopeUserIds: inScope, outsideCount: userIds.length - inScope.length}
 }
 
-const operations = {sharedContext, checkRecord, search, choices, toolLinks, appAccess, memberScope}
+const operations = {sharedContext, checkRecord, search, choices, memberScope}
 ;({
     // the scope for a phase's own module: the user's scope, the same refusing a user without Admin, and a record's check
     scope,
