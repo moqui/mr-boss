@@ -276,4 +276,25 @@ along with this software (see the LICENSE.md file). If not, see
         <field name="sequenceNum" type="number-integer"/>
         <field name="disabled" type="text-indicator"/>
     </entity>
+
+    <!-- Insights' dataset classes (impl-insights P10; design-insights §1.2 "Assist and MCP analytics", §2 "restricted values"):
+        what Assist and an MCP client may ask of a business dataset is decided by its class, a BOSS seed record its domain owner
+        fills beside the dataset's readiness provider. ironstone.insights.AssistServices read it: a dataset of business
+        operations answers Assist and MCP; one that carries costs or margins answers Assist only for a viewer who holds
+        PRODUCT_COST_VIEW and never an MCP client; a People or payroll one neither; a dataset without a row answers neither
+        (fail closed, a steward's new dataset included). A class opens nothing: the dataset's admission, artifact and row
+        filter still decide every read. Configuration rows with no organization, as the other registries here. -->
+    <entity entity-name="DatasetClass" package="ironstone.insights" use="configuration">
+        <description>The class of a business dataset for Assist and MCP (design §1.2), and the domain that owns its source
+            (design §11 SourceOwners). The row grants nothing.</description>
+        <field name="datasetId" type="id-long" is-pk="true"><description>The report engine's dataset definition id
+            (mantle-sales-orders)</description></field>
+        <field name="version" type="number-integer"/>
+        <field name="domainOwner" type="text-short"><description>The app whose records the dataset reads (Sales, Commerce,
+            Customer Service, Warehouse)</description></field>
+        <field name="classEnumId" type="id"><description>Business operations, costs and margins, or People and payroll</description></field>
+        <field name="disabled" type="text-indicator"/>
+        <relationship type="one" title="InsightsDatasetClass" related="moqui.basic.Enumeration" short-alias="datasetClass">
+            <key-map field-name="classEnumId" related="enumId"/></relationship>
+    </entity>
 </entities>

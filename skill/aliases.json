@@ -6,5 +6,7 @@
     "cart": ["basket", "shopping cart", "checkout"],
     "store": ["shop", "storefront"],
     "integration": ["channel", "marketplace", "connector"],
-    "retry": ["resend", "reprocess", "try again"]
+    "retry": ["resend", "reprocess", "try again"],
+    "metric": ["kpi", "measure"],
+    "dashboard": ["scorecard", "overview"]
 }

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AddToDashboard (design-insights §1.2 "Add to my dashboard"; impl-insights P10, INS-10): the root's response-action opens it
+    in the shell's quick-create frame from an Assist answer, with the answer's text in answerText (put there by the drawer; it is
+    never in the URL). The answer ends with the query Assist ran, as its Panel line (the insights-analyst skill): the user names
+    the panel, optionally picks a dashboard of their own, and ironstone.insights.AssistServices.add#AssistPanel saves it through
+    Analysis' own checked service, so it needs Insights authoring and the dataset, its class, each field and the engine's guards
+    are checked again. Nothing is saved until the user submits; a reader is told who can save it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Add to my dashboard" default-menu-include="false">
+
+    <transition name="addPanel" method="post">
+        <actions>
+            <service-call name="ironstone.insights.AssistServices.add#AssistPanel" out-map="added"
+                    in-map="{answerText:answerText, title:panelTitle, visualization:(visualization || null), dashboardId:(dashboardId || null)}"/>
+            <script>ec.message.addMessage(added.applied ? (added.dashboardId ? 'Added to your dashboard' : 'Saved to your library panels')
+                : added.reason, added.applied ? 'success' : 'danger')</script>
+            <set field="definitionId" from="added.dashboardId || added.definitionId"/>
+        </actions>
+        <conditional-response url="../Dashboard" condition="added?.applied &amp;&amp; added.dashboardId"><parameter name="definitionId"/></conditional-response>
+        <conditional-response url="../PanelDetail" condition="added?.applied"><parameter name="definitionId"/></conditional-response>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="canAdd" from="!!(insights.capabilities.author || insights.capabilities.datasetEdit)"/>
+        <if condition="canAdd">
+            <service-call name="ironstone.insights.AnalysisServices.get#AnalysisOptions" out-map="choices" transaction="force-new" ignore-error="true"
+                    in-map="{ownDashboards:true}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="dashboardOptions" from="choices?.dashboards || []"/>
+        <set field="visualizationOptions" from="choices?.visualizations || []"/>
+        <set field="panelValues" from="{answerText:'', panelTitle:'', visualization:'table'}"/>
+    </actions>
+    <widgets>
+        <label text="Add to my dashboard" type="h6"/>
+        <section name="NotAnAuthor" condition="!canAdd"><widgets>
+            <label type="p" style="m-muted" text="Saving a panel needs Insights authoring. Ask an author to save this answer, or open the numbers in Explore."/>
+        </widgets></section>
+        <section name="AddPanelShown" condition="canAdd"><widgets>
+            <label type="p" style="m-muted" text="Saves the query this answer ends with as a library panel of your own. It shows each viewer their own organizations' numbers."/>
+            <form-single name="AddPanelForm" transition="addPanel" map="panelValues">
+                <field name="panelTitle"><default-field title="Panel name"><text-line size="50"/></default-field></field>
+                <field name="visualization"><default-field title="Show as">
+                    <drop-down><list-options list="visualizationOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field></field>
+                <field name="dashboardId"><default-field title="Dashboard" tooltip="One of your own dashboards. Empty: the panel is kept in your library panels.">
+                    <drop-down allow-empty="true"><list-options list="dashboardOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field></field>
+                <field name="answerText"><default-field title="Answer" tooltip="The answer as Assist gave it; its last Panel line is the query that is saved">
+                    <text-area rows="6" cols="60"/>
+                </default-field></field>
+                <field name="submitButton"><default-field title="Add panel"><submit/></default-field></field>
+            </form-single>
+        </widgets></section>
+    </widgets>
+</screen>

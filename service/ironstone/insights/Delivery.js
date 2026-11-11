@@ -8,8 +8,9 @@
 // - who may do what, from the INSIGHTS_* permissions: reading (INSIGHTS_VIEW) sees what one received; INSIGHTS_SCHEDULE
 //   schedules a report for oneself; INSIGHTS_DISTRIBUTE adds other people and groups (the engine checks its own group delivery
 //   artifact as well, and each recipient's scope);
-// - the recipient cap, 50 until Insights Settings holds it (P10), which the engine keeps under the instance ceiling
-//   (Admin's report.groupRecipientCeiling);
+// - the recipient cap, the organization's Insights setting (Insights.js recipientCap; 50 unless the organization set its own),
+//   which the engine keeps under the instance ceiling (Admin's report.groupRecipientCeiling) and stores on the schedule at
+//   each save;
 // - display rows: names for ids, dates as text in the user's zone, states and safe reason codes in words;
 // - a refusal as an answer (applied false with reasonCode and reason), so a screen shows it; nothing is thrown at a transition
 //   for a refusal the user can act on;
@@ -23,8 +24,6 @@ const insights = ec.resource.script("component://mr-boss/service/ironstone/insig
 const {find, denied, reasonCode} = lib
 
 const ENGINE = "org.moqui.report.ReportServices."
-// the group recipient cap until P10's Insights Settings (impl-insights §4); the engine holds it under the instance ceiling
-const RECIPIENT_CAP = 50
 const TEMPLATE = "BOSS_INSIGHTS_REPORT"
 const DIGEST_PREFERENCE = "InsightsDigest"
 const SCHEDULE = "moqui.screen.ScreenScheduled"
@@ -426,7 +425,7 @@ function getSchedule(p) {
         group: row.deliveryMode === "group",
         recipientUserIds: row.deliveryMode === "group" ? Array.from(row.recipientUserIds || []) : [],
         recipientGroupIds: Array.from(row.recipientGroupIds || []),
-        recipientCap: row.recipientCap || RECIPIENT_CAP,
+        recipientCap: row.recipientCap || insights.recipientCap(),
         expectedRevision: row.revision
     })
     const recipients = schedule.recipientUserIds
@@ -533,7 +532,7 @@ function storeSchedule(p) {
             thruDate: p.thruDate ?? null,
             emailTemplateId: TEMPLATE,
             emailSubject: p.emailSubject ?? null,
-            recipientCap: RECIPIENT_CAP,
+            recipientCap: insights.recipientCap(),
             expectedRevision: p.expectedRevision == null || p.expectedRevision === "" ? null : Number(p.expectedRevision)
         }
         if (recipientsGiven) Object.assign(parameters, {recipientUserIds: users, recipientGroupIds: groups})
@@ -626,7 +625,7 @@ function checkAudience(p) {
             definitionId: p.definitionId,
             recipientUserIds: idList(p.recipientUserIds),
             recipientGroupIds: idList(p.recipientGroupIds),
-            recipientCap: RECIPIENT_CAP
+            recipientCap: insights.recipientCap()
         })
         return {
             recipients: audienceRows(checked),
@@ -935,11 +934,19 @@ function storeDefaultDigest(p) {
         return {definitionId: definitionId || null}
     }, "The Home digest could not be set")
 }
-// get#DigestPreview: Home's card, the user's default digest as their own preview; nothing when none is set or it is gone.
+// get#DigestPreview: Home's card, the user's default digest as their own preview, else the default digest of the organization
+// in scope (Insights Settings, P10) when they read it; nothing when neither is set or it is gone.
 function digestPreview() {
     reader()
-    const definitionId = defaultDigestId()
-    const chosen = definitionId ? digests().find(definition => definition.id === definitionId) : null
+    const all = digests()
+    const organizationPartyId = insights.context({appRoot: "Insights"}).organizationPartyId
+    const organizationDefault = organizationPartyId
+        ? insights.organizationSettings(organizationPartyId).values.defaultDigestDefinitionId
+        : null
+    const chosen =
+        all.find(definition => definition.id === defaultDigestId()) ||
+        all.find(definition => definition.id === organizationDefault) ||
+        null
     if (!chosen) return {digest: null, sections: [], missingCount: 0}
     const preview = sections(chosen)
     return {

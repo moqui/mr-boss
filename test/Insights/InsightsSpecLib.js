@@ -6,7 +6,7 @@ const ids = {
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // every Insights user's menu (P2: the dashboards and Report builder › Explore; P4: Reports and Saved reports; P7: Scheduled
     // reports and Management digest, which replaced the last copied screen, impl-insights F20; P8: Business alerts; P9:
-    // Business flows)
+    // Business flows; P10: Settings)
     readerMenu: [
         "Home",
         "Dashboards",
@@ -18,7 +18,8 @@ const ids = {
         "ScheduledReports",
         "ManagementDigest",
         "Alerts",
-        "Flows"
+        "Flows",
+        "Settings"
     ]
 }
 // The demo users of each group (each also in BOSS_INSIGHTS but the administrator), agents of Ziziwork Retail but the Services

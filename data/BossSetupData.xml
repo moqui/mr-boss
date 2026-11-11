@@ -4699,4 +4699,130 @@ along with this software (see the LICENSE.md file). If not, see
             description="What the server speaks besides the web (mail reception, SSH and Git, chat, calls and phones), the configuration each runs with and the checks of it"
             settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/Home"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Whoever operates the server" sequenceNum="113"/>
+    <!-- Insights P10 (impl-insights P10, §4; design-insights §11 Settings, DataReadiness, §1.2 "Assist and MCP analytics"; INS-01,
+        INS-09, INS-10): Settings, data readiness and Assist. -->
+    <!-- The organization's analytics defaults (impl-insights §4): PartySetting types registered for internal organizations, so
+        Admin's OrganizationDefaults lists them too. ironstone.insights.ContextServices.store#Settings writes them (Settings.js);
+        the two typed ones (an enumeration each) may also be changed in Admin as any typed default, and the others carry no
+        pattern, so Admin shows them as set by their owner: the recipient cap is refused above the instance ceiling
+        (report.groupRecipientCeiling) on its one path, and a default definition or time zone is checked as it will be read. The
+        cap's default is the engine's own (50); an empty default stays empty. -->
+    <moqui.basic.EnumerationType enumTypeId="InsightsWeekStart" description="Insights week start"/>
+    <!-- enumCode: the date histogram offset that starts a calendar week on the day (mr-moqui crates/moqui-core/src/search/time.rs) -->
+    <moqui.basic.Enumeration enumId="InsWsMonday" enumTypeId="InsightsWeekStart" description="Monday" enumCode="0d" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="InsWsSunday" enumTypeId="InsightsWeekStart" description="Sunday" enumCode="-1d" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="InsWsSaturday" enumTypeId="InsightsWeekStart" description="Saturday" enumCode="-2d" sequenceNum="3"/>
+    <moqui.basic.EnumerationType enumTypeId="InsightsFreshnessPolicy" description="Insights freshness policy"/>
+    <!-- enumCode: the minutes after its last rebuild at which Data readiness shows a source as stale -->
+    <moqui.basic.Enumeration enumId="InsFpHour" enumTypeId="InsightsFreshnessPolicy" description="One hour" enumCode="60" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="InsFpDay" enumTypeId="InsightsFreshnessPolicy" description="One day" enumCode="1440" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="InsFpWeek" enumTypeId="InsightsFreshnessPolicy" description="One week" enumCode="10080" sequenceNum="3"/>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDefaultDashboard" description="Insights Home dashboard">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDefaultMap" description="Insights flow map">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDefaultDigest" description="Insights management digest">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDisplayTimeZone" description="Insights display time zone">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsWeekStart" description="Insights week start"
+            enumTypeId="InsightsWeekStart">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsFreshnessPolicy" description="Insights source freshness"
+            enumTypeId="InsightsFreshnessPolicy" defaultValue="InsFpDay">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsGroupRecipientCap" description="Insights group recipient cap"
+            defaultValue="50">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <!-- Insights' row in Admin's settings index (owner contract, design-admin §14.2): shown to a viewer whose own groups open the
+        route and who holds INSIGHTS_SETTINGS_VIEW. Its sources' readiness is Data readiness (one provider per source, so the
+        entry names none). -->
+    <ironstone.admin.SettingsEntry settingsKey="insights.settings" version="1" ownerApp="Insights" title="Insights settings"
+            description="Analytics defaults by organization: the Home dashboard, flow map and digest, display time zone and week, source freshness and the group recipient cap; data readiness of the business datasets"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="Insights/Settings/AnalyticsSettings"
+            viewPermission="INSIGHTS_SETTINGS_VIEW" configuredBy="Insights administrator" sequenceNum="95"/>
+    <!-- Data readiness for every Insights reader (design §11 DataReadiness; §13.3 "Source quality"): Admin's get#Readiness alone,
+        beside BOSS_INS_READINESS (the author, the steward and the administrator, who also hold request#Refresh). Each provider's
+        own permission and its owner's check still decide what a reader sees; the reader requests no refresh. -->
+    <artifactGroups artifactGroupId="BOSS_INS_READINESS_READ" description="Insights: reading Admin's readiness registry">
+        <artifacts artifactName="ironstone.admin.RegistryServices.get#Readiness" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_INS_READINESS_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_READINESS_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_READINESS_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- and the engine's listing of the business datasets a viewer reads (find#BusinessDatasets, which answers a non-steward only
+        the admitted datasets they read): each source's readiness check and Assist's choice of datasets read it, so the reading
+        groups hold it as the author and the steward do (BOSS_INS_DATASET_READ above), ALWAYS past BOSS_INS_REPORT_ENGINE's
+        deny. It lists; each dataset's own artifact and row filter still decide every read. -->
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_READ">
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The class of each business dataset for Assist and MCP (design §1.2; entity/AdminEntities.xml DatasetClass), each domain
+        owner's row beside its readiness provider (owner contracts). Sales items holds each line's acquire cost and margins, so it
+        is a cost dataset: Assist reads it only for a holder of PRODUCT_COST_VIEW and an MCP client never. The others are
+        business operations; a field of theirs named for a cost or a margin (sales orders' item cost totals) is refused the same
+        way (Assist.js). A dataset without a row answers neither surface. -->
+    <moqui.basic.EnumerationType enumTypeId="InsightsDatasetClass" description="Insights dataset class"/>
+    <moqui.basic.Enumeration enumId="InsDcOperations" enumTypeId="InsightsDatasetClass" description="Business operations" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="InsDcCost" enumTypeId="InsightsDatasetClass" description="Costs and margins" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="InsDcPeople" enumTypeId="InsightsDatasetClass" description="People and payroll" sequenceNum="3"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-sales-orders" version="1" domainOwner="Sales" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-sales-items" version="1" domainOwner="Sales" classEnumId="InsDcCost"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-inventory" version="1" domainOwner="Warehouse" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-commerce-checkouts" version="1" domainOwner="Commerce" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-commerce-payment-attempts" version="1" domainOwner="Commerce" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-commerce-feed-builds" version="1" domainOwner="Commerce" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-service-clocks" version="1" domainOwner="Customer Service" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-service-breaches" version="1" domainOwner="Customer Service" classEnumId="InsDcOperations"/>
+    <!-- Assist and MCP (design §1.2, INS-10): the read tools of the insights-analyst skill (skill/insights-analyst.md), each run
+        as the signed-in user under the framework's read fence. The catalog and a measure's meaning are navigation and wording,
+        offered to both surfaces. A number is a saved panel's own result or a typed query over an admitted dataset
+        (ironstone.insights.AssistServices), one service per surface since a tool is offered to Assist or to MCP by its row: the MCP pair never reads a cost or a
+        margin. The report engine's run#Query is not exposed: a raw query could not be held to a dataset's class. -->
+    <moqui.agent.AgentToolExposure toolName="insights_find_reports" serviceName="ironstone.insights.RegistryServices.find#Reports"
+            title="Report catalog"
+            description="find#Reports: the catalog reports the user may read, each with its owner app, business purpose, date or status basis, formats and route; narrow by ownerApp, purpose or text. No report runs and no figure is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_get_metric" serviceName="ironstone.insights.RegistryServices.get#Metric"
+            title="What a measure means"
+            description="get#Metric: a registered business measure's meaning (owner, version, grain, basis, aggregation, numerator and denominator, unit policy, dimensions, exclusions, scope, freshness and comparison rules), by metricId, or by the definitionId and panelId of a dashboard panel that names it. A panel without a registered measure answers available false. No figure is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_datasets" serviceName="ironstone.insights.AssistServices.find#QuerySources"
+            title="Datasets to ask"
+            description="find#QuerySources: the admitted business datasets the user reads that insights_query can ask, each with its title, domain owner and whether it holds costs; with a datasetId, its measureFields, groupFields and filterFields, the aggregates and the time grains. Cost and margin datasets and fields are listed only for a user who may see costs."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_query" serviceName="ironstone.insights.AssistServices.run#DatasetQuery"
+            title="Ask a business number"
+            description="run#DatasetQuery: one aggregate over an admitted business dataset from typed choices: datasetId, aggregate (count, sum, avg, min, max, cardinality), measureField, groupBy, groupBy2, timeGrain (day, week, month, quarter, year), filterField with filterValue, from and thru (relative such as now-30d, now-1M/M, now/M, or ISO dates; the last 30 days when empty) and organizationPartyId for one of the user's organizations. It runs as the user with the dataset's row filter and guards, as a dashboard does. Group an amount by its currency field. A refusal (available false with refusedCode and reason) is the answer."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_panel" serviceName="ironstone.insights.AssistServices.run#PanelQuery"
+            title="Read a dashboard panel"
+            description="run#PanelQuery: a saved panel's own numbers as its dashboard shows them to the user, by the dashboard's definitionId and the panel's panelId (or a library panel's definitionId), with from and thru (relative such as now-30d, now-1M/M, now/M, or ISO dates; the last 30 days when empty) and organizationPartyId for one of the user's organizations. Use it for a number that is on a dashboard: it runs the panel's saved query, filters and exclusions, and answers its rows, the count of source records and the measure's registered meaning. No record is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_operations_panel" serviceName="ironstone.insights.AssistServices.run#OperationsPanel"
+            title="Read a business operations panel"
+            description="run#OperationsPanel: a saved panel's own numbers as its dashboard shows them to the user, by the dashboard's definitionId and the panel's panelId (or a library panel's definitionId), with from, thru and organizationPartyId for one of the user's organizations. A panel that reads cost, margin, People or payroll data in any of its queries is refused, whatever the user holds."
+            classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_operations_datasets" serviceName="ironstone.insights.AssistServices.find#OperationsSources"
+            title="Business operations datasets"
+            description="find#OperationsSources: the admitted business operations datasets the user reads that insights_operations_query can ask and, with a datasetId, its measureFields, groupFields and filterFields. Cost, margin, People and payroll data are never listed."
+            classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_operations_query" serviceName="ironstone.insights.AssistServices.run#OperationsQuery"
+            title="Ask a business operations number"
+            description="run#OperationsQuery: one aggregate over an admitted business operations dataset from typed choices: datasetId, aggregate (count, sum, avg, min, max, cardinality), measureField, groupBy, groupBy2, timeGrain, filterField with filterValue, from and thru, and organizationPartyId for one of the user's organizations. It runs as the user with the dataset's row filter and guards. Cost, margin, People and payroll datasets and fields are refused (DATASET_RESTRICTED, FIELD_RESTRICTED) whatever the user holds."
+            classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
 </entity-facade-xml>

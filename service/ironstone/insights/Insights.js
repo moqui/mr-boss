@@ -17,7 +17,7 @@ const access = lib.access
 
 const rootLocation = "component://mr-boss/screen/Insights.xml"
 const areaLocation = area => "component://mr-boss/screen/Insights/" + area + ".xml"
-// the default reporting range until P10's organization analytics defaults: relative, so it needs no zone or calendar
+// the default reporting range: relative, so it needs no zone or calendar
 const defaultRange = {from: "now-30d", thru: "now"}
 
 // ===== capabilities =====
@@ -140,6 +140,84 @@ function organizationIds(userScope) {
     return rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
 }
 
+// ===== organization analytics defaults (P10; design §11 Settings, impl-insights §4) =====
+// The organization's analytics defaults are registered PartySetting types mr-boss seeds (data/BossSetupData.xml), each for the
+// OrgInternal role, so Admin's OrganizationDefaults lists them too: the default dashboard, flow map and digest, the display
+// time zone and week start of Insights' own queries, the freshness policy of DataReadiness and the group recipient cap.
+// ContextServices.store#Settings writes them (Settings.js); the readers are here, for every module that applies one. A value
+// is the organization's own, else its type's default, else none: an empty choice stays empty.
+const settingTypes = {
+    defaultDashboardId: "InsightsDefaultDashboard",
+    defaultMapId: "InsightsDefaultMap",
+    defaultDigestDefinitionId: "InsightsDefaultDigest",
+    displayTimeZone: "InsightsDisplayTimeZone",
+    weekStart: "InsightsWeekStart",
+    freshnessPolicyId: "InsightsFreshnessPolicy",
+    groupRecipientCap: "InsightsGroupRecipientCap"
+}
+const ceilingKey = "report.groupRecipientCeiling"
+// what the report engine itself falls back to (mr-moqui crates/moqui-report/src/delivery.rs)
+const fallbackCeiling = 200
+const fallbackCap = 50
+function organizationSettings(partyId) {
+    const typeIds = Object.values(settingTypes)
+    const types = Array.from(find("mantle.party.PartySettingType").condition("partySettingTypeId", "in", typeIds).list())
+    const own = partyId
+        ? Array.from(find("mantle.party.PartySetting", {partyId}).condition("partySettingTypeId", "in", typeIds).list())
+        : []
+    const values = {}
+    const sources = {}
+    for (const [name, typeId] of Object.entries(settingTypes)) {
+        const stored = own.find(row => row.partySettingTypeId === typeId)?.settingValue
+        const fallback = types.find(row => row.partySettingTypeId === typeId)?.defaultValue
+        const value = stored != null && stored !== "" ? stored : fallback
+        values[name] = value == null || value === "" ? null : String(value)
+        sources[name] = stored != null && stored !== "" ? "organization" : values[name] != null ? "default" : "none"
+    }
+    return {values, sources}
+}
+// Admin's instance ceiling for group recipients (the instance preference the report engine reads too): a registered,
+// nonsecret preference, read whoever asks.
+function recipientCeiling() {
+    try {
+        const ceiling = Number(
+            lib.probe("org.moqui.admin.ConfigurationServices.get#InstancePreference", {settingKey: ceilingKey}).numberValue
+        )
+        if (Number.isInteger(ceiling) && ceiling > 0) return ceiling
+    } catch (error) {
+        ec.logger.error(
+            "Insights: the group recipient ceiling could not be read; using " + fallbackCeiling + ": " + error.message
+        )
+    }
+    return fallbackCeiling
+}
+const capOf = (values, ceiling) => {
+    const cap = Number(values.groupRecipientCap)
+    return Math.min(Number.isInteger(cap) && cap > 0 ? cap : fallbackCap, ceiling)
+}
+// The group recipient cap a schedule or an alert rule is saved and checked with: the cap of the organization the caller works
+// in (the active one), else the lowest of the organizations in the caller's scope (every internal one for the administrator
+// of all with none active: the P10 review, R3), never above the instance ceiling, which the engine holds it under as well.
+function recipientCap(userScope = scope()) {
+    const ceiling = recipientCeiling()
+    const active = userScope.activeOrganizationPartyId
+    const ids = active ? [active] : organizationIds(userScope).slice(0, 50)
+    return Math.min(...(ids.length ? ids : [null]).map(partyId => capOf(organizationSettings(partyId).values, ceiling)))
+}
+// The organization's display zone and week start as the engine's calendar bucket parameters (time_zone, and offset for a
+// week: the week start's enumCode), for Insights' own typed queries; nothing for a choice left empty, where the viewer's
+// zone and the instance's week start apply as everywhere else.
+function calendarParameters(partyId, unit) {
+    const {values} = organizationSettings(partyId)
+    const parameters = {}
+    if (values.displayTimeZone) parameters.time_zone = values.displayTimeZone
+    if (unit === "week" && values.weekStart) {
+        const offset = one("moqui.basic.Enumeration", {enumId: values.weekStart, enumTypeId: "InsightsWeekStart"})?.enumCode
+        if (offset) parameters.offset = offset
+    }
+    return parameters
+}
+
 // ===== context =====
 // The Insights routes other screens link to (sharedLinks), by path under the root; each phase adds the screens it builds. The
 // copied screens (F20) are not canonical links: their phases replace them.
@@ -184,7 +262,10 @@ const linkPaths = [
     "Flows/FlowMap",
     "Flows/FlowMaps",
     "Flows/FlowMapEditor",
-    "Flows/ProcessStory"
+    "Flows/ProcessStory",
+    // P10: Settings and data readiness (design §11)
+    "Settings/AnalyticsSettings",
+    "Settings/DataReadiness"
 ]
 // The record screens with tabs: under Insights their one subscreen is InsightsRecord (Shared/InsightsRecord.xml), which the
 // links name, since a screen's default tab is chosen before the app's context is known.
@@ -228,7 +309,7 @@ function scopeVariables(found, definition) {
 }
 // get#Context: the organization choices, the organization in scope (a requested one only when it is the user's, else the active
 // one, else the only one), the capabilities, the safe defaults (the reporting range; currencies kept apart, never a default
-// currency) and the canonical links. A requested organization outside the user's is refused (ORGANIZATION_UNAVAILABLE), whether
+// currency; the organization in scope's display zone and week start where it set them) and the canonical links. A requested organization outside the user's is refused (ORGANIZATION_UNAVAILABLE), whether
 // or not it exists, so a forged id learns nothing.
 function context(p) {
     if (p.appRoot && p.appRoot !== "Insights") denied("INSIGHTS_CONTEXT", "Insights context is not available")
@@ -242,13 +323,20 @@ function context(p) {
     const organizations = ids
         .map(partyId => ({value: partyId, label: partyName(partyId)}))
         .sort((a, b) => a.label.localeCompare(b.label))
+    const settings = organizationPartyId ? organizationSettings(organizationPartyId).values : {}
     return {
         capabilities: userScope.capabilities,
         organizations,
         organizationPartyIds: ids,
         organizationPartyId,
         allOrganizations: !userScope.ownerIds,
-        defaults: {from: defaultRange.from, thru: defaultRange.thru, currencyMode: "native"},
+        defaults: {
+            from: defaultRange.from,
+            thru: defaultRange.thru,
+            currencyMode: "native",
+            displayTimeZone: settings.displayTimeZone || null,
+            weekStart: settings.weekStart || null
+        },
         appRoot: "Insights",
         linkBase: "//Insights",
         webBase: "/qapps/Insights",
@@ -327,6 +415,14 @@ const operations = {context, shareGroups, shareDashboard}
     asViewer,
     asViewerApart,
     shareGroupIds,
+    // P10: the organization's analytics defaults, for Settings.js and every module that applies one
+    settingTypes,
+    organizationSettings,
+    recipientCeiling,
+    recipientCap,
+    calendarParameters,
+    partyName,
+    organizationIds,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights operation " + op)
         return operations[op](parameters)

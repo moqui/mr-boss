@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Settings › Settings (design-insights §11 Settings; impl-insights P10; style-guide §3.9 Settings): for the
+    organization in scope, ScopeAndDelivery (the controls in effect, in words: the fiscal calendar, which is Accounting's, the
+    display zone and week, delivery and who may schedule, the group recipient cap under the instance ceiling, exports,
+    retention and freshness; every Insights reader's to read), and for a holder of INSIGHTS_SETTINGS_VIEW AnalyticsDefaults
+    (the organization's defaults: registered PartySetting types, changed through
+    ironstone.insights.ContextServices.store#Settings by a holder of INSIGHTS_SETTINGS_EDIT at the revision read) and
+    SourceOwners (each registered source's domain owner, class, state and steward, with its Data readiness link). An empty
+    choice stays empty. A cap above Admin's ceiling is refused with the reason; the ceiling itself is Admin's instance
+    setting. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1">
+
+    <parameter name="organizationPartyId"/>
+
+    <transition name="storeSettings" method="post">
+        <actions>
+            <service-call name="ironstone.insights.ContextServices.store#Settings" out-map="stored"
+                    in-map="{organizationPartyId:settingsOrganizationPartyId, defaultDashboardId:defaultDashboardId, defaultMapId:defaultMapId,
+                        defaultDigestDefinitionId:defaultDigestDefinitionId, displayTimeZone:displayTimeZone, weekStart:weekStart,
+                        freshnessPolicyId:freshnessPolicyId, groupRecipientCap:groupRecipientCap, expectedRevision:expectedRevision}"/>
+            <script>ec.message.addMessage(stored.applied ? (stored.changedCount ? 'Settings saved' : 'Nothing changed') : stored.reason,
+                stored.applied ? 'success' : 'danger')</script>
+            <set field="organizationPartyId" from="settingsOrganizationPartyId"/>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+
+    <actions>
+        <!-- a member of the root group alone reads nothing in Insights: told so, as on Home; an organization that is not the
+            viewer's shows nothing -->
+        <if condition="insights.capabilities.view">
+            <service-call name="ironstone.insights.ContextServices.get#Settings" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:(organizationPartyId || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="scopeOptions" from="found?.organizations || insights.organizations || []"/>
+        <set field="controlRows" from="found?.controls || []"/>
+        <set field="sourceRows" from="found?.sources || []"/>
+        <set field="options" from="found?.options || {}"/>
+        <set field="formValues" from="Object.assign({settingsOrganizationPartyId:found?.organizationPartyId, expectedRevision:found?.revision}, found?.settings || {})"/>
+        <set field="findValues" from="{organizationPartyId:(found?.organizationPartyId || organizationPartyId)}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Insights settings" type="h5"/>
+                <label text="${found?.organizationName}" type="p" style="text-caption m-muted q-mb-none" condition="found?.organizationName"/>
+            </container>
+        </container>
+        <label text="Insights settings are shown to Insights readers." type="p" style="m-muted" condition="!insights.capabilities.view"/>
+        <label text="These settings are not available for that organization." type="p" style="m-muted"
+                condition="insights.capabilities.view &amp;&amp; !found"/>
+
+        <section name="OrganizationChoice" condition="scopeOptions.length &gt; 1"><widgets>
+            <form-single name="SettingsOrganization" transition="." map="findValues">
+                <field name="organizationPartyId"><default-field title="Organization">
+                    <drop-down allow-empty="true"><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field></field>
+                <field name="apply"><default-field><submit text="Show"/></default-field></field>
+                <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="apply"/></field-row-big></field-layout>
+            </form-single>
+        </widgets></section>
+        <label text="Choose an organization to see its settings." type="p" style="m-muted"
+                condition="found &amp;&amp; !found.organizationPartyId"/>
+
+        <section name="AnalyticsDefaultsShown" condition="found?.canView &amp;&amp; found?.settings"><widgets>
+            <container-box>
+                <box-header title="Analytics defaults"/>
+                <box-body>
+                    <label type="p" style="m-muted" text="What ${found.organizationName} starts from. Each person's own choices on Home, Business flows and Management digest come first, and a default is shown only to someone who may read it."/>
+                    <label type="p" style="m-muted" condition="!found.canEdit" text="You may read these settings. Changing them needs the Insights administrator."/>
+                    <form-single name="AnalyticsDefaults" transition="storeSettings" map="formValues">
+                        <field name="settingsOrganizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                        <field name="defaultDashboardId"><default-field title="Home dashboard" tooltip="The dashboard Home shows until someone arranges their own. Empty: the suite overview.">
+                            <drop-down allow-empty="true"><list-options list="options.dashboards || []" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="defaultMapId"><default-field title="Flow map" tooltip="The map Business flows opens until someone chooses their own.">
+                            <drop-down allow-empty="true"><list-options list="options.maps || []" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="defaultDigestDefinitionId"><default-field title="Management digest" tooltip="The digest Home previews until someone chooses their own.">
+                            <drop-down allow-empty="true"><list-options list="options.digests || []" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="displayTimeZone"><default-field title="Display time zone" tooltip="The zone Analysis and Assist group days, weeks and months by. Empty: each viewer's own.">
+                            <drop-down allow-empty="true"><list-options list="options.timeZones || []" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="weekStart"><default-field title="Week starts on" tooltip="Empty: the instance's week start.">
+                            <drop-down allow-empty="true"><list-options list="options.weekStarts || []" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="freshnessPolicyId"><default-field title="A source is stale after" tooltip="How long after its last rebuild Data readiness shows a source as stale.">
+                            <drop-down allow-empty="true"><list-options list="options.freshnessPolicies || []" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="groupRecipientCap"><default-field title="Group recipients, at most" tooltip="For one scheduled report or alert rule. The instance allows up to ${found.recipientCeiling}, which is set in Admin.">
+                            <text-line size="6"/>
+                        </default-field></field>
+                        <field name="save"><conditional-field condition="found.canEdit"><submit text="Save settings" type="primary"/></conditional-field>
+                            <default-field><ignored/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="defaultDashboardId"/><field-ref name="defaultMapId"/></field-row>
+                            <field-row><field-ref name="defaultDigestDefinitionId"/><field-ref name="freshnessPolicyId"/></field-row>
+                            <field-row><field-ref name="displayTimeZone"/><field-ref name="weekStart"/></field-row>
+                            <field-row><field-ref name="groupRecipientCap"/><field-ref name="save"/></field-row>
+                        </field-layout>
+                    </form-single>
+                </box-body>
+            </container-box>
+        </widgets></section>
+
+        <section name="ScopeAndDeliveryShown" condition="controlRows.length"><widgets>
+            <container-box>
+                <box-header title="Scope and delivery"/>
+                <box-body-nopad>
+                    <form-list name="ScopeAndDelivery" list="controlRows" skip-form="true" paginate="false">
+                        <field name="control"><default-field title="Control"><display/></default-field></field>
+                        <field name="value"><default-field title="In effect"><display/></default-field></field>
+                        <field name="note"><default-field title="Where it is set">
+                            <label text="${note}"/>
+                            <link url="${url}" url-type="plain" text="Open" link-type="anchor" condition="url"/>
+                        </default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="control"/><field-ref name="note"/></column>
+                            <column><field-ref name="value"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+
+        <section name="SourceOwnersShown" condition="sourceRows.length"><widgets>
+            <container-box>
+                <box-header title="Source owners"/>
+                <box-body-nopad>
+                    <form-list name="SourceOwners" list="sourceRows" skip-form="true" paginate="false">
+                        <field name="source"><default-field title="Source">
+                            <link url="${readinessUrl}" url-type="plain" text="${source}" link-type="anchor"/>
+                        </default-field></field>
+                        <field name="domainOwner"><default-field title="Owner"><display/></default-field></field>
+                        <field name="className"><default-field title="Class"><display/></default-field></field>
+                        <field name="state"><default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(state)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state})}]]></text>
+                                <text type="html">${state}</text>
+                            </render-mode>
+                        </default-field></field>
+                        <field name="stewardName"><default-field title="Steward"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="source"/><field-ref name="domainOwner"/></column>
+                            <column><field-ref name="state"/><field-ref name="className"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

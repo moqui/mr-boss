@@ -428,13 +428,18 @@ function findMaps(p) {
         ]
     }
 }
-// The map FlowMap opens without one named: the viewer's default if they still read it, else a map of the organization in
-// scope, else the suite's customer flow, else the first.
+// The map FlowMap opens without one named: the viewer's default if they still read it, else the default of the organization
+// in scope (Insights Settings, P10) if they read it, else a map of that organization, else the suite's customer flow, else
+// the first.
 function openingMapId(userScope, organizationPartyId) {
     const maps = readableMaps(userScope)
     const chosen = defaultMapId()
+    const organizationDefault = organizationPartyId
+        ? insights.organizationSettings(organizationPartyId).values.defaultMapId
+        : null
     const pick =
         maps.find(definition => definition.id === chosen) ||
+        maps.find(definition => definition.id === organizationDefault) ||
         maps.find(
             definition =>
                 !definition.readOnly && organizationPartyId && definition.body.organizationPartyId === organizationPartyId

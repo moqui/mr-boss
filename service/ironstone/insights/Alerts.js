@@ -11,8 +11,8 @@
 //   one's own state of them; INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE sets a rule for oneself (from a panel, or a copy of a
 //   shipped rule); INSIGHTS_DISTRIBUTE adds other people and groups (the engine checks its own group delivery artifact as
 //   well, and each recipient's scope);
-// - the rule's fixed parts: Insights' private topic, its email template, the link to AlertDetail and the recipient cap (50
-//   until Insights Settings holds it, P10), none of them a caller's to name;
+// - the rule's fixed parts: Insights' private topic, its email template, the link to AlertDetail and the recipient cap (the
+//   organization's Insights setting, Insights.js recipientCap), none of them a caller's to name;
 // - a new rule and a copy start paused (not validated); Activate runs the rule's reading as the caller first, then saves it
 //   active, which is the engine's check of the owner's sources and every recipient;
 // - display rows: names for ids, dates as text, states and safe reason codes in words; a refusal is an answer (applied false
@@ -28,8 +28,6 @@ const {engine, attempt, proposable, userNames, groupNames, dateText, deliverySta
 const TOPIC = "InsightsBusinessAlert"
 const TEMPLATE = "BOSS_INSIGHTS_ALERT"
 const DETAIL_LINK = "/qapps/Insights/Alerts/AlertDetail"
-// the group recipient cap until P10's Insights Settings (impl-insights §4); the engine holds it under the instance ceiling
-const RECIPIENT_CAP = 50
 // most severe first; No data and Error say the health is not known
 const stateWords = {
     Error: ["Error (not known)", "warning"],
@@ -428,7 +426,7 @@ function getAlert(p) {
                 definitionId: definition.id,
                 recipientUserIds: alert.recipientUserIds,
                 recipientGroupIds: alert.recipientGroupIds,
-                recipientCap: audience.recipientCap || RECIPIENT_CAP
+                recipientCap: audience.recipientCap || insights.recipientCap()
             })
             audienceRows = Array.from(checked.recipients || []).map(recipient => ({
                 userId: recipient.userId,
@@ -538,7 +536,7 @@ function audienceOf(p, capabilities, existing) {
         recipientGroupIds: groups,
         channels: email ? ["notification", "email"] : ["notification"],
         topic: TOPIC,
-        recipientCap: RECIPIENT_CAP
+        recipientCap: insights.recipientCap()
     }
     if (email) audience.emailTemplateId = TEMPLATE
     // each series is its own notification (no grouping across series), so nothing is gained by waiting to group; a state
@@ -645,11 +643,14 @@ function storeAlert(p) {
             if (group && !insights.shareGroupIds().includes(group))
                 denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
             definition.userGroupId = group
-        } else
+        } else {
+            // the cap kept from the last save, never above the organization's setting as it is now
+            const cap = insights.recipientCap()
             body.audience = Object.assign({}, body.audience, {
                 topic: TOPIC,
-                recipientCap: body.audience?.recipientCap || RECIPIENT_CAP
+                recipientCap: Math.min(Number(body.audience?.recipientCap) || cap, cap)
             })
+        }
         body.detailLink = DETAIL_LINK
         delete body.contactPoints
         delete body.contactPointRefs
@@ -689,7 +690,7 @@ function copyAlert(p) {
                 recipientGroupIds: [],
                 channels: ["notification"],
                 topic: TOPIC,
-                recipientCap: RECIPIENT_CAP,
+                recipientCap: insights.recipientCap(),
                 groupWaitSeconds: 0
             }
         })

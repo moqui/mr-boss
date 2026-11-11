@@ -212,6 +212,9 @@ function drill(p) {
         breakdownDimension: answer.breakdown?.dimension || null,
         breakdownRefused: answer.breakdown?.refused || null,
         breakdown: frameRows(answer.breakdown?.frames, false),
+        // the panel's own result as the engine answered it, for a module that presents it itself (Assist.js, which checks
+        // the dataset's class and leaves restricted measures out); not an out-parameter of get#Drill
+        panelFrames: selected.length ? [] : Array.from(answer.panelFrames || []),
         rowsAvailable: !!answer.rowsAvailable,
         rowsReason: answer.rowsAvailable ? null : "You may read this total, not the records behind it.",
         columns,

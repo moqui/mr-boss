@@ -79,6 +79,7 @@ const demoParameters = {
     "Insights/Flows/FlowMap": { definitionId: "insights-flowmap-supplier", stepId: "order" },
     "Insights/Flows/FlowMapEditor": { definitionId: "insights-flowmap-internal" },
     "Insights/Flows/ProcessStory": { definitionId: "insights-flowmap-customer", stepId: "order" },
+    "Insights/Settings/AnalyticsSettings": { organizationPartyId: "ORG_ZIZI_RETAIL" },
     "Chatter": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
     "RecordFiles": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
 }

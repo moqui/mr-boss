@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     through an authorization of their groups on its root (BOSS_INSIGHTS, the root user group, or BOSS_INSIGHTS_ADMIN); the root
     grant opens navigation only. The report engine checks its own artifacts whatever this answers: a capability opens an
     affordance, never a source. Disabled artifact authorization widens nothing here. P4 adds search#Records, the palette's
-    dashboards and saved reports (Registry.js); P10 adds store#Settings. -->
+    dashboards and saved reports (Registry.js); P10 adds get#Settings and store#Settings, the organization's analytics defaults
+    (Settings.js; design §11 Settings). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="Context" allow-remote="false">
         <description>Check that the user may open Insights and resolve their context: the capabilities (the INSIGHTS_* permissions
@@ -76,6 +77,86 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('searchRecords', context)"/>
             <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Settings" allow-remote="false">
+        <description>Insights' settings for the organization in scope (design §11 Settings): for every Insights reader the
+            controls in effect, in words (the fiscal calendar, which is Accounting's; the display zone and week; delivery
+            modes and who may schedule; the group recipient cap under the instance ceiling; export and retention limits;
+            the freshness policy), and for a holder of INSIGHTS_SETTINGS_VIEW the organization's analytics defaults (the
+            registered PartySetting types) with their revision, the choices and the source owners (each registered source's
+            domain owner, class, admission state and steward; no data). Refuses a user without Insights
+            (INSIGHTS_UNAVAILABLE) or without Insights read (INSIGHTS_VIEW_REQUIRED) and an organization that is not the
+            user's (ORGANIZATION_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationName"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="canView" type="Boolean"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="recipientCeiling" type="Integer"/>
+            <parameter name="controls" type="List"/>
+            <parameter name="settings" type="Map"/>
+            <parameter name="revision"/>
+            <parameter name="options" type="Map"/>
+            <parameter name="sources" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Settings.js').execute('getSettings', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizationName" from="found.organizationName"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="canView" from="found.canView"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="recipientCeiling" from="found.recipientCeiling"/>
+            <set field="controls" from="found.controls"/>
+            <set field="settings" from="found.settings"/>
+            <set field="revision" from="found.revision"/>
+            <set field="options" from="found.options"/>
+            <set field="sources" from="found.sources"/>
+        </actions>
+    </service>
+    <service verb="store" noun="Settings" allow-remote="false">
+        <description>An organization's analytics defaults (design §11 AnalyticsDefaults), the registered PartySetting types
+            mr-boss seeds: the default dashboard, flow map and digest (each one the saver reads), the display time zone and
+            week start, the freshness policy and the recipient cap of group delivery. An empty choice stays empty; fiscal
+            periods are Accounting's and are not set here. Needs INSIGHTS_SETTINGS_EDIT (INSIGHTS_SETTINGS_REQUIRED) for an
+            organization in the caller's scope (ORGANIZATION_UNAVAILABLE), at the revision read (SETTINGS_CHANGED); a value
+            outside its choices is refused (VALUE_INVALID) and a cap above Admin's instance ceiling too
+            (RECIPIENT_CAP_CEILING): an app form never raises an instance limit. A refusal is the answer (applied false
+            with reasonCode and reason).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="defaultDashboardId"/>
+            <parameter name="defaultMapId"/>
+            <parameter name="defaultDigestDefinitionId"/>
+            <parameter name="displayTimeZone"/>
+            <parameter name="weekStart"/>
+            <parameter name="freshnessPolicyId"/>
+            <parameter name="groupRecipientCap"/>
+            <parameter name="expectedRevision"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="changedCount" type="Integer"/>
+            <parameter name="revision"/>
+            <parameter name="settings" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Settings.js').execute('storeSettings', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="changedCount" from="found.changedCount"/>
+            <set field="revision" from="found.revision"/>
+            <set field="settings" from="found.settings"/>
         </actions>
     </service>
 </services>

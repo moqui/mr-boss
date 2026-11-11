@@ -20,6 +20,10 @@
         {"query": "resend Tom's invitation, he lost the email", "page": "/qapps/Admin/Users/Invitations", "expect": ["invite-staff"]},
         {"query": "Dana left the company, disable her account", "expect": ["offboard-user"]},
         {"query": "remove Sam from the Retail organization but keep his Services access", "expect": ["offboard-user"]},
-        {"query": "who should take over the shared drive this leaver owned", "page": "/qapps/Admin/Users/LifecycleDetail", "expect": ["offboard-user"]}
+        {"query": "who should take over the shared drive this leaver owned", "page": "/qapps/Admin/Users/LifecycleDetail", "expect": ["offboard-user"]},
+        {"query": "explain this number", "page": "/qapps/Insights/Dashboard", "expect": ["insights-analyst"]},
+        {"query": "how many orders did we take last month by currency", "expect": ["insights-analyst"]},
+        {"query": "compare this metric with the period before", "page": "/qapps/Insights/ReportBuilder/Explore", "expect": ["insights-analyst"]},
+        {"query": "which data source is stale", "expect": ["insights-analyst"]}
     ]
 }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Settings (design-insights §11, §1.2; impl-insights P10, INS-01, INS-09): Settings (the default: the controls in
+    effect for the organization, every reader's to read, and the organization's analytics defaults and source owners for the
+    Insights administrator) and Data readiness (the sources of Insights the viewer may read, from Admin's readiness registry).
+    Every Insights user opens it; each transition reaches a service that checks its own permission:
+    ironstone.insights.ContextServices.store#Settings needs INSIGHTS_SETTINGS_EDIT and an organization in the caller's scope,
+    and a refresh is Admin's request#Refresh, checked by the registration's own permission. Instance limits and credentials
+    stay Admin's; nothing here raises one. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="12" menu-image="sym_o_settings" menu-image-type="icon">
+    <subscreens default-item="AnalyticsSettings"/>
+    <widgets><subscreens-panel id="InsightsSettingsPanel" type="tab"/></widgets>
+</screen>

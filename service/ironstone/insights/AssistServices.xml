@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights for Assist and MCP (design-insights §1.2 "Assist and MCP analytics", INS-10; impl-insights P10; Assist.js): the
+    read tools of the insights-analyst skill and the service behind "Add to my dashboard". A question about a number is a typed
+    query (Analysis' choices), run by the report engine as the signed-in user over an admitted dataset they read, under its row
+    filter and guards; what may be asked is decided by the dataset's class (ironstone.insights.DatasetClass). The Assist and MCP
+    surfaces are separate services, since a tool exposure (moqui.agent.AgentToolExposure, data/BossSetupData.xml) is offered to
+    one or the other by its row: the MCP ones never read a cost or margin, whatever the caller holds. The report engine's own
+    run#Query is not exposed. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="SourceAnswer" type="interface">
+        <out-parameters>
+            <parameter name="datasets" type="List"><description>datasetId, title, timeField, domainOwner, costs</description></parameter>
+            <parameter name="dataset" type="Map"/>
+            <parameter name="measureFields" type="List"><description>name, label, type</description></parameter>
+            <parameter name="groupFields" type="List"/>
+            <parameter name="filterFields" type="List"/>
+            <parameter name="aggregates" type="List"/>
+            <parameter name="timeGrains" type="List"/>
+        </out-parameters>
+    </service>
+    <service verb="define" noun="QueryAnswer" type="interface">
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="refusedCode"/>
+            <parameter name="reason"/>
+            <parameter name="datasetId"/>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="columns" type="List"/>
+            <parameter name="rows" type="List"><description>label (the groups' values) and valuesText (each measure with its
+                unit)</description></parameter>
+            <parameter name="sourceCount" type="Long"><description>The records the result is computed from</description></parameter>
+            <parameter name="notices" type="List"/>
+            <parameter name="panel"><description>The choices as the Panel line an answer ends with</description></parameter>
+        </out-parameters>
+    </service>
+    <service verb="find" noun="QuerySources" allow-remote="false">
+        <description>For Assist (insights_datasets): the admitted business datasets the user reads that Assist may ask, each
+            with its domain owner and whether it holds costs, and for a chosen datasetId its measures, groups and filters.
+            A dataset of costs and margins, and a cost or margin field of any dataset, is listed only for a user who holds
+            PRODUCT_COST_VIEW; a People or unclassified dataset never. Runs nothing. Refuses a user without Insights read
+            (INSIGHTS_VIEW_REQUIRED), a dataset that is not admitted, not theirs or not classified (DATASET_UNAVAILABLE) and
+            a cost dataset without the permission (DATASET_RESTRICTED).</description>
+        <implements service="ironstone.insights.AssistServices.define#SourceAnswer"/>
+        <in-parameters>
+            <parameter name="datasetId"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('assistSources', context)"/>
+            <set field="datasets" from="found.datasets"/>
+            <set field="dataset" from="found.dataset"/>
+            <set field="measureFields" from="found.measureFields"/>
+            <set field="groupFields" from="found.groupFields"/>
+            <set field="filterFields" from="found.filterFields"/>
+            <set field="aggregates" from="found.aggregates"/>
+            <set field="timeGrains" from="found.timeGrains"/>
+        </actions>
+    </service>
+    <service verb="find" noun="OperationsSources" allow-remote="false">
+        <description>For an MCP client (insights_operations_datasets): the admitted business operations datasets the user
+            reads and, for a chosen datasetId, its measures, groups and filters without any cost or margin field. A dataset of
+            costs and margins, of People or payroll, or without a class is never listed, whatever the user holds
+            (DATASET_RESTRICTED, DATASET_UNAVAILABLE). Runs nothing.</description>
+        <implements service="ironstone.insights.AssistServices.define#SourceAnswer"/>
+        <in-parameters>
+            <parameter name="datasetId"/>
+        </in-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('operationsSources', context)"/>
+            <set field="datasets" from="found.datasets"/>
+            <set field="dataset" from="found.dataset"/>
+            <set field="measureFields" from="found.measureFields"/>
+            <set field="groupFields" from="found.groupFields"/>
+            <set field="filterFields" from="found.filterFields"/>
+            <set field="aggregates" from="found.aggregates"/>
+            <set field="timeGrains" from="found.timeGrains"/>
+        </actions>
+    </service>
+    <service verb="run" noun="DatasetQuery" allow-remote="false">
+        <description>For Assist (insights_query): one aggregate over an admitted business dataset from typed choices (count, or
+            a measure summed, averaged, least, greatest or its distinct values; up to two groups; a time grain; one filter; a
+            range as the engine's relative or ISO dates, the last 30 days when empty), run by the report engine as the user:
+            the dataset's admission, row filter and semantic guards apply as on a dashboard, so the rows are the user's own
+            organizations' and an organizationPartyId narrows to one of them (refused when it is not theirs). No query
+            language, service, index or entity is taken. A dataset of costs and margins and a cost or margin field answer
+            only a user who holds PRODUCT_COST_VIEW. A refusal the asker can act on is the answer (available false with
+            refusedCode and reason): DATASET_UNAVAILABLE, DATASET_RESTRICTED, FIELD_RESTRICTED, FIELD_UNAVAILABLE,
+            VALUE_INVALID, ORGANIZATION_UNAVAILABLE, or a guard (UNIT_MIXED and the others).</description>
+        <implements service="ironstone.insights.AnalysisServices.define#AnalysisChoices"/>
+        <implements service="ironstone.insights.AssistServices.define#QueryAnswer"/>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('assistQuery', context)"/>
+            <set field="available" from="found.available"/>
+            <set field="refusedCode" from="found.refusedCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="datasetId" from="found.datasetId"/>
+            <set field="from" from="found.from"/>
+            <set field="thru" from="found.thru"/>
+            <set field="columns" from="found.columns"/>
+            <set field="rows" from="found.rows"/>
+            <set field="sourceCount" from="found.sourceCount"/>
+            <set field="notices" from="found.notices"/>
+            <set field="panel" from="found.panel"/>
+        </actions>
+    </service>
+    <service verb="run" noun="OperationsQuery" allow-remote="false">
+        <description>For an MCP client (insights_operations_query): run#DatasetQuery's typed aggregate over a business
+            operations dataset only, as the user and under the same admission, row filter and guards. A dataset of costs and
+            margins (DATASET_RESTRICTED) and a cost or margin field (FIELD_RESTRICTED) are refused whatever the user holds; a
+            People or unclassified dataset is not there (DATASET_UNAVAILABLE).</description>
+        <implements service="ironstone.insights.AnalysisServices.define#AnalysisChoices"/>
+        <implements service="ironstone.insights.AssistServices.define#QueryAnswer"/>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('operationsQuery', context)"/>
+            <set field="available" from="found.available"/>
+            <set field="refusedCode" from="found.refusedCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="datasetId" from="found.datasetId"/>
+            <set field="from" from="found.from"/>
+            <set field="thru" from="found.thru"/>
+            <set field="columns" from="found.columns"/>
+            <set field="rows" from="found.rows"/>
+            <set field="sourceCount" from="found.sourceCount"/>
+            <set field="notices" from="found.notices"/>
+            <set field="panel" from="found.panel"/>
+        </actions>
+    </service>
+    <service verb="define" noun="PanelRequest" type="interface">
+        <in-parameters>
+            <parameter name="definitionId" required="true"><description>A dashboard (with panelId) or a library panel the user
+                reads</description></parameter>
+            <parameter name="panelId"/>
+            <parameter name="queryReference"><description>The index of the panel's query, when it has several</description></parameter>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="refusedCode"/>
+            <parameter name="reason"/>
+            <parameter name="title"/>
+            <parameter name="datasetId"/>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="rows" type="List"><description>label (the groups' values) and valuesText (each measure with its
+                unit)</description></parameter>
+            <parameter name="sourceCount" type="Long"/>
+            <parameter name="meaning" type="Map"><description>The panel's registered measure, when it names one: metricId, title,
+                ownerApp, basis, unitPolicy, exclusions, rules</description></parameter>
+            <parameter name="notices" type="List"/>
+        </out-parameters>
+    </service>
+    <service verb="run" noun="PanelQuery" allow-remote="false">
+        <description>For Assist (insights_panel): a saved panel's own result as its dashboard shows it to the user, by the
+            dashboard's definitionId and the panel's panelId (or a library panel's definitionId), a range (the last 30 days
+            when empty) and one of the user's organizations; never a query. The engine runs the panel as the dashboard does
+            (its saved filters and exclusions, the organization in scope, each dataset's admission and row filter), so the
+            numbers are the dashboard's, with the panel's registered meaning. Before it runs, every dataset the panel's
+            queries name is held to its class (DATASET_RESTRICTED for costs without PRODUCT_COST_VIEW, DATASET_UNAVAILABLE
+            without a class or for a query that names no dataset) and a panel that reads a cost or margin field is refused
+            (FIELD_RESTRICTED) unless the user holds PRODUCT_COST_VIEW. A panel or organization the user does not read, a
+            repeated panel and one whose query takes a name from a variable answer available false (PANEL_UNAVAILABLE,
+            ORGANIZATION_UNAVAILABLE). No record is returned.</description>
+        <implements service="ironstone.insights.AssistServices.define#PanelRequest"/>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('assistPanel', context)"/>
+            <set field="available" from="found.available"/>
+            <set field="refusedCode" from="found.refusedCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="title" from="found.title"/>
+            <set field="datasetId" from="found.datasetId"/>
+            <set field="from" from="found.from"/>
+            <set field="thru" from="found.thru"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="rows" from="found.rows"/>
+            <set field="sourceCount" from="found.sourceCount"/>
+            <set field="meaning" from="found.meaning"/>
+            <set field="notices" from="found.notices"/>
+        </actions>
+    </service>
+    <service verb="run" noun="OperationsPanel" allow-remote="false">
+        <description>For an MCP client (insights_operations_panel): run#PanelQuery's saved panel over a business
+            operations dataset only, as the user. A panel any of whose queries reads a cost, People or unclassified
+            dataset (DATASET_RESTRICTED, DATASET_UNAVAILABLE) or a cost or margin field (FIELD_RESTRICTED) is refused,
+            whatever the user holds.</description>
+        <implements service="ironstone.insights.AssistServices.define#PanelRequest"/>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('operationsPanel', context)"/>
+            <set field="available" from="found.available"/>
+            <set field="refusedCode" from="found.refusedCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="title" from="found.title"/>
+            <set field="datasetId" from="found.datasetId"/>
+            <set field="from" from="found.from"/>
+            <set field="thru" from="found.thru"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="rows" from="found.rows"/>
+            <set field="sourceCount" from="found.sourceCount"/>
+            <set field="meaning" from="found.meaning"/>
+            <set field="notices" from="found.notices"/>
+        </actions>
+    </service>
+    <service verb="add" noun="AssistPanel" allow-remote="false">
+        <description>"Add to my dashboard" (design §1.2): the query an Assist answer ends with (its Panel line: the typed
+            choices, read by name; anything else in the text is ignored) saved as the caller's own library panel and, when a
+            dashboard of their own is chosen, placed on it, through AnalysisServices.store#Analysis as the caller, so
+            Insights authoring, the dataset, each field and the engine's guards are checked as from Analysis, and the
+            dataset's class as for the answer. A refusal is the answer (applied false with reasonCode and reason):
+            PANEL_REQUIRED for an answer without a query, INSIGHTS_AUTHOR_REQUIRED, DATASET_UNAVAILABLE, DATASET_RESTRICTED,
+            FIELD_RESTRICTED, DASHBOARD_NOT_OWNED, VALUE_INVALID or a guard.</description>
+        <in-parameters>
+            <parameter name="answerText" allow-html="any"/>
+            <parameter name="title"/>
+            <parameter name="visualization"/>
+            <parameter name="dashboardId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="definitionId"/>
+            <parameter name="dashboardId"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Assist.js').execute('addPanel', context)"/>
+            <set field="applied" from="found.applied"/>
+            <set field="reasonCode" from="found.reasonCode"/>
+            <set field="reason" from="found.reason"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="dashboardId" from="found.dashboardId"/>
+        </actions>
+    </service>
+</services>
