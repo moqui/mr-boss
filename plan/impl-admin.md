@@ -5279,7 +5279,7 @@ review: …"); Mantle and BOSS unchanged.
     175. Failing: WarehouseServerStatic (AssetDetail's Move link made a screen path from an expression by mr-boss
     35223fd6, Nov 10, before this build; the user's call: keep the screen path and unmark Files and Notes, or a plain link
     again); ManufacturingScheduleWalk's drag (the one that failed once at gate 1 and passed on reruns; not this build's);
-    InsightsCatalogUsable's order count against OnlineSales in the full run only (impl-insights P12's acceptance note).
+    InsightsCatalogUsable's order count against OnlineSales in the full run only: a stale sales item document (the search feed kept an order item at OrderOpen after its header and part were completed milliseconds later, framework), fixed in the spec by reindexing the month (mr-boss f49c227b) and recorded for the framework (impl-insights P12's acceptance note).
 
 ## 4. Decisions
 

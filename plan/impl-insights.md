@@ -3179,6 +3179,14 @@ Admin's are impl-admin's). All the Insights failures were spec bugs; none is a p
   reader of the playlist who holds `ADMIN_ACCESS_VIEW`, so a playlist shared with the wall displays shows its devices to its
   owner alone (with §5's wall-sharing question).
 
+**Final suites (Nov 11, at the end of the build).** Recorded in full in impl-admin under P19's "Final suites": the framework,
+app and acceptance runs are one for both apps. For Insights: every Insights regression spec passed in
+`mail_capture_sends=true ./moq test-apps` (3,526 server and 35 client features, all passed); the Insights acceptance specs
+and the review walk pass in `./moq accept mr-boss` after the fixes above (InsightsCatalogUsable's full-run failure was the
+search feed's stale item document, fixed in the spec, mr-boss f49c227b; the feed itself is the framework's, recorded
+above). The framework's report specs passed; its server feature time is 16.8 s of 12 s, of which this build's specs
+(ReportDrill, ReportAnnotations, ReportAudience, BusinessAlerts and the Admin specs) are 4.4 s: no budget raised, the user's call.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-insights.md
