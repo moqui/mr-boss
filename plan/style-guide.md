@@ -81,6 +81,7 @@ Assist" asks for. §2.8 lists what is new against today's shell; the implementat
 | Canvas | `q-page-container` > `q-page q-pa-sm` > `m-subscreens-active` | The screen; window scroll | The app | Yes |
 | Tray panel | A right-aligned panel inside the canvas, 400 px, full width below 600 px | Opens over the canvas from the Today, Chat and Notifications buttons; one panel, tabbed; closes on Esc or its close button; stays across navigation until closed | Framework frame, BOSS screens as content | Yes |
 | Assist drawer | right `q-drawer`, 420 px, resizable, bordered | Toggled from the rightmost header button; stays across navigation; pushes the canvas from 1440 px, overlays below | Framework | It is Assist; not a target |
+| Floats | `m-float-layer` over the page and the header, outside the canvas: windows that are not dialogs (the Assist conversation and the tray's tabs undocked, terminals) | Moved, resized, snapped, tiled and minimized by pointer and keys; kept across navigation and reloads, per device; none below 600 px | Framework (mr-moqui `docs/ui/Qvt-Client.md` Floats) | A floated tray tab is; Assist and a terminal are not |
 | Live call mini-window | `q-page-sticky` bottom right, 320 × 180 | Only during a call; drag to move; click to return to the call screen | Comms | Yes |
 | Footer | `q-footer` bordered, `text-caption` | Theme footer items | Theme | No |
 
