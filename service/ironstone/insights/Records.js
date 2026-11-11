@@ -274,7 +274,21 @@ function record(p) {
     }
 }
 
-const operations = {record}
+// get#RecordPanelAccess (P12, the P6 mount lesson): whether the viewer's own grants open Commons. The Chatter and RecordFiles
+// panels every app root mounts are served under the Insights root only to such a user (Insights.xml's always-actions), who
+// reaches the same transitions in Commons under the same filters; no Insights screen offers a note, message or file, so the
+// Insights root's inheritable grant opens none of their writes to a user given Insights without Commons. False for a caller
+// without Insights read.
+function recordPanelAccess() {
+    try {
+        insights.required()
+        return {opens: admin.destinationOpens(insights.grants(), "Commons")}
+    } catch (error) {
+        return {opens: false}
+    }
+}
+
+const operations = {record, recordPanelAccess}
 ;({
     recordTypes,
     execute: (op, parameters) => {

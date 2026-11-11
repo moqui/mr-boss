@@ -1,5 +1,8 @@
 # IronStone BOSS — Insights implementation
 
+Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
+and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
+results go in a Final suites note under P12.
 Nov 10, 2026 — gate 2 built: P6–P10 (stage 2), Insights' first release, beside Admin's stage 3 (impl-admin P8–P14), each phase
 reviewed by a fresh agent and merged on its focused specs; the full suites run once at the end of the build (the user's
 call). Next: P11 (wall displays) after Admin P18, then P12 with Admin P19.
@@ -179,8 +182,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | built and reviewed Nov 10, merged |
 | P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | built and reviewed Nov 10, merged |
 | P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | built and reviewed Nov 10, merged |
-| P11 Wall displays on shared devices | BOSS | Playlists on a registered device | — |
-| P12 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P11 Wall displays on shared devices | BOSS | Playlists on a registered device | built and reviewed Nov 11, merged |
+| P12 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 11, merged |
 
 ### P0 — Checks
 
@@ -2682,6 +2685,233 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
 - **Usable when:** a plant wall screen registered for ORG_ZIZI_RETAIL's operations playlist plays it with no one signed
   in, shows that organization's numbers only, and opens nothing else; revoking the device in Admin ends the display.
 
+**Built Nov 11 (P11).**
+- Checked first (the phase against the code as Admin P18 left it; impl-admin F285, F286, F289):
+  - A device cannot load the `/qapps` shell (its menu, shell data and `actions` are in no route group), and admitting the
+    shell would admit what every app's page asks for. So a wall display gets a page of its own, `Insights/WallDisplay`
+    (below), and the route group admits that screen's render and its `data` transition by name, nothing else: not
+    Playlists, not the Dashboard screens, not a pattern (F149).
+  - The display account's authorization: the Insights root is the launcher group's (`BOSS_INSIGHTS`), whose inheritable
+    grant opens every Insights screen, so a display account must not hold it; and the root's always-actions call
+    `get#Context`, which refuses a user without the root grant (INSIGHTS_UNAVAILABLE), so even an admitted Insights screen
+    failed for a display account (F150). The reader bundle reads (engine operations, admitted datasets, documents) and
+    opens no screen; a new registered bundle opens the wall display's page alone; the root calls no Insights service for
+    a device's request.
+  - A playlist and its dashboards are read by the display account only if shared with a group it is in, and
+    `share#Dashboard` shared only with the author's own groups (a definition has one group), so no author could make a
+    playlist reach a display (F151). The wall displays (`BOSS_INSIGHTS_DISPLAY`) are a share target for any author,
+    playlists too.
+  - P18's "removing the display account's organization membership leaves the device working and shows that organization
+    nothing": confirmed in the code. A device's request runs as the display account (`ec.user.userId`), and Mantle's
+    `get#OrganizationRowFilter` computes the organizations of `ec.user` (`get#PartyOrganizationInfo`): with none it
+    answers the match-nothing filter, and a display account can hold no privileged group (the system-administrator
+    branch) nor set its active organization (the preference transitions are outside its route group). Written into the
+    acceptance walk.
+  - The framework Playlist's `data` transition takes `index` (a dashboard of the stored playlist) and `from`/`thru`, and
+    renders that dashboard's own panels as the viewer: no dataset, query or definition from the request beyond the
+    playlist, which the framework forces on a device. It is no general query endpoint and is kept; a range from the
+    request changes when, not what (F152). A playlist of one dashboard was never refreshed (the timer moved to the same
+    index, which loaded nothing), and a failed load paused the playlist until someone pressed Retry (F153).
+  - Device answers and caching: every screen and transition answer of a device carries the conf's `screen-render`
+    `Cache-Control: no-cache, no-store, must-revalidate, private` (qvt `private, no-store`); only the static files are
+    public, and those carry no device cookie (P18 R1's rotation skips a public answer). The plain page sets
+    `private, no-store` itself (checked over HTTP in SecurityDevice).
+- mr-moqui (Rust changed: a Debug build in the worktree; no release build):
+  - `crates/moqui-core/src/user/device.rs`: `Refusal::page_text`, `refusal_page`, `OUTSIDE_PAGE_TEXT`, `FAILED_PAGE_TEXT`:
+    the plain page of a refused display (not registered, revoked, ended, refused for now) and of a device's page outside
+    its route group or that failed: one sentence and a link to `/Device`, nothing of the instance (no host, title, theme,
+    script, style sheet, route group, device, account or error text). `screen/mod.rs`: `handle` answers a refused device
+    whose client takes html with it (an API client keeps the JSON 403), and `error_page` answers a device's page with it
+    instead of the instance's error screen (which its route group refuses anyway), with `Cache-Control: private, no-store`.
+  - `webroot/js/WebrootReport.js`: `m-report-playlist` takes `kiosk` (no link out, a dashboard's panels with no controls
+    through the dashboard's new `display` flag, a failed load retried at the next turn, a 401 or 403 reloading the page so
+    the server's plain page replaces it, `report.reloadPage`); a playlist of one loads its dashboard again at each turn,
+    keeping the frames shown until the new ones come, for every playlist.
+  - `tools/screen/Dashboards/Playlist.xml`: the `data` transition answers a dashboard the viewer may not read with its
+    refusal instead of a TypeError (F155).
+  - Docs: `docs/security/Shared-Devices.md` (the plain page, a device's page reloading on a refusal, the client spec),
+    `Attack-Surface.md` (one sentence), `docs/tools/Monitoring.md` (the kiosk playlist), `plans/Remaining-Work.md` (the
+    device row: the "bare 403" item done).
+- BOSS:
+  - `screen/Insights/WallDisplay.xml` (new, hidden, standalone): html is a bare document (the theme's style sheets, the qvt
+    client's files, `WebrootPublic.qvt.js`) with the screen as an island; qvt is `m-report-playlist` in kiosk mode on the
+    playlist (as the viewer: a definition that is no playlist or not readable is "not available to this display"), each
+    dashboard read as the viewer and one it may not read left out and logged by name, as the framework Playlist does; tui
+    the framework's `report-playlist` component; the `data` transition is the framework Playlist's. Nothing writes.
+  - `screen/Insights.xml`: for a device's request (`UserSecurityChecks.currentDevice()`) the root sets the defaults only and
+    calls no `get#Context`.
+  - `screen/Insights/Playlists.xml`: Play full screen (WallDisplay as the viewer, in a new window); the owner's Share with
+    wall displays and Stop sharing (`sharePlaylist`, `share#Dashboard`); Register as display (Admin's Security › Devices
+    with `newRouteGroupId` `INSIGHTS_PLAYLISTS` and `newParameterValue` the playlist) for a holder of
+    `ADMIN_ACCESS_MANAGE`; the devices showing each playlist with their state, read only, for a holder of
+    `ADMIN_ACCESS_VIEW` or `ADMIN_ACCESS_MANAGE` (one `find#SharedDevices` call per render, within their identity scope).
+  - `service/ironstone/insights/Insights.js` (`shareDashboard`, `shareGroups`) and `DashboardServices.xml` share#Dashboard:
+    a playlist as well as a dashboard, and `BOSS_INSIGHTS_DISPLAY` ("Wall displays") as a target beside the author's own
+    groups.
+  - `data/BossSetupData.xml` (the P18 block): the route group `INSIGHTS_PLAYLISTS` now names `BOSS_DEV_INS_WALL`
+    (WallDisplay's render and `WallDisplay.xml/data`, by name, not inheritable) with `homePath` `/apps/Insights/WallDisplay`,
+    the idle timeout a week; P18's `BOSS_DEV_INS_PLAYLISTS` rows are gone from the seed (an instance that loaded them keeps
+    them in a group nothing names). Appended: the group `BOSS_INSIGHTS_DISPLAY`, its artifact group `BOSS_INS_WALL_DISPLAY`
+    (the same two artifacts, ALLOW, VIEW, with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`) and its `CapabilityBundle`
+    row (Insights, no permission, so `ADMIN_ACCESS_MANAGE` assigns it).
+- Specs (feature time; BOSS on the shared release binary, the framework's on the Debug one):
+  - BOSS `Insights/InsightsWallDisplay` (3 features, 0.15 to 0.26, 0.02 to 0.07, 0.07 to 0.09 s): sharing with the wall
+    displays (the owner, an author; another group and a reader refused); a display account with the reader and wall
+    display bundles registered and redeemed; as the device, the bare page, the island of the registered playlist whatever
+    the browser asks for (kiosk, its seconds, the private dashboard left out), the data of the registered playlist's
+    dashboard by index, the private one refused, and Playlists, Playlists' data, Dashboard and `/qapps` refused by the
+    route group; Playlists (qvt, once, under the webroot) with the device showing the playlist and Register as display.
+  - BOSS `Admin/AdminDevices`: its route-group request is now `WallDisplay/data` (its display account holds the reader
+    bundle alone and is refused by authorization: F286 as it stands).
+  - framework client `SecurityDevice` (+1 feature, 0.00 s on Debug): a revoked device's page and a device's page outside
+    its route group are the plain page (403, html, `no-store`, the cookie removed for the revoked one, nothing of the
+    instance, a link to `/Device`).
+  - framework client `WebrootReport` (+1 feature, 0.00 s): a kiosk playlist of one loads again at each turn without
+    clearing what is shown, its panels have no export, inspect or menu and no link out, a failure is retried at the next
+    turn, and a 403 reloads the page.
+  - cargo `user::device::tests` (+1 test): the plain page of each refusal, nothing of the instance, the text encoded.
+  - Acceptance, written and not run: `acceptance/Insights/InsightsWallDisplayUsable.spec.js` (the "usable when": the
+    author's playlist over store checkouts by organization shared with the wall displays, the display account made in
+    Users, the device registered with Playlists' values and its code read once in Devices, the wall playing Retail's
+    numbers only with no one signed in and opening nothing else, Playlists listing it, the membership ended showing no
+    one's numbers, the revocation in Admin refusing its next request). `acceptance/AppStructure.spec.js` gains
+    WallDisplay's row; `acceptance/Admin/AdminDevicesUsable.spec.js` its two paths now `WallDisplay/data` (not run).
+- Tests run: the specs above; BOSS `InsightsDashboards`, `InsightsAccess`, `AdminAccess`, `AdminDevices`; framework
+  `DeviceCredential`; cargo `-p moqui-core --lib user::device` (4) and `screen::` (459 passed), clippy of `moqui-core`
+  (nothing in the files touched), rustfmt of them; `moqui lint --screens` (no parse failure; WallDisplay's and the root's
+  flags are the `static-class` and `catch-bare` notes of any screen script naming `WebUtilities` or a host global). No
+  suite, no acceptance test.
+- Rendered by hand, in a real browser (a throwaway client spec and fixture, deleted, under `./moq test-client mr-boss
+  --serve --debug`): `/Device`, the code, the redirect to `/apps/Insights/WallDisplay`, the playlist playing (title,
+  1 / 1, the dashboard's text panel, no panel controls or links), `/apps/Insights/Playlists` answered with the plain page
+  (403, "This page is not part of this display."), and the wall again. No server was run by hand (the worktree path).
+- Inventories: none names Playlists' device parts or WallDisplay (design §2's WallDisplay row is new); nothing to mark.
+- Design edits: design-insights §2 (the WallDisplay row) and §4 Playlists (the bundles; "As built" P11); design-admin §6
+  Devices (its "As built": Insights' wall display); design-crosscut CX-DEVICE's need row.
+- Findings:
+  - F149: a device cannot load `/qapps` (impl-admin F285). Resolved: a page of its own, `Insights/WallDisplay`, the island
+    of its own qvt render; the route group names it and its data transition alone.
+  - F150: the Insights root's `get#Context` refuses a user without the root grant, so a display account (which must not
+    hold it) failed on any Insights screen, and the reader bundle opens no screen (impl-admin F286). Resolved:
+    `BOSS_INSIGHTS_DISPLAY` opens WallDisplay and its data alone; the root calls no Insights service for a device's request.
+  - F151: a definition has one group and `share#Dashboard` took only the author's own, so no playlist could reach a display
+    account. Resolved: the wall displays are a share target for every author, a playlist too; a playlist shared with them is
+    read by its owner and the displays only, so an access administrator who is not its owner registers it in Admin's
+    Devices by its id rather than from Playlists (Register as display is on the rows the viewer reads).
+  - F152: the framework Playlist's data transition takes `from` and `thru` from the request; on a device they change
+    when, not what (the stored dashboard's own panels, as the display account). Kept.
+  - F153: a playlist of one dashboard never refreshed, and a failed load paused a wall display until someone pressed
+    Retry. Fixed in the framework playlist (every playlist; the retry in kiosk mode).
+  - F154: a refused device got a bare 403 JSON, and a device's page outside its route group the same (impl-admin F289).
+    Resolved: the plain page, for a browser's page only.
+  - F155: the framework Playlist's data transition answered a dashboard the viewer may not read with a TypeError
+    ("cannot set property 'definitionId' of undefined") after the refusal. Fixed: its refusal is the answer.
+- Decisions made here:
+  - A wall display plays on a page of its own, `Insights/WallDisplay`, not the shell: a bare html document whose island is
+    the screen's qvt render; the route group admits that render and its `data` transition by name.
+  - A display account holds two registered bundles: the Insights reader (the reading) and the wall display (WallDisplay and
+    its data, view only). Neither opens another Insights screen.
+  - The wall displays are a share target every author may choose for a dashboard or a playlist (definitions only).
+  - A refused device's browser, and a device's page that is refused or fails, get a fixed plain page; an API client the JSON.
+  - A kiosk playlist retries a failure at its next turn and reloads its page on a refusal; any playlist of one refreshes at
+    each turn.
+  - The idle timeout stays a week (a display asks at every turn; a week ends one switched off or replaced).
+- For the lead:
+  - Budgets (feature time): BOSS server +0.3 s (InsightsWallDisplay); framework client +0.01 s (one feature each in
+    SecurityDevice and WebrootReport).
+  - Merge: `BossSetupData.xml` (the P18 block's route group rows replaced, the P11 rows appended at the end);
+    `acceptance/AppStructure.spec.js` one row after AddToDashboard; mr-moqui `WebrootReport.js` and its page test,
+    `Playlist.xml`, `screen/mod.rs` and `user/device.rs`, `Remaining-Work.md` (the device row), `Shared-Devices.md`.
+    `test/client/suite.js` and `TuiRender.spec.js` unchanged.
+  - An instance that loaded P18's seed keeps `BOSS_DEV_INS_PLAYLISTS` and its two members in a group no route group names
+    (harmless; deleting them is the lead's call).
+  - The user's call: whether an access administrator should see the playlists shared with the wall displays in Playlists
+    without owning them (F151; today they register by the playlist's id in Admin › Devices); whether a person may be
+    given `BOSS_INSIGHTS_DISPLAY` (it is meant for display accounts; a person with it alone gets no Insights context).
+  - Not verified: the acceptance tests (not run); a real wall display over a day (the daily secret's replacement on a
+    kiosk's answers is P18's); two servers.
+
+**Review Nov 11 (P11).** Fresh review of mr-moqui dc7d01f4 and mr-boss 50e41d1c; fixes in mr-moqui and mr-boss ("Insights
+P11 review: …") and this note (branch `ins/p11`).
+- Checked and kept:
+  - **Confinement, as a device over HTTP** (a throwaway client spec and fixture under `./moq test-client mr-boss --serve
+    --debug`, deleted: a display account with the reader and wall display bundles, a device redeemed by its code, 36
+    requests). Admitted: WallDisplay's html (the bare page), its `.qvt` (the island's one load; `private, no-store`), its
+    tui, text, csv and xml renders (the screen's own render, empty in the modes it has no template for) and `data`.
+    Refused with the plain page (403, `private, no-store`): the Insights root, Home, Dashboards, Dashboard, Playlists and
+    its `data`, Reports, ScheduledReports, Drill, Records, Chatter, `/qapps`, `/qapps/Insights/WallDisplay`,
+    `/qapps/menuData`, `/apps/getPreferences`, WallDisplay's `actions`; 404 plain for `/vapps`, `/apps/menuData`,
+    `WallDisplay.js`, `WallDisplay/menuData`, `WallDisplay/Chatter` (WallDisplay has no subscreen or include); REST the
+    JSON 403. The island needs nothing else: the qvt client's files are static (`check_route` admits a static file no
+    render requires authentication for), and WebrootPublic asks the screen's `.qvt` alone (no `actions`, `menuData`).
+  - **The forced playlist**: `definitionId` in the query string, an extra path segment (`data/OTHER`) or the form is the
+    registration's (`screen::handle` puts it over the merged parameters, the JSON body's included); the transition is GET
+    only (a POST is 405). The index is an integer within the stored playlist (7, -1, 0.5 refused). Each dashboard and each
+    panel's datasets are read as the display account (`get#Definition`, `render#Dashboard`, no authorization switched off
+    on the path), so the row filters and the alias rule hold as for a person; an unreadable dashboard is left out of the
+    page and named in the log, and refused by the data transition.
+  - **The root's skip**: `UserSecurityChecks.currentDevice()` is `user::device::current_scope()`, set only by
+    `begin_request` for a valid device cookie; a person's request cannot set it. A person holding `BOSS_INSIGHTS_DISPLAY`
+    alone still runs `get#Context`, which refuses them, so WallDisplay fails for them.
+  - **The plain page**: one sentence and a link to `/Device`, no script, style sheet, title of the instance, route group,
+    device or error text; `private, no-store`. A refused device's answer returns before the daily rotation and removes the
+    cookie only when the device is no more (revoked, ended, unknown); a page outside the route group carries the day's
+    new secret as any whole answer does (P18 R1). Revoked and ended are told only after the secret matched, Unknown for a
+    wrong secret or no device alike: the page tells an html client nothing the JSON did not.
+  - **Framework playlist changes for ordinary viewers**: outside kiosk the only changes are a playlist of one reloading
+    its dashboard at each turn (keeping the frames shown) and the turn's ceiling (R3); the Playlist screen's `data`
+    answers an unreadable dashboard with its refusal. `InsightsDashboards` and `WebrootReport` (50 features) pass.
+  - **Upgrade**: an instance that loaded P18's seed keeps `BOSS_DEV_INS_PLAYLISTS` and its two members; no
+    `ArtifactAuthz` ever named it (it was only a route group's allow-list) and the seed's `INSIGHTS_PLAYLISTS` row (same
+    key) now names `BOSS_DEV_INS_WALL`, so it grants and admits nothing. Harmless.
+  - **Playlists**: Share with wall displays posts to `share#Dashboard` (owner and authoring checked there), Register as
+    display is a link to Admin (its service checks `ADMIN_ACCESS_MANAGE`), the devices column one `find#SharedDevices`
+    in the viewer's identity scope with its failure logged.
+  - **Specs**: InsightsWallDisplay three features (0.20, 0.05, 0.09 s), WallDisplay rendered once in html and once in
+    qvt, Playlists once in qvt and nowhere else in the regression suite; the client features 0.00 s.
+- Fixes:
+  - **R1, Medium.** WallDisplay took the framework Playlist's `data` transition, which read `from` and `thru` from the
+    request: anyone at an unattended wall's browser could make every panel of the playlist query decades
+    (`from=now-40y` was honored), and a panel's failure went to the wall in full: "User 100000 is not authorized for
+    AT_SERVICE [org.moqui.report.dataset.otel_spans] action view" (the display account's id and the dataset's service).
+    WallDisplay's `data` is now its own: the page's range (now-30d to now) whatever the request says, a dashboard of the
+    playlist only (type checked), each error notice replaced by "This panel is not available to this display." with its
+    text logged by playlist, dashboard and panel, no inspection or request detail, and any failure one fixed message.
+    InsightsWallDisplay asks for 30 years and a panel over a dataset the account may not read, and checks both.
+  - **R2, Medium.** The kiosk's reload on a 401 or 403 had no limit: a refused data request under a page that still
+    renders (a route group admitting the page and not its data, an authorization the page does not need) reloaded the
+    page, scripts and all, as fast as it loaded, for good. `report.reloadPage` now reloads at most once a minute (the
+    time in the tab's `sessionStorage`) and answers false otherwise, and the playlist then goes on to its next turn. And a
+    kiosk whose playlist was reordered under it paused for a Reload button no one presses (the wall froze until someone
+    came): it reloads the page instead, on the same limit. WebrootReport's kiosk test covers both.
+  - **R3, Low.** A playlist's seconds went to `setInterval` unbounded; past about 24.8 days the timer fires at once, so
+    an author's large number made a wall ask for data every millisecond. The player holds a turn to 5 s to a day, and
+    WallDisplay the page's seconds to 5 to 3600.
+- Tests: InsightsWallDisplay, AdminDevices, InsightsDashboards (9 features pass, Debug); client SecurityDevice (6) and
+  WebrootReport (50, offline); `moqui lint --screens` (no parse failure; WallDisplay's flag is the `WebUtilities` note).
+  No cargo test (no `.rs` changed), no suite, no acceptance test.
+- For the lead:
+  - Budgets: unchanged in substance (InsightsWallDisplay 0.34 s of feature time; the client's kiosk test 0.00 s).
+  - The user's call, `BOSS_INSIGHTS_DISPLAY` held by a person: it opens nothing for them (WallDisplay fails without the
+    root grant; with it, WallDisplay shows only what Playlists already plays for them), but membership makes them read
+    every definition shared with the wall displays, every organization's authors' (titles, panels, text panels; the
+    numbers stay row-filtered to their own organizations). Access cannot refuse it today: a display account must hold a
+    registered bundle, and no bundle field says "display accounts only". The fix, if wanted, is framework: a
+    `CapabilityBundle` flag that `storeMembership` and `bundleOptions` refuse to a non-display account (and Mantle's
+    `create#DisplayAccount` allows). Left as is; Low.
+  - The user's call, F151 across organizations: the wall displays are one group, so a playlist or dashboard shared
+    with it is readable by every organization's display accounts. No author pushes onto another organization's wall
+    by sharing alone: a wall plays only the playlist its registration fixed, chosen by an access administrator within
+    their identity scope. But a registrar of organization B may register organization A's shared playlist by its id, and
+    then A's author's later edits (titles, text panels, which dashboards) appear on B's wall with B's numbers; and an
+    author may put any wall-shared dashboard of another organization in their own playlist. Options: refuse on a device
+    a playlist or dashboard whose owner shares no organization with the display account, or one display group per
+    organization. Recorded, not changed.
+  - Finding: a definition has one group, so sharing a dashboard with the wall displays takes it from the author's team
+    (and Share with wall displays on a playlist shared with a group moves it silently). Worth a line in design §4.
+  - Low, not fixed: under the dev conf's boundary comments WallDisplay's html begins with a comment before
+    `<!DOCTYPE html>`, which puts the page in quirks mode (dev only; production writes no boundary comment).
+
 ### P12 — Finish
 
 With Admin P19.
@@ -2696,6 +2926,266 @@ With Admin P19.
   rewritten by a deliberate migration, an unsupported one shown invalid; no hidden alias routes.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-boss README's
   Insights line.
+
+**Built Nov 11 (P12).** mr-boss and mr-moqui (branch `ins/p12`; Mantle is not touched; no Rust, on the shared release binary).
+- **Checked first** (the phase against the code and the earlier phases' open items): the copied report screens are all
+  replaced (P7 the last), so the legacy mapping is the saved finds and schedules of their lists; TuiRender already swept
+  Insights in tui as john.doe with authorization off, and no sweep covered it in server-static; the framework's
+  `import#Definitions` already keeps an imported alert rule inactive (`prepare_copy`) and saves each definition through the
+  same save (an imported dataset is a new id, never admitted), and Insights denies import to every group (P1); FlowMap
+  already had the ordered list (StepList, P9); every Insights demo user is in `BOSS_USERS`, so the Chatter and RecordFiles
+  mounts gave them nothing Commons does not, but the root's inheritable grant opened their writes to a user given Insights
+  without Commons (F156).
+- **Acceptance** (written, not run; the lead runs the suite at the end of the build):
+  - `acceptance/Insights/InsightsTui.spec.js`: every Insights screen file and the ten record mounts (the tabbed ones by
+    their `InsightsRecord` subscreen) render in tui as a model document with no error node, as john.doe with authorization
+    on, on the demo's records; a second feature checks three twins' data (the supplier flow's steps, the shipped alert rule,
+    Retail's settings). `acceptance/TuiRender.spec.js` no longer sweeps Insights (its Insights rows removed): one sweep per
+    app per mode.
+  - `acceptance/Insights/InsightsServerStatic.spec.js`: ServerStaticLib's full check of every plain XML Insights screen (no
+    Insights screen is marked server-static yet; none errors).
+  - WallDisplay is in neither sweep: a device's bare page, not a shell screen, with no terminal twin; it is left to the
+    regression InsightsWallDisplay and the acceptance InsightsWallDisplayUsable, and the review walk's last feature.
+  - `acceptance/Insights/InsightsReviewWalk.spec.js` (design §13.3, §8), `dependsOn` InsightsDatasetsUsable, nine features:
+    rows (each group's Retail user and the Services reader through Explore's page and its value suggestions, the engine's
+    direct query with a forged filter, a terms aggregate and the export, the administrator reading none); dashboards, an
+    embed (`render#Dashboard` of the suite panel with forged variables), Home, the Home layout and the context for another
+    organization; drill (refused for another organization, forged variables reach no other organization's orders) and the
+    record context of another organization's order; costs (Assist refuses `mantle-sales-items` to every user without
+    `PRODUCT_COST_VIEW`, MCP to the financial reader too); Assist (another organization refused, the typed answer of the
+    reader's organization only); schedules and alerts (the Services reader refused with a reason that names no
+    organization, a reader refused the audience check); the palette, saved reports and flow maps (a Retail copy shared with
+    every Insights user is not listed or read for the Services reader); the dataset-alias attack (the steward's alias over
+    `otel_logs`, over the sales document without its signal, and with the business signal over the log index; an author's
+    log alias; the steward's direct log query: all refused, nothing kept); and the wall display (a device plays its
+    registered playlist whatever its request names, reads its organization's numbers only, opens nothing else of Insights,
+    Chatter and the record mounts included, and is refused after revocation).
+- **The §14 outputs:**
+  - **Delivery audit** (built): `DeliveryServices.export#DeliveryAudit` over `Delivery.js deliveryAudit`: one run's statuses
+    as CSV for whom `get#Delivery` answers it (the owner each recipient's result, safe reason and attempts; a recipient their
+    own row, named), no address or content, a formula-leading cell made text, audited by the engine as `delivery-audit`;
+    ReportDelivery's Export status (`exportAudit`).
+  - **Business map print** (built): FlowMap's Print opens the page in `html-print` (to PDF where the server has one) for the
+    same map, organization, counts and step; checked by hand as `insights.reader` (200, no error, the lanes and the steps in
+    order). The ordered list is P9's StepList.
+  - **Definitions bundles** (recorded, not built): the export is already every reading group's (the mounted editor's
+    `export#Definitions`); import stays Tools' and an instance administrator's. The engine already keeps an imported rule
+    inactive and a dataset unadmitted and holds no schedule in a bundle; an author's import waits on `save#Definition`
+    refusing a group the owner is not in (F42), since a bundle names each definition's group (F159).
+- **The legacy mapping** (design §13.2): `RegistryServices.migrate#LegacySavedFinds` (Registry.js), an instance
+  administrator's upgrade step (`ADMIN_REQUIRED` otherwise): every saved find of an Insights list and every schedule of an
+  Insights screen by ID, owners, groups and list or path, with its action (moved, kept, invalid); with `apply` the moved ones
+  are rewritten (DatasetDetail/FieldList's FieldList and ConditionList to DatasetFields', the copied scheduled finds' list to
+  Scheduled reports' Schedules, and a schedule's old path), each find keeping its owners, groups and fields (a field the new
+  list lacks is named). SavedReports shows a find whose list is gone as "Not valid" with no link (`findList`, `invalid`);
+  no alias route. The demo has no such find (F28); P7 converted the copied scheduled finds.
+- **Loose ends:**
+  - **Chatter and RecordFiles under the Insights mount** (fixed, F156): the root's always-actions serve its Chatter and
+    RecordFiles mounts only to a user whose own grants open Commons (`DrillServices.get#RecordPanelAccess`, Records.js:
+    `destinationOpens(grants, "Commons")`), who reaches the same transitions in Commons under the same filters; else
+    `RECORD_PANEL_UNAVAILABLE` before any transition runs. ProcessStory's Knowledge pages, the only Insights screen that shows
+    a panel, are a Commons user's already.
+  - **The `ignore-error` capture** (fixed for Insights, impl-admin F129, F101): `Insights.js answering` answers a read's
+    refusal as `refusalCode` and `refusal` when the caller passes `answerRefusal` (any other failure as `FAILED` with a plain
+    sentence, logged); `find#SavedReports`, `find#Reports`, `get#ReportOptions`, `get#Home`, `get#Attention`, `get#Drill`,
+    `get#AnalysisOptions` and `get#AnalysisResult` take it, and SavedReports, Reports, Home, Drill and Analysis pass it and show
+    the reason (Home's attention line now says why). Other callers are unchanged (they still get the error). The other
+    `ignore-error` sites of Insights read no message (they show a not-available state).
+  - **The organization's recipient cap** (recorded, F157): BOSS applies it (`Insights.js recipientCap` at every save and
+    check of a schedule's or rule's audience); the engine's `store#Schedule` and an alert rule's definition, which the reading
+    and authoring groups hold directly, hold the instance ceiling only. The engine holding it needs a schedule and a rule to
+    carry their organization (framework, with F118); Remaining-Work's report engine row says so.
+  - **Wall-display sharing across organizations** (recorded, §5): a registrar of organization B may register A's wall-shared
+    playlist; A's later edits show on B's wall with B's numbers; an author may put another organization's wall-shared
+    dashboard in their own playlist. The two options are in §5 for the user; nothing changed.
+  - **A definition has one group** (done): design §4 says so (As built, P12); Dashboard's Share dialog names the group the
+    dashboard is shared with now and that another choice replaces it; Playlists names a playlist's other group and asks before
+    Share with wall displays takes it from that group.
+- **Specs** (regression, assertions in existing specs only): InsightsRecords' OrderDetail feature (the record panels: a note
+  and the files refused with the reader's Commons membership ended, the panel answering before; 0.39 s) and its drill
+  feature (the refusal answered with `answerRefusal`; 0.28 s); InsightsDelivery's Send now feature (the status export of the
+  owner, the reader's own row, the outsider refused; 0.51 s); InsightsCatalog gains one feature (a legacy find not valid, the
+  migration's dry run, refusal and apply; 0.10 s, no render).
+- **Tests run** (release binary, `--nobuild`, this phase's runtime): InsightsRecords, InsightsDelivery, InsightsCatalog,
+  InsightsDatasets, InsightsHome, InsightsAccess, InsightsDashboards, InsightsWallDisplay, InsightsFlowMaps, InsightsSettings,
+  InsightsAlerts and ProjectsAccess: 55 of 55 (mr-boss 16.8 s of feature time); `moqui lint --screens` clean (no parse
+  failure; the one Insights flag is P11's). By hand: FlowMap in html-print, Playlists, ReportDelivery. Not run: any
+  acceptance test, the full suites.
+- **Records:** design-insights §2's Impl column names each screen's phase; §4 (one group), §13.2 (the legacy mapping) and §14
+  (each output) gain As built notes; ss-inventory's Insights line and usl-inventory's Insights rows (`setup#UserOrganizationInfo`,
+  `get#PartyOrganizationInfo`, `store#PartySetting`, the attention counts `find#Payables` and `find#Records`, and a note of the
+  newer Mantle services Insights calls that have no row); mr-moqui `plans/Remaining-Work.md`'s report engine row (field
+  classes, an organization on a schedule and a rule, authors' bundle import, more than one group or a per-organization wall
+  share); the mr-boss README's Insights sentence.
+- **Findings** (provisional):
+  - F156 (medium, fixed): the Chatter and RecordFiles mounts under the Insights root opened their writes (log a note,
+    message, upload, remove) to a user given Insights without Commons, by the root's inheritable grant (the P6 R1 lesson).
+  - F157 (open, framework): the organization's recipient cap is BOSS's alone; the engine holds the ceiling.
+  - F158 (open, F83 and F58 restated by the review walk): an admitted `mantle-sales-items` gives every reader its cost and
+    margin fields in Explore, a direct query, an analysis's measure list and a panel's own aggregate; design §13.3's "cost
+    fields never reach an unauthorized response" holds in Assist, MCP and drill only. The walk does not assert it. Until
+    field classes (Remaining-Work), the alternatives are granting `mantle-sales-items` to cost holders only, or a cost-free
+    items dataset for readers: the user's call.
+  - F159 (open): an author's bundle import waits on F42; the export is every reader's.
+  - F160 (low): `get#Delivery`'s own delivery, as a recipient reads it, did not carry their name in the export (the
+    engine's row is the recipient's own), so the export names the caller from their account.
+- **For the lead:**
+  - Budgets: mr-boss server +0.1 s (InsightsCatalog's feature; the other assertions sit in features already timed).
+  - Merge: shared with Admin P19: `acceptance/TuiRender.spec.js` (the header, the app list, the feature title and the
+    removed Insights rows), the mr-boss README (the Insights sentence of the paragraph Admin's sentence opens; "They are built
+    in one order" left as it was), mr-moqui `plans/Remaining-Work.md` (the report engine row only), usl-inventory's
+    `setup#UserOrganizationInfo` row (Admin may add its root to the same cell: keep both). Not touched: AppStructure,
+    BossSetupData (no grant changed; the new services' verbs `export`, `migrate` and `get` pass ProjectsAccess).
+  - An existing instance: run `ironstone.insights.RegistryServices.migrate#LegacySavedFinds` once as an administrator
+    (first without `apply` to read the inventory); nothing else to load.
+  - The user's call: §5's wall-display sharing across organizations; F158 (costs to readers in Explore until field
+    classes); P10's open items stand (readers reading DataReadiness, every reading group holding `INSIGHTS_SCHEDULE`, a lowered
+    cap at a schedule's next save).
+  - The acceptance suite: InsightsReviewWalk, InsightsTui and InsightsServerStatic are new and unrun; InsightsReviewWalk
+    creates a display account and device per run (revoked at its end) and an alert rule and flow map copy (removed).
+
+**Review Nov 11 (P12).** Fresh review of mr-moqui e81b6c1b and mr-boss fcad146e; fixes in mr-boss ("Insights P12 review: …")
+and this note (branch `ins/p12`).
+- Checked and kept:
+  - **The record panels under Insights (F156)**, by URL (a throwaway spec, deleted) as insights.reader with their
+    `BOSS_USERS` membership ended: every Chatter transition tried (chatterData, timeline, searchRecords, downloadFile, logNote,
+    sendMessage, deleteEntry), ChatterTui, and RecordFiles' upload, download, remove, addFromFiles, the file picker's
+    pickerData and RecordFilesTui are refused `RECORD_PANEL_UNAVAILABLE` before the transition runs; with the membership each
+    reaches its own service (a validation error for the missing input). The check is the server's, at every request, in the
+    root's always-actions on the resolved path: a render-mode suffix (`Chatter.qvt`) is resolved to `Chatter` before it,
+    subscreen names are matched exactly, Insights has no no-sub-path wrapper, `/qapps/Insights/…` is the shell (no transition
+    runs), and no other path reaches the two screens below Insights (Records' mounts serve no transition, P6; ProcessStory's
+    Knowledge its own check, P9). A device's request skips it; its route group admits WallDisplay alone.
+  - **`answerRefusal`**, probed on the services refused (get#Home and get#Attention for another organization, as the reader
+    and the Services reader; get#ReportOptions of an unknown entry; get#AnalysisOptions and get#AnalysisResult as a reader):
+    every data out-parameter is null beside `refusalCode` and `refusal`, and the refusal is the default's own message without
+    its code, so a caller learns nothing the error did not carry; without the flag each fails as before. Of the eight only
+    `find#Reports` is an agent tool (Assist and MCP); with the flag it answers the same code and text, and any other failure
+    a fixed sentence. Each screen shows the refusal or a fixed sentence and drops the answer's data (`!refusalCode`).
+  - **`export#DeliveryAudit`**: the owner every recipient's row, a recipient their own (F160: the name is the caller's own
+    account's, which they read anyway; the owner's rows carry the names ReportDelivery already shows them); the columns are
+    the run's title, date, kind, mode and state and each recipient's name, result, safe reason, attempt and count, no address
+    or content; audited through `audit#Export` (kind, format, row count; the engine's audit names no run, as Explore's);
+    a cell beginning `=`, `+`, `-`, `@`, tab or CR made text; bounded by the run's recipients (the organization's cap under
+    the instance ceiling); another's run refused `DELIVERY_UNAVAILABLE` (InsightsDelivery). The GET transition's audit
+    write is allowed (the read fence is an agent render's only).
+  - **`migrate#LegacySavedFinds`**: ADMIN only (`access.systemAdmin`, the `ADMIN` group), not remote; an inventory unless
+    `apply`; it writes only a find on one of the three replaced lists whose list is gone and a schedule of the two replaced
+    paths. A second apply changes nothing: a moved find's new location is not a replaced list and exists (kept), a moved
+    schedule's new path is not a replaced path (kept). SavedReports shows a find on a list that is gone "Not valid" with no
+    link; no alias route.
+  - **FlowMap's Print**: html-print escapes the map's text (a map titled with `&` and quotes rendered `&amp;`, `&quot;`; a
+    title refuses `<` and `>` at input); the link's parameters are encoded.
+  - **One group**: Dashboard's Share dialog names the current group before a choice; Playlists asks, naming the other group,
+    before Share with wall displays; both post to `share#Dashboard`, which checks authoring and the owner
+    (`DASHBOARD_NOT_OWNED`). Playlists reads the descriptions of only the groups its listed playlists are shared with.
+  - **The acceptance specs** (read, not run; their services and parameters checked against the definitions): TuiRender sweeps
+    no Insights screen and keeps no Insights parameter; InsightsTui walks every Insights screen file but WallDisplay and
+    Records, and the ten record mounts in Insights' read-only context (the same files TuiRender's Shared sweep renders
+    outside it); InsightsServerStatic checks each plain XML screen once. InsightsReviewWalk covers design §13.3 and §8 as the
+    phase lists: rows and a forged filter, terms (the value counts), the export, dashboards and an embed with forged
+    variables, Home, its layout and the context, drill and a record of another organization, costs through Assist and MCP,
+    Assist for another organization, a schedule's audience and an alert rule's, the palette, saved reports, flow maps, the
+    alias attack and the wall display. It does not call `store#Schedule` itself (`check#Audience` is the engine's same
+    check) and does not assert F158.
+  - **F158, on the current code** (mr-boss master has no Insights change since the branch's base; the engine is master's
+    release binary): with `mantle-sales-items` admitted, insights.reader (no `PRODUCT_COST_VIEW`) read `itemCostTotal`,
+    `itemMarginTotal` and each issuance's `acquireCost`, `issuedCostTotal` and margins in `query#Documents`' rows, and a
+    `run#Query` sum of `itemCostTotal`; insights.author (no `PRODUCT_COST_VIEW`) was offered the cost and margin fields among
+    Analysis' measures and ran a sum of `itemCostTotal` by currency. A panel's own aggregate is the same `run#Query`. Assist
+    and MCP refuse it (InsightsSettings). It holds as written; nothing changed.
+  - **Records**: design §2's Impl column, §4, §13.2 and §14 match the code; the inventories' rows; the README sentence; the
+    Remaining-Work row.
+- Fixes:
+  - **R1, Low.** `Insights.js answering` took any `WORD:` prefix for a refusal's code, so an exception's text beginning
+    `ERROR:` (a database's), `URL:` or `JSON:` reached the screen as a reason. A refusal's code now has an underscore (every
+    Insights and engine refusal's does) and its text is at most 300 characters; anything else is `FAILED` with a fixed
+    sentence, as Admin P19's review made `AdminCalls.read`.
+  - **R2, Low.** `Registry.js findList` compared a dynamic form's find location (`…form_list$Name#extension`, the framework's
+    `saved_find_location`) with the form's name, so such a find would show "Not valid" in SavedReports (no mr-boss list is
+    dynamic today). The extension is dropped before the check.
+  - **R3, Low.** `migrate#LegacySavedFinds` wrote its rows in a loop with no tolerance: a row that cannot be written is now
+    answered `failed` and logged by its id, and the others go on (AGENTS.md).
+  - **R4, Low.** InsightsTui's second feature rendered FlowMap, AlertDetail and Settings again in tui; it now reads the
+    sweep's renders, so each screen is rendered once per mode.
+- Tests: InsightsRecords, InsightsCatalog, InsightsDelivery, InsightsHome, InsightsDashboards (and InsightsDatasets, their
+  dependency): 28 of 28, 5.6 s of feature time, release binary. No screen changed, so no lint; no acceptance test, no suite.
+- For the lead:
+  - Budgets: unchanged.
+  - The user's call: F158 confirmed on the current code (above); §5's wall sharing across organizations as the Built note.
+  - Merge: the README's "They are built in one order, and the rest of each is next" now follows "Insights is built"; worth a
+    word when Admin P19's sentence is merged beside it.
+
+**Acceptance Nov 11 (after gate 5).** `mail_capture_sends=true ./moq accept mr-boss` on master, release binary, the first
+run after the whole Admin and Insights build; this note is Insights' failures and the screen sweeps' (branch `acc/insights`;
+Admin's are impl-admin's). All the Insights failures were spec bugs; none is a product defect:
+- InsightsReviewWalk "schedules and alerts reach only owner-equivalent recipients" stored the Services reader on a copied
+  rule and expected `RECIPIENT_REFUSED`. Checked as a possible security defect first: a copy is paused (not validated), and
+  a paused rule's audience is a draft that tells nobody; the engine checks every recipient when the rule is saved active
+  (`alert_delivery.rs` `refuse`, BusinessAlerts) and again before each notification (`scope-differs`), as AlertServices
+  documents. The walk now stores the draft (applied, paused), activates it (`pause#Alerts`), which is refused
+  `RECIPIENT_REFUSED` naming the Services reader, and checks the rule stayed paused. The walk's `attempt` also called every
+  service twice (a refusal check, then the call), so each copy was made twice and one left behind (the palette found two
+  maps); it calls once now. Its wall display feature registered the device with a code and then asked `reveal#SharedDeviceCode`
+  for one (refused, so no device cookie): it registers with `issueCode: false`, as Admin's Devices does.
+- InsightsFlowMapsUsable read Commerce's own count by calling `get#StoreWorkSummary` directly as john.doe, a service granted
+  through Commerce Home's screen and not to a direct call; the flow map's count itself is right (the attention board calls the
+  provider inside Insights' service). It reads it with the artifact check off (the service scopes by the user's stores);
+  ProcessStory was rendered as the leaf in qvt, whose default subscreen (Commons Knowledge) is a .qvue screen with no qvt:
+  it is rendered from its own level (`lastStandalone` -4), as the shell loads it.
+- InsightsSettingsUsable expected a 200 from the refused post (a transition redirects, 302); it now checks the redirect and the
+  service's `RECIPIENT_CAP_CEILING`. Its Assist feature read the suite panel from a `Definition` row (a shipped definition is a
+  file: read through `get#Definition`) and the frame by field names the frames do not use (they are the aggregations' ids).
+- InsightsWallDisplayUsable rendered Playlists' `sharePlaylist` (a post transition) as a page, so nothing was shared; it posts
+  now. It then expected john.doe's Playlists to list the device, though he reads only his own playlists and those shared with
+  his groups (a definition has one group): it checks the author's Playlists shows the playlist on the wall displays (the
+  regression InsightsWallDisplay lists devices for an owner who registers them). Its revoke came after the display account's
+  Retail membership was ended, which puts the device outside admin.access's organization scope (`DEVICE_UNAVAILABLE`); the
+  instance administrator revokes it.
+- AppStructure swept Insights' Records group with no record: it is reached from a drill with an order, so the sweep gives it
+  one (`Insights/Records` with `orderId`).
+- Not this build's, upstream of it: TuiRender (Commons and Customer Service ContactDetail) and CommerceTui (Merchandising
+  Reviews) "A dialog of a list row did not render": a `section` in a list row's container-dialog was an error node by design
+  (ScreenTui.js, Oct 21); ContactRecord's contact info dialog has had one since Oct 19 and only renders since mr-moqui
+  9ff43d2e (Nov 9) rendered a container's widgets in a list cell, and Reviews has one since mr-boss dc419165 (Nov 10).
+  Fixed in mr-moqui (ScreenTui.js): a section or section-iterate inside a captured row dialog is its nodes as a value
+  (`sri.renderSectionValue`, Nov 9, which a section in a cell already uses); an include or subscreen there stays an error
+  node. Cargo `a_container_dialog_in_a_list_cell_is_a_dialog_of_its_row` (the section's condition and fail-widgets per row)
+  and the `tui/structure` golden; moqui-core `screen::tests` 365 passed. WarehouseServerStatic is left failing, recorded for
+  the user: mr-boss 35223fd6 (Nov 10) made AssetDetail's Move link a screen path from an expression
+  (`${sharedLinks['Transfers/Move']}`, no longer `url-type="plain"`), which the server-static check reports as
+  `[disable-link] link # is not a screen or transition` for AssetDetail and its marked subscreens Files and Notes (with
+  `url-type="plain"` back the sweep passes); whether to keep the screen path and unmark them, or keep them static, is the
+  app's call. Reviews renders a row dialog only when a review exists (after the Commerce walks), so CommerceTui passes alone.
+- Runs: each fixed spec alone; then the thirteen Insights acceptance specs with AppStructure and WarehouseServerStatic
+  together (release); CommerceTui, TuiRender and InsightsTui on the Debug binary with the fix (no error node). On Debug the
+  Customer Service demo order `BOSS_CS_SO_DELIVERED` and its texts are missing from TuiRender, AppStructure and CommerceTui's
+  second feature (qvt too, so not the tui change; the release binary shows them). A server suite run by mistake (release, the
+  fixes without the tui one) passed every Insights spec but InsightsCatalogUsable (panel 17 orders against OnlineSales 15 in
+  the latest month, after the other walks' orders; it passes alone and passed in the lead's run): open, order-dependent.
+  Resolved: 17 was right (the store's 17 placed orders that month, as the database and the order-part index have them); a
+  spec artifact, not a disagreement of the two definitions. CommerceReviewsScenario writes its buyers' delivered orders as
+  records (header, part and item created OrderOpen, then header and part set OrderCompleted within milliseconds), and the
+  sales feed left some of those orders' `MantleSalesOrderItem` documents at OrderOpen for good (no pending row, still stale
+  later; which order varies by run), so get#SalesOrderSummary, which needs a placed status on the item document, missed
+  them while the panel's `MantleSalesOrderPart` documents had them (reproduced with CommerceReviewsScenario alone before the
+  spec: 6 against 5). The spec now indexes the month's sales part and item documents again before counting, and passes the
+  panel's range inside the query (beside it, it was ignored and the engine counted the default last 7 days), in the
+  reporting user's calendar month as OnlineSales does. For the lead: the feed leaving an item document behind its order's
+  later status change is a framework finding (moqui-core `search/feed.rs`, a related record's update soon after the
+  primary's create), not fixed here.
+- For the lead: findings, each one line: admin.access cannot revoke a device whose display account has left its organization
+  (out of scope reads as not available; the instance administrator can); Playlists lists a playlist's devices only to a
+  reader of the playlist who holds `ADMIN_ACCESS_VIEW`, so a playlist shared with the wall displays shows its devices to its
+  owner alone (with §5's wall-sharing question).
+
+**Final suites (Nov 11, at the end of the build).** Recorded in full in impl-admin under P19's "Final suites": the framework,
+app and acceptance runs are one for both apps. For Insights: every Insights regression spec passed in
+`mail_capture_sends=true ./moq test-apps` (3,526 server and 35 client features, all passed); the Insights acceptance specs
+and the review walk pass in `./moq accept mr-boss` after the fixes above (InsightsCatalogUsable's full-run failure was the
+search feed's stale item document, fixed in the spec, mr-boss f49c227b; the feed itself is the framework's, recorded
+above). The framework's report specs passed; its server feature time is 16.8 s of 12 s, of which this build's specs
+(ReportDrill, ReportAnnotations, ReportAudience, BusinessAlerts and the Admin specs) are 4.4 s: no budget raised, the user's call.
 
 ## 4. Decisions
 
@@ -2744,12 +3234,13 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the plan's open question as written (Q1, the recipient cap) was answered on Nov 7 and is in §4 |
+| Should a wall display read only the playlists and dashboards of its own organizations? The wall displays are one group (`BOSS_INSIGHTS_DISPLAY`): a registrar of organization B may register organization A's wall-shared playlist by its id, and A's author's later edits (titles, text panels, which dashboards) then show on B's wall with B's numbers; and an author may put another organization's wall-shared dashboard into their own playlist | the user (P11 review; recorded in P12, not changed) | Options: refuse on a device a playlist or dashboard whose owner shares no organization with the display account; or one display group per organization. No author pushes onto another organization's wall by sharing alone (a wall plays the playlist its registration fixed) |
 | Should an organization's flow map be editable by every flow editor of that organization, or taken over from its owner? Today a map is its copier's: the engine saves only for the owner, another editor copies it, and there is no ownership transfer | a later review of flow maps (with the editor's refactoring, §4) | F117 (P9); left open by the user on Nov 10 for future review |
 
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114, P9's F115 to F129 and P10's F130 to F142; F143 to F148 (Nov 11) are in P3's Follow-up note (dataset aliases, impl-admin F277).
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114, P9's F115 to F129 and P10's F130 to F142; F143 to F148 (Nov 11) are in P3's Follow-up note (dataset aliases, impl-admin F277), and P11's F149 to F155 in its Built and Review notes, and P12's F156 to F160 in its.
 
 | # | Finding | Resolution |
 | --- | --- | --- |

@@ -114,6 +114,25 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="checkedText" from="found.checkedText"/>
         </actions>
     </service>
+    <service verb="get" noun="SupportSummary" allow-remote="false">
+        <description>The readiness and support summary (design §16; impl-admin P19), the one projection of SupportSummary, its print
+            and its redacted JSON: the instance (display name, framework version and package, when prepared and, unless
+            redacted, by whom), the readiness checks the viewer may read (get#Readiness), the protocols' states
+            (get#ProtocolReadiness) and the effective settings (get#EffectiveSettings, a secret only set or not), each section
+            read with the viewer's own permissions and marked unavailable with its reason when refused. No environment, host
+            facts, listeners, paths, users, fix links or diagnostics. Redacted also leaves out who prepared it and writes an email
+            address as [address]. Refuses a user without ADMIN_OVERVIEW_VIEW (PERMISSION_DENIED).</description>
+        <in-parameters>
+            <parameter name="redacted" type="Boolean" default="false"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="summary" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Registry.js').execute('supportSummary', context)"/>
+            <set field="summary" from="found.summary"/>
+        </actions>
+    </service>
     <service verb="find" noun="Settings" allow-remote="false">
         <description>The settings index (design §7 SettingsHome, §14.2): the owners' registered settings landings the viewer
             may open, each shown only when its destination opens to the viewer's own groups and its view permission holds,

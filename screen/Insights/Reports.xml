@@ -50,8 +50,9 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <service-call name="ironstone.insights.RegistryServices.find#Reports" out-map="found" transaction="force-new"
                 ignore-error="true" in-map="{text:(text || null), ownerApp:(ownerApp || null), purpose:(purpose || null),
-                    pinnedOnly:(pinnedOnly === 'true')}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    pinnedOnly:(pinnedOnly === 'true'), answerRefusal:true}"/>
+        <!-- a refusal is the service's answer (impl-admin F129: ignore-error clears the message) -->
+        <set field="failure" from="found?.refusal || (found?.reports ? null : 'The report catalog could not be read now')"/>
         <script>ec.message.clearErrors()</script>
         <set field="reports" from="found?.reports || []"/>
         <set field="ownerOptions" from="found?.ownerOptions || []"/>
@@ -64,8 +65,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- ReportContext: the chosen report's shared parameters, read only when one is chosen -->
         <if condition="entryId">
             <service-call name="ironstone.insights.RegistryServices.get#ReportOptions" out-map="options" transaction="force-new"
-                    ignore-error="true" in-map="{entryId:entryId, organizationPartyId:(organizationPartyId || null)}"/>
-            <set field="optionsFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    ignore-error="true" in-map="{entryId:entryId, organizationPartyId:(organizationPartyId || null), answerRefusal:true}"/>
+            <set field="optionsFailure" from="options?.refusal || (options?.fields ? null : 'This report\'s options could not be read now')"/>
             <script>ec.message.clearErrors()</script>
             <set field="optionFields" from="Object.fromEntries(Array.from(options?.fields || []).map(field =&gt; [field.name, field]))"/>
             <set field="contextValues" from="{entryId:entryId,

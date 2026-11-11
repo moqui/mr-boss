@@ -906,7 +906,167 @@ function settings(p) {
     }
 }
 
-const operations = {readiness, requestRefresh, overview, settings, adminSetup}
+// ===== readiness and support summary =====
+// get#SupportSummary (design §16 "Readiness/support summary"; impl-admin P19): one projection for SupportSummary, its
+// html-print and its redacted JSON, an administrative reader's (ADMIN_OVERVIEW_VIEW). It holds the instance (its display name,
+// the framework's version and package, when it was prepared), the readiness checks the viewer may read (readiness() above:
+// each provider's checks with their state, reason code, message, checked time and freshness, a provider that failed named),
+// the protocols' states (get#ProtocolReadiness) and the effective settings (get#EffectiveSettings), each read with the
+// viewer's own permissions: a section the viewer cannot read is marked unavailable with its reason, never shown empty. A
+// secret setting is only "set" or "not set" (the settings service never answers its value). Never in it: the environment, the
+// host's facts, listeners, paths, users, fix links, refresh keys or a check's diagnostics. Redacted (the JSON) also leaves out
+// who prepared it and writes an email address in any text as [address], so the file can be given to someone outside.
+const addressPattern = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
+// The settings that name the server's inside (review): the addresses a listener binds, the gateway addresses it admits and
+// a certificate file's path. The screen and print show them to a viewer who reads them in InstanceSettings anyway; the
+// redacted JSON, for someone outside, says only whether each is set. The public names (publicHost, publicAddress, domain,
+// the public URLs) stay, as they are given to every browser and client.
+const internalSetting = key =>
+    /^protocol\.[a-z]+\.(host|listenHost|mediaHost|allowedAddresses)$/.test(String(key || "")) || /File$/.test(String(key || ""))
+function supportSummary(p) {
+    if (!ec.user.hasPermission("ADMIN_OVERVIEW_VIEW")) denied("PERMISSION_DENIED", "ADMIN_OVERVIEW_VIEW is required")
+    const redacted = p.redacted === true || p.redacted === "true" || p.redacted === "Y"
+    const clean = value => (value == null ? value : redacted ? String(value).replace(addressPattern, "[address]") : String(value))
+    const calls = ec.resource.script("component://mr-boss/service/ironstone/admin/AdminCalls.js")
+    const section = (name, parameters, fallback) => calls.read(name, parameters, fallback)
+    // the instance
+    const named = section("org.moqui.admin.ConfigurationServices.get#InstancePreference", {settingKey: "instance.displayName"})
+    let report = {}
+    try {
+        report = ec.factory.getStartupReport() || {}
+    } catch (error) {
+        report = {}
+    }
+    const instance = {
+        displayName: clean(named.out?.value || ""),
+        version: String(report.version || ec.factory.moquiVersion || ""),
+        packageName: String(report.package || ""),
+        preparedDate: ec.user.nowTimestamp ? new Date(nowMs()).toISOString() : null,
+        preparedText: timeText(ec.user.nowTimestamp),
+        preparedBy: redacted ? null : ec.user.userAccount?.userFullName || ec.user.username || null
+    }
+    // the readiness checks the viewer may read
+    let readinessSection
+    try {
+        const found = readiness({})
+        readinessSection = {
+            available: true,
+            checkedText: found.checkedText,
+            failedProviders: found.failedProviders,
+            counts: Object.fromEntries(
+                Object.keys(states).map(state => [state, found.checks.filter(row => row.state === state).length])
+            ),
+            checks: found.checks.map(row => ({
+                providerKey: row.providerKey,
+                providerTitle: row.providerTitle,
+                ownerApp: row.ownerApp,
+                groupName: row.groupName,
+                checkKey: row.checkKey,
+                title: row.title,
+                subject: clean(row.subject),
+                organizationPartyId: row.organizationPartyId,
+                state: row.state,
+                stateName: row.stateName,
+                reasonCode: row.reasonCode,
+                message: clean(row.message),
+                coverage: clean(row.coverage),
+                freshnessText: row.watermarkText
+                    ? "Last " +
+                      row.watermarkText +
+                      (row.lagText ? ", " + row.lagText + " ago" : "") +
+                      (row.expectedFrequencyText ? "; every " + row.expectedFrequencyText : "")
+                    : row.expectedFrequencyText
+                      ? "Every " + row.expectedFrequencyText
+                      : "",
+                lagMinutes: row.lagMinutes
+            }))
+        }
+    } catch (error) {
+        readinessSection = {
+            available: false,
+            reason: calls.reasonOf(error?.message) || "The checks are not available to you.",
+            checks: []
+        }
+    }
+    // the protocols
+    const protocols = section(
+        "org.moqui.admin.ConfigurationServices.get#ProtocolReadiness",
+        {},
+        "The protocols are not available to you."
+    )
+    const protocolSection = protocols.out
+        ? {
+              available: true,
+              protocols: Array.from(protocols.out.protocolList || []).map(row => ({
+                  protocolKey: row.protocolKey,
+                  title: row.title,
+                  built: !!row.built,
+                  enabled: !!row.enabled,
+                  state: row.state,
+                  stateText: row.stateText,
+                  reason: clean(row.reason || ""),
+                  trustState: row.trustState || null,
+                  checks: Array.from(row.checkList || []).map(check => ({
+                      checkKey: check.checkKey,
+                      title: check.title,
+                      lastCheckPassed: check.lastCheckPassed ?? null,
+                      lastCheckDate: check.lastCheckDate || null
+                  }))
+              }))
+          }
+        : {available: false, reason: protocols.failure, protocols: []}
+    // the effective settings, a secret as set or not
+    const settingsFound = section(
+        "org.moqui.admin.ConfigurationServices.get#EffectiveSettings",
+        {},
+        "The settings are not available to you."
+    )
+    const settingSection = settingsFound.out
+        ? {
+              available: true,
+              settings: Array.from(settingsFound.out.settingList || []).map(row => {
+                  const hidden = redacted && internalSetting(row.settingKey) && !row.masked
+                  const set = !(row.value === "" || row.value == null)
+                  return {
+                  settingKey: row.settingKey,
+                  title: row.title,
+                  settingGroup: row.settingGroup,
+                  value: row.masked || hidden ? null : clean(row.value),
+                  shownValue: hidden
+                      ? set
+                          ? "[internal] (set)"
+                          : "Not set"
+                      : row.masked
+                      ? row.valueSet
+                          ? "Hidden (set)"
+                          : "Hidden (not set)"
+                      : row.value === "" || row.value == null
+                        ? "Not set"
+                        : clean(row.value),
+                  masked: !!row.masked,
+                  internal: hidden,
+                  valueSet: hidden ? set : !!row.valueSet,
+                  source: row.source,
+                  sourceText: row.sourceText,
+                  restartRequired: !!row.restartRequired
+                  }
+              })
+          }
+        : {available: false, reason: settingsFound.failure, settings: []}
+    return {
+        summary: {
+            kind: "ironstone.admin.supportSummary",
+            formatVersion: 1,
+            redacted,
+            instance,
+            readiness: readinessSection,
+            protocols: protocolSection,
+            settings: settingSection
+        }
+    }
+}
+
+const operations = {readiness, requestRefresh, overview, settings, adminSetup, supportSummary}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Admin registry operation " + op)

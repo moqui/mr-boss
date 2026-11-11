@@ -40,8 +40,9 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <service-call name="ironstone.insights.RegistryServices.find#SavedReports" out-map="found" transaction="force-new"
-                ignore-error="true" in-map="{kind:(kind || null), owner:(owner || null), text:(text || null)}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                ignore-error="true" in-map="{kind:(kind || null), owner:(owner || null), text:(text || null), answerRefusal:true}"/>
+        <!-- a refusal is the service's answer (impl-admin F129: ignore-error clears the message) -->
+        <set field="failure" from="found?.refusal || (found?.savedReports ? null : 'Your saved reports could not be read now')"/>
         <script>ec.message.clearErrors()</script>
         <set field="savedReports" from="found?.savedReports || []"/>
         <set field="kindOptions" from="found?.kindOptions || []"/>

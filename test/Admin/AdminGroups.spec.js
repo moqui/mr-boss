@@ -75,7 +75,13 @@ feature("a delegated access administrator changes a member within a registered b
             })
             const privileged = invoke(access + "store#Membership", {userGroupId: ids.backupGroupId, userId: ids.retailUserId})
             const memberScope = invoke(context + "get#MemberScope", {userIds: [ids.retailUserId, ids.otherUserId]})
-            const options = invoke(context + "get#Choices", {choice: "members", term: ""}).options.map(row => row.value)
+            // a page of the choice, searched for both users (commerce.manager and commerce.services): the first page of an
+            // empty term holds the first of whatever staff the other specs add, by name
+            const options = invoke(context + "get#Choices", {
+                choice: "members",
+                term: "commerce.",
+                selected: ids.otherUserId
+            }).options.map(row => row.value)
             const ended = member
                 ? invoke(access + "end#Membership", {
                       userGroupId: bundleId,
@@ -101,5 +107,37 @@ feature("a delegated access administrator changes a member within a registered b
         ended.applied == true
         // ended and kept: the row stays with its end date
         after.length == 1 && after[0].thruDate != null
+    }
+})
+
+// F129 (P19): a screen's read keeps a refusal's reason, which a service-call with ignore-error clears; an error that is not a
+// refusal shows only the screen's own words
+feature("a screen's refused read is shown as its reason, and any other failure as the screen's own words", {
+    when() {
+        const calls = ec.resource.script("component://mr-boss/service/ironstone/admin/AdminCalls.js")
+        return {
+            refused: asUser(users.identity, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
+            allowed: asUser(users.access, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
+            broken: asUser(users.access, () => calls.read(access + "get#Group", {}, "Group is not available.")),
+            // an exception's text with a prefix like a code is never shown as a reason (review)
+            exceptions: [
+                "error returned from database: ERROR: relation \"user_account\" does not exist",
+                "URL: http://10.0.0.5:8080/internal refused",
+                "RECORD_UNAVAILABLE: " + "x".repeat(400)
+            ].map(text => calls.reasonOf(text)),
+            coded: calls.reasonOf("Error: RECORD_UNAVAILABLE: Group G is not available"),
+            errorsAfter: ec.message.hasError()
+        }
+    },
+    then({refused, allowed, broken, exceptions, coded, errorsAfter}) {
+        exceptions.every(reason => reason == null)
+        coded == "Group G is not available"
+        refused.out == null
+        refused.failure.includes("ADMIN_ACCESS_VIEW")
+        !refused.failure.includes("PERMISSION_DENIED")
+        allowed.failure == null
+        allowed.out.groupList.length > 0
+        broken.failure == "Group is not available."
+        errorsAfter == false
     }
 })

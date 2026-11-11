@@ -125,10 +125,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="mantle.party.IdentityServices.get#InternalOrganization" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{organizationPartyId:organizationPartyId}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#InternalOrganization', {organizationPartyId:organizationPartyId}, 'Organization ' + organizationPartyId + ' is not available.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <set field="organization" from="found?.organization || null"/>
         <if condition="organization">
             <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="contacts" transaction="force-new" ignore-error="true"

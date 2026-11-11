@@ -127,21 +127,37 @@ feature("a warehouse reader finds Stock at date and not the Accounting statement
 feature("the orders panel's meaning shows its basis and the base-order exclusion, and agrees with Commerce's OnlineSales", {
     when() {
         const board = render(users.reader, "Dashboard", {definitionId: "boss-commerce-store-operations"})
-        // a month of the store's placed orders, by the dashboard's orders query (bases excluded) and by Commerce's report
-        const month = system(() => {
-            const latest = ec.entity
+        // a month of the store's placed orders, by the dashboard's orders query (bases excluded) and by Commerce's report;
+        // the month is the reporting user's calendar month (OnlineSales' period, in their time zone)
+        const latest = system(() =>
+            ec.entity
                 .find("mantle.order.OrderHeader")
                 .condition("productStoreId", storeId)
                 .condition("placedDate", "is-not-null", null)
                 .orderBy("-placedDate")
                 .one()
-            return latest ? ec.l10n.format(latest.placedDate, "yyyy-MM") : null
+        )
+        if (!latest) return {board, month: null}
+        const {month, from, thru} = asUser(users.system, () => {
+            const range = ec.user.getPeriodRange("month", "0", String(Number(latest.placedDate)))
+            return {
+                month: ec.l10n.format(latest.placedDate, "yyyy-MM"),
+                from: new Date(Number(range[0])).toISOString(),
+                thru: new Date(Number(range[1])).toISOString()
+            }
         })
-        if (!month) return {board, month}
-        const from = month + "-01T00:00:00"
-        const next = new Date(Date.parse(from + "Z"))
-        next.setUTCMonth(next.getUTCMonth() + 1)
-        const thru = next.toISOString().slice(0, 19)
+        // both read the sales index (the panel its order parts, OnlineSales its order items): other walks write orders as
+        // records (CommerceReviewsScenario's delivered orders) and the feed can leave an item document at a status the order
+        // has left, so the month's sales documents are indexed again first and both count the orders as they are
+        system(() =>
+            ["MantleSalesOrderPart", "MantleSalesOrderItem"].forEach(dataDocumentId =>
+                ec.service
+                    .sync()
+                    .name("org.moqui.search.SearchServices.index#DataFeedDocuments")
+                    .parameters({dataFeedId: "MantleSales", dataDocumentId, fromUpdateStamp: new Date(Date.parse(from))})
+                    .call()
+            )
+        )
         const panel = system(
             () => invoke(R + "get#Definition", {definitionId: "boss-commerce-store-operations"}).definition.body.panels.orders
         )
@@ -151,7 +167,8 @@ feature("the orders panel's meaning shows its basis and the base-order exclusion
             ]),
             aggregations: [{id: "orders", type: "cardinality", role: "metric", params: {field: "orderId"}}]
         })
-        const frames = asUser(users.system, () => invoke(R + "run#Query", {query, from, thru}))
+        // the range is the query's own (from and thru beside it were ignored, leaving the engine's default last 7 days)
+        const frames = asUser(users.system, () => invoke(R + "run#Query", {query: Object.assign({}, query, {from, thru})}))
         const sales = asUser(
             users.system,
             () =>

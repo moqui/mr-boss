@@ -19,6 +19,7 @@ Per-service inventory of the mr-mantle component, for tracking service-level fea
 - **Implemented in** for [design-warehouse.md](design-warehouse.md) was filled on Oct 31, 2026 at the end of the Warehouse build (impl-warehouse.md P18): each Warehouse screen whose transitions, actions or forms call the service, directly or through the `ironstone.warehouse` services, the `WarehouseTaskServices` guards or Mantle's own services (and the SECA, named where it is the path), with shared screens by their Warehouse mount and handheld tasks by `Warehouse/Handheld/...`. A service a guard or BOSS read replaced is `—` with the service or screen that does its work (for example Availability's `get#ProductStockTotals`, Ship's `get#ShipContext`); a function left for later is `—` with its impl-warehouse.md §7 item, and one not built is `—` with what the screen does instead. 36 rows filled here (the two earlier "not used" cells now start with `—`); rows that name other apps keep their other paths as they were.
 - **Implemented in** for [design-manufacturing.md](design-manufacturing.md) was filled phase by phase during the Manufacturing build and checked on Nov 4, 2026 at its end (impl-manufacturing.md P17): each Manufacturing screen, its shared mounts and its new Mantle services (`mantle.work.Production*Services`, `SupplyPlanningServices`, `ProductionCostServices`) that call the service; a service a Manufacturing screen was designed to call and does not is `—` with what it calls instead.
 - **Implemented in** for [design-purchasing.md](design-purchasing.md) was filled phase by phase during the Purchasing build and completed on Nov 4, 2026 at its end (impl-purchasing.md P17): every service with a Purchasing **Designed in** path names the Purchasing screen that calls it, or `—` with the Purchasing service called instead and the phase.
+- **Implemented in** for [design-admin.md](design-admin.md) was filled phase by phase during the Admin build and completed on Nov 11, 2026 at its end (impl-admin.md P19): every service with an Admin **Designed in** path names the Admin screen that calls it, mostly through `mantle.party.IdentityServices` (accounts, invitations, internal organizations and their defaults), or `—` with what Admin does instead and the phase. The framework's `org.moqui.admin` services and BOSS's `ironstone.admin` are outside this inventory (design-admin §17.2).
 - **Implemented in** for [design-commerce.md](design-commerce.md) and [design-shop.md](../../mr-pass/plan/design-shop.md) was filled phase by phase during the Commerce and Shop build and completed on Nov 7, 2026 at its end (impl-commerce.md P15, which does both plans' inventories, impl-shop F59): every service with a Commerce or `PASS:Shop` **Designed in** path names the Commerce screen or Shop page that calls it, through the Commerce and Shop services (`mantle.order.ShopCartServices`, `ShopCheckoutServices`, `mantle.party.ShopCustomerServices`, `StoreOperationsServices`, `StoreChannelServices`), or `—` with what Commerce or Shop does instead and the phase. Commerce's OrderDetail is read only (its order work is Customer Service's and Accounting's).
 
 **People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) maps verified current services used by People forms and inherited time/rate forms, with required guard/source extensions labelled in the design. Proposed People services and legacy payroll helpers mentioned only for disposition are not added as active screen calls. Implemented in is unchanged. The already-existing get#PartyCapacity service receives a separate source-verified row under Work.
@@ -52,6 +53,15 @@ and every Implemented in cell are preserved; catalog links alone do not claim se
 catalog entries name (`sourceReference`) are registrations, not calls: no Insights screen calls them yet, so their
 **Implemented in** is unchanged (design §6.2: a registration does not promote a capability). The Insights paths of their
 **Designed in** cells say `Insights/Panels/PanelDetail`, which was built as `Insights/PanelDetail` (impl-insights F46).
+
+**Insights P12 (Nov 11, 2026):** **Implemented in** checked for every Insights row at the end of the Insights build. The root
+calls `setup#UserOrganizationInfo` and every Insights screen `get#PartyOrganizationInfo` (through `get#Context`); Settings
+writes `store#PartySetting`; Home's attention board calls the registered count services as the viewer (`find#Payables`,
+`AccountingServices.find#Records`). The §6.2 report services stay registrations, not calls (P4's note). Mantle services Insights
+calls that are newer than this inventory have no row: `StoreOperationsServices.get#StoreWorkSummary` and
+`StoreChannelServices.get#ChannelHealth` (Home's attention counts), `PartyServices.get#OrganizationRowFilter` (the report
+engine's scope policy, `MantleOrganization`), `BusinessEventServices.record#BusinessEvent` (the owners' business markers) and
+`IdentityServices.find#SharedDevices` (Playlists' devices, P11).
 
 **Design review fixes (Nov 1, 2026):** after [review-suite-apps.md](review-suite-apps.md),
 renamed paths are replaced in place (`Marketing/Audiences/Import` → `AudienceImport`,
@@ -342,7 +352,7 @@ Added in Accounting P6 (payables), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills) |
+| InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills); Insights/Home (an attention provider's count, as the viewer; Insights P5) |
 | InvoiceServices | import#Bill | Accounting/Payables/Bills | Accounting/Payables/Bills#BillUploadForm; Accounting/Records/OrderDetail#OrderBillUploadForm; Purchasing/Bills/BillList#UploadSupplierBill; Purchasing/Orders/OrderDetail#PurchaseOrderUploadBillForm (Purchasing P6) |
 | InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail; Sales/Orders/OrderDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm; Purchasing/Receiving/ShipmentDetail (Create draft bill, AP intake, received basis) (Purchasing P5); Purchasing/Orders/OrderDetail#PurchaseOrderDraftBillForm (Purchasing P6) |
 | InvoiceServices | request#PayableApproval |  | Accounting/Payables/BillDetail |
@@ -742,10 +752,10 @@ Added in Accounting P15 (budgets), called by built screens:
 | CommunicationServices | create#CommunicationEventContent | Shared/RecordFiles | Shared/RecordFiles |
 | CommunicationServices | update#CommunicationEventContent |  |  |
 | CommunicationServices | save#CommunicationEventContentFile | Shared/RecordFiles |  |
-| ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint |
+| ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint; Admin/Settings/OrganizationDetail (Contacts: OrganizationContacts) (Admin P7) |
 | ContactServices | get#PartyContactInfoList | PASS:Shop/Account/Addresses; PASS:Shop/Checkout | — Shop: PASS:Shop/Account/Addresses and Checkout's saved addresses through ShopCustomerServices.get#Addresses (Shop P5, P6) |
 | ContactServices | get#PartyDefaultBilling |  |  |
-| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; — Shop: PASS:Shop/Account/Addresses through ShopCustomerServices.store#Address, Checkout through set#CheckoutAddresses (Shop P5, P6) |
+| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; — Shop: PASS:Shop/Account/Addresses through ShopCustomerServices.store#Address, Checkout through set#CheckoutAddresses (Shop P5, P6); Admin/Settings/OrganizationDetail (Contacts: storeContacts, after the Admin record check) (Admin P7) |
 | ContactServices | create#PostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout | PASS:Shop/Account/Addresses (ShopCustomerServices.store#Address); PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5) (set#CheckoutAddresses) |
 | ContactServices | update#PartyPostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout | PASS:Shop/Account/Addresses (ShopCustomerServices.store#Address, end#Address; Shop P6) |
 | ContactServices | get#PostalAddressGeoIdSet |  |  |
@@ -778,21 +788,21 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1) |
-| PartyServices | get#PartyOrganizationInfo |  |  |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1); Insights (the root's always-actions, Insights P1) |
+| PartyServices | get#PartyOrganizationInfo |  | Insights (every screen, through ironstone.insights.ContextServices.get#Context; Insights P1) |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |
 | PartyServices | create#UserAccountPerson |  |  |
-| PartyServices | create#PartyUserAccount | Admin/Users/Users |  |
-| PartyServices | update#PartyUserAccount | Admin/Users/UserDetail |  |
+| PartyServices | create#PartyUserAccount | Admin/Users/Users | Admin/Users/Users (NewStaffAccount, through mantle.party.IdentityServices.create#StaffAccount) (Admin P4); AcceptInvitation (an accepted invitation with no account, through accept#Invitation) (Admin P5) |
+| PartyServices | update#PartyUserAccount | Admin/Users/UserDetail | Admin/Users/UserDetail (Account, through mantle.party.IdentityServices.store#Account: the account's fields only, F68) (Admin P4) |
 | PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers; Sales/Accounts/Accounts; Sales/Accounts/ContactDetail | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier) |
 | PartyServices | create#PersonCustomer |  |  |
 | PartyServices | create#PersonEmployee |  |  |
-| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier) |
-| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier); Admin/Settings/Organizations (CreateOrganization, through mantle.party.IdentityServices.create#InternalOrganization) (Admin P7) |
+| PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List; Admin/Settings/OrganizationDetail (Profile, through store#InternalOrganization: the name and pseudo id) (Admin P7) |
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
-| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations; Admin/Settings/OrganizationDetail | — (create#Supplier adds the Supplier role through create#Person or create#Organization); — Purchasing: create#Supplier gives the Supplier role (Purchasing P2) |
+| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations; Admin/Settings/OrganizationDetail | — (create#Supplier adds the Supplier role through create#Person or create#Organization); — Purchasing: create#Supplier gives the Supplier role (Purchasing P2); — Admin: create#InternalOrganization gives the OrgInternal role through create#Organization (Admin P7) |
 | PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying, Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.set#SupplierCategory); — (other apps' contexts on Customer360, §7) |
 | PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying, Purchasing/Suppliers/SupplierList (through set#SupplierCategory); — (other apps' contexts on Customer360, §7) |
 | PartyServices | get#PartyBadgeInfo |  |  |
@@ -802,10 +812,10 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | create#PartyContent | Commons/Contacts/ContactDetail; Commons/Settings/Account; Shared/RecordFiles; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Shared/RecordFiles |
 | PartyServices | update#PartyContent |  |  |
 | PartyServices | save#PartyContentFile | Shared/RecordFiles |  |
-| PartyServices | get#PartySettingValue | Admin/Settings/OrganizationDetail |  |
-| PartyServices | store#PartySetting | Admin/Settings/OrganizationDetail |  |
+| PartyServices | get#PartySettingValue | Admin/Settings/OrganizationDetail | — (Admin P7: OrganizationDefaults reads the organization's own and inherited values in store#OrganizationDefault's service, F104) |
+| PartyServices | store#PartySetting | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Defaults, through store#OrganizationDefault) (Admin P7); Insights/Settings/AnalyticsSettings (ironstone.insights.ContextServices.store#Settings, Insights P10) |
 | PartyServices | store#PartyRelationshipSetting |  |  |
-| PartyServices | validate#PartySetting | Admin/Settings/OrganizationDetail |  |
+| PartyServices | validate#PartySetting | Admin/Settings/OrganizationDetail | — (Admin P7: store#OrganizationDefault checks a registered type's value itself, F104) |
 | PartyServices | send#DataDocumentNotifications |  |  |
 | TimeServices | get#DescendantPeriods |  |  |
 | TimeServices | create#TimePeriod |  |  |
@@ -1764,7 +1774,7 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | AccountingServices | get#Access | Accounting (scoped records and QuickCreate) | Native contract (not directly mounted) |
-| AccountingServices | find#Records | Accounting (scoped records and QuickCreate) | Accounting/GeneralLedger/ChartOfAccounts; Accounting/GeneralLedger/JournalBatches; Accounting/GeneralLedger/JournalEntries; Accounting/GeneralLedger/JournalTemplates; Accounting/GeneralLedger/TransactionEntries; Accounting/Payables/Bills; Accounting/Payments/Payments; Accounting/PeriodClose/PeriodLocks; Accounting/PeriodClose/Periods; Accounting/Receivables/Invoices |
+| AccountingServices | find#Records | Accounting (scoped records and QuickCreate) | Accounting/GeneralLedger/ChartOfAccounts; Accounting/GeneralLedger/JournalBatches; Accounting/GeneralLedger/JournalEntries; Accounting/GeneralLedger/JournalTemplates; Accounting/GeneralLedger/TransactionEntries; Accounting/Payables/Bills; Accounting/Payments/Payments; Accounting/PeriodClose/PeriodLocks; Accounting/PeriodClose/Periods; Accounting/Receivables/Invoices; Insights/Home (an attention provider's count, as the viewer; Insights P5) |
 | AccountingServices | get#Record | Accounting (scoped records and QuickCreate) | Accounting/GeneralLedger/AccountDetail; Accounting/GeneralLedger/JournalEntryDetail; Accounting/GeneralLedger/JournalTemplates; Accounting/Payables/BillDetail; Accounting/Payments/PaymentDetail; Accounting/Receivables/InvoiceDetail |
 | AccountingServices | create#DraftDocument | Accounting (scoped records and QuickCreate) | Accounting/QuickCreate/NewBill; Accounting/QuickCreate/NewInvoice; Accounting/QuickCreate/NewPayment |
 | JournalServices | store#DraftEntry | Accounting/GeneralLedger/JournalEntryDetail; Accounting/GeneralLedger/JournalBatches; Accounting/GeneralLedger/JournalTemplates | Accounting/GeneralLedger/JournalEntryDetail; Accounting/QuickCreate/NewEntry |

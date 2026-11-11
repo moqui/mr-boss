@@ -350,15 +350,24 @@ function context(p) {
 // ===== sharing (design §4 ShareDashboard) =====
 // The groups an author may share a dashboard with: their own groups, by name, never the implicit ALL_USERS. Sharing gives the
 // group the definition only; each viewer's queries still run with their own dataset grants.
+// P11 (design §4 Playlists): and the wall displays, every display account's group (BOSS_INSIGHTS_DISPLAY), which no person is
+// in: a playlist and its dashboards shared with it are read by the registered displays, each showing only what its own display
+// account's grants and organizations give.
+const wallDisplayGroupId = "BOSS_INSIGHTS_DISPLAY"
 function shareGroupIds() {
     return Array.from(ec.user.getUserGroupIdSet() || []).filter(groupId => groupId !== "ALL_USERS")
 }
 function shareGroups() {
     required()
-    const groups = Array.from(find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds()).list())
+    const groups = Array.from(
+        find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds().concat([wallDisplayGroupId])).list()
+    )
     return {
         groups: groups
-            .map(group => ({value: group.userGroupId, label: group.description || group.userGroupId}))
+            .map(group => ({
+                value: group.userGroupId,
+                label: group.userGroupId === wallDisplayGroupId ? "Wall displays" : group.description || group.userGroupId
+            }))
             .sort((a, b) => a.label.localeCompare(b.label))
     }
 }
@@ -381,9 +390,12 @@ function shareDashboard(p) {
     const userScope = required()
     if (!userScope.capabilities.author) denied("INSIGHTS_AUTHOR_REQUIRED", "Sharing a dashboard needs Insights authoring")
     const group = p.userGroupId || null
-    if (group && !shareGroupIds().includes(group)) denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
+    if (group && group !== wallDisplayGroupId && !shareGroupIds().includes(group))
+        denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
     const definition = asViewer("org.moqui.report.ReportServices.get#Definition", {definitionId: p.definitionId}).definition
-    if (definition.type !== "dashboard") denied("DASHBOARD_REQUIRED", "Choose a dashboard")
+    // a dashboard, or (P11) a wall display playlist
+    const playlist = definition.type === "report" && definition.body?.kind === "playlist"
+    if (definition.type !== "dashboard" && !playlist) denied("DASHBOARD_REQUIRED", "Choose a dashboard or a playlist")
     if (definition.readOnly || definition.ownerId !== ec.user.userId)
         denied("DASHBOARD_NOT_OWNED", "Only the owner shares a dashboard; save a copy first")
     const version = p.expectedVersion != null && p.expectedVersion !== "" ? Number(p.expectedVersion) : definition.version
@@ -399,6 +411,30 @@ function shareDashboard(p) {
         note: group ? "Shared with " + group : "Made private"
     }).definition
     return {definitionId: saved.id, userGroupId: saved.userGroupId || null, version: saved.version}
+}
+
+// A screen's read with its refusal as an answer (P12, impl-admin F129): a service-call with ignore-error clears the message, so
+// a screen cannot read a refusal's reason after it. With answerRefusal the read's refusal (a "CODE: text" error) is answered as
+// {refusalCode, refusal}; any other failure is logged and answered as FAILED with a plain sentence, never its text. Without
+// answerRefusal the read fails as before, for every other caller.
+function answering(parameters, read) {
+    if (!parameters || parameters.answerRefusal !== true) return read()
+    try {
+        return read()
+    } catch (error) {
+        const text = String(error?.message ?? error ?? "")
+        const code = lib.reasonCode(error)
+        ec.message.clearErrors()
+        // a refusal's code has an underscore (every Insights and engine refusal's does), so an exception's text with a
+        // code-like prefix (a database's ERROR:, URL:, JSON:) is a failure, never shown (as Admin's AdminCalls.read, P19 review)
+        if (code && code.includes("_"))
+            return {refusalCode: code, refusal: text.replace(/^(Error:\s*)?[A-Z][A-Z0-9_]+:\s*/, "").substring(0, 300)}
+        ec.logger.warn("Insights read refused or failed for " + ec.user.username + ": " + text)
+        return {
+            refusalCode: "FAILED",
+            refusal: /not authorized/i.test(text) ? "You may not read this" : "This could not be read now"
+        }
+    }
 }
 
 const operations = {context, shareGroups, shareDashboard}
@@ -423,6 +459,8 @@ const operations = {context, shareGroups, shareDashboard}
     calendarParameters,
     partyName,
     organizationIds,
+    // P12: a screen's read with its refusal as an answer (impl-admin F129)
+    answering,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights operation " + op)
         return operations[op](parameters)

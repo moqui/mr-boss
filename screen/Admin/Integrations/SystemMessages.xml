@@ -123,12 +123,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the review of a chosen batch: each message's own preview for the chosen action -->
         <set field="reviewRows" from="[]"/>
         <if condition="reviewing">
-            <service-call name="org.moqui.admin.OperationServices.preview#Recovery" out-map="previewed" transaction="force-new" ignore-error="true"
-                    in-map="{targetKind:'SystemMessage', targetIdList:bulkChosen.slice(0, 25)}"/>
+            <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.OperationServices.preview#Recovery',
+                    {targetKind:'SystemMessage', targetIdList:bulkChosen.slice(0, 25)}, 'The messages could not be reviewed')"/>
+            <set field="previewed" from="called.out"/>
             <script><![CDATA[
-                const refusal = ec.message.hasError() ? ec.message.getErrorsString() : ''
-                ec.message.clearErrors()
-                reviewFailure = previewed?.previewList ? '' : (refusal || 'The messages could not be reviewed')
+                reviewFailure = previewed?.previewList ? '' : (called.failure || 'The messages could not be reviewed')
                 reviewAction = bulkActions.find(option => option.value === bulkAction) || null
                 reviewRows = reviewAction ? Array.from(previewed?.previewList || []).map(row => {
                     const offered = Array.from(row.actionList || []).find(option => option.action === reviewAction.value) || {}

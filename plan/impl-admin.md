@@ -1,5 +1,8 @@
 # IronStone BOSS — Admin implementation
 
+Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
+and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
+results go in a Final suites note under P19.
 Nov 11, 2026 — gate 4 built: P15–P17 (stage 4), Admin's data and audit, each phase reviewed by a fresh agent and merged on
 its focused specs. Next: stage 5: P18 (shared devices), Insights P11 (wall displays) and the two Finish phases, then the
 full suites.
@@ -285,8 +288,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P15 Imports | mr-moqui, Mantle, BOSS | Imports, DataImport, ImportDetail; Products' import mount | built and reviewed Nov 11, merged |
 | P16 Exports and backups | mr-moqui, BOSS | Exports, DataExport, Backups | built and reviewed Nov 11, merged |
 | P17 Audit and access evidence | mr-moqui, BOSS | AuditChanges, AccessLog | built and reviewed Nov 11, merged |
-| P18 Shared devices | mr-moqui, BOSS | Devices | — |
-| P19 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P18 Shared devices | mr-moqui, BOSS | Devices | built and reviewed Nov 11, merged |
+| P19 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 11, merged |
 
 ### P0 — Checks
 
@@ -4775,6 +4778,263 @@ second release (§4).
   the Insights reader bundle for ORG_ZIZI_RETAIL; its code works once; the browser opens nothing outside the route
   group; revoking the device ends its session at once.
 
+**Built Nov 11 (P18).**
+- Checked first (the plan's proposal against CX-DEVICE and the code, as the phase asks; the answer is in design-admin §6 and
+  §19 item 7 and crosscut CX-DEVICE):
+  - The proposal stands, with one change of substance. A device identifies no person and reads as a display account: a
+    UserAccount nothing signs in, with a Person party that is a member of each organization it shows
+    (`store#OrganizationMembership`, so `setup#UserOrganizationInfo`, `MANTLE_USER_ORG` and Insights' row filter scope
+    it, F33) and the registered bundles its registrar could assign. The change: the plan had "its requests run as it"
+    and "its sessions ended at once", which reads as a signed-in session of the display account. The code says no to
+    that. The framework's nearest credentials (an API or device key, `login.rs` `check_login_key`; an app password) all
+    end by making their account the web session's user, and three places outside the screens read a session's user
+    from its row or live copy (the notification socket, the terminal socket, the Assistant's event stream), and many
+    paths ask only for a signed-in user. So the display account is the user of a device's request only, held in the
+    request's context and never written to the session (F278); there is no session of it to end, and revocation is
+    the device row, read on every request (F281).
+  - Artifact authorization cannot confine a device: `ALL_USERS` holds an inheritable ALLOW on the Admin service
+    families (each refuses by permission), the app list and shell transitions, and a display account's own bundle
+    reaches more than one screen. And the display account's own authorization cannot be cut down to the route group
+    either: a dataset's artifact is checked with `authorize_own` under its own grant, which a playlist's panels need
+    (F279, F280). So the route group is an allow-list of the request's target, checked by the framework before
+    the target runs, and what it admits is authorized as the display account as ever.
+  - A display account must be refused by every sign-in. Beside the password and key logins, a dozen entry points check
+    a credential of their own and then call `internal_login_user` (SSH keys, SFTP, XMPP, the terminal, git, the report
+    schedules), so the refusal is in `internal_login` itself, with one named exception for the work a request queued
+    (`service/pool.rs`), which a worker runs as its user with no client attached (F282).
+  - `create#PartyUserAccount` requires an email address, unique among accounts: a display account has none, so Mantle
+    creates its account itself (F283). P4's `store#OrganizationMembership` needs `ADMIN_IDENTITY_MANAGE` and P3's
+    grant proposal `ADMIN_ACCESS_MANAGE` or `ADMIN_IDENTITY_MANAGE`; the identity operator opens no Security area and
+    the access administrator no Users area (F284).
+  - Upstream's `/qapps` shell: a browser's page under `/qapps` is the shell screen itself, which then asks for the
+    menu, the shell data, notifications and each screen. None of that is in a route group, so a device cannot load the
+    BOSS shell: Insights P11's display needs a page of its own or members for what it loads (F285).
+- mr-moqui (Rust changed: a Debug build in the worktree; no release build):
+  - `crates/moqui-core/src/user/device.rs` (new): the credential. `begin_request` (the cookie `moqui.device`,
+    `<deviceId>.<secret>`; the secret compared first, by its SHA-256, so a request without it learns nothing; then
+    revoked, stopped, the end date, the idle timeout, `ipAllowed`, the display account's fitness, the route group; no
+    cache), `enter`/`leave` of the request's identity, the daily replacement of the secret with the ten-minute grace
+    and the stop of a device whose earlier secret comes back (`copied`), last seen at most once a minute, `redeem` (the
+    code once, the write holding only while unredeemed; the session's user signed out), `check_route` (the gate),
+    `display_account_refusal` (displayAccount, not closed, no password or external identity, no privileged group, no
+    sealed permission), and the evidence rows.
+  - `user/session.rs`: a device's hold in the context's session memory; `thread_view` stores the session's own
+    identity whatever the context's user is, so no flush, sync or guard order can write the display account.
+    `user/login.rs`: the display-account refusals (password, `internal_login`), `internal_login_queued_user` for
+    `service/pool.rs`, and no login at all inside a device's request.
+  - `screen/mod.rs` `handle`: the device begins after the session is bound; a refused one is 403 (its cookie removed
+    when the refusal is final); the registration's fixed parameter replaces the request's; `authenticate` is skipped;
+    a script servlet is refused. `screen/render.rs`: the gate before anything of the target, and a screen test's
+    render with a device cookie header is that device's request. `token_route.rs`: `Device` reserved.
+  - `script/host/globals.rs`: `UserSecurityChecks.newDeviceCode`, `redeemDeviceCode` (the cookie goes on the response,
+    never to the script), `displayAccountRefusal`, `currentDevice`.
+  - Entities (`SecurityEntities.xml`): `UserAccount.displayAccount` (audit-logged), `moqui.security.DeviceRouteGroup`
+    (the registry row) and `DeviceCredential`.
+  - `service/org/moqui/admin/DeviceServices.xml` and `Devices.js` (new): `find#RouteGroups`, `find#Devices`,
+    `register#Device`, `issue#DeviceCode`, `revoke#Device`, and the public page's `redeem#Device` and
+    `get#DeviceStatus`. `webroot/screen/webroot/Device.xml` (new): the `/Device` page.
+  - Data: `SecurityTypeData.xml` (the `AdminDeviceServices` grant, appended). No route group is seeded by the
+    framework: each owner seeds its own.
+  - Docs: `docs/security/Shared-Devices.md` (new), Attack-Surface ("Shared devices"), the webroot README's row,
+    Remaining-Work (the device-credential ask rewritten as built with what is left; the `org.moqui.admin` row).
+- Mantle: `service/mantle/party/SharedDevices.js` (new) and five services appended to `IdentityServices.xml` (the
+  package's existing grant covers them): `create#DisplayAccount` (`ADMIN_IDENTITY_MANAGE`: the party, the member
+  relationship through `store#OrganizationMembership`, the account, the grant proposal, all or nothing, and the account
+  must come out fit for a device), `find#DisplayAccounts`, `find#SharedDevices`, `register#SharedDevice`,
+  `reveal#SharedDeviceCode` and `revoke#SharedDevice`, each within the caller's identity scope (the organization entity
+  filters, as every find of the package): another organization's display account and device are not available and
+  are counted, a display account that also shows an organization out of scope needs `ADMIN_IDENTITY_GLOBAL`, and the
+  site is a Facility the caller reads. `find#Users` names a display account as one. `data/PartyAuditData.xml`: six
+  projections (the `displayAccount` flag and the five device events), by Mantle's audit source.
+- BOSS:
+  - `screen/Admin/Security/Devices.xml` (new, the Security area's third tab): DeviceFind, DeviceList with Revoke,
+    RegisterDevice, and the code shown once at the render (`revealDeviceId`). `screen/Admin/Users/Users.xml`:
+    NewDisplayAccount. `Admin.js`: the route row, and Login as refused for a display account with its reason.
+  - `data/BossSetupData.xml` (appended): the route group `INSIGHTS_PLAYLISTS` (owner Insights, parameter
+    `definitionId`, a week's idle timeout) and its artifact group `BOSS_DEV_INS_PLAYLISTS`: the Playlists screen and
+    its `data` transition, no more. Insights P11 adds what its play needs and sets the home path.
+- Specs (feature time on the Debug binary):
+  - cargo `user::device::tests` (3 tests, 0.3 s): the code once and nothing stored in plain text; the request-only
+    identity and the session that never holds it; the daily replacement, the grace and the copy; the idle stop; the
+    sign-ins a display account never passes and the queued work it does; the privileged group, the address and the
+    disabled account.
+  - framework `DeviceCredential` (3 features, 0.5 s): registering and its refusals, the code through `/Device`, the
+    gate beside an instance administrator's own session, revocation, the evidence.
+  - framework client `SecurityDevice` (4 features, 0.1 to 0.4 s; over real HTTP, with fixtures in `ClientFixtures`): the
+    cookie's flags, a second redemption, the device refused another screen, a transition, a REST path with a login key
+    and the REST login (403), its session cookie alone signing no one in, no notification socket, and a forged and a
+    revoked cookie refused and removed.
+  - Mantle `party/SharedDevices` (2 features, 0.8 s): a display account's making and its refusals; a device
+    registered, its code shown once, listed and revoked only within the registrar's organizations.
+  - BOSS `Admin/AdminDevices` (3 features, 0.6 to 1.1 s): the transitions as each role, Devices' one qvt render, the code
+    redeemed and the device refused Admin, Insights' other screens, its account's notifications and Playlists' own
+    editing transition, and its admitted request decided as the display account. `AdminAccess` gains the rule's case
+    (0.3 s): one holder, one non-holder, another organization's display account, a privileged bundle, Login as.
+  - Acceptance, written and not run: `acceptance/Admin/AdminDevicesUsable.spec.js` (the "usable when", with the audit
+    reader's view of it).
+- Tests run: the specs above; framework `AdminSessions`, `PushDevice`, `AdminAccessServices`, `RecentAuth`,
+  `AdminAuditChanges`; the framework's client `SecurityAuthn`, `SecurityAccess`, `SecurityScreens`, `SecurityRest`;
+  Mantle `StaffIdentity`, `IdentityAudit`, `UserLifecycle`; BOSS `AdminUsers`, `AdminSecurity`, `AdminAudit`,
+  `ProjectsAccess`; cargo `-p moqui-core --lib` for `user::`, `screen::`, `service::pool` and `script::host` (583
+  tests), clippy for the crate; `moqui lint --screens` (no parse failure, nothing flagged in the new screens). No
+  suite, no acceptance test.
+- Rendered by hand (a throwaway spec, not kept): Devices in tui, html and qvt as the access administrator and the
+  administrator, as the configuration administrator ("not available to you") and the reader (refused the area);
+  Users in tui and html with NewDisplayAccount; `/Device`. No server was run by hand: the worktree's path is too long
+  for the embedded database's socket (117 bytes), so the HTTP path was proved by the client spec instead.
+- Inventories: none names Devices (design §2's row is "new"); nothing to mark.
+- Design edits: design-admin (the head line, §6 Devices with "What a device reads as" and "As built", §14's row,
+  §17.1 ADM-DEVICES, §17.2's DeviceServices row and the device record, §19 item 7 settled); design-crosscut (CX-DEVICE
+  in §1.5, its need row and the L5 remainder row); design-insights §4 Playlists (the display account, one sentence).
+- Findings:
+  - F278: a signed-in session of the display account would be a general session to the sockets and to every path
+    that asks only for a user. Resolved: the display account is a request's user, never a session's.
+  - F279: `ALL_USERS` grants and login-only paths make artifact authorization no fence for a device. Resolved: the
+    route group is an allow-list of the request's target, deny by default, in the framework.
+  - F280: cutting the display account's authorization down to the route group would refuse the dataset grants a
+    playlist reads by. Resolved: what the gate admits is authorized as the display account, unchanged.
+  - F281: "its sessions ended at once" has no sessions to end. Resolved: every request reads the device; a
+    revocation holds from the next one on every server, and the cookie is removed.
+  - F282: a dozen sign-ins end in `internal_login_user` after a check of their own. Resolved: the refusal is there,
+    with `internal_login_queued_user` for queued work.
+  - F283: `create#PartyUserAccount` needs an email. Resolved: `create#DisplayAccount` writes the account.
+  - F284: no one delegated role both makes an account and registers a device. Built: the identity operator makes
+    the display account in Users, the access administrator registers the device. Open (the user's call, below).
+  - F285: the `/qapps` shell is outside every route group. Open, Insights P11's: a page for the display, or the
+    members it loads. A screen's own server-side render of another screen is gated too.
+  - F286: the Insights reader bundle alone opens nothing: the Insights root is the launcher group's
+    (`BOSS_INSIGHTS`). The "usable when" display account "holding only the reader bundle" is refused its own route
+    group by authorization (the spec shows exactly that). Open, Insights P11's: which bundles a display holds.
+  - F287: a copy of the cookie used within the day of the copying is not detected; the replacement catches it
+    after. Said in design §6 and the docs; a bound credential is in Remaining-Work.
+  - F288: a browser that loses the response carrying its new secret is stopped ten minutes later and must be
+    registered again. Kept: re-issuing the secret would let a copy keep up.
+  - F289: a refused device gets a bare 403. Open, with P11's page (Remaining-Work).
+  - F290: the framework's client budget is 6 s and five of its six specs with `SecurityDevice` take 6.4 s on the
+    Debug binary (the failing line is 9 s).
+  - F291: `apps/ScreenTree` fails in a screen test (`sri.getRootScreenDef` is not a function). Not this phase's.
+- Decisions made here:
+  - The display account is the user of a device's request only; revocation is the next request refused.
+  - A route group's artifact group is an allow-list and grants nothing: a screen member admits its render, an
+    inheritable one its transitions and what is below, a transition member that transition; `/Device` and the files
+    anyone may have are always admitted.
+  - The code is about 99 bits, made at the render that shows it (as P5's link), entered at `/Device` within 15 minutes;
+    every refusal of a code gets one answer.
+  - The cookie is `HttpOnly`, `SameSite=Strict`, `Secure` on https; the secret is replaced daily, the one before it
+    works ten minutes and then stops the device.
+  - A wall display's idle timeout is a week by default (5 minutes to 30 days), a registration lasts 365 days (at most
+    730), and a device may be held to addresses.
+  - A display account that stops being fit refuses its devices until it is put right; it does not stop them for good.
+  - A device's evidence is on its display account, so the organization scope of an account's evidence is its scope.
+  - Revoking takes no revision: it only ends, and a second one answers the first (last seen rewrites the row a minute).
+  - Nothing signs in as a display account, Login as included.
+  - Mantle's device services are in `mantle.party.IdentityServices`, bodies in a module of their own.
+- For the lead:
+  - Budgets (Debug feature time): framework server +0.5 s, framework client +0.4 s (see F290), Mantle +0.8 s,
+    BOSS +1.4 s.
+  - Merge: appended at the end of `BossSetupData.xml`, the framework's `SecurityTypeData.xml`, Mantle's
+    `PartyAuditData.xml` and `IdentityServices.xml`, and `ClientFixtures.spec.js`; one row in `Admin.js`'s route list and
+    two lines in its `loginAsCheck`; `AdminAccess.spec.js` one feature before the last; `Remaining-Work.md` the two
+    rows named. The `crates/moqui-report` work on another branch touches none of these files.
+  - For Insights P11: the route group row and its artifact group are in BossSetupData's last block (add members, set
+    `homePath`); Devices opens RegisterDevice's values from `newRouteGroupId` and `newParameterValue`;
+    `find#SharedDevices` takes `routeGroupId` and `parameterValue` for "the devices showing each playlist";
+    `UserSecurityChecks.currentDevice()` says whether a request is a device's; a refused device gets 403 JSON; see
+    F285 and F286.
+  - The user's call: who makes a display account (built: the identity operator; the access administrator alone
+    cannot set a display up, F284); whether Login as a display account should be allowed to an `ADMIN_LOGIN_AS`
+    holder (built: refused); the defaults (a week idle, 365 days, a daily replacement, 15 minutes for a code).
+  - Not verified: the acceptance test was not run; a real browser (the client spec proves the cookie and the gate over
+    HTTP, not a browser's handling of `SameSite=Strict`); two servers (nothing is cached per server, but no cluster
+    was run); the secret's replacement over HTTP (cargo only).
+
+**Review Nov 11 (P18).** A fresh review of the three repositories' P18 diffs, the Rust line by line (`user/device.rs`,
+`user/session.rs`, `user/login.rs`, `screen/mod.rs` `handle` and `dispatch_request`, `screen/render.rs`, `token_route.rs`,
+`script/host/globals.rs`, `service/pool.rs`), then `Devices.js`, Mantle's `SharedDevices.js` and BOSS's screens and seed;
+the gate probed with a throwaway spec (deleted): as a device, 33 paths. Fixes committed apart in mr-moqui ("Admin P18
+review: …"); Mantle and BOSS unchanged.
+- Checked and found sound:
+  - Confinement. Every HTTP request with a device cookie passes `handle`, and the gate is in `run_job_now` before the
+    redirects, the authentication check, any action and any file: deny unless a member admits the target screen (a
+    non-inheritable screen member admits its render only, not its transitions, its implicit ones such as `actions`, or
+    a subscreen) or the transition; a missing or disabled route group refuses the device (`Account`), a missing artifact
+    group admits nothing. Probed and refused with "This device opens only …": other screens and app transitions (GET
+    and POST), `rest/s1`, `rest/e1`, `rest/m1`, `rest/login`, `Login` and its transitions, `ChangePassword`,
+    `SecondFactor`, `ReAuth`, `sso`, `assist`, `rum`, `WebPush`, `ChatKeys`, `emailOAuth`, `PublicShell`, `echopath`,
+    `status`, `error`, `qapps/<member>` (the shell's mount, not the member), a script servlet; admitted: the member, its
+    `.xml` render mode, `/Device`, `favicon.ico`. `/fop` renders through the same `run_job_now`. The host's own routes
+    (`/notws`, `/termws`, `/xmpp-websocket`, `/callws`, `/git`, `/dav`, `/llm/v1`) never read the device cookie and see
+    the browser's session, which holds no user. A nested render inside an admitted screen is gated too; what the
+    screen itself includes is the screen author's, and its services run with the display account's own authorization,
+    which is right (F280). `before-request` actions and filters run as the display account before the gate: conf
+    code, not the request's.
+  - Identity. `enter_device` swaps the context's user and `thread_view` stores the held identity, so no flush, sync or
+    `restore_identity` writes the display account to the session row or live session; a visit is made at the bind,
+    before the device, with no user; no login history is written. `finish_login` refuses any sign-in under a device
+    (password, `internal_login_user`, a service's `authUsername`, which `login_user_local` checks through it);
+    `internal_login` refuses a display account everywhere but `pool.rs`'s three queued paths, whose user is the
+    caller's own at queue time (or a persisted queue row's, writable only by an entity administrator who could name any
+    user). Login as: the framework (`internal_login`) and BOSS refuse. A display account has no email, so no reset,
+    invitation or SSO link reaches it; a password or external id makes its devices refuse.
+  - Privileged groups and sealed permissions are not refused on the grant paths (P3's `store#Membership`,
+    `apply#Grants`, imports, Tools, direct writes): a display account may come to hold one, and then every device of
+    it refuses, from the next request, until it is removed; nothing else signs it in, so holding one opens nothing.
+  - The credential. The code is 20 of 31 symbols (about 99 bits, unbiased), single-use-hashed, unique-indexed, good
+    once (the write guarded on `redeemedDate` null), 15 minutes by default; the secret 43 base64url characters (258
+    bits), kept as `hash_login_key`; the secret checked first so a request without it learns nothing; every refusal of
+    a code or secret is `note_auth_failure` for the web protection. No secret in a log line (device ids only), URL,
+    error or audit row. `ipAllowed` against `web::client_ip`, the configured proxy header. Rotation race: the write is
+    guarded on the current hash, the loser's request goes on with no cookie, the old secret works the grace.
+  - Revocation and fitness: the device row is `cache="never"` and read with `use_cache(false)`; the display account's
+    groups, grants and the route group are cached entities the cluster invalidates, as every user's authorization is.
+    The cost on an ordinary request is one cookie header scan. Removing the display account's organization membership
+    does not refuse the device: it then shows that organization nothing (the row filters), which fails safe.
+  - Registration: `register#Device` needs `ADMIN_ACCESS_MANAGE` and a display account whose every current or future
+    group the registrar could assign; Mantle adds the identity scope (another organization's display account and device
+    not available, counted), `ADMIN_IDENTITY_GLOBAL` for one shown beyond it, a Facility the caller reads.
+    `create#DisplayAccount` checks `ADMIN_IDENTITY_MANAGE` and the organization, writes the party, the membership
+    through `store#OrganizationMembership`, the account (no password, email or external id, `displayAccount` Y) and the
+    grant proposal in one transaction, and refuses an account a device could not run as. The framework's
+    `DeviceServices` know no organization and are granted to `ALL_USERS` (`allow-remote` false), as `AccessServices`
+    are: scope is Mantle's, as in gate 1.
+  - The fixed parameter is put last over the query, the form, a JSON body and the saved parameters in `handle` (and in
+    a screen test's render), and a path's inline parameters yield to it in `run_job_now`.
+  - Audit: registered, redeemed, revoked, refused (throttled to one each ten minutes), stopped; never a code or secret;
+    Mantle's six projections. The daily replacement is not audited (a row a day per device would be noise; a copy's
+    use is, as `deviceStopped` `copied`).
+  - Regression: the non-device path of `handle`, `login.rs` and `session.rs` is unchanged but for one cookie scan;
+    `pool.rs`'s queued login differs only for a display account.
+- Fixes (mr-moqui):
+  - R1 (High): the daily new secret was written in `begin_request` and its cookie put in the web slot, which every
+    answer built outside it dropped (a route refusal, a 404, a render error, the error page), so a display whose first
+    request of the day was refused, or failed, was stopped ten minutes later as a copy, with a false `copied` row; and
+    a static answer marked `Cache-Control: public` carried the new secret where a shared cache may keep it. Now
+    `DeviceGuard::rotate` makes the secret at the end of `handle`, on an answer that will carry it (any whole answer, a
+    refusal too); a streamed or public one leaves it to the next request. cargo (`rotate`, nothing made when not
+    called) and `SecurityDevice` (the new secret on a 403, which then works).
+  - R2 (Low): a token route ran its token service as the display account before the gate refused its shell: refused
+    first now. R3 (Low): a device held to addresses passed a request with no known address: it fails closed (cargo).
+    R4 (Low): the refusal throttle's count did not use `ENTAUDLOG_FLD1PK` whole (no display account): it does.
+  - R5 (Low): a refused device request left the live session minted for a cookieless request in the table until its
+    idle timeout, one per request: it is discarded (`SecurityDevice` checks no session cookie).
+  - R6 (Low): a screen test's render inside a device's request began the device again, and its guard's drop ended the
+    outer scope: not begun again.
+  - Shared-Devices.md: the replacement's timing, the token route, the unknown address.
+- F291 is master's: `ScreenTree.xml` calls `sri.getRootScreenDef()`, which no Rust on master or this branch
+  implements, and the branch does not touch the screen.
+- F290: on the shared release binary with this runtime the six client specs other than `SecurityDevice` take 4.6 s
+  of 6 s; `SecurityDevice` is 0.4 s on Debug, so the suite is about 5 s on release: the overrun is Debug's. No budget
+  raised.
+- Tests: cargo `user::device` (3) and `-p moqui-core --lib screen:: user::` (565 passed), clippy and fmt of the files
+  touched; framework `DeviceCredential`, `AdminSessions`, `RecentAuth`; client `SecurityDevice` (5 features, 0.4 s on
+  Debug), `SecurityAuthn`; BOSS `AdminDevices`; all pass on the rebuilt Debug binary. No suite, no acceptance test.
+- For the lead:
+  - Budget: framework client +0.02 s (the rotation feature); nothing else.
+  - Open, the user's call or a later phase's: F288 stands (a lost answer still stops the display after the grace;
+    R1 removed the far commoner cause); whether a grant path should refuse a privileged group to a display account
+    rather than leave its devices refusing; F285 (the `/qapps` shell) is now also the reason a qvt client asking
+    `actions` or `qapps/<member>` is refused.
+
 ### P19 — Finish
 
 - The tui and server-static screen sweeps of Admin, one acceptance test per mode (each screen's twin is built in its
@@ -4785,6 +5045,241 @@ second release (§4).
 - The §16 outputs not built earlier: the readiness and support summary (print and redacted JSON).
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-boss README's
   Admin line.
+
+**Built Nov 11 (P19).**
+- Checked first: the phase's loose ends against the code as it is now (the Built and Review notes' "For the lead" items of
+  P1–P18). What changed from the plan: the readiness and support summary is a screen of its own under Operations (no
+  owner screen of design §16's two held room for a print and a file); F129's sites were 23 reads in 18 Admin screens, not
+  only gate 1's; the notification-title hazard reached past BOSS into the framework's job error and agent inbox notices
+  (Rust), Voice's alerts and Mantle's approval notices.
+- mr-moqui:
+  - Rust: `moqui-core` `notify/message.rs` (`service_job_error`: the job's name and errors taken into the title from the
+    message by name, `${jobName}` and `${errors}`, so an error that quotes stored or entered text runs nothing) with its
+    test `job_error_publishes_danger_with_job_name` given an error holding an expression; `moqui-llm` `trigger.rs`
+    (`inbox`: the title is put in the message as `inboxTitle` and the template is `${inboxTitle}`, for an approval's
+    model-written summary and an agent or trigger id).
+  - `service/org/moqui/call/Voice.js`: the emergency call, trunk and blocked-source alerts pass their caller, location
+    name, trunk name and source address in the message and a fixed title template (they were expanded once by
+    `ec.resource.expand` and then again as the title). `test/Voice.spec.js` checks the blocked source's title.
+  - `plans/Remaining-Work.md`: the `org.moqui.admin.*` row (P19's titles; the identity provider link rule, below); the
+    security list (mr-marble's `topicSubscriptions`); the tests list (`apps/ScreenTree`).
+- Mantle: `service/mantle/order/PurchaseApprovals.js` (`notify`: a source's own wording, which quotes a supplier's name, is
+  put in the message as `noticeTitle` and the title is `${noticeTitle}`); `test/party/PurchaseAgreements.spec.js` checks
+  the notices' title.
+- BOSS:
+  - `service/ironstone/admin/AdminCalls.js` (new): `read(service, parameters, fallback)` answers `{out, failure}` with a
+    refusal's own words ("CODE: words", or "PERMISSION is required" as the framework's administration services refuse) and
+    otherwise the screen's own text (F129). The 23 reads that captured a failure after `ignore-error="true"` (Home,
+    Groups, GroupDetail and its grant preview, Users, UserDetail and its lifecycle preview, Sessions (two), Invitations,
+    LifecycleOperations, LifecycleDetail, SettingsHome, Organizations, OrganizationDetail, InstanceSettings, Localization,
+    ReferenceData, Constitution, Health, SystemMessages' bulk review) read through it; GroupDetail no longer reads a
+    group its record check refused. The other `ignore-error` calls of Admin's screens keep a "not available" state
+    and capture nothing, as before.
+  - `RegistryServices.get#SupportSummary` (new, `Registry.js` `supportSummary`) and `screen/Admin/Operations/SupportSummary.xml`
+    (new, hidden, menu-include false; linked from Health's header and ServerConfiguration for an `ADMIN_OVERVIEW_VIEW`
+    holder): design §16's readiness and support summary, html-print and redacted JSON (`summaryJson`). Holds the
+    instance's display name, version and package, the readiness checks the viewer may read (state, reason code, message,
+    freshness, checked time; failed providers named), the protocols' states with their last checks, and the effective
+    settings (a secret only set or not); each section read with the viewer's own permissions and marked unavailable with
+    its reason. Never: the environment, host facts, listeners, paths, users, fix links, refresh keys or diagnostics. The
+    JSON is always redacted: who prepared it left out, an email address in any text written `[address]`. `Admin.js`
+    `linkPaths` gains `Operations/SupportSummary`. A `get` verb: the client deny pattern is unchanged.
+  - Acceptance, written and not run (the lead runs the suite): `acceptance/Admin/AdminTui.spec.js` (1 feature: every
+    Admin screen, 66 with the Data area's `Shared/DataImport` mount, in tui as admin.admin with authorization on: a TUI
+    document, no error node; System is Tools' and left out); `acceptance/Admin/AdminServerStatic.spec.js` (1 feature:
+    ServerStaticLib's full check of each, no verdict an error; none is marked server-static); and
+    `acceptance/Admin/AdminReviewWalk.spec.js` (4 features, design §15.3 as §8 sets it: each of the eleven Admin group
+    users (admin.reader to admin.backup and admin.delegate) is refused another organization's identity by URL,
+    UserDetail's `storeAccount`, the palette, three drop-downs, Assist's `admin_find_users` (not exposed to MCP), direct
+    services, a shared identity's account-wide change, another organization's OrganizationDetail and its member's contact
+    book through `run#AdminExport`; is given no secret (a relay password and a provider client secret set by the walk) on
+    eight pages, the summary's print, its JSON and four services; gains no privileged membership or sealed grant through
+    GroupDetail's `addMember`, `store#Membership`, a grant proposal, `invite#User` (the rules a bulk invitation import
+    applies to each row), an SSO role mapping or direct entity writes, and nothing is written; and opens no System
+    screen). `test/Admin/AdminSpecLib.js` gains `sweepScreens` and `sweepParameters` for the sweeps (their output was
+    checked once by a throwaway spec: 66 screens, every detail screen's demo record or `NONE`).
+  - Specs: `AdminGroups` (+1 feature, 0.12 s: a refused read answers its reason, an allowed one its result, a malformed
+    one the screen's own words, and no error is left behind); `AdminRegistries` (+1 feature, 0.34 s: the summary as the
+    reader, redacted, and as the administrator; no fix link, refresh key or address in the redacted one; a secret
+    setting never a value; the privacy administrator refused; SupportSummary's one qvt render and the JSON download).
+  - Records: design-admin §2 (the Impl column of every built row, `xml (built Pn)` with its path where it differs, and the
+    new SupportSummary row), §10 TopicDetail (mr-marble's exposure and the proposed fix), §16 (the summary as built);
+    ss-inventory (the Admin header note: its rows were already filled phase by phase) and usl-inventory (the Admin header
+    note and ten rows: `get#`/`store#PartyContactInfo`, `create#`/`update#PartyUserAccount`, `create#Organization`,
+    `update#PartyDetail`, `ensure#PartyRole`, `get#PartySettingValue`, `store#PartySetting`, `validate#PartySetting`); §7
+    (mr-marble's finding, ScreenTree, the lifecycle notice); the README's Admin paragraph.
+- Tests run (the shared release binary, `--nobuild`, this phase's runtime; Rust in the worktree's Debug build): mr-boss
+  AdminGroups, AdminUsers, AdminSettings, AdminOrganizations, AdminConstitution, AdminRegistries, AdminLifecycle,
+  AdminInvitations, AdminSystemMessages, AdminAccess and ProjectsAccess 46 of 46; mr-mantle PurchaseAgreements 3 of 3; framework
+  Voice 13 of 13; `cargo test -p moqui-core --lib job_error` 3 of 3; `cargo clippy -p moqui-core -p moqui-llm --lib -D
+  warnings` clean; rustfmt and Prettier clean on what changed (Voice.js and Voice.spec.js were not Prettier-clean before
+  and are left so); `moqui lint --screens` no Admin file flagged, 0 parse failures. By hand, not kept: SupportSummary in
+  html-print, tui and html as the administrator. Not run: the acceptance tests written here, the full suites, the rest of
+  cargo, the moqui-host integration test of the agent inbox.
+- Loose ends:
+  - **F129** done (above). A screen whose area the user cannot open still says so by its screen grant first; the reason
+    shows where the area opens and the service refuses (the configuration administrator in Operations, the reader on a
+    list its permission does not cover).
+  - **F-P10's open item** (an organization-scoped `ADMIN_ACCESS_MANAGE` holder administers identity providers, which are
+    instance-wide): checked, recorded, not bounded. An access administrator of Ziziwork Retail (or the delegate) enables a
+    provider an integration administrator of Retail configured; with the link rule `AflVerifiedEmail` that provider then
+    signs in any account of any organization (Services' staff, a PASS customer) whose verified email and name it asserts,
+    privileged and sealed-granting accounts excepted (P10 R1); with `AflNever` it signs in the accounts it made or that
+    name it, and one with an id naming no provider. `HELD_BEYOND` at enabling counts the accounts linked then, not those a
+    later sign-in links. The framework's provider records know no organization, so a bound there is either the link rule
+    `AflVerifiedEmail` (and enabling a provider with it) kept for `ADMIN_IDENTITY_GLOBAL`, which would change P10's
+    usable-when (the Retail access administrator sets it in AdminSecurityUsable), or an organization on the provider that
+    the sign-in's link honors (Rust, a framework ask; in Remaining-Work). The user's call: F292.
+  - **The notification-title hazard** (Insights P8 R1): every caller searched in mr-moqui (Rust and scripts), Mantle,
+    BOSS, mr-pass and mr-marble. Fixed: the job error notice and the agent inbox (Rust), Voice's three alerts (an
+    emergency location's or trunk's name, a source address; each was expanded twice), Mantle's approval notices with
+    their own wording (a supplier's name). Left as they are, each an administrator's template by design: a DataDocument's
+    `documentTitle` used as a topic's title when no topic exists (`service/tools.rs`, PartyServices' data-feed notice; as
+    Java), a topic's `titleTemplate` (Tools'; Admin never writes it, P14), Chat's localized mention (P8 R1 validates a
+    translation's expressions). Safe: the database job notice (generated id, fixed status), the report alert (P8 R1).
+  - **mr-marble's subscription screen**: not changed (read only); the finding and the proposed fix are in §7,
+    design-admin §10 TopicDetail and Remaining-Work's security list.
+  - **`apps/ScreenTree`**: not one line (it needs a host member for screen definitions); in Remaining-Work's tests list
+    and §7.
+- Findings (provisional, numbered by the lead):
+  - **F292** (high, the user's call) The identity provider link rule is instance-wide while its enabler may be
+    organization-scoped (above).
+  - **F293** (medium, fixed) A notification title quoting stored or model-written text ran it as a script: the job
+    error notice (its errors), the agent inbox (an approval's summary, which a model writes), Voice's alerts and Mantle's
+    approval notices with their own wording (a supplier's name).
+  - **F294** (low, fixed) F129's dead `failure` captures were in 18 Admin screens (23 reads), P8–P16's too, so a
+    refused list read as empty ("No groups yet.") and a refused record as missing.
+  - **F295** (low, open) design §16's lifecycle completion and exception notice was never built (§7).
+  - **F296** (low, open) F73 stands as designed: the framework's `org.moqui.admin` identity services
+    (`revoke#AccountAccess`, `revoke#Sessions`) take any account from a holder of their permission and know no
+    organization; they are not remote services, and BOSS's and Mantle's record checks come first on every Admin path.
+    The review walk checks the record check, not a direct framework call.
+- Decisions: the support summary is its own screen under Operations, the screen and print unredacted for the viewer and
+  the JSON always redacted; a screen's refusal shows the service's words only when they are a refusal's (a coded reason or
+  a missing permission), never an exception's text; the review walk's users are the demo's group users as they are (each
+  in `BOSS_ADMIN` and one group, so no other app's launcher), not users made for it.
+- For the lead:
+  - the shared release binary needs a rebuild for the two Rust changes (notification titles); nothing else needs it, and
+    no entity changed;
+  - budget shares: mr-boss about 0.46 s (AdminGroups 0.12, AdminRegistries 0.34); mr-mantle and the framework unchanged
+    (an assertion each);
+  - merge: mr-boss `README.md` (the Admin paragraph is now its own; the Insights paragraph starts on the next line,
+    unchanged: the Insights worker's line may conflict on that boundary), `Admin.js` (`linkPaths`, one line after P17's),
+    `Operations.xml`, `test/Admin/AdminSpecLib.js` (appended), design-admin, the two inventories (an Admin header note
+    after Purchasing's, away from the Insights note), impl-admin §7 and this note; nothing in the shared acceptance files
+    (AppStructure, TuiRender), BossSetupData or the sweep helper ServerStaticLib; mr-moqui `Remaining-Work.md` (the
+    `org.moqui.admin` row's end, one row in the security list, one in the tests list), Voice.js, the two Rust files;
+    Mantle PurchaseApprovals.js;
+  - the Apps row "Admin and Insights" of Remaining-Work still says gate 1 and "Next: Admin P8–P14": it is shared with
+    Insights and left to the lead;
+  - the phase table's P19 row and §6 (F292 to -5) are the lead's;
+  - the user's call: F292 (bound the verified-email link rule to `ADMIN_IDENTITY_GLOBAL`, or an organization on the
+    provider in the framework, or accept it as built); whether to build the lifecycle notice (F295).
+
+**Review Nov 11 (P19).**
+- Checked: `git diff master...adm/p19` in mr-moqui, mr-mantle and mr-boss against the phase's text, §2, §4, design §1.1,
+  §15.3 and §16.
+  - Notification titles (F293): sound. The job error notice takes `${jobName}` and `${errors}` from its message (the
+    job's own message map is extended after them, under its own keys); the agent inbox puts the title in the message as
+    `inboxTitle`; Voice's three alerts carry their names in the message and expand once; Mantle's approval notice sends
+    `${noticeTitle}`. Searched again (`.title(`, `NotificationMessage::new`, `makeNotificationMessage`, `send#Notification`,
+    `titleTemplate`, `documentTitle`) across mr-moqui (Rust and scripts), Mantle, BOSS, mr-pass and mr-marble: no other
+    caller passes stored or written text as a title. The rest set no title (the topic's `titleTemplate` over the message) or
+    a fixed one (the database job notice: a generated id and a fixed status; the report alert, P8 R1). The administrator
+    templates are as described: a DataDocument's `documentTitle` (`service/tools.rs`, PartyServices' feed notice) and a
+    topic's `titleTemplate` are written only through seed data and Tools' entity screens (`ADMIN`); no Admin, Insights or
+    Mantle service writes either; Chat's mention title is `ec.l10n.localize` of a fixed template whose translation an
+    administrator stores, validated by P8 R1.
+  - F129 and `AdminCalls.read`: the 23 reads in 18 screens answer `out` null on any failure, so no screen renders a record
+    after a refused read; before, every `failure` was null (cleared) and a refused check let the next read run (GroupDetail).
+    Constitution's `failure` is now its `get#Constitution` read's only (the other reads were cleared before too). The fallback
+    texts quote only the screen's own parameter, and every label shows it once (no second expansion). qvt, html and tui render
+    the same label. One defect (R1).
+  - SupportSummary: `ADMIN_OVERVIEW_VIEW` (the reader and the administrator; the operations operator opens the screen and is
+    shown the refusal, as on Health); each section read with the viewer's permissions through `AdminCalls.read`; a masked
+    setting only set or not; bounded (the registered settings, the protocol list, the readiness checks). One defect (R2).
+  - The acceptance specs (read, not run): the sweeps render each `screen/Admin` file and Data's `Shared/DataImport` once per
+    mode as admin.admin (tui with authorization on, as Commerce's) and check errors, not content; System is left out (Tools'
+    file, ADMIN's). AdminReviewWalk's calls use the services' real parameter names (`get#Choices`' choices, `search#Records`,
+    `store#Membership`, `check#GrantProposal`, `invite#User`'s `bundleGroupIdList`, `store#IdentityProvider` with the revision
+    from `find#IdentityProviders`' `provider`), so its refusals are not vacuous, and each write feature also counts the rows
+    written since it started.
+  - F292 checked against P10's code (framework `ConfigurationProviders.js` `storeIdentityProvider`, `linkedBeyond`;
+    `moqui-core` `service/sso.rs` `link_allowed`, `linked_account`, `unscoped_link_allowed`): the worker's description holds.
+    Two facts for the user's decision: (a) the link rule is an access part (`ADMIN_ACCESS_MANAGE` alone): changing it on a
+    provider already enabled needs no new test and no `HELD_BEYOND` count, so an organization's access administrator can turn
+    `AflVerifiedEmail` on for a provider an instance administrator enabled; (b) an account carrying an id with no provider
+    named is taken by the first provider that signs in with that id under either rule, and while that provider is the only
+    one enabled even a privileged or sealed-granting account (`unscoped_link_allowed`); `HELD_BEYOND` counts such accounts at
+    enabling. Not changed.
+  - Mantle's approval notice and its assertion, the Rust test (an error holding `${...}` shows as it is): sound.
+  - Records: design §2's Impl column, §16, the inventories' notes and Remaining-Work's rows match the code; the README's Admin
+    paragraph is short.
+- Fixes:
+  - **R1** (medium) `AdminCalls.reasonOf` took any `UPPER: text` in an error as a refusal's reason, so an exception's text
+    with such a prefix (a database's `ERROR: ...`, the framework's `URL: ...` or `JSON: ...` errors) reached the screen whole.
+    A code now needs an underscore or is one of the seven single-word codes the services use, and a reason longer than 300
+    characters is not shown (the screen's own words instead). AdminGroups' F129 feature checks both.
+  - **R2** (low) the redacted JSON, meant for someone outside, held the addresses the listeners bind
+    (`protocol.*.host`, `listenHost`, `mediaHost`), the gateway addresses admitted (`smtp.allowedAddresses`) and the SMTP
+    certificate's path, against "no listeners, paths". Redacted, each is `[internal] (set)` or not set (`internal` true, value
+    null); the screen and print keep them for the viewer, who reads them in InstanceSettings anyway. AdminRegistries checks
+    it as the administrator; design §16 says so.
+- Tests: mr-boss AdminGroups and AdminRegistries 9 of 9 on the shared release binary with this runtime (`--nobuild`). Not
+  run: the acceptance specs (the lead's), the Rust (unchanged by the review).
+- For the lead: budget share unchanged in substance (AdminRegistries' feature 0.44 s); F292's two facts above go with the
+  user's call; nothing else open from the review.
+
+- **Acceptance Nov 11 (after gate 5).** `mail_capture_sends=true ./moq accept mr-boss` on master, the first run after the
+  whole Admin and Insights build: eight Admin specs failed (the Insights and sweep failures are the other track's,
+  `acc/insights`). None was a product defect; each was a spec bug, fixed in mr-boss on `acc/admin`. AdminReviewWalk's
+  grant proposal check, taken first as a possible escalation: `check#GrantProposal` allowed admin.access BOSS_ADMIN_ACCESS
+  because admin.access is a member of it, the framework's rule for a privileged group (only a member changes its
+  members; design §1.1 "cannot add anyone to a privileged group it is not in", the UserGroupMemberPrivileged EECA, and
+  `store#Membership` the same); every non-member, admin.delegate among them, is refused every privileged group, and
+  invitations (the bulk import's rows too), SSO role mappings and display accounts refuse a privileged group even for a
+  member. The walk now flags an allowed privileged group only when the user is not in it; the proposal's rule had no
+  regression check, so the framework's AdminAccessServices now asks `check#GrantProposal` for a bundle, the privileged
+  ADMIN_ADV and an unregistered group as its non-member (allowed, PRIVILEGED_GROUP, UNREGISTERED_BUNDLE). The others:
+  AdminAuditUsable made a relay with no TLS and set its password, which `store#Connection` refuses (INSECURE_TRANSPORT,
+  a warning, not an error); the relay now has STARTTLS. AdminConnectionsUsable read the gateway's revision inside
+  `asUser("commerce.services")`, whom `get#Connection` refuses; it is read first. AdminDevicesUsable looked for
+  "Shared device's code redeemed" in html, which escapes the apostrophe. AdminGroupsWalk counted every membership of
+  commerce.manager in BOSS_PURCHASING_BUYER, AdminAuditUsable's ended one among them; it counts its own rows (from its
+  start). AdminImportsUsable compared decimals with `Number()`, which the JS API now refuses; `toDecimal(...).eq`.
+  AdminJobsUsable: its cleanup read the job `forUpdate` with no transaction (dropped); and the alert copy had no data, as a
+  spec's process exports no spans (`moqui test` attaches search but not the telemetry exporter), so the failed run's root
+  span is written to `otel_spans` as the exporter writes it (AdminAuditUsable's pattern for its log line); and in `then`,
+  `Array.from` of `get#AlertState`'s instances gave `[]` (so the template's "no instances" held vacuously), read now as
+  plain rows. AdminProtocolsUsable expected call media off, but every test run merges basic-comms'
+  `test/MoquiConf.xml`, which sets `rtc_media_port`, so where the build has rtc it is configured and not started in a
+  command-line run. Final: each spec alone and all 21 of `acceptance/Admin/` together (`--spec` with a comma list),
+  61 of 61 features passed; framework AdminAccessServices 6 of 6. For the lead: several `--spec` flags run only the last;
+  the `Array.from` behaviour of a service's list in `then` is worth a look in the testkit.
+
+- **Final suites (Nov 11, on master after Admin P1–P19, Insights P1–P12, both acceptance fix branches, the framework
+  follow-ups and the upstream pulls merged; the release binary rebuilt; nothing else running).** Run once, at the end of
+  the build (the user's call: no full suites per wave after gate 1).
+  - `./moq test-framework`: the moq script tests, the demo specs and every client suite passed (webroot 423, dev-aide 48,
+    framework, basic-comms and example 155). The framework specs passed 516 of 517: the one failure is the tools
+    component's LoadRunner (`cannot compare null with 0` on a server sample), failing since the upstream Tools-apps pull
+    and not this build's. Cargo passed in the first final run (F38's long-failing test is gone upstream); in the
+    rerun one moqui-git test, `large_objects_are_content_blobs_streamed_in_and_out`, failed on a reset local
+    connection (`curl 56 Recv failure`) and passed alone. Feature time: framework 16.8 s of 12 s (this build's
+    eighteen framework specs 4.4 s; gate 1 measured 10.8 s, the rest is upstream's), tools 4.1 s of 4 s and dev-aide 41.6 s
+    of 30 s (neither this build's), basic-comms 6.0 of 8 s, webroot client 43.2 of 44 s. The user agreed (Nov 11) to raise the framework server budget by this build's 4.4 s, rounded up: 12 to 17 s (mr-moqui framework test/budget).
+  - `mail_capture_sends=true ./moq test-apps`: 3,526 server and 35 client features, all passed (after the two full-run
+    order dependences the first final run found were fixed in their specs: IdentityAudit matched an instance-level
+    SystemMessage row whose sequenced id equals the spec's user id, mr-mantle 08448e42; AdminGroups' member choice is one
+    page of 30, filled by other specs' staff, mr-boss 68c2212d; neither a product defect). Feature time mr-mantle 362.8 of
+    393 s, mr-boss 239.5 of 264 s server and 59.9 of 57 s client (no mr-boss client spec changed in this build; Admin's
+    and Insights' walks 2.9 s each, as at gate 1), mr-pass 13.6 of 20 s server and 6.7 of 9 s client. No budget raised.
+  - `moqui lint --screens`: clean of this build's screens.
+  - `mail_capture_sends=true ./moq accept mr-boss`, after the two acceptance fix branches: server 600 of 602, client 174 of
+    175. Failing: WarehouseServerStatic (AssetDetail's Move link made a screen path from an expression by mr-boss
+    35223fd6, Nov 10, before this build; the user's call: keep the screen path and unmark Files and Notes, or a plain link
+    again); ManufacturingScheduleWalk's drag (the one that failed once at gate 1 and passed on reruns; not this build's);
+    InsightsCatalogUsable's order count against OnlineSales in the full run only: a stale sales item document (the search feed kept an order item at OrderOpen after its header and part were completed milliseconds later, framework), fixed in the spec by reindexing the month (mr-boss f49c227b) and recorded for the framework (impl-insights P12's acceptance note).
 
 ## 4. Decisions
 
@@ -4890,7 +5385,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes. P16's F240 to F256 (Nov 11, 2026) are in its Built and Review notes. P17's F257 to F271 (Nov 11, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes. P16's F240 to F256 (Nov 11, 2026) are in its Built and Review notes. P17's F257 to F271 (Nov 11, 2026) are in its Built and Review notes. P18's F278 to F291 (Nov 11, 2026) are in its Built and Review notes. P19's F292 to F296 (Nov 11, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -5041,6 +5536,22 @@ Designed, not in this build:
 - **Design §17.4 and §19:** LDAP and SCIM provisioning, a custom-field editor, workflow automation, DMARC and TLS
   reports, passkeys, event-condition notification rules; the per-group inactivity timeout, a runtime password policy,
   saved export profiles, connection and protocol checks as Monitor synthetic checks.
+- **Found outside Admin's repositories, not changed here (P19):**
+  - mr-marble's MyAccount/User/Notifications (`screen/SimpleScreens/MyAccount/User/Notifications.xml`, its
+    `topicSubscriptions` transition) stores `moqui.security.user.NotificationTopicUser` from the whole request with the
+    caller's own user id, so any signed-in user can post `allNotifications=Y` for any topic, a private one too
+    (`ServiceJobError`, `WebServletError`, `ReportAlert`), and then receives every message of it: other users' private
+    messages and the job error notifications' unmasked errors, parameters and results (F209, F210; Insights P8 R2 closed it
+    for business alerts only, by sending them direct-only). Proposed fix, mr-marble's: the transition passes only the
+    delivery choices it shows (`receiveNotifications`, `emailNotifications` and the like) and never `allNotifications`, and
+    refuses a private topic; with the framework ask (mr-moqui `plans/Remaining-Work.md`) that the recipient resolution honor
+    `allNotifications` on a private topic only for the topic's registered audience. Written into design-admin §10 TopicDetail
+    and Remaining-Work's security list.
+  - The framework's `apps/ScreenTree` (the Site Map) fails a screen render (`sri.getRootScreenDef` is not a function; the P18
+    review): it needs a host member for screen definitions or a rewrite over the menu data. In Remaining-Work's tests list.
+- **The lifecycle completion and exception notice** (design §16): not built. A lifecycle operation's outcome is on
+  LifecycleOperations and LifecycleDetail only; a registered private topic with a link to LifecycleDetail (Mantle sends,
+  BOSS seeds the link, as the `AccountSignIn` topic) is the remaining work.
 
 ## 8. Verification
 

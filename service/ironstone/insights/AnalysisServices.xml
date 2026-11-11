@@ -39,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="datasetId"/>
             <parameter name="ownDashboards" type="Boolean"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="datasets" type="List"/>
@@ -49,10 +51,12 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="grains" type="List"/>
             <parameter name="visualizations" type="List"/>
             <parameter name="dashboards" type="List"/>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
             <set field="analysis" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Analysis.js')"/>
-            <set field="found" from="analysis.execute('options', context)"/>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; analysis.execute('options', context))"/>
             <set field="datasets" from="found.datasets"/>
             <set field="measureFields" from="found.measureFields"/>
             <set field="groupFields" from="found.groupFields"/>
@@ -60,7 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="aggregates" from="found.aggregates"/>
             <set field="grains" from="found.grains"/>
             <set field="visualizations" from="found.visualizations"/>
-            <if condition="ownDashboards"><set field="dashboards" from="analysis.execute('ownDashboards', context).dashboards"/></if>
+            <if condition="ownDashboards &amp;&amp; !found.refusalCode"><set field="dashboards" from="analysis.execute('ownDashboards', context).dashboards"/></if>
+            <set field="refusalCode" from="found.refusalCode || null"/>
+            <set field="refusal" from="found.refusal || null"/>
         </actions>
     </service>
     <service verb="get" noun="AnalysisResult" allow-remote="false">
@@ -71,14 +77,22 @@ along with this software (see the LICENSE.md file). If not, see
             currencies until grouped by its currency or filtered to one, UNIT_MIXED; RATIO_AGGREGATE; NONADDITIVE;
             BOUNDED_RESULT) answers available false with refusedCode and reason, and nothing is computed around it.</description>
         <implements service="ironstone.insights.AnalysisServices.define#AnalysisChoices"/>
+        <in-parameters>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
+        </in-parameters>
         <out-parameters>
             <parameter name="available" type="Boolean"/>
             <parameter name="result" type="Map"><description>available, refusedCode, reason, query, range, columns, rows (label,
                 valuesText), sourceCount, notices</description></parameter>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Analysis.js').execute('result', context)"/>
+            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Analysis.js').execute('result', context))"/>
             <set field="available" from="result.available"/>
+            <set field="refusalCode" from="result.refusalCode || null"/>
+            <set field="refusal" from="result.refusal || null"/>
         </actions>
     </service>
     <service verb="store" noun="Analysis" allow-remote="false">

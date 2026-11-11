@@ -34,7 +34,13 @@ spec({
         login("john.doe")
         system(() => {
             const relay = ec.entity.makeValue("moqui.basic.email.EmailServer")
-            relay.setFields({emailServerId: relayId, smtpHost: "relay.usable-audit.example", smtpPort: "587"}, true, null, null)
+            // STARTTLS: a relay that signs in needs TLS (store#Connection refuses a password otherwise)
+            relay.setFields(
+                {emailServerId: relayId, smtpHost: "relay.usable-audit.example", smtpPort: "587", smtpStartTls: "Y"},
+                true,
+                null,
+                null
+            )
             relay.create()
             // a membership of a person of Services only, given by an instance administrator
             invoke("org.moqui.admin.AccessServices.store#Membership", {

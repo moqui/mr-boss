@@ -309,6 +309,8 @@ const linkPaths = [
     "Security/SignInPolicy",
     "Security/IdentityProviders",
     "Security/IdentityProviderDetail",
+    // P18: shared devices
+    "Security/Devices",
     // P11: connections and mail relays
     "Integrations/Connections",
     "Integrations/ConnectionDetail",
@@ -341,6 +343,8 @@ const linkPaths = [
     // P17: change and access evidence
     "Audit/AuditChanges",
     "Audit/AccessLog",
+    // P19: the readiness and support summary
+    "Operations/SupportSummary",
     "Agents/Home",
     "System",
     "Developer/Home"
@@ -491,6 +495,9 @@ function checkRecord(p) {
 function loginAsCheck(record) {
     if (!ec.user.hasPermission("ADMIN_LOGIN_AS")) denied("PERMISSION_DENIED", "ADMIN_LOGIN_AS is required")
     if (record.recordId === ec.user.userId) denied("LOGIN_AS", "Choose another user to sign in as")
+    // a display account (shared devices, P18) stands for no person: the framework signs nothing in as it
+    if (one("moqui.security.UserAccount", {userId: record.recordId})?.displayAccount === "Y")
+        denied("LOGIN_AS", record.label + " is a display account: nothing signs in as it")
     // the framework's bounded-delegation rule for an account-wide action on another user (Identity.js heldBeyond)
     const held = ec.resource.script("component://framework/service/org/moqui/admin/Identity.js").heldBeyond(record.recordId)
     if (held) denied("LOGIN_AS", record.label + " holds access you do not: signing in as them is refused")

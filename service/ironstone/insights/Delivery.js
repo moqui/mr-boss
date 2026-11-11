@@ -736,6 +736,50 @@ function getDelivery(p) {
         ownDelivery: found.ownDelivery ? deliveryRow(found.ownDelivery) : null
     }
 }
+// export#DeliveryAudit (design §14 Delivery audit; P12): one run's delivery status as CSV for whom get#Delivery answers it: its
+// schedule's owner (the run and each recipient's result with its safe reason) or a recipient (their own delivery alone). No
+// report content, address, frame or another recipient's report; the export is audited (moqui.report.audit) by the engine.
+function deliveryAudit(p) {
+    const found = getDelivery(p)
+    const occurrence = found.occurrence
+    // a recipient's own row: named as they are, since the engine's own delivery carries their id alone
+    const deliveries = found.administers
+        ? found.deliveries
+        : found.ownDelivery
+          ? [Object.assign({}, found.ownDelivery, {recipientName: userNames([ec.user.userId])[ec.user.userId] || ec.user.username})]
+          : []
+    // a cell: quoted when it holds a separator, and a leading formula character made text (a spreadsheet would run it)
+    const cell = value => {
+        let text = String(value ?? "")
+        if (/^[=+\-@\t\r]/.test(text)) text = "'" + text
+        return /[",\n\r]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text
+    }
+    const header = ["Report", "Run", "Kind", "Delivery", "Run state", "Recipient", "Result", "Why", "Attempted", "Attempts"]
+    const lines = [header.map(cell).join(",")]
+    for (const delivery of deliveries)
+        lines.push(
+            [
+                occurrence.title,
+                occurrence.dateText,
+                occurrence.kindText || "",
+                occurrence.modeText,
+                found.administers ? occurrence.stateText : "",
+                delivery.recipientName,
+                delivery.stateText,
+                delivery.reasonText,
+                delivery.attemptText,
+                delivery.attemptCount
+            ]
+                .map(cell)
+                .join(",")
+        )
+    engine("audit#Export", {kind: "delivery-audit", format: "csv", rowCount: deliveries.length})
+    return {
+        csvText: lines.join("\r\n") + "\r\n",
+        fileName: "delivery-" + String(occurrence.occurrenceId || "run").replace(/[^A-Za-z0-9_-]/g, "") + ".csv",
+        rowCount: deliveries.length
+    }
+}
 // retry#Recipients: the failed deliveries chosen, each with its own outcome; a sent one is never replayed and an uncertain
 // one waits to be reconciled (the engine's rules).
 function retryRecipients(p) {
@@ -967,6 +1011,7 @@ const operations = {
     checkAudience,
     recipientChoices,
     getDelivery,
+    deliveryAudit,
     retryRecipients,
     reconcileRecipient,
     ownReport,
