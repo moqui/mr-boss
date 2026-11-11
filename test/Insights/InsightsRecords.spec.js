@@ -2,7 +2,8 @@
 // annotations, §5 Analysis, §10): a reader drills a saved panel's value to the orders of their own organization, whatever the
 // request sends, and each opens Shared/OrderDetail under Insights, read only (its one qvt render: the admitted dataset's facts,
 // the return to the report, no action); another organization's order is "not available" there, as a missing one is, and nothing
-// below a record screen is served under Insights but its read-only context: no transition and no owner tab. An analysis summing
+// below a record screen is served under Insights but its read-only context: no transition and no owner tab; the root's Chatter
+// and RecordFiles panels answer only a user whose own grants open Commons (P12). An analysis summing
 // amounts across currencies is refused with its reason until it is grouped by currency, and is saved as a library panel only
 // by an author. A business event of the reader's organization is a marker on the panel. The engine's rules are the framework's ReportDrill and ReportAnnotations, the events'
 // records Mantle's BusinessEvents; the orders and the admitted sales dataset are InsightsDatasets'. The "usable when" scenario is
@@ -127,6 +128,10 @@ feature("a drill answers the viewer's own organization's orders, whatever the re
         const otherOrganization = asUser(users.reader, () =>
             refusal(DRILL, Object.assign({definitionId: panelId, organizationPartyId: ids.otherOrganizationId}, range))
         )
+        // a screen's call answers the refusal instead of failing (P12, impl-admin F129: ignore-error clears the message)
+        const answered = asUser(users.reader, () =>
+            invoke(DRILL, Object.assign({definitionId: panelId, organizationPartyId: ids.otherOrganizationId, answerRefusal: true}, range))
+        )
         // the administrator reads no business dataset; a user of another app has no Insights
         const admin = drillAs(users.admin, {})
         const otherApp = asUser(users.otherApp, () => refusal(DRILL, Object.assign({definitionId: panelId}, range)))
@@ -137,6 +142,7 @@ feature("a drill answers the viewer's own organization's orders, whatever the re
             servicesIds: recordIds(services),
             forgedIds: recordIds(forged),
             otherOrganization,
+            answered,
             admin,
             otherApp,
             buckets: Array.from(whole.panelBuckets || [])
@@ -146,7 +152,7 @@ feature("a drill answers the viewer's own organization's orders, whatever the re
             breakdown: Array.from(whole.breakdown || []).length
         }
     },
-    then({reader, readerIds, servicesIds, forgedIds, otherOrganization, admin, otherApp, buckets, breakdown}) {
+    then({reader, readerIds, servicesIds, forgedIds, otherOrganization, answered, admin, otherApp, buckets, breakdown}) {
         reader.available
         reader.rowsAvailable
         readerIds == orders.retail
@@ -155,7 +161,9 @@ feature("a drill answers the viewer's own organization's orders, whatever the re
         servicesIds == orders.services
         forgedIds == orders.retail
         otherOrganization.includes("ORGANIZATION_UNAVAILABLE")
-        !admin.available
+        answered.refusalCode == "ORGANIZATION_UNAVAILABLE"
+        answered.refusal != "" && !answered.refusal.includes("ORGANIZATION_UNAVAILABLE")
+        !answered.available
         admin.rows.length == 0
         otherApp.includes("is not authorized")
         buckets == "EUR,USD"
@@ -181,6 +189,26 @@ feature("OrderDetail under Insights shows the order read only with its return; a
         const approved = system(
             () => ec.entity.find("mantle.order.OrderHeader").condition("orderId", orders.retail).one().statusId
         )
+        // P12: the record panels mounted under the Insights root (Chatter, RecordFiles) answer only a user whose own grants
+        // open Commons; with the reader's Commons membership ended a note and the files are refused before they run
+        const panelRecord = {recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST"}
+        const panel = (path, method) =>
+            asUser(users.reader, () => {
+                const result = ec.screen.makeTest().rootScreen(webroot).render("apps/Insights/" + path, panelRecord, method)
+                return Array.from(result.errorMessages || []).join(" | ")
+            })
+        const panelOpen = panel("Chatter/chatterData", "get")
+        const member = system(() =>
+            ec.entity.find("moqui.security.UserGroupMember").condition({userGroupId: "BOSS_USERS", userId: "BOSS_INS_READER"}).one()
+        )
+        let panelNote, panelFiles
+        try {
+            system(() => member.set("thruDate", ec.user.nowTimestamp).update())
+            panelNote = panel("Chatter/logNote", "post")
+            panelFiles = panel("RecordFiles/filesData", "get")
+        } finally {
+            system(() => member.set("thruDate", null).update())
+        }
         return {
             page,
             other,
@@ -189,10 +217,13 @@ feature("OrderDetail under Insights shows the order read only with its return; a
             approve: approve.errors,
             tab: tab.errors,
             approved,
-            unknownType: asUser(users.reader, () => refusal(RECORD, {recordType: "Anything", recordId: "X"}))
+            unknownType: asUser(users.reader, () => refusal(RECORD, {recordType: "Anything", recordId: "X"})),
+            panelOpen,
+            panelNote,
+            panelFiles
         }
     },
-    then({page, other, missing, own, approve, tab, approved, unknownType}) {
+    then({page, other, missing, own, approve, tab, approved, unknownType, panelOpen, panelNote, panelFiles}) {
         page.status == 200
         page.errors.join(" | ") == ""
         page.output.includes("Order " + orders.retail)
@@ -212,6 +243,9 @@ feature("OrderDetail under Insights shows the order read only with its return; a
         tab.includes("RECORD_READ_ONLY")
         approved == "OrderApproved"
         unknownType.includes("RECORD_UNAVAILABLE")
+        panelOpen == ""
+        panelNote.includes("RECORD_PANEL_UNAVAILABLE")
+        panelFiles.includes("RECORD_PANEL_UNAVAILABLE")
     }
 })
 

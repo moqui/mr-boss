@@ -3,7 +3,7 @@
 // is one entry, Sales'; a pin edits the user's InsightsHome preference only, over entries they read; get#Metric answers a
 // measure's basis, grain, denominator and comparison rules, by id and by the panel that names it; a panel's target is typed, a
 // mixed-currency target refused and a missing or zero target an unavailable comparison; saved reports keep their kinds apart and
-// a copy is the author's. Reports', PanelDetail's and SavedReports' one qvt render each. Dashboard's MeasureMeaning is checked on InsightsDashboards' render; the
+// a copy is the author's; a legacy saved find shows not valid and the administrator's migration moves the registered ones (P12). Reports', PanelDetail's and SavedReports' one qvt render each. Dashboard's MeasureMeaning is checked on InsightsDashboards' render; the
 // screens' access is InsightsAccess's. The "usable when" scenario is the acceptance InsightsCatalogUsable.
 // Run: ./moq test mr-boss --spec InsightsCatalog
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -331,5 +331,70 @@ feature("saved reports keep their kinds apart; a copy is the author's, private o
         rendered.output.includes("Spec copy")
         rendered.output.includes("Library panel")
         rendered.output.includes("Save as")
+    }
+})
+
+// P12 (design §13.2): a saved find on a list the copied report screens had is shown not valid, never opened elsewhere; the
+// instance administrator's migration inventories the finds and schedules of Insights' lists and moves only the registered ones
+feature("a legacy saved find shows not valid; the administrator's migration lists it and moves the registered one only", {
+    when() {
+        const location = "component://mr-boss/screen/Insights/"
+        const finds = {
+            gone: ["INS_CAT_FIND_GONE", location + "Reports.xml.form_list$DataDocumentList"],
+            moved: ["INS_CAT_FIND_MOVED", location + "ReportBuilder/DatasetDetail/FieldList.xml.form_list$FieldList"]
+        }
+        const ids = Object.values(finds).map(find => find[0])
+        const clean = () =>
+            system(() => {
+                for (const entityName of ["moqui.screen.form.FormListFindField", "moqui.screen.form.FormListFindUser", "moqui.screen.form.FormListFind"])
+                    ec.entity.find(entityName).condition("formListFindId", "in", ids).deleteAll()
+            })
+        clean()
+        try {
+            system(() => {
+                const make = (entityName, fields) => {
+                    const row = ec.entity.makeValue(entityName)
+                    row.setAll(fields)
+                    row.create()
+                }
+                for (const [formListFindId, formLocation] of Object.values(finds)) {
+                    make("moqui.screen.form.FormListFind", {formListFindId, formLocation, description: "Spec " + formListFindId})
+                    make("moqui.screen.form.FormListFindUser", {formListFindId, userId: "BOSS_INS_READER"})
+                }
+            })
+            const listed = asUser(users.reader, () => invoke(G + "find#SavedReports", {kind: "find"}).savedReports || [])
+            const refused = asUser(users.reader, () => refusal(G + "migrate#LegacySavedFinds", {}))
+            const dryRun = invoke(G + "migrate#LegacySavedFinds", {})
+            const kept = system(() => ec.entity.find("moqui.screen.form.FormListFind").condition("formListFindId", finds.moved[0]).one().formLocation)
+            const applied = invoke(G + "migrate#LegacySavedFinds", {apply: true})
+            const moved = system(() => ec.entity.find("moqui.screen.form.FormListFind").condition("formListFindId", finds.moved[0]).one().formLocation)
+            const after = asUser(users.reader, () => invoke(G + "find#SavedReports", {kind: "find"}).savedReports || [])
+            const action = (answer, id) => (Array.from(answer.finds || []).find(row => row.formListFindId === id) || {}).action
+            return {
+                listed: listed.filter(row => ids.includes(row.id)),
+                refused,
+                dryGone: action(dryRun, finds.gone[0]),
+                dryMoved: action(dryRun, finds.moved[0]),
+                kept,
+                applied: applied.applied,
+                moved,
+                after: after.find(row => row.id === finds.moved[0]) || {},
+                goneAfter: after.find(row => row.id === finds.gone[0]) || {}
+            }
+        } finally {
+            clean()
+        }
+    },
+    then({listed, refused, dryGone, dryMoved, kept, applied, moved, after, goneAfter}) {
+        listed.length == 2
+        listed.every(row => row.invalid === true && row.url === null && row.unavailable.startsWith("Not valid"))
+        refused.includes("ADMIN_REQUIRED")
+        dryGone == "invalid"
+        dryMoved == "moved"
+        kept.endsWith("DatasetDetail/FieldList.xml.form_list$FieldList")
+        applied == true
+        moved == "component://mr-boss/screen/Insights/ReportBuilder/DatasetFields.xml.form_list$FieldList"
+        after.invalid === false
+        goneAfter.invalid === true
     }
 })

@@ -52,8 +52,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="from" from="from || insights.defaults.from"/>
         <set field="thru" from="thru || insights.defaults.thru"/>
         <service-call name="ironstone.insights.AnalysisServices.get#AnalysisOptions" out-map="analysisOptions"
-                in-map="{datasetId:datasetId, ownDashboards:true}" transaction="force-new" ignore-error="true"/>
-        <set field="optionsError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                in-map="{datasetId:datasetId, ownDashboards:true, answerRefusal:true}" transaction="force-new" ignore-error="true"/>
+        <!-- a refusal is the service's answer (impl-admin F129: ignore-error clears the message) -->
+        <set field="optionsError" from="analysisOptions?.refusal || (analysisOptions?.datasets ? null : 'The analysis choices could not be read now')"/>
         <script>ec.message.clearErrors()</script>
         <set field="analysisOptions" from="analysisOptions?.datasets ? analysisOptions : {datasets:[], measureFields:[], groupFields:[],
                 filterFields:[], aggregates:[], grains:[], visualizations:[], dashboards:[]}"/>
@@ -61,11 +62,11 @@ along with this software (see the LICENSE.md file). If not, see
                 groupBy2:groupBy2, timeGrain:timeGrain, filterField:filterField, filterValue:filterValue, from:from, thru:thru,
                 organizationPartyId:organizationPartyId}"/>
         <if condition="datasetId &amp;&amp; run &amp;&amp; !optionsError">
-            <service-call name="ironstone.insights.AnalysisServices.get#AnalysisResult" in-map="choices" out-map="analysisOut"
-                    transaction="force-new" ignore-error="true"/>
-            <set field="resultError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <service-call name="ironstone.insights.AnalysisServices.get#AnalysisResult" in-map="Object.assign({answerRefusal:true}, choices)"
+                    out-map="analysisOut" transaction="force-new" ignore-error="true"/>
+            <set field="resultError" from="analysisOut?.refusal || null"/>
             <script>ec.message.clearErrors()</script>
-            <set field="analysis" from="analysisOut?.result || {available:false, reason:(resultError || 'The analysis could not run'), rows:[], notices:[]}"/>
+            <set field="analysis" from="(analysisOut?.result &amp;&amp; !analysisOut.refusalCode ? analysisOut.result : null) || {available:false, reason:(resultError || 'The analysis could not run'), rows:[], notices:[]}"/>
         </if>
         <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share"/>
         <set field="saveValues" from="Object.assign({}, choices, {visualization:'table'})"/>

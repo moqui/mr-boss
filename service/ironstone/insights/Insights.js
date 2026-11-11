@@ -413,6 +413,30 @@ function shareDashboard(p) {
     return {definitionId: saved.id, userGroupId: saved.userGroupId || null, version: saved.version}
 }
 
+// A screen's read with its refusal as an answer (P12, impl-admin F129): a service-call with ignore-error clears the message, so
+// a screen cannot read a refusal's reason after it. With answerRefusal the read's refusal (a "CODE: text" error) is answered as
+// {refusalCode, refusal}; any other failure is logged and answered as FAILED with a plain sentence, never its text. Without
+// answerRefusal the read fails as before, for every other caller.
+function answering(parameters, read) {
+    if (!parameters || parameters.answerRefusal !== true) return read()
+    try {
+        return read()
+    } catch (error) {
+        const text = String(error?.message ?? error ?? "")
+        const code = lib.reasonCode(error)
+        ec.message.clearErrors()
+        // a refusal's code has an underscore (every Insights and engine refusal's does), so an exception's text with a
+        // code-like prefix (a database's ERROR:, URL:, JSON:) is a failure, never shown (as Admin's AdminCalls.read, P19 review)
+        if (code && code.includes("_"))
+            return {refusalCode: code, refusal: text.replace(/^(Error:\s*)?[A-Z][A-Z0-9_]+:\s*/, "").substring(0, 300)}
+        ec.logger.warn("Insights read refused or failed for " + ec.user.username + ": " + text)
+        return {
+            refusalCode: "FAILED",
+            refusal: /not authorized/i.test(text) ? "You may not read this" : "This could not be read now"
+        }
+    }
+}
+
 const operations = {context, shareGroups, shareDashboard}
 ;({
     // the scope for a later phase's own module: the user's scope, the same refusing a user without Insights
@@ -435,6 +459,8 @@ const operations = {context, shareGroups, shareDashboard}
     calendarParameters,
     partyName,
     organizationIds,
+    // P12: a screen's read with its refusal as an answer (impl-admin F129)
+    answering,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights operation " + op)
         return operations[op](parameters)

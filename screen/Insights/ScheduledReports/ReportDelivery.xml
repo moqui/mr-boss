@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     RecipientOutcomes: each recipient's own result with its safe reason, never a payload. RetryRecipients: the failed deliveries
     chosen, sent again after each recipient is checked again, at the revision read; a delivery whose outcome is not known is
     reconciled by a person first, never retried blind. OwnArtifact: the caller's own report, rendered again as themselves
-    (nothing sent is kept), or why it is not released. A recipient who administers nothing sees their own delivery alone. -->
+    (nothing sent is kept), or why it is not released. A recipient who administers nothing sees their own delivery alone.
+    Export status (P12, design §14 Delivery audit): the same statuses and safe reasons as CSV, audited. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Report delivery" default-menu-include="false">
 
@@ -39,6 +40,14 @@ along with this software (see the LICENSE.md file). If not, see
             ]]></script>
         </actions>
         <default-response url="."/>
+    </transition>
+    <!-- P12 (design §14 Delivery audit): this run's delivery status as CSV, as the page shows it to the caller -->
+    <transition name="exportAudit" method="get" read-only="true">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.export#DeliveryAudit" in-map="{occurrenceId:occurrenceId}" out-map="exported"/>
+            <script>ec.web.sendTextResponse(exported.csvText, 'text/csv', exported.fileName)</script>
+        </actions>
+        <default-response type="none"/>
     </transition>
     <transition name="reconcileRecipient" method="post">
         <actions>
@@ -97,6 +106,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                         <link url="ownReportFile" text="Open my report" link-type="anchor-button" btn-type="primary" icon="sym_o_description"
                                 target-window="_blank" condition="ownDelivery?.sent" parameter-map="{deliveryId:ownDelivery?.deliveryId}"/>
+                        <link url="exportAudit" text="Export status" link-type="anchor" icon="sym_o_download"
+                                condition="administers || ownDelivery" parameter-map="{occurrenceId:occurrenceId}"/>
                         <link url="../ScheduledReportDetail" text="The schedule" link-type="anchor" condition="occurrence.screenScheduledId"
                                 parameter-map="{screenScheduledId:occurrence.screenScheduledId}"/>
                         <link url="../Schedules" text="Received reports" link-type="anchor" condition="!administers" parameter-map="{view:'received'}"/>

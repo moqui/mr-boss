@@ -12,7 +12,8 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Insights' drill and read-only record contexts (design-insights §4 Drill, §10; impl-insights P6; Drill.js, Records.js). -->
+<!-- Insights' drill and read-only record contexts (design-insights §4 Drill, §10; impl-insights P6; Drill.js, Records.js), and
+    (P12) whether the record panels mounted under the Insights root are served to the viewer (get#RecordPanelAccess). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="Drill" allow-remote="false">
         <description>From a value of a saved panel to its meaning, a breakdown and the records behind it, for an Insights reader
@@ -38,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="bucketsJson"/>
             <parameter name="breakdownDimension"/>
             <parameter name="pageIndex" type="Integer"/>
+            <parameter name="answerRefusal" type="Boolean" default="false"><description>For a screen (impl-admin F129): a refusal
+                is answered as refusalCode and refusal instead of failing the call</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="available" type="Boolean"/>
@@ -45,10 +48,14 @@ along with this software (see the LICENSE.md file). If not, see
                 meaning, selected, dimensions, panelBuckets, breakdownDimension, breakdownRefused, breakdown, rowsAvailable,
                 rowsReason, columns, rows, total, bounded, pageIndex, pageMaxIndex, and the parameters of its links (carry, clear,
                 previous, next)</description></parameter>
+            <parameter name="refusalCode"><description>With answerRefusal: the refusal's code, or FAILED</description></parameter>
+            <parameter name="refusal"><description>With answerRefusal: why it was refused, safe to show</description></parameter>
         </out-parameters>
         <actions>
-            <set field="drill" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Drill.js').execute('drill', context)"/>
+            <set field="drill" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').answering(context, () =&gt; ec.resource.script('component://mr-boss/service/ironstone/insights/Drill.js').execute('drill', context))"/>
             <set field="available" from="drill.available"/>
+            <set field="refusalCode" from="drill.refusalCode || null"/>
+            <set field="refusal" from="drill.refusal || null"/>
         </actions>
     </service>
     <service verb="get" noun="Record" allow-remote="false">
@@ -80,6 +87,20 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <set field="record" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Records.js').execute('record', context)"/>
             <set field="recordFound" from="record.recordFound"/>
+        </actions>
+    </service>
+    <service verb="get" noun="RecordPanelAccess" allow-remote="false">
+        <description>Whether the caller's own grants open Commons (opens): what the Insights root asks before it serves its
+            Chatter or RecordFiles mount (the record panels of design-drawers-commons, mounted under every app root) or any
+            transition of theirs, since the Insights root's inheritable grant would otherwise open their writes to a user given
+            Insights without Commons. Such a user reaches the same panels in Commons under the same filters. False for a caller
+            without Insights read.</description>
+        <out-parameters>
+            <parameter name="opens" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Records.js').execute('recordPanelAccess', context)"/>
+            <set field="opens" from="found.opens"/>
         </actions>
     </service>
 </services>
