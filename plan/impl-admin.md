@@ -2934,6 +2934,68 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     (`--nobuild`, the shared binary): F-P12-13; nothing was built or changed there;
   - the acceptance AdminProtocolsUsable to run when asked, and ProtocolsHome to look at once on a running server (F-P12-5).
 
+**Review Nov 10 (P12).**
+- Checked (the code paths, not the Built note): `moqui-mail`'s two send paths (only a failed delivery writes `sendOutcome` and
+  `sendError`, in a transaction of its own; a client message's result stays `record#SendResult`'s; statuses, the answers and
+  `deliveryOutcome` as before, so the ledger, the report engine's read, P11's retryable outcomes, PASS and invitations are
+  untouched); `retry#MailOutcome` (the claim locks the row at the revision read and marks it uncertain before anything is
+  sent, so a second request, a stopped server and a send that fails before the session all leave it held or uncertain,
+  never sent twice; an uncertain or outcome-less message only through `reconcile#MailOutcome`; an operation key keeps an
+  applied result only, for one user and target); `reconcile#MailOutcome` (ADMIN_OPERATION_MANAGE, a required reason, sent
+  and notSent only from uncertain, the audit rows through `statusId`'s audit log and `auditRow`); every caller of
+  `send#EmailTemplate` and `send#EmailMessage` for a sender that tries again on its own (below); `find#MailOutcomes`' answer
+  (no subject, body, header or address; the relays' keeper forced to the instance's mail); `get#ProtocolFacts` and
+  `probe#ProtocolTarget` (fixed lists, the target's host and port only from the conf's properties, one connection, a kind
+  of failure and no text of the other side; no request value reaches an address); the group readers of
+  `get#EffectiveSettings` (the filter is on the registered group before any narrowing; the 33 settings are ports, addresses,
+  names, switches and one certificate file path); the SMTP trust logic against `moqui-host`'s `smtp.rs`;
+  `rust_services_tests`' list (passes; P10's two and P12's two are the registered paths); the three screens and
+  `BOSS_ADM_PROTOCOLS_OPS` (the area's screen not inherited, each transition to a framework service with its own check,
+  MailRelays refused the operator in the spec); IdentityProviderDetail's `secretPassword` (both forms, the map and the
+  transition); Mantle's ledger change (the attempt's `emailMessageId` only added; `resolve#Delivery`'s permission checked
+  by the recover service); the specs (one render per screen, mail captured).
+- Fixes:
+  - **R1 (high: a notice sent twice).** Two senders that try a failed mail again on their own left a stored message the
+    queue offered "Send again" for, as the mail service's own: the forum's delivery worker (`ForumDelivery`, retry with
+    backoff) and the report engine's alert mail (tried again at the next evaluation). The forum now registers as an owner
+    (`forumDeliveries`, `mantle.forum.DeliveryWorkerServices.find#MailOutcomeOwners`: every stored message of a site's
+    `ForumMailSettings` template is the forum's, no retry and no reconciliation here); alert mail keeps no stored message
+    (`createEmailMessage` false in `moqui-report` `alert.rs`, as a scheduled report's mail). The other callers were read:
+    none tries a refused or unreached send again by itself (they read a Ready message as handed off), but for
+    `send#CustomerPastDueEmail` if its job, shipped paused, is turned on.
+  - **R2 (medium).** Sign-in mail (PASSWORD_RESET, SINGLE_USE_CODE, ADDED_EMAIL_AUTHC_FACTOR, EMAIL_AUTHC_FACTOR_SENT,
+    ACCOUNT_SIGN_IN and the `pass_verification_template`) holds a reset password, a code or a link of its moment: it is
+    not sent again from the queue (SIGN_IN_MAIL), only closed.
+  - **R3 (medium, disclosure).** A mail account's message answered its error text (struck out), which can name an
+    attachment or quote a server's words about the message: an account's row now answers no error, only its id, count
+    and state.
+  - **R4 (medium).** SMTP trust: two halves of every address (`0.0.0.0/1 128.0.0.0/1`) read as trusted; a range wider than
+    /8 is now a mismatch. A listener bound to this machine behind the PROXY protocol with no allowed address on it read as
+    trusted though the server refuses the proxy's own address: the exemption is removed. A bracketed IPv6 entry, which the
+    server takes, read as a bad entry.
+  - **R5 (low).** A message sent by a retry kept the claim's text as its `sendError`: the release clears it.
+- Tests (the worktree's Debug binary, rebuilt for `alert.rs`): framework AdminProtocols, AdminMailOutcomes 6 of 6 (0.3 s;
+  the trust cases and the sign-in and account rows added); mr-mantle DeliveryLedger 4 of 4 (a forum notice added to P12's
+  feature); mr-boss AdminMailQueue, AdminAccess, AdminRegistries 14 of 14; `cargo test -p moqui-report alert` 11 passed,
+  `-p moqui-core rust_services` passed. Not run: the suites, the acceptance tests, `lint --screens` (no screen changed).
+- For the lead:
+  - `crates/moqui-report/src/alert.rs` is Insights P8's file (three lines added in `send_contact`'s email parameters); the
+    release binary needs the rebuild the Built note already asks for;
+  - open, not fixed: a sender registered later that tries again on its own must register as an owner or keep no stored
+    message (the past-due invoice job if it is ever turned on; a Marketing send); a Ready message with no outcome
+    (`send#EmailTemplate` stopped before the delivery: no server, no SMTP host, no recipient in an allowed domain, which is
+    every template mail on an instance with no SMTP host) reads "May have been sent" and waits for a person, where
+    "Not sent" would be truer (it needs the mail service to keep an outcome for those returns); an earlier attempt's
+    message of a ledger delivery stays in "Needs attention" for the fourteen days with no way to close it; a reconciliation
+    whose owner applied and whose message then changed leaves the message uncertain with the owner refusing a repeat
+    (no double send); if the ledger's attempt transaction fails after a failed send, its message is unowned while the
+    delivery is still due; BasicComms' MessageDetail `resend` (ADMIN, before this phase) sends any stored message again
+    with none of these checks;
+  - the user's calls of the Built note stand; R2 and R3 are defaults built here that belong with them (whether an operator
+    sees an account message's error; whether sign-in mail may ever be sent again);
+  - `AdminMailOutcomes` and `DeliveryLedger` look up `mail.nowhere.invalid` once each with capture off (a resolver
+    question, no connection).
+
 ### P13 — System messages and recovery
 
 Design §8 MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail, §14 operational recovery;
