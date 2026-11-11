@@ -54,7 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
         <script><![CDATA[
             ec.message.clearErrors()
             coverage = found?.coverage || {}
-            const colors = {success: 'positive', partial: 'deep-orange', failed: 'negative', skipped: 'deep-orange', notEnded: 'deep-orange', running: 'info'}
+            const colors = {success: 'positive', partial: 'deep-orange', failed: 'negative', skipped: 'deep-orange', unscheduled: 'deep-orange', notEnded: 'deep-orange', running: 'info'}
             stateColor = colors[coverage.state] || 'grey-7'
             const lastRun = coverage.lastRun
             coverageValues = {

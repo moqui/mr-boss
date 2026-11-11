@@ -207,6 +207,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="deliveryText"><default-field title="Delivery"><display/></default-field></field>
                                         </form-single>
                                         <label type="p" style="m-muted" condition="preview.rowCount == 0" text="Nothing matches, so there is nothing to export."/>
+                                        <label type="p" style="text-caption m-muted" text="Larger volumes are not a BOSS export: ask a system administrator, who has tools for volume (Tools' ETL, snapshots and data export)."/>
                                     </widgets>
                                 </section>
                             </box-body>

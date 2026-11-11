@@ -4344,6 +4344,93 @@ Design §11 Exports, DataExport and Backups; ADM-EXPORT.
   - the brief had the acceptance test written and not run, AGENTS.md has a new one run once: AdminExportsUsable is
     not run, to run when asked.
 
+**Review Nov 11 (P16).** A fresh review of the three repositories' P16 diffs, the read path first (the export module, the
+backup module, Mantle's exporter and BOSS's mount read line by line; the job runner and the backup read in
+`crates/moqui-core/src/service/jobs.rs`, `service/backup.rs` and `crates/moqui-drivers/src/backup.rs`); fixes committed
+apart per repository ("Admin P16 review: …"). No Rust changed.
+- Checked and found sound:
+  - Export dispatch. The target is read by id with direction `export` (an unknown, disabled, malformed or import target
+    fails closed; `constructor` is no target); a wizard-mode target is refused before anything is called; the service is
+    the registration's `exportService` through `call#TargetService`, whose step table for an export target holds only
+    `export` and `scopes`. A request's scope must be one the scope service gave this caller; its options are the
+    registration's by own name and checked by `optionsOf`; its fields are registered names only. No entity, filter,
+    expression, address or path is read from a request (`run#Export` takes five parameters).
+  - Fields (F241). A field's permission is the registration's; the list given to the owner is cut to the allowed ones,
+    a rows target's answer is written from those names only, and a wanted field the caller may not read is named as
+    left out, never by its permission. A field naming an unknown permission is dropped for everyone. No registered
+    exporter has a restricted field; birthdays and notes are `selected: false`, a default and not a restriction.
+    `export#Contacts`' new `fieldList` only removes groups of fields: no caller and no request can use it to add one.
+  - The contact book (F249, confirmed by the user Nov 11). `export#ContactBookTransfer` calls
+    `check#ContactBookAccess` (view) on the book as the caller before anything, whatever grant the call runs under, and
+    the framework has already refused a scope `find#ContactExportScopes` (the caller's own and shared-with-them books)
+    did not give; `export#Contacts` leaves out a contact another user owns privately. So on every path (the framework's
+    service called directly, Admin's `download` transition, the preview) the data operator exports only a book they
+    may themselves view; another user's personal book and another organization's read as not available. The record of
+    an export is listed by the same scopes.
+  - Bounds. The owner is given `maxRows` and answers a count alone past it (the translations count to one past it and
+    read no rows; the contact book counts before it builds); the answer is refused whole past the rows or the bytes,
+    never cut. The file is only `run#Export`'s answer: nothing stores, mails or addresses it. The delimited writer
+    (P15's) writes `= + - @`, a tab and a carriage return as text, headers too.
+  - `find#Transfers` with direction export: an occurrence as its sequence id, its engine state, sanitized reason code,
+    counters and its schedule's owner's name; an alert rule as a digest of its id (the id carries title words), with
+    counters; no title, recipient, value, parameter or content, and nothing opens. Occurrences and rules carry no
+    organization, so a holder of `ADMIN_TRANSFER_VIEW` sees every organization's as these counters (as the engine's
+    administrative read was built, Insights P7 and P8); noted, not changed.
+  - Backups. No parameter of the three services names a path, a name, a destination or a job; the archive directory is
+    the job's stored parameter, the property or the default; an archive is answered only when its name matches the
+    backup's own pattern, as that name, with no path and no download; the mirror as set or not (F251);
+    `ADMIN_BACKUP_DOWNLOAD` is used nowhere and stays sealed. The bounds (30 minutes, three a day: BOSS's rule for the
+    delegated backup operator, the user's decision of Nov 11) are in the service, under a ledger row locked for the
+    request, so two requests at once are taken one after the other. The run is the job's stored parameters only
+    (`run_job_now`), under the operator's user with authorization off as every job run is; the service it calls is
+    `authenticate="false"` and reads nothing of the user. `start#BackupRun` has no grant, asks `ADMIN_BACKUP_RUN` and
+    refuses inside a transaction; starting it with no transaction (F243) is sound.
+  - BOSS. `BOSS_ADM_DATA_BACKUPS` gives the backup operator the area's screen without inheritance and Backups alone;
+    Data.xml has no transition of its own. Each transition reaches a service that checks the caller (`run#Backup`,
+    `run#AdminExport` with the mount's `ADMIN_TRANSFER_RUN`); the five owner's-place targets are links from a fixed
+    route table. AdminExports renders each of the three screens once (qvt); no spec takes a real backup.
+- Fixes:
+  - **R1 (medium, F254).** Two runs of the backup beside each other are not safe: each begins by removing every
+    unfinished archive in the directory (`sweep_partials`), the other's too, so the first fails at its publish (a dump)
+    or is removed while it is written (a physical backup), and each renames and removes archives by its own plan. The
+    request was refused while a scheduled run held the lock, but a run asked for took no lock, so the schedule could
+    start beside it. The run now takes the job's lock for itself once it has its run id (`hold#BackupLock`, internal, a
+    transaction of its own), and the job runner releases it at the run's end as it does a scheduled run's (its release
+    names the run). A run that ended before the lock named it is settled at once, and a lock naming a run that ended is
+    read as free and taken over. Script and service definition only.
+  - **R2 (medium, F255).** A repeat under an export's operation key made the file again from the data as it then was
+    and wrote nothing: with one key a user could take the data every day under one audit row. Every file made is now an
+    audit log row (`repeat: N rows of …`); the record stays one.
+  - **R3 (low).** The record and the audit row of an export were written in the caller's transaction, so a response
+    that failed after the file left could roll them back: `run#Export` now has a transaction of its own.
+  - **R4 (low, F256).** Coverage said success for a job that is paused or has no schedule (the seeded job is paused):
+    a success that nothing follows now reads `unscheduled` ("No next backup is scheduled …"), and a first run under way
+    reads `running`, not "No backup has run yet".
+  - **R5 (low).** An export's byte bound counted characters: it counts UTF-8 bytes.
+  - The user's decision of Nov 11 on the export bounds: the review and the refusal at the bound say that larger volumes
+    are not a BOSS export and a system administrator has tools for volume (Data.js, DataExport, design-admin §11).
+  - Comments, Attack-Surface and design-admin §11 say the above.
+- Tests (the shared release binary, this phase's runtime): framework AdminBackups, AdminDataExport, AdminDataTransfer,
+  AdminConfiguration, AdminJobs 13 of 13 (AdminBackups 0.05 s; added: the lock after a request, the lock service
+  refused directly, a lock of an ended run and of a live one, the paused success); mr-mantle ContactBooks 22 of 22;
+  mr-boss AdminExports, AdminAccess, ProjectsAccess, AdminImports 22 of 22. Prettier clean. Not run: the suites, the
+  acceptance test (unchanged; its `running` state now exists), cargo, `lint --screens` (a label and a color only).
+- For the lead:
+  - no Rust and no entity changed by the review; no seed data changed (a service definition added: `hold#BackupLock`);
+  - R1's rest: between a run's release of a lock that did not yet name it and the write of its end there is an instant
+    in which the settle can read the run as not ended; the lock is then left until the next request (which takes it
+    over) or the job's `expireLockTime` (a day by default), and the schedule waits that long. It needs a run that ends
+    within milliseconds of starting. The framework's own fix closes it and Tools' Run Job besides: `run_job_now` taking
+    the job's lock, or the backup runner refusing a second run in the process (Remaining-Work with F243);
+  - a run of the backup job from Tools still takes no lock (an instance administrator's);
+  - coverage does not say a scheduled backup is overdue (a success three weeks old with the job running reads
+    success with its date), and does not read the job's from and thru dates;
+  - `get#ExportFields` answers a target's words and registered permission names to any signed-in user, as P15's target
+    reads do;
+  - provisional findings: **F254** two backups at once remove each other's unfinished archive, and the schedule could
+    start beside a requested run; **F255** a repeat under an export's key read the data again unaudited; **F256**
+    coverage read a paused job's old success as covered.
+
 ### P17 — Audit and access evidence
 
 Design §12 AuditChanges and AccessLog, §16 audit evidence; ADM-AUDIT, ADM-REPORTS.

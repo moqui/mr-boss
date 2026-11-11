@@ -28,6 +28,12 @@ function mount() {
     if (!admin.capabilities?.transferView && !admin.capabilities?.transferRun) throw new Error("ADMIN_TRANSFER_VIEW is required")
     return {canRun: !!admin.capabilities.transferRun, canView: !!admin.capabilities.transferView}
 }
+// An export here is bounded (the framework's rows and bytes of one file). What is said where a user meets the bound: the
+// user's decision of Nov 11 (impl-admin §4).
+const volumeNote =
+    "Larger volumes are not a BOSS export: ask a system administrator, who has tools for volume (Tools' ETL, snapshots and data export)."
+const bounded = out => ["TOO_MANY_ROWS", "FILE_TOO_LARGE"].includes(text(out?.reasonCode))
+const refusalText = out => text(out?.reason) + (bounded(out) ? " " + volumeNote : "")
 // The option slots a wizard form shows (three: no registered target has more; a further option keeps its default).
 const optionSlots = 3
 // The selection a request carries, by the target's registered options: option1 to option3 are their values in order.
@@ -161,7 +167,7 @@ function context(p) {
         // only names the form offered: a field this user may not read is not asked for
         fieldList: out.selectedFields
     })
-    if (preview.refused) out.previewRefusal = preview.reason
+    if (preview.refused) out.previewRefusal = refusalText(preview)
     else {
         out.preview = preview
         // one key for this review: a second press of Export makes the file again and keeps no second record
@@ -177,13 +183,14 @@ function exportFile(p) {
     if (!mounted.canRun) throw new Error("ADMIN_TRANSFER_RUN is required")
     const targetId = text(p.targetId)
     const target = call(T + "get#ExportFields", {targetId}).target || {}
-    return call(T + "run#Export", {
+    const out = call(T + "run#Export", {
         targetId,
         scopeKey: text(p.scopeKey) || null,
         selection: selectionOf(target, p),
         fieldList: fieldNames(p.fields),
         operationKey: text(p.operationKey) || null
     })
+    return out.refused ? Object.assign({}, out, {reason: refusalText(out)}) : out
 }
 
 const operations = {runs, context, exportFile}
