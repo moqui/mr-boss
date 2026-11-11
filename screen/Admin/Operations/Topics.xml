@@ -12,71 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Topics (design-admin §10 Topics; style-guide §3.2 List; impl-admin P14): the notification topics, from the framework's
-    org.moqui.admin.OperationServices.find#Topics. TopicList: each topic with its description, its owner (or "Not registered":
-    read only here), whether it is private, its inbox, whether it asks for a decision, its delivery defaults (in app, email,
-    push, digest) and how many users have a setting for it and receive every message of it; a topic opens TopicDetail. No title
-    or link template, approval service or email template is shown. Reading needs ADMIN_OPERATION_VIEW or ADMIN_SETTINGS_VIEW,
-    checked by the service: the operations operator and the configuration administrator (BOSS_ADM_OPERATIONS_TOPICS). -->
+<!-- Topics (design-admin §10 Topics; mr-moqui plans/Admin-Screens-Down.md): the framework's System › Operations notification
+    topics at this location, which BOSS_ADM_OPERATIONS_TOPICS opens to the configuration administrator beside the operations
+    operator. Reading needs ADMIN_OPERATION_VIEW or ADMIN_SETTINGS_VIEW, checked by the service. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Notification topics" menu-image="sym_o_notifications" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="pageIndex"/>
 
-    <actions>
-        <service-call name="org.moqui.admin.OperationServices.find#Topics" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{term:(term || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
-        <!-- ignore-error clears a refusal's message -->
-        <set field="available" from="!!found?.topicList"/>
-        <script><![CDATA[
-            ec.message.clearErrors()
-            topics = Array.from(found?.topicList || []).map(row => Object.assign({}, row, {
-                kindText: [row.isPrivate ? 'Private' : 'Open', row.inboxText, row.actionable ? 'asks for a decision' : ''].filter(Boolean).join(' · '),
-                defaultsText: ['In app: ' + row.receiveText, 'Email: ' + row.emailText, 'Push: ' + row.pushText, 'Digest: ' + row.digestText].join(' · '),
-                subscriberText: row.subscriptionCount + (row.allNotificationsCount ? ' (' + row.allNotificationsCount + ' receive every message)' : '')}))
-            topicsCount = Number(found?.topicCount || 0)
-            topicsPageIndex = Number(found?.pageIndex || 0)
-            topicsPageSize = Number(found?.pageSize || 50)
-            topicsPageMaxIndex = Math.max(Math.ceil(topicsCount / topicsPageSize) - 1, 0)
-            topicsPageRangeLow = topicsCount ? topicsPageIndex * topicsPageSize + 1 : 0
-            topicsPageRangeHigh = Math.min((topicsPageIndex + 1) * topicsPageSize, topicsCount)
-            findValues = {term: term}
-        ]]></script>
-    </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col">
-                <label text="Notification topics" type="h5"/>
-                <label text="What people are notified about, and how each topic is delivered when a person has chosen nothing. A topic its owner registered may be changed here. Each person's own choices are in their notification settings."
-                        type="p" style="text-caption m-muted q-mb-none"/>
-            </container>
-        </container>
-        <label type="p" style="text-negative" condition="!available" text="Notification topics are not available to you."/>
-        <section name="TopicsSection" condition="available">
-            <widgets>
-                <form-single name="TopicFind" transition="." map="findValues">
-                    <field name="term"><default-field title="Topic"><text-line size="30"/></default-field></field>
-                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
-                    <field-layout><field-row-big><field-ref name="term"/><field-ref name="submitButton"/></field-row-big></field-layout>
-                </form-single>
-                <label type="p" style="m-muted" condition="!topics.length" text="No topic matches."/>
-                <form-list name="TopicList" list="topics" skip-form="true" paginate="true">
-                    <field name="description">
-                        <default-field title="Topic">
-                            <link url="../TopicDetail" text="${description}" link-type="anchor" parameter-map="{topic:topic}"/>
-                            <label text="${purpose || topic}" type="p" style="text-caption m-muted q-mb-none"/>
-                        </default-field>
-                    </field>
-                    <field name="ownerText"><default-field title="Owner"><display/></default-field></field>
-                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                    <field name="defaultsText"><default-field title="Delivery when a person chose nothing"><display/></default-field></field>
-                    <field name="subscriberText"><default-field title="Users with a setting"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="description"/><field-ref name="kindText"/></column>
-                        <column><field-ref name="ownerText"/><field-ref name="subscriberText"/></column>
-                    </columns>
-                </form-list>
-            </widgets>
-        </section>
+        <include-screen location="component://tools/screen/System/Operations/Topics.xml" share-scope="true"/>
     </widgets>
 </screen>

@@ -33,7 +33,7 @@ feature("Home names the mail and backup warnings with their fix links for an ins
         home.output.includes("The nightly database backup is paused")
         home.output.includes("Backups are not mirrored off the server")
         home.output.includes("/qapps/tools/Data/Grid?entityName=moqui.basic.email.EmailServer")
-        home.output.includes("/qapps/Admin/System/ServiceJob/Jobs/ServiceJobDetail?jobName=backup_EmbeddedDatabase_daily")
+        home.output.includes("/qapps/Admin/Operations/JobDetail?jobName=backup_EmbeddedDatabase_daily")
         home.output.includes(
             "/qapps/Admin/System/SystemMessage/Remote/MessageRemoteDetail?systemMessageRemoteId=EmbeddedDbBackup"
         )

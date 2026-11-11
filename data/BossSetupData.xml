@@ -2486,7 +2486,7 @@ along with this software (see the LICENSE.md file). If not, see
             requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="tools/Data/Grid?entityName=moqui.basic.email.EmailServer" sequenceNum="10"/>
     <ironstone.admin.ReadinessProvider providerKey="admin.backup" version="1" ownerApp="Admin" title="Database backup"
             healthGroupEnumId="AdmHgStorage" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/ServiceJob/Jobs/ServiceJobDetail?jobName=backup_EmbeddedDatabase_daily"
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/Operations/JobDetail?jobName=backup_EmbeddedDatabase_daily"
             expectedFrequencyMinutes="1440" maxLagMinutes="2880" sequenceNum="20"/>
     <ironstone.admin.ReadinessProvider providerKey="admin.reportMail" version="1" ownerApp="Admin" title="Report mail"
             healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
@@ -2499,7 +2499,7 @@ along with this software (see the LICENSE.md file). If not, see
             requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/Security/UserAccount" sequenceNum="50"/>
     <ironstone.admin.ReadinessProvider providerKey="admin.jobRuns" version="1" ownerApp="Admin" title="Job runs"
             healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/System/ServiceJob/JobRuns" sequenceNum="60"/>
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/Operations/JobRuns" sequenceNum="60"/>
     <ironstone.admin.ReadinessProvider providerKey="admin.cluster" version="1" ownerApp="Admin" title="Cluster"
             healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
             requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/Operations/Monitoring" sequenceNum="70"/>

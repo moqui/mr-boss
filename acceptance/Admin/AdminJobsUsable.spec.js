@@ -151,7 +151,7 @@ feature("a run's trace opens in Monitor only by System's own grant", {
         out.run != null && out.run.hasError == "Y" && /^[0-9a-f]{32}$/.test(out.run.traceId)
         opened(out.operator) && out.operator.output.includes("Failed")
         out.operator.output.includes(out.run.traceId) && !out.operator.output.includes("Monitor/TraceDetail")
-        opened(out.administrator) && out.administrator.output.includes("/qapps/system/Monitor/TraceDetail")
+        opened(out.administrator) && out.administrator.output.includes("system/Monitor/TraceDetail")
         out.operatorMonitor.status != 200
         out.administratorMonitor.status == 200
     }
@@ -212,7 +212,7 @@ feature("the failing job runs alert is a template until an owner copies it; the 
         out.template.template === true && out.templateInstances.length == 0
         // shipped read only, on job-run telemetry, with no contact point
         out.definition.body.query.datasetId == "otel_spans" && out.definition.body.contactPoints == null
-        opened(out.jobs) && out.jobs.output.includes("Failing job runs") && !out.jobs.output.includes("/qapps/dashboards/Alerts")
+        opened(out.jobs) && out.jobs.output.includes("Failing job runs") && !out.jobs.output.includes("dashboards/Alerts")
         out.operatorCopy != ""
         out.copy.definition != null && out.state.own === true && out.state.template !== true
         out.evaluated.failed == 0

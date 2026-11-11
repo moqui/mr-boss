@@ -350,9 +350,11 @@ const linkPaths = [
 // The mount of the framework's administration screens under this root (adminMount; tools template/AdminMount.js, mr-moqui
 // plans/Admin-Screens-Down.md): where a link to a record goes here, by the key its registration or the framework's screen
 // names. Data only, never authority: a screen shown here still asks its service. A user's page is Admin's own, the staff
-// identity in the organizations administered, not System's account record.
+// identity in the organizations administered, not System's account record. The paths are relative to a screen of an area
+// (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root.
 const mountRoutes = {
-    user: {url: "//Admin/Users/UserDetail", idParameter: "userId"}
+    user: {url: "../../Users/UserDetail", idParameter: "userId"},
+    systemMessage: {url: "../../Integrations/SystemMessageDetail", idParameter: "systemMessageId"}
 }
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")

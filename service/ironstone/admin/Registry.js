@@ -792,7 +792,7 @@ function overview(p) {
                     .count()
             ),
             icon: "sym_o_event_busy",
-            url: link("Admin/System/ServiceJob/JobRuns")
+            url: link("Admin/Operations/JobRuns?state=failed")
         },
         {
             key: "transports",
@@ -808,7 +808,7 @@ function overview(p) {
             title: "Backup coverage",
             value: backup?.coverage || "Unavailable",
             icon: "sym_o_backup",
-            url: link("Admin/System/ServiceJob/Jobs/ServiceJobDetail?jobName=" + backupJob)
+            url: link("Admin/Operations/JobDetail?jobName=" + backupJob)
         },
         {
             key: "signIn",

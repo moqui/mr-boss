@@ -168,7 +168,7 @@ feature(
             opened(jobList)
             jobList.output.includes("JobList") && jobList.output.includes(jobs.registered) && jobList.output.includes(jobs.plain)
             jobList.output.includes("Spec owner") && jobList.output.includes("Not registered")
-            jobList.output.includes("Failing job runs") && !jobList.output.includes("/qapps/dashboards/Alerts")
+            jobList.output.includes("Failing job runs") && !jobList.output.includes("dashboards/Alerts")
             opened(jobDetail)
             jobDetail.output.includes("JobConfiguration") && jobDetail.output.includes("JobExecution")
             jobDetail.output.includes("JobParameters") && jobDetail.output.includes("JobNotifications")
@@ -215,6 +215,12 @@ feature("the operator pauses, resumes and asks for a run; a topic's default and 
             expectedRevision: jobRevision(jobs.plain).revision,
             paused: "Y"
         })
+        // the System screen's own transitions for an instance administrator (a job's record changed directly) are not taken
+        // in here, so they do not exist on Admin's route: for the operator, whose area grant is an inheritable always-allow,
+        // and for ADMIN
+        for (const user of [users.operations, users.system])
+            post(user, "Operations/JobDetail/updateJob", {jobName: jobs.plain, paused: "Y", description: "Spec: changed directly"})
+        out.direct = row(JOB, {jobName: jobs.plain})
         // a run outside the schedule: the job is marked due; nothing runs here
         const before = row(LOCK, {jobName: jobs.registered})
         post(users.operations, "Operations/JobDetail/runJob", {
@@ -260,6 +266,7 @@ feature("the operator pauses, resumes and asks for a run; a topic's default and 
         out.untouched == "N"
         out.paused == "Y" && out.resumed == "N"
         row(JOB, {jobName: jobs.plain}).paused == "N"
+        out.direct.paused == "N" && out.direct.description != "Spec: changed directly"
         out.lockMoved && row(LOCK, {jobName: jobs.registered}).jobRunId == null && out.state == "requested"
         system(() => find(RUN, {jobName: jobs.registered}).count()) == 0
         out.operatorDefault == "N" && row(TOPIC, {topic: topicId}).showAlert == "Y"
