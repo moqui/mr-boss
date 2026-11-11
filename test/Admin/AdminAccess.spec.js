@@ -261,7 +261,8 @@ const capabilityUsers = [
     {user: users.configure, granted: ["settingsView", "settingsManage", "security", "organizations"]},
     {user: users.integrations, granted: ["connectionView", "connectionManage", "security", "integrations", "protocols"]},
     // P12: Mail and protocols' Home, MailQueue and ServerConfiguration, the operations operator's too (BOSS_ADM_PROTOCOLS_OPS)
-    {user: users.operations, granted: ["operationView", "operationManage", "protocols", "operations"]},
+    // P13: Integrations' SystemMessages and SystemMessageDetail, the operations operator's too (BOSS_ADM_INTEGRATIONS_OPS)
+    {user: users.operations, granted: ["operationView", "operationManage", "integrations", "protocols", "operations"]},
     {user: users.data, granted: ["transferView", "transferRun"]},
     {user: users.audit, granted: ["auditView"]},
     {user: users.privacy, granted: []},

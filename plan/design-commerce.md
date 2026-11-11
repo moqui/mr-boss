@@ -372,7 +372,13 @@ message identity (Z9, R-COM-13). Admin P2 registers the readiness provider (`com
 impl-admin P2, Nov 7): a Commerce reader (COMMERCE_VIEW in the store's organization) gets each store's findings
 on Admin Health, and an administrative reader the summary the PASS readiness answers (the checks by name, no
 messages), for the stores of the organizations it administers, with StoreDetail as the fix link only for those who
-open it. Until Admin's recovery registry (its P13), retry is IntegrationDetail's action (Nov 5, impl-commerce F23). Readiness refuses a payment gateway outside the store
+open it. Admin P13 registers the recovery (impl-admin P13, Nov 10): Mantle's store channels seed two recovery descriptors
+(channel orders, and a store's EDI interchanges) whose action is `retry#StoreMessages` for one message
+(`recover#StoreMessage`, with the reason and an operation key) and whose `find#MessageRecoveryTargets` answers, for the
+caller's own `COMMERCE_CHANNEL_OPERATE` and store scope, which messages it would take; a conflict, a duplicate, an applied
+message and a batch are never retried, nothing is reconciled or cancelled there, and a message's content is not shown.
+Admin's SystemMessages offers that retry to an operations operator who also holds the channel permission for the store,
+with a link to IntegrationDetail; the registration adds no right. Retry stays IntegrationDetail's action too. Readiness refuses a payment gateway outside the store
 organization's enabled `PaymentGatewayOrganization` rows (Z4) and a store whose shipping is bound
 to the local rate gateway with no local rate rule (§8).
 
@@ -1191,7 +1197,8 @@ Derived from tools SystemMessage Message/Remote/Type screens and ridgecrest VDC 
 
 Retry reuses the message/business identity, and I.retry#StoreMessages is registered with Admin
 §14 as an operational recovery action, so Admin offers the same retry with the original
-operation identity (Z9). Incoming order deduplication is by store, remote, message kind and
+operation identity (Z9). As built (impl-admin P13): the registration is Mantle's seed data, and Admin's
+queue passes the retry its own operation key, so a repeat there answers Commerce's first result. Incoming order deduplication is by store, remote, message kind and
 external ID, not external ID alone. A conflicting replay is quarantined with
 its evidence; a matching replay returns the original result. Failed independent messages do
 not stop other stores. Credentials and raw payment/identity payloads never appear in generic

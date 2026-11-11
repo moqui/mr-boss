@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MessageTypes (design-admin §8 MessageTypes, §14; style-guide §3.2 List; impl-admin P13): the message contracts of the
+    instance, from the framework's org.moqui.admin.ConfigurationServices.find#MessageTypes, for the integration administrator.
+    MessageTypeFind narrows by name or id and direction. MessageTypeList shows each type's name, content type, direction, its
+    send and consume handlers (a registered handler by its title, another by its service name), its owner, what recovery is
+    registered for its messages and whether it is changed here: only a type whose owner registered a handler for delegated
+    administration is, in MessageTypeDetail. No type is started here: a type is deployed with the integration that speaks
+    it. Reading needs ADMIN_CONNECTION_VIEW, checked by the service. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Message types" menu-image="sym_o_schema" menu-image-type="icon">
+    <parameter name="term"/>
+    <parameter name="direction"/>
+    <parameter name="pageIndex"/>
+
+    <actions>
+        <service-call name="org.moqui.admin.ConfigurationServices.find#MessageTypes" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), direction:(direction || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="available" from="!!found?.typeList"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            types = Array.from(found?.typeList || []).map(row => Object.assign({}, row, {
+                handlerText: [row.sendHandlerText ? 'Send: ' + row.sendHandlerText : '', row.consumeHandlerText ? 'Consume: ' + row.consumeHandlerText : '']
+                    .filter(Boolean).join(' · ') || 'None',
+                changeText: row.configurable ? 'Changed here' : 'Its owner\'s deployment',
+                changeColor: row.configurable ? 'positive' : 'grey-7'}))
+            typesCount = Number(found?.typeCount || 0)
+            typesPageIndex = Number(found?.pageIndex || 0)
+            typesPageSize = Number(found?.pageSize || 50)
+            typesPageMaxIndex = Math.max(Math.ceil(typesCount / typesPageSize) - 1, 0)
+            typesPageRangeLow = typesCount ? typesPageIndex * typesPageSize + 1 : 0
+            typesPageRangeHigh = Math.min((typesPageIndex + 1) * typesPageSize, typesCount)
+            findValues = {term: term, direction: direction}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Message types" type="h5"/>
+                <label text="The kinds of message this instance exchanges with other systems, and what sends and consumes each. A type comes with the integration that speaks it; where its owner allows, its transport options and its handler are chosen here."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="!available" text="Message types are not available to you."/>
+        <section name="TypesSection" condition="available">
+            <widgets>
+                <form-single name="MessageTypeFind" transition="." map="findValues">
+                    <field name="term"><default-field title="Message type"><text-line size="30"/></default-field></field>
+                    <field name="direction">
+                        <default-field title="Direction">
+                            <drop-down allow-empty="true"><option key="out" text="Sent"/><option key="in" text="Received"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout><field-row-big><field-ref name="term"/><field-ref name="direction"/><field-ref name="submitButton"/></field-row-big></field-layout>
+                </form-single>
+                <label type="p" style="m-muted" condition="!types.length" text="No message type matches."/>
+                <form-list name="MessageTypeList" list="types" skip-form="true" paginate="true">
+                    <field name="description">
+                        <default-field title="Message type">
+                            <link url="../MessageTypeDetail" text="${description}" link-type="anchor" parameter-map="{systemMessageTypeId:systemMessageTypeId}"/>
+                        </default-field>
+                    </field>
+                    <field name="contentType"><default-field title="Content type"><display/></default-field></field>
+                    <field name="directionText"><default-field title="Direction"><display/></default-field></field>
+                    <field name="handlerText"><default-field title="Handlers"><display/></default-field></field>
+                    <field name="ownerText"><default-field title="Owner"><display/></default-field></field>
+                    <field name="recoveryText"><default-field title="Recovery registered"><display/></default-field></field>
+                    <field name="changeText">
+                        <default-field title="Administration">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${changeColor}">${changeText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: changeText})}]]></text>
+                                <text type="html">${changeText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="handlerText"/></column>
+                        <column><field-ref name="directionText"/><field-ref name="changeText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
