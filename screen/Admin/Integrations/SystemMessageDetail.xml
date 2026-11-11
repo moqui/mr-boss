@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SystemMessageDetail (design-admin §8 SystemMessageDetail, §8.1, §15.3 "Unknown provider outcome"; style-guide §3.3 Detail;
+    impl-admin P13): one system message's evidence and recovery, from the framework's
+    org.moqui.admin.OperationServices.get#Message. MessageEvidence: its direction, type and remote, its state in words, its
+    times, its correlation ids, the class of its last error and, where its owner lets this reader, one masked line of it, its
+    owner with the owner's own state and place, and the next step. MessageAttempts: each failed attempt with its time, what was
+    attempted and the error's class; then the status history from the audit log, with who and why. MessageRecovery: each action
+    its owner registered that may be taken now, in a dialog that says what it does, with a reason and the revision read
+    (execute#Recovery); a message whose outcome is unknown is offered Settle (what was found on the other side: nothing is sent
+    or consumed, and the message is not marked sent or consumed: the report is kept beside it, with who, when and why, and
+    shown in MessageEvidence) and never a retry; one reported not done may then be retried; an action that may not be taken is listed with why. The message's content is shown only
+    when asked for, only to a reader who holds the permission its owner registered for it, and only where that owner lets it;
+    otherwise the screen says why not. Reading needs ADMIN_OPERATION_VIEW and an action ADMIN_OPERATION_MANAGE (and the owner's
+    permission where it registered one), checked by the services; every refusal comes back as a reason shown here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="System message" default-menu-include="false">
+    <parameter name="systemMessageId" required="true"/>
+    <parameter name="showContent"/>
+
+    <transition name="recoverMessage">
+        <actions>
+            <service-call name="org.moqui.admin.OperationServices.execute#Recovery" out-map="done"
+                    in-map="{targetKind:'SystemMessage', action:action, resolution:(resolution || null), targetId:systemMessageId,
+                        expectedRevision:expectedRevision, reason:reason, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <script><![CDATA[
+                    const result = Array.from(done.resultList || [])[0] || {}
+                    ec.message.addMessage(done.applied ? (done.repeated ? 'Already done. ' : 'Done. ') + 'The message is now: ' + (result.stateText || 'changed')
+                            + (action === 'reconcile' ? '. It is not marked sent or consumed.' : '')
+                        : (result.reason || done.reason || 'Not done'), done.applied ? 'success' : 'warning')
+                ]]></script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="systemMessageId"/></default-response>
+        <error-response url="."><parameter name="systemMessageId"/></error-response>
+    </transition>
+
+    <actions>
+        <service-call name="org.moqui.admin.OperationServices.get#Message" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{systemMessageId:systemMessageId, includePayload:(showContent === 'Y')}"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="recordFound" from="!!found?.message"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const colors = {failed: 'negative', retrying: 'warning', uncertain: 'deep-orange', settled: 'purple', inProgress: 'info', waiting: 'info', done: 'positive'}
+            const when = value => value ? ec.l10n.format(Date.parse(value), 'yyyy-MM-dd HH:mm') : ''
+            message = found?.message || {}
+            stateColor = colors[message.state] || 'grey-7'
+            const ownerRoutes = {storeIntegration: row => '/qapps/Commerce/Integrations/IntegrationDetail?systemMessageRemoteId='
+                + encodeURIComponent(row.ownerRef) + '&systemMessageId=' + encodeURIComponent(row.systemMessageId)}
+            ownerUrl = message.ownerRef && Object.hasOwn(ownerRoutes, message.ownerRoute || '') ? ownerRoutes[message.ownerRoute](message) : ''
+            evidence = recordFound ? [
+                {label: 'Direction', value: message.directionText},
+                {label: 'Type', value: message.typeText + (message.contentType ? ' (' + message.contentType + ')' : '')},
+                {label: 'Remote', value: message.remoteText ? message.remoteText + (message.remoteDisabled ? ' (disabled until a test of the connection passes)' : '') : 'None'},
+                {label: message.direction === 'out' ? 'Produced' : 'Received', value: when(message.initDate)},
+                {label: 'Last attempt', value: when(message.lastAttemptDate)},
+                {label: message.direction === 'out' ? 'Sent' : 'Consumed', value: when(message.processedDate)},
+                {label: 'Failed attempts', value: String(message.failCount || 0)},
+                {label: 'Settled', value: message.settlement ? [message.settlementText + (message.settledByName ? ' by ' + message.settledByName : ''), when(message.settledDate),
+                    message.settledReason].filter(Boolean).join(' · ') + '. The message is not marked ' + (message.direction === 'out' ? 'sent' : 'consumed') + '.' : ''},
+                {label: 'Envelope id', value: message.messageId},
+                {label: 'Id at the other system', value: message.remoteMessageId},
+                {label: 'Document', value: message.docType},
+                {label: 'Split from', value: message.parentMessageId},
+                {label: 'Messages split from it', value: message.childCount ? String(message.childCount) : ''},
+                {label: 'Acknowledged by', value: message.ackMessageId},
+                {label: 'Last failure', value: [message.errorClass, message.errorText].filter(Boolean).join(': ')},
+                {label: 'Size', value: message.payloadLength ? message.payloadLength + ' characters' : 'Empty'}
+            ].filter(row => row.value) : []
+            attempts = Array.from(found?.attemptList || []).map(row => Object.assign({}, row, {timeText: when(row.errorDate)}))
+            history = Array.from(found?.historyList || []).map(row => Object.assign({}, row, {timeText: when(row.changedDate),
+                changeText: [row.fromText, row.toText].filter(Boolean).join(' → ')}))
+            const offered = Array.from(found?.actionList || [])
+            const keyOf = name => (name + '.' + message.systemMessageId + '.' + message.revision).replace(/[^\w.-]/g, '_').slice(0, 60)
+            recoveryActions = offered.filter(row => row.eligible).map(row => Object.assign({}, row, {
+                resolutionOptions: Array.from(row.resolutionList || []).map(option => ({value: option.resolution, label: option.label})),
+                values: {systemMessageId: message.systemMessageId, action: row.action, expectedRevision: message.revision, operationKey: keyOf(row.action)}}))
+            // why the others are not offered, where a reader would look for them
+            const open = ['failed', 'retrying', 'uncertain', 'settled'].includes(message.state)
+            refusedActions = open ? offered.filter(row => !row.eligible && !['NOT_UNCERTAIN', 'NOT_FAILED', 'ALREADY_SETTLED'].includes(row.reasonCode)) : []
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="MessageUnavailable" condition="!recordFound">
+            <widgets>
+                <label type="p" style="text-negative" text="This message is not available to you, or there is no such message."/>
+                <link url="../SystemMessages" text="System messages" link-type="anchor"/>
+            </widgets>
+        </section>
+        <section name="MessageFound" condition="recordFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Message ${message.systemMessageId}" type="h5"/>
+                        <label text="${message.typeText}${message.remoteText ? ' · ' + message.remoteText : ''}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-auto">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${stateColor}">${message.stateText}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: message.stateText})}]]></text>
+                            <text type="html">${message.stateText}</text>
+                        </render-mode>
+                    </container>
+                    <container style="col-auto">
+                        <link url="../SystemMessages" text="System messages" icon="sym_o_arrow_back"/>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Recovery"/>
+                    <box-body>
+                        <label type="p" condition="message.nextStep" text="${message.nextStep}"/>
+                        <label type="p" style="m-muted" condition="!message.nextStep &amp;&amp; !recoveryActions.length" text="Nothing is to be done to this message here."/>
+                        <label type="p" style="m-muted" condition="message.idempotencyNote" text="${message.ownerApp}: ${message.idempotencyNote}"/>
+                        <section-iterate name="MessageRecoveryActions" list="recoveryActions" entry="offer">
+                            <widgets>
+                                <container-dialog id="Recover_${offer.action}" button-text="${offer.label}" icon="sym_o_build" width="600"
+                                        title="${offer.label}: message ${message.systemMessageId}">
+                                    <label type="p" text="${offer.consequence}"/>
+                                    <form-single name="MessageRecovery" transition="recoverMessage" map="offer.values">
+                                        <field name="systemMessageId"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="resolution">
+                                            <conditional-field condition="offer.resolutionOptions.length" title="What was found">
+                                                <drop-down><list-options list="offer.resolutionOptions" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <default-field><hidden/></default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="${offer.label}"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section-iterate>
+                        <section-iterate name="RefusedActions" list="refusedActions" entry="held">
+                            <widgets><label type="p" style="text-caption m-muted q-mb-none" text="${held.label}: ${held.reason}"/></widgets>
+                        </section-iterate>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Evidence"/>
+                    <box-body>
+                        <form-list name="MessageEvidence" list="evidence" skip-form="true" paginate="false">
+                            <field name="label"><default-field title=""><display/></default-field></field>
+                            <field name="value"><default-field title=""><display/></default-field></field>
+                        </form-list>
+                        <container style="q-mt-sm">
+                            <label text="Owner: " style="m-muted"/>
+                            <link url="${ownerUrl}" url-type="plain" link-type="anchor" condition="ownerUrl"
+                                    text="${[message.ownerApp, message.ownerTitle, message.ownerStateText].filter(Boolean).join(' · ')}"/>
+                            <label condition="!ownerUrl"
+                                    text="${[message.ownerApp, message.ownerTitle, message.ownerStateText].filter(Boolean).join(' · ') || 'No owner has registered a recovery for this message type'}"/>
+                        </container>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Attempts"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!attempts.length" text="No failed attempt is recorded."/>
+                        <form-list name="MessageAttempts" list="attempts" skip-form="true" paginate="false">
+                            <field name="timeText"><default-field title="Time"><display/></default-field></field>
+                            <field name="attemptedText"><default-field title="Attempted"><display/></default-field></field>
+                            <field name="errorClass"><default-field title="Failure"><display/></default-field></field>
+                            <field name="errorText"><default-field title="What was recorded"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="text-caption m-muted q-mt-sm" condition="history.length" text="Status changes"/>
+                        <form-list name="MessageHistory" list="history" skip-form="true" paginate="false">
+                            <field name="timeText"><default-field title="Time"><display/></default-field></field>
+                            <field name="changeText"><default-field title="Change"><display/></default-field></field>
+                            <field name="username"><default-field title="By"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Content"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!found.payloadVisible" text="${found.payloadHiddenReason}."/>
+                        <section name="ContentShown" condition="found.payloadVisible">
+                            <widgets>
+                                <link url="." text="Show the content" icon="sym_o_visibility" condition="found.payloadText == null"
+                                        parameter-map="{systemMessageId:systemMessageId, showContent:'Y'}"/>
+                                <label type="p" style="text-caption m-muted" condition="found.payloadText != null"
+                                        text="As its owner lets you read it${found.payloadTruncated ? ', cut to its first 20,000 characters' : ''}; values of fields named like a credential are hidden."/>
+                                <label type="pre" style="text-mono text-caption" condition="found.payloadText != null" text="${found.payloadText}"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

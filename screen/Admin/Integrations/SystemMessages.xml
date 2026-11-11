@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SystemMessages (design-admin §8 SystemMessages, §8.1, §15.3 "Unknown provider outcome" and "Independent failure";
+    style-guide §3.2 List; impl-admin P13): the transport outcomes of the instance's system messages, from the framework's
+    org.moqui.admin.OperationServices.find#Messages, for the operations operator who triages failed and stuck integration
+    work. MessageFind narrows by state, type, direction, a whole reference (a message's own id, its envelope's or the
+    remote's) and dates; there is no search inside a message. MessageList shows each message's id, type and remote, state,
+    age and attempts, its correlation ids, the class of its last error, its owner and the next step; never a message's text,
+    which the service does not return. Bulk recovery: the eligible messages of the page are chosen with one action (retry
+    now, queue again, cancel) and a reason, reviewed message by message (preview#Recovery: each one's eligibility and what the
+    action would do), then run by execute#Recovery, which names a result for each and goes on past one that is refused or
+    fails; the review's operation key answers a second submit with the first results. A message whose outcome is unknown is
+    never in a retry: it is settled in SystemMessageDetail, which records what a person reported beside the message and
+    never marks it sent or consumed (a settled message is its own state, out of Needs attention; one reported not done may
+    be retried). What may be done to a message is what its owner registered
+    (moqui.server.RecoveryDescriptor), and an owner's own service checks its own permission and scope. Reading needs
+    ADMIN_OPERATION_VIEW and an action ADMIN_OPERATION_MANAGE, checked by the services; every refusal comes back as a reason
+    shown here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="System messages" menu-image="sym_o_swap_horiz" menu-image-type="icon">
+    <parameter name="state"/>
+    <parameter name="systemMessageTypeId"/>
+    <parameter name="systemMessageRemoteId"/>
+    <parameter name="direction"/>
+    <parameter name="reference"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="bulkIds"/>
+    <parameter name="bulkAction"/>
+    <parameter name="bulkReason"/>
+
+    <transition name="recoverMessages">
+        <actions>
+            <!-- the list's filters come back as one value, so the page returns to the list as it was; the reviewed messages
+                with the revision each was read at come as one value too -->
+            <script><![CDATA[
+                let filters = {}
+                try { filters = JSON.parse(filterJson || '{}') } catch (error) { filters = {} }
+                ec.context.putAll(Object.fromEntries(['state', 'systemMessageTypeId', 'systemMessageRemoteId', 'direction', 'reference', 'fromDate', 'thruDate', 'pageIndex']
+                    .map(name => [name, filters[name] == null ? null : String(filters[name])])))
+                let chosen = []
+                try { chosen = JSON.parse(targetsJson || '[]') } catch (error) { chosen = [] }
+                targetList = (Array.isArray(chosen) ? chosen : []).slice(0, 25).map(row => ({targetId: String(row?.targetId || ''), expectedRevision: String(row?.expectedRevision || '')}))
+            ]]></script>
+            <service-call name="org.moqui.admin.OperationServices.execute#Recovery" out-map="done"
+                    in-map="{targetKind:'SystemMessage', action:action, targetList:targetList, reason:reason, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <script><![CDATA[
+                    const results = Array.from(done.resultList || [])
+                    ec.message.addMessage((done.repeated ? 'Already done: ' : '') + done.appliedCount + ' of ' + results.length + ' done'
+                        + (done.refusedCount ? ', ' + done.refusedCount + ' not' : ''), done.refusedCount ? 'warning' : 'success')
+                    for (const row of results.filter(found => !found.applied))
+                        ec.message.addMessage('Message ' + row.targetId + ': ' + (row.reason || 'not done'), 'warning')
+                ]]></script>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="org.moqui.admin.OperationServices.find#Messages" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{state:(state || null), systemMessageTypeId:(systemMessageTypeId || null), systemMessageRemoteId:(systemMessageRemoteId || null),
+                    direction:(direction || null), reference:(reference || null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                    pageIndex:(pageIndex || 0), pageSize:50}"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="available" from="!!found?.messageList"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const colors = {failed: 'negative', retrying: 'warning', uncertain: 'deep-orange', settled: 'purple', inProgress: 'info', waiting: 'info', done: 'positive',
+                staged: 'grey-7', rejected: 'grey-7', cancelled: 'grey-7'}
+            const when = value => value ? ec.l10n.format(Date.parse(value), 'yyyy-MM-dd HH:mm') : ''
+            // the owner's own place for a message, by the key its registration names (never a URL from data)
+            const ownerRoutes = {storeIntegration: row => '/qapps/Commerce/Integrations/IntegrationDetail?systemMessageRemoteId='
+                + encodeURIComponent(row.ownerRef) + '&systemMessageId=' + encodeURIComponent(row.systemMessageId)}
+            messages = Array.from(found?.messageList || []).map(row => Object.assign({}, row, {
+                stateColor: colors[row.state] || 'grey-7',
+                routeText: [row.typeText, row.remoteText].filter(Boolean).join(' · ') + (row.remoteDisabled ? ' (remote disabled)' : ''),
+                timeText: when(row.initDate),
+                attemptText: row.failCount ? row.failCount + ' failed' + (row.lastAttemptDate ? ', last ' + when(row.lastAttemptDate) : '') : '',
+                referenceText: [row.messageId, row.remoteMessageId && row.remoteMessageId !== row.messageId ? row.remoteMessageId : ''].filter(Boolean).join(' · '),
+                problemText: row.settlement ? ['Settled' + (row.settledByName ? ' by ' + row.settledByName : ''), when(row.settledDate), row.settledReason].filter(Boolean).join(' · ')
+                    : [row.errorClass, row.errorText].filter(Boolean).join(': '),
+                ownerUrl: row.ownerRef && Object.hasOwn(ownerRoutes, row.ownerRoute || '') ? ownerRoutes[row.ownerRoute](row) : '',
+                ownerText: [row.ownerApp, row.ownerStateText].filter(Boolean).join(' · ') || 'Not registered'}))
+            messagesCount = Number(found?.messageCount || 0)
+            messagesPageIndex = Number(found?.pageIndex || 0)
+            messagesPageSize = Number(found?.pageSize || 50)
+            messagesPageMaxIndex = Math.max(Math.ceil(messagesCount / messagesPageSize) - 1, 0)
+            messagesPageRangeLow = messagesCount ? messagesPageIndex * messagesPageSize + 1 : 0
+            messagesPageRangeHigh = Math.min((messagesPageIndex + 1) * messagesPageSize, messagesCount)
+            stateOptions = Array.from(found?.stateList || []).map(row => ({value: row.state, label: row.text}))
+            typeOptions = Array.from(found?.typeList || []).map(row => ({value: row.systemMessageTypeId, label: row.description}))
+            findValues = {state: state || 'attention', systemMessageTypeId: systemMessageTypeId, direction: direction, reference: reference,
+                fromDate: fromDate, thruDate: thruDate, systemMessageRemoteId: systemMessageRemoteId}
+            const filters = {state: state, systemMessageTypeId: systemMessageTypeId, systemMessageRemoteId: systemMessageRemoteId, direction: direction,
+                reference: reference, fromDate: fromDate, thruDate: thruDate, pageIndex: pageIndex}
+            filterJson = JSON.stringify(filters)
+            // bulk recovery: what of this page may be chosen, by the action
+            bulkActions = [{value: 'retry', label: 'Retry now', flag: 'retryEligible'}, {value: 'requeue', label: 'Queue again', flag: 'requeueEligible'},
+                {value: 'cancel', label: 'Cancel', flag: 'cancelEligible'}]
+            bulkChoices = messages.filter(row => bulkActions.some(option => row[option.flag])).map(row => ({value: row.systemMessageId,
+                label: row.systemMessageId + ' · ' + row.routeText + ' · ' + row.stateText + ' ('
+                    + bulkActions.filter(option => row[option.flag]).map(option => option.label.toLowerCase()).join(', ') + ')'}))
+            bulkValues = Object.assign({}, filters, {bulkAction: 'retry'})
+            // what was chosen for a review, as ids (a check field posts a list, a link one text)
+            bulkChosen = (Array.isArray(bulkIds) ? bulkIds : String(bulkIds || '').split(',')).map(id => String(id).trim()).filter(Boolean)
+            reviewing = available && bulkChosen.length > 0 && !!bulkAction
+        ]]></script>
+        <!-- the review of a chosen batch: each message's own preview for the chosen action -->
+        <set field="reviewRows" from="[]"/>
+        <if condition="reviewing">
+            <service-call name="org.moqui.admin.OperationServices.preview#Recovery" out-map="previewed" transaction="force-new" ignore-error="true"
+                    in-map="{targetKind:'SystemMessage', targetIdList:bulkChosen.slice(0, 25)}"/>
+            <script><![CDATA[
+                const refusal = ec.message.hasError() ? ec.message.getErrorsString() : ''
+                ec.message.clearErrors()
+                reviewFailure = previewed?.previewList ? '' : (refusal || 'The messages could not be reviewed')
+                reviewAction = bulkActions.find(option => option.value === bulkAction) || null
+                reviewRows = reviewAction ? Array.from(previewed?.previewList || []).map(row => {
+                    const offered = Array.from(row.actionList || []).find(option => option.action === reviewAction.value) || {}
+                    return {targetId: row.targetId, stateText: row.stateText || '', ownerText: row.ownerApp || 'Not registered', eligible: offered.eligible === true,
+                        outcomeText: offered.eligible === true ? offered.consequence : (row.found ? offered.reason || 'Not offered' : 'No such message'),
+                        revision: row.revision}
+                }) : []
+                const allowed = reviewRows.filter(row => row.eligible)
+                reviewAllowedCount = allowed.length
+                // one key for this review: the same messages at the same revisions for the same action
+                let hash = 5381
+                for (const character of allowed.map(row => row.targetId + '@' + row.revision).join(',')) hash = ((hash * 33) ^ character.charCodeAt(0)) >>> 0
+                confirmValues = {action: reviewAction?.value, reason: bulkReason || null, filterJson: filterJson,
+                    targetsJson: JSON.stringify(allowed.map(row => ({targetId: row.targetId, expectedRevision: row.revision}))),
+                    operationKey: 'bulk.' + (reviewAction?.value || '') + '.' + allowed.length + '.' + hash.toString(16)}
+            ]]></script>
+        </if>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="System messages" type="h5"/>
+                <label text="What became of the messages this instance sends to and receives from other systems: what failed, what is tried again, and what may or may not have gone through. Sent or consumed is only what a send or a consume succeeded in: what a person reported of an unknown outcome is listed as settled. A message's content is not shown here."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="!available" text="System messages are not available to you."/>
+        <section name="MessagesSection" condition="available">
+            <widgets>
+                <section name="BulkReview" condition="reviewing">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Review: ${reviewAction?.label || 'recover'} ${reviewRows.length} ${reviewRows.length === 1 ? 'message' : 'messages'}"/>
+                            <box-toolbar>
+                                <link url="." text="Back to the list" icon="sym_o_close" parameter-map="{state:state, systemMessageTypeId:systemMessageTypeId,
+                                    systemMessageRemoteId:systemMessageRemoteId, direction:direction, reference:reference, fromDate:fromDate, thruDate:thruDate, pageIndex:pageIndex}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" style="text-negative" condition="reviewFailure" text="${reviewFailure}"/>
+                                <label type="p" style="m-muted" condition="!reviewFailure"
+                                        text="Each message is taken on its own: one that is refused or fails is named in the result and the others go on. A message whose outcome is unknown is never retried here."/>
+                                <form-list name="BulkRecoveryReview" list="reviewRows" skip-form="true" paginate="false">
+                                    <field name="targetId">
+                                        <default-field title="Message"><link url="../SystemMessageDetail" text="${targetId}" link-type="anchor" parameter-map="{systemMessageId:targetId}"/></default-field>
+                                    </field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="ownerText"><default-field title="Owner"><display/></default-field></field>
+                                    <field name="eligibleText">
+                                        <default-field title="In this batch"><display text="${eligible ? 'Yes' : 'No'}"/></default-field>
+                                    </field>
+                                    <field name="outcomeText"><default-field title="What happens, or why not"><display/></default-field></field>
+                                </form-list>
+                                <section name="BulkConfirmSection" condition="reviewAllowedCount &gt; 0">
+                                    <widgets>
+                                        <form-single name="BulkRecoveryConfirm" transition="recoverMessages" map="confirmValues">
+                                            <field name="action"><default-field><hidden/></default-field></field>
+                                            <field name="targetsJson"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="filterJson"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log beside each message"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="${reviewAction?.label} ${reviewAllowedCount} ${reviewAllowedCount === 1 ? 'message' : 'messages'}">
+                                                    <submit confirmation="${reviewAction?.label} ${reviewAllowedCount} ${reviewAllowedCount === 1 ? 'message' : 'messages'}? Each keeps its identity: no new message is made."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                    <fail-widgets>
+                                        <label type="p" style="text-warning" condition="!reviewFailure" text="None of the chosen messages can be taken by this action now."/>
+                                    </fail-widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <form-single name="MessageFind" transition="." map="findValues">
+                    <field name="state">
+                        <default-field title="State"><drop-down><list-options list="stateOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                    </field>
+                    <field name="systemMessageTypeId">
+                        <default-field title="Type"><drop-down allow-empty="true"><list-options list="typeOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                    </field>
+                    <field name="direction">
+                        <default-field title="Direction">
+                            <drop-down allow-empty="true"><option key="out" text="Sent from here"/><option key="in" text="Received"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="reference">
+                        <default-field title="Reference" tooltip="A whole id: the message's, its envelope's or the other system's"><text-line size="24"/></default-field>
+                    </field>
+                    <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
+                    <field name="fromDate"><default-field title="From" tooltip="Empty shows the last ${found.defaultDays} days"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="Before"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="state"/><field-ref name="systemMessageTypeId"/><field-ref name="direction"/><field-ref name="reference"/>
+                            <field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <section name="RemoteFilter" condition="systemMessageRemoteId">
+                    <widgets>
+                        <container style="q-mb-sm">
+                            <label text="Of the remote ${systemMessageRemoteId}." style="q-mr-sm"/>
+                            <link url="." text="Every remote" link-type="anchor" parameter-map="{state:state, systemMessageTypeId:systemMessageTypeId, direction:direction,
+                                fromDate:fromDate, thruDate:thruDate, systemMessageRemoteId:''}"/>
+                        </container>
+                    </widgets>
+                </section>
+                <label type="p" style="m-muted" condition="!messages.length" text="No message matches."/>
+                <form-list name="MessageList" list="messages" skip-form="true" paginate="true">
+                    <field name="systemMessageId">
+                        <default-field title="Message">
+                            <link url="../SystemMessageDetail" text="${systemMessageId}" link-type="anchor" parameter-map="{systemMessageId:systemMessageId}"/>
+                        </default-field>
+                    </field>
+                    <field name="routeText">
+                        <default-field title="Type and remote">
+                            <label text="${directionText}: " style="m-muted"/>
+                            <link url="." text="${routeText}" link-type="anchor" condition="systemMessageRemoteId"
+                                    parameter-map="{systemMessageRemoteId:systemMessageRemoteId, state:(ec.web.parameters.state || '')}"/>
+                            <label text="${routeText}" condition="!systemMessageRemoteId"/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="timeText"><default-field title="Since"><display/></default-field></field>
+                    <field name="attemptText"><default-field title="Attempts"><display/></default-field></field>
+                    <field name="referenceText"><default-field title="References"><display/></default-field></field>
+                    <field name="problemText"><default-field title="Last failure, or who settled it"><display/></default-field></field>
+                    <field name="owner">
+                        <default-field title="Owner">
+                            <link url="${ownerUrl}" url-type="plain" text="${ownerText}" link-type="anchor" condition="ownerUrl"/>
+                            <label text="${ownerText}" condition="!ownerUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="nextStep"><default-field title="Next step"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="systemMessageId"/><field-ref name="routeText"/><field-ref name="nextStep"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="problemText"/></column>
+                    </columns>
+                </form-list>
+                <section name="BulkRecoveryBox" condition="found.canManage &amp;&amp; bulkChoices.length &gt; 0 &amp;&amp; !reviewing">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Recover several"/>
+                            <box-body>
+                                <label type="p" style="m-muted"
+                                        text="Choose messages of this page and one action. You review what happens to each before anything is done. Up to ${found.maxTargets} at a time."/>
+                                <form-single name="BulkRecovery" transition="." map="bulkValues">
+                                    <field name="state"><default-field><hidden/></default-field></field>
+                                    <field name="systemMessageTypeId"><default-field><hidden/></default-field></field>
+                                    <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
+                                    <field name="direction"><default-field><hidden/></default-field></field>
+                                    <field name="reference"><default-field><hidden/></default-field></field>
+                                    <field name="fromDate"><default-field><hidden/></default-field></field>
+                                    <field name="thruDate"><default-field><hidden/></default-field></field>
+                                    <field name="pageIndex"><default-field><hidden/></default-field></field>
+                                    <field name="bulkIds">
+                                        <default-field title="Messages">
+                                            <check><list-options list="bulkChoices" key="${value}" text="${label}"/></check>
+                                        </default-field>
+                                    </field>
+                                    <field name="bulkAction">
+                                        <default-field title="Action">
+                                            <drop-down><list-options list="bulkActions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="bulkReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

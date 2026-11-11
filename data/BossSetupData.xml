@@ -4825,4 +4825,30 @@ along with this software (see the LICENSE.md file). If not, see
             title="Ask a business operations number"
             description="run#OperationsQuery: one aggregate over an admitted business operations dataset from typed choices: datasetId, aggregate (count, sum, avg, min, max, cardinality), measureField, groupBy, groupBy2, timeGrain, filterField with filterValue, from and thru, and organizationPartyId for one of the user's organizations. It runs as the user with the dataset's row filter and guards. Cost, margin, People and payroll datasets and fields are refused (DATASET_RESTRICTED, FIELD_RESTRICTED) whatever the user holds."
             classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+
+    <!-- Admin P13 (impl-admin P13; design-admin §2, §8): system messages for the operations operator. The Integrations area
+        is the integration administrator's whole (BOSS_ADM_INTEGRATIONS, which now holds MessageTypes and MessageTypeDetail
+        too); the operator opens only SystemMessages and SystemMessageDetail in it: the area's screen itself, not inherited
+        (so Connections, ConnectionDetail and the message types stay refused), and the two screens, each inheritable for its
+        own transitions, which reach framework services that check their own permission (find#Messages, get#Message and
+        preview#Recovery ADMIN_OPERATION_VIEW; execute#Recovery ADMIN_OPERATION_MANAGE and, for an owner's messages, the
+        owner's own permission and scope). ALWAYS, to beat the area's deny of the root group, with the root's filter sets,
+        under which an owner's recovery service (Mantle's store channels) resolves the operator's organizations. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_INTEGRATIONS_OPS" description="Admin system messages">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations/SystemMessages.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations/SystemMessageDetail.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_OPS_OPERATIONS" userGroupId="BOSS_ADMIN_OPERATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin's settings index entry of P13 (design §14.2), shown to a user its screen opens to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.messageTypes" version="1" ownerApp="Admin" title="Message types"
+            description="The kinds of message exchanged with other systems: what sends and consumes each, among the handlers its owner registered, and its transport options"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Integrations/MessageTypes"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="114"/>
 </entity-facade-xml>

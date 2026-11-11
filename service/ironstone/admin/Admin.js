@@ -77,6 +77,8 @@ const areas = {
     // integration administrator and the administrator (BOSS_ADM_INTEGRATIONS, BOSS_ADM_PROTOCOLS); P12 opens Mail and
     // protocols to the operations operator too, for ProtocolsHome, MailQueue and ServerConfiguration alone
     // (BOSS_ADM_PROTOCOLS_OPS: the area's screen without its other subscreens)
+    // P13 opens Integrations to the operations operator too, for SystemMessages and SystemMessageDetail alone
+    // (BOSS_ADM_INTEGRATIONS_OPS); MessageTypes and MessageTypeDetail are the integration administrator's with the rest
     integrations: "Integrations",
     protocols: "Protocols",
     organizations: "Settings/Organizations",
@@ -308,6 +310,11 @@ const linkPaths = [
     "Protocols/Home",
     "Protocols/MailQueue",
     "Protocols/ServerConfiguration",
+    // P13: message types and system messages
+    "Integrations/MessageTypes",
+    "Integrations/MessageTypeDetail",
+    "Integrations/SystemMessages",
+    "Integrations/SystemMessageDetail",
     "Agents/Home",
     "System",
     "Developer/Home"
