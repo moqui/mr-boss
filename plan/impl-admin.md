@@ -278,7 +278,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | built and reviewed Nov 10, merged |
 | P13 System messages and recovery | mr-moqui, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | built and reviewed Nov 10, merged |
 | P14 Jobs and topics | mr-moqui, BOSS | Jobs, JobDetail, JobRuns, JobRunDetail, Topics, TopicDetail | built and reviewed Nov 10, merged |
-| P15 Imports | mr-moqui, Mantle, BOSS | Imports, DataImport, ImportDetail; Products' import mount | — |
+| P15 Imports | mr-moqui, Mantle, BOSS | Imports, DataImport, ImportDetail; Products' import mount | built and reviewed Nov 11, merged |
 | P16 Exports and backups | mr-moqui, BOSS | Exports, DataExport, Backups | — |
 | P17 Audit and access evidence | mr-moqui, BOSS | AuditChanges, AccessLog | — |
 | P18 Shared devices | mr-moqui, BOSS | Devices | — |
@@ -3858,8 +3858,8 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
   walk, AppStructure and one grant pattern (mr-pass names it nowhere); `ProductImportServices`' five steps carry one
   parameter list, which is taken as the import contract; `invite#User` adds nothing of BOSS's (InviteStaff adds
   `BOSS_USERS` in its transition); Mantle's identity scope is the caller's organization filters, so it follows the grant a
-  call runs under (F-P15-2); ChannelImport's batch is a SystemMessage with no stager and no counts before its commit, and
-  the opening open items keep one result on the setup run (F-P15-6, F-P15-7); the framework had no delimited-text reader
+  call runs under (F221); ChannelImport's batch is a SystemMessage with no stager and no counts before its commit, and
+  the opening open items keep one result on the setup run (F225, F226); the framework had no delimited-text reader
   outside Mantle's catalog one.
 - mr-moqui (no Rust changed: everything ran on the shared release binary; no Debug build was made):
   - `entity/ServerEntities.xml` (appended): `moqui.server.TransferTarget` (a registered target: direction, title,
@@ -3938,7 +3938,7 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
   invite through the wizard's transitions, its refusals, `BOSS_USERS` always, a privileged group and ADMIN never; Imports'
   and ImportDetail's one qvt render; an owner's run with its place and no row, not shown to who may not read it).
   `AdminAccess` changed: the `data` capability and the two menus. `ProductsImport` changed in four lines (the mapping and
-  context services are the shared ones, F-P15-11). Acceptance, written and not run: `acceptance/Admin/AdminImportsUsable`
+  context services are the shared ones, F230). Acceptance, written and not run: `acceptance/Admin/AdminImportsUsable`
   (3 features, the "usable when"); `ProductsImportWalk` (three form ids) and `AppStructure` (the screen's name) edited,
   not run.
 - Tests run (the shared release binary, this phase's runtime): framework AdminDataTransfer, AdminConfiguration 7 of 7;
@@ -3957,52 +3957,52 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
   Shared/DataImport), design-crosscut (its row), design-commerce (ChannelImport registered), design-accounting (the two
   registered), design-drawers-commons and design-projects (registered with no runs).
 - Findings (provisional, numbered by the lead):
-  - **F-P15-1** A target with no owner batch has no five steps to register: it registers a validate and an apply service
+  - **F220** A target with no owner batch has no five steps to register: it registers a validate and an apply service
     for one row (`validate#TargetRow`, `apply#TargetRow`), and the framework's batch answers the five steps' contract for
     it, so one wizard serves both. The design's contract said only the five steps; §11.1 and §14 edited.
-  - **F-P15-2** The framework knows no organization. A batch's scope is the target's word: its scope service says which
+  - **F221** The framework knows no organization. A batch's scope is the target's word: its scope service says which
     scopes a caller has (Mantle's identity scope for invitations, which follows the organization filters of the grant
     the call runs under: the Data area's, or the identity services' own `MANTLE_USER_ORG`). A rows target with no scope
     service (message translations) is read by every holder of its view permissions.
-  - **F-P15-3** The catalog registers no permission of Admin's, so a Products user imports through Products' mount with
+  - **F222** The catalog registers no permission of Admin's, so a Products user imports through Products' mount with
     the catalog's permissions alone, as before. Admin's mount asks `ADMIN_TRANSFER_RUN` itself (the wizard's transitions
     and `map#Import`); the framework's services, called directly, ask only what the registration and the owner ask.
-  - **F-P15-4** `BOSS_ADMIN_DATA` holds the two transfer permissions and no target's domain permission, so the demo
+  - **F223** `BOSS_ADMIN_DATA` holds the two transfer permissions and no target's domain permission, so the demo
     data operator alone starts no import: staff invitations also need `ADMIN_IDENTITY_MANAGE`, the catalog its own
     permissions. P1's note read "each data target's domain permission on BOSS_ADMIN_DATA, P15"; not done: it would make
     the data operator an identity operator and a catalog editor of its organizations.
-  - **F-P15-5** `staffInvitations` asks `ADMIN_TRANSFER_RUN` besides `ADMIN_IDENTITY_MANAGE`, so the identity operator
+  - **F224** `staffInvitations` asks `ADMIN_TRANSFER_RUN` besides `ADMIN_IDENTITY_MANAGE`, so the identity operator
     alone invites one at a time; Invite from a file shows to a user who holds both and opens the Data area.
-  - **F-P15-6** The opening open items keep the latest import's result on the setup run, not a history: an organization
+  - **F225** The opening open items keep the latest import's result on the setup run, not a history: an organization
     is listed with at most one run.
-  - **F-P15-7** A channel import batch records no stager and no counts before its commit: it is listed with its
+  - **F226** A channel import batch records no stager and no counts before its commit: it is listed with its
     committer and the count the commit kept.
-  - **F-P15-8** A catalog import is its importer's (Mantle: "Open your own catalog import", but for a system
+  - **F227** A catalog import is its importer's (Mantle: "Open your own catalog import", but for a system
     administrator), so Imports shows a data operator only their own catalog imports.
-  - **F-P15-9** The catalog import's result notice (the SECA on `apply#CatalogImport`) checks the Products launcher and
+  - **F228** The catalog import's result notice (the SECA on `apply#CatalogImport`) checks the Products launcher and
     links Products' mount: an import through Admin by a user without Products sends no notice.
-  - **F-P15-10** Shared/DataImport is rendered by ProductsImport's spec (three modes, twice, from before this phase), so
+  - **F229** Shared/DataImport is rendered by ProductsImport's spec (three modes, twice, from before this phase), so
     AdminImports renders it in no mode and reads the wizard's context through its service; the Admin mount and the options
     section were rendered by hand.
-  - **F-P15-11** ProductsImport's spec called `ironstone.products.ImportServices.map#CatalogImport` and
+  - **F230** ProductsImport's spec called `ironstone.products.ImportServices.map#CatalogImport` and
     `get#ImportContext`, which are now the shared screen's services (`ironstone.shared.DataImportServices.map#Import` and
     `get#ImportContext`, with `appRoot`): the spec names them in four lines, its assertions unchanged. The walk's three form
     ids are ImportUpload, ImportPreview and ImportApply.
-  - **F-P15-12** Not built of the design's forms: spreadsheet files and sheet or header selection (delimited text
+  - **F231** Not built of the design's forms: spreadsheet files and sheet or header selection (delimited text
     only), a registered import mode and source namespace beyond the catalog's own update mode, a confirmation reason at
     apply, cancelling an apply under way, ImportTarget as a dialog (it is a list below the runs) and a corrected row as a
     linked revision.
-  - **F-P15-13** The framework registers a target of its own, message translations, which the plan did not name: it is
+  - **F232** The framework registers a target of its own, message translations, which the plan did not name: it is
     the rows contract's framework example (its spec's target, with no Mantle) and a use of its own for the configuration
     administrator who also holds the transfer permission. Its place is Settings › Localization.
-  - **F-P15-14** Outside an app screen an owner's service needs the caller's own artifact authorization (that is the
+  - **F233** Outside an app screen an owner's service needs the caller's own artifact authorization (that is the
     point of `call#TargetService`), so a direct call of `find#Transfers` by a user with no grant for an owner's find
     service names that owner as not answered rather than listing none.
-  - **F-P15-15** When the instance cannot send mail a bulk invitation's row reads "resend it from Invitations": the link
+  - **F234** When the instance cannot send mail a bulk invitation's row reads "resend it from Invitations": the link
     shown once is the single invitation's, and nothing reveals many.
-  - **F-P15-16** `clean_TransferBatches_daily` has no `JobRegistration`, so it is read only in Admin's Jobs; a target's
+  - **F235** `clean_TransferBatches_daily` has no `JobRegistration`, so it is read only in Admin's Jobs; a target's
     retention is its registration's.
-  - **F-P15-17** A spec assertion that begins with a regular expression literal reads to Prettier as a division of the
+  - **F236** A spec assertion that begins with a regular expression literal reads to Prettier as a division of the
     line above and can fail its parse, though the runner takes it: the new specs use a `has(value, pattern)` helper.
 - Decisions: three modes of a registration (steps, rows, wizard) in one framework record; the import contract is
   Products' parameter list, unchanged; an owner's service is called by the step's name through a call whose grant is not
@@ -4035,11 +4035,11 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
     design says so);
   - P16 adds exports to the same family: `DataTransferLib.js` is shared, `TransferTarget.direction` is `import` today and
     `targetsOf("export")` reads the others; `find#Transfers` lists imports only until then;
-  - the user's call: F-P15-4 (whether `BOSS_ADMIN_DATA` should carry any target's domain permission; built: none);
-    F-P15-5 (whether the identity operator alone may invite from a file; built: the transfer permission too); F-P15-13
-    (whether the framework keeps its message translations target); F-P15-12 (spreadsheet files, and a reason at apply);
-    F-P15-8 (whether a catalog import should be readable by its organization's other catalog administrators, so Imports
-    shows more than one's own); F-P15-6 and F-P15-7 (a history of opening imports and a stager on a channel batch, their
+  - the user's call: F223 (whether `BOSS_ADMIN_DATA` should carry any target's domain permission; built: none);
+    F224 (whether the identity operator alone may invite from a file; built: the transfer permission too); F232
+    (whether the framework keeps its message translations target); F231 (spreadsheet files, and a reason at apply);
+    F227 (whether a catalog import should be readable by its organization's other catalog administrators, so Imports
+    shows more than one's own); F225 and F226 (a history of opening imports and a stager on a channel batch, their
     owners' later work, §7);
   - the acceptance AdminImportsUsable, ProductsImportWalk and AppStructure to run when asked.
 
@@ -4055,7 +4055,7 @@ modules, Mantle's invitation rows and BOSS's mount read line by line; the author
   - How an owner's service is authorized (the Built note and the comments said "as a direct call is"; that is half of
     it). `call#TargetService`'s own ALLOW is not inheritable, so outside a screen the dispatching service's grant does
     not carry and the caller needs the owner's own artifact grant (Mantle's identity services have one, the catalog's
-    have none: F-P15-14 is this). Below an app screen the area's inheritable ALWAYS (`BOSS_ADM_DATA`, as every BOSS
+    have none: F233 is this). Below an app screen the area's inheritable ALWAYS (`BOSS_ADM_DATA`, as every BOSS
     area's) is taken before any record of the artifact's own (`is_permitted`), so it covers `call#TargetService` and the
     owner's service after it: there the only wall is the owner's service checking the caller itself. Tried through the
     Admin mount's `stage` transition (a scratch spec, not kept): the data operator alone is refused by the catalog
@@ -4077,7 +4077,7 @@ modules, Mantle's invitation rows and BOSS's mount read line by line; the author
     Admin mount asks `ADMIN_TRANSFER_RUN` in each writing transition and the view or run permission to open. The
     widened pattern (`…|CatalogChecks|DataImport`) is a member of `BOSS_PROJECTS_INTERNAL`, a DENY for client contacts:
     it grants nothing, and now denies them the screen under Admin too. Nothing else names the old location.
-  - `messageTranslations` (F-P15-13): its apply is `storeLocalizedMessage` itself (`ADMIN_SETTINGS_MANAGE`, P8 R1's
+  - `messageTranslations` (F232): its apply is `storeLocalizedMessage` itself (`ADMIN_SETTINGS_MANAGE`, P8 R1's
     placeholder and expression rules, R2's link rule, the revision, the audit row), its validation the same checks
     without the write, and an import removes none. Kept.
   - Owners' runs: the four find services answer by their owners' capabilities and organization policy and return
@@ -4127,10 +4127,10 @@ modules, Mantle's invitation rows and BOSS's mount read line by line; the author
     is answered `repeated`;
   - a validation or a mapping change made while the same batch is being applied marks the rows not yet reached as
     failed ("The validation changed"): fails closed, and they are retried or validated again;
-  - F-P15-10 stands and is older than this phase: ProductsImport renders Shared/DataImport twice in each of three
+  - F229 stands and is older than this phase: ProductsImport renders Shared/DataImport twice in each of three
     modes (empty and with an import), against "once per mode";
-  - provisional findings: **F-P15-R1** a retry wrote over a source changed after the preview; **F-P15-R2** a batch
-    stayed readable by who staged it after they lost the permission or the organization; **F-P15-R3** a repeat of an
+  - provisional findings: **F-P15R-1** a retry wrote over a source changed after the preview; **F-P15R-2** a batch
+    stayed readable by who staged it after they lost the permission or the organization; **F-P15R-3** a repeat of an
     applied row became valid on a second validation.
 
 ### P16 — Exports and backups
@@ -4306,7 +4306,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
