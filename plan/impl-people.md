@@ -305,7 +305,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F71) |
 | P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | built and reviewed Nov 11, merged |
-| P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | — |
+| P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | built and reviewed Nov 11, merged |
 | P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | — |
 | P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | — |
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | — |
@@ -715,7 +715,7 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
   RecordFiles, §15 the directory export); design-crosscut §3.4 and header; the owner designs: design-insights §10 (the Records
   mount), design-admin UserDetail, design-projects PersonDetail, design-drawers-commons (Commons/People, the record panels, the
   palette groups).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F79 to F84 in order:
   - Mantle has no `EmailWork` contact purpose; the directory takes `EmailPrimary` as the work email, as P1's demo stores it, which
     would publish a person's own address where their primary email is personal. A seeded `EmailWork` (and the demo on it) would
     make the work identity unambiguous;
@@ -798,7 +798,7 @@ confidentiality first; fixes committed apart per repository ("People P2 review: 
     record" for anyone but a People user; it says so only for the person.
   - **R7 (low, conventions).** PeopleEmployees rendered `Employees/List` twice in csv (reader and HR); it renders it once, as the
     reader (the public columns, no dates); HR's columns are Mantle's PeopleDirectory.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F85 to F88 in order:
   - the record-lookup hook keeps the first provider's info and card, and Comms' `boss.records` (sequence 0) comes before
     `people.records` (30) and answers every visible Party, so People's Person info and card never show; its search and links do.
     Putting People first (a negative sequence) now leaves non-employees to Comms (R5) but changes Comms' room titles and cards
@@ -1613,7 +1613,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
