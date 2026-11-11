@@ -1198,8 +1198,10 @@ Registrations are trusted component definitions, validated at load. They are not
   built (impl-people P5): Mantle's `mantle.humanres.PeopleApprovalServices.find#OwnedApprovals` and `transfer#ApprovalOwner`
   (resource parameter `approvalResourceId`, permission `PEOPLE_APPROVAL_OWNER_CHANGE`, which the identity operator and the
   administrator hold); a rule row naming the user (approver, alternate or HR fallback) is handed to a new approver who works for
-  its employer (the row ends and its copy names them), and a waiting request is listed, not transferable: it follows its route
-  once the rule or reporting line naming the user changes.
+  its employer (the row in effect ends and its copy names them; a row starting later changes in place), and a waiting request is
+  listed, not transferable: it follows its route once the rule or reporting line naming the user changes, and P6's separation
+  routes it again (P5's review). A rule is handed over only with the permission (or by the People administrator of its
+  employer), never by its approver alone.
 - Sales, "Sales assignments": the accounts, open opportunities and quotes a departing user owns (impl-sales P6).
 - Marketing, `marketing.campaigns`: a departing user's campaign manager and contributor rows; approvals and scheduled sends are not a person's and are not moved (impl-marketing P2).
 - Maintenance, `maintenance.assignments`: a user's open work order and step assignments and equipment custody (impl-maintenance P3), with a leaver's booking approver roles later (its P15).

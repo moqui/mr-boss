@@ -179,7 +179,8 @@ const capabilityNames = [
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     {user: users.manager, granted: ["team", "requestApprove"]},
-    {user: users.hr, granted: ["hrView", "hrEdit", "import", "staff"]},
+    // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
