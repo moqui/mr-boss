@@ -30,7 +30,11 @@ along with this software (see the LICENSE.md file). If not, see
     a panel's New alert rule opens AlertDetail (reportLinks.alertRule), never Tools' AlertRule. P9 adds Business flows: Flow map
     and Maps, with the hidden FlowMapEditor and ProcessStory, every Insights user's to open, each transition reaching
     ironstone.insights.FlowMapServices, which checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT, the map's organization and its owner
-    itself; ProcessStory serves Commons Knowledge only to a user whose own grants open it. -->
+    itself; ProcessStory serves Commons Knowledge only to a user whose own grants open it. P10 adds Settings (Settings, the
+    organization's analytics defaults, and Data readiness, over Admin's readiness registry), every Insights user's to open, each
+    transition reaching a service that checks its own permission (INSIGHTS_SETTINGS_EDIT; a refresh registration's own), and
+    Assist: the prompts and the response action below, the insights-analyst skill (skill/insights-analyst.md) and the read tools
+    of ironstone.insights.AssistServices (data/BossSetupData.xml), each run as the signed-in user. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 
@@ -54,8 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- the palette's dashboards, saved reports and flow maps (P4, P9, design §1.2); quick create (Dashboard, Analysis, Schedule
-        by capability), the Assist prompts and response action arrive with their screens (P10) -->
+    <!-- the palette's dashboards, saved reports and flow maps (P4, P9, design §1.2), and Assist's prompts and response action
+        (P10) -->
     <shell-providers>
         <palette-source group="Insights" label="Dashboards, saved reports and flow maps" icon="sym_o_insights"
                 service="ironstone.insights.ContextServices.search#Records" sequence="62"/>
@@ -64,6 +68,17 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g s" label="Insights home" screen="Insights/Home"/>
             <key keys="g m" label="Flow map" screen="Insights/Flows/FlowMap"/>
         </keymap>
+        <!-- P10 (design §1.2 "Assist and MCP analytics"): the insights-analyst skill answers each from the same authorized
+            query as the page, as the user; "Add to my dashboard" saves an answer's query as the user's own library panel
+            (Insights/AddToDashboard, an author's) -->
+        <assist-prompt label="Explain this number" text="Explain this number: what it measures, its basis and scope, and what it leaves out"
+                screen="Insights/Dashboard" sequence="10"/>
+        <assist-prompt label="Compare with last period" text="Compare this with the period before, keeping currencies apart"
+                screen="Insights" sequence="20"/>
+        <assist-prompt label="Which source is stale?" text="Which source is stale, how far behind is it, and who can refresh it?"
+                screen="Insights" sequence="30"/>
+        <response-action label="Add to my dashboard" icon="sym_o_dashboard_customize" screen="Insights/AddToDashboard"
+                text-parameter="answerText" sequence="40"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="insights-panel" type="popup"/></widgets>

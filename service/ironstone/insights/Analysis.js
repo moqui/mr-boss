@@ -46,7 +46,8 @@ function sources(datasetId) {
     if (datasetId && !chosen) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
     if (!chosen) return {datasets, dataset: null, fields: []}
     const found = insights.asViewer(ENGINE + "get#Dataset", {datasetId}).dataset || {}
-    const defaults = insights.asViewer(ENGINE + "get#Definition", {definitionId: datasetId}).definition?.body?.fieldDefaults || {}
+    const body = insights.asViewer(ENGINE + "get#Definition", {definitionId: datasetId}).definition?.body || {}
+    const defaults = body.fieldDefaults || {}
     const fields = Array.from(found.fields || [])
         .filter(field => !String(field.name).startsWith("_"))
         .map(field => {
@@ -64,7 +65,18 @@ function sources(datasetId) {
             }
         })
         .sort((a, b) => a.value.localeCompare(b.value))
-    return {datasets, dataset: Object.assign({timeField: found.timeField || chosen.timeField}, chosen), fields}
+    return {
+        datasets,
+        dataset: Object.assign(
+            {
+                timeField: found.timeField || chosen.timeField,
+                // the field its row filter scopes by, where it names one (the organization filter's)
+                organizationField: body.rowFilterParameters?.organizationField || null
+            },
+            chosen
+        ),
+        fields
+    }
 }
 function options(p) {
     author()
@@ -79,8 +91,9 @@ function options(p) {
         visualizations: visualizations.map(value => ({value, label: value.charAt(0).toUpperCase() + value.slice(1)}))
     }
 }
-// The engine's query of the typed choices: every field one of the dataset's own.
-function queryOf(p, found) {
+// The engine's query of the typed choices: every field one of the dataset's own. A time grain's buckets follow the display
+// zone and week start of the organization in scope where it set them (Insights Settings, P10), else the viewer's.
+function queryOf(p, found, organizationPartyId) {
     const named = (value, list, what) => {
         if (!value) return null
         const field = list.find(row => row.value === value)
@@ -100,7 +113,10 @@ function queryOf(p, found) {
             id: "period",
             type: "date_histogram",
             role: "x-axis",
-            params: {field: found.dataset.timeField, calendar_interval: p.timeGrain}
+            params: Object.assign(
+                {field: found.dataset.timeField, calendar_interval: p.timeGrain},
+                organizationPartyId ? insights.calendarParameters(organizationPartyId, p.timeGrain) : {}
+            )
         })
     }
     for (const value of [p.groupBy, p.groupBy2].filter(Boolean)) {
@@ -137,10 +153,25 @@ function shown(field, value) {
 // get#AnalysisResult: the choices run as the viewer. A guard's refusal is the answer's reason, with its code.
 function result(p) {
     author()
+    return run(p)
+}
+// The typed choices run as the viewer, for one whose right to ask the caller has checked (Analysis' author; Assist's reader of
+// a dataset its class opens, Assist.js): the dataset an admitted one the viewer reads, every field its own, the engine's
+// admission, row filter and guards as for any query.
+function run(p) {
     const context = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     const found = sources(p.datasetId)
     if (!found.dataset) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
-    const query = queryOf(p, found)
+    const query = queryOf(p, found, context.organizationPartyId)
+    // one organization asked for by name (Assist): the dataset narrowed to it on the field its row filter scopes by, under
+    // the row filter, which still decides what the viewer reads
+    if (p.narrowOrganization && p.organizationPartyId && found.dataset.organizationField)
+        query.filters = (query.filters || []).concat([
+            {
+                query: {field: {name: found.dataset.organizationField, op: "eq", value: String(p.organizationPartyId)}},
+                label: "Organization: " + p.organizationPartyId
+            }
+        ])
     const range = {from: p.from || context.defaults.from, thru: p.thru || context.defaults.thru}
     let answer
     ec.message.pushErrors()
@@ -213,7 +244,11 @@ function store(p) {
     if (!visualizations.includes(visualization)) denied("VALUE_INVALID", "Choose how the analysis is shown")
     const found = sources(p.datasetId)
     if (!found.dataset) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
-    const query = queryOf(p, found)
+    const query = queryOf(
+        p,
+        found,
+        insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null}).organizationPartyId
+    )
     // refused now, as it would be on every render (an amount across currencies, a ratio averaged)
     const checked = result(p)
     if (!checked.available) denied(checked.refusedCode, checked.reason)
@@ -271,6 +306,9 @@ function ownDashboards() {
 
 const operations = {options, result, store, ownDashboards}
 ;({
+    // P10: the admitted sources and a typed query run as the viewer, for Assist.js after its own checks
+    sources,
+    run,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights analysis operation " + op)
         return operations[op](parameters)

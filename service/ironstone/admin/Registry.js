@@ -590,6 +590,8 @@ function present(provider, row, context) {
         coverage: row.coverage || "",
         watermarkText: "",
         lagText: "",
+        // the lag in minutes, for a reader that applies a freshness policy of its own (Insights' DataReadiness)
+        lagMinutes: null,
         expectedFrequencyText: "",
         fixUrl: null,
         refreshKey: context.refreshByProvider[provider.providerKey]?.refreshKey || null,
@@ -604,6 +606,7 @@ function present(provider, row, context) {
             const lag = Math.max(0, Math.round((nowMs() - watermark) / minute))
             out.watermarkText = timeText(row.watermark)
             out.lagText = frequencyText(lag)
+            out.lagMinutes = lag
             if (provider.maxLagMinutes != null && lag > provider.maxLagMinutes && out.state === "ready")
                 Object.assign(out, {
                     state: "warning",

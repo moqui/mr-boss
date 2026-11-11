@@ -203,6 +203,12 @@ const demoRecords = {
     "Insights/Flows/FlowMaps": { text: "Suite template" },
     "Insights/Flows/FlowMapEditor": { parameters: { definitionId: "insights-flowmap-internal" }, text: "A suite template is not changed" },
     "Insights/Flows/ProcessStory": { parameters: { definitionId: "insights-flowmap-customer", stepId: "order" }, text: "Back to Customer flow" },
+    // Insights P10: Settings (the organization's analytics defaults and the controls in effect), Data readiness and the
+    // Assist response action's frame
+    "Insights/Settings": { parameters: { organizationPartyId: "ORG_ZIZI_RETAIL" }, text: "Scope and delivery" },
+    "Insights/Settings/AnalyticsSettings": { parameters: { organizationPartyId: "ORG_ZIZI_RETAIL" }, text: "Analytics defaults" },
+    "Insights/Settings/DataReadiness": { text: "Data readiness" },
+    "Insights/AddToDashboard": { text: "Add to my dashboard" },
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list
     // (Time/TimeEntries) john.doe's time
     // Projects P2: Home, the project list (the default of Projects), the NewProject wizard and its steps (the fragment is the

@@ -383,4 +383,42 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="count" from="found.count"/>
         </actions>
     </service>
+    <service verb="find" noun="SourceReadiness" allow-remote="false">
+        <description>Insights' data readiness (design §11 DataReadiness; impl-insights P10): the sources Insights registered
+            in Admin's readiness registry that the user may read, through ironstone.admin.RegistryServices.get#Readiness as
+            the user (its freshness facet: the last watermark, the expected frequency, the lag and the coverage), each with
+            its domain owner and class and the freshness policy of the organization in scope applied: a ready source older
+            than the policy allows is stale, with its lag. Stale, waiting for review, failed and unavailable stay apart; a
+            provider that could not be checked is named and the others still answer; the registered refresh is offered only
+            where Admin's registry says the user may run it. There is no second readiness registry. Filtered by domain
+            owner, source and state. Refuses a user without Insights read (INSIGHTS_VIEW_REQUIRED) and an organization not
+            theirs (ORGANIZATION_UNAVAILABLE); Admin's registry refuses one without its grant.</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="domainOwner"/>
+            <parameter name="source"/>
+            <parameter name="state"><description>ready, stale, warning, failed or unavailable</description></parameter>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="sources" type="List"/>
+            <parameter name="failedProviders" type="List"/>
+            <parameter name="checkedText"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="freshnessText"/>
+            <parameter name="ownerOptions" type="List"/>
+            <parameter name="stateOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Settings.js').execute('sourceReadiness', context)"/>
+            <set field="sources" from="found.sources"/>
+            <set field="failedProviders" from="found.failedProviders"/>
+            <set field="checkedText" from="found.checkedText"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="freshnessText" from="found.freshnessText"/>
+            <set field="ownerOptions" from="found.ownerOptions"/>
+            <set field="stateOptions" from="found.stateOptions"/>
+        </actions>
+    </service>
 </services>

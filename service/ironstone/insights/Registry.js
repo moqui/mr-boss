@@ -1075,7 +1075,7 @@ function scopeVariables(context, definition) {
     return seller ? {organizationPartyId: value, vendorPartyId: value} : {organizationPartyId: value}
 }
 // get#Home: the viewer's landing (design §3): the management scope, their starred and recent dashboards, the dashboard whose
-// panels Home shows (their own choice, else the shipped suite dashboard) with the panels in their order, their pinned reports
+// panels Home shows (their own choice, else their organization's default, else the shipped suite dashboard) with the panels in their order, their pinned reports
 // and whether this is their first use. Every definition is read as the viewer; one they no longer read is left out, and a
 // chosen dashboard they cannot read is said so. Attention is get#Attention's, so a slow or failing owner never holds Home.
 function getHome(p) {
@@ -1116,7 +1116,13 @@ function getHome(p) {
                 url: link(definition)
             })
         }
-    const dashboardId = preference.dashboardDefinitionId || suiteDashboardId
+    // their own choice, else the default dashboard of the organization in scope (Insights Settings, P10) when they read
+    // it, else the suite dashboard
+    const organizationDefault = context.organizationPartyId
+        ? insights.organizationSettings(context.organizationPartyId).values.defaultDashboardId
+        : null
+    const dashboardId =
+        preference.dashboardDefinitionId || (byId.has(organizationDefault) ? organizationDefault : null) || suiteDashboardId
     const dashboard = {definitionId: dashboardId, title: "", available: false, message: "", url: null}
     let panelOptions = []
     let shown = null
