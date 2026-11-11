@@ -1,0 +1,55 @@
+{
+  "id": "admin-job-runs",
+  "type": "alert",
+  "title": "Failing job runs",
+  "body": {
+    "folder": "Admin",
+    "description": "Fires when runs of a scheduled job ended with an error in the last hour, by job, from job-run telemetry (the root span of each run). A job that is late and did not run leaves no span: Admin › Operations › Jobs lists those. A template: it runs only once copied, which gives it an owner; then set the threshold, the contact points and any silence.",
+    "query": {
+      "datasetId": "otel_spans",
+      "from": "now-1h",
+      "thru": "now",
+      "queryString": "moqui.job.root:true AND status_code:ERROR",
+      "aggregations": [
+        {
+          "id": "job",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "moqui.job.name",
+            "size": 100
+          }
+        },
+        {
+          "id": "runs",
+          "type": "value_count",
+          "role": "metric",
+          "params": {
+            "field": "span_id"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ]
+    },
+    "field": "runs",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 300,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "operations",
+      "severity": "warning"
+    }
+  }
+}

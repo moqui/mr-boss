@@ -211,7 +211,9 @@ feature("a settings entry shows only to those its destination opens to, and its 
                 "admin.mailRelays",
                 "admin.protocols",
                 // P13: Admin's Message types
-                "admin.messageTypes"
+                "admin.messageTypes",
+                // P14: Admin's Notification topics
+                "admin.topics"
             ])
         )
             problems.push(`the instance group: ${instance}`)

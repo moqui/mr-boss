@@ -82,6 +82,8 @@ const areas = {
     integrations: "Integrations",
     protocols: "Protocols",
     organizations: "Settings/Organizations",
+    // P14 opens Operations to the configuration administrator too, for Topics and TopicDetail alone
+    // (BOSS_ADM_OPERATIONS_TOPICS: the area's screen without its other subscreens)
     operations: "Operations",
     agents: "Agents",
     developer: "Developer"
@@ -315,6 +317,13 @@ const linkPaths = [
     "Integrations/MessageTypeDetail",
     "Integrations/SystemMessages",
     "Integrations/SystemMessageDetail",
+    // P14: jobs, job runs and notification topics
+    "Operations/Jobs",
+    "Operations/JobDetail",
+    "Operations/JobRuns",
+    "Operations/JobRunDetail",
+    "Operations/Topics",
+    "Operations/TopicDetail",
     "Agents/Home",
     "System",
     "Developer/Home"

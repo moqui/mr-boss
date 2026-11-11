@@ -3549,6 +3549,279 @@ Design §10 Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail; ADM-
   the job's zone, opens a run's trace in Monitor only with Monitor's grant, and copies the job-run alert template to an
   owner so it fires.
 
+**Built Nov 10 (P14).**
+- Checked first (the code over the plan): Monitor is now a section of System (`system/Monitor/...`, opened by System's
+  grant; `MONITOR_APP` is gone), so "Monitor's grant" is System's (F-P14-1); P0's shipped report source holds: a job run's
+  root span carries `moqui.job.root`, `moqui.job.name`, `moqui.job.run.id` and an error status, `moqui.job.runs` counts
+  outcomes only, and nothing signals a late run (F-P14-2, as F45); Tools' "Run Job" (`ec.service.job(name).run()`,
+  jobs.rs `run_job_now`) runs the job as its caller and takes no lock, so it can run beside a scheduled run (F-P14-3); a
+  job's notifications carry the run's errors, parameters and results unmasked (F-P14-6); `allNotifications` on a private
+  topic is how the framework's own job error and web error topics reach administrators, so refusing it in the
+  notification resolution does not fit (F-P14-7); `ServiceJob` and `NotificationTopic` have no owner and
+  `ServiceJobRun` no organization (F-P14-5, F-P14-9); the retry limits of a message are parameters of the two message jobs
+  (F185).
+- mr-moqui (no Rust changed: everything ran on the shared release binary; no Debug build was made):
+  - `entity/ServerEntities.xml` (appended): `moqui.server.JobRegistration` (a job its owner registers: owner, title, which
+    of schedule, pause, priority and wait after an error may be changed, the shortest interval of a schedule set here, the
+    owner's permission, the permission a notification recipient must hold), `JobParameterDefinition` (a parameter safe to
+    change: integer, decimal, boolean, option or text, with bounds) and `TopicRegistration` (a topic its owner registers:
+    the delivery settings that may be changed and the permission that is its audience); `RecoveryDescriptor` gains
+    `itemsService`.
+  - `service/org/moqui/admin/OperationServices.xml` (appended, bodies in two new modules). `OperationJobs.js`: `find#Jobs`
+    (every job but the queued calls: schedule in words, state, next and last run in the machine's time zone, owner),
+    `get#Job`, `store#Job` (only a registered job, only what was registered; no parameter for the service, the run-as
+    identity, the topic, the time limits, the lock expiry or the dates; a cron expression that parses and is no more
+    frequent than registered; a parameter of its registered type and bounds, a text of plain words only; a recipient by
+    username, only an account that holds the registered permission, one answer for an unknown name and an outsider; a
+    revision over the job, its parameters and its recipients; an audit row per change), `find#JobRuns` and `get#JobRun`
+    (a bounded range; the class of an error and masked lines; the numbers among the results; parameter names with a value
+    only where it is a number, a yes or no, or registered; a run without an error whose results or owner's items count
+    failures is `itemsFailed`), `get#JobRunItems` (the owner's registered `itemsService`, the interface
+    `find#JobRunItems`, called as the reader and read as data), the internal `apply#JobRecovery`, the framework's own
+    provider `find#MessageJobRunItems`, and jobs as the recovery kind `ServiceJob` (one more row of `kindModules` in
+    `OperationRecovery.js`): its one action, a run outside the schedule, natively marks the job due under its lock row
+    (locked, at the revision read, only while no run holds the lock) so the scheduler's own claim starts it, as itself.
+    `OperationTopics.js`: `find#Topics`, `get#Topic`, `store#TopicDefaults` (`ADMIN_SETTINGS_MANAGE`; only the registered
+    delivery settings) and `store#TopicSubscription` (`ADMIN_OPERATION_MANAGE`; only an account of the topic's registered
+    audience; `allNotifications` never set, only ended).
+  - Data: `AdminConfigurationData.xml` (appended: a third member row of `AdminOperationServices` naming the ten services;
+    the framework's own registrations: the two system message jobs with `retryMinutes` and `retryLimit` as registered
+    parameters, a native run and their items; `clean_ServiceJobRun_daily` with `daysToKeep`; the `ServiceJobError`
+    topic with its audience).
+  - Docs: Attack-Surface (the jobs and notification topics paragraph), Remaining-Work's `org.moqui.admin` row. No
+    Parity-Diffs entry: no existing behavior changed.
+- BOSS:
+  - Screens (six, in the Operations area): `Operations/Jobs.xml` (JobFind, JobList, the counts, the alert template's
+    line), `JobDetail.xml` (Run: JobExecution in a dialog per registered action, and why not otherwise; Configuration:
+    the facts and JobConfiguration; JobParameters as editable rows for the registered ones; JobNotifications with a
+    dialog), `JobRuns.xml` (RunFind, RunList), `JobRunDetail.xml` (RunEvidence with the masked error lines and the
+    parameters; RunItems; the trace link only by System's grant), `Topics.xml` (TopicFind, TopicList) and
+    `TopicDetail.xml` (TopicDefaults as a form where a setting is changed here; TopicSubscriptions with a dialog).
+    `Operations.xml`: the six subscreens, and the configuration administrator lands on Topics (`conditional-default`). No
+    new `ironstone` service, so the client deny pattern is unchanged.
+  - `report/admin-job-runs.json`: the alert template "Failing job runs" on `otel_spans` (root spans of job runs with an
+    error status, by job, in the last hour), with no contact point; a template until copied to an owner.
+  - `Admin.js`: six link paths. `data/BossSetupData.xml` (appended): `BOSS_ADM_OPERATIONS_TOPICS` (the configuration
+    administrator on the area's screen itself, not inherited, and on Topics and TopicDetail) and the settings index entry
+    `admin.topics`. BossUsersDemoData unchanged.
+- Specs: framework `test/AdminJobs` (4 features, 0.1 s on the release binary: an unregistered job and an arbitrary
+  service, user, topic or time limit refused or never written, an unregistered and an undeclared parameter, an expression,
+  a path, a URL, an address and out-of-bounds values, a schedule that is too frequent, unreadable or cleared, a stale
+  revision, then the registered changes with their audit row, pause and resume with the next run in the machine's zone,
+  a recipient of the audience only; a run asked of the scheduler: refused for a job a run holds, whose lock and run row
+  are left as they were, for an unregistered, a paused and a stale one, taken once, the lock left free and due with no
+  run row made, the key's repeat and a second request, two requests at one revision; a run with failed items by its
+  results and one by its owner's items not a success, errors and parameters masked; a topic's registered default only,
+  private and the title template never written, an approval kept, nobody subscribed to a private topic without an
+  audience or outside one, `allNotifications` never set and ended, names only within the audience). BOSS
+  `test/Admin/AdminJobRuns` (2 features, 1.2 s: JobRunDetail's, Jobs', JobDetail's, JobRuns', Topics' and TopicDetail's
+  one qvt render each; pause, resume, a run asked for, a default and a subscription through the transitions as the
+  operator, the configuration administrator and the reader; the configuration administrator refused Jobs and Health).
+  `AdminAccess` changed: the configuration administrator's `operations` capability. `AdminRegistries` changed: the
+  Instance group's new entry. Acceptance, written and not run: `acceptance/Admin/AdminJobsUsable` (3 features, the
+  "usable when"; its third needs the telemetry store).
+- Tests run (the shared release binary, this phase's runtime, the branches rebased on master's P12 follow-up): framework
+  AdminJobs, AdminRecovery, AdminMailOutcomes, AdminConfiguration, AdminProtocols, AdminConnectionServices 20 of 20;
+  mr-boss AdminJobRuns, AdminAccess, AdminRegistries, ProjectsAccess, AdminSystemMessages, AdminMailQueue 27 of 27.
+  `moqui lint --screens` 132 flagged sites, as master, no parse failure (with the release binary: no
+  Debug binary was built). By hand, not kept: the six screens in qvt, tui and html on the test load as the operator and
+  the configuration administrator (Jobs' hundred jobs with the three registered, JobDetail of the send job, TopicDetail
+  of the job error topic for each of the two, the configuration administrator's landing on Topics). Prettier clean on
+  the new and changed JavaScript. Not run: `./moq test-framework`, `./moq test-apps`, the acceptance suite, cargo (no
+  Rust changed); no browser.
+- Inventories: none of ss-inventory's or usl-inventory's rows is P14's.
+- Design edits: design-admin §8 (MessageTypeDetail: the retry settings are the jobs' parameters), §10 Topics and
+  TopicDetail, Jobs, JobDetail, JobRuns and JobRunDetail (as built) and Monitoring (Monitor under System's grant), §14
+  (Operational recovery: the `ServiceJob` kind and the job and topic registrations), §17.2 (OperationServices).
+- Findings (provisional, numbered by the lead):
+  - **F-P14-1** Monitor is a section of System: the trace link is `system/Monitor/TraceDetail`, shown only to a user
+    System's grant opens (`ContextServices.get#AppAccess`); the operator sees the trace id alone. The design said
+    `MONITOR_APP`; edited.
+  - **F-P14-2** Job-run telemetry is enough for a failing-runs alert and not for a late one (no lag signal): the template
+    is failing runs only; Jobs reads "late" from the lock and the schedule (due for more than ten minutes, not started,
+    not waiting out a retry). On an instance whose scheduler does not run (a spec's load) every due job reads late.
+  - **F-P14-3** `ec.service.job(name).run()` runs a job as its caller (authorization off) and claims no lock, so Tools'
+    Run Job can run beside a scheduled run, under an administrator's identity. Built without it: a native run marks the
+    job due and the scheduler runs it. What follows from that: it starts at the next pass, not at once; only a scheduled,
+    unpaused job within its dates can be asked for; after a failed run the scheduler still waits the job's retry time;
+    and the lock's last run time is set just before the schedule's last occurrence, so a service that reads its
+    `lastRunTime` parameter as a window sees that time, not its true last run (its owner registers the run as safe to
+    repeat). A claim on an explicit run is a framework ask (Remaining-Work).
+  - **F-P14-4** A job run has no "unknown outcome" to settle here: a run whose server stopped is ended with an error by
+    the scheduler when it takes the lock over, and the job is due again by the framework's own rule. No settlement is
+    kept on `ServiceJobRun`; a run that never ended and is not what the lock holds is listed as not ended. An owner's
+    word that its last run's outcome is unknown (`find#RecoveryTargets`) holds the run (`OWNER_RECONCILES`). Cancelling a
+    run under way is not offered: no owner registers one, and nothing here stops a worker.
+  - **F-P14-5** A job run carries no organization, so the queue of runs is not scoped (as the mail queue, F167, and
+    system messages, F188): an operator reads the masked evidence of every organization's jobs. JobFind and RunFind have
+    no organization filter.
+  - **F-P14-6** A job's notification (its topic's, and `ServiceJobError`'s) carries the run's errors, parameters and
+    results unmasked, more than JobRunDetail shows. Built: a recipient is added only where the owner registered the
+    permission a recipient must hold; the framework's three jobs name `ADMIN_OPERATION_MANAGE`. `ServiceJobError`'s
+    default is not to notify, so a recipient is told only with a setting of their own on that topic (JobDetail says so;
+    the operator sets it in TopicDetail, whose audience is the same permission).
+  - **F-P14-7** The contained framework fix for `allNotifications` on a private topic was not made: `WebServletError` and
+    `ServiceJobError` are private topics with no default delivery, and reach an administrator only through
+    `allNotifications` (Tools' UserAccountDetail sets it; moqui-mail's sender tests rely on it), so refusing it in the
+    resolution would silence them. It is guarded at the write instead: `store#TopicSubscription` has no parameter that
+    turns it on and only ends it, and subscribes nobody outside a topic's registered audience. Tools and mr-marble's
+    MyAccount/User/Notifications (Insights P8's finding, unchanged, read only here) still set it. An audience on a topic
+    that the resolution itself honors is a framework ask.
+  - **F-P14-8** F185 is answered here: `retryMinutes` and `retryLimit` are registered parameters of the framework's send
+    and consume jobs, for every type at once, not per message type.
+  - **F-P14-9** `ServiceJob` and `NotificationTopic` have no owner: the registrations give them one. Only the
+    framework's three jobs and one topic are registered, so on the demo the other hundred jobs and every other topic are
+    read only in Admin until their owners (Mantle, the BOSS apps) seed their rows.
+  - **F-P14-10** `NotificationTopic.receiveNotifications`' description says it defaults to N; the resolution delivers when
+    it is not set (notify/message.rs `receives`). Topics shows "Yes (not set)".
+  - **F-P14-11** A subscription is listed by name only for a user of the topic's registered audience, to a holder of
+    `ADMIN_OPERATION_VIEW`; the framework knows no organization of an account, so those names are not scoped by
+    organization (the audiences registered today are operators'). Every other setting is counted.
+  - **F-P14-12** The Operations area's grant is inheritable for the administrative reader, who therefore opens Jobs,
+    JobRuns and Topics and is told they are not available (the services check their permissions), as F195. The
+    configuration administrator's group is granted the two topic screens narrowly, which the spec holds.
+  - **F-P14-13** Not built of the design's forms: JobParameters' "secret references" (a secret is never a registered
+    parameter), JobFind's and RunFind's organization, and a change of the lock expiry or the time limit (shown, never
+    changed: lowering either can start a second run of a long job).
+  - **F-P14-14** A job's zone is the machine's time zone (jobs.rs `job_time_zone`), not the instance's default time zone
+    or the viewer's: Jobs, JobDetail and the run screens name it and show times in it.
+- Decisions: nothing of a job or a topic is changed without its owner's registration; the registrations are seed
+  records of the layer that reads them (framework), one per job and per topic; a job's service, run-as identity, topic,
+  limits and dates are never parameters of the service; a text parameter is plain words; a run outside the schedule is
+  the scheduler's own run, asked for by marking the job due, with a reason and an audit row; no lock is cleared or
+  deleted; a run's values are shown only where they are numbers, yes or no, or registered; a run with failed items is
+  its own state; the recovery kind is the job (`ServiceJob`), a run being evidence; topic defaults are the configuration
+  administrator's and subscriptions the operations operator's; a subscription is set only within the registered
+  audience and `allNotifications` never; Topics and TopicDetail are in the Operations area; the alert template carries no
+  contact point and Jobs links Alerts only by Dashboards' own grant.
+- For the lead:
+  - no Rust changed, so the shared release binary needs no rebuild for this phase; a database made before needs the
+    tables of `JobRegistration`, `JobParameterDefinition` and `TopicRegistration`, `RecoveryDescriptor`'s new column and
+    the seed data loaded again (the grant row, the framework's registrations, BossSetupData's group and entry);
+  - master moved while this was built (the P12 follow-up, with Rust in moqui-mail): on the branch as first cut,
+    AdminMailOutcomes' second feature failed on the shared binary against the branch's older XML; both branches were
+    then rebased on master, where it passes;
+  - budget shares (release binary): framework about 0.1 s (AdminJobs); mr-boss about 1.2 s (AdminJobRuns); no budget
+    raised;
+  - merge: mr-moqui `ServerEntities.xml` (three entities appended at its end, one field and one sentence in
+    `RecoveryDescriptor`), `AdminConfigurationData.xml` (appended, and one comment line of P13's), `OperationServices.xml`
+    (appended, two lines of its header comment and two of `preview#Recovery`'s description), `OperationRecovery.js`
+    (`kindModules` and one comment line), Attack-Surface, Remaining-Work (the `org.moqui.admin` row only), the rest new
+    files; mr-boss `BossSetupData.xml` appended at its end (Insights appends there too), `Admin.js` (`areas`' comment,
+    `linkPaths` after P13's), `Operations.xml`, `AdminAccess.spec.js` and `AdminRegistries.spec.js` (one expectation
+    each), `design-admin.md`, the rest new files;
+  - the user's call: F-P14-3 (a run asked of the scheduler, not started at once, against a claim on explicit runs in the
+    framework's Rust); F-P14-5 (whether an operator may read every organization's job runs, masked, for now as the mail
+    queue and the messages); F-P14-6 (who may be a recipient of the framework's jobs: built `ADMIN_OPERATION_MANAGE`
+    holders, since the notification is unmasked); F-P14-7 (whether the resolution should get an audience rule for
+    `allNotifications`, and mr-marble's notification screen); F-P14-9 (which owners register their jobs and topics
+    next: Mantle's and the apps' jobs are read only until then); F-P14-12 (whether the reader should be shown tabs that
+    answer "not available"); whether the configuration administrator should also read a topic's subscribers by name
+    (built: no, counts only);
+  - `acceptance/Admin/AdminJobsUsable` was written and not run, as the brief asks: its second feature starts a failing job
+    by hand as an instance administrator and its third evaluates the copied alert over `otel_spans`, which no regression
+    spec here proves, so run it when asked and expect to adjust it.
+
+**Review Nov 10 (P14).**
+- Checked (the code paths of `git diff master...adm/p14` in both repositories, with the scheduler's Rust, jobs.rs
+  `readiness`, `dispatch` and `LockPlan`, and the notification resolution, notify/message.rs `resolve_users`):
+  - `store#Job`: nothing without a `JobRegistration`; the service has no parameter for the service name, the run-as
+    identity, the topic, the limits, the lock expiry or the dates, and writes the job's row only through the fields it
+    built (`cronExpression`, `paused`, `priority`, `minRetryTime`). A parameter is taken by its own name among the
+    registered definitions (`parameterMap` posted whole is read by its own keys, one unregistered name refuses the whole
+    change before anything is written; a name differing in case and an inherited name such as `constructor` find no
+    definition; an empty value clears only a registered parameter that is not required); a definition named like a secret
+    or not declared by the job's service is left out. The cron expression is of its own characters, parsed by the
+    scheduler's parser, and its next thirty occurrences are no closer than the registration's minimum (at least a
+    minute, so a schedule of every second is refused; a cron expression is a product of field sets, so a close pair
+    shows within the first few occurrences). Pause, priority (0 to 999) and the wait (1 to 1440); `paused` is
+    audit-logged by the entity, the rest by audit rows; the two message jobs' `retryMinutes` (1 to 1440) and
+    `retryLimit` (1 to 100) are declared by their services.
+  - Run now (F-P14-3) is safe against the scheduler as built. The scheduler claims by one conditional update (`jobRunId`
+    null, or the expired holder's id) that also sets `lastRunTime`; the request holds the lock row `for update`, refuses
+    a lock that holds any run (an expired one too: the scheduler takes that over itself), and writes only
+    `lastRunTime`. A claim that came first leaves the request reading a held lock (not taken); one that comes after
+    waits on the row, then claims and overwrites the time, which is one run. Only a job that is scheduled or failing and
+    not due is marked, so no regular run is missed (the job was not due; after the run its time is now) and a paused,
+    unscheduled, ended or already due job is refused. It runs once: a success sets the time to now; a failure restores
+    the marked time, so the job is retried after its wait as every failing job is, to its `repeatCount`. Nothing clears
+    or deletes a lock. No framework Rust is needed for this; a claim on `ec.service.job(name).run()` (Tools' Run Job)
+    stays the framework ask.
+  - Job runs: `find#JobRuns`, `get#JobRun` and `get#JobRunItems` answer, to any holder of `ADMIN_OPERATION_VIEW` and for
+    every organization's jobs (F-P14-5): the job, times, host, instance and thread, the trace id, the class of an error
+    and its masked lines (one in the list, five in the detail; addresses, URL paths, credentials and long tokens struck
+    out), the numbers and yes-or-noes among the results by name, the count of an array result, the names of the other
+    results and of every parameter, a parameter's value where it is a short number, a yes or no, or registered, and the
+    count of message lines. Never the messages, a result's text or another value. An error line is what the job's
+    service wrote, so it can name a customer, an order or an amount, as a system message's can (F188). Items come only
+    from the `itemsService` of the job's registered descriptor, called under the reader's own identity (the service
+    checks its permission itself: the framework's checks `ADMIN_OPERATION_VIEW`), each answer cut and masked. A run
+    without an error whose results or items count failures is `itemsFailed` in the list and the detail.
+  - Recovery: `ServiceJob` only by a registered descriptor, eligibility read again at execute, `ADMIN_OPERATION_MANAGE`
+    and the descriptor's own permission both required, the operation key answering a repeat, the claim as above.
+  - Topics: `store#TopicDefaults` writes only the registered fields of a registered topic (never `isPrivate`, a
+    template, an approval service or the inbox); `store#TopicSubscription` only for an open account that holds the
+    registered audience, and has no parameter that sets `allNotifications`. By the resolution, a subscription row adds
+    nobody to a message: it only decides whether a user a message was already sent to receives it, so subscribing a user
+    gives them nothing they were not sent; only `allNotifications` adds a reader, and it is never set here. An email goes
+    to the account's own address. The configuration administrator reads counts only; an operator reads the subscribers
+    within the audience by name, username and whether the account is open, not scoped by organization (F-P14-11).
+  - F-P14-7's reasoning holds: `WebServletError` and `ServiceJobError` are private with `receiveNotifications` N, the
+    first is sent to nobody by name, so `allNotifications` is the only way either reaches an administrator, and a rule in
+    the resolution refusing it on a private topic would silence both. What stays exposed, outside this phase: Tools'
+    UserAccountDetail sets it for any user (ADMIN only), and mr-marble's MyAccount/User/Notifications `topicSubscriptions`
+    passes the whole request to `store#NotificationTopicUser` with the caller's own id, so any user who opens that screen
+    can post `allNotifications` Y for any topic, a private one too, and then receives every job error notification with
+    its unmasked errors, parameters and results.
+  - `report/admin-job-runs.json`: as the framework's own shipped alert rules (`system-disk-space-low.json`): read only,
+    no owner, so never evaluated, no contact point. It reads `otel_spans`, a technical dataset, so a copy is **not**
+    paused `not-validated` (that is the engine's rule for a rule over business data): the copy is active at once,
+    evaluated as its owner, and tells nobody until its owner adds a contact point. Copying needs Dashboards' own grant,
+    which the operations operator does not hold (the acceptance test expects the refusal), and whoever holds it reads
+    `otel_spans` in Dashboards already: the template gives no telemetry.
+  - BOSS grants: `BOSS_ADM_OPERATIONS_TOPICS` is the area's screen not inherited and the two topic screens; the six
+    screens' own actions call only the framework's services (each refuses without its permission) and
+    `get#AppAccess`, so the reader is shown "not available" and nothing else; every transition reaches a service with
+    its own check and passes named parameters only (no `parameterMap` from a request); the trace link is rendered only
+    when `get#AppAccess` says System opens. Spec leanness: each of the six screens rendered once in qvt; the transitions
+    posted in html and Jobs once more in html for the reader (it has a `render-mode` section).
+- Fixes (mr-moqui 1825a4aa):
+  - **R1 (medium, secrets).** A value that reads as a number was shown whatever its name: a job's deployed parameter
+    named like a secret (`get#Job`), and a run's result named like one (`find#JobRuns`, `get#JobRun`; a run's parameter
+    was already held by its name). And a stored text of up to fifteen digits counted as a number, which an account, card
+    or phone number is. Now nothing named like a secret is shown as a value or a count, a stored text is a number only up
+    to nine digits, and the secret names take a pass code, a pass phrase and a PIN too.
+  - **R2 (medium, a rule on one path).** `apply#JobRecovery` (in no group's grant, but run by whatever calls it under an
+    inherited grant or with authorization off) marked any scheduled job due, registered or not. The step now reads the
+    job's registered native run itself and takes nothing without one; it locks the job's row with the lock row, so a
+    pause or a schedule change is not made between its read and its mark.
+  - **R3 (low, revision).** `store#Job` read the revision and then locked the job's row, so two changes at one revision
+    could both be written. The row is locked before the job is read.
+  - **R4 (low).** JobConfiguration posts the wait after an error back as the framework's default when the job has none
+    set, which `store#Job` took as a change (an audit row from nothing to 5). The default is no change.
+- Tests (the shared release binary, this phase's runtime): framework AdminJobs 4 of 4 (0.1 s; added: the secret-named
+  and the long numbers, the step on an unregistered job, the default wait; three of the four features fail on the
+  worker's module), AdminRecovery, AdminMailOutcomes 6 of 6; mr-boss AdminJobRuns, AdminAccess, AdminRegistries,
+  ProjectsAccess 23 of 23. Prettier clean. Not run: the suites, the acceptance test, cargo (no Rust changed),
+  `lint --screens` (no screen changed).
+- For the lead:
+  - no Rust and no entity changed by the review; no rebuild;
+  - the lead's brief said the copied template is paused `not-validated`: it is not, being a technical rule (above). If
+    it should be, that is the report engine's rule to widen (a copy of any shipped rule paused), not this phase's;
+  - F-P14-6 for the user's call, as it stands: a recipient must hold `ADMIN_OPERATION_MANAGE` when added, and that
+    permission does not itself make a run's unmasked parameters and results readable anywhere else (JobRunDetail masks
+    them for its holders too); a recipient who later loses the permission stays one until removed (JobDetail marks them
+    "no longer holds", the scheduler does not check), and the job error notification's link opens Tools' JobRunDetail,
+    which an operator cannot open;
+  - `store#TopicSubscription` cannot end `allNotifications` or remove a setting for a user outside the audience or a
+    closed account (the eligibility check comes first, and names outside the audience are never shown): those are
+    counted on TopicDetail for an instance administrator. Ending it there by username would tell whether a name has a
+    setting; left as built, the user's call;
+  - mr-marble's `topicSubscriptions` transition (above) is the open exposure of F-P14-7 and wants its own fix in
+    mr-marble (take only `receiveNotifications` and `emailNotifications`, and only for a topic that is not private);
+  - provisional findings: **F-P14-R1** a number-shaped secret was shown (R1); **F-P14-R2** the recovery step marked an
+    unregistered job due when called apart from `execute#Recovery` (R2).
+
 ### P15 — Imports
 
 Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; ADM-IMPORT.

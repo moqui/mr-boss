@@ -13,14 +13,25 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Operations area of IronStone Admin (design-admin §1.2, §10): Health, the readiness checks (P2, the default), and
-    Monitoring, the landing that opens the framework's Monitor and Dashboards under their own grants (P1); Jobs, JobRuns and Topics
-    (P14) are added by their phase. For the administrative reader, the operations operator and the administrator
-    (BOSS_ADM_OPERATIONS). -->
+    Monitoring, the landing that opens the framework's Monitor and Dashboards under their own grants (P1); Jobs with JobDetail,
+    JobRuns with JobRunDetail, and Topics with TopicDetail (P14). For the administrative reader, the operations operator and
+    the administrator (BOSS_ADM_OPERATIONS, the whole area: the jobs' and topics' services check ADMIN_OPERATION_VIEW and
+    ADMIN_OPERATION_MANAGE themselves, so the reader is told they are not available) and, for Topics and TopicDetail only, the
+    configuration administrator (BOSS_ADM_OPERATIONS_TOPICS), who lands on Topics. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Operations" default-menu-index="8" menu-image="sym_o_monitor_heart" menu-image-type="icon">
     <subscreens default-item="Health" always-use-full-path="true">
+        <!-- the configuration administrator opens only the topics here: the area starts at them -->
+        <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ADMIN_OVERVIEW_VIEW') &amp;&amp; !ec.user.hasPermission('ADMIN_OPERATION_VIEW') &amp;&amp; ec.user.hasPermission('ADMIN_SETTINGS_VIEW')"
+                item="Topics"/>
         <subscreens-item name="Health" location="component://mr-boss/screen/Admin/Operations/Health.xml" menu-title="Health" menu-index="1"/>
-        <subscreens-item name="Monitoring" location="component://mr-boss/screen/Admin/Operations/Monitoring.xml" menu-title="Monitoring" menu-index="3"/>
+        <subscreens-item name="Jobs" location="component://mr-boss/screen/Admin/Operations/Jobs.xml" menu-title="Jobs" menu-index="2"/>
+        <subscreens-item name="JobDetail" location="component://mr-boss/screen/Admin/Operations/JobDetail.xml" menu-include="false"/>
+        <subscreens-item name="JobRuns" location="component://mr-boss/screen/Admin/Operations/JobRuns.xml" menu-title="Job runs" menu-index="3"/>
+        <subscreens-item name="JobRunDetail" location="component://mr-boss/screen/Admin/Operations/JobRunDetail.xml" menu-include="false"/>
+        <subscreens-item name="Monitoring" location="component://mr-boss/screen/Admin/Operations/Monitoring.xml" menu-title="Monitoring" menu-index="4"/>
+        <subscreens-item name="Topics" location="component://mr-boss/screen/Admin/Operations/Topics.xml" menu-title="Notification topics" menu-index="5"/>
+        <subscreens-item name="TopicDetail" location="component://mr-boss/screen/Admin/Operations/TopicDetail.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminOperationsPanel" type="tab"/>
