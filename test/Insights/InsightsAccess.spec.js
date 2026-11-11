@@ -236,12 +236,19 @@ feature(
                 asUser(users.distributor, () => refusal(reports + "find#OwnedAlertRules", {userId: "BOSS_INS_READER"})),
                 "is not authorized"
             )
-            // flow maps (P9): the flow editor saves their own maps through the engine (InsightsFlowMaps), and holds no other
-            // authoring operation of it
+            // flow maps (P9): the flow editor's maps are saved by FlowMapServices (InsightsFlowMaps); the group holds no
+            // authoring operation of the engine, so no playlist, search or dashboard is theirs to save (the P9 review)
             expect(
-                "the flow editor copies a dashboard through the engine",
+                "the flow editor saves a playlist through the engine",
                 asUser(users.flow, () =>
-                    refusal(reports + "copy#Definition", {definitionId: "insights-suite", newDefinitionId: dashboardId + "-flow"})
+                    refusal(reports + "save#Definition", {
+                        definition: {
+                            id: dashboardId + "-flow",
+                            type: "report",
+                            title: "Flow editor's playlist",
+                            body: {kind: "playlist", seconds: 30, playlist: [{definitionId: "insights-suite"}]}
+                        }
+                    })
                 ),
                 "is not authorized"
             )

@@ -760,7 +760,7 @@ New map input is `{definitionId, title, description, organizationPartyId, userGr
 - **Editing.** A map is changed by its owner (the engine's rule), a flow editor, with the version read; another flow editor copies it. A map starts as a copy (`copy#Map`: one engine save, the caller's, with the source and its version; nothing of the source's sharing goes with it). Lanes and steps are edited a row at a time; versions, what a version changed (by lane and step) and Restore are the engine's. Saved reports' SaveAs does not copy a flow map.
 - **Defaults.** A user's default map is the `InsightsFlowMap` preference (`store#DefaultMap`); the organization's default waits for Settings (§11).
 - **ProcessStory** mounts Commons Knowledge (and its terminal twin) under `Insights/Flows/ProcessStory`, with the way back to the map and step above it. Nothing below the mount is served unless the viewer's own grants open Commons Knowledge, since the Insights root's grant would otherwise cover Knowledge's transitions.
-- **Grants.** No screen grant: every Insights user opens Business flows and each service checks `INSIGHTS_VIEW` or `INSIGHTS_FLOW_EDIT`. The flow editor's group holds the engine's `save#Definition`, `restore#Definition` and `delete#Definition`.
+- **Grants.** No screen grant: every Insights user opens Business flows and each service checks `INSIGHTS_VIEW` or `INSIGHTS_FLOW_EDIT`. The flow editor's group holds no engine authoring operation: its grant is on FlowMapServices' six writing operations (`BOSS_INS_REPORT_FLOW`, an inheritable ALWAYS), so the engine's save, restore and delete are reached only below them, after their checks, and a flow editor saves no playlist, search or dashboard (the P9 review).
 
 ## 10. Shared screen contexts
 

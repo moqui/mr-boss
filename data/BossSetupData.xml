@@ -4518,15 +4518,21 @@ along with this software (see the LICENSE.md file). If not, see
         ALLOW opens Business flows (FlowMap, FlowMaps and the hidden FlowMapEditor and ProcessStory), each transition reaches an
         ironstone.insights FlowMapServices operation that checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT and the map's organization
         and owner itself, and ProcessStory serves Commons Knowledge only to a user whose own grants open it. A flow map is a
-        report engine definition (type report, kind flowmap): reading one is every reading group's (BOSS_INS_REPORT_READ);
-        the flow editor saves, restores and deletes their own through the engine's operations below, ALWAYS past
-        BOSS_INS_REPORT_ENGINE's deny, the engine holding each to its owner. The grant is the operation's, as the
-        distributor's save (BOSS_INS_REPORT_DISTRIBUTE): a flow editor could also save a definition of another type from an
-        Insights screen every user opens (a playlist, a saved search), never data. -->
+        report engine definition (type report, kind flowmap): reading one is every reading group's (BOSS_INS_REPORT_READ).
+        The flow editor holds no engine authoring operation (the P9 review; design §1.1: maps, not playlists, searches or
+        dashboards): the engine's save, restore and delete stay denied to them (BOSS_INS_REPORT_ENGINE) wherever an Insights
+        screen calls one. The grant is on FlowMapServices' six writing operations instead, an inheritable ALWAYS, so the
+        engine call each makes after its own checks (INSIGHTS_FLOW_EDIT, a flow map, its organization, its owner, the version
+        read, the body validated) passes the deny, and the engine still holds the save to the definition's owner. Nothing
+        else those operations call is denied to the group (the engine's reads are its own, the wiki decides a page by its
+        rows), and a reader who calls one is refused by the operation itself. -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_FLOW" description="Insights: a flow editor's own flow maps">
-        <artifacts artifactName="org.moqui.report.ReportServices.save#Definition" artifactTypeEnumId="AT_SERVICE"/>
-        <artifacts artifactName="org.moqui.report.ReportServices.restore#Definition" artifactTypeEnumId="AT_SERVICE"/>
-        <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.copy#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.store#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.store#MapLane" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.store#MapStep" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.restore#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone.insights.FlowMapServices.delete#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_FLOW_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>

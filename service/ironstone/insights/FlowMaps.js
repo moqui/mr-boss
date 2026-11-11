@@ -344,7 +344,10 @@ function provenance(userScope, body) {
     }
     const version = Number(body.sourceVersion || 0)
     const sourceText =
-        "Copied from " + (source ? source.title || source.id : "a map that is no longer available") + ", version " + version
+        "Copied from " +
+        (source ? shown(source.title || source.id, limits.title) : "a map that is no longer available") +
+        ", version " +
+        version
     const current = source ? sourceVersionOf(source) : version
     return {
         sourceText,
@@ -690,7 +693,9 @@ function checkPages(steps, before) {
     }
 }
 // Save a map's body as the caller through the engine (its owner and version checks, and a new version): refused while the
-// body has a problem, each named.
+// body has a problem, each named. The flow editor's group holds no engine save of its own: the grant is on this module's
+// writing operations (BOSS_INS_REPORT_FLOW, an inheritable ALWAYS), so the engine's save, restore and delete are reached only
+// below them, after their checks, and only for a flow map.
 function saveMap(definitionId, title, userGroupId, version, facts, lanes, steps, before, note) {
     const cleanTitle = String(title ?? "").trim()
     if (!cleanTitle) denied("TITLE_REQUIRED", "Name the map")

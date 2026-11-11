@@ -2,8 +2,8 @@
 // templates and the registered flow targets hold together; a flow editor's copy keeps its provenance and its organization, a
 // reader of that organization reads it and another organization's does not, and only a flow editor copies; a stale version is
 // refused, and a step is saved only with a registered worklist and the parameters it takes; a map saved through the report
-// engine (as Tools saves one) with an unregistered target, a stored URL and an expression in its text renders that step as
-// information, with no link and nothing run (FlowMap's one qvt render, its XML widgets); a link and a count are answered only
+// engine (as Tools saves one) with an unregistered target, a stored URL, an expression and markup in its text renders that
+// step as information, with no link, nothing run and the markup as text (FlowMap's one qvt render, its XML widgets); a link and a count are answered only
 // to a viewer who reads their owner's list; and a step's procedure is a Knowledge page its viewer reads, ProcessStory serving
 // Knowledge only to a user whose own grants open it (on the demo's Returns policy page). The
 // "usable when" scenario is the acceptance InsightsFlowMapsUsable.
@@ -294,7 +294,8 @@ feature("a map saved through Tools with an unregistered target renders that step
                 {
                     stepId: "cases",
                     laneId: "lane",
-                    title: "Spec cases",
+                    // markup and a template of the browser's in a name: shown as text
+                    title: "Spec cases <img src=x onerror=alert(1)> {{7*7}}",
                     sequenceNum: 3,
                     targetRegistrationId: "CustomerService.Cases",
                     targetParameters: {view: "unassigned"}
@@ -333,6 +334,10 @@ feature("a map saved through Tools with an unregistered target renders that step
         !rendered.output.includes("evil.example")
         !rendered.output.includes("Pay 2 now")
         !rendered.output.includes("Saved outside john.doe")
+        // a name's markup is escaped wherever it is drawn, and its braces where the browser would read a template
+        !rendered.output.includes("<img src=x")
+        rendered.output.includes("Spec cases &lt;img src=x")
+        !/>[^<]*\{\{7\*7\}\}/.test(rendered.output)
         rogue.live == false
         rogue.stateText == "Information"
         rogue.url == null
