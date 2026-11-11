@@ -1,5 +1,11 @@
 # IronStone BOSS — People implementation
 
+Nov 11, 2026 — P0 done: the checks left after the plan's review, F55–F71, against the code as Admin P17–P19 and Insights
+P11–P12 left it. P30 no longer waits: Admin P18 is built, and the kiosk is a page of its own that a device reads as a
+display account (F55). People registers no audit projection (F56). P10's time mounts change more of Projects' code than
+§4 had (F57). P1, P2, P3, P6, P7, P8, P12, P14, P15, P16, P27 and P29 take the contracts as found. §5 Q3, Q6, Q7 and Q8
+are answered as recommended. The People acceptance tests run once, after the full suites at the end of the build. At
+most two phase workers run at once (§4).
 Nov 11, 2026 — the open questions answered (§4): the budgets may rise by the plan's estimates as its phases land, the
 import targets name `PEOPLE_IMPORT`, the one costing purpose is `RaprCost` and P10 moves Manufacturing to it, P27
 builds AC-23 and external payroll processing waits on it, a hire's provisioning proposes `BOSS_USERS` and
@@ -69,9 +75,10 @@ payroll services (F3–F6, F32). People is built on what is there (as found in t
     [design-maintenance.md](design-maintenance.md) MT-03, Teams and TechnicianKiosk, for what People leaves to it (§7)
 - Plans:
   - [impl-admin.md](impl-admin.md): the pattern; its §7 "What waits on People"; the Built and Review notes of P2
-    (registries), P3 and P9 (capability bundles), P6 (lifecycle), P15 and P16 (transfer targets); P18 (shared devices,
-    not built).
-  - [impl-insights.md](impl-insights.md) §7 "What waits on People" and the Built notes of its registries.
+    (registries), P3 and P9 (capability bundles), P6 (lifecycle), P15 and P16 (transfer targets), P17 (audit
+    projections) and P18 (shared devices).
+  - [impl-insights.md](impl-insights.md) §7 "What waits on People", the Built notes of its registries and P11's (the
+    wall display, a device's page of its own).
   - [impl-projects.md](impl-projects.md) (time and capacity), [impl-accounting.md](impl-accounting.md) P6
     (ExpensePosting), [impl-manufacturing.md](impl-manufacturing.md) (its deferred LaborCostingRates and the
     shared-station operator switch), [impl-drawers-commons.md](impl-drawers-commons.md) §4 (the shared rules).
@@ -182,15 +189,15 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
   Each phase starts after the one above it, except these, which may run side by side because neither uses the other's
   work: P9 beside P10; in stage 3 the four tracks P15, P16–P17, P18 and P21, with P19 and P20 after both P16 and P18;
-  and P22–P23 beside stage 3, since pay configuration needs only employment and P4's grades. The dependencies that
-  fix the rest: P4 needs P3's departments (a position's department and its choices); P6 needs P3's units, P4's
-  positions and P5's approvals; P7 needs P6's services and Admin P6 and P15 (built); P11 and P12 need P9's schedules
-  for durations; P13's corrections and P15's claims need P5; P17 consumes P6's hire; P19 grants P18's
-  qualifications; P19's results and P20's assessments are responses of P16's forms; P16's scorecards, P20's review
-  text and P21's cases need P12's AI opt-out; P24 needs P10–P13 and P15 (the sources it reserves); P27 needs P15
-  (the claim's payroll route) and P25–P26; P30 waits for Admin P18 and may move after gate 5 if P18 has not landed;
-  P29's datasets wait for nothing in Insights P11–P12. A phase of a side-by-side pair that appends to the same file
-  as the other (BossSetupData.xml, BossUsersDemoData.xml, mr-mantle's setup data) rebases on it before merging.
+  and P22–P23 beside stage 3, since pay configuration needs only employment and P4's grades. The dependencies that fix
+  the rest: P4 needs P3's departments (a position's department and its choices); P6 needs P3's units, P4's positions and
+  P5's approvals; P7 needs P6's services and Admin P6 and P15 (built); P11 and P12 need P9's schedules for durations;
+  P13's corrections and P15's claims need P5; P17 consumes P6's hire; P19 grants P18's qualifications; P19's results and
+  P20's assessments are responses of P16's forms; P16's scorecards, P20's review text and P21's cases need P12's AI
+  opt-out; P24 needs P10–P13 and P15 (the sources it reserves); P27 needs P15 (the claim's payroll route) and P25–P26;
+  P30 needs P13's punches and Admin P18's device credential, which is built (F55); P29's datasets wait for nothing in
+  Insights P11–P12. A phase of a side-by-side pair that appends to the same file as the other (BossSetupData.xml,
+  BossUsersDemoData.xml, mr-mantle's setup data) rebases on it before merging.
 
 ## 2. Ground rules
 
@@ -296,7 +303,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 11 (§6 F1–F54); the checks below left |
+| P0 Checks | all (read) | — | done Nov 11 (§6 F1–F71) |
 | P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | — |
 | P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | — |
 | P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | — |
@@ -326,58 +333,24 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P27 Accounting handoff and settlement | Mantle, BOSS | PayRunDetail's Finalize and Settlement, InvoiceDetail; Accounting's finance screens | — |
 | P28 Payroll exchange | Mantle, BOSS | PayrollExchange | — |
 | P29 Reports, Insights and settings | Mantle, BOSS | Reports, Settings | — |
-| P30 Clocking kiosk | Mantle, BOSS | ClockingKiosk | — (waits on Admin P18) |
+| P30 Clocking kiosk | Mantle, BOSS | ClockingKiosk | — (Admin P18 built; no longer waits, F55) |
 | P31 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
 
 Verify the design's riskiest assumptions against the code before building. Each result is a row in §6 and, where it
 changes the design, an edit there. F1–F54 were found on Nov 11 while writing and reviewing this plan; the design
-edits they call for in design-people were made then (F11, F20, F34, F51). Still to check:
+edits they call for in design-people were made then (F11, F20, F34, F51).
 
-- **Admin P18, when it lands** (planned from the design, F24): the device credential's principal (a display account,
-  impl-admin P18's proposal), the route-group registration's fields, how a route group that is one screen
-  (`People/Time/ClockingKiosk`) is granted, and the idle timeout; P30 is replanned on the Built note.
-- **Admin P17, when it lands:** which People entities need a registered safe projection in
-  `AuditServices.find#Changes` so a salary, tax election or case change is not disclosed by its audit row
-  (impl-admin P17 names payroll); People registers them in P23 and P21, or right after P17.
-- **The Projects time screens under another root** (F17): which of `ironstone.projects.TimeServices`' checks assume
-  the Projects app (`get#TaskAccess` with app `projects`, impl-manufacturing.md:356), what MyTime.qvue reads from its
-  route, and whether a time approver who is not a Projects user gets the weeks of the people they manage
-  (`PrtManager` is read at TimeServices.xml:1551).
-- **The readiness contract:** the checks list `RegistryServices` reads from a provider with no adapter
-  (Registry.js:684), for the shape `PeopleServices.get#Readiness` answers.
-- **The directory across employers** (F39, F49): what a directory reader of one organization sees of a person
-  employed by two; the Party filter goes by `ownerPartyId`, which a person hired by a second employer keeps.
-- **The return task's link to its assignment** (F52): how a task names an AssetPartyAssignment (a
-  WorkEffortAssetAssign row, or the asset and custodian on the task), so that ending the assignment finds its task;
-  Maintenance's custody change (its P2) ends the assignment through the same service, so the same rule completes it.
-- **The costing purpose** (F34, §4): Manufacturing's `RaprProductionCost` rows and its lookup in
-  ProductionShopFloor.js, for the move to the one purpose, `RaprCost`.
-- **The survey builder's generic part** (F51): which of `CaseFeedbackServices`' form services hold case rules (the
-  default rating, `SUPPORT_POLICY_EDIT`) and which are the builder's own, and what a response's reader check needs
-  for a private purpose.
-- **The team's from-role** (F13): which roles Projects and Maintenance read on a `PrtMember` row before
-  `store#Membership` fixes one.
-- **Commons' Home and Today card contract** for another app's cards, and whether `Commons/People/SelfService` needs
-  a Commons menu entry (design §1.2) or only the cards' links.
-- **Mail rule actions:** how Mantle's `createRequest` action resolves its plus-tag address to a target
-  (MantleSetupData.xml:464), for `createApplication` and `createExpenseLine`.
-- **`get#RecordLinkInfo`'s registration** of a content entity and a protected purpose
-  (CommunicationServices.xml:2005), for the six HR hosts of PE-01, and what Shared/RecordFiles does with public
-  sharing for a protected purpose.
-- **The projected calendar kind** in `CalendarDavServices.get#DavCollections` (CX-SYNC, design PE-24): it lists the
-  user's calendars and Tasks only (F22); whether a read-only projected collection is a calendar of a new kind or a
-  provider.
-- **The resource-lane timeline** (crosscut M11, F53): which transitions and lane and bar fields Projects'
-  Timeline.qvue asks of a mounting screen in its resource mode, as ProductionSchedule answers them, for ShiftRoster's
-  person lanes.
-- **Payment runs for employee payees** (design §8.3): what `PaymentRunServices` assumes of a supplier payee that an
-  employee or tax authority does not have.
-- **Insights' dataset admission** for a dataset of class `InsDcPeople`: what admission asks of a dataset no Assist
-  or MCP surface may read (impl-insights P3 and P10 Built notes).
-- **Legacy rows on the demo instance:** whether any demo or install data makes `EmploymentPayHistory`,
-  `EmploymentLeave` or `PayrollAdjustment` rows that Payslips' historical view or LeaveBalances would show (F31).
+**Done Nov 11.** The checks left after the review, read in the code as Admin P17–P19 and Insights P11–P12 left it,
+are F55–F71: Admin P18's device credential, on which P30 is replanned and no longer waits (F55); Admin P17's audit
+projections, of which People needs none (F56); Projects' time screens under another root (F57); the readiness contract
+(F58); the directory across employers (F59); the return task's link (F60); the costing purpose (F61); the survey
+builder's generic part (F62); the team's from-role (F63); Commons' Home and Today (F64); mail rule actions (F65);
+`get#RecordLinkInfo` and RecordFiles' sharing (F66); the projected calendar kind (F67); the resource-lane timeline
+(F68); payment runs for employee payees (F69); Insights' admission of an `InsDcPeople` dataset (F70); legacy rows on
+the demo instance (F71). The phases they change say so (P1, P2, P3, P6, P7, P8, P10, P12, P14, P15, P16, P27, P29,
+P30, §7). Design-people changed: §1.4 (mail intake, devices), ClockingKiosk, §13 RecordFiles and PE-01.
 
 ### P1 — Foundation
 
@@ -405,11 +378,14 @@ permissions, scope), PE-18 (the root).
 - **Mantle `mantle.humanres.PeopleServices`** starts with `get#Scope` (the caller's employers, employments, live
   reports and capabilities, one query each; every later service's scope check), `get#Home` (counts of what is built,
   nothing for what is not) and `get#Readiness` (the checks of what is built: an employer with no department, an
-  employee with no manager; later phases add theirs).
+  employee with no manager; later phases add theirs). `get#Readiness` answers the registry's contract with no adapter
+  (F58): called with `providerKey` and an `organizationPartyId`, it returns `checks` of `checkKey`, `title`, `state`,
+  `reasonCode`, `message` and `fixPath`, and refuses an organization outside the caller's scope by reason code.
 - **Admin's registries** (owner contracts, F27): People's capability bundles from crosscut §1.4's rows, as the
   built apps' are (BossSetupData.xml:2676-2687), `PEOPLE_IMPORT` in the HR bundle; the settings entry
   `people.settings` to `People/Settings` (the pattern of :2553-2556) and the readiness provider `people.setup` over
-  `get#Readiness` with `PEOPLE_CONFIGURE` and `fixPath` People/Settings (the pattern of :2557-2560).
+  `get#Readiness`, scope `AdmScOrganization`, with `PEOPLE_CONFIGURE` and `fixPath` People/Settings (the row of
+  :2550-2552; Accounting's and Products' services have adapters, People's answers the contract, F58).
 - **The People root** (design §1.2): the menu areas Home and Settings; each later phase adds its entries, and
   `later` entries stay absent. The eight placeholders are removed (each area's phase builds its real screens); the
   stale grant comment fixed (F1). `<shell-providers>` with the `people` keymap scope; the palette, quick create and
@@ -443,9 +419,12 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
 - **Mantle PeopleServices:** `find#Employees` (the public work projection; HR columns with `PEOPLE_HR_VIEW`; search
   in the query, ignoring case; paged), `get#Employee360` (regions by capability, an omitted region absent from the
   answer), `get#EmploymentHistory` and `store#PersonalInfo` (self for the permitted fields, HR for the rest; tax and
-  bank fields refused here). The employment content host (employment content keyed by `partyRelationshipId`) and
-  its registration in `get#RecordLinkInfo` with a protected purpose (P0). `get#EmploymentHistory` lists employments
-  until P6 adds their assignments.
+  bank fields refused here). These read Party with the filters off after `get#Scope` and answer by employment, so a
+  reader of one employer sees that employment and the public work identity of a person employed by two, nothing of
+  the other (F59). The employment content host (employment content keyed by `partyRelationshipId`), registered as
+  each HR host is (F66): an entry in `get#RecordLinkInfo`'s map with a visibility branch by People's scope, an entry
+  in RecordFiles' `get#ContentType`, and no Records-drive folder. `get#EmploymentHistory` lists employments until P6
+  adds their assignments.
 - **`Shared/Employee360.xml`** (crosscut §3.4): takes `partyId`, an optional employment and `appRoot`; capabilities
   from the service; regions, fixed scope and actions from a per-app context table in People.js keyed by `appRoot`,
   which a later app adds its row to. Mounted at `People/Employees/Employee360`, at `Commons/People/Employee360` (own
@@ -454,8 +433,9 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
   a link for the audience `get#Employee360` admits (F41); they and any app with no row link the People mount for a
   People user and the Commons mount otherwise. Each is an owner contract.
 - **Chatter and RecordFiles** (design §13): the root's two mounts stay; under People they open only a host the
-  HR services admit (the employment here, each later host with its phase), with public sharing off for a protected
-  purpose (P0), and a person's Party timeline carries no HR child's content.
+  HR services admit (the employment here, each later host with its phase), with no public sharing (RecordFiles has
+  none, and an HR host has no Records-drive folder for Files to share, F66), and a person's Party timeline carries no
+  HR child's content.
 - **Screens:** Employees (FindEmployees, EmployeeList with phone columns, the scoped CSV); Employee360 with the
   record header and the four regions; the later regions arrive with their phases (Compensation P23, TimeAndLeave
   P12, SkillsAndReviews P18 and P20, AssignedEquipment P7). The palette's directory source (rows with `recordEntity`
@@ -476,7 +456,8 @@ Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
 - **Mantle `mantle.humanres.OrganizationServices`:** `find#Units` (the tree, lazy children, as-of counts),
   `store#Unit` (a department with the `OrgDepartment` role or a team with `OrgTeam`, a dated `PrtOrgRollup` to its
   parent; cycles, moves across legal employers and stale dates refused; F11), `store#Membership` (a dated
-  `PrtMember` row; never an employment; the from-role P0 settles, F13), `get#ReportingTree` and `change#Manager`
+  `PrtMember` row; never an employment; from role `Assignee` for a member, as Mantle's demo, and `Manager` for the
+  team's lead, which BusinessTime's hours access reads, F63), `get#ReportingTree` and `change#Manager`
   (a dated `PrtManager` row from the manager to the report, as the time services read it, F50; self and cyclic
   reporting refused; people with no manager listed, not lost).
 - **Screens:** OrgStructure (OrganizationTree on `view-tree`, EditUnit, TeamMembers); OrgChart (ReportingTree with
@@ -545,7 +526,9 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
 - **Mantle `EmploymentAssignment`** (dated: department, primary position, manager, work location, schedule; inside
   the employment; one primary at a time) and PeopleServices `preview#Hire`, `hire#Employee` (one transaction: person
   chosen or created, the Employee role, exactly one employment through `create#Employment`, the first assignment,
-  position occupancy; an orphan `PrtEmployee` relationship completed, not duplicated; an operation key),
+  position occupancy; an orphan `PrtEmployee` relationship completed, not duplicated; an operation key; the
+  person's `ownerPartyId` left as it is, and `preview#Hire`'s person match People's own, with the filters off and
+  public identity only, so a second employer finds the person and does not make a second one, F59),
   `preview#EmploymentChange`, `apply#EmploymentChange` (transfer, manager change, leave of absence, separation; the
   role and relationship projections maintained by the same service) and `decide#EmploymentChange` on
   `PeopleEmploymentChangeApproval`.
@@ -591,10 +574,12 @@ EquipmentDetail, Employee360's AssignedEquipment; PE-02, PE-19 (the `employees` 
   `apply#EmploymentChange` instantiate after commit, each template on its own. Offboarding, separation and goal
   tasks are left out of `get#TaskObjectTags` (PE-01, F22); P21 adds the tasks linked to a case.
 - **Equipment** (review Y6): `get#AssignedEquipment`; a separation raises one return task per current
-  AssetPartyAssignment, each naming its assignment (P0). The return is `replace#AssetPartyAssignment` to the
-  receiving custodian, which the service requires (F52), after People's scope check; a Mantle rule on the
-  end of an AssetPartyAssignment completes the return task that names it, so Warehouse's and, later, Maintenance's
-  custody changes complete it too (F45). Maintenance's P2 adds only its guard and an effective date to
+  AssetPartyAssignment, each naming its assignment by a `WorkEffortAssetAssign` row of the asset and a `WorkEffortParty`
+  of the holder in the assignment's role, since the assignment's key is four fields and no record link can name it
+  (F60). The return is `replace#AssetPartyAssignment` to the receiving custodian, which the service requires (F52),
+  after People's scope check; a Mantle EECA on AssetPartyAssignment's update that sets `thruDate` (the service ends a
+  row so and never deletes) completes the open return tasks of that asset, party and role, so Warehouse's and, later,
+  Maintenance's custody changes complete them too (F45). Maintenance's P2 adds only its guard and an effective date to
   `replace#AssetPartyAssignment`.
 - **Provisioning** (Admin's entry, owner contract; F15): Mantle's lifecycle operation gains a provisioning kind and
   its steps (account or invitation, organization membership, approved grants, notification);
@@ -642,8 +627,12 @@ stage 1.
   contract, F46). `BOSS_PEOPLE_SELF`'s grants: the two mounts, the parent context artifacts and the self routes,
   non-inheritable, as the settings index is granted to every BOSS user (BossSetupData.xml:2528-2535, F28); the staff
   launcher and the rest of the People tree stay refused.
-- **Shell:** the Today source (decisions waiting on me), Commons Home's People cards (P0), the notification topic
-  `PeopleTaskAssigned`.
+- **Shell:** the Today source (decisions waiting on me) on the People root, and People's self source declared on
+  Commons' root too (owner contract, the pattern of Commons.xml:70), since a self-service employee opens no People
+  root and the shell gathers sources only from the roots a user may open (F64); it answers nothing without
+  `PEOPLE_SELF_SERVICE`, and Home takes each service once. Commons Home has no card registry, so it gains one People
+  card over `get#SelfService` (owner contract, design-drawers-commons §5), linking `Commons/People/SelfService`,
+  which stays out of Commons' menu. The notification topic `PeopleTaskAssigned`.
 - **Screens:** SelfService (MySummary, MyRequests; Clock is P13's), MyTeam (Team, Decisions), Home complete for the
   phases built.
 - **Specs:** BOSS `PeopleSelfService` (the self group opens SelfService under Commons and is refused
@@ -676,8 +665,20 @@ Design §13 MyTime, Timesheets, TimesheetDetail, TimeEntries and Rates, §6 (pay
 missing time"; PE-18, PE-23.
 
 - **The mounts** (owner contract, crosscut §3.31; F17): Projects' four time screens at `People/Time/*` and
-  Billing/Rates at `People/Payroll/Rates`, the screens reading their context from the mount (P0), with People's
-  filters: no rate column without `PAYROLL_VIEW`, client rates hidden without Projects' billing grants.
+  Billing/Rates at `People/Payroll/Rates`, with People's filters: no rate column without `PAYROLL_VIEW`, client
+  rates hidden without Projects' billing grants. What the screens and `ironstone.projects.TimeServices` assume of
+  Projects changes with them (F57), Projects' specs passing unchanged:
+  - the links the services build (`/qapps/Projects/...`) from the mount's root, and the screens' `Projects/Time`
+    paths (MyTime's tui container, TimeEntries' import, EditEntry's responses, the print URLs) relative;
+  - the checks of the group name `BOSS_PROJECT_MANAGER` as the permissions Mantle reads (`TIME_ENTRY_RATE` for
+    money, `TIMESHEET_APPROVE` for everyone's time), as §2 asks;
+  - the person pickers and the missing-time list take a manager's live reports (`PrtManager`) beside the time keepers
+    of the projects the user manages;
+  - Rates' pay rows for a holder of `PAYROLL_VIEW` without `TIME_ENTRY_RATE` (`check#Money` admits neither today),
+    and its read-only `RaprCost` rows beside RaprClient and RaprVendor;
+  - a line manager approves a week only under the organization's `line` policy (the PartySetting
+    `ProjTimesheetPolicy`; the default is `project`): People's demo sets `line` on its employers, after checking that
+    Projects' demo and specs do not read theirs. A deployment chooses its policy in Projects' settings, as today.
 - **PE-23:** RatePurpose `RaprCost` seeded, the one labor costing purpose (§4);
   `RateServices.get#CostingRate` (the most specific dated rate by position class and work type; never a person's
   rate; none answers unpriced), Rates' read-only Labor costing rows, and Accounting's LaborCostingRates form on
@@ -687,7 +688,9 @@ missing time"; PE-18, PE-23.
   demo's rates in mr-boss data/BossManufacturingDemoData.xml, and rows a deployment holds, by a data update) become
   `RaprCost`, the `RaprProductionCost` value is removed, and the lookup in mr-mantle
   service/mantle/work/ProductionShopFloor.js calls `get#CostingRate`, so the form's rates are the ones every app
-  reads. Manufacturing's specs are kept passing, changed only where they name the purpose. Maintenance reads
+  reads. `get#CostingRate` takes that lookup's rules unchanged and its `laborFits` re-check by rate id stays (F61).
+  Manufacturing's specs are kept passing, changed only where they name the purpose (mr-mantle
+  test/work/ProductionShopFloor.spec.js alone). Maintenance reads
   `get#CostingRate` only (its P11); the switch of Projects' cost reports is its owner's (§7).
 - **Screens:** the five mounts; MyTeam's and Timesheets' missing-time reminder over `send#MissingTimeReminders`;
   SelfService's and Home's missing-week cards; the Today source "my week not submitted".
@@ -734,7 +737,10 @@ Design §7 LeaveRequests, LeaveRequestDetail, §13 TeamCalendar, Employee360's T
   leave request.
 - **Projected calendars** (CX-SYNC, PE-24; F22): `CalendarDavServices.get#DavCollections` gains the projected
   kind, which is generic: a registration names an owner service, which answers a read-only collection for the users
-  it admits, and the kind itself reads no People record. Team absence is the first; published shifts (P14), my
+  it admits, and the kind itself reads no People record. There is no registry today and the four DAV services branch
+  on a fixed `tasks` collection (F67), so the kind is a registration Mantle seeds (the owner service, a title) and a
+  branch on its own collection-id prefix in `get#DavCollections` and `get#DavObjects`, with `readOnly` set, which
+  the DAV server already enforces before the adapter; no Rust. Team absence is the first; published shifts (P14), my
   interviews (P16), Maintenance's two collections (impl-maintenance P19) and Marketing's campaign calendar
   (impl-marketing P21) register the same way.
 - **Screens:** LeaveRequests (with RequestLeave), LeaveRequestDetail (the decision notice and the balance
@@ -778,8 +784,13 @@ Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its rost
 - **Mantle** ShiftAssignment and ScheduleServices `get#Roster` and `store#Shift` (overlaps, ended employments and
   approved leave refused; publishing notifies, updates capacity and the projected shift collection).
 - **Screens:** ShiftRoster over the shared resource-lane timeline, Projects' Timeline.qvue in its resource mode as
-  ProductionSchedule mounts it (F53, P0), one lane per person, with its TUI person and date table; drag previews
-  and the dialog commits.
+  ProductionSchedule mounts it (F53), one lane per person, with its TUI person and date table, its own as
+  ProductionScheduleTui is; drag previews and the dialog commits.
+- **The timeline's resource mode** (owner contract with Projects and Manufacturing; F68): it is entered today only
+  under a path segment named `ProductionSchedule`, with production transitions, lanes keyed by facility and plant and
+  work-center wording. This phase makes the mode the mount's choice, the lanes and bars generic keys with their
+  labels and wording from the schedule answer, and the move and decision transitions named by the mount;
+  ProductionSchedule answers the same, and Manufacturing's specs pass unchanged.
 - **Specs:** Mantle `test/humanres/ShiftRoster` (an overlap and a leave conflict refused; a published shift
   changes capacity once); BOSS `PeopleRoster` (the qvt render and the TUI twin, each for its own template).
 - **Usable when** (`acceptance/People/PeopleRosterUsable`): a manager rosters a week for their team, is refused a
@@ -802,6 +813,11 @@ Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDeta
   claim's PDF and evidence bundle of design §15), EmployeeAdvances, `People/Payroll/InvoiceDetail` with People's
   context branch (F19); quick create "New claim";
   the "Add to my claim" `create-from` and the mail rule action.
+- **The mail rule action** (F65): an `EmailRuleAction` Enumeration `createExpenseLine` whose `optionValue` names
+  `create#ClaimLineFromEmail`, which takes the five parameters `run#EmailRules` passes, runs with authorization off,
+  so it checks itself what it does, and answers a message once. The claimant is the person whose employment's work
+  address sent it; the line is a draft for the claimant to review, never submitted by mail, so a forged sender adds
+  at most a draft line.
 - **Specs:** Mantle `test/humanres/ExpenseClaims` (a claimant creates only their own; manager approval leaves
   InvoiceReceived; a claim reserved for one route refused the other; an advance's outstanding from delivered less
   applied); BOSS `PeopleExpenses`.
@@ -820,7 +836,10 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
   `find#Applications`, `create#Application`, `get#Application`, `store#Application`, `change#ApplicationStage`
   (Hired never by a stage change), `schedule#Interview` (a private Event with a CallLink and an iMIP invitation),
   `submit#Scorecard` (a response of a form of the scorecard purpose, its text opted out of AI, P12),
-  `create#ApplicationFromEmail`. My interviews, for panel members, is a projected calendar (P12).
+  `create#ApplicationFromEmail`, the service of an `EmailRuleAction` Enumeration `createApplication` (F65): its
+  opening from the rule's value or a plus tag set on the opening, since `createRequest`'s plus tag maps to a project
+  only; it checks itself what the rule's owner may do and answers a message once. My interviews, for panel members, is
+  a projected calendar (P12).
 - **The survey builder for a second app** (owner contract with Commons and Customer Service; F51, §4):
   - the four shared screens (`Shared/SurveyForms`, `SurveyFormDetail`, `SurveyResponses`, `SurveyResponseDetail`)
     take their context from the mounting app's registration and no longer from a Customer Service branch: the
@@ -829,12 +848,18 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
     with its behavior and specs unchanged; People's is the second; Marketing's plan adds its own;
   - the builder's form definition services move from `mantle.request.CaseFeedbackServices` to
     `mantle.party.FormDefinitionServices` (`create#Form`, `get#Form`, `rename#Form`, `save#FormField`,
-    `save#FormCondition`, `end#FormPart`, `publish#Form`), each checking the permission its purpose names;
-    `CaseFeedbackServices` keeps its names as callers of them with the case defaults (P0);
+    `save#FormCondition`, `end#FormPart`, `publish#Form`), each checking the permission its purpose names. They
+    take the builder of mr-mantle service/mantle/request/CaseTemplates.js (dated fields, conditions and parts, and
+    their checks), with the permission from the purpose's registration where it checks `SUPPORT_POLICY_EDIT` and
+    admits two purposes; case templates call the same module. `CaseFeedbackServices` keeps its names as callers of
+    them with the case defaults: the purpose, the rating field, the customer audience and `SUPPORT_POLICY_EDIT`
+    (F62);
   - People's purposes on FormPublication (interview scorecard, review, training assessment, exit interview): a
     form of one is answered only by the respondents a People service assigns, has no public or invitation link,
     and its responses are read through the People service of the record they belong to (the scorecard's own
-    reviewer here; P19's trainer, P20's review step), never through another app's registration.
+    reviewer here; P19's trainer, P20's review step), never through another app's registration. A response is a
+    `FormInvitation` naming the respondent and its People record; the framework's `get#FormResponse` checks no reader
+    (F62), so no People screen calls it except through that record's service.
 - **Screens:** Openings, ApplicantPipeline (`view-board` and its list), ApplicantDetail, InterviewsCalendar (Commons'
   Calendar and EventDetail mounted, with the interview invitation and `.ics` of design §15),
   `People/Settings/Forms` and its form detail (the builder with People's registration); the palette's openings and
@@ -1021,7 +1046,8 @@ Design §8.2 (corrections), Payslips, PayslipDetail, §15 (the payslip); PE-10, 
   and `mantle.humanres.PayrollResultServices`: `find#Payslips`, `get#Payslip`, `issue#Payslip` (the stored PDF and
   an authenticated notice on `PayslipIssued`, no amount in it); `PayrollRunServices.create#Correction`. In preview
   mode a run's approved results become preview slips, marked as such and never issued as pay (§5 Q3). The legacy
-  `EmploymentPayHistory` rows read only, by their own key, never recalculated.
+  `EmploymentPayHistory` rows read only, by their own key, never recalculated; the demo has none, so the spec makes
+  its own (F71).
 - **Screens:** Payslips, PayslipDetail (PayBreakdown, StatementOutput, CorrectPay); SelfService's payslips card;
   the `people-payslip-explain` skill and prompt; `get#Payslip` exposed to the Assistant for own issued slips.
 - **Specs:** Mantle `test/humanres/Payslips` (self reads own issued slips only; a correction is a new linked slip
@@ -1040,7 +1066,11 @@ Design §8.2 (steps 6–7), §8.3, §9 (the payroll route), PayRunDetail's Final
   live-enabled, which is every group in this build) and `get#Settlement`; the claim's payroll route (the original
   invoice reserved, a settlement line and no second expense) and an advance's recovery input.
 - **Accounting** (owner contracts): `approve#Payable`, `change#InvoiceState` and `PaymentRunServices` require a
-  completed finalization for a payroll-origin invoice; and AC-23, built here following design-accounting (§4):
+  completed finalization for a payroll-origin invoice. A payment run selects any approved invoice to the
+  organization, so payroll and tax obligations reach it, and pays every one as `PtInvoicePayment` from the payee's
+  newest bank account (F69): this phase has it take the payment type from the invoice type, as `create#InvoicePayment`
+  does (`PtPayrollPayment`), and a payroll payee's `PmpPayroll` account first; its ACH file is PPD, so a tax
+  authority is paid by check or its own channel in this build. And AC-23, built here following design-accounting (§4):
   the payroll-origin test over PayrollObligation in `ironstone.accounting.AccessServices` and the Mantle services
   behind the finance screens, search and exports, so per-person payroll documents need `PAYROLL_VIEW`. Native
   finalization and P28's external processing are both refused for an organization until the projection is in
@@ -1087,7 +1117,11 @@ Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, As
 - **Insights' registrations** (owner contracts, F27): `report/boss-people-*.json` (a headcount and turnover dataset, a
   leave-balance dataset, a dashboard and the alert templates), each dataset's class row (`InsDcPeople`), catalog
   entries, metrics and attention providers on the built patterns, and the People step of the internal flow map
-  given its targets. No shipped dataset carries pay.
+  given its targets. No shipped dataset carries pay. Each dataset also needs what any business dataset does (F70):
+  a registered row-filter policy, its data feed and index, an admitted `BusinessDataset` row, its
+  `org.moqui.report.dataset.<id>` artifact granted to People's Insights bundle only, and a readiness row for
+  DataReadiness. Assist and MCP admit only the operations and cost classes, so an `InsDcPeople` dataset is refused
+  to both with no code (F70).
 - **Assist:** `skill/people-hire.md` and `people-policy-question.md`, `skill/aliases.json`'s rows, the root's
   response actions.
 - **Screens:** Reports, Settings complete (SetupReadiness with every phase's checks, PeoplePreferences).
@@ -1100,20 +1134,40 @@ Design §12 Reports and Settings (PeoplePreferences), §1.4 (shipped reports, As
 
 ### P30 — Clocking kiosk
 
-Design §6 ClockingKiosk, §1.4 (devices), §15 (the badge); PE-05 (kiosk identity), PE-22. Planned from the design:
-Admin P18 is not built, and this phase is replanned on its Built note (P0).
+Design §6 ClockingKiosk, §1.4 (devices), §15 (the badge); PE-05 (kiosk identity), PE-22. After P13 (punches) and on
+Admin P18's device credential, built (F55); Insights P11's wall display is the pattern.
 
-- **Mantle** kiosk identity: revocable opaque badge tokens and PINs (stored hashed, attempts rate-limited),
-  `AttendanceServices.record#KioskPunch` (the device from the session, the worker from badge and PIN, an event key
-  for retry) and the badge print over `ec.resource.barcodeSvg`.
-- **The route group** (owner contract with Admin P18): `People/Time/ClockingKiosk` registered as a device route
-  group; the device's account holds only the kiosk permission and reaches no directory, payslip or search.
-- **Screens:** ClockingKiosk (IdentifyAndClock at `density="handheld"` with `scan-input`, cleared on idle), its TUI
-  twin; Employee360's badge action.
+- **What a kiosk reads as** (impl-admin P18; F55): a device's request runs as a display account, a UserAccount nothing
+  signs in, whose Person is a member of the employer it serves; the identity operator makes it in Admin's Users, the
+  access administrator registers the device in Security › Devices. The display account is the request's user only,
+  never a session's, and a revoked device's next request is refused. The worker is never the request's user: each
+  punch names them by badge and PIN.
+- **Mantle** kiosk identity: revocable opaque badge tokens and PINs (stored hashed, attempts rate-limited), the
+  permission `PEOPLE_KIOSK_PUNCH` (granted to `ADMIN`, as P1's are), `AttendanceServices.record#KioskPunch` (only in
+  a device's request, `UserSecurityChecks.currentDevice()`, with the permission; the device and its site from the
+  registration; the worker from badge and PIN, whose employment must be with an organization of the display
+  account's; an event key for retry) and the badge print over `ec.resource.barcodeSvg`.
+- **The route group** (owner contract with Admin; F55): a `moqui.security.DeviceRouteGroup` row `PEOPLE_CLOCKING`
+  (owner People, no fixed parameter, `homePath` `/apps/People/Time/ClockingKiosk`, the default idle timeout of a
+  week) and its artifact group, an allow-list that grants nothing: ClockingKiosk's render and its punch transition, by
+  name and not inheritable, as `BOSS_DEV_INS_WALL` names WallDisplay's (BossSetupData.xml:5008-5015).
+- **The kiosk bundle:** a user group for display accounts, `BOSS_PEOPLE_KIOSK`, that opens the kiosk's page and
+  transition alone, with `MANTLE_USER_ORG`, holds `PEOPLE_KIOSK_PUNCH`, and is a capability bundle the access
+  administrator assigns (Insights' `BOSS_INSIGHTS_DISPLAY` is the pattern; P3's delegation rules decide whether a
+  bundle with a permission needs more). It reaches no directory, payslip or search.
+- **Screens:** ClockingKiosk, a page of its own, since a device cannot load the `/qapps` shell (impl-admin F285): a
+  bare document with the screen as an island, as Insights' WallDisplay is, hidden from the menu. IdentifyAndClock at
+  `density="handheld"` with `scan-input`, cleared after each confirmation and on idle; its tui render the screen's
+  own. The People root calls no `get#SharedContext` for a device's request (screen/Insights.xml:49's pattern), since a
+  display account holds no People root grant. Employee360's badge action.
 - **Specs:** Mantle `test/humanres/KioskIdentity` (a wrong PIN refused and limited; a revoked badge refused; a
-  retry with the key records once); BOSS `PeopleKiosk`.
-- **Usable when** (`acceptance/People/PeopleKioskUsable`): Admin registers a tablet for the kiosk; two workers
-  clock in by badge and PIN; the tablet opens nothing else; revoking it ends its session.
+  retry with the key records once; a punch outside a device's request refused); BOSS `PeopleKiosk` (a display
+  account with the kiosk bundle registered and redeemed; as the device, the page and a punch by badge and PIN, and
+  People's other screens, the `/qapps` shell and the directory refused by the route group; the page's one render).
+- **Usable when** (`acceptance/People/PeopleKioskUsable`): the identity operator makes a display account for
+  ORG_ZIZI_RETAIL with the kiosk bundle and the access administrator registers a tablet for the kiosk; two workers
+  clock in by badge and PIN, and a worker of ORG_ZIZI_SERVICES is refused; the tablet opens nothing else; revoking it
+  refuses its next request.
 
 ### P31 — Finish
 
@@ -1143,10 +1197,10 @@ the owner's design.
 | Nov 11, 2026 (review) | People builds the projected calendar kind in `get#DavCollections` (P12), generic over an owner service; Maintenance's two collections (its P19) and Marketing's campaign calendar (its P21) register on it | CX-SYNC names one kind; People needs it first (F22) |
 | Nov 11, 2026 | Mantle seeds the `PEOPLE_*` permissions and `PAYROLL_APPROVE`, each granted to `ADMIN`; BossSetupData grants them to the groups of design §1.1 | The plan's choice, as `PAYROLL_VIEW` and `PAYROLL_EDIT` are seeded (F2): Mantle's services check them and Mantle may not depend on BOSS data |
 | Nov 11, 2026 | People's import targets name the app's own import permission, `PEOPLE_IMPORT`, with the People permissions they named and no `ADMIN_*` permission: `employees` asks `PEOPLE_IMPORT` and `PEOPLE_HR_EDIT` to import and `PEOPLE_HR_VIEW` to view (P7), and the time-and-attendance wizard target names `PEOPLE_IMPORT`, which its wizard services check (P13). Mantle seeds the permission, BossSetupData grants it to `BOSS_PEOPLE_HR`, and it is in the HR capability bundle (P1) | The user's call, one answer for the four apps (impl-sales §4): each app has an import permission of its own. A target's permissions are all required (framework service/org/moqui/admin/DataTransferImports.js:37-41, DataTransferBatch.js:82), so `ADMIN_TRANSFER_RUN` beside them, as staff invitations have, would shut HR out of its own import; Admin's Imports lists a run for a data operator who also holds `PEOPLE_HR_VIEW` |
-| Nov 11, 2026 | Projects' time screens and Rates are mounted under People as they are, made to read their context from the mount; they are not copied or moved to `screen/Shared/` | The plan's choice (F17): one definition, the owner's services; the change is small and Projects' routes do not move |
+| Nov 11, 2026 | Projects' time screens and Rates are mounted under People as they are, made to read their context from the mount; they are not copied or moved to `screen/Shared/` | The plan's choice (F17): one definition, the owner's services; Projects' routes do not move. P0 found the change larger than "small" (F57): links from the mount, permissions for the group-name checks, line reports in the pickers, Rates' pay rows; P10 lists it |
 | Nov 11, 2026 | A department carries the `OrgDepartment` role and a `PrtOrgRollup` to its parent, never `OrgInternal`; Admin's Organizations keeps the legal organizations | F11, F12; design-admin §7 already says so; design-people §4 changed |
 | Nov 11, 2026 | The framework's per-field AI opt-out (PE-21) is built in P12 and the decimal evaluator (PE-09) in P22, by this plan | The plan's choice: both are Remaining-Work asks only People needs now (F24) |
-| Nov 11, 2026 | Self-service clocking (P13) does not wait for the kiosk; ClockingKiosk and kiosk identity (P30) wait for Admin P18 and may follow gate 5 | The plan's choice: the device credential is Admin's and unbuilt (F24) |
+| Nov 11, 2026 | Self-service clocking (P13) does not wait for the kiosk; ClockingKiosk and kiosk identity (P30) are built in stage 5 on Admin P18's device credential, which is built: a page of its own that a device reads as a display account, People's route group and a kiosk bundle (F55) | The plan's choice: the device credential is Admin's (F24). Corrected in P0: P30 no longer waits and stays before the finish |
 | Nov 11, 2026 | Each People approval topic is seeded in Mantle with the phase that builds its decision service, not all in P5 | The plan's choice: a topic that names a missing service would be a broken approval |
 | Nov 11, 2026 | People's lifecycle participant is the user's open People decisions and the approval rules that name them (P5), with openings and review steps joining it | The plan's choice: design-admin §14 names People's entry, not what People owns per user |
 | Nov 11, 2026 | The regression budgets may be raised by this plan's estimates as its phases land, each raise by the phase's measured share: about 60 s on mr-mantle, 20 s on mr-boss's server budget, 8 s on its client budget and a second or two on the framework's. A raise beyond an estimate needs the user's agreement again. No spec may pass 15 seconds, as before | The user's call (AGENTS.md: a budget is raised only with the user's agreement). The estimate: about thirty Mantle specs, eighteen BOSS specs, one client walk and two framework specs, at the earlier apps' measure (about two seconds a Mantle spec, about 20 s of server budget and 5 to 8 s of client budget an app). Today mr-boss is 264 s server and 57 s client, mr-mantle 393 s (F37). A phase that would pass an estimate cuts a duplicate or moves a scenario to acceptance |
@@ -1155,16 +1209,19 @@ the owner's design.
 | Nov 11, 2026 | P27 builds Accounting's payroll-origin projection (AC-23), following design-accounting, and external payroll processing (P28's live results) is gated on it as native finalization is | The user's call: there is an Accounting app, but accounting functionality is in practice spread among the other apps, so the app that needs a piece builds it, as an owner contract following design-accounting. AC-23 was designed and in no plan (F29), and external results create the same payroll invoices (F30). Maintenance builds AC-24 on the same ground (impl-maintenance §4) |
 | Nov 11, 2026 | A hire's provisioning proposes `BOSS_USERS` and `BOSS_PEOPLE_SELF` by default, and the account request is optional on ConfirmHire | The user's call, as recommended. Design: no login merely for payroll. Anything more is chosen by HR from the bundles HR may grant, and Admin's delegation rules decide (P7) |
 | Nov 11, 2026 | Payroll stays generic in this build: no country localization, only the synthetic demonstration localization (P22). The phase order of §1 stands as written | The user's call. A real deployment needs a localized configuration and, in some cases, service changes as well; live finalization, full and final settlement, compensatory leave and overtime follow the first real localization (§7) |
+| Nov 11, 2026 | §5 Q3, Q6, Q7 and Q8 are taken as recommended: a payslip in preview mode is a preview slip for payroll only (P26); Mantle's `OrgInternal` demo departments stay as they are (P3); mileage and per-diem lines are later (§7); legacy leave and pay rows are read only and labelled historical, with no migration (P11, P26; §7) | The user's call |
+| Nov 11, 2026 | The People acceptance tests (each phase's "usable when", the §8 scenarios and P31's sweeps and walks) are written in their phases and run once, after the full suites at the end of the build | The user's call, as for Admin and Insights; a phase runs only its own regression specs (§2 Done) |
+| Nov 11, 2026 | At most two phase workers run at once, and only as a pair §1 lets run side by side: P9 with P10; in stage 3 two of the tracks P15, P16–P17, P18 and P21 (P19 and P20 after both P16 and P18); P22–P23 beside a stage 3 track. Every other phase runs alone, in §1's order | The user's call. A pair that appends to the same file rebases before merging (§1) |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Q2. (answered Nov 11, §4) One labor costing purpose, `RaprCost`; P10 moves Manufacturing's rows and lookup to it | P10 | Nothing is open |
-| Q3. What is a payslip in preview mode? | P26 | Recommended: an approved preview run's results are kept as preview slips, visible to payroll only, never issued to an employee and never an obligation; SelfService shows issued slips only, so none in this build outside the acceptance fixture |
-| Q6. Mantle's demo departments are `OrgInternal` parties (ORG_ZIZI_HR, ORG_ZIZI_SALES) | P3 | Recommended: leave Mantle's demo as it is; OrgStructure shows them as legal organizations under their parent, and People's demo adds `OrgDepartment` units under the BOSS employers |
-| Q7. Mileage and per-diem claim lines (design §18) | P15 | Recommended: later (§7), unless a launch deployment reimburses mileage |
-| Q8. Legacy leave and pay rows (EmploymentLeave, EmploymentPayHistory) | P12, P26 | Recommended: read only, labelled historical; no migration in this build (§7) |
+| Q3. (answered Nov 11, §4) What is a payslip in preview mode? | P26 | As recommended: an approved preview run's results are kept as preview slips, visible to payroll only, never issued to an employee and never an obligation; SelfService shows issued slips only, so none in this build outside the acceptance fixture |
+| Q6. (answered Nov 11, §4) Mantle's demo departments are `OrgInternal` parties (ORG_ZIZI_HR, ORG_ZIZI_SALES) | P3 | As recommended: leave Mantle's demo as it is; OrgStructure shows them as legal organizations under their parent, and People's demo adds `OrgDepartment` units under the BOSS employers |
+| Q7. (answered Nov 11, §4) Mileage and per-diem claim lines (design §18) | P15 | As recommended: later (§7), unless a launch deployment reimburses mileage |
+| Q8. (answered Nov 11, §4) Legacy leave and pay rows (EmploymentLeave, EmploymentPayHistory) | P12, P26 | As recommended: read only, labelled historical; no migration in this build (§7) |
 | Q9. (answered Nov 11, §4) The budgets may be raised by the plan's estimates, by each phase's measured share | every phase's Done | Nothing is open; a raise beyond the estimates is asked of the user again |
 | Q10. (answered Nov 11, §4) People's import targets name `PEOPLE_IMPORT` | P7, P13 | Nothing is open |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here |
@@ -1172,9 +1229,9 @@ the owner's design.
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, and F49–F54 in its review the same
-day, which also corrected F19, F26, F33, F34, F39 and F46. Mantle paths are under
-`runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
+is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. Mantle paths are
+under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1232,6 +1289,23 @@ day, which also corrected F19, F26, F33, F34, F39 and F46. Mantle paths are unde
 | F52 | P0 (review): `replace#AssetPartyAssignment` requires `newPartyId`, ends every other holder of the role now and checks no permission or organization (service/mantle/product/AssetServices.xml:3232-3255); it knows of no task | P7: a return names the receiving custodian; People checks scope before the call; a Mantle rule on the assignment's end completes its return task (P0 settles the link) |
 | F53 | P0 (review): the shared resource-lane timeline of crosscut M11 is Projects' `Timeline.qvue` in its resource mode, which Manufacturing's ProductionSchedule mounts with its own transitions and a TUI twin, ProductionScheduleTui (screen/Manufacturing/Planning/ProductionSchedule.xml:16, :99) | P14 mounts it the same way, with people as lanes; P0 reads the contract |
 | F54 | P0 (review): design-maintenance §4.1 puts a step's assignable role, due offset and required flag on `WorkEffortStepPolicy`, which ChecklistTasks sets (design §12), and Maintenance's plan refuses generic task writes, from its P3, on a root that has a MaintenanceWorkOrder row and its steps and on work whose process policy guards execution. The plan as written left both records to Maintenance | P7 builds both records with the fields a checklist needs, the guards-execution flag and People's policy, whose flag is false (§4) |
+| F55 | P0: Admin P18 is built (impl-admin.md:4781-5036; design-admin §6 "As built"). A device's request runs as a display account, a UserAccount nothing signs in, whose Person is a member of each organization it shows and which holds the bundles its registrar may assign; the account is the request's user only, never a session's, and revocation refuses the next request (impl-admin F278, F281). A route group is a `moqui.security.DeviceRouteGroup` row its owner seeds (framework entity/SecurityEntities.xml:472-498): an artifact group as an allow-list that grants nothing (a non-inheritable screen member admits its render only, a transition member that transition), `homePath`, one fixed parameter, an idle timeout (a week when empty) and a lifetime. A device cannot load the `/qapps` shell (F285), so Insights' wall display is a page of its own, `/apps/Insights/WallDisplay`, with a display bundle that opens it alone, and the Insights root calls no context service for a device's request (screen/Insights.xml:49; BossSetupData.xml:5008-5015; impl-insights F149, F150). The identity operator makes the display account, the access administrator registers the device (F284) | P30 replanned on it and no longer waits (§1, §4): ClockingKiosk a page of its own; People's route group of the page and its punch transition by name; a kiosk bundle with `PEOPLE_KIOSK_PUNCH`; the People root skipping `get#SharedContext` for a device; `record#KioskPunch` only in a device's request, the worker by badge and PIN. Design §1.4 Devices and ClockingKiosk changed |
+| F56 | P0: Admin P17 is built: `AuditServices.find#Changes` reads only the entities with a registered `moqui.server.AuditProjection` (framework entity/ServerEntities.xml:816; impl-admin F257), shows a value only by a `show` registration and never an encrypted field's (F258), and reads an organization's records through its owner's source (Mantle's `find#IdentityChanges`, data/PartyAuditData.xml). No `mantle.humanres` or `mantle.request` entity is registered, so no salary, tax election or case change is in AuditChanges; Tools' audit log reads `EntityAuditLog` whole, for `ADMIN` only (impl-admin.md:4461-4465) | People registers no projection, in P21, P23 or later: those histories are People's screens. Whether a business entity belongs in AuditChanges is Admin's F257, the user's call (§7) |
+| F57 | P0: Projects' time screens assume Projects beyond the route. `ironstone.projects.TimeServices` checks the group name `BOSS_PROJECT_MANAGER` in ten places (TimeServices.xml:113-116, :375, :491, :728, :822, :856, :903, :987, :1000, :1021) where §2 asks a permission (Mantle reads `TIME_ENTRY_RATE`, service/mantle/work/TimeServices.xml:1526), builds 17 links to `/qapps/Projects/...` (e.g. :60-61, :505-506), and lists people from the time keepers of the projects the user manages (`get#MyWeek` :73-79, `get#TimePeople` :663-668; Mantle's missing list, TimesheetServices.xml:1110-1118), never a manager's reports. MyTime.qvue finds its path by `lastIndexOf('MyTime')` (:318-320) and works mounted; MyTime.xml's tui container (:116), TimeEntries' import (:93), EditEntry's responses (:40, :53, :65) and the print URLs (TimesheetDetail.xml:55, TimeEntries.xml:140) name `Projects/Time`, and no time screen reads `appRoot`. A line manager approves a week only under the organization's `line` policy (TimesheetServices.xml:430-433), whose default is `project` (:54) and which no demo sets; TimeEntries reads `PrtManager` with no policy (TimeServices.xml:1551). Rates needs `check#Money` (`ADMIN` or `TIME_ENTRY_RATE`, BillingServices.xml:27-36), lists RaprClient and RaprVendor only (:912) and shows pay by `get#PayRateAccess` (:927-929). `check#TimeItem`'s `get#TaskAccess` with app `projects` (TimeServices.xml:121) concerns the work item and stays | P10's owner contract is larger than §4 had: links from the mount, the group-name checks as permissions, a manager's reports in the pickers and the missing list, the `Projects/Time` paths relative, Rates' pay rows for `PAYROLL_VIEW` and its read-only `RaprCost` rows, and the `line` policy on People's demo employers; Projects' specs unchanged. P10 and §4's row changed |
+| F58 | P0: a readiness provider with no adapter answers the registry's contract (service/ironstone/admin/Registry.js:139-143, :351-357, :684): called with `providerKey`, and `organizationPartyId` once per organization for `AdmScOrganization` (:112-135), it returns `checks` [{checkKey, title, state ready, warning, failed or unavailable, reasonCode, message, fixPath, watermark, coverage}]; a refusal by reason code is left out and any other failure is a `PROVIDER_FAILED` row (:685-700); the organizations are the Admin user's (:84-88). Accounting's and Products' services have adapters (Products' row is BossSetupData.xml:2559-2562); Insights' datasets and Admin's checks answer the contract | P1: `get#Readiness` answers the contract, organization-scoped, with no adapter, and refuses an organization outside the caller's scope by reason code. P1 changed |
+| F59 | P0: a person is in every organization's Party finds: `Party.ownerPartyId` defaults to `_NA_` (entity/PartyEntities.xml:36), which `MANTLE_USER_ORG_9` admits (`ownerPartyId` in `_NA_` and `filterOrgIds`, data/MantleSetupData.xml:273-274; a null is excluded, :276-277), and neither `create#Person` nor `create#PersonEmployee` sets an owner (service/mantle/party/PartyServices.xml:956-972, :1055-1120). Commons' quick create to the directory sets it to the active organization (mr-boss service/ironstone/commons/QuickCreateServices.xml:285), which hides that person from another employer's filtered finds. With the relationship filter off (F39), no Party filter tells employments apart | P2: People reads Party with the filters off after `get#Scope` and answers by employment, so a reader of one employer sees that employment and the work identity, nothing of the other. P6: `hire#Employee` leaves `ownerPartyId` as it is, and `preview#Hire`'s person match is People's own, so a second employer finds the person and makes no second one. P2, P6 changed |
+| F60 | P0: AssetPartyAssignment is keyed by asset, party, role and from date (entity/ProductAssetEntities.xml:461-473), so neither `WorkEffortRecord` nor `get#RecordLinkInfo` (one key field only, CommunicationServices.xml:2175-2179) can name it; `WorkEffortAssetAssign` links a task to an asset (WorkEffortEntities.xml:526-548). `replace#AssetPartyAssignment` ends a row by setting `thruDate`, never deleting (AssetServices.xml:3232-3255). No ECA on AssetPartyAssignment exists | P7: a return task names its assignment by a `WorkEffortAssetAssign` row of the asset and a `WorkEffortParty` of the holder in the assignment's role; a Mantle EECA on the update that sets `thruDate` completes the open return tasks of that asset, party and role. P7 changed |
+| F61 | P0: `RaprProductionCost` is in Manufacturing's seed (data/ProductionShopFloorData.xml:27), its demo rate (mr-boss data/BossManufacturingDemoData.xml:273-275), the lookup (service/mantle/work/ProductionShopFloor.js:1131-1144), a description (ProductionServices.xml:2222) and one spec (test/work/ProductionShopFloor.spec.js:226; mr-boss ManufacturingShopFloor names the demo rate's id only, :318). The lookup takes rows with no party or work effort whose work type and position class match or are empty, most specific first, then newest, with no organization or currency; `laborFits` re-checks a frozen rate by its id (:1167-1181). `RaprCost` and `get#CostingRate` exist nowhere | As §4: `get#CostingRate` takes the lookup's rules unchanged, and the move is the seed, the demo row, the call and the one spec's purpose; `laborFits` stays. P10 changed (the spec named) |
+| F62 | P0: CaseFeedbackServices are wrappers over CaseFeedback.js, whose case rules are the fixed purpose `DbfpCaseFeedback` (:43, :82-92), the rating (:95-153, :191-200, :238-243), the customer audience on every field (:49, :187, :213) and `SUPPORT_POLICY_EDIT` (:157, :203, :225). The builder itself is service/mantle/request/CaseTemplates.js (`formAt`, `saveField`, `saveCondition`, `endPart`, `problemsOf`, `checkValues`), which checks `SUPPORT_POLICY_EDIT` (:431, :717, :815, :880) and admits two purposes (:114). A response is read by Customer Service's `get#CaseResponse` (mr-boss service/ironstone/customerservice/Feedback.js:339-424), which checks the reader before the framework's `get#FormResponse`, which checks none (framework ScreenServices.xml:253-293); `FormInvitation` names a party, a record and a context (entity/FormPublicationEntities.xml:72-108) | P16: FormDefinitionServices takes CaseTemplates.js's builder, the permission from the purpose's registration; CaseFeedback keeps the purpose, rating, audience and its permission. A People response is a FormInvitation on its People record, read only through that record's service. P16 changed |
+| F63 | P0: one reader checks a from-role on a relationship: BusinessTime.js `requireHoursAccess` looks for `fromRoleTypeId` `Manager` (service/mantle/work/BusinessTime.js:293). Projects' team planner and every reader of a user's organizations ignore both roles (ResourceServices.xml:943-946; PartyServices.xml:571-575); `store#WorkEffortPartyTime` writes `Worker` (TimeServices.xml:650-662) and the demo `Assignee` (data/ZbaOrganizationDemoData.xml:121-123 and four more rows) | P3: `store#Membership` writes `Assignee` for a member and `Manager` for the team's lead; the `Worker` rows stay. P3 changed |
+| F64 | P0: Commons Home has fixed sections and no card registry (mr-boss screen/Commons/Home.xml:15-20). Another app's items reach Home and Today only as `today-source`s of its own root (xml-screen-3.xsd:694-701), gathered from the roots the user may open (crates/moqui-core/src/screen/shell.rs:16-21, :931-942; Home.xml:33-41), each answering `get#UserTodayItems`' item shape. `BOSS_PEOPLE_SELF` opens no People root (P1), so no People root source reaches a self-service employee. Commons' menu is its directory subscreens; there is no Commons/People | P8: People's self source is declared on Commons' root too, answering nothing without `PEOPLE_SELF_SERVICE`; Commons Home gains one People card over `get#SelfService` (owner contract); `Commons/People` stays out of the menu, reached by the card and Today. P8 changed |
+| F65 | P0: a mail rule action is an `EmailRuleAction` Enumeration whose `optionValue` names its service (data/MantleSetupData.xml:464-467); `run#EmailRules` calls it with `emailMessageId`, `emailAccountId`, `emailRuleId`, `ruleOwnerUserId` and `value`, in its own transaction with authorization off (framework EmailClientServices.xml:4570-4581). `createRequest`'s plus tag maps only to a project, through the `WstIntakePlusTag` setting (service/mantle/request/RequestServices.xml:1110-1156) | P15, P16 each seed an action and a service on that contract that checks what it does itself and answers a message once: `createApplication` finds its opening from the rule's value or a plus tag set on the opening; `createExpenseLine` takes the claimant from their employment's work address and adds a draft line only. P15, P16 changed; design §1.4 Mail intake changed |
+| F66 | P0: `get#RecordLinkInfo`'s hosts are a literal map with a visibility branch per entity (service/mantle/party/CommunicationServices.xml:2126-2151); BOSS's RecordFiles keeps a second map (mr-boss service/ironstone/shared/RecordFilesServices.xml:43-66). There is no "protected purpose". RecordFiles shares nothing (screen/Shared/RecordFiles.xml:31-148); a link share is Files' `share#Resource` (framework FileServices.xml:1852-1913), and on the Records drive a path outside the folder map is refused below the manage level (:141-150), where employments are left out on purpose (BossSetupData.xml:640-654) | P2 and each host's phase: an entry in both maps, a visibility branch by People's scope, no Records-drive folder; that is "public sharing off". P2 changed; design §13 RecordFiles and PE-01 changed |
+| F67 | P0: the DAV server routes `/dav/calendars/<user>/<collection>/` to Mantle's four services (crates/moqui-dav/src/dav/pim.rs:15-29, :143-166); a collection row has `readOnly`, and the server refuses a PUT or DELETE on one before the adapter (:573-576, :618-621). `get#DavCollections` lists the user's calendars and a fixed `tasks` collection, on which the other three branch (CalendarDavServices.xml:137-164, :185, :280, :440): there is no registry | P12: the projected kind is a registration Mantle seeds naming the owner service, and a branch on its own collection-id prefix in `get#DavCollections` and `get#DavObjects`; no Rust. P12 changed |
+| F68 | P0: Timeline.qvue enters its resource mode only under a path segment `ProductionSchedule` (mr-boss screen/Projects/WorkItems/Timeline.qvue:455-456), calls the mount's `schedule`, `moveOperation` and `decideOverride` with production parameters (:1085, :1134-1138, :1199-1202), keys lanes by `facilityId` with plant and work-center wording (:39-41, :89-95, :166-173) and bars by operation fields (:741-756). ProductionScheduleTui is its own table, not the qvue (ProductionScheduleTui.xml:37-53) | P14 makes the mode the mount's, with generic lane and bar keys and the wording from the answer (owner contract; Manufacturing's specs unchanged); ShiftRoster's TUI twin is its own table. P14 changed |
+| F69 | P0: a payment run selects every approved invoice to the organization with an unpaid total but credit memos, with no payee role check (service/mantle/account/PaymentRuns.js:148-155), so payroll and tax invoices reach it once approved. It pays each as `PtInvoicePayment` (:542-554), where payroll's own path takes the type from the invoice type (`PtPayrollPayment`, PaymentServices.xml:607-611), from the payee's newest bank account whatever its purpose (:64-69), where payroll asks `PmpPayroll` (PayrollServices.xml:330-336); its ACH file is PPD (service/mantle/ext/account/NachaServices.xml:203-204) | P27's owner contract adds the payment type from the invoice type and a payroll payee's `PmpPayroll` account first; a tax authority is paid by check or its own channel in this build. P27 changed |
+| F70 | P0: Insights admits a dataset to Assist or MCP only if its `DatasetClass` is `InsDcOperations` or `InsDcCost` (mr-boss service/ironstone/insights/Assist.js:72-84, :95-113, :212-234), so an `InsDcPeople` dataset is refused and listed nowhere, as an unclassified one; the class has no flag to set (entity/AdminEntities.xml:287-299). A business dataset needs a registered row-filter policy, its data feed and index, an admitted `BusinessDataset` row (BossSetupData.xml:3282-3286), the reader's grant on `org.moqui.report.dataset.<id>` and a readiness row for DataReadiness (:3347-3351) | P29 seeds these for each People dataset, its artifact granted to People's Insights bundle only; the Assist and MCP refusal holds with no code. P29 changed |
+| F71 | P0: no data file of Mantle, BOSS or Marble makes an `EmploymentPayHistory` or `EmploymentLeave` row; `PayrollAdjustment` has 18 global tax rows with no employment, in install data (data/ZapPayrollTaxInstallData.xml:70 on), which the new engine never reads (§2); nothing at load runs `process#TimePeriodPay`, whose job has no schedule (data/MantleSetupData.xml:600-601) | §5 Q8 as answered: the historical views are empty on the demo; P11's and P26's specs make their own legacy rows. P26 changed |
 
 ## 7. Later
 
@@ -1279,7 +1353,8 @@ Designed, not in this build:
   marker in MyTime and planner by team over P12's and P3's records (impl-projects §7); Manufacturing's
   shared-station operator switch on People's kiosk identity (impl-manufacturing §7); Projects' StaffAllocation
   adopting `check#Qualifications`; People's privacy provider and retention purposes, when Admin builds
-  PrivacyServices and Retention (F47); the safe audit projections of People's entities, when Admin P17 lands (P0).
+  PrivacyServices and Retention (F47); whether People's changes belong in Admin's AuditChanges at all, Admin's F257
+  (People registers no audit projection, F56).
 - **Design §17's later capabilities and §18:** the PASS careers page and public registration; full LMS delivery;
   roster optimization and swaps; offline kiosk drafts; a graphic org chart; a CardDAV company directory; mileage and
   per-diem claim lines (§5 Q7); migration of legacy leave and pay history into the new records (§5 Q8); advanced
