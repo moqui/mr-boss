@@ -106,8 +106,8 @@ is unchanged.
 | RequestCommentUpdate | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase (Customer Service P15) |
 | MyRequests | NewRequestForm | Commons/Requests; Commons/QuickCreate; PASS:Support/NewCustomerCase | Commons/Requests/List; Commons/QuickCreate; PASS:Support/NewCustomerCase (Customer Service P15) |
 | MyRequests | ListRequests | Commons/Home; Commons/Requests; PASS:Support/MyCases | Commons/Home; Commons/Requests/List; PASS:Support/MyCases (Customer Service P15) |
-| ScheduledFinds | ScreenScheduledList | Insights/ScheduledReports |  |
-| EditScheduledFind | EditScreenScheduled | Insights/ScheduledReports/ScheduledReportDetail |  |
+| ScheduledFinds | ScreenScheduledList | Insights/ScheduledReports | screen/Insights/ScheduledReports/Schedules.xml (impl-insights P7) |
+| EditScheduledFind | EditScreenScheduled | Insights/ScheduledReports/ScheduledReportDetail | screen/Insights/ScheduledReports/ScheduledReportDetail.xml (impl-insights P7) |
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
 | MyTasks | MyTasks | Commons/Panel/Today; Commons/Home; Commons/Tasks; Projects/Home | Commons/Panel/Today; Commons/Home; Commons/Tasks/List; Projects/Home |
 | TaskDetail | UpdateEvent | Commons/Tasks/TaskDetail | Commons/Tasks/TaskDetail |

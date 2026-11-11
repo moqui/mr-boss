@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Capabilities matrix and the access review of the Admin app (impl-admin P9; design-admin §5 Capabilities, §16;
+    Capabilities.js). The framework's org.moqui.admin.AccessServices holds the registry, the projections and every rule; these
+    build the screens' context over them and apply a matrix proposal group by group. Each refuses a user without Admin and
+    without ADMIN_ACCESS_VIEW (ADMIN_ACCESS_MANAGE to apply); the framework services check again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="MatrixContext" allow-remote="false">
+        <description>The Capabilities screen's context over org.moqui.admin.AccessServices.get#Capabilities: the group columns, the
+            matrix rows (a capability with a cell per group) and the list rows (the same cells, one a row), each cell with its
+            state text, its bound row rules, the proposal made for it and the proposal its control would make next (changes with
+            its token added or withdrawn); what the groups hold that no registered bundle describes; the find form's options;
+            and, when changes are proposed, their effect on each group from preview#Grants, whether all may be applied and the
+            grant revisions to apply them at. changes is the proposal the screen carries: comma separated tokens
+            group~a|e~p:permission or group~a|e~a:artifactGroup, at most 40. More than 8 groups or 40 changes is answered as
+            failure, the reason, with nothing else but the proposal as given. Needs ADMIN_ACCESS_VIEW; nothing is written.</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="appName"/>
+            <parameter name="groups"><description>Group ids, comma separated or a list; at most 8</description></parameter>
+            <parameter name="kind"/>
+            <parameter name="text"/>
+            <parameter name="changes"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="failure"/>
+            <parameter name="columns" type="List"/>
+            <parameter name="matrixRows" type="List"/>
+            <parameter name="listRows" type="List"/>
+            <parameter name="unsupportedRows" type="List"/>
+            <parameter name="appOptions" type="List"/>
+            <parameter name="kindOptions" type="List"/>
+            <parameter name="groupOptions" type="List"/>
+            <parameter name="groups"/>
+            <parameter name="moreGroupCount" type="Integer"/>
+            <parameter name="maxGroups" type="Integer"/>
+            <parameter name="changes"/>
+            <parameter name="changeCount" type="Integer"/>
+            <parameter name="proposal" type="Map"/>
+            <parameter name="canManage" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/admin/Capabilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('matrixContext', context)"/>
+            <set field="failure" from="found.failure"/>
+            <set field="columns" from="found.columns"/>
+            <set field="matrixRows" from="found.matrixRows"/>
+            <set field="listRows" from="found.listRows"/>
+            <set field="unsupportedRows" from="found.unsupportedRows"/>
+            <set field="appOptions" from="found.appOptions"/>
+            <set field="kindOptions" from="found.kindOptions"/>
+            <set field="groupOptions" from="found.groupOptions"/>
+            <set field="groups" from="found.groups"/>
+            <set field="moreGroupCount" from="found.moreGroupCount"/>
+            <set field="maxGroups" from="found.maxGroups"/>
+            <set field="changes" from="found.changes"/>
+            <set field="changeCount" from="found.changeCount"/>
+            <set field="proposal" from="found.proposal"/>
+            <set field="canManage" from="found.canManage"/>
+        </actions>
+    </service>
+    <service verb="apply" noun="MatrixChanges" allow-remote="false">
+        <description>Applies a matrix proposal (changes, as get#MatrixContext) group by group through
+            org.moqui.admin.AccessServices.apply#Grants: each group's changes as one change at the grant revision previewed for
+            it (revisions, a JSON object by group), in its own transaction. A group that is refused (a stale revision, a sealed
+            permission, a privileged group, an unregistered grant, the administration path) or fails is named with its reason
+            and the others still apply; remainingChanges are the tokens not applied. Needs ADMIN_ACCESS_MANAGE.</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="changes" required="true"/>
+            <parameter name="revisions" allow-html="any"/>
+            <parameter name="reason"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="resultList" type="List"/>
+            <parameter name="appliedCount" type="Integer"/>
+            <parameter name="refusedCount" type="Integer"/>
+            <parameter name="remainingChanges"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/admin/Capabilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('applyMatrixChanges', context)"/>
+            <set field="resultList" from="found.resultList"/>
+            <set field="appliedCount" from="found.appliedCount"/>
+            <set field="refusedCount" from="found.refusedCount"/>
+            <set field="remainingChanges" from="found.remainingChanges"/>
+        </actions>
+    </service>
+    <service verb="get" noun="AccessReview" allow-remote="false">
+        <description>The access and grant review as one list for print and CSV, over
+            org.moqui.admin.AccessServices.get#GrantReview: for each group reviewed (those named, or an app's registered bundles) as
+            of a date and time, its permission grants, its app gates with their row rules, and its members who work for an
+            organization the user administers; members outside it are counted per group, never named, and sealed grants are
+            left out and counted. More than 60 groups is answered as failure, the reason. Needs ADMIN_ACCESS_VIEW.</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="groups"/>
+            <parameter name="appName"/>
+            <parameter name="asOfDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="failure"/>
+            <parameter name="reviewRows" type="List"/>
+            <parameter name="groupRows" type="List"/>
+            <parameter name="asOfText"/>
+            <parameter name="groups"/>
+            <parameter name="sealedOmittedCount" type="Integer"/>
+            <parameter name="outsideCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/admin/Capabilities.js"/>
+            <set field="found" from="ec.resource.script(module).execute('accessReview', context)"/>
+            <set field="failure" from="found.failure"/>
+            <set field="reviewRows" from="found.reviewRows"/>
+            <set field="groupRows" from="found.groupRows"/>
+            <set field="asOfText" from="found.asOfText"/>
+            <set field="groups" from="found.groups"/>
+            <set field="sealedOmittedCount" from="found.sealedOmittedCount"/>
+            <set field="outsideCount" from="found.outsideCount"/>
+        </actions>
+    </service>
+</services>

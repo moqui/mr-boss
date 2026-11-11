@@ -1,5 +1,5 @@
 // Insights P1's "usable when" (impl-insights P1), as an acceptance walk with artifact authorization on: the menu renders for each
-// group, each entry of it opens and the copied screens it leaves out are refused; insights.reader opens Insights but not the
+// group and each entry of it opens (P7 replaced the last copied screen, so every entry is every user's); insights.reader opens Insights but not the
 // report builder; a Projects client and a PASS public account are refused the root and every ironstone.insights service. The
 // rules themselves are InsightsAccess's.
 // Run: ./moq accept mr-boss --spec InsightsFoundationWalk
@@ -19,14 +19,14 @@ const groupUsers = [
     users.finance
 ]
 
-feature("the menu renders for each group, its entries open and the copied screens it leaves out are refused", {
+feature("the menu renders for each group and each of its entries opens", {
     when() {
         const problems = []
         for (const user of groupUsers.concat([users.system])) {
             const found = shell(user, user === users.system)
             if (found.status != 200 || !found.names.includes("Home"))
                 problems.push(`${user}'s menu: ${found.status} ${found.names}`)
-            for (const entry of ids.legacyMenu) {
+            for (const entry of ids.readerMenu) {
                 const expected = found.names.includes(entry)
                 const rendered = asUser(user, () => lib.page(entry, {}, "html"))
                 if (opened(rendered) !== expected)

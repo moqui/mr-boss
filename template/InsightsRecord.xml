@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Insights context of a shared record screen (design-insights §10; design-crosscut §3.2 to §3.16, the Insights rows;
+    impl-insights P6, F16): the section a shared record screen shows in place of its owners' contexts when it is mounted under
+    Insights/Records (appRoot Insights; the screen's condition fails for Insights, so none of the owners' reads or widgets
+    runs). The screen sets insightsRecordType (its own name) and insightsRecordId (its record's key); the section reads
+    ironstone.insights.DrillServices.get#Record (Records.js): what the admitted datasets the viewer reads say of the record,
+    the owning apps' screens of it that open to the viewer, and the return to the report. Read only: no transition, form or
+    action is here, and every operational action is on an owner's screen behind its own authorization. A record no source
+    shows the viewer is "not available", whether or not it exists. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="InsightsRecord">
+            <actions>
+                <service-call name="ironstone.insights.DrillServices.get#Record" out-map="insightsRecordOut"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{recordType:insightsRecordType, recordId:insightsRecordId, definitionId:definitionId, panelId:panelId,
+                            from:from, thru:thru, breakdownDimension:breakdownDimension, bucketsJson:bucketsJson,
+                            variablesJson:variablesJson, queryReference:queryReference, organizationPartyId:organizationPartyId}"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="insightsRecord" from="insightsRecordOut?.record || {recordFound:false, recordLabel:'Record',
+                        recordId:insightsRecordId, sources:[], owners:[], hasReturn:false, returnParameters:{}}"/>
+                <set field="insightsSources" from="insightsRecord.sources || []"/>
+                <set field="insightsOwners" from="insightsRecord.owners || []"/>
+            </actions>
+            <widgets>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="${insightsRecord.recordLabel} ${insightsRecord.recordId}" type="h5" style="q-my-none"/>
+                        <label text="Read only, as the reports you may read show it. Changes are made in the app that owns the record."
+                                type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="m-record-actions">
+                        <link url="${sharedLinks['Drill']}" text="Back to the report" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_arrow_back" parameter-map="insightsRecord.returnParameters"
+                                condition="insightsRecord.hasReturn"/>
+                        <link url="${sharedLinks['Dashboards']}" text="Dashboards" link-type="anchor-button"
+                                condition="!insightsRecord.hasReturn"/>
+                    </container>
+                </container>
+                <section name="InsightsRecordMissing" condition="!insightsRecord.recordFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="${insightsRecord.recordLabel} ${insightsRecord.recordId} is not available: no dataset admitted for you describes it."/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section-iterate name="InsightsRecordSources" list="insightsSources" entry="insightsSource">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${insightsSource.title}"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-pa-md text-warning" text="This source could not be read."
+                                        condition="insightsSource.failed"/>
+                                <form-list name="InsightsRecordRows" list="insightsSource.rows" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Record"><display/></default-field></field>
+                                    <field name="text"><default-field title="As reported"><display/></default-field></field>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="insightsSource.bounded"
+                                        text="Showing ${insightsSource.rows.length} of ${insightsSource.total}."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <section name="InsightsRecordOwners" condition="insightsOwners.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Work on it"/>
+                            <box-body>
+                                <section-iterate name="InsightsRecordOwnerLinks" list="insightsOwners" entry="insightsOwner">
+                                    <widgets>
+                                        <link url="${insightsOwner.url}" url-type="plain" text="${insightsOwner.label}" link-type="anchor"/>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

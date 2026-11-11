@@ -105,7 +105,7 @@ Paths are relative to BOSS. Role letters are §1.1; all rows additionally requir
 | Panels | Insights/Panels | list | xml | Find reusable number cards and charts | panel Definition | framework Panels, §4 | R,A | new | panel filters |
 | PanelDetail | Insights/PanelDetail | editor | xml | Configure and inspect one library panel | panel Definition | framework Definition, §4 | A; R view | new | panel, metric, range |
 | Playlists | Insights/Playlists | list | xml | Rotate dashboards in kiosk mode on a wall display | `report` Definition, kind `playlist` | framework Playlist, §4 | R; A edit | new | playlist definition |
-| Drill | Insights/Drill | dialog | xml | Explain a selected value and reach source rows | authorized frame/query | own §4 | R | new | metric, bucket, original query scope |
+| Drill | Insights/Drill | detail (a hidden page; a linear task in the terminal) | xml | Explain a selected value and reach source rows | authorized frame/query | own §4 | R | new | metric, bucket, original query scope |
 | Explore | Insights/ReportBuilder/Explore | report | xml | Explore an admitted dataset | dataset and saved search Definition | framework Explore, §5 | A; R saved | new | dataset, query, range |
 | Analysis | Insights/ReportBuilder/Analysis | editor | xml | Build aggregates, pivot and comparison | panel/search Definition | framework query/editor widgets, §5 | A | new | query, measures, dimensions |
 | Datasets | Insights/ReportBuilder/Datasets | list | xml | Find approved business data sources | DataDocument, dataset Definition | own §5 | A,D | parity | dataset filters |
@@ -114,7 +114,7 @@ Paths are relative to BOSS. Role letters are §1.1; all rows additionally requir
 | DatasetView | Insights/ReportBuilder/DatasetView | report | xml | Preview authorized detail rows | admitted dataset | own §5 | A,D | parity | dataset, filters, range |
 | Reports | Insights/Reports | list | xml | Index every permitted application report | proposed ReportCatalogEntry | own §6 | R | parity | app, report, filters |
 | SavedReports | Insights/SavedReports | list | xml | Find named analyses, saved finds and pins | Definition, FormListFind, pins (UserPreference) | own §6 | R,A | parity | type, owner, selected saved report |
-| ScheduledReports | Insights/ScheduledReports | list | xml | Manage personal and approved group delivery | ScreenScheduled | own §7; framework services | R with schedule right; S | parity | schedule filters |
+| ScheduledReports | Insights/ScheduledReports (the list is its default subscreen, `Schedules`) | list | xml | Manage personal and approved group delivery | ScreenScheduled | own §7; framework services | R with schedule right; S | parity | schedule filters |
 | ScheduledReportDetail | Insights/ScheduledReports/ScheduledReportDetail | detail | xml | Configure recipients, timing and output | ScreenScheduled | own §7 | owner/S | parity | schedule, definition, safe audience summary |
 | ReportDelivery | Insights/ScheduledReports/ReportDelivery | detail | xml | Inspect an occurrence and retry failed recipients | proposed report occurrence/delivery | own §7 | owner/S; recipient own result | new | occurrence, own delivery or safe status |
 | ManagementDigest | Insights/ManagementDigest | editor | xml | Compose a recurring management summary | report Definition | framework composition, §7 | A,S | new | definition, range, selected panels |
@@ -215,6 +215,8 @@ Existing `number-card`/`m-chart` screens remain valid operational UI. They adopt
 
 **Business annotations.** Time series show domain events as markers through the existing `ReportServices.create#Annotation`: price list published (Products), campaign sent (Marketing), promotion start (Commerce) and period close (Accounting). Each owner registers its annotation source under INS-02 and writes the annotation after its commit. An annotation carries the event's name, time, organization and a link the viewer's permissions resolve; it carries no amounts. **Source:** research §§2,10,12; framework Dashboard and Annotations. **Needs:** INS-01, INS-02, INS-03, INS-04, INS-09.
 
+As built (impl-insights P6): the framework's annotations take the source `business` (an organization, an event type, the record behind it or a link, a name and a time, no amount), written only by a holder of `org.moqui.report.annotation.business`. Mantle's `mantle.party.BusinessEventServices.record#BusinessEvent` makes the marker from the stored record and is registered to run after the commit of `publish#ProductPriceList` (Products), `store#Promotion` when a promotion's dates or name change (Commerce; the dated promotion is a band, since there is no start event) and `close#Period` (Accounting); a failure is logged and never fails the owner's change. Mantle's dataset `mantle-business-events`, scoped to the viewer's organizations, is the registered source (`ReportAnnotationSource`) a dashboard over business data reads for its viewer; BossSetupData grants the Insights groups its view. Marketing's campaign sends wait for Marketing.
+
 ### DashboardEditor
 
 **Context passed.** Reuse Tools Definition's dashboard editor, fixing type=dashboard and business-admitted dataset/panel choices. It mounts under Insights through INS-04: the editor's transitions become appRoot-relative and its dataset choices come from the author's dataset grants, not from `DASHBOARDS_APP` or `REPORT_DATASETS_ADMIN`. INS-04 is a first-release framework need; without it authors cannot edit inside Insights. The existing framework model supplies layout tree, panel placement, variables, query/transformations, copies, versions, dependency uses, import/export and restore. BOSS provides labels and scoped route choices; it adds no competing layout format.
@@ -259,6 +261,8 @@ The new drill request is `{definitionId, panelId, metricId, metricVersion, query
 
 **Actions/navigation.** Open source uses §10. Open as analysis is available to A and copies query meaning, not a privileged result. Export uses the same authorized source projection. **States/devices.** No source access returns a useful authorized explanation without identifying hidden records. The same dialog is a linear task in TUI and a full-width page on a phone. **Source:** research §§2,15; framework Explore and source queries. **Needs:** INS-02, INS-03, INS-04, INS-09.
 
+As built (impl-insights P6): the route is `Insights/Drill`, a hidden screen each panel's menu opens (Drill; the root's `reportLinks.drill`) in the browser and the terminal, over `ironstone.insights.DrillServices.get#Drill` and the framework's `ReportServices.get#Drill` (mr-moqui docs/tools/Monitoring.md "Drill"). The request is `{definitionId, panelId, queryReference, from, thru, variablesJson, bucketsJson, breakdownDimension, pageIndex, organizationPartyId}`; `metricId` and `metricVersion` are read from the panel, not sent. The engine reads the saved panel again as the viewer and takes each bucket's predicate from its own result; Insights fixes the organization in scope over any variable sent, as on Dashboard. Breakdown lists the panel's own buckets to choose and adds one of the dataset's dimensions; a breakdown bucket is shown, not chosen (only the saved panel's buckets resolve to predicates). SourceRows shows the query's own time, group and measured fields of each record, never the whole document, each opening its Insights record screen (§10); a cost or margin field is neither a column nor a breakdown dimension for a viewer without `PRODUCT_COST_VIEW` (by the field's name, until datasets have field classes). A dataset whose definition says `rows: "restricted"` gives totals and no record without `org.moqui.report.rows.<id>`, which no Insights group holds. A registered domain drill service for a service-source panel is not built: such a panel answers that its value has no drill. Export of the drilled records is DatasetView's.
+
 ## 5. Exploration and report builder
 
 ### Explore
@@ -281,6 +285,8 @@ The new drill request is `{definitionId, panelId, metricId, metricVersion, query
 An analysis over monetary fields must carry currency grouping or a registered conversion measure. The server refuses semantically invalid operations rather than merely removing the currency symbol. A ratio aggregates its numerator/denominator according to its registered rule; it is not an average of row percentages. Distinct counts, balances and snapshot measures declare nonadditive dimensions. Calculated fields use the bounded framework expression/transform vocabulary; no raw SQL, JavaScript or arbitrary service invocation is exposed.
 
 Generic `form-list` pivot/graph adapters remain later; eligible existing reports/lists may offer Add to dashboard through a registered source adapter. A list's currently loaded page is never treated as its entire dataset. **Source:** research §§5–6; Sales/Purchasing analytics decisions. **Needs:** INS-02, INS-03, INS-04, INS-12.
+
+As built (impl-insights P6): `Insights/ReportBuilder/Analysis`, the author's and the steward's (`BOSS_INS_ANALYSIS`), over `ironstone.insights.AnalysisServices` (`get#AnalysisOptions`, `get#AnalysisResult`, `store#Analysis`). AnalysisSource is typed choices: an admitted dataset, how a measure is aggregated (count, sum, average, least, greatest, distinct), up to two groups, a time grain, one equality filter and the range; each field is one of the dataset's own. AnalysisResult runs them through `run#Query` as the author and shows the engine's count of the records behind the result. SaveAnalysis saves a library panel (private or one of the author's groups, optionally placed on one of their own dashboards by reference) and opens it in PanelDetail, the framework definition editor, which is AnalysisSteps (transformations, pivot, totals, the time comparison). The semantic guards are the framework's, for every caller (mr-moqui docs/tools/Monitoring.md "Semantic guards"), from what a dataset's `fieldDefaults` declare: `unitField` (`UNIT_MIXED` until grouped by the unit field or filtered to one unit; refused when the records hold several units, so a single-currency organization's sums are unchanged), `ratio` (`RATIO_AGGREGATE`), `nonAdditive` (`NONADDITIVE`), and a bounded page of records (`BOUNDED_RESULT`, a `bounded_result` notice). A catalog report source and a registered conversion measure as a starting point are not built: the starting point is a dataset.
 
 ### Datasets
 
@@ -456,7 +462,7 @@ The user-facing promise is precise: **no internal recipient receives more than t
   - At each run, the check repeats. A recipient whose scope changed is skipped with the safe reason `scope-differs`; the others are delivered.
 - **Separate messages.** Each recipient gets a separately addressed message through the existing email/template transport. No two recipients share a To, CC or BCC line. Each delivery has its own outcome row and retry (`ReportRecipientDelivery`).
 - **Render reuse.** One render serves every recipient with the same definition version, scope fingerprint and locale. Owner equivalence means one fingerprint, so a group usually needs one render per locale.
-- **Caps.** A business schedule or business alert rule has a recipient cap, an Insights Settings value (50 by default) under an Admin instance ceiling (200 by default); each default holds until its setting exists (§16). An alert rule keeps the framework's 500-series cap. A group alert evaluates once, as owner, because equivalence makes that evaluation valid for every recipient; it then notifies each recipient separately.
+- **Caps.** A business schedule or business alert rule has a recipient cap, an Insights Settings value (50 by default) under an Admin instance ceiling (200 by default); each default holds until its setting exists (§16). The ceiling exists (impl-admin P8): the framework instance preference `report.groupRecipientCeiling`, read with `org.moqui.admin.ConfigurationServices.get#InstancePreference` (its `numberValue`; no Mantle or BOSS needed), 200 by default, 1 to 500. An alert rule keeps the framework's 500-series cap. A group alert evaluates once, as owner, because equivalence makes that evaluation valid for every recipient; it then notifies each recipient separately.
 - **Ownership.** If the owner is disabled, their schedules and rules pause. Admin's lifecycle calls the admin-callable proposed `ReportServices.pause#OwnedSchedules(userId)`. They stay paused until proposed `transfer#DefinitionOwner` moves them to a qualified owner, who must pass the same audience check (Admin §14 Lifecycle participant; review Z3).
 
 Audiences whose scopes differ, such as a regional report to each regional manager, wait for full recipient execution (§7.2), which is later. Until then such a report is a personal schedule each manager sets up.
@@ -542,6 +548,62 @@ Retry input is `{occurrenceId, deliveryIds, expectedRevision, reason}`; recipien
 | DigestPreview | component | Review own result before scheduling | values, changes, meaning, as-of, missing sections | same rendered report/table | ReportServices.preview#Report | framework reports |
 
 Period comparison and commentary distinguish facts from authored explanation; an Assist draft is reviewed under the same author permission. A digest does not add per-recipient values into a shared summary, since recipient scopes may overlap. Preferences and unsubscribe/pause use the common delivery policy. **Source:** research §§9,15. **Needs:** INS-02, INS-06, INS-09.
+
+### As built (impl-insights P7, Nov 10, 2026)
+
+- **The framework** (mr-moqui `crates/moqui-report/src/delivery.rs`, docs/tools/Monitoring.md "Report delivery"): the services
+  of §15.2's delivery row are built, with `reconcile#ReportRecipient` and `find#OwnedSchedules` beside them. The scope
+  fingerprint is a hash of what the user reads of the definition and everything it references, the documents of each dataset
+  they may read, each dataset's resolved row filter and, where a dataset's records are restricted, whether they hold them, and of what a dashboard reads without naming it (a query's default telemetry dataset, the change markers and,
+  over a business dataset, each registered source of business events); it
+  is computed in a context of its own signed in as that user. The organization scope is in it through the organization row
+  filter of each dataset, not as a value of its own. A definition over a service source is not comparable (the service decides
+  its scope in its own code), so it is delivered to its owner alone until a service source can declare its scope.
+- **Which schedules.** One saved by `store#Schedule` (`deliveryMode` personal or group), and any report schedule whose
+  definition reads a business dataset or another whose rows depend on the viewer (a `rowFilterService` or `contextFilters`:
+  `mantle-business-events`), whatever wrote its row (the "direct calls must not bypass the business mode" of §7.3):
+  one made by Tools' `create#Schedule` is checked recipient by recipient at each run. Technical schedules are unchanged.
+- **Records.** `moqui.report.ReportScheduleRecipient`, `ReportOccurrence` (keyed by the schedule and the cron instant, or a
+  Send now) and `ReportRecipientDelivery` (unique by occurrence, recipient and channel; pending, sending, sent, skipped, failed,
+  uncertain, with a safe reason code). No row keeps a report: OwnArtifact is the report rendered again as its recipient
+  (`get#RecipientReport`), released only while their fingerprint is the one the delivery was sent under. Stored private
+  artifacts with retention wait for Admin's retention policy.
+- **The cap** is `recipientCap` on the schedule, 50 from Insights until Settings holds it (P10), held by the engine under
+  Admin's instance preference `report.groupRecipientCeiling`. A group that grows past it is sent to in user order up to the
+  cap, the rest skipped (`over-cap`). An occurrence that runs again (a run that ended before the schedule's last run time was kept) sends to nobody
+  whose delivery is sent or not known.
+- **Group delivery** needs the engine's artifact `org.moqui.report.delivery.group`, which setup grants the distributor; the
+  five reading groups hold `INSIGHTS_SCHEDULE` and the engine's own-schedule operations, so every reader schedules for
+  themselves (§1.1's table lists the permission for the distributor alone and §7.1 says "any reader with
+  `INSIGHTS_SCHEDULE`": whether every reading group holds it by default is open, impl-insights P7's review). A distributor proposes Insights readers (holders of `INSIGHTS_VIEW`) and groups they belong to; the check
+  decides. A recipient must read the report itself as well as its data: a private dashboard or digest is refused for
+  anyone else (`not-shared`) until its owner shares it with a group they are in. A named recipient who may not receive refuses the save; a group's member without an address or an active account
+  is skipped at each run instead.
+- **Retry** needs the schedule and the definition unchanged since the occurrence (else send a new occurrence) and renders
+  again: the period is the definition's relative range at the retry, not the occurrence's instant (a schedule's own time zone
+  and a pinned reporting period are not built; the scheduler's zone applies).
+- **Ownership.** A run that finds its owner inactive pauses the schedule (`owner-disabled`); Admin's lifecycle participant
+  `insights.schedules` is the engine's `find#OwnedSchedules`, `pause#OwnedSchedules` and `transfer#DefinitionOwner`
+  (`REPORT_OWNER_CHANGE`, the identity operator's and the administrator's). A transfer moves the schedule with the
+  definitions it needs that the leaving owner owns, to an owner who may schedule, reads every source and, for a group
+  schedule, may deliver to a group; it stays paused (`transfer-pending`) until the new owner resumes it, which checks the
+  recipients against the new owner's scope. An owner who is active again may resume a schedule paused for them.
+- **Legacy.** A screen schedule (`screenPath`, a saved find) the user set up for themselves is listed under Mine and its
+  timing, format and subject changed in ScheduledReportDetail, its row kept; it takes no other recipient. The framework sends
+  a screen schedule to a user group only when its screen path is a registered `ReportLegacyAdapter`, one message a member the
+  saved find is shared with; none is registered, so every legacy schedule is personal.
+- **Screens.** `Insights/ScheduledReports` is a parent whose default is the list `Schedules` (ScheduleFind with Mine, Shared
+  administration and Received; ScreenScheduledList; NewSchedule), with the hidden ScheduledReportDetail (one page of boxes,
+  not tabs: EditScreenScheduled, ReportAudience with each recipient's result, OwnPreview, ScheduleRuns) and ReportDelivery
+  (Occurrence, RecipientOutcomes with RetryRecipients as the list's selection action and Reconcile on an uncertain row,
+  OwnArtifact). `Insights/ManagementDigest` lists the digests the viewer reads, with DigestComposition as a form (name, one
+  to six dashboards the composer reads, one period, a commentary, a share group) saved through `store#Digest` as a report
+  definition of kind digest, not the framework's composition editor, and DigestPreview as the caller's own panels and file.
+  The author and the distributor compose; mr-boss ships `insights-weekly-digest` over the suite dashboard. Home's DigestPreview
+  shows the digest the user chose (Show on Home, the `InsightsDigest` preference) until Settings names an organization default
+  (P10). Period comparison is each panel's own; an Assist draft of the commentary waits for P10.
+- **The message** is the `BOSS_INSIGHTS_REPORT` template, whose link opens Insights' Dashboard; sending profiles and
+  Comms-approved templates are not built (one template, the instance's mail server).
 
 ## 8. Business alerts
 
@@ -664,6 +726,8 @@ All mounts use crosscut §1.1: the server resolves shared capabilities from perm
 | InvoiceDetail | invoiceId, payable/receivable direction and report return | Accounting's authorized invoice/source/payment projection. Different financial-read permissions remain distinct; posting/payment/credit actions link to Accounting. |
 
 These are Context passed definitions for every reused record row in §2; the owning forms are not copied here. Each owner's per-app table carries a read-only Insights row (report return, no actions): crosscut §3.2, §3.3, §3.4 (Employee360), §3.5, §3.6, §3.8, §3.10, §3.16, Projects §5 and §6, and People §4 (review Z10). Chatter/RecordFiles use the host's canonical access checks and never expose inaccessible source identities. Missing source records show Not available with a return to the report, without revealing whether a denied key exists. **Source:** research §15; crosscut §§3.2–3.12,3.16; People §4 and Projects §§5–6. **Needs:** INS-01, INS-02, INS-04.
+
+As built (impl-insights P6): each mount is the shared record screen under `Insights/Records/` with `appRoot` Insights; the screen's condition fails for Insights, so none of the owners' reads or widgets runs, and it shows `template/InsightsRecord.xml` (for Customer360, Supplier360, Product360 and FacilityDetail, whose tabs are the owners', the one subscreen `InsightsRecord` that Insights' links name). Insights holds no domain permission, so what it shows of a record is what the admitted datasets the viewer reads say of it (`ironstone.insights.DrillServices.get#Record`, Records.js): each source read through the report engine as the viewer, its admission and row filter deciding, with named columns only and never a cost. Today's sources: the sales orders and items (OrderDetail; Customer360's orders; Product360's order items; FacilityDetail's shipping parts), the inventory dataset (Product360, FacilityDetail) and the service clocks (RequestDetail). Supplier360, WorkItemDetail, ShipmentDetail, EquipmentDetail and InvoiceDetail have no admitted source yet and say not available. Beside the sources are the owners' screens of the record, each only where its route opens to the viewer and only for a record a source showed. Product360 does not use Products' shared context (which would read the catalog by Products' permission), so SharedContext.js still refuses Insights. The mount is read only by its path (the P6 review): `Insights/Records` serves a record screen and its `InsightsRecord` subscreen and refuses everything below them (`RECORD_READ_ONLY`), so no transition of a shared screen and no owner's tab runs under Insights for any user, whatever the owner's service would decide; a user who also holds the owner's permission follows the owner's link. A read-only mount declared in the screen definition, in place of the path check, is a framework ask. Employee360 waits for People.
 
 ## 11. Settings and data readiness
 
@@ -838,7 +902,7 @@ Names in this table are proposed unless explicitly marked existing. The form sum
 | `ironstone.insights.FlowMapServices` | validate#Map, get#Map, copy#Map, store#Map; §9 typed input → validated `report`/`flowmap` Definition and authorized targets/counts. Listing, versions, diff and restore are the existing ReportServices definition operations | BOSS documentation/navigation validation over framework Definitions; Commons owns linked content |
 | Existing `org.moqui.report.ReportServices` | run#Query, query#Documents, list#Datasets, get#Dataset, render#Dashboard; get#Definition, list#Definitions, save#Definition, copy#Definition, versions#Definition, get#DefinitionDiff, restore#Definition, delete#Definition, find#DefinitionUses, export#Definitions, import#Definitions; create#Annotation; preview#Report, send#Report, create#Schedule, list#Schedules, pause#Schedule, evaluate#Alerts | Framework engine, definitions and scheduling; extend contracts without BOSS role tests |
 | Proposed ReportServices dataset extensions | create/store/validate/find/index#BusinessDataset, store#BusinessDatasetFields, store#BusinessDatasetConditions; §5 inputs → admitted source/version/check results | Framework mutation/admission/index mechanics with domain-supplied `rowFilterService`; existing EntityServices and `SearchServices.index#DataFeedDocuments` used where applicable |
-| Proposed ReportServices delivery extensions | check#ReportAudience, store#Schedule, find#ReportOccurrences, get#ReportOccurrence, get#RecipientReport, retry#ReportRecipients, find#AlertDeliveries, pause#OwnedSchedules, transfer#DefinitionOwner; §7 inputs → safe status or caller-owned content | Framework audience/lease/outbox/artifact lifecycle; `pause#OwnedSchedules` and `transfer#DefinitionOwner` are callable by Admin's lifecycle coordinator (Admin §14); business mode cannot be bypassed by direct services |
+| ReportServices delivery extensions (built with impl-insights P7 but `find#AlertDeliveries`, P8's) | check#ReportAudience, store#Schedule, find#ReportOccurrences, get#ReportOccurrence, get#RecipientReport, retry#ReportRecipients, reconcile#ReportRecipient, find#AlertDeliveries, find#OwnedSchedules, pause#OwnedSchedules, transfer#DefinitionOwner; §7 inputs → safe status or caller-owned content | Framework audience/lease/outbox/artifact lifecycle; `pause#OwnedSchedules` and `transfer#DefinitionOwner` are callable by Admin's lifecycle coordinator (Admin §14); business mode cannot be bypassed by direct services |
 | Proposed `mantle.party.PartyServices.get#OrganizationRowFilter` | viewer, dataset organization field → row filter for the viewer's permitted organizations (`MANTLE_USER_ORG`, `MANTLE_ACTIVE_ORG` semantics) | Mantle; registered as a `rowFilterService` for business datasets |
 | Existing domain report service families | §6.2 registered inputs and declared outputs → rows/frames plus versioned business metadata; add missing authorization/semantics where necessary | Mantle owns calculations, dates, units, private-field projection and source evidence; BOSS owns view adapters |
 | Proposed `mantle.ledger.CashForecastServices` | get#Options, preview#Scenario, run#Forecast; §12 input → authorized source movements, scenario projection and uncertainty | Later Accounting-domain calculation, owned as INS-12 and presented in Insights |

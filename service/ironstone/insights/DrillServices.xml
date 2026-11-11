@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights' drill and read-only record contexts (design-insights §4 Drill, §10; impl-insights P6; Drill.js, Records.js). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Drill" allow-remote="false">
+        <description>From a value of a saved panel to its meaning, a breakdown and the records behind it, for an Insights reader
+            (INSIGHTS_VIEW_REQUIRED otherwise). The request names the definition, the panel, one of its queries, the range and
+            the buckets chosen as the panel showed them (selectedBuckets of field and value, or the same list as JSON text, bucketsJson);
+            the report engine's get#Drill reads the saved panel as the viewer and computes every predicate, so no query,
+            entity or service is taken from the request, and the organization in scope is fixed over any variable sent (a
+            requested organization only when it is the user's). Answers the measure's registered meaning, the panel's
+            buckets, a breakdown by one of the dataset's dimensions (or the engine's refusal of it), and a page of records
+            with the query's own columns and each record's Insights record screen. A viewer who reads the totals and not the
+            records gets rowsAvailable false and no record; a panel, definition or dataset the viewer may not read answers
+            available false with a reason that does not say whether it exists.</description>
+        <in-parameters>
+            <parameter name="definitionId" required="true"/>
+            <parameter name="panelId"/>
+            <parameter name="queryReference"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="variables" type="Map"/>
+            <parameter name="variablesJson"/>
+            <parameter name="selectedBuckets" type="List"/>
+            <parameter name="bucketsJson"/>
+            <parameter name="breakdownDimension"/>
+            <parameter name="pageIndex" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="drill" type="Map"><description>reason, title, definitionType, datasetId, range, organizationPartyId,
+                meaning, selected, dimensions, panelBuckets, breakdownDimension, breakdownRefused, breakdown, rowsAvailable,
+                rowsReason, columns, rows, total, bounded, pageIndex, pageMaxIndex, and the parameters of its links (carry, clear,
+                previous, next)</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="drill" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Drill.js').execute('drill', context)"/>
+            <set field="available" from="drill.available"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Record" allow-remote="false">
+        <description>The record behind a report's value, read only, for an Insights reader (INSIGHTS_VIEW_REQUIRED otherwise):
+            what the admitted datasets the viewer reads say of it (each read through the report engine as the viewer, so its
+            admission and row filter decide; named columns only, never a cost), the owning apps' screens of it that open to the
+            viewer by the owner's own authorization, and the return to the report (the drill's parameters). recordType is the
+            shared record screen (OrderDetail, Customer360, Supplier360, Product360, RequestDetail, WorkItemDetail,
+            ShipmentDetail, FacilityDetail, EquipmentDetail, InvoiceDetail). A record no source shows the viewer answers
+            recordFound false, whether or not it exists, with no owner link.</description>
+        <in-parameters>
+            <parameter name="recordType" required="true"/>
+            <parameter name="recordId" required="true"/>
+            <parameter name="definitionId"/>
+            <parameter name="panelId"/>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="breakdownDimension"/>
+            <parameter name="bucketsJson"/>
+            <parameter name="variablesJson"/>
+            <parameter name="queryReference"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="record" type="Map"><description>recordFound, recordLabel, recordId, sources (title, total, bounded,
+                failed, rows of title and text), owners (label, url), hasReturn, returnParameters</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="record" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Records.js').execute('record', context)"/>
+            <set field="recordFound" from="record.recordFound"/>
+        </actions>
+    </service>
+</services>

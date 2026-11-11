@@ -66,10 +66,13 @@ const capabilityPermissions = {
 // below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the
 // administrator; P4 Users (Users, UserDetail, Sessions) for the identity operator and the administrator; P7 Settings' Organizations,
 // OrganizationDetail and Constitution for the configuration administrator and the administrator (one artifact group, so
-// Organizations stands for the three).
+// Organizations stands for the three; P8 adds InstanceSettings and Localization to that group).
 const areas = {
     users: "Users",
     access: "Access",
+    // P10: Security (SignInPolicy, IdentityProviders, IdentityProviderDetail) for the access, configuration and integration
+    // administrators and the administrator (BOSS_ADM_SECURITY)
+    security: "Security",
     organizations: "Settings/Organizations",
     operations: "Operations",
     agents: "Agents",
@@ -279,6 +282,18 @@ const linkPaths = [
     "Settings/Organizations",
     "Settings/OrganizationDetail",
     "Settings/Constitution",
+    // P8: instance settings, localization and reference data
+    "Settings/InstanceSettings",
+    "Settings/Localization",
+    "Settings/ReferenceData",
+    // P9: capabilities, row rules and the access review
+    "Access/Capabilities",
+    "Access/RowRules",
+    "Access/AccessReview",
+    // P10: sign-in policy and identity providers
+    "Security/SignInPolicy",
+    "Security/IdentityProviders",
+    "Security/IdentityProviderDetail",
     "Agents/Home",
     "System",
     "Developer/Home"

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Records (design-insights §10, §2; impl-insights P6, F16): the record behind a value of a report, each a mount of
+    the shared record screen with the Insights context (template/InsightsRecord.xml): read only, with the return to the
+    report. They are reached from a drill's records, not from the menu. Employee360 waits for People. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Records"
+        menu-image="sym_o_folder"
+        menu-image-type="icon"
+        default-menu-include="false">
+    <!-- Read only by the path (P6 review): a shared screen's transitions and its owners' tabs are authorized by the screen's own
+        location, which the Insights root's inheritable grant covers as it covers any screen below it, so under this mount they
+        would be refused only by each owner service's own check. Nothing below a record screen is served here but its
+        InsightsRecord subscreen: no transition, no owner tab, for any user; the owners' links open the record in its own app. -->
+    <always-actions><script><![CDATA[
+        const recordPath = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+        const recordsAt = recordPath.indexOf('Records')
+        const belowRecord = recordsAt < 0 ? null : recordPath.slice(recordsAt + 2)
+        if (!belowRecord || belowRecord.length > 1 || (belowRecord.length === 1 && belowRecord[0] !== 'InsightsRecord'))
+            throw new Error('RECORD_READ_ONLY: Insights shows this record read only; open it from a report, and change it in the app that owns it')
+    ]]></script></always-actions>
+    <subscreens default-item="OrderDetail" always-use-full-path="true">
+        <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
+        <subscreens-item name="Customer360" location="component://mr-boss/screen/Shared/Customer360.xml" menu-include="false"/>
+        <subscreens-item name="Supplier360" location="component://mr-boss/screen/Shared/Supplier360.xml" menu-include="false"/>
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+        <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>
+        <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>
+        <subscreens-item name="ShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml" menu-include="false"/>
+        <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml" menu-include="false"/>
+        <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml" menu-include="false"/>
+        <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

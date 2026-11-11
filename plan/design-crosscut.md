@@ -276,7 +276,8 @@ organization/record scope, never a map of BOSS group names or another app's laun
 permission alone does not imply read access. The group vocabulary is seed data in CX-ACCESS, not a
 parallel authorization system: the framework's capability registry (`moqui.security.CapabilityBundle`, built in impl-admin P3)
 describes each built app's groups as registered bundles, filled from this table by BossSetupData, and Admin assigns only
-those. Mantle remains independent of BOSS group and screen names.
+those; Admin › Access › Capabilities (impl-admin P9) shows them as a matrix, a launcher apart from each view, change, export
+and sensitive-value permission. Mantle remains independent of BOSS group and screen names.
 Every BOSS app requires a UserGroup (decided Nov 5, 2026; impl-drawers-commons R29): `ALL_USERS`, which
 every account holds, public ones too, grants no app root. Commons and Comms are opened by `BOSS_USERS`
 ("IronStone BOSS users"), the group every internal user is a member of; each other app by its root user
@@ -1054,6 +1055,8 @@ CX-ORDER-AUTHORITY, CX-RECURRING, CX-CREDIT, CX-AUTOMATION, CX-DELIVERY, CX-SHEL
 | Commerce (`Commerce/Orders/OrderDetail`) | Overview, Items, Payments, Shipments, Invoices, Chatter | sales orders in permitted stores; recurring bases only from SubscriptionDetail | place/approve/hold/cancel only with domain grants; the OhtPayment hold banner is read only and links Accounting, which releases it (X4); open cancellation proposals link Customer Service's OrderChangeDetail (X7); "Order again" clones into a new open order with `clone#Order(copyPayment=false)` and reprices on the shared form; active checkout must be resolved before staff edit | payment/fulfillment and intake references; carts have separate worklists |
 | Maintenance | Header, Items, Fulfillment and receipts, History | purchase and service orders linked to authorized maintenance work through AssetMaintenanceOrderItem | read; the buyer's actions by grant; Accept outside service through `accept#ServiceItem` with the work's evidence | parts and outside service for the work order |
 | Insights | Header, Items, Fulfillment, permitted Invoices/payments, History | the order and the report's period and organization | read only; a return link to the report | the order behind an aggregate |
+
+Insights rows as built (impl-insights P6, Nov 10, 2026; this one and those of §3.2, §3.3, §3.5, §3.8, §3.10, §3.16 and Projects §5, §6): under `Insights/Records/` the shared screen shows only Insights' own read-only section (`template/InsightsRecord.xml`): what the admitted datasets the viewer reads say of the record (for an order its parts and items, with amounts in their currency and no cost), the owners' screens of it that open to the viewer, and the return to the drill. The owners' tabs and regions named in these rows are not shown under Insights; a tab opens in its owner's app. Records with no admitted dataset (supplier, work item, shipment, equipment, invoice) say not available until one is admitted ([Insights §10](design-insights.md#10-shared-screen-contexts)).
 
 ### 3.7 InventoryAvailability
 

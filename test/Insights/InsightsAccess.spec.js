@@ -90,8 +90,8 @@ feature(
     }
 )
 
-// the menu of design §1.2 built so far: Home, the dashboards and Report builder; the copied screens the administrator's and
-// ADMIN's until their phases
+// the menu of design §1.2 built so far, every Insights user's: Home, the dashboards, Report builder, Reports, Scheduled
+// reports and Management digest (no copied screen is left, impl-insights F20)
 feature("the Insights menu and keys follow the groups; the launcher shows Insights to its users only", {
     when() {
         const problems = []
@@ -108,7 +108,7 @@ feature("the Insights menu and keys follow the groups; the launcher shows Insigh
         if (otherApps.length) problems.push(`the reader's launcher has ${otherApps}`)
         for (const user of [users.admin, users.system]) {
             const names = shell(user, true).names
-            if (JSON.stringify(names) !== JSON.stringify(ids.legacyMenu)) problems.push(`${user}'s menu: ${names}`)
+            if (JSON.stringify(names) !== JSON.stringify(ids.readerMenu)) problems.push(`${user}'s menu: ${names}`)
         }
         if (shell(users.otherApp).apps.includes("Insights")) problems.push(`${users.otherApp} has Insights`)
         return {problems}
@@ -128,26 +128,28 @@ const capabilityNames = [
     "flowEdit",
     "settingsView",
     "settingsEdit",
-    "legacy",
     "datasets",
-    "stewardship"
+    "stewardship",
+    // P6: Analysis, the author's and the steward's area
+    "analysis"
 ]
-// design §1.1's table; the copied screens (legacy) are the administrator's and ADMIN's; P3's dataset screens the author's and the
-// steward's (datasets), DatasetDetail the steward's (stewardship)
+// design §1.1's table; P3's dataset screens the author's and the steward's (datasets), DatasetDetail the steward's
+// (stewardship); P7: every reading group schedules for itself (schedule), the distributor alone delivers to others, and the
+// administrator, who reads no business data, schedules nothing
 const capabilityUsers = [
-    {user: users.reader, granted: ["view"]},
-    {user: users.author, granted: ["view", "author", "datasets"]},
-    {user: users.steward, granted: ["view", "datasetView", "datasetEdit", "datasets", "stewardship"]},
+    {user: users.reader, granted: ["view", "schedule"]},
+    {user: users.author, granted: ["view", "author", "schedule", "datasets", "analysis"]},
+    {user: users.steward, granted: ["view", "datasetView", "datasetEdit", "schedule", "datasets", "stewardship", "analysis"]},
     {user: users.distributor, granted: ["view", "schedule", "distribute"]},
-    {user: users.flow, granted: ["view", "flowEdit"]},
-    {user: users.admin, granted: ["view", "settingsView", "settingsEdit", "legacy"]},
-    {user: users.services, granted: ["view"]},
-    {user: users.finance, granted: ["view"]},
-    {user: users.serviceManager, granted: ["view"]},
-    {user: users.warehouse, granted: ["view"]},
+    {user: users.flow, granted: ["view", "schedule", "flowEdit"]},
+    {user: users.admin, granted: ["view", "settingsView", "settingsEdit"]},
+    {user: users.services, granted: ["view", "schedule"]},
+    {user: users.finance, granted: ["view", "schedule"]},
+    {user: users.serviceManager, granted: ["view", "schedule"]},
+    {user: users.warehouse, granted: ["view", "schedule"]},
     {user: users.system, granted: capabilityNames}
 ]
-feature("each group holds exactly the capabilities of its permissions; the copied screens are the administrator's", {
+feature("each group holds exactly the capabilities of its permissions", {
     when() {
         const problems = []
         for (const {user, granted} of capabilityUsers) {
@@ -201,14 +203,26 @@ feature(
                 "the steward saves a dataset",
                 asUser(users.steward, () => refusal(reports + "save#Definition", dataset))
             )
-            // schedules: the distributor's, not the reader's
+            // schedules (P7): every reading group's own, not the administrator's; the audience check of a group delivery is
+            // the distributor's, not the reader's
+            for (const user of [users.distributor, users.reader])
+                expect(
+                    `${user} lists schedules`,
+                    asUser(user, () => refusal(reports + "list#Schedules", {}))
+                )
             expect(
-                "the distributor lists schedules",
-                asUser(users.distributor, () => refusal(reports + "list#Schedules", {}))
+                "the administrator lists schedules",
+                asUser(users.admin, () => refusal(reports + "list#Schedules", {})),
+                "is not authorized"
+            )
+            const audience = {definitionId: "insights-weekly-digest"}
+            expect(
+                "the distributor checks an audience",
+                asUser(users.distributor, () => refusal(reports + "check#ReportAudience", audience))
             )
             expect(
-                "the reader lists schedules",
-                asUser(users.reader, () => refusal(reports + "list#Schedules", {})),
+                "the reader checks an audience",
+                asUser(users.reader, () => refusal(reports + "check#ReportAudience", audience)),
                 "is not authorized"
             )
             // a telemetry dataset and git sync: no Insights group, the steward neither
@@ -250,12 +264,6 @@ feature(
                 underRoot(users.admin, reports + "save#Definition", dashboard),
                 "is not authorized"
             )
-            // and from a copied screen, whose grant is the administrator's ALLOW, not an ALWAYS that would pass the denies
-            expect(
-                "the administrator saves a dashboard from the copied scheduled reports",
-                under("Insights/ScheduledReports.xml", users.admin, reports + "save#Definition", dashboard),
-                "is not authorized"
-            )
             // P2: every operation is denied to the root user group unless granted, and the reading grants pass that deny
             expect(
                 "the reader reads a definition from an Insights screen",
@@ -290,16 +298,14 @@ feature(
     }
 )
 
-feature("the copied screens, the dataset screens and the editors are refused to the ordinary groups; each opens to its group", {
+feature("the dataset screens and the editors are refused to the ordinary groups; each opens to its group", {
     when() {
         const problems = []
-        for (const path of ["ScheduledReports", "ReportBuilder/Datasets"]) {
+        for (const path of ["ReportBuilder/Datasets"]) {
             const message = screenRefusal(users.reader, path)
             if (!unauthorized(message) || !message.includes("AT_XML_SCREEN"))
                 problems.push(`the reader opens ${path}: ${message || "opened"}`)
         }
-        const opened = screenRefusal(users.admin, "ScheduledReports")
-        if (opened !== "") problems.push(`the administrator is refused the copied ScheduledReports: ${opened}`)
         // F74: the administrator reads no dataset, so Explore says so instead of Tools' log dataset and its refusal
         const explore = asUser(users.admin, () => lib.page("ReportBuilder/Explore", {}, "html"))
         if (explore.status !== 200 || explore.errors.length || !explore.output.includes("No dataset is admitted for you to read"))

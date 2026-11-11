@@ -23,6 +23,13 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="product360Tabs" from="[]"/>
             <return/>
         </if>
+        <!-- Insights' mount (appRoot Insights, Insights/Records/Product360) reads no catalog context: its root checked Insights'
+            access, and what it shows is the admitted datasets' (template/InsightsRecord.xml) -->
+        <if condition="appRoot == 'Insights'">
+            <set field="product360Tabs" from="[]"/>
+            <set field="insightsRecordType" value="Product360"/><set field="insightsRecordId" from="productId"/>
+            <return/>
+        </if>
         <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
         <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
         <set field="appRoot" from="sharedMountContext.appRoot"/>
@@ -85,6 +92,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <!-- the tabs in design-products §3 order; each tab screen also checks product360Tabs, the server-derived list -->
     <subscreens default-item="Summary">
+        <subscreens-item name="InsightsRecord" location="component://mr-boss/screen/Shared/InsightsRecord.xml" menu-include="false"/>
         <subscreens-item name="Summary" menu-index="1" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Summary.xml"/>
         <subscreens-item name="Features" menu-index="2" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Features.xml"/>
         <subscreens-item name="Categories" menu-index="3" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Categories.xml"/>
@@ -110,6 +118,11 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- Commerce P12 (design-commerce §4, X16): what a purchase grants, edited in Commerce, read only in Products -->
         <subscreens-item name="PaidAccess" menu-title="Paid access" menu-index="21" menu-include="true" location="component://mr-boss/screen/Shared/Product360/PaidAccess.xml"/>
     </subscreens>
+    <!-- Insights (appRoot Insights, mounted at Insights/Records/Product360; design-insights §10, crosscut's Insights row, impl-insights
+        P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
+        below runs, and the fail-widgets show the InsightsRecord subscreen (template/InsightsRecord.xml): the record as the admitted datasets the viewer reads
+        show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <set field="productFound" from="false"/>
@@ -427,4 +440,5 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
     </widgets>
+    <fail-widgets><subscreens-active/></fail-widgets>
 </screen>

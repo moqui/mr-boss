@@ -19,8 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     as the viewer and kept to the organization in scope; Attention: the registered providers' counts as the viewer
     (RegistryServices.get#Attention), grouped by owner, each opening its owner's worklist with the filter that produced it, a
     failed count named on its own card, never added into a total; PinnedReports: the catalog entries the user pinned in Reports.
-    The first-use state offers the suite dashboard, Dashboards and Reports, and no sample numbers. DigestPreview comes with the
-    management digest. A user with no Insights read (the root group alone) is told why Home shows nothing. -->
+    The first-use state offers the suite dashboard, Dashboards and Reports, and no sample numbers. DigestPreview (P7): the digest
+    the user chose to show on Home (Management digest › Show on Home), as their own preview, two panels a section, with Open
+    digest; absent until they choose one. A user with no Insights read (the root group alone) is told why Home shows nothing. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
 
@@ -53,7 +54,12 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{organizationPartyId:(home?.organizationPartyId || null)}"/>
             <set field="attentionFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
+            <service-call name="ironstone.insights.DeliveryServices.get#DigestPreview" out-map="digestPreview" transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
         </if>
+        <set field="homeDigest" from="digestPreview?.digest || null"/>
+        <set field="homeDigestSections" from="digestPreview?.sections || []"/>
         <set field="scopeOptions" from="home?.organizations || insights.organizations || []"/>
         <set field="organizationPartyId" from="home?.organizationPartyId || null"/>
         <set field="scopeText" from="organizationPartyId ? (scopeOptions.find(row =&gt; row.value === organizationPartyId)?.label || organizationPartyId)
@@ -177,6 +183,29 @@ along with this software (see the LICENSE.md file). If not, see
                                     variables="scopeVariables"/>
                         </widgets>
                     </section-iterate>
+                </box-body>
+            </container-box>
+        </widgets></section>
+
+        <!-- DigestPreview: the user's default management digest, as they read it now -->
+        <section name="DigestPreviewBox" condition="homeDigest"><widgets>
+            <container-box>
+                <box-header title="${homeDigest.title}"/>
+                <box-toolbar>
+                    <link url="${sharedLinks['ManagementDigest']}" text="Open digest" link-type="anchor"
+                            parameter-map="{definitionId:homeDigest.definitionId}"/>
+                </box-toolbar>
+                <box-body>
+                    <label type="p" style="m-muted" text="Your management digest · ${homeDigest.periodText}. Your own result, as of now."/>
+                    <label type="p" text="${homeDigest.commentary}" condition="homeDigest.commentary"/>
+                    <label type="p" style="text-warning" condition="digestPreview.missingCount"
+                            text="${digestPreview.missingCount} ${digestPreview.missingCount == 1 ? 'section is' : 'sections are'} not shown: you may not read ${digestPreview.missingCount == 1 ? 'it' : 'them'}."/>
+                    <section-iterate name="HomeDigestSections" list="homeDigestSections" entry="digestSection"><widgets>
+                        <section-iterate name="DigestPreview" list="digestSection.panels" entry="digestPanel"><widgets>
+                            <report-embed definition-id="${digestPanel.definitionId}" panel-id="${digestPanel.panelId}"
+                                    from="${digestPanel.from}" thru="${digestPanel.thru}"/>
+                        </widgets></section-iterate>
+                    </widgets></section-iterate>
                 </box-body>
             </container-box>
         </widgets></section>

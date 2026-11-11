@@ -4126,4 +4126,285 @@ along with this software (see the LICENSE.md file). If not, see
             description="The shared guidance for people and agent runs, for the instance and each organization" settingsGroupEnumId="AdmSgCompany"
             scopeEnumId="AdmScOrganization" screenPath="Admin/Settings/Constitution" viewPermission="ADMIN_SETTINGS_VIEW"
             configuredBy="Configuration administrator" sequenceNum="6"/>
+
+    <!-- Admin P8 (impl-admin P8; design-admin §7 InstanceSettings, Localization and ReferenceData, §1.1): InstanceSettings and
+        Localization join the configuration administrator's Settings screens (BOSS_ADM_ORGANIZATIONS: denied to the root user
+        group, ALWAYS for the configuration administrator and the administrator); the framework's
+        org.moqui.admin.ConfigurationServices check ADMIN_SETTINGS_VIEW and ADMIN_SETTINGS_MANAGE whatever opens the screens, and
+        write registered preferences and translations only. ReferenceData is every Admin user's, as the settings index: it links
+        the owners' screens and changes nothing. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_ORGANIZATIONS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/InstanceSettings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Localization.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+    </artifactGroups>
+    <!-- Admin's own settings index entries of P8, each shown to a user Admin › Settings opens them to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.instanceSettings" version="1" ownerApp="Admin" title="Instance settings"
+            description="What the instance is called, its default locale and time zone, the new-device sign-in window, the group recipient ceiling, and where each deployment value comes from"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/InstanceSettings"
+            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="101"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.localization" version="1" ownerApp="Admin" title="Localization"
+            description="Translations of messages and of the names of statuses, options, units and places"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/Localization"
+            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="102"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.referenceData" version="1" ownerApp="Admin" title="Reference data"
+            description="Where units, currencies, tax, types, statuses and workflows are changed, each by its owner"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Settings/ReferenceData"
+            configuredBy="Each owner's administrators" sequenceNum="103"/>
+    <!-- The reference kinds of ReferenceData (design §7 ReferenceOwners, §14.2: a deep link inside an owner's settings is a
+        further entry with the owner's permission): a group of the settings index, each entry its owner's screen and shown only
+        to a viewer that screen opens to. Each owner's rows follow its design; Admin changes none of these records. -->
+    <moqui.basic.Enumeration enumId="AdmSgReference" enumTypeId="AdminSettingsGroup" description="Reference data" sequenceNum="4"/>
+    <!-- Products (design-products: it owns units and conversions; changing a unit is an instance administrator's write) -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.units" version="1" ownerApp="Products" title="Units of measure"
+            description="Units, their conversions and barcodes; a unit a document already uses keeps its meaning"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="Products/Units"
+            configuredBy="Catalog administrator; unit changes an instance administrator" sequenceNum="210"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.identificationTypes" version="1" ownerApp="Products"
+            title="Product identification types" description="The kinds of product identifier (SKU, GTIN, supplier code)"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="Products/Settings/IdentificationTypes"
+            configuredBy="Catalog administrator" sequenceNum="220"/>
+    <!-- Accounting (design-accounting: currencies, tax, terms and posting policy are its own) -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.currencies" version="1" ownerApp="Accounting" title="Currencies"
+            description="The currencies in use and their exchange rates" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/Currencies" configuredBy="Finance administrator"
+            sequenceNum="230"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.paymentTerms" version="1" ownerApp="Accounting" title="Payment terms"
+            description="Settlement terms offered to customers and taken from suppliers" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Accounting/Settings/PaymentTerms" configuredBy="Finance administrator"
+            sequenceNum="240"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.tax" version="1" ownerApp="Accounting" title="Tax authorities and rates"
+            description="Tax authorities, their rates and what they apply to" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Accounting/Tax/TaxAuthorities" configuredBy="Finance administrator"
+            sequenceNum="250"/>
+    <!-- Customer Service, Projects and Manufacturing: their own types, statuses and reasons -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.caseTypes" version="1" ownerApp="Customer Service" title="Case types"
+            description="The kinds of case and what each asks for" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/CaseTypes"
+            configuredBy="Customer service administrator or manager" sequenceNum="260"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.caseStatusCategories" version="1" ownerApp="Customer Service"
+            title="Case status categories" description="How case statuses are grouped for queues and reports"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization" screenPath="CustomerService/Settings/StatusCategories"
+            configuredBy="Customer service administrator or manager" sequenceNum="270"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.workItemTypes" version="1" ownerApp="Projects" title="Work item types"
+            description="The kinds of work item and their fields" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/WorkItemTypes" configuredBy="Projects managers"
+            sequenceNum="280"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.workflows" version="1" ownerApp="Projects" title="Work item workflows"
+            description="The statuses a work item moves through and the moves allowed" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Projects/Settings/Workflows" configuredBy="Projects managers"
+            sequenceNum="290"/>
+    <ironstone.admin.SettingsEntry settingsKey="reference.reasonCodes" version="1" ownerApp="Manufacturing" title="Production reason codes"
+            description="Reasons for scrap, downtime and rework" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" screenPath="Manufacturing/Settings/ReasonCodes"
+            configuredBy="Production or resource administrator" sequenceNum="300"/>
+    <!-- Tools (the framework's generic editors, an instance administrator's): status flows, and every message and label -->
+    <ironstone.admin.SettingsEntry settingsKey="reference.statusFlows" version="1" ownerApp="Tools" title="Status flows"
+            description="The generic status-flow editor; an app's own workflow screen is the place to change its flow"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" screenPath="tools/StatusFlows"
+            configuredBy="Instance administrator" sequenceNum="310"/>
+    <!-- Insights P6 (impl-insights P6; design-insights §4 Drill and business annotations, §5 Analysis, §10): drill, Analysis, the
+        record contexts and business events.
+        Drill: the report engine's get#Drill, a reading operation (it reads a saved panel as the viewer and each dataset by its own
+        artifact and row filter), ALWAYS for the groups that read, past BOSS_INS_REPORT_ENGINE's deny; Insights' own Drill screen and
+        the Records mounts are open to every Insights user by the root's ALLOW, and ironstone.insights.DrillServices check
+        INSIGHTS_VIEW. That ALLOW is inheritable, so it also covers the shared record screens' own transitions and tabs when they
+        are reached under Insights/Records: no row here can deny them without denying them in their owners' apps (a transition's
+        artifact is its screen's location, not its mount), so Records.xml refuses every path below a record screen but its
+        InsightsRecord subscreen (the P6 review). No Insights group holds a dataset's records artifact (org.moqui.report.rows.<id>): a dataset whose definition
+        restricts its records gives them totals only.
+        Business events: the dataset mantle-business-events (Mantle's ReportAnnotationSource over the engine's annotations, scoped
+        to the viewer's organizations), view only; writing one (org.moqui.report.annotation.business) is no Insights group's, its
+        owner's service does it after its commit.
+        Analysis: the author's and the dataset steward's, as the editors (BOSS_INS_AUTHORING): the root user group and the
+        administrator are denied it, and the non-inheritable ALWAYS names its one transition. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DRILL" description="Insights: drilling a saved panel">
+        <artifacts artifactName="org.moqui.report.ReportServices.get#Drill" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_EVENTS" description="Insights: business events on the time series">
+        <artifacts artifactName="org.moqui.report.dataset.mantle-business-events" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_ANALYSIS" description="Insights: Analysis">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/Analysis.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/Analysis.xml/saveAnalysis"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+
+    <!-- Admin P10 (impl-admin P10; design-admin §6, §1.1, §1.2): the Security area (SignInPolicy, IdentityProviders,
+        IdentityProviderDetail) for the access administrator, the configuration administrator, the integration administrator
+        and the administrator, denying the root user group as the other areas do. Each screen shows a viewer what the
+        framework's services answer them: the policy with ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW, the groups' sign-in rules
+        with ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE, a provider's configuration with ADMIN_CONNECTION_VIEW and
+        ADMIN_CONNECTION_MANAGE, its role mappings and enabling with ADMIN_ACCESS_MANAGE, checked by
+        org.moqui.admin.ConfigurationServices and AccessServices whatever opens the screens. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_SECURITY" description="Admin sign-in policy and identity providers">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Security.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_ACCESS" userGroupId="BOSS_ADMIN_ACCESS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_INTEGRATIONS" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The new-device sign-in notice (the framework's AccountSignIn topic, org.moqui.admin.IdentityServices
+        notify#NewDeviceSignIn; design-admin §4 Sessions): its link opens Commons Account, where the account's owner signs that
+        session out ("Where you are signed in"; design-drawers-commons Account). Only the link is set here. -->
+    <moqui.security.user.NotificationTopic topic="AccountSignIn" linkTemplate="/qapps/Commons/Settings/Account"/>
+    <!-- Insights P7 (impl-insights P7; design-insights §7.1, §7.3, §1.1; INS-06, INS-11): scheduled delivery and digests.
+        The copied ScheduledReports (BOSS_INS_LEGACY, impl-insights F20) is replaced by Insights' own list, every Insights user's to
+        open (Received is every reader's): the group's last pattern row is reloaded as a plain name, which no screen location
+        equals, so it denies nothing (as F65's rows), on a fresh load and an existing instance alike. No screen grant is added:
+        the root's ALLOW opens Scheduled reports and Management digest, each transition reaches an ironstone.insights
+        DeliveryServices operation that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself, and the report engine's
+        operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. -->
+    <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ScheduledReports\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
+    </artifactGroups>
+    <!-- Personal scheduling is every reading group's (design §1.1: INSIGHTS_SCHEDULE added to the reader's grants); the
+        administrator, who reads no business data, schedules nothing. Distribution stays the distributor's. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_READ" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_AUTHOR" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_READ" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_AUTHOR" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <!-- Scheduling for oneself, the five reading groups': the engine's store#Schedule (which sets the mode and checks every
+        recipient; a recipient other than the owner also needs the group delivery artifact below), the owner's list, pause,
+        Send now, retry and reconciliation. P1's BOSS_INS_REPORT_SCHEDULE keeps the distributor's create#Schedule (owner mode),
+        which no Insights screen calls; a schedule it makes over a business dataset is held to the same recipient check at
+        each run (mr-moqui crates/moqui-report/src/delivery.rs). -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_OWN" description="Insights: scheduling reports for oneself">
+        <artifacts artifactName="org.moqui.report.ReportServices.store#Schedule" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.list#Schedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pause#Schedule" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.send#Report" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.retry#ReportRecipients" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.reconcile#ReportRecipient" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Reading deliveries: one's own occurrences and received deliveries, and one's own report rendered again as oneself; the
+        engine answers a recipient their own delivery alone. The administrator reads a delivery to them as anyone does. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DELIVERY" description="Insights: reading report deliveries">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ReportOccurrences" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#ReportOccurrence" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#RecipientReport" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Group delivery, the distributor's: the audience check, and the engine's own artifact for delivering to anyone but
+        oneself (org.moqui.report.delivery.group, checked by its own rows whatever screen asks). A recipient is still sent the
+        result only when their scope fingerprint equals the owner's. The distributor also saves a digest (store#Digest validates
+        it: a report definition of kind digest over dashboards they read), so the engine's save is theirs; the editors stay
+        the author's (BOSS_INS_AUTHORING). -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DISTRIBUTE" description="Insights: delivering reports to groups">
+        <artifacts artifactName="org.moqui.report.ReportServices.check#ReportAudience" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.save#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DISTRIBUTE_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_GROUP_DELIVERY" description="Insights: the engine's group delivery artifact">
+        <artifacts artifactName="org.moqui.report.delivery.group" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_GROUP_DELIVERY_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The message of a delivered report or digest: the body links to Insights' Dashboard, not Tools' -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="BOSS_INSIGHTS_REPORT" description="Insights report or digest" emailServerId="SYSTEM"
+            emailTypeEnumId="EMT_SCREEN_RENDER" bodyScreenLocation="component://mr-boss/template/InsightsReportEmail.xml"
+            webappName="webroot" fromAddress="" fromName="" subject="${title}" sendPartial="Y"/>
+    <!-- Admin's lifecycle (impl-admin P6; design-admin §14 Lifecycle participant, design-insights §7.1 Ownership): Insights'
+        report schedules, through the report engine's own services (the owned-resource contract). Offboarding pauses what the
+        user owns and hands each schedule, with the definitions it needs that they own, to a new owner, who must be able to
+        schedule, read its sources and, for a group schedule, deliver to a group; the schedule stays paused until that owner
+        resumes it, which checks every recipient against the new owner's scope. The services check REPORT_OWNER_CHANGE for
+        another user's schedules; the identity operator and the administrator hold it and the three operations (ALWAYS, past
+        BOSS_INS_REPORT_ENGINE's deny for one who is also in Insights). The caller gains no report data. -->
+    <ironstone.admin.LifecycleParticipant participantKey="insights.schedules" version="1" ownerApp="Insights" title="Report schedules"
+            description="The scheduled reports and digests the user owns, paused when access ends and handed to a new owner who passes the same recipient check."
+            resourceKind="schedule" lookupService="org.moqui.report.ReportServices.find#OwnedSchedules"
+            transferService="org.moqui.report.ReportServices.transfer#DefinitionOwner" resourceParameter="screenScheduledId"
+            pauseService="org.moqui.report.ReportServices.pause#OwnedSchedules" requiredPermission="REPORT_OWNER_CHANGE" sequenceNum="60"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="REPORT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="REPORT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="REPORT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="REPORT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <artifactGroups artifactGroupId="BOSS_INS_LIFECYCLE" description="Insights: the lifecycle participant's report schedule operations">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#OwnedSchedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pause#OwnedSchedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.transfer#DefinitionOwner" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_LIFECYCLE_IDENTITY" userGroupId="BOSS_ADMIN_IDENTITY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_LIFECYCLE_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

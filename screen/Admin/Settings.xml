@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Settings area of IronStone Admin (design-admin §1.2, §7): SettingsHome, the settings index of every app (P2); Organizations,
     OrganizationDetail and Constitution (P7), the configuration administrator's and the administrator's (BOSS_ADM_ORGANIZATIONS);
-    InstanceSettings, Localization and ReferenceData are added by P8. The area is every Admin user's: the index shows each entry
+    InstanceSettings and Localization (P8), theirs too, and ReferenceData (P8), every Admin user's as the index. The area is every Admin user's: the index shows each entry
     only to those who open its destination. A BOSS user outside Admin is granted SettingsHome alone (impl-admin F46), not this
     area or the root; a member reads its organization's Constitution in the Assist drawer's Rules pane (impl-admin F46), not here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -26,6 +26,12 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-index="2"/>
         <subscreens-item name="Constitution" location="component://mr-boss/screen/Admin/Settings/Constitution.xml" menu-title="Constitution"
                 menu-index="3"/>
+        <subscreens-item name="InstanceSettings" location="component://mr-boss/screen/Admin/Settings/InstanceSettings.xml" menu-title="Instance"
+                menu-index="4"/>
+        <subscreens-item name="Localization" location="component://mr-boss/screen/Admin/Settings/Localization.xml" menu-title="Localization"
+                menu-index="5"/>
+        <subscreens-item name="ReferenceData" location="component://mr-boss/screen/Admin/Settings/ReferenceData.xml" menu-title="Reference data"
+                menu-index="6"/>
         <subscreens-item name="OrganizationDetail" location="component://mr-boss/screen/Admin/Settings/OrganizationDetail.xml"
                 menu-include="false"/>
     </subscreens>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     document (CreateDataset) and opens it in DatasetDetail; an admitted dataset is previewed in DatasetView. The author's and the
     steward's (BOSS_INS_DATASET_SCREENS); it replaces the copied SimpleReport builder's list (F20). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Datasets" default-menu-index="2">
+        default-menu-title="Datasets" default-menu-index="3">
     <parameter name="status"/>
     <parameter name="text"/>
 
