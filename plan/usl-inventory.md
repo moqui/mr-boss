@@ -1465,9 +1465,9 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| product/CatalogRecordServices | store#Product |  | Shared/Product360; Products/Products/List; Shared/ProductImport |
-| product/CatalogRecordServices | store#CatalogRow |  | Shared/Product360; Products/Products/List; Shared/ProductImport |
-| product/CatalogRecordServices | ensure#CatalogAssignment |  | Shared/Product360; Products/Products/List; Shared/ProductImport |
+| product/CatalogRecordServices | store#Product |  | Shared/Product360; Products/Products/List; Shared/DataImport |
+| product/CatalogRecordServices | store#CatalogRow |  | Shared/Product360; Products/Products/List; Shared/DataImport |
+| product/CatalogRecordServices | ensure#CatalogAssignment |  | Shared/Product360; Products/Products/List; Shared/DataImport |
 | product/ContentServices | find#CatalogContents |  | Shared/Documents; Shared/DocumentDetail; Shared/Translations; Products/Categories/CategoryDetail/Content |
 | product/ContentServices | get#CatalogContent |  | Shared/Documents; Shared/DocumentDetail; Shared/Translations; Products/Categories/CategoryDetail/Content |
 | product/ContentServices | store#CatalogContent |  | Shared/Documents; Shared/DocumentDetail; Shared/Translations; Products/Categories/CategoryDetail/Content |
@@ -1477,14 +1477,14 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/ContentServices | store#CatalogTranslation |  | Shared/Documents; Shared/DocumentDetail; Shared/Translations; Products/Categories/CategoryDetail/Content |
 | product/ContentServices | get#CatalogContentResource |  | Shared/Documents; Shared/DocumentDetail; Shared/Translations; Products/Categories/CategoryDetail/Content |
 | product/ContentServices | get#ProductDatasheet |  | Shared/Documents; Shared/DocumentDetail; Shared/Translations; Products/Categories/CategoryDetail/Content |
-| product/ProductImportServices | get#CatalogImportKinds | Admin/Data/DataImport | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | stage#CatalogImport | Admin/Data/DataImport | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | configure#CatalogImport | Admin/Data/DataImport | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | validate#CatalogImport | Admin/Data/DataImport | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | apply#CatalogImport | Admin/Data/DataImport; Admin/Data/ImportDetail | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | get#CatalogImport | Admin/Data/ImportDetail | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | get#CatalogImportReport | Admin/Data/ImportDetail | Shared/ProductImport; Products/ProductImport |
-| product/ProductImportServices | get#CatalogImportSample | Admin/Data/DataImport | Shared/ProductImport; Products/ProductImport |
+| product/ProductImportServices | get#CatalogImportKinds | Admin/Data/DataImport | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | stage#CatalogImport | Admin/Data/DataImport | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | configure#CatalogImport | Admin/Data/DataImport | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | validate#CatalogImport | Admin/Data/DataImport | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | apply#CatalogImport | Admin/Data/DataImport; Admin/Data/ImportDetail | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | get#CatalogImport | Admin/Data/ImportDetail | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | get#CatalogImportReport | Admin/Data/ImportDetail | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
+| product/ProductImportServices | get#CatalogImportSample | Admin/Data/DataImport | Shared/DataImport (Products/ProductImport; Admin/Data/DataImport; Admin/Data/ImportDetail) |
 | product/CatalogCheckServices | validate#Catalog | Admin/Operations/Health | Shared/CatalogChecks; Products/CatalogChecks; Products/Home; Admin/Operations/Health and Admin/Home (readiness provider products.catalogChecks, impl-admin P2) |
 | product/CatalogCheckServices | get#CatalogChecks |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
 | product/PriceServices | store#ProductPrice | Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices; Commerce/Merchandising/Product360 (P3) |

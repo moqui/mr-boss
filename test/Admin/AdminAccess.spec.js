@@ -160,6 +160,8 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
                     "Integrations",
                     "Protocols",
                     "Operations",
+                    // P15: Data (Imports, DataImport, ImportDetail), the data operator's and the administrator's
+                    "Data",
                     "Agents",
                     "Developer"
                 ],
@@ -194,6 +196,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
                 "Integrations",
                 "Protocols",
                 "Operations",
+                "Data",
                 "Agents",
                 "System",
                 "Developer"
@@ -245,6 +248,8 @@ const capabilityNames = [
     // P7: Settings' Organizations, OrganizationDetail and Constitution (BOSS_ADM_ORGANIZATIONS)
     "organizations",
     "operations",
+    // P15: Data's Imports, DataImport and ImportDetail (BOSS_ADM_DATA)
+    "data",
     "agents",
     "developer",
     "system"
@@ -264,7 +269,7 @@ const capabilityUsers = [
     // P12: Mail and protocols' Home, MailQueue and ServerConfiguration, the operations operator's too (BOSS_ADM_PROTOCOLS_OPS)
     // P13: Integrations' SystemMessages and SystemMessageDetail, the operations operator's too (BOSS_ADM_INTEGRATIONS_OPS)
     {user: users.operations, granted: ["operationView", "operationManage", "integrations", "protocols", "operations"]},
-    {user: users.data, granted: ["transferView", "transferRun"]},
+    {user: users.data, granted: ["transferView", "transferRun", "data"]},
     {user: users.audit, granted: ["auditView"]},
     {user: users.privacy, granted: []},
     {user: users.backup, granted: ["backupView", "backupRun"]},

@@ -3851,6 +3851,198 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
   an unknown bundle, sends three invitations and names the two; a catalog price import through Admin gives the result
   Products' mount gives; Accounting's statement imports appear in Imports with links to their owner.
 
+**Built Nov 10 (P15).**
+- Checked first (the code over the plan): P0's check is F43's (Projects' work-item import keeps per-user drafts and no run
+  record, as Commons'); `ADMIN_TRANSFER_VIEW` and `ADMIN_TRANSFER_RUN` are seeded and held by `BOSS_ADMIN_DATA` and the
+  administrator, and there was no Data area; `Shared/ProductImport` was referenced only by Products' mount, its spec, its
+  walk, AppStructure and one grant pattern (mr-pass names it nowhere); `ProductImportServices`' five steps carry one
+  parameter list, which is taken as the import contract; `invite#User` adds nothing of BOSS's (InviteStaff adds
+  `BOSS_USERS` in its transition); Mantle's identity scope is the caller's organization filters, so it follows the grant a
+  call runs under (F-P15-2); ChannelImport's batch is a SystemMessage with no stager and no counts before its commit, and
+  the opening open items keep one result on the setup run (F-P15-6, F-P15-7); the framework had no delimited-text reader
+  outside Mantle's catalog one.
+- mr-moqui (no Rust changed: everything ran on the shared release binary; no Debug build was made):
+  - `entity/ServerEntities.xml` (appended): `moqui.server.TransferTarget` (a registered target: direction, title,
+    description, what applying it does, owner, version, mode, and by mode the five step services with an optional report,
+    sample and kinds service, or the fields, key fields, batch options, refused columns, row services, scope service, bounds
+    and retention; the find service of its runs, the import and view permissions asked besides, fixed values, the key of the
+    owner's place), `TransferBatch` and `TransferItem` (an import of a target with no owner batch: the key, target, scope,
+    user, state, file name and content hash, the mapping request, the validation's fingerprint; per row the source, the
+    preview, the result, the reason, the owner's reference, the row's operation key and the attempts).
+  - `service/org/moqui/admin/DataTransferServices.xml` (new, a module per part as the operation services).
+    `DataTransferLib.js`: the registrations as they are used (checked when read, a malformed one logged and left out), the
+    contracts of each step (the parameters a registered service must carry and the only ones it is given),
+    `call#TargetService` (the service read from the registration by the step's name, called as the caller), the bounded
+    delimited reader and the writer that writes a formula cell as text. `DataTransferImports.js`: `find#ImportTargets`
+    (`ADMIN_TRANSFER_VIEW`), `get#ImportTarget` (one target as its wizard needs it, for any signed-in user: no service
+    name), `stage#Import`, `configure#Import`, `validate#Import`, `apply#Import` and `get#Transfer` (the dispatch: an
+    owner's step for a steps target, the batch for a rows target, an error for a wizard), `get#ImportReport`,
+    `get#ImportSample`, `retry#ImportItems` (for an owner's batch: the rows chosen must read failed there, then the owner
+    validates and applies only those) and `find#Transfers` (every target's runs the caller may view, an owner's read as
+    data, an owner that does not answer named). `DataTransferBatch.js`: the batch of a rows target (stage with the file's
+    checks and the refused columns; configure at the mapping revision; validate through the owner's row validator, apart;
+    apply and retry, each row locked, validated again and applied apart under its own key; the report; the runs; the
+    retention). The interfaces `define#ImportStep`, `validate#TargetRow`, `apply#TargetRow`, `find#TargetScopes` and
+    `find#TargetRuns`; the internal `apply#TransferItem`, `fail#TransferItem` and `clean#TransferBatches`.
+  - `ConfigurationServices.xml` and `ConfigurationLocalization.js` (appended): `validate#MessageTranslationRow` and
+    `apply#MessageTranslationRow`, the row services of the framework's own target (a translation by
+    `store#LocalizedMessage`'s rules at the revision its preview read; an import removes none).
+  - Data: `AdminConfigurationData.xml` (appended: `AdminTransferServices`, an inheritable `ALL_USERS` ALLOW naming the
+    eleven services; `AdminTransferCall`, the not inheritable ALLOW of `call#TargetService`; the two row services added to
+    `AdminConfigurationServices`; the target `messageTranslations`; the job `clean_TransferBatches_daily`).
+  - Docs: Attack-Surface (the business imports paragraph), Remaining-Work's `org.moqui.admin` row. No Parity-Diffs entry:
+    no existing behavior changed.
+- Mantle:
+  - `service/mantle/party/Invitations.js` and `IdentityServices.xml`: `invite#User`'s checks are now one function
+    (`invitationProposal`, no behavior changed), which `validate#InvitationImportRow` runs for a row without writing;
+    `apply#InvitationImportRow` is `invite#User` itself with the row's operation key and the batch's options;
+    `find#InvitationImportScopes` answers the organizations the caller administers. A row's organization is the batch's
+    only; a name is plain text; the bundles are ids, with those the registration always includes first.
+  - Owners' runs: `ProductImportServices.find#CatalogImportRuns` (CatalogImport.js: a user's own imports, every one for a
+    system administrator), `ReconciliationServices.find#StatementImportRuns` (BankReconciliation.js: the organizations of
+    the caller's accounting scope, for who may read a bank), `SetupServices.find#OpenItemImportRuns`
+    (AccountingActivation.js: the latest import of each organization, finance administration) and
+    `StoreChannelServices.find#ChannelImportRuns` (StoreChannels.js: the batches of the stores the caller operates).
+  - Data: the targets `staffInvitations` (PartyInvitationData.xml; rows; `ADMIN_TRANSFER_RUN` with
+    `ADMIN_IDENTITY_MANAGE`), `catalog` (ProductImportData.xml; steps; no permission of its own), `statementImports` and
+    `openingOpenItems` (AccountingSetupData.xml; wizard) and `channelOrders` (StoreChannelSetupData.xml; wizard).
+- BOSS:
+  - `screen/Shared/DataImport.xml` replaces `Shared/ProductImport.xml` (moved, F12): its mount, target, words, kinds,
+    organizations, bounds and options from `ironstone.shared.DataImportServices` (`get#ImportMount`, `get#ImportContext`,
+    `map#Import`, `find#ImportRuns`; `shared/DataImport.js`) over the framework's services, nothing called with
+    authorization off. `Products/ProductImport.xml` mounts it as before (same route and transitions).
+    `ironstone.products.ImportServices` keeps only the result notice.
+  - The Data area: `Admin/Data.xml` with `Data/Imports.xml` (ImportFind, ImportList, ImportTargets), the mount
+    `Data/DataImport` and `Data/ImportDetail.xml` (ImportSummary, ImportResults with the two files and Retry failed rows).
+    Invitations gains Invite from a file. `Admin.js`: the `data` area and three link paths.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_DATA` (the area denied to the root group, opened to the data operator
+    and the administrator), `staffInvitations`' fixed value (`BOSS_USERS` in every row), the wizard targets
+    `commonsContacts` and `projectsWorkItems` (a place, no runs); the catalog screens' grant pattern names DataImport in
+    place of ProductImport. BossUsersDemoData unchanged. No new write verb, so the client deny pattern is unchanged.
+- Specs: framework `test/AdminDataTransfer` (3 features, 0.15 s: an unknown target, a registration without its contract
+  and a wizard never dispatched, a step named and never a service, names a request carries never read, an unregistered and
+  an inherited field name refused, a password and a token column refused whole with nothing kept, a file that is not text,
+  the import permission and the transfer permission each alone, a reader of the target, another importer and a stranger;
+  the same file and the same key answer the same import, other content under the key refused, a stale mapping, a preview
+  that writes nothing, a stale preview, the apply and its repeat with one audit row, a formula cell written as text; a
+  repeated key, a placeholder lost, a link and a bad locale named, a source changed after the preview not written, the
+  retry of that row only, an applied, an invalid and an unknown row named, the retry's key). Mantle
+  `test/party/StaffInvitationImport` (2 features, 0.4 s: the password, group and permission columns, another
+  organization's scope, an option out of bounds, the identity operator without the transfer permission; ten rows with a
+  repeat, a sealed-granting bundle, ADMIN, an unregistered bundle, another organization, another organization's staff, an
+  expression as a name; the two invitations as the importer with the batch's options; a row whose result was lost
+  answered and not invited again; another organization's importer and the organization's identity operator reading
+  nothing), and one assertion each in StoreChannels, AccountingSetup and AccountingBankReconciliation for the owners'
+  runs. BOSS `test/Admin/AdminImports` (3 features, 1.7 s: the catalog through Admin's mount and Products', the Products
+  mount the catalog whatever is asked, the data operator and a catalog editor outside Admin importing nothing; the bulk
+  invite through the wizard's transitions, its refusals, `BOSS_USERS` always, a privileged group and ADMIN never; Imports'
+  and ImportDetail's one qvt render; an owner's run with its place and no row, not shown to who may not read it).
+  `AdminAccess` changed: the `data` capability and the two menus. `ProductsImport` changed in four lines (the mapping and
+  context services are the shared ones, F-P15-11). Acceptance, written and not run: `acceptance/Admin/AdminImportsUsable`
+  (3 features, the "usable when"); `ProductsImportWalk` (three form ids) and `AppStructure` (the screen's name) edited,
+  not run.
+- Tests run (the shared release binary, this phase's runtime): framework AdminDataTransfer, AdminConfiguration 7 of 7;
+  mr-mantle StaffInvitationImport, StaffInvitation, ProductCatalogImport, StoreChannels, AccountingSetup,
+  AccountingBankReconciliation 42 of 42; mr-boss AdminImports, AdminAccess, ProjectsAccess, AdminInvitations,
+  ProductsImport, ProductsAccess, CommerceChannels, AdminRegistries 41 of 41. `moqui lint --screens` 132 flagged sites, as
+  master, no parse failure (the release binary). By hand, not kept: DataImport under Admin in qvt, tui and html for a
+  staged and validated staff-invitation batch (its options), with no batch, for the catalog, for an owner wizard's target
+  and with no target; Imports and ImportDetail in the three modes; Invitations' link shown to the administrator and not to
+  the identity operator. Prettier clean on the new JavaScript and on the changed files that were clean. Not run:
+  `./moq test-framework`, `./moq test-apps`, the acceptance suite, cargo (no Rust changed); no browser.
+- Inventories: usl-inventory's `ProductImportServices` and `CatalogRecordServices` rows name Shared/DataImport with its
+  two mounts; none of ss-inventory's rows is P15's.
+- Design edits: design-admin §4 Invitations (the bulk invite as built), §11.1, Imports, DataImport and ImportDetail (as
+  built), §14 (Import/export target) and §17.2; the owners' designs, one sentence each: design-products (the wizard is
+  Shared/DataImport), design-crosscut (its row), design-commerce (ChannelImport registered), design-accounting (the two
+  registered), design-drawers-commons and design-projects (registered with no runs).
+- Findings (provisional, numbered by the lead):
+  - **F-P15-1** A target with no owner batch has no five steps to register: it registers a validate and an apply service
+    for one row (`validate#TargetRow`, `apply#TargetRow`), and the framework's batch answers the five steps' contract for
+    it, so one wizard serves both. The design's contract said only the five steps; §11.1 and §14 edited.
+  - **F-P15-2** The framework knows no organization. A batch's scope is the target's word: its scope service says which
+    scopes a caller has (Mantle's identity scope for invitations, which follows the organization filters of the grant
+    the call runs under: the Data area's, or the identity services' own `MANTLE_USER_ORG`). A rows target with no scope
+    service (message translations) is read by every holder of its view permissions.
+  - **F-P15-3** The catalog registers no permission of Admin's, so a Products user imports through Products' mount with
+    the catalog's permissions alone, as before. Admin's mount asks `ADMIN_TRANSFER_RUN` itself (the wizard's transitions
+    and `map#Import`); the framework's services, called directly, ask only what the registration and the owner ask.
+  - **F-P15-4** `BOSS_ADMIN_DATA` holds the two transfer permissions and no target's domain permission, so the demo
+    data operator alone starts no import: staff invitations also need `ADMIN_IDENTITY_MANAGE`, the catalog its own
+    permissions. P1's note read "each data target's domain permission on BOSS_ADMIN_DATA, P15"; not done: it would make
+    the data operator an identity operator and a catalog editor of its organizations.
+  - **F-P15-5** `staffInvitations` asks `ADMIN_TRANSFER_RUN` besides `ADMIN_IDENTITY_MANAGE`, so the identity operator
+    alone invites one at a time; Invite from a file shows to a user who holds both and opens the Data area.
+  - **F-P15-6** The opening open items keep the latest import's result on the setup run, not a history: an organization
+    is listed with at most one run.
+  - **F-P15-7** A channel import batch records no stager and no counts before its commit: it is listed with its
+    committer and the count the commit kept.
+  - **F-P15-8** A catalog import is its importer's (Mantle: "Open your own catalog import", but for a system
+    administrator), so Imports shows a data operator only their own catalog imports.
+  - **F-P15-9** The catalog import's result notice (the SECA on `apply#CatalogImport`) checks the Products launcher and
+    links Products' mount: an import through Admin by a user without Products sends no notice.
+  - **F-P15-10** Shared/DataImport is rendered by ProductsImport's spec (three modes, twice, from before this phase), so
+    AdminImports renders it in no mode and reads the wizard's context through its service; the Admin mount and the options
+    section were rendered by hand.
+  - **F-P15-11** ProductsImport's spec called `ironstone.products.ImportServices.map#CatalogImport` and
+    `get#ImportContext`, which are now the shared screen's services (`ironstone.shared.DataImportServices.map#Import` and
+    `get#ImportContext`, with `appRoot`): the spec names them in four lines, its assertions unchanged. The walk's three form
+    ids are ImportUpload, ImportPreview and ImportApply.
+  - **F-P15-12** Not built of the design's forms: spreadsheet files and sheet or header selection (delimited text
+    only), a registered import mode and source namespace beyond the catalog's own update mode, a confirmation reason at
+    apply, cancelling an apply under way, ImportTarget as a dialog (it is a list below the runs) and a corrected row as a
+    linked revision.
+  - **F-P15-13** The framework registers a target of its own, message translations, which the plan did not name: it is
+    the rows contract's framework example (its spec's target, with no Mantle) and a use of its own for the configuration
+    administrator who also holds the transfer permission. Its place is Settings › Localization.
+  - **F-P15-14** Outside an app screen an owner's service needs the caller's own artifact authorization (that is the
+    point of `call#TargetService`), so a direct call of `find#Transfers` by a user with no grant for an owner's find
+    service names that owner as not answered rather than listing none.
+  - **F-P15-15** When the instance cannot send mail a bulk invitation's row reads "resend it from Invitations": the link
+    shown once is the single invitation's, and nothing reveals many.
+  - **F-P15-16** `clean_TransferBatches_daily` has no `JobRegistration`, so it is read only in Admin's Jobs; a target's
+    retention is its registration's.
+  - **F-P15-17** A spec assertion that begins with a regular expression literal reads to Prettier as a division of the
+    line above and can fail its parse, though the runner takes it: the new specs use a `has(value, pattern)` helper.
+- Decisions: three modes of a registration (steps, rows, wizard) in one framework record; the import contract is
+  Products' parameter list, unchanged; an owner's service is called by the step's name through a call whose grant is not
+  inheritable; Admin's own targets ask the transfer permission and the owner's, the catalog none of Admin's; a batch kept
+  by the framework is read by who staged it and by a holder of the target's view permission its scope service admits,
+  and changed and applied only by who staged it; a file with a column named like a secret is refused whole; an import of
+  invitations is for one organization; `BOSS_USERS` in every invited row is a value the registration fixes, set by BOSS on
+  Mantle's target; retention 30 days by default (a batch never applied removed, an applied one keeps its outcomes);
+  owner wizards without a run record are BOSS's seed rows, the others their Mantle owners'; the data operator's group is
+  given no domain permission; ImportDetail is Admin's alone and Products' mount keeps its own rows and files; times in
+  Imports are the server's zone.
+- For the lead:
+  - no Rust changed, so the shared release binary needs no rebuild; a database made before needs the three new tables
+    and the seed data loaded again (the two grants, the targets of the framework, Mantle and BOSS, the area's group, the
+    cleanup job);
+  - budget shares (release binary): framework about 0.15 s (AdminDataTransfer); mr-mantle about 0.4 s
+    (StaffInvitationImport) and under 0.1 s in three touched features; mr-boss about 1.7 s (AdminImports); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` (three entities appended at its end), `AdminConfigurationData.xml` (appended),
+    `ConfigurationServices.xml` (appended), `ConfigurationLocalization.js` (two functions and the operations list),
+    Attack-Surface, Remaining-Work (the `org.moqui.admin` row only), the rest new files; mr-mantle `Invitations.js`
+    (`inviteUser` split in two, three functions appended), `IdentityServices.xml`, `ProductImportServices.xml`,
+    `ReconciliationServices.xml`, `SetupServices.xml` and `StoreChannelServices.xml` (one service appended each, three for
+    identity), `CatalogImport.js`, `BankReconciliation.js`, `AccountingActivation.js` and `StoreChannels.js` (one function
+    and the operations list each), four data files appended, three specs with one assertion block each; mr-boss
+    `BossSetupData.xml` appended at its end (Insights appends there too) and one grant pattern changed
+    (`...|CatalogChecks|DataImport`), `Admin.js` (`areas`, `linkPaths` after P14's), `Shared/ProductImport.xml` moved to
+    `Shared/DataImport.xml`, `products/Imports.js` and `ImportServices.xml` cut to the notice, `Users/Invitations.xml` (one
+    link), `AdminAccess.spec.js`, `ProductsImport.spec.js`, the six designs, `usl-inventory.md`, the rest new files;
+  - other plans: none edited (impl-commerce §7's "registration later" for ChannelImport is done here; its owner's
+    design says so);
+  - P16 adds exports to the same family: `DataTransferLib.js` is shared, `TransferTarget.direction` is `import` today and
+    `targetsOf("export")` reads the others; `find#Transfers` lists imports only until then;
+  - the user's call: F-P15-4 (whether `BOSS_ADMIN_DATA` should carry any target's domain permission; built: none);
+    F-P15-5 (whether the identity operator alone may invite from a file; built: the transfer permission too); F-P15-13
+    (whether the framework keeps its message translations target); F-P15-12 (spreadsheet files, and a reason at apply);
+    F-P15-8 (whether a catalog import should be readable by its organization's other catalog administrators, so Imports
+    shows more than one's own); F-P15-6 and F-P15-7 (a history of opening imports and a stager on a channel batch, their
+    owners' later work, §7);
+  - the acceptance AdminImportsUsable, ProductsImportWalk and AppStructure to run when asked.
+
 ### P16 — Exports and backups
 
 Design §11 Exports, DataExport and Backups; ADM-EXPORT.

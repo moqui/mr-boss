@@ -1,5 +1,6 @@
 const S = "mantle.product.ProductImportServices.",
-    B = "ironstone.products.ImportServices."
+    // the wizard's projections are the shared screen's (Shared/DataImport, impl-admin P15), under the Products mount
+    B = "ironstone.shared.DataImportServices."
 function as(user, fn, on = false) {
     login(user)
     if (on) ec.artifactExecution.enableAuthz()
@@ -54,14 +55,16 @@ feature("the BOSS mapping form configures native work and emits one aggregate re
                     organizationPartyId: "ORG_ZIZI_SERVICES",
                     sourceText: "Code,Name\nBOSS_IMPORT_VALID,Imported catalog product\nBOSS_IMPORT_INVALID,\n"
                 }),
-                first = call(B + "map#CatalogImport", {
+                first = call(B + "map#Import", {
+                    appRoot: "Products",
                     operationKey: staged.operationKey,
                     mappingRevision: staged.mappingRevision,
                     mappingAction: "column",
                     sourceColumn: "Code",
                     targetField: "productId"
                 }),
-                mapped = call(B + "map#CatalogImport", {
+                mapped = call(B + "map#Import", {
+                    appRoot: "Products",
                     operationKey: staged.operationKey,
                     mappingRevision: first.mappingRevision,
                     mappingAction: "column",
@@ -80,7 +83,7 @@ feature("the BOSS mapping form configures native work and emits one aggregate re
                     operationKey: staged.operationKey,
                     inputFingerprint: validated.inputFingerprint
                 }),
-                context = call(B + "get#ImportContext", {operationKey: staged.operationKey}),
+                context = call(B + "get#ImportContext", {appRoot: "Products", operationKey: staged.operationKey}),
                 notices = ec.entity
                     .find("mantle.product.ProductCatalogOperation")
                     .condition("operationType", "import-notice")

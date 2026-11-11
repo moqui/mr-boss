@@ -12,55 +12,89 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Product import" default-menu-include="false">
+<!-- DataImport (design-admin §11.1 and DataImport; impl-admin P15, F12): the one import wizard, generalized from Products'
+    catalog import. Upload, map columns and values, validate, review and apply, results; a saved run resumes from this page.
+    Mounted at Products/ProductImport (the catalog target, whatever the request names) and at Admin/Data/DataImport (the
+    registered target the request names, for a holder of ADMIN_TRANSFER_RUN): the app root sets appRoot, and
+    ironstone.shared.DataImportServices.get#ImportMount answers the mount's target and links or refuses. Its words, fields,
+    kinds, organizations, bounds and options come from the target's registration (the framework's
+    org.moqui.admin.DataTransferServices.get#ImportTarget); every step is that family's (stage#Import, configure#Import through
+    map#Import, validate#Import, apply#Import, get#ImportReport, get#ImportSample), which dispatches by the registration and
+    calls the target's owner as the user. A refusal a person can act on comes back as a reason and is shown. A mount adds no
+    field, option or right the target does not have. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Import" default-menu-include="false">
     <parameter name="appRoot"/>
+    <parameter name="targetId"/>
+    <parameter name="operationKey"/>
+    <parameter name="pageIndex"/>
     <always-actions>
-        <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
-        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
-        <set field="printBase" from="sharedMountContext.printBase"/>
+        <service-call name="ironstone.shared.DataImportServices.get#ImportMount" in-map="{appRoot:appRoot, targetId:targetId}" out-map="mounted"/>
+        <set field="importMount" from="mounted.importMount"/>
+        <!-- the mount's target, never the request's where the mount fixes one -->
+        <set field="targetId" from="importMount.targetId"/>
+        <set field="urlTargetId" from="appRoot == 'Admin' ? importMount.targetId : null"/>
     </always-actions>
     <transition name="stage">
         <actions>
-            <service-call name="mantle.product.ProductImportServices.stage#CatalogImport" in-map="context" out-map="result"/>
+            <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
+            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <service-call name="org.moqui.admin.DataTransferServices.stage#Import" out-map="result"
+                    in-map="{targetId:targetId, organizationPartyId:organizationPartyId, kindId:kindId, importFile:importFile,
+                        sourceText:sourceText, delimiter:delimiter, updateMode:updateMode, forceNew:(forceNew == 'true' || forceNew === true)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; result?.refused"><script>ec.message.addMessage(result.reason, 'warning')</script></if>
         </actions>
         <default-response url=".">
-            <parameter name="operationKey" from="result.operationKey"/>
+            <parameter name="operationKey" from="result?.operationKey"/>
+            <parameter name="targetId" from="urlTargetId"/>
         </default-response>
-        <error-response url="."/>
+        <error-response url="."><parameter name="targetId" from="urlTargetId"/></error-response>
     </transition>
     <transition name="mapping">
         <actions>
-            <service-call name="ironstone.products.ImportServices.map#CatalogImport" in-map="context" out-map="result"/>
+            <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
+            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <service-call name="ironstone.shared.DataImportServices.map#Import" in-map="context" out-map="result"/>
+            <if condition="!ec.message.hasError() &amp;&amp; result?.refused"><script>ec.message.addMessage(result.reason, 'warning')</script></if>
         </actions>
         <default-response url=".">
-            <parameter name="operationKey" from="result.operationKey"/>
+            <parameter name="operationKey" from="result?.operationKey || operationKey"/>
+            <parameter name="targetId" from="urlTargetId"/>
         </default-response>
-        <error-response url="."/>
+        <error-response url="."><parameter name="operationKey" from="operationKey"/><parameter name="targetId" from="urlTargetId"/></error-response>
     </transition>
     <transition name="validate">
         <actions>
-            <service-call name="mantle.product.ProductImportServices.validate#CatalogImport" in-map="context" out-map="result"/>
+            <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
+            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <service-call name="org.moqui.admin.DataTransferServices.validate#Import" out-map="result"
+                    in-map="{targetId:targetId, operationKey:operationKey, mappingRevision:mappingRevision}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; result?.refused"><script>ec.message.addMessage(result.reason, 'warning')</script></if>
         </actions>
         <default-response url=".">
-            <parameter name="operationKey" from="result.operationKey"/>
+            <parameter name="operationKey" from="result?.operationKey || operationKey"/>
+            <parameter name="targetId" from="urlTargetId"/>
         </default-response>
-        <error-response url="."/>
+        <error-response url="."><parameter name="operationKey" from="operationKey"/><parameter name="targetId" from="urlTargetId"/></error-response>
     </transition>
     <transition name="apply">
         <actions>
-            <service-call name="mantle.product.ProductImportServices.apply#CatalogImport" in-map="context" out-map="result"/>
+            <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
+            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <service-call name="org.moqui.admin.DataTransferServices.apply#Import" out-map="result"
+                    in-map="{targetId:targetId, operationKey:operationKey, inputFingerprint:inputFingerprint,
+                        selectedRowIds:(selectedRowIds ? [selectedRowIds] : null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; result?.refused"><script>ec.message.addMessage(result.reason, 'warning')</script></if>
         </actions>
         <default-response url=".">
-            <parameter name="operationKey" from="result.operationKey"/>
+            <parameter name="operationKey" from="result?.operationKey || operationKey"/>
+            <parameter name="targetId" from="urlTargetId"/>
         </default-response>
-        <error-response url="."/>
+        <error-response url="."><parameter name="operationKey" from="operationKey"/><parameter name="targetId" from="urlTargetId"/></error-response>
     </transition>
     <transition name="sample" read-only="true" method="get">
         <actions><script><![CDATA[
-            const report = ec.service.sync().name('mantle.product.ProductImportServices.get#CatalogImportSample')
-                .parameters({kindId:kindId, organizationPartyId:organizationPartyId}).call() || {}
+            const report = ec.service.sync().name('org.moqui.admin.DataTransferServices.get#ImportSample')
+                .parameters({targetId:targetId, kindId:kindId, organizationPartyId:organizationPartyId}).call() || {}
             if (ec.message.hasError()) ec.web.sendJsonResponse({})
             else ec.web.sendTextResponse(report.reportCsv, 'text/csv', report.filename)
         ]]></script></actions>
@@ -68,42 +102,66 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="results" read-only="true" method="get">
         <actions><script><![CDATA[
-            const report = ec.service.sync().name('mantle.product.ProductImportServices.get#CatalogImportReport')
-                .parameters({operationKey:operationKey, errorsOnly:errorsOnly}).call() || {}
+            const report = ec.service.sync().name('org.moqui.admin.DataTransferServices.get#ImportReport')
+                .parameters({targetId:targetId, operationKey:operationKey, errorsOnly:(errorsOnly == 'true' || errorsOnly === true)}).call() || {}
             if (ec.message.hasError()) ec.web.sendJsonResponse({})
             else ec.web.sendTextResponse(report.reportCsv, 'text/csv', report.filename)
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
     <actions>
-        <service-call name="ironstone.products.ImportServices.get#ImportContext" in-map="context" out-map="context"/>
-        <entity-find-one entity-name="mantle.party.Organization" value-field="organization" cache="true">
-            <field-map field-name="partyId" from="organizationPartyId"/>
-        </entity-find-one>
-        <set field="organizationName" from="organization?.organizationName || organizationPartyId || ''"/>
+        <service-call name="ironstone.shared.DataImportServices.get#ImportContext" out-map="context"
+                in-map="{appRoot:appRoot, targetId:targetId, operationKey:operationKey, pageIndex:pageIndex, organizationPartyId:organizationPartyId, kindId:kindId}"/>
+        <set field="fieldLabel" from="importTarget?.fieldLabel || 'Target field'"/>
+        <set field="scopeLabel" from="importTarget?.scopeLabel || 'Organization'"/>
+        <set field="features" from="features || {}"/>
+        <set field="startRefusal" from="'You may not start this import: it needs ' + (importTarget?.importPermission ? importTarget.importPermission.split(',').join(' and ') : 'its owner\'s permission') + (importTarget?.scoped ? ' and ' + scopeLabel.toLowerCase() + ' you administer' : '') + '.'"/>
     </actions>
     <widgets>
-        <label text="Product import" type="h5"/>
-        <link text="Start another import" url="${sharedLinks['ProductImport']}" url-noparam="true" condition="hasImport" link-type="anchor"/>
-        <label text="Upload → Map columns and values → Validate → Review and apply → Results. Saved runs resume from this page." type="p"/>
+        <label text="${importTarget?.title || 'Import'}" type="h5"/>
+        <link text="All imports" url="${importMount.listLink}" url-noparam="true" condition="!!importMount.listLink" link-type="anchor" icon="sym_o_list"/>
+        <link text="Start another import" url="${importMount.selfLink}" url-noparam="true" condition="hasImport" link-type="anchor" parameter-map="urlTargetId ? {targetId:urlTargetId} : {}"/>
+        <label text="Choose what to import from Imports." type="p" style="m-muted" condition="!hasTarget &amp;&amp; !wizardElsewhere"/>
+        <section name="ImportElsewhere" condition="!!wizardElsewhere">
+            <widgets>
+                <label text="${importTarget.title} is imported in ${importTarget.ownerApp || 'its owner'}'s own wizard." type="p"/>
+                <link url="${ownerUrl}" url-type="plain" text="Open it in ${importTarget.ownerApp || 'its app'}" link-type="anchor-button" icon="sym_o_open_in_new" condition="!!ownerUrl"/>
+            </widgets>
+        </section>
+        <label text="${importTarget?.description || ''}" type="p" style="m-muted" condition="hasTarget &amp;&amp; !!importTarget?.description"/>
+        <label text="Upload → Map columns and values → Validate → Review and apply → Results. Saved runs resume from this page." type="p" condition="hasTarget"/>
+        <label text="${importTarget?.effectsNote || ''}" type="p" style="text-caption m-muted" condition="hasTarget &amp;&amp; !!importTarget?.effectsNote"/>
+        <label text="${startRefusal}" type="p" style="text-negative" condition="hasTarget &amp;&amp; !canStage &amp;&amp; !hasImport"/>
         <section name="ImportUpload" condition="canStage &amp;&amp; !hasImport">
             <widgets>
                 <container-box>
-                    <box-header title="1. Upload a catalog file"/>
+                    <box-header title="1. Upload a file"/>
                     <box-body>
-                        <form-single name="CatalogImportUpload" transition="stage" map="uploadForm">
+                        <label text="Fields: ${fieldNames}. At most ${maxRows} rows and ${maxKiB} KiB. Passwords, factors and tokens are never imported: a file with such a column is refused." type="p" style="text-caption m-muted" condition="!!fieldNames"/>
+                        <form-single name="ImportUpload" transition="stage" map="uploadForm">
+                            <field name="targetId" from="urlTargetId">
+                                <default-field title="">
+                                    <hidden/>
+                                </default-field>
+                            </field>
                             <field name="organizationPartyId">
-                                <default-field title="Organization">
+                                <conditional-field condition="ownerOptions.length &gt; 0" title="${scopeLabel}">
                                     <drop-down allow-empty="false">
                                         <list-options list="ownerOptions" key="${value}" text="${label}"/>
                                     </drop-down>
+                                </conditional-field>
+                                <default-field title="">
+                                    <hidden/>
                                 </default-field>
                             </field>
                             <field name="kindId">
-                                <default-field title="Import kind">
+                                <conditional-field condition="!!features.kinds" title="Import kind">
                                     <drop-down allow-empty="false">
                                         <list-options list="kindOptions" key="${value}" text="${label}"/>
                                     </drop-down>
+                                </conditional-field>
+                                <default-field title="">
+                                    <hidden/>
                                 </default-field>
                             </field>
                             <field name="importFile">
@@ -126,12 +184,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="updateMode">
-                                <default-field title="Update mode">
+                                <conditional-field condition="!!features.updateMode" title="Update mode">
                                     <drop-down allow-empty="false">
                                         <option key="upsert" text="Create or update"/>
                                         <option key="create" text="Create only"/>
                                         <option key="update" text="Update only"/>
                                     </drop-down>
+                                </conditional-field>
+                                <default-field title="">
+                                    <hidden/>
                                 </default-field>
                             </field>
                             <field name="forceNew">
@@ -148,19 +209,30 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                         </form-single>
-                        <form-single name="CatalogImportSample" transition="sample">
+                        <form-single name="ImportSample" transition="sample" map="uploadForm">
+                            <field name="targetId" from="urlTargetId">
+                                <default-field title="">
+                                    <hidden/>
+                                </default-field>
+                            </field>
                             <field name="organizationPartyId">
-                                <default-field title="Organization">
+                                <conditional-field condition="ownerOptions.length &gt; 0 &amp;&amp; !!features.kinds" title="${scopeLabel}">
                                     <drop-down allow-empty="false">
                                         <list-options list="ownerOptions" key="${value}" text="${label}"/>
                                     </drop-down>
+                                </conditional-field>
+                                <default-field title="">
+                                    <hidden/>
                                 </default-field>
                             </field>
                             <field name="kindId">
-                                <default-field title="Sample kind">
+                                <conditional-field condition="!!features.kinds" title="Sample kind">
                                     <drop-down allow-empty="false">
                                         <list-options list="kindOptions" key="${value}" text="${label}"/>
                                     </drop-down>
+                                </conditional-field>
+                                <default-field title="">
+                                    <hidden/>
                                 </default-field>
                             </field>
                             <field name="submitButton">
@@ -176,7 +248,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="ImportWorkspace" condition="hasImport">
             <widgets>
                 <label text="${filename} · ${kindDescription} · ${state}" type="h6"/>
-                <label text="${organizationName} · ${rowCount} rows · ${validCount} ready · ${appliedCount} applied · ${errorCount} need attention" type="p"/>
+                <label text="${organizationName ? organizationName + ' · ' : ''}${rowCount} rows · ${validCount} ready · ${appliedCount} applied · ${errorCount} need attention${skippedCount ? ' · ' + skippedCount + ' skipped' : ''}" type="p"/>
+                <label text="The staged rows of this import were removed after its retention; its outcomes are kept." type="p" style="m-muted" condition="!!purged"/>
                 <label text="${lastError || &quot;&quot;}" type="p" condition="!!lastError"/>
                 <section name="ImportMappingEditor" condition="canEdit">
                     <widgets>
@@ -185,6 +258,11 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <form-list name="ImportColumnMapping" list="mappingRows" transition="mapping" paginate="false">
                                     <field name="operationKey">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="targetId" from="urlTargetId">
                                         <default-field title="">
                                             <hidden/>
                                         </default-field>
@@ -205,7 +283,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="targetField">
-                                        <default-field title="Catalog field">
+                                        <default-field title="${fieldLabel}">
                                             <drop-down allow-empty="true">
                                                 <list-options list="targetOptions" key="${value}" text="${label}"/>
                                             </drop-down>
@@ -232,6 +310,11 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <hidden/>
                                             </default-field>
                                         </field>
+                                        <field name="targetId" from="urlTargetId">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
                                         <field name="mappingRevision">
                                             <default-field title="">
                                                 <hidden/>
@@ -243,7 +326,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </default-field>
                                         </field>
                                         <field name="targetField">
-                                            <default-field title="Catalog field">
+                                            <default-field title="${fieldLabel}">
                                                 <drop-down allow-empty="false">
                                                     <list-options list="targetOptions" key="${value}" text="${label}"/>
                                                 </drop-down>
@@ -276,6 +359,11 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <hidden/>
                                             </default-field>
                                         </field>
+                                        <field name="targetId" from="urlTargetId">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
                                         <field name="mappingRevision">
                                             <default-field title="">
                                                 <hidden/>
@@ -287,7 +375,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </default-field>
                                         </field>
                                         <field name="targetField">
-                                            <default-field title="Catalog field">
+                                            <default-field title="${fieldLabel}">
                                                 <drop-down allow-empty="false">
                                                     <list-options list="targetOptions" key="${value}" text="${label}"/>
                                                 </drop-down>
@@ -299,7 +387,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </default-field>
                                         </field>
                                         <field name="targetValue">
-                                            <default-field title="Catalog value">
+                                            <default-field title="Value to import">
                                                 <text-line/>
                                             </default-field>
                                         </field>
@@ -321,7 +409,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container style="scroll full-width">
                                     <form-list name="ImportDefaults" list="defaultRows" skip-form="true" paginate="false">
                                         <field name="field">
-                                            <default-field title="Catalog field">
+                                            <default-field title="${fieldLabel}">
                                                 <display/>
                                             </default-field>
                                         </field>
@@ -335,7 +423,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container style="scroll full-width">
                                     <form-list name="ImportValueMappings" list="valueMappingRows" skip-form="true" paginate="false">
                                         <field name="field">
-                                            <default-field title="Catalog field">
+                                            <default-field title="${fieldLabel}">
                                                 <display/>
                                             </default-field>
                                         </field>
@@ -345,7 +433,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </default-field>
                                         </field>
                                         <field name="targetValue">
-                                            <default-field title="Catalog value">
+                                            <default-field title="Value to import">
                                                 <display/>
                                             </default-field>
                                         </field>
@@ -359,9 +447,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         </columns>
                                     </form-list>
                                 </container>
-                                <container-dialog id="ImportFormatsDialog" button-text="Formats and clearing" title="Formats and clearing" width="700">
+                                <container-dialog id="ImportFormatsDialog" button-text="Formats and clearing" title="Formats and clearing" width="700" condition="!!features.formats">
                                     <form-single name="ImportFormats" transition="mapping" map="formatForm">
                                         <field name="operationKey">
+                                            <default-field title="">
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="targetId" from="urlTargetId">
                                             <default-field title="">
                                                 <hidden/>
                                             </default-field>
@@ -427,14 +520,80 @@ along with this software (see the LICENSE.md file). If not, see
                                         </field>
                                     </form-single>
                                 </container-dialog>
+                                <section name="ImportOptionsSection" condition="optionRows.length &gt; 0">
+                                    <widgets>
+                                        <label text="Options of the whole import" type="h6"/>
+                                        <form-list name="ImportOptions" list="optionRows" transition="mapping" paginate="false">
+                                            <field name="operationKey">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="targetId" from="urlTargetId">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="mappingRevision">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="mappingAction" from="'option'">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="optionName">
+                                                <default-field title="">
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="optionLabel">
+                                                <default-field title="Option">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="optionValue">
+                                                <default-field title="Value">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="optionHint">
+                                                <default-field title="Takes">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Save option">
+                                                    <submit/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="optionLabel"/>
+                                                    <field-ref name="optionValue"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="submitButton"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                         <container-box>
                             <box-header title="3. Validate"/>
                             <box-body>
-                                <label text="An empty cell preserves the existing value unless an optional field is explicitly selected for clearing. Validate again after changing any mapping." type="p"/>
-                                <form-single name="ValidateCatalogImport" transition="validate">
+                                <label text="${features.clearFields ? 'An empty cell preserves the existing value unless an optional field is explicitly selected for clearing. ' : ''}Validation changes nothing. Validate again after changing any mapping or option." type="p"/>
+                                <form-single name="ImportPreview" transition="validate">
                                     <field name="operationKey">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="targetId" from="urlTargetId">
                                         <default-field title="">
                                             <hidden/>
                                         </default-field>
@@ -459,8 +618,13 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="4. Review and apply"/>
                             <box-body>
-                                <form-single name="ApplyCatalogImport" transition="apply">
+                                <form-single name="ImportApply" transition="apply">
                                     <field name="operationKey">
+                                        <default-field title="">
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="targetId" from="urlTargetId">
                                         <default-field title="">
                                             <hidden/>
                                         </default-field>
@@ -477,7 +641,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="submitButton">
                                         <default-field title="Apply reviewed valid rows">
-                                            <submit confirmation="Apply ${validCount} ready rows? Each source record is checked again first."/>
+                                            <submit confirmation="Apply ${validCount} ready rows of ${importTarget.title}${organizationName ? ' for ' + organizationName : ''}? Each row is checked again first. ${importTarget.effectsNote || ''}"/>
                                         </default-field>
                                     </field>
                                 </form-single>
@@ -488,18 +652,19 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="5. Rows and results"/>
                     <box-toolbar>
-                        <link url="${printBase}/ProductImport/Index/results" url-type="plain" text="All results CSV" link-type="anchor-button" icon="sym_o_download" parameter-map="{operationKey:operationKey,errorsOnly:false}"/>
-                        <link url="${printBase}/ProductImport/Index/results" url-type="plain" text="Error CSV" link-type="anchor-button" icon="sym_o_download" parameter-map="{operationKey:operationKey,errorsOnly:true}"/>
+                        <link url="${importMount.detailLink}" text="Results and retry" link-type="anchor-button" icon="sym_o_fact_check" condition="!!importMount.detailLink" parameter-map="{targetId:targetId,operationKey:operationKey}"/>
+                        <link url="${importMount.downloadBase}/results" url-type="plain" text="All results CSV" link-type="anchor-button" icon="sym_o_download" parameter-map="urlTargetId ? {targetId:urlTargetId,operationKey:operationKey,errorsOnly:false} : {operationKey:operationKey,errorsOnly:false}"/>
+                        <link url="${importMount.downloadBase}/results" url-type="plain" text="Error CSV" link-type="anchor-button" icon="sym_o_download" parameter-map="urlTargetId ? {targetId:urlTargetId,operationKey:operationKey,errorsOnly:true} : {operationKey:operationKey,errorsOnly:true}"/>
                     </box-toolbar>
                     <box-body>
-                        <form-list name="CatalogImportRows" list="previewRows" skip-form="true" paginate="false">
+                        <form-list name="ImportRows" list="previewRows" skip-form="true" paginate="false">
                             <field name="itemSeqId">
                                 <default-field title="Row ID">
                                     <display/>
                                 </default-field>
                             </field>
                             <field name="rowNumber">
-                                <default-field title="CSV row">
+                                <default-field title="File row">
                                     <display/>
                                 </default-field>
                             </field>
@@ -552,9 +717,9 @@ along with this software (see the LICENSE.md file). If not, see
                             </columns>
                         </form-list>
                         <container style="row items-center q-gutter-sm">
-                            <link url="." text="Previous rows" link-type="anchor-button" icon="sym_o_chevron_left" condition="(Number(pageIndex) || 0) &gt; 0" parameter-map="{operationKey:operationKey,pageIndex:(Number(pageIndex) || 0) - 1}"/>
+                            <link url="." text="Previous rows" link-type="anchor-button" icon="sym_o_chevron_left" condition="(Number(pageIndex) || 0) &gt; 0" parameter-map="urlTargetId ? {targetId:urlTargetId,operationKey:operationKey,pageIndex:(Number(pageIndex) || 0) - 1} : {operationKey:operationKey,pageIndex:(Number(pageIndex) || 0) - 1}"/>
                             <label text="Rows ${(Number(pageIndex) || 0) * 50 + 1}–${(Number(pageIndex) || 0) * 50 + (previewRows?.length || 0)} of ${rowCount}" type="span" style="m-muted"/>
-                            <link url="." text="Next rows" link-type="anchor-button" icon="sym_o_chevron_right" condition="((Number(pageIndex) || 0) + 1) * 50 &lt; rowCount" parameter-map="{operationKey:operationKey,pageIndex:(Number(pageIndex) || 0) + 1}"/>
+                            <link url="." text="Next rows" link-type="anchor-button" icon="sym_o_chevron_right" condition="((Number(pageIndex) || 0) + 1) * 50 &lt; rowCount" parameter-map="urlTargetId ? {targetId:urlTargetId,operationKey:operationKey,pageIndex:(Number(pageIndex) || 0) + 1} : {operationKey:operationKey,pageIndex:(Number(pageIndex) || 0) + 1}"/>
                         </container>
                     </box-body>
                 </container-box>

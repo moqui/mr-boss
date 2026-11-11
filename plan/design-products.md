@@ -471,7 +471,15 @@ its rows are `ProductCatalogOperation` and `ProductCatalogOperationItem`. The se
 table above are the design's earlier proposals. Admin generalizes this import into
 Shared/DataImport ([design-admin §11](design-admin.md#11-import-export-and-backups)). Products/ProductImport
 becomes the Products mount of Shared/DataImport, target `catalog`, and keeps its own batch
-records and services; no TransferBatch is added for the catalog.
+records and services; no TransferBatch is added for the catalog. As built (impl-admin P15):
+`Shared/ProductImport.xml` is now `Shared/DataImport.xml`, which Products/ProductImport mounts
+as before (the catalog target whatever the request names; the route, the transitions and the
+catalog's words unchanged); its steps go through the framework's
+`org.moqui.admin.DataTransferServices`, which dispatches to these services by the catalog's
+registration (`moqui.server.TransferTarget` `catalog`, ProductImportData.xml) and calls them as
+the user, so the kinds' own permissions decide as before; the wizard's mapping form is
+`ironstone.shared.DataImportServices`; `find#CatalogImportRuns` answers the runs Admin's Imports
+lists (a user's own; every one for a system administrator).
 **Source.** Research
 §2, §14; Akaunting `resources/views/common/import/create.blade.php`, `app/Utilities/Import.php`.
 **Needs.** PRD-IMPORT, PRD-ACCESS, PRD-BULK.

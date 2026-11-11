@@ -1219,7 +1219,10 @@ forms, derived from ridgecrest OrderFileImporter. Unsupported formats are refuse
 spreadsheet-to-entity mapping. Partial success is durable and visible. ChannelImport is an
 owner wizard registered in [Admin §11's import targets](design-admin.md#111-shared-transfer-contract)
 (Commerce, channel orders): it keeps its own wizard and its SystemMessage batch and provides `get#`
-for its runs; there is no second import batch (Z2). **Needs:** COM-CHANNEL.
+for its runs; there is no second import batch (Z2). Registered (impl-admin P15): the target
+`channelOrders` (StoreChannelSetupData.xml), whose runs `find#ChannelImportRuns` answers for a user who
+operates the store (the batch's file, store, state and the count a commit kept, with the parameters
+that open it here; no order or payload). **Needs:** COM-CHANNEL.
 
 **As built (Nov 6, 2026; impl-commerce P13).** A binding is a SystemMessageRemote with the store and a registered
 connector (`mantle.product.store.StoreChannelConnector`: `ChannelOrders`, the API's and ChannelImport's channel orders, and
