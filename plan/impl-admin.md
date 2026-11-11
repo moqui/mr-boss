@@ -3220,6 +3220,10 @@ the owner's design.
 | Nov 10, 2026 | On a production instance a gateway's address must be one of its provider's hosts | The user's call (Nov 10), P11 |
 | Nov 10, 2026 | MailRelays lists every EmailServer no EmailAccount owns, so on the demo `MOQUI_LOCAL` and the apps' sending servers beside SYSTEM | The user's call (Nov 10), F151 (P11); design §9 |
 | Nov 10, 2026 | An organization or purpose record for relays and the other connection kinds waits (§7) | The user's call (Nov 10), F156 (P11) |
+| Nov 10, 2026 | Who reads the mail queue stays as P12 built it, for now: the operations operator reads the transport outcomes of every organization's mail (EmailMessage carries no organization) and acts on them; the integration administrator reads the instance's own mail only, with no actions; a mail account's row gives id, count and state only | The user's call (Nov 10), F167, F168 (P12 and its review R3); design §9 MailQueue |
+| Nov 10, 2026 | A refused (permanent) or bounced message may be sent again from the queue, as a retryable one may: left open on purpose, the operator's responsibility, for the valid uses it has. Sign-in mail is still only closed, and an owner's messages are still its owner's (P12 review R1, R2) | The user's call (Nov 10), P12 |
+| Nov 10, 2026 | A person never sets a message's sent state: a stored message's status and outcome are what the transport knows. Settling an uncertain send records the settlement apart (who, when, the reason and what they concluded) and takes the message out of Needs attention; it does not mark the message Sent | The user's call (Nov 10), over P12's built `reconcile#MailOutcome`, which marked it Sent on the operator's word; changed in the P12 follow-up |
+| Nov 10, 2026 | The read-only protocol settings stay listed in InstanceSettings' sources, for now; to be reviewed | The user's call (Nov 10), F174 (P12) |
 
 ## 5. Open questions
 
