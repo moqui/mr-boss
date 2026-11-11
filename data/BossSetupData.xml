@@ -2514,7 +2514,7 @@ along with this software (see the LICENSE.md file). If not, see
             requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="Admin/Operations/Monitoring" sequenceNum="70"/>
     <ironstone.admin.ReadinessProvider providerKey="admin.telemetry" version="1" ownerApp="Admin" title="Telemetry"
             healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance" serviceName="ironstone.admin.RegistryServices.check#AdminSetup"
-            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="monitor/Sources" sequenceNum="80"/>
+            requiredPermission="ADMIN_OVERVIEW_VIEW" fixPath="system/Monitor/Sources" sequenceNum="80"/>
     <!-- The Constitution's source diagnostics (impl-admin P2): the framework's document for the instance and Mantle's for each
         organization, read as the viewer (get#Constitution needs a signed-in user, get#OrganizationConstitution a member or an
         editor of the organization) -->
@@ -4031,7 +4031,7 @@ along with this software (see the LICENSE.md file). If not, see
             description="Business operation runs rolled back or set to retry in the last day."
             countService="ironstone.insights.RegistryServices.get#OperationFailures"
             countField="count"
-            routePath="monitor/Operations"
+            routePath="system/Monitor/Operations"
             organizationScope="Every organization" sequenceNum="910"/>
     <!-- Admin P6 (impl-admin P6; design-admin §4.1 Offboarding, §14 Lifecycle participant): the lifecycle participants, each the owner's
         own registration (owner contracts, F31): Commons' shared drives, calendars and contact books, Comms' shared mail accounts and
