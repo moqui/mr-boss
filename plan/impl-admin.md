@@ -3076,6 +3076,39 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   - the user's calls: F-P12F-1, F-P12F-3 (whether to close it in Rust), F-P12F-4;
   - budget shares unchanged (no feature added).
 
+**Review Nov 10 (P12 follow-up).**
+- Checked (the code paths, not the note): `reconcile#MailOutcome` writes only the four settlement fields for `delivered`
+  and `notDelivered` (no `statusId`, `sendOutcome`, `sendError`, `sentDate` or claim), and `abandon` is P12's; Send again of
+  one reported not delivered goes through `claim#MailOutcomeRetry` (its own transaction, the row locked, the revision
+  compared), so of two requests one is refused, a settle and a retry cannot both pass (each compares the revision under
+  the lock), and a server that stops after the claim leaves the message uncertain with no settlement; reported delivered
+  is refused by the retry and by the claim; a second settlement is `ALREADY_SETTLED` or its key's first answer; sign-in
+  mail and an owner's message are still never sent from here, and an owner that cannot be asked still holds a settled
+  one. `stateOf` and the filters agree (`sent` is `ES_SENT`; `settled` is out of `attention`, `uncertain` and `bounced`;
+  the count is the same find). `ES_BOUNCED` is only written over `ES_SENT`, so a bounce never lands on a settled message.
+  The settlement fields have no writer but this service and the claim (no screen, entity-auto transition or mail client
+  service names them); the reason is `plainText` (255, no `${`, no control characters) and shown through `display`. An
+  owner's message: the owner's contract words unchanged, refused means nothing recorded; the ledger gives each attempt
+  its own message and offers no retry here, so a settlement never goes stale on one. One qvt render of MailQueue still.
+- Fixes:
+  - **R1 (low, hardening)** a mail account's row answers no settled-by user, time or reason: such a message is never
+    settled here (`OWNER_ONLY` comes before the write), so fields found on one were written by something else, and the
+    row keeps to its state (P12 review R3). `OperationMail.js`.
+- Tests: framework `AdminMailOutcomes` and `AdminProtocols` 6 of 6, mr-mantle `DeliveryLedger` 4 of 4, mr-boss
+  `AdminMailQueue` and `AdminAccess` 9 of 9, on the shared release binary. R1 has no case of its own (the state it
+  guards cannot be reached through a service).
+- For the lead (open):
+  - F-P12F-3 stands and is the one way round the rule: a send of a settled message from outside the queue (BasicComms
+    `resend`, ADMIN only) that is lost part way leaves the old settlement on the row, and one reported not delivered is
+    then offered Send again without a new decision. That resend already sends an uncertain message with no decision
+    (P12's open item); closing both is the mail service clearing the settlement when a send begins (Rust), or the
+    resend going through `retry#MailOutcome`.
+  - An owner's message: the owner's action commits in its own transaction before the message is locked, so a change of
+    the message in between (`STALE_REVISION`) leaves the owner resolved and no settlement recorded, the row then in
+    Needs attention with "Its owner reconciles it". As P12 built it; only a send's late result can cause it, and that
+    result is then the state.
+  - F-P12F-1 and F-P12F-4 are the user's calls, as the worker says.
+
 ### P13 — System messages and recovery
 
 Design §8 MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail, §14 operational recovery;
