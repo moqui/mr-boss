@@ -280,7 +280,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Jobs and topics | mr-moqui, BOSS | Jobs, JobDetail, JobRuns, JobRunDetail, Topics, TopicDetail | built and reviewed Nov 10, merged |
 | P15 Imports | mr-moqui, Mantle, BOSS | Imports, DataImport, ImportDetail; Products' import mount | built and reviewed Nov 11, merged |
 | P16 Exports and backups | mr-moqui, BOSS | Exports, DataExport, Backups | built and reviewed Nov 11, merged |
-| P17 Audit and access evidence | mr-moqui, BOSS | AuditChanges, AccessLog | — |
+| P17 Audit and access evidence | mr-moqui, BOSS | AuditChanges, AccessLog | built and reviewed Nov 11, merged |
 | P18 Shared devices | mr-moqui, BOSS | Devices | — |
 | P19 Finish | all | the sweeps and the review walk (acceptance) | — |
 
@@ -4563,54 +4563,54 @@ Design §12 AuditChanges and AccessLog, §16 audit evidence; ADM-AUDIT, ADM-REPO
 - Design edits: design-admin §12 AuditChanges and AccessLog (as built), §14 (an Audit projection row), §16 (Audit
   evidence), §17.1 (ADM-AUDIT, ADM-REPORTS) and §17.2.
 - Findings (provisional, numbered by the lead):
-  - **F-P17-1** The audit log is read only by registration. Of about 240 audited entities 32 are registered: the
+  - **F257** The audit log is read only by registration. Of about 240 audited entities 32 are registered: the
     administrative records. A business entity (an invoice, a payment, a supplier's terms, an employee's identification)
     has no projection and is not in AuditChanges: its history is its owner's screen's. An owner that wants one in
     Admin seeds a projection with its own source.
-  - **F-P17-2** A value is shown only where a row says `show`, and never for an encrypted or secret-named field: the
+  - **F258** A value is shown only where a row says `show`, and never for an encrypted or secret-named field: the
     entity audit log's own rows of a relay's or a remote's password hold the encrypted values, which are not answered.
     Every other field of a connection, a provider, a job, a topic, a message type and a printer is registered as `*`:
     named, never shown (their columns are their adapters' and change with them).
-  - **F-P17-3** The framework knows no organization, so it registers its own records as the whole instance's and
+  - **F259** The framework knows no organization, so it registers its own records as the whole instance's and
     Mantle registers the identity records with its source. A framework-only instance has no account or membership
     changes in `find#Changes` (Tools has them, for `ADMIN`).
-  - **F-P17-4** Identity scope is the current relationship, as Users (P4): once a person's memberships have all ended,
+  - **F260** Identity scope is the current relationship, as Users (P4): once a person's memberships have all ended,
     their account's later changes are in no organization's AuditChanges. What ended them is: the membership's end and
     the lifecycle operation are found by their own organization. An instance administrator with no organization
     active reads every account's.
-  - **F-P17-5** The administrator's every-organization reading comes from the Audit area's grant
+  - **F261** The administrator's every-organization reading comes from the Audit area's grant
     (`MANTLE_ACTIVE_ORG`), as in Users (F65): `find#ChangeEvidence` called outside the screen answers the
     administrator their own organizations only.
-  - **F-P17-6** A group's grants, a connection and a job carry no organization, so every audit reader reads their
+  - **F262** A group's grants, a connection and a job carry no organization, so every audit reader reads their
     changes, with an actor who may work for another organization (the usable-when's grant change and relay are such).
     An export or an import a person made is scoped by its maker's organizations.
-  - **F-P17-7** A data load writes audit rows with no user (the demo load about 1,500 of app gates and grants alone):
+  - **F263** A data load writes audit rows with no user (the demo load about 1,500 of app gates and grants alone):
     AuditChanges lists people's changes unless asked for a load's too.
-  - **F-P17-8** The access log is log lines: kept seven days by default, nothing for a refused read or export, no
+  - **F264** The access log is log lines: kept seven days by default, nothing for a refused read or export, no
     purpose, no organization (F45 stands). AccessEvidence has no "permission result" and no "purpose" column, and says
     how long lines are kept. A durable evidence store is the framework's (Remaining-Work).
-  - **F-P17-9** A dataset has no field list, so the dataset answers a line whole: `recipients` (a scheduled export's
+  - **F265** A dataset has no field list, so the dataset answers a line whole: `recipients` (a scheduled export's
     addresses, `audit_export`) and a runtime setting's `value` (`live_settings`) are in it. The screen and its file
     leave them out; a reader who also holds an Insights group reads them through the engine, within the dataset's two
     filters. Closing it is Rust: the lines written without the values (Remaining-Work).
-  - **F-P17-10** The design scoped the access log by its two targets only. Built with a row-filter service besides: a
+  - **F266** The design scoped the access log by its two targets only. Built with a row-filter service besides: a
     reader of some organizations reads the lines written under those organizations' people (the line's `user.id`), so
     lines no user wrote (a schedule's run, another server's change) are read only by a reader of every organization.
     Past 5,000 accounts in scope nothing is answered.
-  - **F-P17-11** A line's attributes are searchable only through the pairs the telemetry ingest keeps beside them
+  - **F267** A line's attributes are searchable only through the pairs the telemetry ingest keeps beside them
     (`__attributes`): the specs index their lines with those pairs, as the ingest does; a spec's process exports no
     log lines, so no test reads a line a real export wrote (the framework's report tests do).
-  - **F-P17-12** Evidence added where an action changed no audited field: sessions ended, access revoked, a password,
+  - **F268** Evidence added where an action changed no audited field: sessions ended, access revoked, a password,
     factor or lock reset, an import applied, a mail message closed or sent again. Left as they are: Login as (a log
     line, F69, Tools'); a group's creation and description; an organization's name and defaults (Mantle's
     `PartySetting` is not audited); an owner's own import batch (Products' operation record); a self-service
     revocation; a Constitution change (a line on `moqui.monitor.audit`, so in AccessLog for as long as lines are kept).
-  - **F-P17-13** The services' own audit rows now carry the session; rows written before this phase have none, and a
+  - **F269** The services' own audit rows now carry the session; rows written before this phase have none, and a
     job's or a load's have none by nature. The session is the correlation: a row's link lists everything changed in it.
-  - **F-P17-14** `EntityAuditLog` has no index on its second key value or its actor: a membership's and a maker's
+  - **F270** `EntityAuditLog` has no index on its second key value or its actor: a membership's and a maker's
     rows are found by the entity and field index first. Fast on the demo's 105,000 rows; an index is the framework's
     to add when a log grows (Remaining-Work).
-  - **F-P17-15** No user picker in the finds: the audit reader holds no identity permission, so a find narrows to an
+  - **F271** No user picker in the finds: the audit reader holds no identity permission, so a find narrows to an
     actor, a record or a session by the links of a row, not by a typed id.
 - Decisions: the registry is a framework record its owners seed; a request names a projection or a category, never an
   entity or a field; `marker` is the default and `show` the exception; a secret-named or encrypted field is a marker
@@ -4634,10 +4634,10 @@ Design §12 AuditChanges and AccessLog, §16 audit evidence; ADM-AUDIT, ADM-REPO
     files; mr-boss `BossSetupData.xml` appended at its end, `Admin.js` (`areas`, `linkPaths`), `AdminAccess.spec.js`
     (the menus and a capability row), design-admin, the rest new files;
   - other plans: none edited;
-  - the user's call: F-P17-10 (the access log scoped by its lines' users: built; the design had the two targets only);
-    F-P17-6 (every audit reader reads the changes of the instance's shared records, whoever made them); F-P17-4
-    (whether a leaver's account changes should stay readable to the organization they left); F-P17-9 and F-P17-8
-    (framework work on the audit lines: no values in them, a durable store, refused reads); F-P17-1 (whether any
+  - the user's call: F266 (the access log scoped by its lines' users: built; the design had the two targets only);
+    F262 (every audit reader reads the changes of the instance's shared records, whoever made them); F260
+    (whether a leaver's account changes should stay readable to the organization they left); F265 and F264
+    (framework work on the audit lines: no values in them, a durable store, refused reads); F257 (whether any
     business entity's changes belong in Admin's AuditChanges at all); whether `BOSS_ADMIN_ADMIN` should read the access
     log (built: yes, as it holds `ADMIN_AUDIT_VIEW`);
   - the brief had the acceptance test written and not run, AGENTS.md has a new one run once: AdminAuditUsable is not
@@ -4678,10 +4678,10 @@ fixes committed apart per repository ("Admin P17 review: …"). No Rust changed.
     `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` are seeded for all seven; the actor, key, session and date filters are
     conditions on the same filtered find, so none of them reaches another organization's row. Key orders checked
     against the entities (a membership's and a subscription's user is the second key, a gateway's organization the
-    first). F-P17-5 confirmed by reading: outside the area the administrator's call runs under the root group's
-    `MANTLE_USER_ORG`, their own organizations. F-P17-4 as written. A person of two organizations is read by both
+    first). F261 confirmed by reading: outside the area the administrator's call runs under the root group's
+    `MANTLE_USER_ORG`, their own organizations. F260 as written. A person of two organizations is read by both
     (as Users, P4).
-  - F-P17-6, exactly: every audit reader reads the framework's projections above but the export and the import. None
+  - F262, exactly: every audit reader reads the framework's projections above but the export and the import. None
     carries a user as its record; what they reveal of another organization is the actor of a change to a shared record
     (username and name), a user id inside a job's recipient field name, and the ids and states of system and mail
     messages (no address, subject or body). A group's membership rows and a transfer's rows are scoped (by the member,
@@ -4697,7 +4697,7 @@ fixes committed apart per repository ("Admin P17 review: …"). No Rust changed.
     (`csv_guards_formula_text_and_quotes_a_carriage_return`). AdminAudit renders each screen once in html, and
     AuditChanges once more as a refusal.
 - Fixes:
-  - **R1 (High).** F-P17-9 was wider than a note: the dataset's artifact was granted to `BOSS_ADMIN_AUDIT` and
+  - **R1 (High).** F265 was wider than a note: the dataset's artifact was granted to `BOSS_ADMIN_AUDIT` and
     `BOSS_ADMIN_ADMIN`, and a dataset has no field list, so a holder who may also call the engine (with any Insights
     group) read each line whole: the addresses scheduled exports went to and runtime settings' values (the first build's
     own spec read whole documents so; an aggregate of an attribute and an agent's report tools resolve the dataset the
@@ -4706,7 +4706,7 @@ fixes committed apart per repository ("Admin P17 review: …"). No Rust changed.
     authorization off, under the dataset's two filters, answering its safe fields. The engine refuses the dataset to
     the audit reader (documents and aggregate: the spec). Left: an instance administrator reads the lines in Tools, as
     they read the log index.
-  - **R2 (Medium).** F-P17-10's bound was silent: past 5,000 accounts in a reader's organizations the row filter
+  - **R2 (Medium).** F266's bound was silent: past 5,000 accounts in a reader's organizations the row filter
     matched nothing and the screen said "No line matches", which reads as nothing having happened. The bound stays
     (fail closed); `get#AccessLog` now answers `unavailable` with the reason, and the screen shows it.
   - **R3 (Low).** Mantle: an instance administrator with no organization active read the audit log as it is, so every
@@ -4735,11 +4735,11 @@ fixes committed apart per repository ("Admin P17 review: …"). No Rust changed.
   - decisions for §4: the access log dataset is granted to no group and read by Admin's service after its own check
     (the plan and design §12 had it granted to `BOSS_ADMIN_AUDIT`; design §12 edited); the audit reader therefore
     cannot chart it in Insights;
-  - F-P17-9 as it now stands: only an instance administrator reads the addresses and values; the lines written
+  - F265 as it now stands: only an instance administrator reads the addresses and values; the lines written
     without them is still the framework's;
-  - F-P17-10: a scoped reader with more than 5,000 accounts in their organizations is answered no line and is told;
+  - F266: a scoped reader with more than 5,000 accounts in their organizations is answered no line and is told;
     widening it (a filter by organization on the line) needs the lines to carry an organization (F45);
-  - the user's call, unchanged: F-P17-6 (actor names of shared records to every audit reader), F-P17-4, F-P17-1;
+  - the user's call, unchanged: F262 (actor names of shared records to every audit reader), F260, F257;
   - merge: this review touches only P17's own files, Attack-Surface (one bullet) and `Identity.js` (`revokeSessions`).
 
 ### P18 — Shared devices
@@ -4884,7 +4884,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes. P16's F240 to F256 (Nov 11, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes. P16's F240 to F256 (Nov 11, 2026) are in its Built and Review notes. P17's F257 to F271 (Nov 11, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
