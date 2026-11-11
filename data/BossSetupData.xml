@@ -4985,4 +4985,21 @@ along with this software (see the LICENSE.md file). If not, see
         addresses and a runtime setting's value with it. ironstone.admin.AuditServices.get#AccessLog checks
         ADMIN_AUDIT_VIEW under Admin and reads the dataset itself, answering only its safe fields. Never grant the
         artifact to a group, alone or as part of a wider dataset pattern. -->
+    <!-- Admin P18 (impl-admin P18; design-admin §6 Devices, §14 shared-device registration; crosscut CX-DEVICE): the route
+        group a shared device may be registered for, the framework's moqui.security.DeviceRouteGroup, each owner's row: Insights'
+        wall display first. Its artifact group is the device's allow-list and grants nothing: no authz row names it. A device
+        registered for it opens Insights' Playlists (the screen with the playlist its registration fixed, definitionId, whatever
+        its browser asks for, and its read-only data transition) and nothing else; what it shows is still authorized as its
+        display account, by that account's own groups and organizations. Insights P11 adds what its kiosk play needs (the
+        Dashboard renders a playlist plays, the page a display opens at) to this group and sets homePath; ShopFloor and the
+        People, Maintenance and Marketing kiosks register theirs when they are built (impl-admin §7). The Devices screen is
+        in the Security area (BOSS_ADM_SECURITY above), whose services check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE. -->
+    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_INS_PLAYLISTS" description="Shared device route group: Insights wall display"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_PLAYLISTS" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/Playlists.xml"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_PLAYLISTS" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/Playlists.xml/data"/>
+    <moqui.security.DeviceRouteGroup routeGroupId="INSIGHTS_PLAYLISTS" description="Insights wall display" ownerName="Insights"
+            artifactGroupId="BOSS_DEV_INS_PLAYLISTS" homePath="/apps/Insights/Playlists" parameterName="definitionId"
+            parameterTitle="Playlist" parameterRequired="Y" defaultIdleMinutes="10080" defaultLifetimeDays="365" sequenceNum="10"/>
 </entity-facade-xml>
