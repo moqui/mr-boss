@@ -4990,18 +4990,45 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Admin P18 (impl-admin P18; design-admin §6 Devices, §14 shared-device registration; crosscut CX-DEVICE): the route
         group a shared device may be registered for, the framework's moqui.security.DeviceRouteGroup, each owner's row: Insights'
         wall display first. Its artifact group is the device's allow-list and grants nothing: no authz row names it. A device
-        registered for it opens Insights' Playlists (the screen with the playlist its registration fixed, definitionId, whatever
-        its browser asks for, and its read-only data transition) and nothing else; what it shows is still authorized as its
-        display account, by that account's own groups and organizations. Insights P11 adds what its kiosk play needs (the
-        Dashboard renders a playlist plays, the page a display opens at) to this group and sets homePath; ShopFloor and the
+        registered for it opens Insights' WallDisplay (with the playlist its registration fixed, definitionId, whatever its
+        browser asks for, and its read-only data transition) and nothing else; what it shows is still authorized as its
+        display account, by that account's own groups and organizations. Insights P11 set the members and homePath (below);
+        ShopFloor and the
         People, Maintenance and Marketing kiosks register theirs when they are built (impl-admin §7). The Devices screen is
         in the Security area (BOSS_ADM_SECURITY above), whose services check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE. -->
-    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_INS_PLAYLISTS" description="Shared device route group: Insights wall display"/>
-    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_PLAYLISTS" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
-            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/Playlists.xml"/>
-    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_PLAYLISTS" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
-            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/Playlists.xml/data"/>
+    <!-- Insights P11 (impl-insights P11; design-insights §4 Playlists, crosscut CX-DEVICE): the route group's members, the wall
+        display's page and nothing else. A wall display opens Insights' WallDisplay (homePath; the bare page, its qvt island and its
+        tui twin, all the screen's own render) and calls its data transition (the framework Playlist's: a dashboard of the stored
+        playlist by its index, read only); the qvt client's files are static and need no member. The /qapps shell, Playlists and
+        the Dashboard screens are not members (impl-admin F285): the page needs none of them. The members are in a new artifact
+        group, BOSS_DEV_INS_WALL, which the route group names instead of P18's BOSS_DEV_INS_PLAYLISTS (Playlists and its data
+        transition), so an instance that loaded P18's rows keeps them in a group nothing names. The idle timeout stays a week: a
+        display asks for data at every turn of its playlist all day, so the week ends only a display switched off or replaced
+        (over a long holiday it is registered again). -->
+    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_INS_WALL" description="Shared device route group: Insights wall display"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_WALL" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/WallDisplay.xml"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_WALL" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/WallDisplay.xml/data"/>
     <moqui.security.DeviceRouteGroup routeGroupId="INSIGHTS_PLAYLISTS" description="Insights wall display" ownerName="Insights"
-            artifactGroupId="BOSS_DEV_INS_PLAYLISTS" homePath="/apps/Insights/Playlists" parameterName="definitionId"
+            artifactGroupId="BOSS_DEV_INS_WALL" homePath="/apps/Insights/WallDisplay" parameterName="definitionId"
             parameterTitle="Playlist" parameterRequired="Y" defaultIdleMinutes="10080" defaultLifetimeDays="365" sequenceNum="10"/>
+    <!-- Insights P11: what a display account holds (impl-admin F286; design-insights §4 Playlists). The Insights root is the
+        launcher group's (BOSS_INSIGHTS), which opens every Insights screen, so a display account is not in it: it holds the reader
+        bundle (BOSS_INSIGHTS_READ: the engine's read operations, the admitted datasets and their documents, INSIGHTS_VIEW), which
+        alone opens no screen, and this one, which opens the wall display's page and its data transition, view only, and nothing
+        else of Insights even if a route group were wider (the root's always-actions call no Insights service for a device's
+        request, screen/Insights.xml). A registered bundle with no permission, so ADMIN_ACCESS_MANAGE assigns it (P3's delegation
+        rules), and with the organization filters as every Insights grant. Meant for display accounts: a person with it alone
+        gets no Insights context. -->
+    <moqui.security.UserGroup userGroupId="BOSS_INSIGHTS_DISPLAY" description="Insights wall display (display accounts)"/>
+    <artifactGroups artifactGroupId="BOSS_INS_WALL_DISPLAY" description="Insights: the wall display's page alone">
+        <artifacts artifactName="component://mr-boss/screen/Insights/WallDisplay.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/WallDisplay.xml/data" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_WALL_DISPLAY" userGroupId="BOSS_INSIGHTS_DISPLAY" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_DISPLAY" appName="Insights" description="Insights wall display: plays a registered playlist on a shared device, with the reader bundle (display accounts only)" scopeDependency="organization; each source by its own view permission" sequenceNum="935"/>
 </entity-facade-xml>

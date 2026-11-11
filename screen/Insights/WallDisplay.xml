@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Wall display, played (design-insights §4 Playlists, CX-DEVICE; impl-insights P11): the page a wall display opens,
+    the homePath of the INSIGHTS_PLAYLISTS route group (data/BossSetupData.xml), which admits this screen's render and its data
+    transition and nothing else. A page of its own rather than the /qapps shell, which a device may not load (impl-admin F285):
+    standalone, the html mode is a bare document (no navigation, menu, account or instance header) that loads the qvt client's
+    files and mounts this screen's qvt render as an island (WebrootPublic.qvt.js), which is m-report-playlist in kiosk mode:
+    each dashboard of the playlist in turn at the playlist's seconds, its panels' frames from the data transition (the
+    framework Playlist's: a dashboard of the stored playlist by its index, rendered as the viewer), a dashboard refreshed at
+    each turn even when it is the only one, a refused request (a revoked or stopped device) reloading the page into the
+    framework's plain refusal page.
+    On a device the playlist is the registration's (the framework puts the registered definitionId over whatever the browser
+    sends) and everything runs as the device's display account, which needs no Insights root grant (BOSS_INSIGHTS_DISPLAY opens
+    this screen and its data transition alone; BOSS_INSIGHTS_READ gives the reading): a dashboard it may not read is left out and
+    logged by name, and a panel without data or not available to it says so (render#Dashboard's notices). A signed-in Insights
+    user opens it too (Playlists' Play full screen), as themselves. Nothing here writes. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Wall display" default-menu-include="false" standalone="true" history="false"
+        screen-theme-type-enum-id="STT_INTERNAL_QUASAR">
+
+    <parameter name="definitionId"/>
+
+    <!-- {dashboard, frames} of the dashboard at index in the stored playlist, as the viewer; read only -->
+    <transition-include name="data" location="component://tools/screen/Dashboards/Playlist.xml"/>
+
+    <actions>
+        <script><![CDATA[
+            // the playlist as the viewer: a definition they may not read, or one that is no playlist, is not available
+            playlistTitle = null; playlistSeconds = 30; playlistEntries = []
+            if (definitionId) {
+                ec.message.pushErrors()
+                try {
+                    const definition = ec.service.sync().name('org.moqui.report.ReportServices.get#Definition').parameters({definitionId}).call()?.definition
+                    if (!ec.message.hasError() && definition?.type === 'report' && definition.body?.kind === 'playlist') {
+                        playlistTitle = definition.title || definition.id
+                        playlistSeconds = Number(definition.body.seconds) || 30
+                        playlistItems = Array.from(definition.body.playlist || []).slice(0, 50)
+                    }
+                } catch (error) { ec.logger.error('Wall display playlist ' + definitionId + ' unavailable: ' + String(error)) }
+                finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
+            // each dashboard as the viewer, as the framework Playlist does: one they may not read is left out and logged by name,
+            // and keeps its index in the playlist for the data transition
+            for (const [index, item] of (playlistTitle ? playlistItems : []).entries()) {
+                ec.message.pushErrors()
+                try {
+                    const dashboard = ec.service.sync().name('org.moqui.report.ReportServices.get#Definition').parameters({definitionId: item.definitionId}).call()?.definition
+                    if (!ec.message.hasError() && dashboard?.type === 'dashboard')
+                        playlistEntries.push({index, title: dashboard.title || dashboard.id, url: '?definitionId=' + encodeURIComponent(dashboard.id) + '&from=now-30d&thru=now'})
+                    else ec.logger.error('Wall display playlist ' + definitionId + ': dashboard ' + item.definitionId + ' unavailable')
+                } catch (error) { ec.logger.error('Wall display playlist ' + definitionId + ': dashboard ' + item.definitionId + ' unavailable: ' + String(error)) }
+                finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
+            // the range is Insights' default (relative, so it needs no zone); the data transition takes the playlist's index
+            dataSource = sri.buildUrl('data').path + '?definitionId=' + encodeURIComponent(definitionId || '') + '&from=now-30d&thru=now'
+            // the html page: the theme's style sheets, the qvt client's files and this screen as an island (WebrootPublic.qvt.js)
+            const qvtLib = ec.resource.script('component://webroot/screen/includes/QvtConfig.js')
+            const localeTag = String(ec.user.locale || 'en_US').replace('_', '-')
+            const quasarLang = qvtLib.quasarLangOf(localeTag)
+            const sheets = Array.from(sri.getThemeValues('STRT_STYLESHEET'))
+            const scripts = ['/libs/vue/vue.global.prod.js', '/libs/quasar/quasar.umd.prod.js', '/libs/quasar/lang/' + quasarLang + '.umd.prod.js']
+            if (sheets.some(sheet => String(sheet).includes('/libs/material-symbols/'))) scripts.push('/libs/quasar/icon-set/material-symbols-outlined.umd.prod.js')
+            scripts.push('/js/MoquiLib.js', '/js/MoquiL10n.js', '/js/WebrootVue.qvt.render.js', '/js/WebrootVue.qvt.js', '/js/WebrootReport.js', '/js/WebrootPublic.qvt.js')
+            const version = '?v=' + ec.web.getResourceDistinctValue()
+            const href = location => WebUtilities.encodeHtml(sri.buildUrl(location).url + version)
+            wallHead = sheets.map(sheet => '<link rel="stylesheet" href="' + href(sheet) + '">').join('')
+            wallScripts = scripts.map(script => '<script src="' + href(script) + '"></script>').join('')
+            wallLang = WebUtilities.encodeHtml(localeTag)
+            wallTitle = WebUtilities.encodeHtml(playlistTitle || ec.l10n.localize('Wall display'))
+            const island = {
+                shell: 'island', sessionToken: ec.web.sessionToken, appRootPath: '', locale: localeTag, timeZone: ec.user.timeZone,
+                quasarLang: quasarLang.replace(/-([a-zA-Z])/g, (m, ch) => ch.toUpperCase()),
+                qvt: {build: 'compiler', handles: ['merged-fragment', 'static-template']},
+                route: {name: 'wall-display', basePath: sri.buildUrl('.').path, title: playlistTitle, renderModes: ['qvt']},
+                context: {}, labels: {loading: ec.l10n.localize('Loading'), notFound: ec.l10n.localize('This playlist is not available to this display.')}
+            }
+            wallIsland = JSON.stringify(island).split('<').join('\\u003c')
+        ]]></script>
+    </actions>
+    <widgets>
+        <render-mode>
+            <text type="html" no-boundary-comment="true"><![CDATA[<!DOCTYPE html>
+<html lang="${wallLang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>${wallTitle}</title>${wallHead}</head>
+<body class="m-wall-display"><script type="application/json" data-moqui-island="wall-display">${wallIsland}</script>
+<div id="wall-display" class="q-pa-md"></div><noscript><p>This display needs JavaScript.</p></noscript>${wallScripts}</body></html>
+]]></text>
+            <text type="qvt"><![CDATA[<div class="m-wall-display">${playlistTitle ? '<m-report-playlist source="' + WebUtilities.encodeHtml(dataSource) + '" :items="' + WebUtilities.encodeHtml(JSON.stringify(playlistEntries)) + '" :seconds="' + playlistSeconds + '" :kiosk="true"></m-report-playlist>' : '<p role="status">' + WebUtilities.encodeHtml(ec.l10n.localize('This playlist is not available to this display.')) + '</p>'}</div>]]></text>
+            <text type="tui"><![CDATA[${JSON.stringify(playlistTitle ? {t:'component',name:'report-playlist',props:{source:dataSource,definitionId:definitionId,from:'now-30d',thru:'now',items:playlistEntries,seconds:playlistSeconds}} : {t:'text',text:ec.l10n.localize('This playlist is not available to this display.')})}]]></text>
+        </render-mode>
+    </widgets>
+</screen>

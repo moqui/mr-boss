@@ -162,7 +162,7 @@ feature("the code works once; the browser opens nothing outside the route group 
         out.replayed = request("Device/redeem", {code}, "post")
         login("john.doe")
         out.page = request("Device", {}, "get", cookie)
-        out.data = request("apps/Insights/Playlists/data", {definitionId: "AnotherPlaylist"}, "get", cookie)
+        out.data = request("apps/Insights/WallDisplay/data", {definitionId: "AnotherPlaylist"}, "get", cookie)
         out.refused = [
             "apps/Admin/Home",
             "apps/Admin/Security/Devices",
@@ -197,7 +197,7 @@ feature("revoking the device in Devices refuses its next request, and the audit 
         asUser(users.configure, () => page("Security/Devices/revokeDevice", {deviceId: device.deviceId}, "html"))
         out.afterConfigure = deviceRow().revokedDate
         asUser(users.access, () => page("Security/Devices/revokeDevice", {deviceId: device.deviceId}, "html"))
-        out.next = request("apps/Insights/Playlists/data", {}, "get", cookie)
+        out.next = request("apps/Insights/WallDisplay/data", {}, "get", cookie)
         out.revoked = deviceRow()
         out.audit = asUser(users.audit, () => page("Audit/AuditChanges", {recordKey: display.userId}, "html"))
         return out

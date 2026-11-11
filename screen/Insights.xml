@@ -34,7 +34,9 @@ along with this software (see the LICENSE.md file). If not, see
     organization's analytics defaults, and Data readiness, over Admin's readiness registry), every Insights user's to open, each
     transition reaching a service that checks its own permission (INSIGHTS_SETTINGS_EDIT; a refresh registration's own), and
     Assist: the prompts and the response action below, the insights-analyst skill (skill/insights-analyst.md) and the read tools
-    of ironstone.insights.AssistServices (data/BossSetupData.xml), each run as the signed-in user. -->
+    of ironstone.insights.AssistServices (data/BossSetupData.xml), each run as the signed-in user. P11 adds the hidden WallDisplay,
+    the page a registered wall display plays its playlist on (the INSIGHTS_PLAYLISTS route group admits it alone), whose
+    request runs as the device's display account: get#Context is not called for it (below). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 
@@ -42,7 +44,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Insights"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
-        <service-call name="ironstone.insights.ContextServices.get#Context" in-map="{appRoot:appRoot}" out-map="insights"/>
+        <!-- P11: a shared device's request (a wall display; its route group admits WallDisplay alone) runs as a display account,
+            which is no Insights user and holds no root grant: it gets the defaults only, and no links -->
+        <if condition="UserSecurityChecks.currentDevice()"><then>
+            <set field="insights" from="{defaults: {from: 'now-30d', thru: 'now', currencyMode: 'native'}, sharedLinks: {}, reportLinks: {}}"/>
+        </then><else>
+            <service-call name="ironstone.insights.ContextServices.get#Context" in-map="{appRoot:appRoot}" out-map="insights"/>
+        </else></if>
         <set field="sharedLinks" from="insights.sharedLinks"/>
         <!-- where the framework report screens' links go under Insights (mr-moqui docs/tools/Monitoring.md, "Mounting the report
             screens"); in always-actions, so the mounted screens' transitions read it too -->
