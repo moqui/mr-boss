@@ -3186,7 +3186,9 @@ along with this software (see the LICENSE.md file). If not, see
         their own organizations' rows in rows, suggestions, value counts, aggregates and exports alike. The grants below give the
         Insights groups each business dataset's own artifact (view; the steward update, its index#BusinessDataset guard) and its
         documents' DataDocumentUserGroup rows; the owners' report groups are granted below (BOSS_COM_DATASETS, BOSS_CS_DATASETS and
-        their documents' rows). Datasets a steward creates are named insights-*. The
+        their documents' rows). Datasets a steward creates are named insights-*: the
+        pattern grants the dataset a steward names, never a source under it (an alias of a log index, or of a business document without
+        its signal, needs the source's own artifact of its saver and reader: the engine's alias.rs, impl-admin F277). The
         Insights administrator reads no dataset (its business data stays a separate grant). Never grant an Insights group
         org.moqui.report.dataset.* or a DataDocument-by-id or index: dataset: the engine opens those over a business dataset's
         document only to a holder of their update artifact (impl-insights F53, review R1), which would read them unfiltered. -->
