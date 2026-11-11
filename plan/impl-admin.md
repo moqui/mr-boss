@@ -3109,6 +3109,100 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     result is then the state.
   - F177 and F180 are the user's calls, as the worker says.
 
+**Follow-up Nov 10 (P12: a settlement cleared when a send begins, F179).**
+- The user's instruction (Nov 10): look up whether there is a standard approach; "Off the top of my head I'd say clear
+  the settlement when the send begins"; adjust the Rust as needed.
+- The lookup (web search, about ten minutes; read from the search results' summaries, the pages not opened one by one).
+  Established delivery systems keep the delivery state per attempt, written by the system alone, and a person's handling
+  of one attempt neither changes that state nor carries to the next attempt: Stripe lists each event's delivery attempts
+  with their results, a manual resend is one more delivery, and an event a person processed by hand is still held
+  undelivered and retried (https://docs.stripe.com/workbench/webhooks,
+  https://edge-docs.stripe.com/webhooks/process-undelivered-events); Postfix keeps per-recipient status of why mail is
+  delayed and a requeue (`postsuper -r`) puts the message through again as a new pass
+  (https://manpages.debian.org/testing/postfix/qmgr.8.en.html, https://leancrew.com/all-this/man/man1/postsuper.html).
+  A send under way is marked before the transport is contacted, and a result that was not recorded is unknown, never
+  the state before: the outbox pattern's `in_progress` with a lock time, a failure after the publish and before the mark
+  being ambiguous (https://levelup.gitconnected.com/transactional-outbox-with-rabbitmq-part-2-handling-retries-dead-letter-queues-and-observability-d53217cf45e9,
+  https://oneuptime.com/blog/post/2026-07-22-transactional-outbox-duplicate-events/view), and Stripe's word for such a
+  result, "indeterminate" (https://docs.stripe.com/error-low-level). Nothing found keeps a manual resolution of one
+  attempt over a later attempt. So the user's instinct is the standard one for a record with no attempt rows: the
+  settlement is of one send and ends when the next begins. The fuller form of the principle is an attempt record per
+  send that carries its own settlement (Mantle's ledger has one, which is why a ledger message never had F179); not
+  built, F-P12G-1.
+- Decided and built: the mail service clears the settlement when a send of a stored message begins, and in the same
+  write marks a message that was known not sent uncertain, for every caller. The send begins when the letter is handed to
+  the transport: a refusal before that (no body, no address, no server, a host not allowed, no recipient in an allowed
+  domain, an attachment that cannot be read) is no send and leaves the settlement, since nothing superseded the person's
+  conclusion. A transport that refuses before it connects (a disabled server, a name not found) comes after the begin:
+  the settlement is cleared and the outcome the transport gives (retryable) is the state.
+- mr-moqui (Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it):
+  - `moqui-mail` `implementation.rs`: `begin_send`, called by `send_message` (`send#EmailMessage`) after its checks and the
+    stored attachments and before `deliver`, for a message that is not a mail account's; in a transaction of its own (as
+    the Sent status and the failed outcome are), one update, and none when there is nothing to supersede
+    (`superseded_by_send`): the four settlement fields cleared when a settlement is there, whatever the status (the audit
+    log of `sendSettlement` keeps what was reported, by whom and that it was cleared); `sendOutcome` set to uncertain for a
+    Ready message whose outcome was retryable or permanent and for a Bounced one, so a send lost part way never reads "Not
+    sent" or "Bounced" and is not offered Send again without a decision. A Ready message with no outcome already reads
+    uncertain and gets no write (a first send costs nothing more). If the write fails the message is not sent (an error:
+    nothing went out). `send#EmailTemplate` makes a new message and is unchanged. A mail account's message is left to the
+    mail client, which claims it itself (`claim#DraftSend`), may hold its row, and is never settled.
+  - `OperationMail.js`: `claim#MailOutcomeRetry` no longer clears the settlement (one mechanism, the mail service's): the
+    claim still marks the message uncertain with its time before anything is sent, and a claim whose send never began
+    leaves a "reported not delivered" as the person left it. Comments. `OperationServices.xml`: one sentence each in
+    `retry#MailOutcome`'s and `claim#MailOutcomeRetry`'s descriptions. `BasicEntities.xml`: the settlement's comment and a
+    sentence of `sendOutcome`'s description.
+  - Callers found (all through `send#EmailMessage`, so all covered; none changed): the queue's retry; BasicComms'
+    MessageDetail `resend`; Marble's SimpleScreens `sendEmailMessage` transitions (PartyEmails, EditInvoice, OrderDetail,
+    ShipmentDetail); the relay test message, voicemail and call mail (new messages); the mail client (its own claim).
+  - Docs: Attack-Surface (the mail queue's line), Parity-Diffs (P8c-24's row: the start of a send).
+- BasicComms' `resend` is left as it is (ADMIN only, no settlement asked first, the operator's responsibility, as the
+  user's Nov 10 call on sending again): the state after it is now truthful whatever happens to the send.
+- BOSS: no code. design-admin §9 MailQueue (as built).
+- Specs: `cargo test -p moqui-mail` 153 passed, 1 ignored (new: `a_send_that_begins_clears_the_settlement_of_the_send_before`:
+  the table of what a send supersedes; the start alone, as a send lost part way leaves it, uncertain with no settlement
+  and the audit row; a whole send from outside the queue, Sent with no settlement; a send refused before any attempt,
+  the settlement kept); clippy clean on `moqui-mail` (all targets); rustfmt clean on the two files. Framework
+  `AdminMailOutcomes` 3 of 3 (no feature added: the second feature gains a message settled and then sent by
+  `send#EmailMessage` directly, as the resend does, Sent with its settlement cleared and the audit rows; its queue retry
+  of one reported not delivered now proves the claim relies on the mail service) and `AdminProtocols` 3 of 3, 0.4 s
+  together; mr-mantle `DeliveryLedger` 4 of 4; mr-boss `AdminMailQueue` 2 of 2 (1.3 s), all on the worktree's Debug
+  binary. The spec's two checks of the settlement's audit rows no longer depend on the rows' order (the settlement's
+  row and the clearing's can carry one timestamp, which failed on master among the other Admin and Report specs): run
+  with AdminAccessCapabilities, AdminAccessServices, AdminConfiguration, AdminConnectionServices, AdminIdentityProviders,
+  AdminNewDevice, AdminProtocols, AdminSessions, BusinessAlerts, BusinessDatasets, ReportAnnotations, ReportAudience and
+  ReportDrill, 52 of 52 (7.2 s). Prettier clean on the two JavaScript files. BasicComms has no spec of `resend`. Not run: the suites, the
+  acceptance tests, `moqui-host`'s SMTP and edge integration tests (they call `send#EmailMessage` on new messages).
+- Findings (provisional):
+  - **F-P12G-1** The settlement is fields on the message, so only the last one is on the row and the earlier ones are
+    in the audit log. The established form is a record per attempt with its own outcome and settlement (the ledger's
+    shape). Not built: one clear at the start of a send gives the same truth on the row for far less; the user's call if
+    the queue should ever show a message's attempts.
+  - **F-P12G-2** A send from outside the queue (BasicComms' resend, Marble's `sendEmailMessage` transitions) still asks
+    for no decision on an uncertain or settled message, and may send one reported delivered. Left open by the user's
+    Nov 10 call; what changed is the state afterwards.
+  - **F-P12G-3** `begin_send` leaves `sendError` as the last failure's text, so a message resent from outside the queue
+    and lost part way reads "May have been sent" beside the error of the send before; and a retry whose send is refused
+    before it begins keeps the claim's text ("A retry of this message began...") beside "Settled: reported not
+    delivered". Cosmetic; a text of the mail service's own at the start of a send, cleared with Sent, would close both.
+  - **F-P12G-4** A mail account's message is outside this (the mail client's claim is its start, and it is never
+    settled here): settlement fields found on one, which no service writes, would not be cleared by a send.
+  - **F-P12G-5** A message already Sent that is sent again from outside the queue and fails keeps `ES_SENT` with a
+    `sendOutcome` (as before this change); the queue reads it as Sent. Its settlement, if any, is cleared.
+- Decisions: clear at the start, not with the result; the start is the hand-over to the transport, so a refusal before
+  it keeps the settlement; one mechanism, in the mail service, and the queue's claim relies on it; the same write marks
+  a known "not sent" uncertain; a failed start write refuses the send; the resend is not restricted.
+- For the lead:
+  - the shared release binary needs a rebuild after the merge (`moqui-mail`); until then `AdminMailOutcomes` fails on it
+    (the claim no longer clears the settlement); no schema change;
+  - shared lines with P13: `OperationServices.xml` only inside the mail section (one sentence in `retry#MailOutcome`'s
+    description, one in `claim#MailOutcomeRetry`'s); `OperationLib.js` untouched; `OperationMail.js` (the head comment,
+    the claim's comment and its `setFields`);
+  - other files: `crates/moqui-mail/src/implementation.rs` and `implementation_tests.rs`, `BasicEntities.xml` (the
+    `EmailMessage` comment and one description), `AdminMailOutcomes.spec.js`, Attack-Surface, Parity-Diffs (one row);
+    mr-boss `plan/design-admin.md` (§9 MailQueue, one sentence replaced) and this note;
+  - the user's calls: F-P12G-1 (attempt records), F-P12G-2 (stands as decided), F-P12G-3 (whether to tidy the texts);
+  - budget shares unchanged (no feature added).
+
 ### P13 — System messages and recovery
 
 Design §8 MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail, §14 operational recovery;
