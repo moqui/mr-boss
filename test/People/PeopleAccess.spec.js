@@ -6,7 +6,9 @@
 // one html render (the People administrator's setup checks; the HR officer's html render a refusal), and People's rows in
 // Admin's readiness and settings registries. One feature per rule, each case of it a line of its problems, with artifact
 // authorization enabled. Mantle's scope rules (employment dates, reporting lines, self) are Mantle's PeopleScope. The access
-// and isolation walk is the acceptance PeopleFoundationWalk. A later phase adds a case only for an access rule it adds.
+// and isolation walk is the acceptance PeopleFoundationWalk. A later phase adds a case only for an access rule it adds. P2: the
+// employment content host (its notes and files an HR officer's of its employer, through the shared panels' record check) and
+// the People panels serving no other record.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -113,7 +115,7 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             problems.push(`the HR officer's menu: ${hr.status} ${hr.names}`)
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
-        if (JSON.stringify(keys) !== JSON.stringify(["g p"])) problems.push(`the HR officer's people keys: ${keys}`)
+        if (JSON.stringify(keys) !== JSON.stringify(["g p", "g e"])) problems.push(`the HR officer's people keys: ${keys}`)
         if ((hr.providers?.quickCreate || []).length) problems.push("the HR officer is offered quick create")
         if (!hr.apps.includes("People")) problems.push(`the HR officer's launcher has no People: ${hr.apps}`)
         for (const user of [users.admin, users.system]) {
@@ -307,6 +309,55 @@ feature(
             checks.sort() == ["people.departments warning NO_DEPARTMENT", "people.managers warning EMPLOYEE_NO_MANAGER"]
             admin.includes("people.settings")
             !hr.includes("people.settings")
+        }
+    }
+)
+
+feature(
+    "an employment's notes and files open to an HR officer of its employer, not to a directory reader or another employer's employment; People's panels serve no other record",
+    {
+        when() {
+            const problems = []
+            // the shared panels' record check (Mantle's get#RecordLinkInfo), whose HR host rule holds with authorization off too
+            const visible = (user, recordId) =>
+                asUser(user, () =>
+                    system(() =>
+                        invoke("ironstone.shared.ChatterServices.get#RecordInfo", {
+                            recordEntityName: "mantle.humanres.employment.Employment",
+                            recordId
+                        })
+                    )
+                ).visible === true
+            if (!visible(users.hr, ids.employmentId)) problems.push("the HR officer does not see Retail's employment")
+            if (visible(users.reader, ids.employmentId)) problems.push("the directory reader sees Retail's employment")
+            if (visible(users.hr, ids.otherEmploymentId)) problems.push("the HR officer sees Services' employment")
+            // the panels under People (their files' data, as the record-files element fetches it): the employment opens, a
+            // person's Party record is kept in its own app
+            const filesData = (recordEntity, recordId) =>
+                asUser(users.hr, () => {
+                    const result = ec.screen
+                        .makeTest()
+                        .rootScreen("component://webroot/screen/webroot.xml")
+                        .render("apps/People/RecordFiles/filesData", {recordEntity, recordId}, "get")
+                    const errors = Array.from(result.errorMessages || []).join(" | ")
+                    ec.message.clearErrors()
+                    return {output: String(result.output || ""), errors}
+                })
+            const employment = filesData("mantle.humanres.employment.Employment", ids.employmentId)
+            const employmentFiles = employment.errors ? {} : JSON.parse(employment.output)
+            if (
+                !employmentFiles.visible ||
+                !employmentFiles.canUpload ||
+                !String(employmentFiles.record?.title).startsWith("Tomas Lindqvist at")
+            )
+                problems.push(`the employment's files under People: ${employment.errors} ${employment.output.slice(0, 200)}`)
+            const party = filesData("mantle.party.Party", ids.employeePartyId)
+            if (!party.errors.includes("RECORD_PANEL_UNAVAILABLE"))
+                problems.push(`a Party's files under People: ${party.errors} ${party.output.slice(0, 160)}`)
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
         }
     }
 )

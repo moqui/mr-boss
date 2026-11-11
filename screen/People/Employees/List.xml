@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Employees (design-people §4 Employees, §15 the directory export; style-guide §3.2 List; impl-people P2): FindEmployees
+    narrows the directory by name, employer, manager and as-of date (an HR reader may ask for ended employments too), and
+    EmployeeList shows one row per employment from mantle.humanres.PeopleServices.find#Employees: the public work identity (name,
+    employer, job title, manager, location, work email and phone, state) and, for an HR reader, the employment's dates; never a
+    private contact, identification or pay, which the service leaves out. The CSV export is the same projection, every row the
+    search finds up to the service's cap. Each person opens Employee360. Department and location filters come with P3's units and
+    P6's assignments; Hire employee with P6. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Employees" default-menu-include="false">
+    <parameter name="term"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="managerPartyId"/>
+    <parameter name="includeEnded"/>
+    <parameter name="asOfDate"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <actions>
+        <service-call name="mantle.humanres.PeopleServices.find#Employees" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), organizationPartyId:(organizationPartyId || null), managerPartyId:(managerPartyId || null),
+                    includeEnded:(includeEnded == 'Y'), asOfDate:(asOfDate || null), pageIndex:(pageIndex || 0),
+                    pageSize:(pageSize || null), pageNoLimit:(pageNoLimit || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="directoryFound" from="!!found?.employees"/>
+        <set field="hrColumns" from="!!found?.hrColumns"/>
+        <set field="employees" from="found?.employees || []"/>
+        <set field="employeesCount" from="found?.employeesCount || 0"/>
+        <set field="employeesPageIndex" from="found?.employeesPageIndex || 0"/>
+        <set field="employeesPageSize" from="found?.employeesPageSize || 20"/>
+        <set field="employeesPageMaxIndex" from="found?.employeesPageMaxIndex || 0"/>
+        <set field="employeesPageRangeLow" from="found?.employeesPageRangeLow || 0"/>
+        <set field="employeesPageRangeHigh" from="found?.employeesPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(term || organizationPartyId || managerPartyId || includeEnded == 'Y' || asOfDate)"/>
+        <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null,
+                managerPartyId: managerPartyId || null, includeEnded: includeEnded || null, asOfDate: asOfDate || null}"/>
+        <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
+    </actions>
+    <widgets>
+        <label text="Employees" type="h5"/>
+        <label text="The people of the employers you read, by their work identity. Private contacts, identifications and pay are not part of the directory."
+                type="p" style="text-caption m-muted"/>
+        <form-single name="FindEmployees" transition="." map="findValues">
+            <field name="term"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
+            <field name="organizationPartyId">
+                <default-field title="Employer">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="managerPartyId">
+                <default-field title="Manager">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'people', selected:findValues.managerPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="asOfDate">
+                <default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="includeEnded">
+                <conditional-field condition="people.capabilities.hrView" title="Ended employments">
+                    <check><option key="Y" text="Include"/></check>
+                </conditional-field>
+                <default-field><ignored/></default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="term"/>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="managerPartyId"/>
+                    <field-ref name="asOfDate"/>
+                    <field-ref name="includeEnded"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label text="This employer is not available to you." type="p" style="text-negative"
+                condition="organizationPartyId &amp;&amp; !directoryFound"/>
+        <label text="The employee directory is not available to you." type="p" style="m-muted"
+                condition="!organizationPartyId &amp;&amp; !directoryFound"/>
+        <section name="EmployeeRows" condition="directoryFound">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="EmployeeList" list="employees" skip-form="true" paginate="true" select-columns="true"
+                                show-csv-button="true">
+                            <field name="personName">
+                                <default-field title="Name">
+                                    <link url="${sharedLinks['Employees/Employee360']}" link-type="anchor"
+                                            text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
+                                            parameter-map="{partyId:partyId, partyRelationshipId:(partyRelationshipId || null)}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="managerName"><default-field title="Manager"><display/></default-field></field>
+                            <field name="workLocation"><default-field title="Location"><display/></default-field></field>
+                            <field name="workEmail"><default-field title="Work email"><display/></default-field></field>
+                            <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
+                            <field name="fromDateText" hide="!hrColumns"><default-field title="Started"><display/></default-field></field>
+                            <field name="thruDateText" hide="!hrColumns"><default-field title="Ended"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="workPhone"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!employees.length &amp;&amp; filtered" text="No one matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!employees.length &amp;&amp; !filtered"
+                                text="No one is employed by the employers you read."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

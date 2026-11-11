@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     people and the employments of the employers in scope for a staff reader, joins and exits of the last 30 days for an HR
     reader; each count of a later phase absent, no pay), DueWork (the employees with no manager, an HR reader's), and the
     first-use state when no employer in scope has employees, which links Settings for the People administrator. A People user
-    who reads no employer (a manager, the root group alone) is told what Home holds. Hire employee, the cards' list links and
+    who reads no employer (a manager, the root group alone) is told what Home holds. P2: Headcount and Employments open the
+    directory (Employees) of the employer chosen, and each due person their Employee360. Hire employee and
     the other counts of design §1.2 (people out, vacancies, decisions, payroll exceptions, expiring qualifications) come with
     the phases that build them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -38,6 +39,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="dueRows" from="home?.dueWork || []"/>
         <set field="dueMoreText" from="home &amp;&amp; home.dueWorkCount &gt; dueRows.length ? 'The first ' + dueRows.length + ' of ' + home.dueWorkCount + ', by name.' : ''"/>
         <set field="scope" from="{organizationPartyId: organizationPartyId || null, asOfDate: asOfDate || null}"/>
+        <set field="employeesLink" from="'/qapps/People/Employees' + (organizationPartyId &amp;&amp; homeFound ? '?organizationPartyId=' + encodeURIComponent(organizationPartyId) : '')"/>
         <set field="scopeText" from="(organizationPartyId &amp;&amp; homeFound ? (people.organizationOptions.find(option =&gt; option.value === organizationPartyId)?.label || organizationPartyId)
                 : people.allOrganizations ? 'Every employer' : 'Your employers') + (homeFound ? ', as of ' + ec.l10n.format(home.asOfDate, 'yyyy-MM-dd') : '')"/>
     </actions>
@@ -92,9 +94,9 @@ along with this software (see the LICENSE.md file). If not, see
                     <widgets>
                         <dashboard min-width="160">
                             <number-card title="Headcount" value="${countText.headcount}" icon="sym_o_groups" size="sm"
-                                    condition="countText.headcount != null"/>
+                                    link="${employeesLink}" condition="countText.headcount != null"/>
                             <number-card title="Employments" value="${countText.employments}" icon="sym_o_badge" size="sm"
-                                    condition="countText.employments != null"/>
+                                    link="${employeesLink}" condition="countText.employments != null"/>
                             <number-card title="Joined, last 30 days" value="${countText.joins}" icon="sym_o_person_add" size="sm"
                                     condition="countText.joins != null"/>
                             <number-card title="Left, last 30 days" value="${countText.exits}" icon="sym_o_person_remove" size="sm"
@@ -112,7 +114,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="Nothing is due." type="p" condition="!dueRows.length"/>
                                 <label text="${dueMoreText}" type="p" style="text-caption m-muted" condition="dueMoreText"/>
                                 <form-list name="DueWorkRows" list="dueRows" skip-form="true" paginate="false" condition="dueRows.length">
-                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                    <field name="personName">
+                                        <default-field title="Employee">
+                                            <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
+                                                    parameter-map="{partyId:partyId}"/>
+                                        </default-field>
+                                    </field>
                                     <field name="dueText"><default-field title="Due"><display/></default-field></field>
                                     <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
                                     <columns type="mobile">

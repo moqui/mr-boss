@@ -54,6 +54,13 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const financeTypes = {MantleInvoice:'invoices',MantlePayment:'payments',MantleGlAccount:'accounts',MantleAcctgTrans:'journals',
                 'mantle.account.invoice.Invoice':'invoices','mantle.account.payment.Payment':'payments','mantle.ledger.account.GlAccount':'accounts','mantle.ledger.transaction.AcctgTrans':'journals'}
+            // an employment (People's HR host, impl-people P2): its Employee360 under People for an HR reader of the employer,
+            // else nowhere
+            if (recordEntityName === 'mantle.humanres.employment.Employment') {
+                url = ec.resource.script('component://mr-boss/service/ironstone/people/People.js').employmentLink(id)
+                icon = 'sym_o_badge'
+                return
+            }
             const financeKind = financeTypes[docType] || financeTypes[recordEntityName]
             if (financeKind && ec.user.userId) {
                 // Accounting's own permission check (the Mantle finance permissions), not group names

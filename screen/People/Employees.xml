@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Employees (design-people §4 Employees and Employee360, §1.2; impl-people P2): the directory and the employee record.
+    The list is the default subscreen Employees/List, so /qapps/People/Employees is the list and Employee360 (the shared record,
+    Shared/Employee360.xml, with People's context) shows in its place. Every People user opens it: what each sees is what
+    mantle.humanres.PeopleServices.find#Employees and get#Employee360 admit (a staff reader the employers they read, a manager
+    their reports, HR the HR columns and regions). HireEmployee (P6), OrgStructure and OrgChart (P3) join with their phases. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Employees" default-menu-index="4" menu-image="sym_o_badge" menu-image-type="icon">
+    <subscreens default-item="List">
+        <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

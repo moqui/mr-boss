@@ -114,8 +114,9 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="search" noun="Records" allow-remote="false">
-        <description>The palette's People records, each opening its People screen, checked again row by row: none yet (P2 adds
-            the directory's work identity, with recordEntity and recordId). No rows for a user without People.</description>
+        <description>The palette's People records, each opening its People screen: the directory (P2), the people
+            mantle.humanres.PeopleServices.find#Employees reaches for the user and the text, each once, as their public work
+            identity, opening Employee360, with recordEntity and recordId. No rows for a user without People.</description>
         <in-parameters>
             <parameter name="text"/>
             <parameter name="limit" type="Integer"/>
@@ -129,6 +130,79 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="module" value="component://mr-boss/service/ironstone/people/People.js"/>
             <set field="found" from="ec.resource.script(module).execute('search', context)"/>
             <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+
+    <!-- ===== P2: Employee360's per-app context, the links of apps without one, and the Person record-lookup ===== -->
+    <service verb="get" noun="Employee360Context" allow-remote="false">
+        <description>A person's record as Shared/Employee360 shows it under appRoot (design §4 Employee360's per-app context,
+            crosscut §3.4; People.js employee360Apps): mantle.humanres.PeopleServices.get#Employee360's answer narrowed to the
+            regions the app shows (People every admitted region; Commons the Overview and the user's own personal information;
+            Insights the Overview, read only), the fields the user may change there and the return link. A context narrows and
+            grants nothing. A person outside the user's People scope answers recordFound false; another app root is refused
+            (PEOPLE_CONTEXT), and People's mount needs the People root (PEOPLE_UNAVAILABLE).</description>
+        <implements service="ironstone.people.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="partyId" required="true"/>
+            <parameter name="partyRelationshipId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="regions" type="List"/>
+            <parameter name="record" type="Map"><description>partyId, overview, personalInfo (when shown), partyRelationshipId,
+                hostEmploymentId (the employment host, when its files and activity are shown)</description></parameter>
+            <parameter name="own" type="Boolean"/>
+            <parameter name="editableFields" type="List"/>
+            <parameter name="returnLabel"/>
+            <parameter name="returnPath"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/people/People.js"/>
+            <set field="found" from="ec.resource.script(module).execute('employee360', context)"/>
+            <set field="recordFound" from="found.recordFound"/>
+            <set field="regions" from="found.regions"/>
+            <set field="record" from="found.record"/>
+            <set field="own" from="!!found.own"/>
+            <set field="editableFields" from="found.editableFields || []"/>
+            <set field="returnLabel" from="found.returnLabel || null"/>
+            <set field="returnPath" from="found.returnPath || null"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Employee360Link" allow-remote="false">
+        <description>Where the user opens a person's record from an app with no Employee360 context (Projects' PersonDetail,
+            Admin's UserDetail): People/Employees/Employee360 for a People user whose scope admits the person as staff or team,
+            Commons/People/Employee360 for one it admits otherwise (the person themselves), else no url. The link adds no right;
+            Employee360 checks again.</description>
+        <in-parameters><parameter name="partyId"/></in-parameters>
+        <out-parameters>
+            <parameter name="url"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/people/People.js"/>
+            <set field="found" from="ec.resource.script(module).execute('employee360Link', context)"/>
+            <set field="url" from="found.url"/>
+            <set field="label" from="found.label"/>
+        </actions>
+    </service>
+    <service verb="lookup" noun="Records" allow-remote="false">
+        <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>
+        <description>People's record-lookup provider (People.xml shell-providers, people.records; design §1.4 Comms hooks): the
+            Person over the directory projection. search: the people find#Employees reaches for text, as optionList of
+            {value: mantle.party.Party|id, label}; info and card: a person the user's People scope admits, as their public work
+            identity, with their Employee360 link (others visible false, or no card); links: the people a message's Employee360
+            links name, up to five.</description>
+        <out-parameters>
+            <parameter name="recordList" type="List"/>
+            <parameter name="card" type="Map"/>
+            <parameter name="optionList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/people/People.js"/>
+            <set field="found" from="ec.resource.script(module).execute('lookup', context)"/>
+            <set field="recordList" from="found.recordList"/>
+            <set field="card" from="found.card"/>
+            <set field="optionList" from="found.optionList"/>
         </actions>
     </service>
 </services>

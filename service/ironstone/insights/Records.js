@@ -224,6 +224,25 @@ function readSource(definition, recordId) {
     }
 }
 
+// The return to the report (design §10): the drill's own parameters, each bounded; a return names a definition. People's
+// Employee360 under Insights/Records reads it too (impl-people P2), as it shows the person without a dataset of its own.
+function returnOf(p) {
+    const returnParameters = {}
+    for (const name of [
+        "definitionId",
+        "panelId",
+        "queryReference",
+        "organizationPartyId",
+        "from",
+        "thru",
+        "breakdownDimension",
+        "bucketsJson",
+        "variablesJson"
+    ])
+        if (p[name] != null && String(p[name]) !== "") returnParameters[name] = String(p[name]).slice(0, 4000)
+    return returnParameters
+}
+
 // get#Record: the record as its admitted sources show it to the viewer, the owners' screens of it they may open, and the
 // return to the report.
 function record(p) {
@@ -250,19 +269,7 @@ function record(p) {
                   url: "/qapps/" + owner.path + "?" + owner.parameter + "=" + encodeURIComponent(recordId)
               }))
         : []
-    const returnParameters = {}
-    for (const name of [
-        "definitionId",
-        "panelId",
-        "queryReference",
-        "organizationPartyId",
-        "from",
-        "thru",
-        "breakdownDimension",
-        "bucketsJson",
-        "variablesJson"
-    ])
-        if (p[name] != null && String(p[name]) !== "") returnParameters[name] = String(p[name]).slice(0, 4000)
+    const returnParameters = returnOf(p)
     return {
         recordFound: found,
         recordLabel: type.label,
@@ -291,6 +298,7 @@ function recordPanelAccess() {
 const operations = {record, recordPanelAccess}
 ;({
     recordTypes,
+    returnOf,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights record operation " + op)
         return operations[op](parameters)

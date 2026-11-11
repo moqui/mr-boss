@@ -29,7 +29,10 @@ along with this software (see the LICENSE.md file). If not, see
     lifecycle's (P6): the Lifecycle box's LifecycleActions (Disable, with a date or at once; Remove from organization; Restore) open a
     review (previewKind: mantle.party.IdentityServices.preview#Lifecycle and what the account owns from the registered participants,
     ironstone.admin.LifecycleServices.find#OwnedResources) whose confirmation starts the operation (start#Lifecycle with the
-    participants' steps) and opens its LifecycleDetail; the box lists the account's operations. -->
+    participants' steps) and opens its LifecycleDetail; the box lists the account's operations. People P2 (an owner contract,
+    design-admin §3.30, design-people §4 Employee360): the account's person's employee record, a link in the header for a viewer
+    People's scope admits (ironstone.people.ContextServices.get#Employee360Link); Admin mounts no Employee360 and the link adds no
+    right. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="User" default-menu-include="false">
     <parameter name="userId" required="true"/>
@@ -225,6 +228,17 @@ along with this software (see the LICENSE.md file). If not, see
             canChangeAccount = !!found?.canChangeAccount
             canManageAccess = !!admin?.capabilities?.accessManage
             canLoginAs = !!account && ec.user.hasPermission('ADMIN_LOGIN_AS') && account.userId !== ec.user.userId
+            // People P2: the person's employee record, for a viewer People's scope admits
+            employeeLink = {}
+            if (account?.partyId) {
+                ec.message.pushErrors()
+                try {
+                    employeeLink = ec.service.sync().name('ironstone.people.ContextServices.get#Employee360Link')
+                        .parameters({partyId: account.partyId}).call() || {}
+                } catch (error) {
+                    employeeLink = {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
             organizationText = (found?.organizations || []).map(row => row.name).join(', ') +
                 (found?.otherOrganizationCount ? ' · and ' + found.otherOrganizationCount + ' organization(s) you do not administer' : '')
             accountValues = account ? {userId, expectedRevision: account.revision, emailAddress: account.emailAddress,
@@ -304,7 +318,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 <text type="html">${stateChips.join(' · ')}</text>
                             </render-mode>
                         </container>
-                        <container style="col-12 col-md-auto">
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm">
+                            <link url="${employeeLink.url}" url-type="plain" text="${employeeLink.label}" icon="sym_o_badge"
+                                    link-type="anchor-button" condition="employeeLink?.url"/>
                             <link url="loginAs" text="Login as" link-type="hidden-form-link" icon="sym_o_login" condition="canLoginAs"
                                     confirmation="Sign in as ${account.username}? You act as ${account.userFullName} until you sign out." parameter-map="{userId:userId}"/>
                         </container>

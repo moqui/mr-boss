@@ -63,7 +63,10 @@ along with this software (see the LICENSE.md file). If not, see
                 'mantle.product.asset.Asset': ['mantle.product.AssetRecordServices.create#AssetContent', 'assetContentId',
                     'AssetContentType'],
                 'mantle.order.return.ReturnHeader': ['mantle.order.ReturnServices.create#ReturnContent', 'returnContentId',
-                    'ReturnContentType']}
+                    'ReturnContentType'],
+                // People's employment content host (impl-people P2, F66): HR's files of an employment, never on the Party
+                'mantle.humanres.employment.Employment': ['mantle.humanres.PeopleServices.create#EmploymentContent', 'employmentContentId',
+                    'EmploymentContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
@@ -107,6 +110,12 @@ along with this software (see the LICENSE.md file). If not, see
                 const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId',info.recordId).one()
                 if (row && ['WepRouting','WepRoutingTask'].includes(row.purposeEnumId)) contentType.catalogCanChange = !!ec.service.sync()
                     .name('mantle.work.RoutingServices.get#RoutingAccess').parameters({workEffortId:info.recordId,need:'edit'}).disableAuthz().call()?.recordVisible
+            }
+            // an employment's files: an HR editor of its employer changes them (Mantle's check#EmploymentAccess, People's scope)
+            if (info.recordEntityName === 'mantle.humanres.employment.Employment') {
+                const access = ec.service.sync().name('mantle.humanres.PeopleServices.check#EmploymentAccess')
+                    .parameters({partyRelationshipId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
             }
             if (info.recordEntityName === 'mantle.party.Party') {
                 const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess')

@@ -633,6 +633,117 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
   preferred name; Insights opens the Overview from a drill-down; Admin's UserDetail link opens Employee360 only for
   a user who may read it.
 
+**Built Nov 11 (P2).** mr-mantle 10fa737c, mr-boss (branch `ppl/p2`).
+- Checked first (the code over the plan): F59 (Party owner `_NA_`, no PrtEmployee filter: every read is by employment after
+  `get#Scope`), F66 (`get#RecordLinkInfo`'s literal content map with a visibility branch per entity, RecordFiles' own map in
+  `get#ContentType`, the Records drive's folder map leaving employments out), F40 (Insights/Records mounts no person; its path
+  check serves a record screen and `InsightsRecord` only), F41 (UserDetail has no link), F46 (no Commons/People), F76 (a date-only
+  as-of). Also: Mantle has no emergency contact record and no `EmailWork` purpose (the demo's work email is `EmailPrimary`); the
+  `record-lookup` hook gives each record the first provider's info and card (`ChatScreenServices.lookup#Records`), and Comms'
+  `boss.records` answers every visible Party; RecordFiles and Chatter render in qvt and tui only; a probe's error text is
+  "Error: CODE: message", which EntityLib's `reasonCode` does not read; the `ironstone.people` services are People's artifact
+  group, so a shared screen under Commons or Insights reaches them through that root's inherited grant only.
+- Mantle (`mantle.humanres.PeopleServices` over a new module `Employees.js`; People.js exports its scope pieces):
+  - `find#Employees`: one row per employment the scope reaches as of the date (a staff reader's employers, current, or with
+    `includeEnded` any for an HR reader; a live report's; the caller's own with self-service; `PERMISSION_DENIED` for no reach):
+    name, preferred name (`Person.nickname`), employer, job title (position class title, P4's), manager (live `PrtManager`), work
+    email (`EmailPrimary`), phone (`PhoneWork`) and location (`PostalWork` city), state; for HR the employment's id, dates and
+    termination reason. Search by name, preferred name or id in the query ignoring case; employer (refused outside,
+    `ORGANIZATION_DENIED`) and manager filters; `EntityLib.page`, an export (`pageNoLimit`) up to 2000;
+  - `get#Employee360`: the regions the scope admits, each other absent from the answer: `overview` for any reader (work identity,
+    the employments it shows, HR's with dates, managers); `personalInfo` and `employmentHistory` for the person and HR of an
+    employer of theirs; `filesAndActivity` (`hostEmploymentId`) for HR of the opened employment's employer. `partyRelationshipId`
+    opens an employment the scope shows (else `RECORD_UNAVAILABLE`); a directory or team reader gets no employment id;
+  - `get#EmploymentHistory` (HR's of the employers in scope, any dates; the person's all; else `PERMISSION_DENIED`);
+  - `store#PersonalInfo`: the person changes preferred name, home and mobile phones; an HR editor these and legal names, birth
+    date, gender and home address; `FIELD_NOT_PERMITTED` for another field changed, `NAME_REQUIRED`, `REVISION_CHANGED` at a
+    revision other than the one read (a hash of the personal information), contacts by date through
+    `ContactServices.store#PartyContactInfo` (`replaceByPurpose`); no tax or bank parameter;
+  - the employment content host (PE-01): `EmploymentContent` (keyed by `employmentContentId`, `partyRelationshipId`, the
+    `EmploymentContentType` enumeration), `check#EmploymentAccess` (an HR reader of the employer in scope, `canEdit` with
+    `PEOPLE_HR_EDIT`; never refuses), `create#EmploymentContent` and `save#EmploymentContentFile`; `get#RecordLinkInfo` gains the
+    content map entry and a visibility branch for `Employment` and `EmploymentContent` by `check#EmploymentAccess`, for every
+    caller, authorization off too;
+  - a date-only as-of is the end of that day (People.js `asOfMillis`, F76), for Home too.
+- BOSS:
+  - Screens: `People/Employees` (menu index 4, every People user's) with `Employees/List` (FindEmployees: name, employer, manager,
+    as-of, HR's "Ended employments"; EmployeeList with phone columns, the state as a chip with its tui text, HR's dates by
+    `hide`, `select-columns` and the CSV) and `Employees/Employee360`; `Shared/Employee360.xml` (the record header with the
+    opened employment's state, Edit personal information for the fields the user may change there, the employment choices, and
+    the boxes Overview, Personal information, Employment history and Files and activity, the last the employment's
+    `record-files` and `chatter`); `Commons/People.xml` (out of the menu) mounting it; `Insights/Records/Employee360`. Home's
+    Headcount and Employments cards open the directory and each due person their Employee360. The People root's Chatter and
+    RecordFiles serve People's hosts only (`RECORD_PANEL_UNAVAILABLE` for another record), with the palette's "Employees" group
+    (`search#Records` over `find#Employees`, rows with `recordEntity` `mantle.party.Party` and `recordId`), the
+    `people.records` record-lookup (`lookup#Records`: search, info, card, links) and the `g e` key.
+  - `ironstone.people.ContextServices`: `get#Employee360Context` (People.js `employee360Apps`, the per-app context: People
+    every admitted region, Commons the Overview and the user's own personal information with their own corrections, Insights the
+    Overview, read only, with the return; another root `PEOPLE_CONTEXT`; a person out of scope `recordFound` false),
+    `get#Employee360Link` (the People mount for a People user whose scope admits the person as staff or team, the Commons mount
+    for the person, else none) and `lookup#Records`. No Projects row: Projects mounts nothing (§1's "Projects row" is the link).
+  - Owner contracts: Projects' PersonDetail and Admin's UserDetail headers link Employee360 (`get#Employee360Link`); Insights'
+    Records mounts Employee360, `Records/Employee360` in its links and Records.js's return parameters exported (`returnOf`);
+    Commons' `get#RecordInfo` names an employment ("Tomas Lindqvist at …"), `get#RecordLink` links it under People for an HR
+    reader (People.js `employmentLink`), RecordFiles' `get#ContentType` adds `create#EmploymentContent` with an HR editor's
+    change right.
+- Specs: Mantle `test/humanres/PeopleDirectory` (4 features, 1.5 to 2.7 s feature time: a reader's rows exactly the public
+  fields, search ignoring case, the manager filter, HR's columns and ended rows, another employer refused; Employee360's regions
+  for reader, HR, a second employer's HR and the person, a forged employment refused; the person's preferred name and not legal
+  name, a stale revision and a reader refused, HR's home address by date, the history HR's and the person's; the employment host
+  for HR of its employer only, edited with `PEOPLE_HR_EDIT`, through `get#RecordLinkInfo` too). BOSS `test/People/PeopleEmployees`
+  (4 features, 0.8 to 1.8 s: Employee360's one qvt render as HR; the CSV export's columns for the reader and HR; the per-app
+  context for Commons, Insights, People and another root; the PersonDetail and UserDetail link, the palette rows, the lookup's
+  search and card, and Commons' mount rendered once in html for the employee). `PeopleAccess` gains one feature (0.2 s: the
+  employment's notes and files an HR officer's of its employer and not the reader's or another employer's, through the panels'
+  record check; the People panels' files data opening the employment and refusing a Party), and its menus and keys now hold
+  Employees and `g e` (PeopleSpecLib `staffMenu`, `adminMenu`). Acceptance, written and not run:
+  `acceptance/People/PeopleDirectoryUsable` (5 features: the reader through list, palette, export and a forged link with a
+  private phone and passport never shown; HR corrects a home address by the transition; the employee's preferred name and not
+  legal name in Commons; Insights' Overview from a drill with the return and its transition refused; UserDetail's and
+  PersonDetail's link for ADMIN and not for the identity operator or another app's user).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, RecordLinks,
+  RecordVisibility, HumanResServices and PayrollServices, 56 of 56 (mr-mantle 6.0 s feature time); BOSS PeopleAccess (8 of 8),
+  PeopleEmployees (4 of 4), Resources, AdminUsers, InsightsAccess, InsightsRecords, RecordFiles, Chatter, Contacts and
+  ProjectsAccess, 125 of 125 (mr-boss 19.2 s). `moqui lint --screens`: 135 flagged sites, as on master, none in the changed
+  screens; no TUI-text finding in them. Prettier clean on the new and changed JavaScript but Insights.js, which was not clean on
+  master (one line added). Not run: `./moq test-apps`, the acceptance suite (PeopleFoundationWalk now walks Employees too, through
+  `ids.adminMenu`).
+- Inventories: ss-inventory's FindParty search and list forms and EditParty's person, identification, phone and postal purpose,
+  note and content forms name the People screens; usl-inventory gains an Added table of the PeopleServices with their screens
+  (P1's and P2's) and `store#PartyContactInfo` and `get#RecordLinkInfo` name Employee360.
+- Design edits: design-people (header, §1.4 palette and Comms hooks, §4 Employees and Employee360 as built, §13 Chatter and
+  RecordFiles, §15 the directory export); design-crosscut §3.4 and header; the owner designs: design-insights §10 (the Records
+  mount), design-admin UserDetail, design-projects PersonDetail, design-drawers-commons (Commons/People, the record panels, the
+  palette groups).
+- Findings (provisional, numbered by the lead):
+  - Mantle has no `EmailWork` contact purpose; the directory takes `EmailPrimary` as the work email, as P1's demo stores it, which
+    would publish a person's own address where their primary email is personal. A seeded `EmailWork` (and the demo on it) would
+    make the work identity unambiguous;
+  - Mantle has no emergency contact record; design §4 PersonalInfo names one. P2 shows none; a relationship type or entity is
+    needed before SelfService (P8);
+  - a manager is any live `PrtManager` and team access shows all of a report's current employments (P1's `partyAccess`), so a
+    reader of one employer sees, in the Overview, a manager the person has at another employer, and a manager of a dual employee
+    sees both employments; P3's reporting lines (and P6's assignments) are where a manager is per employment;
+  - the `record-lookup` hook takes the first provider's info and card per record, and Comms' `boss.records` answers every
+    visible Party, so People's Person card and info show only where Comms' does not answer; its search and links add People's
+    rows. Comms' provider could defer an employee's card to People, or the hook prefer the more specific provider;
+  - EntityLib's `reasonCode` reads `CODE:` at the start of a message only, and a probe's error is "Error: CODE: message"; People.js
+    reads it with its own `codeOf`. A Mantle refusal a caller expects is still logged at ERROR with its stack by the service
+    call (every "Not available" view of a person writes one);
+  - the directory's department and location columns and filters, design §4's, wait for P3's units and P6's assignments; the
+    identification write (AddIdentificationForm) is not built, identifications being read only here.
+- For the lead:
+  - the budget: mr-mantle's share PeopleDirectory 1.5 to 2.7 s; mr-boss's PeopleEmployees 0.8 to 1.8 s and PeopleAccess's new
+    feature 0.2 s, within §4's estimates (no client spec);
+  - merge hot spots: mr-mantle `service/mantle/party/CommunicationServices.xml` (the content map's end and the visibility branch
+    before `financeEntity`), `entity/HumanResourcesEntities.xml` (after Employment), `People.js` (its exports); mr-boss
+    `service/ironstone/shared/RecordFilesServices.xml` (the map's end, a branch before Party's), `ChatterServices.xml`
+    (`get#RecordInfo`'s type chain), `commons/PaletteServices.xml` (`get#RecordLink`'s head), `insights/Insights.js` (linkPaths)
+    and `Records.js`, `screen/Insights/Records.xml` (subscreens), `Admin/Users/UserDetail.xml` and
+    `Projects/Resources/PersonDetail.xml` (the header actions), `test/People/PeopleSpecLib.js` (menus);
+  - the user's call: whether Mantle seeds an `EmailWork` purpose for the work identity (the first finding), and whether the
+    person may see their own employment's files (P2 gives them to HR only; the design's Commons row lists none).
+
 ### P3 — Organization and reporting
 
 Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).

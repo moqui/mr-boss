@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Commons › People (design-people §1.2, §4 Employee360; design-crosscut §3.4; impl-people P2, F46, F64): the personal side of
+    IronStone People for every BOSS user, out of the Commons menu and reached from links (Projects' PersonDetail, Admin's
+    UserDetail, a person's own record). P2 mounts Employee360 with Commons' context (ironstone.people's employee360Apps): the
+    public work card of a person the user's People scope admits, and for the user's own record their personal information with
+    the corrections they may make themselves. SelfService joins in P8. Nothing here needs the People root grant: what shows is
+    what mantle.humanres.PeopleServices admits. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="People" default-menu-include="false" menu-image="sym_o_badge" menu-image-type="icon">
+    <subscreens default-item="Employee360">
+        <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

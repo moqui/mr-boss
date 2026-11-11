@@ -11,7 +11,7 @@
 //
 // Later phases extend the tables below rather than the functions: areas (menu areas whose authorization is a capability),
 // recordKinds (a kind of record: its read and, once built, its screen), searchFinds (the palette), choiceSources (the
-// drop-downs) and linkPaths (sharedLinks).
+// drop-downs), linkPaths (sharedLinks) and employee360Apps (the per-app context of Shared/Employee360, P2).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {find, one, denied, call} = lib
 const access = lib.access
@@ -82,6 +82,8 @@ function required(userScope = scope()) {
     if (!userScope.read) denied("PEOPLE_UNAVAILABLE", "People is not available")
     return userScope
 }
+// The reason code of a refusal, also from a probe's message ("Error: CODE: message"), which lib.reasonCode does not read.
+const codeOf = error => lib.reasonCode(error) || /\b([A-Z][A-Z0-9_]{3,}):/.exec(String(error?.message || ""))?.[1] || null
 const likeText = text => "%" + String(text).replace(/[\\%_]/g, character => "\\" + character) + "%"
 function organizationName(partyId) {
     const organization = partyId ? one("mantle.party.Organization", {partyId}) : null
@@ -115,7 +117,10 @@ function organizationOptions(partyIds, term, limit) {
 const linkPaths = [
     // P1: Home and Settings (design §1.2)
     "Home",
-    "Settings"
+    "Settings",
+    // P2: the directory and the employee record (design §4)
+    "Employees",
+    "Employees/Employee360"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -151,7 +156,7 @@ const recordKinds = {
     person: {
         name: "Person",
         icon: "sym_o_person",
-        destination: null,
+        destination: "Employees/Employee360",
         read: (userScope, partyId) => {
             // Mantle's scope admits the person (self, team or staff) and names the employments it shows
             const admitted = call("mantle.humanres.PeopleServices.get#Scope", {partyId})
@@ -281,9 +286,41 @@ function choices(p) {
 }
 
 // ===== palette =====
-// The palette's People records, each opening its People screen: none in P1; P2 adds the directory (Person rows with recordEntity
-// and recordId).
-const searchFinds = []
+// The palette's People records, each opening its People screen. P2: the directory, the people find#Employees reaches for the
+// user (its public work identity, the same projection as the list and export), each person once, opening Employee360, with
+// recordEntity and recordId for Assist's search.
+const searchFinds = [
+    {
+        kind: "person",
+        rows: (userScope, text, limit) => {
+            let found
+            try {
+                found = lib.probe("mantle.humanres.PeopleServices.find#Employees", {term: text, pageSize: limit * 2})
+            } catch (error) {
+                // a People user the directory reaches no one for (the root group alone) finds nothing
+                if (codeOf(error) === "PERMISSION_DENIED") return []
+                throw error
+            }
+            const byParty = new Map()
+            for (const row of Array.from(found.employees || [])) {
+                const shown = byParty.get(row.partyId)
+                if (shown) {
+                    shown.subtitle += ", " + row.organizationName
+                    continue
+                }
+                byParty.set(row.partyId, {
+                    title: row.preferredName ? row.personName + " (" + row.preferredName + ")" : row.personName,
+                    subtitle: ["Employee", [row.jobTitle, row.organizationName].filter(Boolean).join(" · ")].join(" · "),
+                    icon: recordKinds.person.icon,
+                    recordEntity: "mantle.party.Party",
+                    recordId: row.partyId,
+                    url: "/qapps/People/" + recordKinds.person.destination + "?partyId=" + encodeURIComponent(row.partyId)
+                })
+            }
+            return Array.from(byParty.values())
+        }
+    }
+]
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}
@@ -302,9 +339,201 @@ function search(p) {
     return {rows: Array.from(found.values()).slice(0, limit)}
 }
 
-const operations = {sharedContext, checkRecord, choices, search}
+// ===== Employee360 (P2; design §4 Employee360, crosscut §3.4) =====
+// The per-app context of Shared/Employee360: for each app that mounts it, the regions it shows (of those get#Employee360 admits),
+// the regions it shows only for the user's own record, what may be changed there and the actions. A context narrows what Mantle
+// admits and grants nothing. Maintenance adds its row with its mount (impl-people §7); an app with no row (Projects, Admin, Sales)
+// links the People mount for a People user and the Commons mount otherwise (employee360Link).
+const employee360Apps = {
+    // People: every region the user's capabilities admit; personal corrections, the employment's files and activity
+    People: {
+        regions: ["overview", "employmentHistory", "personalInfo", "filesAndActivity"],
+        ownOnly: [],
+        edits: true,
+        returnLabel: "Employees",
+        returnPath: "//People/Employees"
+    },
+    // Commons: the public work card, and the user's own private data with the corrections they may make themselves
+    Commons: {
+        regions: ["overview", "personalInfo"],
+        ownOnly: ["personalInfo"],
+        edits: "self",
+        returnLabel: null,
+        returnPath: null
+    },
+    // Insights: the Overview of the person behind a report drill-down, read only, with the return to the report
+    Insights: {regions: ["overview"], ownOnly: [], edits: false, returnLabel: "Back to the report", returnPath: null}
+}
+const employee360Path = app => "/qapps/" + (app === "Commons" ? "Commons/People/Employee360" : "People/Employees/Employee360")
+// get#Employee360: the person's record under appRoot, the regions of Mantle's answer that the app's context shows, the fields the
+// user may change there and the employment the record opened on. A person outside the scope answers recordFound false (the screen
+// shows "Not available"); another app root is refused (PEOPLE_CONTEXT), and People's mount needs the People root (PEOPLE_UNAVAILABLE).
+function employee360(p) {
+    const app = Object.hasOwn(employee360Apps, p.appRoot || "") ? employee360Apps[p.appRoot] : null
+    if (!app) denied("PEOPLE_CONTEXT", "This person's record is not available here")
+    if (p.appRoot === "People") required()
+    else if (!ec.user.userId) denied("PEOPLE_UNAVAILABLE", "People is not available")
+    let found
+    try {
+        found = lib.probe("mantle.humanres.PeopleServices.get#Employee360", {
+            partyId: p.partyId,
+            partyRelationshipId: p.partyRelationshipId || null
+        })
+    } catch (error) {
+        if (codeOf(error) === "RECORD_UNAVAILABLE") return {recordFound: false, regions: [], record: {}}
+        throw error
+    }
+    const own = Array.from(found.access || []).includes("self")
+    const regions = Array.from(found.regions || []).filter(
+        region => app.regions.includes(region) && (!app.ownOnly.includes(region) || own)
+    )
+    const caps = found.capabilities || {}
+    const editable =
+        app.edits === true
+            ? Array.from(caps.selfFields || [])
+            : app.edits === "self" && own
+              ? ["preferredName", "homePhone", "mobilePhone"]
+              : []
+    const record = {
+        partyId: found.partyId,
+        overview: found.overview,
+        personalInfo: regions.includes("personalInfo") ? found.personalInfo : null,
+        partyRelationshipId: found.partyRelationshipId || null,
+        hostEmploymentId: regions.includes("filesAndActivity") ? found.hostEmploymentId : null
+    }
+    return {
+        recordFound: true,
+        regions,
+        record,
+        own,
+        editableFields: caps.editPersonal && regions.includes("personalInfo") ? editable : [],
+        returnLabel: app.returnLabel,
+        returnPath: app.returnPath
+    }
+}
+// get#Employee360Link: where the user opens a person's record from an app with no Employee360 row (Projects' PersonDetail,
+// Admin's UserDetail, design §4 Employee360, crosscut §3.4): the People mount for a People user whose scope admits the person as
+// staff or team, the Commons mount for one it admits otherwise (the person themselves), else no link. The link adds no right:
+// Employee360 checks again.
+function employee360Link(p) {
+    const none = {url: null, label: null}
+    if (!p.partyId || !ec.user.userId) return none
+    let admitted
+    try {
+        admitted = lib.probe("mantle.humanres.PeopleServices.get#Scope", {partyId: p.partyId})
+    } catch (error) {
+        if (codeOf(error) === "RECORD_UNAVAILABLE") return none
+        throw error
+    }
+    const kinds = Array.from(admitted.partyAccess || [])
+    const peopleUser = rootGrants().read && (kinds.includes("staff") || kinds.includes("team"))
+    return {
+        url: employee360Path(peopleUser ? "People" : "Commons") + "?partyId=" + encodeURIComponent(p.partyId),
+        label: peopleUser ? "Employee record" : "My employee record"
+    }
+}
+// The People link of an employment (the employment content host's record, for the Chatter and RecordFiles panels and the
+// notifications that name it): its Employee360 under People for a People user who reads its files, else none.
+function employmentLink(partyRelationshipId) {
+    if (!ec.user.userId || !rootGrants().read) return null
+    const access = call("mantle.humanres.PeopleServices.check#EmploymentAccess", {partyRelationshipId})
+    if (!access.recordVisible) return null
+    return (
+        employee360Path("People") +
+        "?partyId=" +
+        encodeURIComponent(access.partyId) +
+        "&partyRelationshipId=" +
+        encodeURIComponent(partyRelationshipId)
+    )
+}
+
+// ===== record-lookup (design §1.4 Comms hooks) =====
+// The Person record-lookup over the directory projection (org.moqui.comms.ProviderInterfaces.record#Lookup): search, the people
+// find#Employees reaches for the text; info and card, a person the user's scope admits, as their public work identity; links, the
+// people a message's Employee360 links name. A person the scope does not admit is answered visible false, or not at all.
+const PARTY = "mantle.party.Party"
+function personCard(partyId) {
+    let found
+    try {
+        found = lib.probe("mantle.humanres.PeopleServices.get#Employee360", {partyId})
+    } catch (error) {
+        if (codeOf(error) === "RECORD_UNAVAILABLE") return null
+        throw error
+    }
+    const overview = found.overview || {}
+    return {
+        partyId,
+        title: overview.personName,
+        subtitle: Array.from(overview.employments || [])
+            .map(row => [row.jobTitle, row.organizationName].filter(Boolean).join(", "))
+            .join(" · "),
+        workEmail: overview.workEmail,
+        workPhone: overview.workPhone
+    }
+}
+function lookup(p) {
+    const empty = {recordList: [], card: null, optionList: []}
+    if (!ec.user.userId) return empty
+    const url = partyId => employee360Link({partyId}).url
+    if (p.operation === "search") {
+        const text = String(p.text || "").trim()
+        if (!text) return empty
+        const rowsFound = searchFinds[0].rows(null, text, Math.max(1, Math.min(20, Number(p.limit || 10))))
+        return Object.assign(empty, {
+            optionList: rowsFound.map(row => ({value: PARTY + "|" + row.recordId, label: row.title + " · " + row.subtitle}))
+        })
+    }
+    if (p.operation === "info") {
+        const recordList = []
+        for (const wanted of Array.from(p.records || [])) {
+            if (wanted.recordEntityName !== PARTY && wanted.recordEntityName !== "Party") continue
+            const card = personCard(wanted.recordId)
+            recordList.push({
+                recordEntityName: wanted.recordEntityName,
+                recordId: wanted.recordId,
+                entity: PARTY,
+                visible: !!card,
+                title: card ? card.title : null,
+                typeLabel: card ? "Employee" : null,
+                url: card ? url(wanted.recordId) : null,
+                icon: recordKinds.person.icon
+            })
+        }
+        return Object.assign(empty, {recordList})
+    }
+    if (p.operation === "card") {
+        if (p.recordEntityName !== PARTY || !p.recordId) return empty
+        const card = personCard(p.recordId)
+        if (!card) return empty
+        return Object.assign(empty, {
+            card: {
+                entityName: PARTY,
+                id: p.recordId,
+                title: card.title,
+                status: card.subtitle,
+                url: url(p.recordId),
+                lines: [card.workEmail, card.workPhone].filter(Boolean)
+            }
+        })
+    }
+    if (p.operation === "links") {
+        const ids = Array.from(
+            String(p.body || "").matchAll(
+                /\/qapps\/(?:People\/Employees|Commons\/People)\/Employee360\?partyId=([A-Za-z0-9_.-]+)/g
+            )
+        ).map(match => decodeURIComponent(match[1]))
+        return Object.assign(empty, {
+            recordList: Array.from(new Set(ids))
+                .slice(0, 5)
+                .map(id => ({entity: PARTY, id}))
+        })
+    }
+    throw new Error("Unknown record lookup " + p.operation)
+}
+
+const operations = {sharedContext, checkRecord, choices, search, employee360, employee360Link, lookup}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown People operation " + op)
     return operations[op](p || {})
 }
-;({execute: run})
+;({execute: run, employmentLink})

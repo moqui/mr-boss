@@ -18,7 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
     organizations, New allocation (for those who may request one; the dialog is Allocations/EditAllocation.xml, mounted here) and the
     team planner on the person. The tabs, each with the person as its context: Overview (the directory card, position, line managers,
     skills, working hours, the next weeks' load), Allocations, Work items (assigned, open), Time (entries and timesheets, as the viewer
-    may see them) and Capacity (twelve weeks). -->
+    may see them) and Capacity (twelve weeks). People P2 (an owner contract, design-people §4 Employee360): the person's employee
+    record, a link for a viewer People's scope admits (ironstone.people.ContextServices.get#Employee360Link: People's mount for a
+    People user, Commons' for the person themselves); the link adds no right, Employee360 checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Person" default-menu-include="false">
 
@@ -53,6 +55,13 @@ along with this software (see the LICENSE.md file). If not, see
         const enc = (value) => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\u0022/g, '&quot;')
         avatarHtml = '<m-avatar name="' + enc(person.name) + '"' + (person.userId ? ' user-id="' + enc(person.userId) + '"' : '')
                 + ' size="40px" class="q-mr-md"></m-avatar>'
+        // People P2: the employee record, for a viewer People's scope admits
+        ec.message.pushErrors()
+        try {
+            employeeLink = ec.service.sync().name('ironstone.people.ContextServices.get#Employee360Link').parameters({partyId}).call() || {}
+        } catch (error) {
+            employeeLink = {}
+        } finally { ec.message.clearErrors(); ec.message.popErrors() }
     ]]></script></actions>
 
     <widgets>
@@ -75,6 +84,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                         <link url="planner" text="Team planner" icon="sym_o_group_work" link-type="anchor-button"/>
+                        <link url="${employeeLink.url}" url-type="plain" text="${employeeLink.label}" icon="sym_o_badge" link-type="anchor-button"
+                                condition="employeeLink?.url"/>
                         <dynamic-dialog id="PersonNewAllocation" button-text="New allocation" icon="sym_o_add" transition="EditAllocation" width="600" title="New allocation for ${person.name}"
                                 parameter-map="{partyId:partyId}" condition="canRequest"/>
                     </container>
