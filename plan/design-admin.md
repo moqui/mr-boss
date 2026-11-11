@@ -1194,7 +1194,14 @@ Registrations are trusted component definitions, validated at load. They are not
 | Shipped report definitions (CX-OPS-REPORTS) | component `report/*.json` datasets, one dashboard and alert templates; `operation` and `operation-ref` on long-running services | The framework loads them read-only with save-as-copy. Insights admits the business datasets (Insights §5), and Admin ships its own (§1.2). |
 
 **Lifecycle participants planned by their owners** (Nov 11, 2026), each on the built contract above:
-- People, `people.approvals`: a departing user's open People decisions and the approval rules that name them (impl-people P5).
+- People, `people.approvals`: a departing user's open People decisions and the approval rules that name them (impl-people P5). As
+  built (impl-people P5): Mantle's `mantle.humanres.PeopleApprovalServices.find#OwnedApprovals` and `transfer#ApprovalOwner`
+  (resource parameter `approvalResourceId`, permission `PEOPLE_APPROVAL_OWNER_CHANGE`, which the identity operator and the
+  administrator hold); a rule row naming the user (approver, alternate or HR fallback) is handed to a new approver who works for
+  its employer (the row in effect ends and its copy names them; a row starting later changes in place), and a waiting request is
+  listed, not transferable: it follows its route once the rule or reporting line naming the user changes, and P6's separation
+  routes it again (P5's review). A rule is handed over only with the permission (or by the People administrator of its
+  employer), never by its approver alone.
 - Sales, "Sales assignments": the accounts, open opportunities and quotes a departing user owns (impl-sales P6).
 - Marketing, `marketing.campaigns`: a departing user's campaign manager and contributor rows; approvals and scheduled sends are not a person's and are not moved (impl-marketing P2).
 - Maintenance, `maintenance.assignments`: a user's open work order and step assignments and equipment custody (impl-maintenance P3), with a leaver's booking approver roles later (its P15).

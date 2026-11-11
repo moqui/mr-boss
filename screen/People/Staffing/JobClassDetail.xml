@@ -153,9 +153,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="skillTypeEnumId">
                                     <default-field title="Skill">
                                         <drop-down>
+                                            <!-- the skill types not ended (People's lookups, Enumeration.thruDate; P5) -->
                                             <entity-options key="${enumId}" text="${description}">
-                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
                                                     <econdition field-name="enumTypeId" value="SkillType"/>
+                                                    <econditions combine="or">
+                                                        <econdition field-name="thruDate" operator="is-null"/>
+                                                        <econdition field-name="thruDate" operator="greater" from="ec.user.nowTimestamp"/>
+                                                    </econditions>
                                                     <order-by field-name="description"/>
                                                 </entity-find>
                                             </entity-options>

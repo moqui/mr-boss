@@ -14,7 +14,9 @@
 // HR editor's of the employer (the directory reader refused with the same parameters, Services' position refused to Retail's HR),
 // a manager reading the seats of the department they lead and not another's, a pay grade's amounts and changes payroll's (the HR
 // officer answered the grade's name alone and refused its change; a shared grade changed by the People administrator and not by
-// Retail's payroll), and the Staffing menu group.
+// Retail's payroll), and the Staffing menu group. P5: approval rules and HR vocabularies the People administrator's (the HR
+// officer refused with the same parameters), a route read by an HR reader of the employer (the directory reader refused, Services'
+// position refused to Retail's HR), a decision asked of an approver (the directory reader refused), and Settings' tabs.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -136,6 +138,10 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.adminMenu)) problems.push(`${user}'s menu: ${names}`)
         }
+        // P5: Settings' tabs, the readiness, the approval rules and the lookups
+        const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
+        if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
+            problems.push(`the administrator's Settings tabs: ${settings.status} ${settings.names}`)
         for (const user of [users.employee, users.otherApp])
             if (shell(user).apps.includes("People")) problems.push(`${user} has People`)
         return {problems}
@@ -173,7 +179,8 @@ const capabilityNames = [
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     {user: users.manager, granted: ["team", "requestApprove"]},
-    {user: users.hr, granted: ["hrView", "hrEdit", "import", "staff"]},
+    // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
@@ -494,6 +501,57 @@ feature(
                 }
             payroll == [true, "3000"]
             hr == [false, "Associate", false, 0]
+        }
+    }
+)
+
+feature(
+    "approval rules and HR vocabularies are the People administrator's; a route is read by an HR reader of the employer; a decision needs an approver's permission",
+    {
+        when() {
+            // Mantle's own checks with the user's identity: a change that passes the permission check is refused for what it asks
+            // (a role that is not one, a value with no name), so the same parameters show the permission's refusal, and nothing
+            // in the demo changes
+            const as = (user, service, parameters) =>
+                asUser(user, () => system(() => refusal("mantle.humanres." + service, parameters)))
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const rule = {
+                organizationPartyId: ids.organizationId,
+                approvalKindEnumId: "PakPosition",
+                approverRoleEnumId: "ParNobody"
+            }
+            const lookup = {enumTypeId: "TerminationReason", description: " "}
+            const route = {emplPositionId: ids.positionId}
+            const otherRoute = {emplPositionId: ids.otherPositionId}
+            // a decision of a seat with no request: past the permission, nothing to decide
+            const decision = {emplPositionId: ids.positionId}
+            return {
+                codes: {
+                    adminRule: code(as(users.admin, "PeopleApprovalServices.store#Policy", rule)),
+                    hrRule: code(as(users.hr, "PeopleApprovalServices.store#Policy", rule)),
+                    adminLookup: code(as(users.admin, "PeopleServices.store#Lookup", lookup)),
+                    hrLookup: code(as(users.hr, "PeopleServices.store#Lookup", lookup)),
+                    hrRoute: code(as(users.hr, "PeopleApprovalServices.resolve#Approvers", route)),
+                    readerRoute: code(as(users.reader, "PeopleApprovalServices.resolve#Approvers", route)),
+                    hrOtherRoute: code(as(users.hr, "PeopleApprovalServices.resolve#Approvers", otherRoute)),
+                    managerDecision: code(as(users.manager, "PositionServices.decide#PositionApproval", decision)),
+                    readerDecision: code(as(users.reader, "PositionServices.decide#PositionApproval", decision))
+                }
+            }
+        },
+        then({codes}) {
+            codes ==
+                {
+                    adminRule: "ROLE_INVALID",
+                    hrRule: "PERMISSION_DENIED",
+                    adminLookup: "DESCRIPTION_REQUIRED",
+                    hrLookup: "PERMISSION_DENIED",
+                    hrRoute: "accepted",
+                    readerRoute: "PERMISSION_DENIED",
+                    hrOtherRoute: "RECORD_UNAVAILABLE",
+                    managerDecision: "RECORD_UNAVAILABLE",
+                    readerDecision: "PERMISSION_DENIED"
+                }
         }
     }
 )

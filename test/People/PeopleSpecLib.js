@@ -34,12 +34,16 @@ const ids = {
     // the Lead grade, shared by Retail and Services (Associate and Manager are Retail's)
     sharedPayGradeId: "BOSS_PPL_PG_LEAD",
     // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
-    // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades
-    staffMenu: ["Home", "Employees", "Staffing"],
-    adminMenu: ["Home", "Employees", "Staffing", "Settings"],
+    // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades; P5:
+    // Approvals (every People user's own), and Settings' tabs the approval rules and lookups
+    staffMenu: ["Home", "Approvals", "Employees", "Staffing"],
+    adminMenu: ["Home", "Approvals", "Employees", "Staffing", "Settings"],
+    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
-    keys: ["g p", "g e", "g o", "g c", "g s"]
+    keys: ["g p", "g e", "g o", "g c", "g s", "g a"],
+    // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
+    plannedPositionId: "BOSS_PPL_P_ASSOC4"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client
