@@ -1,5 +1,9 @@
 # IronStone BOSS — Commerce design
 
+Nov 11, 2026 — brought in line with the Sales plan's decisions and the registered names: a seller's SalesPolicy approval
+setting, off by default, stops the automatic approval of its store orders (§12; impl-sales §4), and §3 Home and §12
+item 15 cite the registered metrics `Sales.Orders`, `Sales.OrderValue` and `Accounting.InvoicedRevenue`. The order-placed
+attribution SECA calls Marketing's one handler, `handle#OrderPlaced` (§12; impl-marketing §4).
 Nov 7, 2026 — built (impl-commerce P1–P15): §2's **Impl** column names the phase that built each screen. Nov 5, 2026 —
 checked against the code while writing [impl-commerce.md](impl-commerce.md) (its F1–F36); the changes are
 marked Nov 5. Nov 1, 2026 — draft; reviewed against research-commerce.md, the reference apps and the other designs (the
@@ -127,10 +131,11 @@ Home has a store selector and period strip, action cards for approval/unpaid/pay
 fulfillment/cart/review/integration work, a recent orders list, and orders, net sales, visits
 and conversion for the selected period against the previous one (R-COM-W01). Each card opens
 the same scoped list used elsewhere. Each metric is the registry metric of its owner, filtered
-to the permitted stores (X11): orders are Sales' `orders.placed` (by placed date, excluding open,
-proposed and recurring-template orders), net sales are Accounting's `revenue.invoicedNet`, and
-visits are Marketing's `visits`, counted from MKT-TRACKING events on the authority (X10).
-Conversion is `orders.placed` over `visits` for the same site, store and window; Commerce has no
+to the permitted stores (X11): orders are Sales' `Sales.Orders`, with `Sales.OrderValue` for their
+value (by placed date, excluding open, proposed and recurring-template orders), net sales are
+Accounting's `Accounting.InvoicedRevenue`, and visits are Marketing's `Marketing.Visits`, counted
+from MKT-TRACKING events on the authority (X10; registered by Marketing's plan).
+Conversion is `Sales.Orders` over the visits for the same site, store and window; Commerce has no
 visit collector of its own and does not read `OrderHeader.visitId`, which a remote PASS cannot
 fill (R-COM-W06, adjusted by X10). Values in different currencies are never summed without an
 explicit reporting currency and Accounting's conversion policy. The summaries require
@@ -906,7 +911,8 @@ SHOP-SUBSCRIPTION.
 it at `Sales/Agreements/Subscriptions` ([Sales](design-sales.md#subscriptions--context-passed)), and
 `R.find#StoreSubscriptions` therefore takes the store as an optional filter: with no store, storeless
 Subscription rows from native sales orders appear beside store contracts, scoped by the seller
-organization the user may see.
+organization the user may see. The list is built as Commerce's own screen; it becomes
+`Shared/Subscriptions`, with Commerce's route as a mount, in impl-sales P16 (impl-sales F23).
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
@@ -1332,7 +1338,7 @@ belongs in the crosscut §1.3 register.
 | Rule / source | Disposition on Commerce/Shop paths |
 | --- | --- |
 | `OrderPlacedAuthorizePayments`, AccountingPayment.secas.xml | Kept. `authorize#OrderPayments` already skips Authorized payments; the proposed guard skips only a Promised payment that has an unresolved attempt, whose key is its `PaymentGatewayResponse.operationKey` (X9, R-SHP-08). |
-| `OrderPlacedAutoApprove`, OrderReturn.secas.xml; `OrderPreApproveCredit`, AccountingCredit.secas.xml | Kept: store delay, pre-approval checks and credit holds. `autoApprove#Order` already refuses without authorized payment covering the grand total, so the Shop pre-approve check applies only to manual `approve#Order`, which runs `check#OrderPreApprove` (X4), and to an attempt in an unknown state. |
+| `OrderPlacedAutoApprove`, OrderReturn.secas.xml; `OrderPreApproveCredit`, AccountingCredit.secas.xml | Kept: store delay, pre-approval checks and credit holds. `autoApprove#Order` already refuses without authorized payment covering the grand total, so the Shop pre-approve check applies only to manual `approve#Order`, whose sales direction calls the credit check itself (X4 as built, impl-sales F11), and to an attempt in an unknown state. Conditioned by the seller (impl-sales §4, Nov 11, 2026; built in impl-sales P11): where the store's organization has its SalesPolicy approval setting on, `autoApprove#Order` approves none of its sales orders, so a store order with an authorized payment stays Placed, in To approve and in Sales' Awaiting approval, until a holder of `SALES_ORDER_APPROVE` approves it. The setting is off by default, and with it off a store order is approved as described here: a pre-approval warning, a Sales one included (impl-sales P9), blocks the automatic approval, as built. With the setting on the warnings are shown to the approver only. |
 | D7 `OrderHold`/`OrderHoldReason`, OrderHoldEntities.xml | Extended: proposed `OhtPayment` hold type, whose `enumCode` names an Accounting payment-operator release permission. Placed when a capture fails or a chargeback arrives after placement, released by Accounting; Commerce shows it (X4). There is no `OhtStock`: stock lost after placement is Warehouse's reservation or backorder fact. |
 | `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve`, ProductAsset.secas.xml; `OrderItemHandleChange`, entity/Order.eecas.xml | Kept for reservation and line-change ownership; enforce the configured reservation moment and refuse public edits once checkout freezes the order. Conditioned: none runs for a RecurringTemplate base order (X5). No parallel Shop reservation ledger. |
 | `OrderPlacedSendEmail`, `OrderApprovedSendEmail`, `OrderApprovedNotify`, OrderReturn.secas.xml | Kept as authoritative status events, delivered through the Comms ledger with idempotent keys (X8). Conditioned: none runs for a RecurringTemplate base order (X5); `OrderApprovedSendEmail` does not run for an order whose parts are all digital or subscription items (Shop §8.3). |
@@ -1342,7 +1348,7 @@ belongs in the crosscut §1.3 register.
 | `OrderApprovedFulfillSubscriptions`, ProductSubscription.secas.xml | Conditioned for Shop paid digital/subscription items: prepare invoice/settlement once and activate resources only after required payment is settled. Current code fulfills before applying/capturing payment, so it is not sufficient unchanged. It already skips recurring bases. |
 | ServiceJob `create_RecurringOrders` (`mantle.order.OrderServices.create#RecurringOrders`), MantleSetupData.xml | Kept, with owners per X5: Sales owns the worker guards and recurrence fields (SAL-RECURRENCE), Shop dispatches Shop-linked bases to its occurrence coordinator, and Accounting monitors it and owns the auto-invoice right. Renewals clone with `copyPayment=false`. |
 | Proposed refund and chargeback SECA | New Mantle SECA on Payment refund and return-item settlement, and Accounting's chargeback intake, calls Shop's `reconcile#RefundedItem` (X5). |
-| Proposed `OrderPlacedRecordAttribution` (tx-commit) | New Mantle SECA calling Marketing's `record#OrderAttribution` for store orders (X10). |
+| Proposed `OrderPlacedRecordAttribution` (tx-commit) | New Mantle SECA calling Marketing's one handler `mantle.marketing.TrackingServices.handle#OrderPlaced`, which records the attribution (`record#OrderAttribution`) and files the order-placed automation event, for store orders as for every placed sales order (X10; impl-marketing §4, Nov 11). |
 | `RequestTriageNotice`, entity/Request.eecas.xml | Kept for Customer Service cases filed by a Shop customer; Customer Service's queue rules decide who is told. Commerce files no plain Request. |
 | `ReturnApprovedProcess`, OrderReturn.secas.xml | Conditioned per D11, behind Accounting's flag: it keeps only `create#ReturnShipment`, and responses are settled by Accounting's `settle#Return` (R-SC-08). |
 | `ShipmentDeliveredReturnReceive`, `ReturnReceivedProcess`, OrderReturn.secas.xml | Replaced per D11, behind the same flag, by Warehouse's proposed `receive#ReturnItems` (R-SC-08). Public intake cannot trigger automatic financial responses. |
@@ -1422,8 +1428,8 @@ on Customer360 (§10). The research open questions and candidate dispositions ar
 14. A capture fails after placement: the order carries an `OhtPayment` hold that Commerce shows
     and cannot release; an Accounting payment operator releases it. A refund of a paid-access
     item revokes only that source grant.
-15. Reports for one store agree with Sales' `orders.placed` and Accounting's
-    `revenue.invoicedNet` for the same window; recurring bases and open carts are never counted.
+15. Reports for one store agree with Sales' `Sales.Orders` and `Sales.OrderValue` and Accounting's
+    `Accounting.InvoicedRevenue` for the same window; recurring bases and open carts are never counted.
 
 ## 13. Documents and outputs
 

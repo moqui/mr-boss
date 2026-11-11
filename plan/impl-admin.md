@@ -107,7 +107,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   ss-inventory maps. mr-pass is not changed: the PASS Account privacy page is later (§7).
 - **Scope.**
   - Every `parity` and `new` row of design §2 and the §17 needs they use, A1 and A2 of design §17.3, as changed by §6,
-    except what waits on People, Maintenance, Sales and Marketing (§4, the user's call):
+    except what waits on People, Maintenance, Sales and Marketing (§4, the user's call; §7 names the plans that now
+    pick each piece up):
     - People's provisioning entry: `ironstone.admin.LifecycleServices.request#Provisioning` and `request#AccessEnd`, the
       tx-commit SECA on `PeopleServices.hire#Employee` and `apply#EmploymentChange`, and the IT checklist task's link;
     - UserDetail's Employee360 link, and the People employee and time-and-attendance import targets;
@@ -4793,7 +4794,7 @@ the owner's design.
 | Date | Decision | Notes |
 | --- | --- | --- |
 | Nov 7, 2026 | Admin and Insights are the next apps built, after Commerce | The user's call (the planning request): people trying the BOSS apps need them, and much of what they bring together is built |
-| Nov 7, 2026 | What depends on People, Maintenance, Sales and Marketing is left out (§1 scope, §7): People's provisioning entry and SECA, Employee360 links, their import targets, settings rows, readiness providers, lifecycle participants, device route groups and privacy providers, and the payroll export | The user's call. Admin's own lifecycle (P6) covers disablement and organization removal without People |
+| Nov 7, 2026 | What depends on People, Maintenance, Sales and Marketing is left out (§1 scope, §7): People's provisioning entry and SECA, Employee360 links, their import targets, settings rows, readiness providers, lifecycle participants, device route groups and privacy providers, and the payroll export; §7 now names the plans that pick these up (Nov 11, 2026) | The user's call. Admin's own lifecycle (P6) covers disablement and organization removal without People |
 | Nov 7, 2026 | Two plans, one order: this file holds the order of both; a phase lives in the plan of the app whose screens it builds; framework and Mantle work goes in the phase that first needs it | The plan's choice, as impl-commerce and impl-shop |
 | Nov 7, 2026 | The order of §1, with Organizations and the Constitution (P7) in Admin's first release, stage 1: Admin's first release with Insights' browsing release; Insights' first release beside Admin's configuration and operations; Admin's data and audit | The user's call (answer 1), over the plan's draft, which had P7 in stage 3. Design §17.3 changed: A1 gains Organizations, OrganizationDetail and Constitution |
 | Nov 7, 2026 | Shared devices (P18) are built in a second Insights release, stage 5, with Insights' wall displays on them (Insights P11); the route groups registered are Insights' Playlists only, ShopFloor's waiting for Manufacturing's operator switch | The user's call (answer 2). A device runs as a display account its registrar names (P18's proposal, checked against CX-DEVICE there). Design §17.3 changed |
@@ -4872,6 +4873,7 @@ the owner's design.
 | Nov 11, 2026 | Admin's export bounds stand (5,000 rows and 2 MiB by default, at most 50,000 rows and 16 MiB). Larger volumes are not a BOSS export: in the BOSS apps that is "contact a system administrator", who has the tools for volume (Tools' ETL, snapshots and data export, and for some a direct database connection) | The user's call (Nov 11), F246 (P16); design §11 DataExport |
 | Nov 11, 2026 | In BOSS the data operator exports only a contact book they may themselves view: an export target adds no right to read | The user's call (Nov 11), confirming F249 (P16) |
 | Nov 11, 2026 | The access log dataset's artifact is granted to no group: `ironstone.admin.AuditServices.get#AccessLog` checks `ADMIN_AUDIT_VIEW` and reads the one dataset itself, under both row filters, so a line is never read whole through the engine (a dataset has no field list, and a holder with an Insights group read recipient addresses and setting values). The audit reader therefore cannot chart the access log in Insights | P17 review, F272; over the plan's and design §12's grant to `BOSS_ADMIN_AUDIT`; design §12 changed |
+| Nov 11, 2026 | An app's own import target names an import permission of that app (`PEOPLE_IMPORT`, `MAINTENANCE_IMPORT`, `SALES_IMPORT`, `MARKETING_AUDIENCE_IMPORT`) beside the app's edit permission, and no `ADMIN_*` permission. Admin's Imports lists such a run for a data operator who also holds the app's view permission | The user's call (Nov 11; impl-sales §4, and §4 of impl-people, impl-maintenance and impl-marketing). A rows-mode target requires every permission it lists (framework service/org/moqui/admin/DataTransferImports.js:37-41, DataTransferBatch.js:82), so `ADMIN_TRANSFER_RUN` beside them, as staff invitations have, would shut the app's own users out of their import; a wizard-mode target's permission is checked by its owner's wizard services. Design §11.1 |
 
 ## 5. Open questions
 
@@ -5009,9 +5011,28 @@ Designed, not in this build:
   `hire#Employee` and `apply#EmploymentChange`, the IT checklist task's operation link; UserDetail's Employee360 link;
   the employee and time-and-attendance import targets; the payroll exchange export; People's settings row, readiness
   provider, lifecycle participant, ClockingKiosk route group and privacy provider.
+  - Picked up by [impl-people.md](impl-people.md) (Nov 11, 2026): `request#Provisioning` and `request#AccessEnd`, the
+    SECA and the IT checklist task's operation link, its P7; UserDetail's Employee360 link, P2; the `employees` import
+    target, P7, and the time-and-attendance target, P13; the payroll exchange export, P28; the settings row, the
+    readiness provider (`people.setup`) and the capability bundles, P1; the lifecycle participant, P5; the
+    ClockingKiosk route group, P30 (after P18 here).
+  - People's privacy provider still waits, on Admin's PrivacyServices (the design's later rows, above).
 - **What waits on Sales, Marketing and Maintenance:** the opportunity, audience and equipment import targets; their
   settings rows and readiness providers; Marketing's CheckIn and Maintenance's TechnicianKiosk route groups; their
   privacy providers; Marketing's consent rules in TopicDetail's audience.
+  - Sales, picked up by [impl-sales.md](impl-sales.md) (Nov 11, 2026): the `opportunities` import target, its P6; the
+    settings row and the readiness provider over `get#SalesReadiness`, P2; the capability bundles, P1; the lifecycle
+    participant (a leaver's accounts, opportunities and quotes), P6.
+  - Marketing, picked up by [impl-marketing.md](impl-marketing.md) (Nov 11, 2026): the audience import target
+    (`marketingAudience`, wizard mode), its P4; the settings row, the readiness provider (`marketing.setup`) and the
+    capability bundles, P1; the lifecycle participant, P2; the CheckIn route group, P18 (after P18 here).
+  - Maintenance, picked up by [impl-maintenance.md](impl-maintenance.md) (Nov 11, 2026): the `equipment` import target
+    and the readiness provider (`maintenance.readiness`, on `check#MaintenanceReadiness`), its P18; the settings row
+    and the capability bundles, P1; the lifecycle participant, P3. TechnicianKiosk's route group stays later (its §7).
+  - Still waiting: the three privacy providers, on Admin's PrivacyServices (the design's later rows, above), and
+    Marketing's consent rules in TopicDetail's audience, which no phase of impl-marketing builds.
+  - A Marketing send registers no mail outcome owner, though F163 (P12) expected one: it is a delivery of the Comms
+    delivery ledger, which is registered (impl-marketing §4 and its F15).
 - **The framework's agent screens** (ADM-AGENTS): the AgentDefinition editor, A2A tasks and the gateway key shown once;
   AgentsHome links them when they exist.
 - **Owners' later work found here:** run records for Commons' contact import and Projects' work-item import, so Imports

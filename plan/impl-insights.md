@@ -2839,12 +2839,23 @@ Designed, not in this build:
   and cross-dataset joins; richer per-breakpoint arrangement.
 - **What waits on People:** the Employee360 record mount and its crosscut row, PeopleReportServices, People's metrics,
   attention providers and confidential-dataset classes.
+  - Picked up by [impl-people.md](impl-people.md) (Nov 11, 2026): all in its P29, except the Employee360 record mount
+    and its crosscut row, P2.
 - **What waits on Marketing:** visits and attribution metrics, CampaignPerformance, DeliveryAnalysis, AudienceGrowth and
   Attribution entries, the campaign-sent annotation, the funnel.
+  - Picked up by [impl-marketing.md](impl-marketing.md) (Nov 11, 2026), its P20: the metrics `Marketing.Visits` and
+    `Marketing.AttributedOrders`, the four catalog entries, the annotation, and Marketing's datasets and alert
+    templates. The funnel stays Insights' (above), over these.
 - **What waits on Sales:** SalesSummary and Sales' own catalog entries, pipeline and forecast measures, Sales' attention
   providers, and SalesAnalysis moving to Sales' route with Accounting mounting it (§4).
+  - Picked up by [impl-sales.md](impl-sales.md) (Nov 11, 2026): the pipeline dataset and the funnel panel, its P6;
+    SalesAnalysis moving to Sales' route with Accounting mounting it, Sales' catalog entries, metrics, flow targets,
+    alert templates and digest, P19.
 - **What waits on Maintenance:** WorkStatus, PreventiveCompliance and cost entries and their metrics; Maintenance's
   context on EquipmentDetail.
+  - Picked up by [impl-maintenance.md](impl-maintenance.md) (Nov 11, 2026): the entries, metrics, datasets
+    (`report/boss-maintenance-*.json`) and the internal flow map's flow target, its P17; EquipmentDetail's context,
+    P2.
 - **Design §17's other open items:** usage analytics for stewards (Q3), alerts to a Comms chat room (Q4).
 
 ## 8. Verification

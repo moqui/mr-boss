@@ -321,7 +321,8 @@ changes. Customer Service keeps its narrower apply capabilities; a Sales mount d
 OrderContent and OrderNote changes and status-only part updates, behind a crosscut CX-AUTOMATION
 flag. The Change hold that Apply places, a stored PDF or a case note no longer moves the revision a
 proposal was made against. Sales quote approval and Purchasing approval bind to the same counter.
-If the flag is refused, all three use one Mantle `get#OrderCommercialSnapshot` hash instead.
+The flag is built, as the seller's `PartyAcctgPreference.salesCommercialRevisionOnly`, off by
+default, so the fallback `get#OrderCommercialSnapshot` hash is not needed (impl-sales F9).
 
 **Customer cancellation (Nov 1, 2026; review X7, R-SC-05, R-SHP-11).** A customer asks to cancel
 from Shop's order page or the Support app (its OrderCancelRequest, §8 NewCustomerCase). Either files
@@ -1072,7 +1073,7 @@ These are proposed additions or extensions. Crosscut owns the consolidated need 
 | Who is viewing (impl-customer-service §4; former §14 item) | Who is viewing or typing on a case is later, unless the Dev AIDE presence (`set#Presence`) generalizes to a record topic at small cost: then a record viewers topic on the notification WebSocket shows viewer avatars on CaseDetail and warns before Send when another agent is composing a reply to the same case. Commons presence stays user status only. |
 | Scope and validation | Documentation only; no application build required. Check Markdown links/tables, source names and active/commented definitions, research/inventory mappings and cross-app scenarios. |
 | Shop requests go through Customer Service (Nov 1, 2026; review X7, R-SC-05, R-SC-06, R-SHP-03) | Shop calls `ReturnPolicyServices.request#CustomerReturn` for a return, `SupportCaseServices.create#CustomerCase` with the store's queue for a question, and `OrderChangeServices.save#OrderChange` for a cancel proposal with customer consent. Immediate cancel only under ServicePolicy's `customerImmediateCancel` flag, before reservation or approval. Commerce's Requests and Returns become store-filtered views (§4 OrderChangeDetail, §8). |
-| ChangeProposal binds to the commercial revision (Nov 1, 2026; review X2) | `expectedOrderRevision` is `orderRevision` narrowed to commercial changes, the counter Sales and Purchasing bind to; `get#OrderCommercialSnapshot` is the shared fallback (§4). |
+| ChangeProposal binds to the commercial revision (Nov 1, 2026; review X2) | `expectedOrderRevision` is `orderRevision` narrowed to commercial changes, the counter Sales and Purchasing bind to; the flag is built as the seller's `PartyAcctgPreference.salesCommercialRevisionOnly`, so no `get#OrderCommercialSnapshot` fallback is needed (§4; impl-sales F9). |
 | Reports registered with Insights (Nov 1, 2026; review Z10, R-INS-07) | All §7 reports, ReturnAnalysis included, register with the Insights catalog with Customer Service as owner. |
 | One customer account (Nov 1, 2026; review X6) | Replaces "Full Commerce storefront accounts are later": ExternalAccess's self relationship gives a verified Shop buyer their own cases and returns, and the PASS Account hub links them (§8, §13 Customer identity). |
 | Privacy provider (Nov 1, 2026; review X15) | One intake on the PASS Account privacy page through Admin; Customer Service registers a provider for its customer data (CS-PRIVACY). |

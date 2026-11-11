@@ -559,8 +559,9 @@ changes and status-only part updates stop incrementing it. Storing the sent PDF,
 writing a note, placing, holding or approving therefore no longer move the revision a decision is
 bound to. PurchaseApprovalDecision, the sent revision, the supplier's acknowledgement and the PASS
 Supplier capability all bind to that one counter, which Sales quotes and Customer Service's
-ChangeProposal share. If the flag is refused, the fallback is one Mantle
-`get#OrderCommercialSnapshot` hash used by all three apps, never a Purchasing-only hash.
+ChangeProposal share. Both flags are built (the sales direction's is the seller's
+`PartyAcctgPreference.salesCommercialRevisionOnly`), so the fallback `get#OrderCommercialSnapshot`
+hash is not needed (impl-sales F9).
 Editing a released PO uses OrderChanges; hiding inputs is insufficient protection. Existing
 OrderPart/OrderItem required/delivery dates are retained with the original requested date for
 performance measurement. Recurring releases create a new draft release and recheck agreement
@@ -1561,8 +1562,8 @@ for the initial Purchasing screens.
 | Maximum stock and suggested levels (decided Oct 28, 2026; impl-purchasing §4) | Settles the earlier Open item. `ProductFacility.maximumStock` and `reorderMethodEnumId` (built, Products P7) through `store#ProductFacilityPolicy`, read by `run#SupplyPlan`, and SuggestLevels on ReorderRules (§8; R-PUR-19). |
 | Supply planning and held quantity (decided Oct 28, 2026; impl-purchasing §4, impl-manufacturing §4) | Manufacturing builds CX-PLANNING with SupplyPlanning, the make conversion and the outside-processing service PO lines for `BOSS_PURCHASING_BUYER`; Purchasing adds its mount and the buy conversion. Settling the earlier Open item on held quantity: a receipt held for inspection is a pending-release line with the inspection's due date, left out of netting by default, and the plan schedule's organization option nets held quantity whose inspection is due within the lead time (D21; R-SA-17). |
 | One Agreement status flow (Nov 1, 2026; review X13, R-SAL-05) | The PUR-AGREEMENT seed (AgmStDraft, AgmStActive, AgmStExpired, AgmStClosed, AgmStCancelled and their transitions) is the one Mantle Agreement status flow; Sales adopts it. The purchase and customer AgreementDetail screens stay two, by design, and may share forms. |
-| Approval binds to the commercial revision (Nov 1, 2026; review X2, R-SAL-02) | PurchaseApprovalDecision, the sent revision, the acknowledgement and the Supplier capability bind to `orderRevision` narrowed to commercial changes, the same counter as Sales quotes and Customer Service's ChangeProposal; `get#OrderCommercialSnapshot` is the shared fallback. |
-| Direction-aware approval (Nov 1, 2026; review X4, R-SAL-04) | Manual `approve#Order` needs proposed `PURCHASE_ORDER_APPROVE` for a purchase part and runs `check#OrderPreApprove`, so the D8 hook guards manual approval too; OhtPurchase is released with proposed `PURCHASE_HOLD_RELEASE`, and `ORDER_APPROVE` no longer releases it. |
+| Approval binds to the commercial revision (Nov 1, 2026; review X2, R-SAL-02) | PurchaseApprovalDecision, the sent revision, the acknowledgement and the Supplier capability bind to `orderRevision` narrowed to commercial changes, the same counter as Sales quotes and Customer Service's ChangeProposal; the flags are built (`PurchasePolicy.commercialRevisionOnly`; for a sales order the seller's `PartyAcctgPreference.salesCommercialRevisionOnly`), so no `get#OrderCommercialSnapshot` fallback is needed (impl-sales F9). |
+| Direction-aware approval (Nov 1, 2026; review X4, R-SAL-04) | Manual `approve#Order` needs `PURCHASE_ORDER_APPROVE` for a purchase part and, behind the buying organization's approval gate, a current approval decision: as built it refuses on the same purchase-approval warning that the D8 SECA adds to `check#OrderPreApprove`, which `autoApprove#Order` runs and refuses on, so the D8 rule guards manual approval too (crosscut §1.4); OhtPurchase is released with proposed `PURCHASE_HOLD_RELEASE`, and `ORDER_APPROVE` no longer releases it. |
 | Maintenance outside service (Nov 1, 2026; review R-MNT-06) | `OrderServices.accept#ServiceItem` accepts outside maintenance service from Maintenance's CompleteWork; RequestDetail shows the originating work order; `link#MaintenancePurchase` writes `AssetMaintenanceOrderItem`. |
 
 ## 18. Open

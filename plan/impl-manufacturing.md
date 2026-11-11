@@ -2485,7 +2485,8 @@ steps 20–23.
   PcmFixedShare and PcmSalesValue in a close. Specs rerun: Mantle ProductionCostClose, ProductionQuantities, ProductionCosts,
   WarehouseProduction (31, pass); BOSS AccountingProductionCostClose, ManufacturingAccess (95, pass); walk
   ManufacturingCostCloseWalk (4, pass); lint shows only anchor rows for the screen.
-- Deferred: CostingPolicies' LaborCostingRates form (People's get#CostingRate; P10 values labor with its own rate rows);
+- Deferred: CostingPolicies' LaborCostingRates form (People's get#CostingRate; P10 values labor with its own rate rows;
+  picked up in impl-people P10, §7);
   posted allocations' reversal actions; a demo run awaiting the close (the walk reads the released Warehouse demo run).
 - Findings (provisional):
   - **F132** The cost close data file sorted before ProductionCostData (alphabetical load order) and failed on the
@@ -3018,7 +3019,14 @@ Designed, not in this build:
 - **Other apps' contexts:** Purchasing, Warehouse and Customer Service on the shared screens Manufacturing builds first
   (ProductionCostClose, SupplyPlanning), beyond Accounting's on ProductionCostClose.
 - **Other apps' callers:** Purchasing placing and approving the service PO, and its supplier portal's subcontract view
-  (design SubcontractDetail, External access); the Maintenance app adopting the AssetMaintenance records.
+  (design SubcontractDetail, External access); the Maintenance app adopting the AssetMaintenance records (picked up
+  in impl-maintenance P3).
+- **The labor costing purpose (Nov 11, 2026; the user's call):** there is one labor costing purpose, `RaprCost`.
+  impl-people P10 seeds it, builds `mantle.humanres.RateServices.get#CostingRate` and Accounting's deferred
+  LaborCostingRates form, and changes what P10 here built to it: the `RaprProductionCost` rows (the seed in mr-mantle
+  data/ProductionShopFloorData.xml, the demo's rates, a deployment's rows by a data update) become `RaprCost` and the
+  lookup in `ProductionShopFloor.js` calls `get#CostingRate`. It is an owner contract with Manufacturing, whose specs
+  are kept passing (impl-people §4, its F34).
 
 ## 8. Verification
 

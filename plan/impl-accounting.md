@@ -1028,9 +1028,9 @@ design-accounting.md, or into the owner's design.
 
 | Question | Decides | Notes |
 | --- | --- | --- |
-| Should the order status writes that bypass `approve#Order` (OrderBulk's `change#OrderPartsStatus`, Projects' estimate approval in `ProjectServices`) check credit too? | Sales and Projects, with P10's `evaluate#OrderCredit` | F210: today they approve without the credit check; an organization without a credit policy is unaffected. OrderBulk can also move a held order to Approved and leave its hold reasons open: `approve#Order` then refuses it (`ORDER_HOLD_OPEN`) until they are released |
+| Should the order status writes that bypass `approve#Order` (OrderBulk's `change#OrderPartsStatus`, Projects' estimate approval in `ProjectServices`) check credit too? | Sales and Projects, with P10's `evaluate#OrderCredit` | F210: today they approve without the credit check; an organization without a credit policy is unaffected. OrderBulk can also move a held order to Approved and leave its hold reasons open: `approve#Order` then refuses it (`ORDER_HOLD_OPEN`) until they are released. Sales' batch approval is picked up in impl-sales P11, each order through `approve#Order` |
 | In which zone is a pack invoice's ship-day book day taken: the user's who ships (as now, `EntityLib.bookDay`) or the organization's? | P17, with P16 and P20 | The book day follows the user's zone everywhere today; an organization zone is a wider change |
-| Which permission opens the search-backed sales summaries to BOSS's Sales app, now that they need report read (F338)? | Sales, when built | Today ADMIN passes; BOSS_SALES_ADMIN users get a refusal on Sales/Reports/SalesSummary until their group holds ACCOUNTING_VIEW or a sales read permission the services accept |
+| Which permission opens the search-backed sales summaries to BOSS's Sales app, now that they need report read (F338)? | Sales, when built (picked up in impl-sales P1) | Today ADMIN passes; BOSS_SALES_ADMIN users get a refusal on Sales/Reports/SalesSummary until their group holds ACCOUNTING_VIEW or a sales read permission the services accept |
 | Should a draft invoice show its sales tax before it is finalized (a Calculate tax action, or a calculation on each line change)? | P14 follow-up, with P6 (`store#InvoiceDraftItem`) | P14 calculates at finalize or approve only (§4) |
 | When two approved budgets of an organization cover the same account and day (an operating and a capital budget), which does spending count against? | P15 follow-up, with Purchasing | P15 takes the first by id (F315) |
 | Where does an internal user invite a customer's or supplier's contact to Billing or Supplier? | P18 follow-up, with Customer Service's ContactDetail (its P15) | `invite#Contact` is built and the demo uses it; no BOSS screen calls it yet (Customer360's and Supplier360's finance details are candidates) |
@@ -1508,7 +1508,7 @@ Designed, not in this build:
 - **Collections, credit and recurring (P10):** auto-send of recurring drafts after tax, credit and period checks; AP's
   entry to recurring supplier bills under Payables; Collections' board and calendar views and saved views; the dunning
   letter print and preview of one letter; a promise matched to the invoices it names; the credit check on order status
-  writes outside `approve#Order` (§5, F210); Aging's comparison periods, graph and saved views; a credit decision scoped to the customer (it is the order's).
+  writes outside `approve#Order` (§5, F210; Sales' batch approval picked up in impl-sales P11); Aging's comparison periods, graph and saved views; a credit decision scoped to the customer (it is the order's).
 - **Valuation (P13):** reversing a landed cost allocation and allocating it again in an open period, and reversing a
   revaluation, after which a cost data repair of the product is available again (F277); duty and broker
   item types for charge lines; a landed cost charge from a bill in another currency (P20); the on-hand and package
@@ -1543,6 +1543,13 @@ Designed, not in this build:
   file); rates per organization (§5, F415); a statement in a document currency (P16); the receipt accrual met by a bill
   at another rate than its receipt's (F417); the payment check of the invoice reconciliation for payments in another
   currency (F424); converting or restating postings made in another currency before P20 (F428).
+- **Built by other apps' plans (Nov 11, 2026; the user's call):** there is an Accounting app, but accounting
+  functionality is in practice spread among the other apps, so the app that needs a piece builds it, as an owner
+  contract following design-accounting. AC-23, the payroll-origin projection, is built in impl-people P27, and
+  external payroll processing is gated on it as native finalization is; AC-24, the maintenance expense routing with
+  MaintenanceCostPolicy and its PostingMappings rows, is built in impl-maintenance P9; CostingPolicies'
+  LaborCostingRates form is built in impl-people P10, with the one labor costing purpose `RaprCost`, to which
+  Manufacturing's `RaprProductionCost` rows move.
 
 ## 8. Verification
 

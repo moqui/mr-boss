@@ -3680,7 +3680,8 @@ Designed, not in this build:
   case through Projects' time services (R-CS-22).
 - **Other design items:**
   - external knowledge sources (product documents, the forum, an external knowledge API);
-  - the chargeable repair's sales quote and the on-site intervention report (design §14), with Sales and Maintenance;
+  - the chargeable repair's sales quote and the on-site intervention report (design §14), with Sales and Maintenance
+    (the quote picked up in impl-sales P8; the report, with the repair as a managed work order, in impl-maintenance P12);
   - who is viewing or typing on a case (design §14), unless P0 brings it into P5 (§4);
   - the Support app's terminal pages (design §8), when PASS gains a terminal UI;
   - Admin's PrivacyRequests and the PASS Account privacy page (Admin's `later`), which take over P2's interim privacy
@@ -3688,9 +3689,9 @@ Designed, not in this build:
 - **Framework:** qvt's browser-side `require-when` on drop-down, text-area, radio and check, which need a `required` prop
   on their `m-*` components; the server check (`evaluate#DbFormDependencies`) refuses a missing value meanwhile.
 - **Other apps' contexts:** the Sales rows of the screens Customer Service mounts; Marketing's and People's mounts of
-  the survey builder.
+  the survey builder (picked up in impl-marketing P12 and impl-people P16).
 - **Other apps' callers:** the order owner (Sales) applying the order-change kinds Customer Service only approves:
-  price, quantity increase, ship date, address, ship method and carrier.
+  price, quantity increase, ship date, address, ship method and carrier (picked up in impl-sales P14).
 - **The rest of the other apps' needs:** crosscut's CX-AVAILABILITY projection beyond what Products P7 and Warehouse P4
   built (incoming purchase supply, held and inspection stock apart; F31); NCR and CAPA in the shared quality model.
 - **Found during the build** (§6; reviewed at P16, each row's resolution names §7):

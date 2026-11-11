@@ -795,7 +795,7 @@ Designed, not in this build:
   - the Purchasing, Manufacturing and Customer Service rows of the shared screens Products builds (crosscut §3.5,
     §3.7, §3.21, §3.23), and Accounting's InventoryAvailability row; Warehouse's Product360, InventoryAvailability
     and Supplier360 rows are built (Warehouse P4, P7), and Accounting's Product360 row (Accounting P13);
-  - the Sales and Commerce rows of the price screens.
+  - the Sales and Commerce rows of the price screens (the Sales rows picked up in impl-sales P15).
 - **Callers of `check#ProductUsable`** that are proposed services of other apps: `run#SupplyPlan`,
   `convert#PlanningSuggestions`, reorder rules, `create#ProductionOrder` and `release#ProductionOrder`.
 - **The rest of the other apps' needs.**
