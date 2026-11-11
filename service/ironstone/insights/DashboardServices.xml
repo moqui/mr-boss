@@ -25,9 +25,10 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="share" noun="Dashboard" allow-remote="false">
-        <description>Share the user's own dashboard with one of their groups, or make it private again (no userGroupId), saving
-            a new version through the report engine. Refuses a user without Insights authoring (INSIGHTS_AUTHOR_REQUIRED), a group
-            the user does not belong to (SHARE_GROUP_UNAVAILABLE), a definition that is not a dashboard (DASHBOARD_REQUIRED) and
+        <description>Share the user's own dashboard or wall display playlist with one of their groups or with the wall displays
+            (BOSS_INSIGHTS_DISPLAY, P11), or make it private again (no userGroupId), saving a new version through the report engine.
+            Refuses a user without Insights authoring (INSIGHTS_AUTHOR_REQUIRED), another group the user does not belong to
+            (SHARE_GROUP_UNAVAILABLE), a definition that is neither a dashboard nor a playlist (DASHBOARD_REQUIRED) and
             a shipped or another user's dashboard (DASHBOARD_NOT_OWNED); the engine refuses a stale expectedVersion.</description>
         <in-parameters>
             <parameter name="definitionId" required="true"/>

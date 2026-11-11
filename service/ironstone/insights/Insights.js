@@ -350,15 +350,24 @@ function context(p) {
 // ===== sharing (design §4 ShareDashboard) =====
 // The groups an author may share a dashboard with: their own groups, by name, never the implicit ALL_USERS. Sharing gives the
 // group the definition only; each viewer's queries still run with their own dataset grants.
+// P11 (design §4 Playlists): and the wall displays, every display account's group (BOSS_INSIGHTS_DISPLAY), which no person is
+// in: a playlist and its dashboards shared with it are read by the registered displays, each showing only what its own display
+// account's grants and organizations give.
+const wallDisplayGroupId = "BOSS_INSIGHTS_DISPLAY"
 function shareGroupIds() {
     return Array.from(ec.user.getUserGroupIdSet() || []).filter(groupId => groupId !== "ALL_USERS")
 }
 function shareGroups() {
     required()
-    const groups = Array.from(find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds()).list())
+    const groups = Array.from(
+        find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds().concat([wallDisplayGroupId])).list()
+    )
     return {
         groups: groups
-            .map(group => ({value: group.userGroupId, label: group.description || group.userGroupId}))
+            .map(group => ({
+                value: group.userGroupId,
+                label: group.userGroupId === wallDisplayGroupId ? "Wall displays" : group.description || group.userGroupId
+            }))
             .sort((a, b) => a.label.localeCompare(b.label))
     }
 }
@@ -381,9 +390,12 @@ function shareDashboard(p) {
     const userScope = required()
     if (!userScope.capabilities.author) denied("INSIGHTS_AUTHOR_REQUIRED", "Sharing a dashboard needs Insights authoring")
     const group = p.userGroupId || null
-    if (group && !shareGroupIds().includes(group)) denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
+    if (group && group !== wallDisplayGroupId && !shareGroupIds().includes(group))
+        denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
     const definition = asViewer("org.moqui.report.ReportServices.get#Definition", {definitionId: p.definitionId}).definition
-    if (definition.type !== "dashboard") denied("DASHBOARD_REQUIRED", "Choose a dashboard")
+    // a dashboard, or (P11) a wall display playlist
+    const playlist = definition.type === "report" && definition.body?.kind === "playlist"
+    if (definition.type !== "dashboard" && !playlist) denied("DASHBOARD_REQUIRED", "Choose a dashboard or a playlist")
     if (definition.readOnly || definition.ownerId !== ec.user.userId)
         denied("DASHBOARD_NOT_OWNED", "Only the owner shares a dashboard; save a copy first")
     const version = p.expectedVersion != null && p.expectedVersion !== "" ? Number(p.expectedVersion) : definition.version

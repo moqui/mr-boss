@@ -130,7 +130,7 @@ feature("the code makes one browser the device, which opens nothing outside its 
             .replace("moqui.device=", "")
         // redeeming signs out whoever was signed in on the browser's session (this thread's, here)
         login("john.doe")
-        out.data = request("apps/Insights/Playlists/data", {definitionId: "AnotherPlaylist"}, "get", cookie)
+        out.data = request("apps/Insights/WallDisplay/data", {definitionId: "AnotherPlaylist"}, "get", cookie)
         out.admin = request("apps/Admin/Security/Devices", {}, "get", cookie)
         out.insightsHome = request("apps/Insights/Home", {}, "get", cookie)
         out.account = request("apps/Commons/Notifications", {}, "get", cookie)
@@ -138,7 +138,7 @@ feature("the code makes one browser the device, which opens nothing outside its 
         out.seen = deviceNamed("Spec plant wall")
         asUser(users.access, () => page("Security/Devices/revokeDevice", {deviceId: device.deviceId}, "html"))
         out.revoked = deviceNamed("Spec plant wall")
-        out.next = request("apps/Insights/Playlists/data", {}, "get", cookie)
+        out.next = request("apps/Insights/WallDisplay/data", {}, "get", cookie)
         return out
     },
     then({redeemed, data, admin, insightsHome, account, editor, seen, revoked, next}) {

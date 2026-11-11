@@ -16,8 +16,13 @@ along with this software (see the LICENSE.md file). If not, see
     report definition of kind playlist), and one played in kiosk mode by the framework Playlist screen (Tools
     Dashboards/Playlist.xml) when one is chosen. The display runs as the signed-in viewer: a dashboard they cannot read is skipped
     and its failure logged by name, and its dashboard links open Insights › Dashboard. An author creates a playlist here (the
-    framework Reports screen's createPlaylist) and orders it in DashboardEditor. A registered device comes in Insights' second
-    release (P11). -->
+    framework Reports screen's createPlaylist) and orders it in DashboardEditor.
+    P11 (design §4 Playlists, CX-DEVICE): a registered wall display plays its playlist on WallDisplay as its display account, which
+    reads a playlist and its dashboards when they are shared with the wall displays (BOSS_INSIGHTS_DISPLAY; the owner's Share with
+    wall displays here, share#Dashboard); Play full screen opens WallDisplay for the viewer; Register as display opens Admin's
+    RegisterDevice for the playlist (a holder of ADMIN_ACCESS_MANAGE, whose service checks it); the devices showing each playlist
+    are listed, read only, to a holder of ADMIN_ACCESS_VIEW or ADMIN_ACCESS_MANAGE (Mantle's find#SharedDevices, within their
+    identity scope; another organization's device is not named). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Wall display" default-menu-index="4" menu-image="sym_o_slideshow" menu-image-type="icon">
 
@@ -29,6 +34,12 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="createPlaylist" location="component://tools/screen/Dashboards/Reports.xml"/>
     <transition name="play"><default-response url="."/></transition>
     <transition name="edit"><default-response url="${reportLinks.definition}"/></transition>
+    <!-- the owner shares the playlist with the wall displays, or makes it private (share#Dashboard checks the owner and authoring) -->
+    <transition name="sharePlaylist" method="post">
+        <service-call name="ironstone.insights.DashboardServices.share#Dashboard"
+                in-map="{definitionId:definitionId, userGroupId:(shareWithDisplays == 'Y' ? 'BOSS_INSIGHTS_DISPLAY' : null)}"/>
+        <default-response url="."/>
+    </transition>
 
     <actions>
         <set field="canAuthor" from="!!reportLinks.definition"/>
@@ -37,7 +48,26 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="!definitionId">
             <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'report'}" out-map="found"/>
             <set field="playlists" from="Array.from(found.definitions || []).filter(row => row.body?.kind === 'playlist')
-                    .map(row => ({id: row.id, title: row.title || row.id, count: (row.body.playlist || []).length, seconds: row.body.seconds || 30}))"/>
+                    .map(row => ({id: row.id, title: row.title || row.id, count: (row.body.playlist || []).length, seconds: row.body.seconds || 30,
+                        owned: !row.readOnly &amp;&amp; row.ownerId === ec.user.userId, onDisplays: row.userGroupId === 'BOSS_INSIGHTS_DISPLAY'}))"/>
+            <!-- P11: the devices showing each playlist, read only, for an access administrator (within their identity scope) -->
+            <set field="wallDisplayPath" from="sri.buildUrl('../WallDisplay').path"/>
+            <set field="canRegister" from="ec.user.hasPermission('ADMIN_ACCESS_MANAGE')"/>
+            <set field="seesDevices" from="canRegister || ec.user.hasPermission('ADMIN_ACCESS_VIEW')"/>
+            <script><![CDATA[
+                const shownOn = {}
+                if (seesDevices && playlists.length) {
+                    ec.message.pushErrors()
+                    try {
+                        const out = ec.service.sync().name('mantle.party.IdentityServices.find#SharedDevices')
+                                .parameters({routeGroupId: 'INSIGHTS_PLAYLISTS', pageSize: 200}).call() || {}
+                        for (const row of Array.from(out.deviceList || []))
+                            (shownOn[row.parameterValue] = shownOn[row.parameterValue] || []).push(row.deviceName + ' (' + row.stateReason + ')')
+                    } catch (error) { ec.logger.warn('Wall display devices not read: ' + String(error)) }
+                    finally { ec.message.clearErrors(); ec.message.popErrors() }
+                }
+                for (const row of playlists) row.devices = (shownOn[row.id] || []).join(', ')
+            ]]></script>
             <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'dashboard'}" out-map="dashboards"/>
             <set field="dashboardChoices" from="Array.from(dashboards.definitions || []).filter(row => !reportHiddenComponents.includes(row.component))
                     .map(row => ({id: row.id, title: row.title || row.id}))"/>
@@ -71,9 +101,19 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="seconds"><default-field title="Seconds each"><display/></default-field></field>
                     <field name="edit"><conditional-field condition="canAuthor"><link url="edit" text="Edit" link-type="anchor" parameter-map="{definitionId:id}"/></conditional-field>
                         <default-field><display text=""/></default-field></field>
+                    <field name="fullScreen"><default-field title=""><link url="${wallDisplayPath}" url-type="plain" target-window="_blank" text="Play full screen" parameter-map="{definitionId:id}"/></default-field></field>
+                    <field name="onDisplays"><conditional-field condition="canAuthor &amp;&amp; owned" title="Wall displays">
+                            <link url="sharePlaylist" text="${onDisplays ? 'Stop sharing with wall displays' : 'Share with wall displays'}" link-type="hidden-form-link"
+                                    parameter-map="{definitionId:id, shareWithDisplays:(onDisplays ? 'N' : 'Y')}"/></conditional-field>
+                        <default-field title="Wall displays"><display text="${onDisplays ? 'Shared' : ''}"/></default-field></field>
+                    <field name="devices"><conditional-field condition="seesDevices" title="Devices showing it"><display/></conditional-field>
+                        <default-field title=""><display text=""/></default-field></field>
+                    <field name="register"><conditional-field condition="canRegister" title=""><link url="//Admin/Security/Devices" text="Register as display"
+                            link-type="anchor" parameter-map="{newRouteGroupId:'INSIGHTS_PLAYLISTS', newParameterValue:id}"/></conditional-field>
+                        <default-field title=""><display text=""/></default-field></field>
                     <columns type="mobile">
-                        <column><field-ref name="title"/></column>
-                        <column><field-ref name="count"/><field-ref name="edit"/></column>
+                        <column><field-ref name="title"/><field-ref name="devices"/></column>
+                        <column><field-ref name="count"/><field-ref name="edit"/><field-ref name="register"/></column>
                     </columns>
                 </form-list>
             </widgets><fail-widgets>
