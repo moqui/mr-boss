@@ -179,7 +179,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | built and reviewed Nov 10, merged |
 | P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | built and reviewed Nov 10, merged |
 | P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | built and reviewed Nov 10, merged |
-| P11 Wall displays on shared devices | BOSS | Playlists on a registered device | — |
+| P11 Wall displays on shared devices | BOSS | Playlists on a registered device | built and reviewed Nov 11, merged |
 | P12 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -2687,16 +2687,16 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
   - A device cannot load the `/qapps` shell (its menu, shell data and `actions` are in no route group), and admitting the
     shell would admit what every app's page asks for. So a wall display gets a page of its own, `Insights/WallDisplay`
     (below), and the route group admits that screen's render and its `data` transition by name, nothing else: not
-    Playlists, not the Dashboard screens, not a pattern (F-P11-1).
+    Playlists, not the Dashboard screens, not a pattern (F149).
   - The display account's authorization: the Insights root is the launcher group's (`BOSS_INSIGHTS`), whose inheritable
     grant opens every Insights screen, so a display account must not hold it; and the root's always-actions call
     `get#Context`, which refuses a user without the root grant (INSIGHTS_UNAVAILABLE), so even an admitted Insights screen
-    failed for a display account (F-P11-2). The reader bundle reads (engine operations, admitted datasets, documents) and
+    failed for a display account (F150). The reader bundle reads (engine operations, admitted datasets, documents) and
     opens no screen; a new registered bundle opens the wall display's page alone; the root calls no Insights service for
     a device's request.
   - A playlist and its dashboards are read by the display account only if shared with a group it is in, and
     `share#Dashboard` shared only with the author's own groups (a definition has one group), so no author could make a
-    playlist reach a display (F-P11-3). The wall displays (`BOSS_INSIGHTS_DISPLAY`) are a share target for any author,
+    playlist reach a display (F151). The wall displays (`BOSS_INSIGHTS_DISPLAY`) are a share target for any author,
     playlists too.
   - P18's "removing the display account's organization membership leaves the device working and shows that organization
     nothing": confirmed in the code. A device's request runs as the display account (`ec.user.userId`), and Mantle's
@@ -2707,8 +2707,8 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
   - The framework Playlist's `data` transition takes `index` (a dashboard of the stored playlist) and `from`/`thru`, and
     renders that dashboard's own panels as the viewer: no dataset, query or definition from the request beyond the
     playlist, which the framework forces on a device. It is no general query endpoint and is kept; a range from the
-    request changes when, not what (F-P11-4). A playlist of one dashboard was never refreshed (the timer moved to the same
-    index, which loaded nothing), and a failed load paused the playlist until someone pressed Retry (F-P11-5).
+    request changes when, not what (F152). A playlist of one dashboard was never refreshed (the timer moved to the same
+    index, which loaded nothing), and a failed load paused the playlist until someone pressed Retry (F153).
   - Device answers and caching: every screen and transition answer of a device carries the conf's `screen-render`
     `Cache-Control: no-cache, no-store, must-revalidate, private` (qvt `private, no-store`); only the static files are
     public, and those carry no device cookie (P18 R1's rotation skips a public answer). The plain page sets
@@ -2725,7 +2725,7 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
     the server's plain page replaces it, `report.reloadPage`); a playlist of one loads its dashboard again at each turn,
     keeping the frames shown until the new ones come, for every playlist.
   - `tools/screen/Dashboards/Playlist.xml`: the `data` transition answers a dashboard the viewer may not read with its
-    refusal instead of a TypeError (F-P11-7).
+    refusal instead of a TypeError (F155).
   - Docs: `docs/security/Shared-Devices.md` (the plain page, a device's page reloading on a refusal, the client spec),
     `Attack-Surface.md` (one sentence), `docs/tools/Monitoring.md` (the kiosk playlist), `plans/Remaining-Work.md` (the
     device row: the "bare 403" item done).
@@ -2786,22 +2786,22 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
 - Design edits: design-insights §2 (the WallDisplay row) and §4 Playlists (the bundles; "As built" P11); design-admin §6
   Devices (its "As built": Insights' wall display); design-crosscut CX-DEVICE's need row.
 - Findings:
-  - F-P11-1: a device cannot load `/qapps` (impl-admin F285). Resolved: a page of its own, `Insights/WallDisplay`, the island
+  - F149: a device cannot load `/qapps` (impl-admin F285). Resolved: a page of its own, `Insights/WallDisplay`, the island
     of its own qvt render; the route group names it and its data transition alone.
-  - F-P11-2: the Insights root's `get#Context` refuses a user without the root grant, so a display account (which must not
+  - F150: the Insights root's `get#Context` refuses a user without the root grant, so a display account (which must not
     hold it) failed on any Insights screen, and the reader bundle opens no screen (impl-admin F286). Resolved:
     `BOSS_INSIGHTS_DISPLAY` opens WallDisplay and its data alone; the root calls no Insights service for a device's request.
-  - F-P11-3: a definition has one group and `share#Dashboard` took only the author's own, so no playlist could reach a display
+  - F151: a definition has one group and `share#Dashboard` took only the author's own, so no playlist could reach a display
     account. Resolved: the wall displays are a share target for every author, a playlist too; a playlist shared with them is
     read by its owner and the displays only, so an access administrator who is not its owner registers it in Admin's
     Devices by its id rather than from Playlists (Register as display is on the rows the viewer reads).
-  - F-P11-4: the framework Playlist's data transition takes `from` and `thru` from the request; on a device they change
+  - F152: the framework Playlist's data transition takes `from` and `thru` from the request; on a device they change
     when, not what (the stored dashboard's own panels, as the display account). Kept.
-  - F-P11-5: a playlist of one dashboard never refreshed, and a failed load paused a wall display until someone pressed
+  - F153: a playlist of one dashboard never refreshed, and a failed load paused a wall display until someone pressed
     Retry. Fixed in the framework playlist (every playlist; the retry in kiosk mode).
-  - F-P11-6: a refused device got a bare 403 JSON, and a device's page outside its route group the same (impl-admin F289).
+  - F154: a refused device got a bare 403 JSON, and a device's page outside its route group the same (impl-admin F289).
     Resolved: the plain page, for a browser's page only.
-  - F-P11-7: the framework Playlist's data transition answered a dashboard the viewer may not read with a TypeError
+  - F155: the framework Playlist's data transition answered a dashboard the viewer may not read with a TypeError
     ("cannot set property 'definitionId' of undefined") after the refusal. Fixed: its refusal is the answer.
 - Decisions made here:
   - A wall display plays on a page of its own, `Insights/WallDisplay`, not the shell: a bare html document whose island is
@@ -2823,7 +2823,7 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
   - An instance that loaded P18's seed keeps `BOSS_DEV_INS_PLAYLISTS` and its two members in a group no route group names
     (harmless; deleting them is the lead's call).
   - The user's call: whether an access administrator should see the playlists shared with the wall displays in Playlists
-    without owning them (F-P11-3; today they register by the playlist's id in Admin › Devices); whether a person may be
+    without owning them (F151; today they register by the playlist's id in Admin › Devices); whether a person may be
     given `BOSS_INSIGHTS_DISPLAY` (it is meant for display accounts; a person with it alone gets no Insights context).
   - Not verified: the acceptance tests (not run); a real wall display over a day (the daily secret's replacement on a
     kiosk's answers is P18's); two servers.
@@ -2896,7 +2896,7 @@ P11 review: …") and this note (branch `ins/p11`).
     registered bundle, and no bundle field says "display accounts only". The fix, if wanted, is framework: a
     `CapabilityBundle` flag that `storeMembership` and `bundleOptions` refuse to a non-display account (and Mantle's
     `create#DisplayAccount` allows). Left as is; Low.
-  - The user's call, F-P11-3 across organizations: the wall displays are one group, so a playlist or dashboard shared
+  - The user's call, F151 across organizations: the wall displays are one group, so a playlist or dashboard shared
     with it is readable by every organization's display accounts. No author pushes onto another organization's wall
     by sharing alone: a wall plays only the playlist its registration fixed, chosen by an access administrator within
     their identity scope. But a registrar of organization B may register organization A's shared playlist by its id, and
