@@ -107,7 +107,7 @@ feature(
             queue.output.includes("Not sent") && queue.output.includes("May have been sent")
             // what each owner allows: the mail service's own is sent again or settled here, a mail account's is its sender's
             queue.output.includes("Send again") && queue.output.includes("Settle_" + ids.maybe)
-            queue.output.includes("Comms/Settings/MailAccounts") && queue.output.includes("Mail account, in Comms")
+            queue.output.includes("/qapps/Comms/Settings/MailAccounts") && queue.output.includes("Mail account")
             queue.output.includes("(address)")
             // a settlement is shown as that, with its reason, and is offered nothing; no row reads Sent
             queue.output.includes(ids.settled) && queue.output.includes("Settled: reported delivered")

@@ -23,10 +23,14 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Mail and protocols" default-menu-index="7" menu-image="sym_o_mail" menu-image-type="icon">
     <subscreens default-item="Home" always-use-full-path="true">
+        <!-- the framework's System › Mail and protocols screens (mr-moqui plans/Admin-Screens-Down.md): MailRelays and
+            MailRelayDetail by location, since no grant names them, they have no instance administrator's transition and
+            Admin adds nothing; MailQueue and ServerConfiguration are included in screens at their own locations here
+            (BOSS_ADM_PROTOCOLS_OPS names them); Home is Admin's own screen around the framework's protocol list -->
         <subscreens-item name="Home" location="component://mr-boss/screen/Admin/Protocols/Home.xml" menu-title="Protocols" menu-index="1"/>
-        <subscreens-item name="MailRelays" location="component://mr-boss/screen/Admin/Protocols/MailRelays.xml" menu-title="Mail relays"
+        <subscreens-item name="MailRelays" location="component://tools/screen/System/Protocols/MailRelays.xml" menu-title="Mail relays"
                 menu-index="2"/>
-        <subscreens-item name="MailRelayDetail" location="component://mr-boss/screen/Admin/Protocols/MailRelayDetail.xml"
+        <subscreens-item name="MailRelayDetail" location="component://tools/screen/System/Protocols/MailRelayDetail.xml"
                 menu-include="false"/>
         <subscreens-item name="MailQueue" location="component://mr-boss/screen/Admin/Protocols/MailQueue.xml" menu-title="Mail queue"
                 menu-index="3"/>

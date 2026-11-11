@@ -12,25 +12,34 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- ConnectionDetail (design-admin §8.1, §8 ConnectionDetail; style-guide §3.3 Detail; impl-admin P11): one connection of a
-    registered kind (a payment, shipping or tax gateway, a remote system, a mail sign-in provider, a network printer), read
-    from org.moqui.admin.ConfigurationServices.get#Connection and changed through store#Connection at the revision read.
-    NativeConnection is the kind's own form: its settings and its secrets, a secret entered and never shown; a change of an
-    endpoint setting needs the secrets entered again, else the stored ones are cleared, and either way the connection is
-    disabled until a test of it passes (test#Connection), which enables it. OrganizationAvailability, for a payment gateway,
-    permits its use by an internal organization the administrator administers, dated and enabled, through Mantle's
-    store#PaymentGatewayOrganization (never deleted: one in use is ended from now on); Accounting and Commerce choose among the
-    permitted gateways and change neither this nor a credential. ConnectionChecks shows the last test's checks, Consumers where
-    the connection is used. Reading needs ADMIN_CONNECTION_VIEW and a change or a test ADMIN_CONNECTION_MANAGE: the services
-    check them, and every refusal comes back as a reason shown here. The shared parts are template/AdminConnectionParts.xml. -->
+<!-- ConnectionDetail (design-admin §8.1, §8 ConnectionDetail; style-guide §3.3 Detail; impl-admin P11; mr-moqui
+    plans/Admin-Screens-Down.md): one connection of a registered kind (a payment, shipping or tax gateway, a remote system, a
+    mail sign-in provider, a network printer), as Admin's own screen for what Admin adds to the framework's System ›
+    Integrations connection screen: OrganizationAvailability, which for a payment gateway permits its use by an internal
+    organization the administrator administers, dated and enabled, through Mantle's store#PaymentGatewayOrganization (never
+    deleted: one in use is ended from now on); Accounting and Commerce choose among the permitted gateways and change
+    neither this nor a credential. The rest is the framework's parts (mr-moqui tools template/ConnectionParts.xml): the
+    record from org.moqui.admin.ConfigurationServices.get#Connection, NativeConnection (the kind's own form, changed through
+    store#Connection at the revision read; a change of an endpoint setting disables the connection until a test of it
+    passes), ConnectionChecks and Consumers, with storeConnection, testConnection and setEnabled taken in. The System
+    screen's part for the instance administrator (a remote's record changed directly) is not here. Reading needs
+    ADMIN_CONNECTION_VIEW and a change or a test ADMIN_CONNECTION_MANAGE: the services check them, and every refusal comes
+    back as a reason shown here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Connection" default-menu-include="false">
     <parameter name="adapterKey" required="true"/>
     <parameter name="connectionKey" required="true"/>
 
-    <transition-include name="storeConnection" location="component://mr-boss/template/AdminConnectionParts.xml"/>
-    <transition-include name="testConnection" location="component://mr-boss/template/AdminConnectionParts.xml"/>
-    <transition-include name="setEnabled" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+    <!-- a mail relay is MailRelayDetail's: this screen and its transitions answer the kinds of the Connections list -->
+    <always-actions>
+        <if condition="adapterKey === 'relay'">
+            <set field="adapterKey" value="none"/>
+        </if>
+    </always-actions>
+
+    <transition-include name="storeConnection" location="component://tools/template/ConnectionParts.xml"/>
+    <transition-include name="testConnection" location="component://tools/template/ConnectionParts.xml"/>
+    <transition-include name="setEnabled" location="component://tools/template/ConnectionParts.xml"/>
     <!-- a payment gateway's use by an organization: permit, change the dates, enable or disable, or end it (remove) -->
     <transition name="storeAvailability">
         <actions>
@@ -47,8 +56,6 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></error-response>
     </transition>
 
-    <!-- a mail relay is MailRelayDetail's: this screen and its transitions answer the kinds of the Connections list -->
-    <always-actions><if condition="adapterKey === 'relay'"><set field="adapterKey" value="none"/></if></always-actions>
     <actions>
         <set field="kindTitle" value="Connection"/>
         <set field="listPath" value="../Connections"/>
@@ -56,10 +63,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="detailPath" value="."/>
     </actions>
     <widgets>
-        <section-include name="ConnectionPrepare" location="component://mr-boss/template/AdminConnectionParts.xml"/>
-        <section-include name="ConnectionUnavailable" location="component://mr-boss/template/AdminConnectionParts.xml"/>
-        <section-include name="ConnectionHeader" location="component://mr-boss/template/AdminConnectionParts.xml"/>
-        <section-include name="NativeConnectionBox" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section-include name="ConnectionPrepare" location="component://tools/template/ConnectionParts.xml"/>
+        <section-include name="ConnectionUnavailable" location="component://tools/template/ConnectionParts.xml"/>
+        <section-include name="ConnectionHeader" location="component://tools/template/ConnectionParts.xml"/>
+        <section-include name="NativeConnectionBox" location="component://tools/template/ConnectionParts.xml"/>
         <section name="OrganizationAvailabilityBox" condition="recordFound &amp;&amp; found.adapter?.organizationBinding">
             <actions>
                 <set field="availabilityRows" from="(connection.organizationList || []).map(row =&gt; Object.assign({}, row, {
@@ -128,7 +135,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <section-include name="ConnectionChecksBox" location="component://mr-boss/template/AdminConnectionParts.xml"/>
-        <section-include name="ConnectionConsumersBox" location="component://mr-boss/template/AdminConnectionParts.xml"/>
+        <section-include name="ConnectionChecksBox" location="component://tools/template/ConnectionParts.xml"/>
+        <section-include name="ConnectionConsumersBox" location="component://tools/template/ConnectionParts.xml"/>
     </widgets>
 </screen>

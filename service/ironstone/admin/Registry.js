@@ -417,7 +417,7 @@ const adminChecks = {
                       "Backups are not mirrored off the server",
                       {
                           coverage,
-                          fixPath: "Admin/System/SystemMessage/Remote/MessageRemoteDetail?systemMessageRemoteId=" + backupRemote
+                          fixPath: "Admin/Integrations/ConnectionDetail?adapterKey=remote&connectionKey=" + backupRemote
                       }
                   )
         ]
@@ -801,7 +801,7 @@ function overview(p) {
                 find("moqui.service.message.SystemMessage").condition("statusId", "SmsgError").count()
             ),
             icon: "sym_o_sync_problem",
-            url: link("Admin/System/SystemMessage/Message")
+            url: link("Admin/Integrations/SystemMessages?state=failed")
         },
         {
             key: "backup",

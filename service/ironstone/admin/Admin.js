@@ -354,7 +354,11 @@ const linkPaths = [
 // (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root.
 const mountRoutes = {
     user: {url: "../../Users/UserDetail", idParameter: "userId"},
-    systemMessage: {url: "../../Integrations/SystemMessageDetail", idParameter: "systemMessageId"}
+    // another app's page is a plain URL: Commerce's store integration (a system message's registered owner, by its remote)
+    // and Comms' mail accounts (a mail account's message in the mail queue, the mail reception's owner)
+    storeIntegration: {url: "/qapps/Commerce/Integrations/IntegrationDetail", idParameter: "systemMessageRemoteId", plain: true},
+    mailAccount: {url: "/qapps/Comms/Settings/MailAccounts", plain: true},
+    supportSummary: {url: "../../Operations/SupportSummary"}
 }
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")
