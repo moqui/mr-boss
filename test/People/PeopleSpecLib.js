@@ -23,12 +23,21 @@ const ids = {
     departmentId: "BOSS_PPL_D_STORE",
     teamId: "BOSS_PPL_T_FLOOR",
     otherDepartmentId: "BOSS_PPL_D_DELIVERY",
+    // P4: Retail's sales associate seats in Store Operations (Tomas holds the first, the third is vacant), Services' technician
+    // seat (Kenji's), the sales associate class and the Associate grade
+    positionId: "BOSS_PPL_P_ASSOC1",
+    vacantPositionId: "BOSS_PPL_P_ASSOC3",
+    merchPositionId: "BOSS_PPL_P_MERCH",
+    otherPositionId: "BOSS_PPL_P_TECH1",
+    jobClassId: "BOSS_PPL_JC_ASSOC",
+    payGradeId: "BOSS_PPL_PG_ASSOC",
     // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
-    // the directory, Organization and Org chart
-    staffMenu: ["Home", "Employees"],
-    adminMenu: ["Home", "Employees", "Settings"],
+    // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades
+    staffMenu: ["Home", "Employees", "Staffing"],
+    adminMenu: ["Home", "Employees", "Staffing", "Settings"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
-    keys: ["g p", "g e", "g o", "g c"]
+    staffingMenu: ["Positions", "JobClasses", "PayGrades"],
+    keys: ["g p", "g e", "g o", "g c", "g s"]
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

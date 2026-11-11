@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
-**Added** (People P1, P2 and P3, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P4, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -517,6 +517,16 @@ the screens that call it.
 | OrganizationServices | store#Membership | People/Employees/OrgStructure | People/Employees/OrgStructure (AddMember, EndMember) (People P3) |
 | OrganizationServices | get#ReportingTree | People/Employees/OrgChart | People/Employees/OrgChart (ReportingTree and its reportChildren level) (People P3) |
 | OrganizationServices | change#Manager | People/Employees/OrgChart | People/Employees/OrgChart (ChangeManager) (People P3) |
+| PositionServices | find#JobClasses | People/Staffing/JobClasses | People/Staffing/JobClasses (FindJobClasses, JobClassList) (People P4) |
+| PositionServices | get#JobClass | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (the header, Job profile, Requirements) (People P4) |
+| PositionServices | store#JobClass | People/Staffing/JobClasses; People/Staffing/JobClassDetail | People/Staffing/JobClasses (NewJobClass); People/Staffing/JobClassDetail (EditJobClass, End job class) (People P4) |
+| PositionServices | store#JobRequirement | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (AddSkill, Remove) (People P4) |
+| PositionServices | find#Positions | People/Staffing/Positions | People/Staffing/Positions (FindPositions, PositionList as list and board) (People P4) |
+| PositionServices | get#Position | People/Staffing/PositionDetail | People/Staffing/PositionDetail (the header, Terms, Holders) (People P4) |
+| PositionServices | store#Position | People/Staffing/Positions; People/Staffing/PositionDetail | People/Staffing/Positions (NewPosition); People/Staffing/PositionDetail (EditPosition, EndPosition) (People P4) |
+| PositionServices | store#PositionHolder | People/Employees/HireEmployee; People/Employees/EmploymentChange | — (no screen yet: a seat is filled by P6's hire and employment change) (People P4) |
+| PayrollSetupServices | find#PayGrades | People/Staffing/PayGrades | People/Staffing/PayGrades (FindPayGrades, Grades, GradeBands; the amounts for PAYROLL_VIEW only) (People P4) |
+| PayrollSetupServices | store#PayGrade | People/Staffing/PayGrades | People/Staffing/PayGrades (NewPayGrade, NewBand) (People P4) |
 
 ## Ledger (81 services)
 

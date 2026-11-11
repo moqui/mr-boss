@@ -319,4 +319,84 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_OWEN_DELIVERY" relationshipTypeEnumId="PrtMember"
             fromPartyId="BOSS_PPL_OWEN" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
             fromDate="2021-07-19 09:00:00"/>
+
+    <!-- People P4 (impl-people P4, F4, F10; design-people §5): the job classes, pay grades and positions. Job classes (shared by
+        both employers) with their work types and skills: Store manager, Sales associate, Merchandiser and Service technician. Pay
+        grades with a monthly USD band each (minimum, reference, maximum): Associate, Lead and Manager. Retail's positions in Store
+        Operations: the store manager seat (Active, Manager grade, Hannah since she joined), three sales associate seats (Active,
+        Associate grade: Tomas's, Rafael's, and one vacant to backfill) and a fourth planned for next season; in Merchandising the
+        merchandiser seat Leon holds. Services' positions in Service Delivery: two technician seats (Active, Lead grade), Kenji's and
+        one vacant. A holder is a dated EmplPositionParty row in role Employee; the directory's job title is the class of the seat
+        held. -->
+    <moqui.basic.Enumeration enumId="BOSS_PPL_SK_SERVICE" enumTypeId="SkillType" description="Customer service"/>
+    <moqui.basic.Enumeration enumId="BOSS_PPL_SK_POS" enumTypeId="SkillType" description="Point of sale"/>
+    <moqui.basic.Enumeration enumId="BOSS_PPL_SK_LEAD" enumTypeId="SkillType" description="Team leadership"/>
+    <moqui.basic.Enumeration enumId="BOSS_PPL_SK_FIELD" enumTypeId="SkillType" description="Field service"/>
+    <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_STOREMGR" title="Store manager"
+            description="Runs a store: its team, opening hours, stock and takings, and the service customers get."/>
+    <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_STOREMGR" workTypeEnumId="WktpManagement"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_LEAD"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_SERVICE"/>
+    <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_ASSOC" title="Sales associate"
+            description="Serves customers on the shop floor and at the till, and keeps the shelves stocked."/>
+    <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_ASSOC" workTypeEnumId="WktpGeneralLabor"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_SERVICE"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_POS"/>
+    <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_MERCH" title="Merchandiser"
+            description="Plans the ranges and displays of the stores with the buyers."/>
+    <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_MERCH" workTypeEnumId="WktpGeneralOffice"/>
+    <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_TECH" title="Service technician"
+            description="Installs and services equipment at customers' sites."/>
+    <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_TECH" workTypeEnumId="WktpSupport"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_TECH" skillTypeEnumId="BOSS_PPL_SK_FIELD"/>
+    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_ASSOC" description="Associate" comments="Shop floor and office staff"/>
+    <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
+            timePeriodTypeId="PayrollMonth" minAmount="2600" amount="3000" maxAmount="3500"/>
+    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_LEAD" description="Lead" comments="Skilled and lead roles"/>
+    <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_LEAD" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
+            timePeriodTypeId="PayrollMonth" minAmount="3600" amount="4200" maxAmount="4900"/>
+    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_MGR" description="Manager" comments="Store and department managers"/>
+    <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_MGR" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
+            timePeriodTypeId="PayrollMonth" minAmount="5000" amount="6000" maxAmount="7200"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_STOREMGR" organizationPartyId="ORG_ZIZI_RETAIL"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionClassId="BOSS_PPL_JC_STOREMGR" description="Store manager"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_MGR" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="40"
+            fullTimeFlag="Y" salaryFlag="Y"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_ASSOC1" organizationPartyId="ORG_ZIZI_RETAIL"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionClassId="BOSS_PPL_JC_ASSOC" description="Sales associate 1"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="40"
+            fullTimeFlag="Y"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_ASSOC2" organizationPartyId="ORG_ZIZI_RETAIL"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionClassId="BOSS_PPL_JC_ASSOC" description="Sales associate 2"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="40"
+            fullTimeFlag="Y"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_ASSOC3" organizationPartyId="ORG_ZIZI_RETAIL"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionClassId="BOSS_PPL_JC_ASSOC" description="Sales associate 3"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="24"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_ASSOC4" organizationPartyId="ORG_ZIZI_RETAIL"
+            departmentPartyId="BOSS_PPL_D_STORE" emplPositionClassId="BOSS_PPL_JC_ASSOC" description="Sales associate (season)"
+            statusId="EmpsPlanned" payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2026-11-01 00:00:00" standardHoursPerWeek="24"
+            temporaryFlag="Y"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_MERCH" organizationPartyId="ORG_ZIZI_RETAIL"
+            departmentPartyId="BOSS_PPL_D_MERCH" emplPositionClassId="BOSS_PPL_JC_MERCH" description="Merchandiser"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_LEAD" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="40"
+            fullTimeFlag="Y" salaryFlag="Y"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_TECH1" organizationPartyId="ORG_ZIZI_SERVICES"
+            departmentPartyId="BOSS_PPL_D_DELIVERY" emplPositionClassId="BOSS_PPL_JC_TECH" description="Service technician 1"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_LEAD" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="40"
+            fullTimeFlag="Y" overtimeFlag="Y"/>
+    <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_TECH2" organizationPartyId="ORG_ZIZI_SERVICES"
+            departmentPartyId="BOSS_PPL_D_DELIVERY" emplPositionClassId="BOSS_PPL_JC_TECH" description="Service technician 2"
+            statusId="EmpsActive" payGradeId="BOSS_PPL_PG_LEAD" fromDate="2019-01-01 00:00:00" standardHoursPerWeek="40"
+            fullTimeFlag="Y" overtimeFlag="Y"/>
+    <mantle.humanres.position.EmplPositionParty emplPositionId="BOSS_PPL_P_STOREMGR" partyId="BOSS_PPL_HANNAH" roleTypeId="Employee"
+            fromDate="2021-03-01 09:00:00"/>
+    <mantle.humanres.position.EmplPositionParty emplPositionId="BOSS_PPL_P_ASSOC1" partyId="BOSS_PPL_TOMAS" roleTypeId="Employee"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.humanres.position.EmplPositionParty emplPositionId="BOSS_PPL_P_ASSOC2" partyId="BOSS_PPL_RAFAEL" roleTypeId="Employee"
+            fromDate="2026-10-26 09:00:00"/>
+    <mantle.humanres.position.EmplPositionParty emplPositionId="BOSS_PPL_P_MERCH" partyId="BOSS_PPL_LEON" roleTypeId="Employee"
+            fromDate="2024-01-15 09:00:00"/>
+    <mantle.humanres.position.EmplPositionParty emplPositionId="BOSS_PPL_P_TECH1" partyId="BOSS_PPL_KENJI" roleTypeId="Employee"
+            fromDate="2022-04-11 09:00:00"/>
 </entity-facade-xml>

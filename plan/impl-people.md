@@ -1065,6 +1065,112 @@ P3's units.
   a department and sees them vacant; `people.payroll` sets a grade band; `people.hr` sees the grade's name and no
   amounts.
 
+**Built Nov 11 (P4).** mr-mantle 2b1f361a, mr-boss (branch `ppl/p4`).
+- Checked first (the code over the plan): F4 (PayGradeSalary's `amount`, `minAmount`, `maxAmount`, `currencyUomId` and `timePeriodTypeId`;
+  PayGrade has a description and no organization), F10 (EmplPosition has the employer, class, grade, status, dates, hours and flags, and
+  no department; its `minimumHourlyWage` is a pay value), F35 (PositionServices' one service). Also: EmplPositionClass has no dates, so a
+  class could not be ended; a seat's occupancy has two records in the code, `EmplPositionParty` (the design's dated holders, read by
+  Manufacturing's shop floor and Projects' resources) and `Employment.emplPositionId` (which `create#Employment` takes and TimeServices,
+  Commons' contacts and P2's directory read); no demo data writes either; the Payroll `TimePeriodType`s are the pay frequencies; a declared
+  service parameter not passed reaches a script service as null, not undefined.
+- Mantle (`entity/HumanResourcesEntities.xml`: `EmplPosition.departmentPartyId`, audited, and `EmplPositionClass.thruDate`):
+  - `mantle.humanres.PositionServices`, extended beside its one service, over a new module `Positions.js`: `find#JobClasses` (title search
+    ignoring case, current unless asked, paged; skills, the positions of the class the reader reads), `get#JobClass` (skills, work types),
+    `store#JobClass` (title, description, work types replaced as a set, an end; `TITLE_REQUIRED`, `WORK_TYPE_INVALID`, `CLASS_ENDED`,
+    `REVISION_CHANGED`) and `store#JobRequirement` (a skill added or removed; `SKILL_INVALID`, `ALREADY_REQUIRED`), classes shared by every
+    employer, read by any staff reader and changed by an HR editor; `find#Positions` (as of a date: employer, department, class, grade,
+    status, vacancy and name filters, the state and vacancy of each seat, the holder, the vacant count, paged with an export),
+    `get#Position` (the seat and every dated holding with the person's employment then), `store#Position` (a new seat, planned, of an
+    employer in scope, `ORGANIZATION_DENIED`; a current class, `CLASS_REQUIRED`, `CLASS_ENDED`; a department, `NOT_A_DEPARTMENT`, whose
+    rollups in effect from the later of the seat's start and today reach the employer, `DEPARTMENT_OUTSIDE`; dates, `DATES_INVALID`; hours,
+    `HOURS_INVALID`; new terms at the revision read, `EMPLOYER_CHANGE`, `OCCUPIED_AFTER_END`, `OCCUPIED_BEFORE_START`; the department,
+    class and grade audited with the change reason) and `store#PositionHolder` (a dated `EmplPositionParty` row in role `Employee`, the
+    occupancy P6's hire and change write, or its end: `POSITION_NOT_IN_EFFECT`, `POSITION_INACTIVE`, `NOT_EMPLOYED`, `POSITION_OCCUPIED`, one
+    holder at a time). A seat's holders are its occupancy rows and an employment that names it for a person with no such row; vacancy is
+    computed from them at a date (filled or vacant while planned or active). Positions are read by an HR, recruiting, payroll or People
+    configuration reader of the employer and by a manager (`PEOPLE_TEAM_VIEW`) for the units they lead (a current `Manager` membership, P3)
+    and those under them (People.js `unitsUnder`, exported); a directory reader reads none. No pay value is in any answer: a grade is its
+    name;
+  - `mantle.humanres.PayrollSetupServices` over a new module `PayrollSetup.js`: `find#PayGrades` (names and comments for any staff reader;
+    for `PAYROLL_VIEW` the band in effect, its count, the revision and, for a grade asked for, every band; `amountsShown`) and
+    `store#PayGrade` (`PAYROLL_VIEW` and `PAYROLL_EDIT`: a grade, a rename, and a band from a date that ends the band in effect, changing no
+    salary; `CURRENCY_REQUIRED`, `CURRENCY_INVALID`, `FREQUENCY_REQUIRED`, `FREQUENCY_INVALID` (a Payroll period only), `AMOUNT_REQUIRED`,
+    `AMOUNT_INVALID`, `CURRENCY_PRECISION`, `BAND_ORDER`, `BAND_SCHEDULED`, `REVISION_CHANGED`);
+  - `Employees.js` `titlesOf`: the job title is the class of the seat the person holds at that employer on the date (an occupancy row), else
+    of the seat the employment names, so the directory, Employee360 and the palette show it.
+- BOSS:
+  - Screens: `People/Staffing` (menu "Positions & recruiting", index 6, every People user's; the key `g s`) with `Staffing/Positions` (the
+    default: FindPositions, PositionList as `views="list,board"`, the board by status with no move, state and vacancy chips with tui texts,
+    the CSV; New position, the one primary, an HR editor's, opening the seat), `Staffing/PositionDetail` (record header with state and
+    vacancy; Terms; Holders read only; Edit terms, the primary, and End position under More, a danger dialog with a confirmation),
+    `Staffing/JobClasses` (FindJobClasses, JobClassList; New job class), `Staffing/JobClassDetail` (header; Job profile; Requirements with Add
+    skill and Remove; Edit profile, the primary; End job class under More) and `Staffing/PayGrades` (Grades with the band's columns hidden
+    unless the service answered amounts; New pay grade, the payroll editor's primary, and New band per grade; a grade opened shows its
+    bands to payroll). Each reads its Mantle service in `actions` and shows "Not available" or "not open to you" on a refusal.
+  - `ironstone.people`: the choices `departments` (one employer's, `choiceOrganizationPartyId`, through `get#Scope`'s units), `jobClasses`
+    (current) and `payGrades` (names only); `sharedLinks` for the six routes. No new access rule in BOSS: the screens are every People
+    user's and Mantle checks every read and change; no amount enters the shared context, a choice or the palette.
+  - Demo (`BossPeopleDemoData.xml`, appended): four skills; the classes Store manager, Sales associate, Merchandiser and Service technician;
+    the grades Associate, Lead and Manager with a monthly USD band each; Retail's store manager seat (Hannah), three sales associate seats
+    (Tomas, Rafael, one vacant) and a planned seasonal one in Store Operations and the merchandiser seat (Leon); Services' two technician
+    seats (Kenji, one vacant).
+- Specs: Mantle `test/humanres/PeoplePositions` (4 features, 2.5 s feature time, 0.6 s each: a class's work types and skills, its refusals,
+  a partial change keeping the description, an ended class listed only when asked and refused for a new seat; two planned seats vacant in
+  a department, another employer's department, a team, another employer, a reader, dates, hours and no class refused, a manager reading
+  their department's seats only and another employer's HR refused; vacancy before and after a holder's start, a second holder and a person
+  not employed refused, the directory's job title from the seat held, an end before the holder's last day refused and allowed after the
+  holding ends, a stale revision and another employer refused; a grade's band, its order, currency, frequency and amounts refused, a raise
+  from next month ending the band before, a band already set refused, the salary on the grade unchanged, and HR answered the name with no
+  band, amount, currency or frequency, on the grade and on the position). BOSS `test/People/PeoplePositions` (3 features, 0.5 s:
+  PositionDetail's one qvt render as HR, a filled seat with its grade's name and no amount; the choices `departments`, `jobClasses` and
+  `payGrades`, each with a selected value off the page; PayGrades' one html render as HR, the names and nothing of the bands).
+  `PeopleAccess` gains one feature (0.5 s: a position's and a job class's change, HR of Retail answered for what it asks with the parameters
+  the reader is refused with, Services' position refused to Retail's HR, a manager reading Store Operations' seat and not Merchandising's,
+  a grade's change payroll's and refused to HR, payroll's answer with the band and HR's without) and its menu feature checks the Staffing
+  group (PeopleSpecLib `staffingMenu`, the menus and keys). Acceptance, written and not run: `acceptance/People/PeoplePositionsUsable`
+  (3 features: HR defines a class with a skill and plans two seats in Merchandising through the transitions and sees them vacant in the list,
+  the seat in tui and the class; payroll sets a grade's band and a raise from next month through PayGrades and reads both, a band out of
+  order refused; HR puts the grade on a seat and sees its name and no amount on PayGrades, the grade opened, PositionDetail, the service's
+  answer and the choice, and a forged grade refused).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeoplePositions, PeopleScope, PeopleDirectory, PeopleOrganization,
+  HumanResServices, PayrollServices, PayrollAdjustments, WorkTimeEntries, ProductionShopFloor and WorkResources, 66 features, 65 passing on
+  the first run (PeoplePositions searched a title the BOSS demo also has; made spec-unique) and PeoplePositions 4 of 4 after (mr-mantle 14.5 s
+  feature time); BOSS PeopleAccess (10 of 10), PeopleEmployees, PeopleOrganization, PeoplePositions, Resources, ManufacturingShopFloor,
+  Contacts, InsightsRecords, AppOrganizationFilters and ProjectsAccess (with a dependency), 100 of 100 (mr-boss 19.2 s). A one-off qvt, tui
+  and html render of the five screens for HR, the reader, the manager and payroll and a post to each of their transitions (not kept) found
+  nothing to fix. `moqui lint --screens`: 135 flagged sites, as on master, none in the People screens; no TUI-text finding in them. Prettier
+  clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table gains the six PositionServices and two PayrollSetupServices with their screens
+  (`store#PositionHolder` has none until P6). ss-inventory has no HumanRes position or grade form (its two HumanRes rows are the rates, P10).
+- Design edits: design-people (header; §1.2 the Staffing group and `g s`; §5 the holders, vacancy, readers and the grades' lane, and
+  JobClasses, JobClassDetail, Positions, PositionDetail and PayGrades as built).
+- Findings (provisional, numbered by the lead):
+  - a seat's occupancy has two records in the code: the design's dated `EmplPositionParty` rows (Manufacturing's shop floor and Projects'
+    resources read them) and `Employment.emplPositionId` (`create#Employment` takes it; TimeServices' rate lookup, Commons' contact card and
+    P2's directory read it). P4 reads both, the occupancy row winning, and writes only the row (`store#PositionHolder`); P6's hire and change
+    should write the row and decide whether `Employment.emplPositionId` follows it (TimeServices reads a worker's class from it);
+  - pay grades and job classes have no organization in Mantle, so both are shared by every employer: a payroll operator of Retail reads and
+    changes the bands of a grade Services' seats name. A grade per employer needs `PayGrade.organizationPartyId` (a Mantle entity change);
+  - design §1.1 says payroll configuration needs `PAYROLL_EDIT` and `PEOPLE_CONFIGURE`; the plan's `store#PayGrade`, built as written, asks
+    `PAYROLL_VIEW` and `PAYROLL_EDIT` (the usable-when's `people.payroll` holds no `PEOPLE_CONFIGURE`);
+  - a new seat is planned and nothing in P4 activates one (the demo's seats are seeded active): P5's `decide#PositionApproval` is the first
+    writer of `EmpsActive`; a seat is filled only by `store#PositionHolder`, which no screen calls until P6;
+  - a declared service parameter not passed arrives in a script service as null, so People's partial updates take null as "unchanged" and
+    an empty text as "clear"; a form cannot clear a Timestamp (an empty date posts null), so an ended seat or class is not reopened;
+  - not built: a seat's budget reference (`EmplPosition.budgetId`), a class's classifications (`EmplPositionClassPtyClsTp`) and
+    responsibilities (`EmplClassResponsibility`, `EmplPositionResponsibility`), and Positions' cost estimate (compensation, P23);
+    `EmplPosition.minimumHourlyWage`, a pay value, is neither read nor written by People.
+- For the lead:
+  - the budget: mr-mantle's share PeoplePositions about 2.5 s; mr-boss's PeoplePositions about 0.5 s and PeopleAccess's new feature 0.5 s,
+    within §4's estimates (no client spec);
+  - merge hot spots: mr-mantle `entity/HumanResourcesEntities.xml` (EmplPosition, EmplPositionClass), `PositionServices.xml` (appended),
+    `Employees.js` (`titlesOf`), `People.js` (the exports); mr-boss `service/ironstone/people/People.js` (`linkPaths`, `choiceSources`),
+    `ContextServices.xml` (`get#Choices`' description), `template/PeopleParts.xml`, `screen/People.xml` (the keymap and comment),
+    `data/BossPeopleDemoData.xml` (appended), `test/People/PeopleSpecLib.js` (ids, menus, keys), `PeopleAccess.spec.js` (header, menu
+    feature, the appended feature), `plan/usl-inventory.md` (the People Added table), design-people's header, §1.2 and §5;
+  - the user's call: whether pay grades (and job classes) stay shared by every employer or a grade gets an employer (the second finding),
+    and whether a grade's band also needs `PEOPLE_CONFIGURE` (the third).
+
 ### P5 — Approval rules and Approvals
 
 Design §12 ApprovalPolicies, Lookups, §13 Approvals, §5 PositionDetail's Requisition; PE-15, PE-18 (topics), PE-03

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Positions (design-people §5 Positions; style-guide §3.2 List; impl-people P4): the seats of the employers a reader
+    reads, as of a date, from mantle.humanres.PositionServices.find#Positions (an HR, recruiting, payroll or configuration reader
+    every seat of their employers, a manager the seats of the departments they lead). FindPositions narrows by employer,
+    department, job class, status, vacancy and name; PositionList shows each seat's name, class, employer, department, grade name,
+    dates, state and vacancy (filled or vacant from its holders at the date, never stored) and its holder, as a list or a board by
+    status; each opens PositionDetail. An HR editor (PEOPLE_HR_EDIT) plans a seat (New position, the one primary): it starts
+    planned, and its activation is an approval (P5). A grade is its name: no pay amount is part of this screen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Positions" default-menu-index="1" menu-image="sym_o_event_seat" menu-image-type="icon">
+    <parameter name="term"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="departmentPartyId"/>
+    <parameter name="emplPositionClassId"/>
+    <parameter name="statusId"/>
+    <parameter name="vacancy"/>
+    <parameter name="includeEnded"/>
+    <parameter name="asOfDate"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new planned seat: Mantle checks the editor, the employer, the class, the department and the dates -->
+    <transition name="storePosition">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.store#Position" out-map="stored"
+                    in-map="{organizationPartyId:(organizationPartyId || null), departmentPartyId:(departmentPartyId || null),
+                        emplPositionClassId:(emplPositionClassId || null), payGradeId:(payGradeId || null),
+                        description:(description || null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        standardHoursPerWeek:(standardHoursPerWeek || null), fullTimeFlag:(fullTimeFlag || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Position planned</message></if>
+        </actions>
+        <default-response url="../PositionDetail"><parameter name="emplPositionId" from="stored?.emplPositionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.hrView &amp;&amp; can.hrEdit)"/>
+        <service-call name="mantle.humanres.PositionServices.find#Positions" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), organizationPartyId:(organizationPartyId || null), departmentPartyId:(departmentPartyId || null),
+                    emplPositionClassId:(emplPositionClassId || null), statusId:(statusId || null), vacancy:(vacancy || null),
+                    includeEnded:(includeEnded == 'Y'), asOfDate:(asOfDate || null), pageIndex:(pageIndex || 0),
+                    pageSize:(pageSize || null), pageNoLimit:(pageNoLimit || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="positionsFound" from="!!found?.positions"/>
+        <set field="positions" from="found?.positions || []"/>
+        <set field="positionsCount" from="found?.positionsCount || 0"/>
+        <set field="positionsPageIndex" from="found?.positionsPageIndex || 0"/>
+        <set field="positionsPageSize" from="found?.positionsPageSize || 20"/>
+        <set field="positionsPageMaxIndex" from="found?.positionsPageMaxIndex || 0"/>
+        <set field="positionsPageRangeLow" from="found?.positionsPageRangeLow || 0"/>
+        <set field="positionsPageRangeHigh" from="found?.positionsPageRangeHigh || 0"/>
+        <set field="vacantCount" from="found?.vacantCount || 0"/>
+        <set field="filtered" from="!!(term || organizationPartyId || departmentPartyId || emplPositionClassId || statusId || vacancy || includeEnded == 'Y')"/>
+        <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null,
+                departmentPartyId: departmentPartyId || null, emplPositionClassId: emplPositionClassId || null, statusId: statusId || null,
+                vacancy: vacancy || null, includeEnded: includeEnded || null, asOfDate: asOfDate || null}"/>
+        <set field="newPosition" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+                departmentPartyId: departmentPartyId || null, emplPositionClassId: emplPositionClassId || null}"/>
+        <set field="stateColors" from="{planned: 'primary', active: 'positive', inactive: 'grey-8', future: 'primary', ended: 'grey-8'}"/>
+        <set field="vacancyColors" from="{vacant: 'warning', filled: 'positive'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Positions" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewPositionDialog" button-text="New position" icon="sym_o_add" type="primary" width="720"
+                        title="Plan a position" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                    <label type="p" text="A position is a seat of its employer, in one of the employer's departments. It starts planned; it is filled by hiring into it."/>
+                    <form-single name="NewPosition" transition="storePosition" map="newPosition">
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'employers', selected:newPosition.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="departmentPartyId">
+                            <default-field title="Department" tooltip="A department of the employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                            parameter-map="{choice:'departments', selected:newPosition.departmentPartyId}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="emplPositionClassId">
+                            <default-field title="Job class">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'jobClasses', selected:newPosition.emplPositionClassId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="payGradeId">
+                            <default-field title="Pay grade" tooltip="Optional">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payGrades'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description"><default-field title="Name" tooltip="The job class's title when empty"><text-line size="40"/></default-field></field>
+                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                        <field name="thruDate"><default-field title="Through" tooltip="Optional"><date-time type="date"/></default-field></field>
+                        <field name="standardHoursPerWeek"><default-field title="Hours a week"><text-line size="5" input-type="number"/></default-field></field>
+                        <field name="fullTimeFlag"><default-field title=" "><check><option key="Y" text="Full time"/></check></default-field></field>
+                        <field name="submitButton"><default-field title="Plan position"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="organizationPartyId"/><field-ref name="departmentPartyId"/></field-row>
+                            <field-row><field-ref name="emplPositionClassId"/><field-ref name="payGradeId"/></field-row>
+                            <field-ref name="description"/>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-row><field-ref name="standardHoursPerWeek"/><field-ref name="fullTimeFlag"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!positionsFound">
+            <widgets>
+                <label text="Positions are open to HR, recruiting and payroll readers of an employer, and to managers for the departments they lead. None is open to you."
+                        type="p" style="m-muted" condition="!organizationPartyId"/>
+                <label text="This employer is not available to you." type="p" style="text-negative" condition="organizationPartyId"/>
+            </widgets>
+        </section>
+        <section name="PositionRows" condition="positionsFound">
+            <widgets>
+                <label text="The seats of the employers you read, as of a date: a seat is vacant while no one holds it. ${vacantCount} vacant of ${positionsCount}."
+                        type="p" style="text-caption m-muted"/>
+                <form-single name="FindPositions" transition="." map="findValues">
+                    <field name="term"><default-field title="Name"><text-find size="18" hide-options="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="departmentPartyId">
+                        <default-field title="Department">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'departments', selected:findValues.departmentPartyId}">
+                                    <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="emplPositionClassId">
+                        <default-field title="Job class">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'jobClasses', selected:findValues.emplPositionClassId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="EmpsPlanned" text="Planned"/>
+                                <option key="EmpsActive" text="Active"/>
+                                <option key="EmpsInactive" text="Inactive"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="vacancy">
+                        <default-field title="Vacancy">
+                            <drop-down allow-empty="true"><option key="vacant" text="Vacant"/><option key="filled" text="Filled"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate"><default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                    <field name="includeEnded"><default-field title="Ended positions"><check><option key="Y" text="Include"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="term"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="departmentPartyId"/>
+                            <field-ref name="emplPositionClassId"/>
+                        </field-row-big>
+                        <field-row-big>
+                            <field-ref name="statusId"/>
+                            <field-ref name="vacancy"/>
+                            <field-ref name="asOfDate"/>
+                            <field-ref name="includeEnded"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="PositionList" list="positions" skip-form="true" paginate="true" select-columns="true"
+                                views="list,board" show-csv-button="true">
+                            <field name="emplPositionId"><default-field><hidden/></default-field></field>
+                            <field name="statusId"><default-field><hidden/></default-field></field>
+                            <field name="positionName">
+                                <default-field title="Position">
+                                    <link url="${sharedLinks['Staffing/PositionDetail']}" text="${positionName}" link-type="anchor"
+                                            parameter-map="{emplPositionId:emplPositionId}"/>
+                                </default-field>
+                            </field>
+                            <field name="classTitle"><default-field title="Job class"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                            <field name="payGradeName"><default-field title="Pay grade"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="vacancyText">
+                                <default-field title="Vacancy">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[${vacancy ? '<q-chip dense square class="q-ma-none m-tonal text-' + (vacancyColors[vacancy] || 'grey-8') + '">' +
+                                            WebUtilities.encodeHtml(vacancyText) + '</q-chip>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: vacancyText || ""})}]]></text>
+                                        <text type="html">${vacancyText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="holderName"><default-field title="Holder"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="positionName"/><field-ref name="departmentName"/></column>
+                                <column><field-ref name="vacancyText"/><field-ref name="stateText"/></column>
+                            </columns>
+                            <view-board group-field="statusId" status-type-id="EmplPosition" card-title-field="positionName"
+                                    card-fields="departmentName,vacancyText,holderName" key-fields="emplPositionId"
+                                    column-order="EmpsPlanned,EmpsActive,EmpsInactive"/>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!positions.length &amp;&amp; filtered" text="No position matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!positions.length &amp;&amp; !filtered"
+                                text="No position is planned yet.${canEdit ? ' Plan one with New position.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
