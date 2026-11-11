@@ -306,7 +306,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F71) |
 | P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | built and reviewed Nov 11, merged |
 | P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | built and reviewed Nov 11, merged |
-| P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | — |
+| P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | built and reviewed Nov 11, merged |
 | P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | — |
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | — |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | — |
@@ -929,7 +929,7 @@ Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
   name OrgStructure and OrgChart.
 - Design edits: design-people (header; §1.2 the keys and the Employees group; §4 departments never a user's organization; §4
   Employees' manager column; OrgStructure and OrgChart as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F89 to F94 in order:
   - `get#PartyInternalOrgIds` admitted every direct rollup child into `userOrgIds` and so `filterOrgIds` (F49), which would have put
     People's departments into every app's organization scope; P3 admits internal children only. A Mantle change outside `humanres`,
     with no effect on the existing data, for the reviewer's eye;
@@ -1013,7 +1013,7 @@ apart per repository ("People P3 review: …"; mr-mantle f0d07655).
     refused as a cost centre (`COST_CENTER_INVALID`).
   - **R5 (low, specs).** PeopleSpecLib's `employeesMenu` was unused: PeopleAccess's menu feature now checks the Employees group
     (List, OrgStructure, OrgChart) through the shell's menu data.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F95 to F99 in order:
   - the cycle checks of `store#Unit` and `change#Manager` walk the parents and lines in effect on the change's date; a move or line
     already set for a later date on the chain above can still close a loop from that later date. Walking every row in effect on
     or after the date would refuse it;
@@ -1822,7 +1822,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
