@@ -75,7 +75,13 @@ feature("a delegated access administrator changes a member within a registered b
             })
             const privileged = invoke(access + "store#Membership", {userGroupId: ids.backupGroupId, userId: ids.retailUserId})
             const memberScope = invoke(context + "get#MemberScope", {userIds: [ids.retailUserId, ids.otherUserId]})
-            const options = invoke(context + "get#Choices", {choice: "members", term: ""}).options.map(row => row.value)
+            // a page of the choice, searched for both users (commerce.manager and commerce.services): the first page of an
+            // empty term holds the first of whatever staff the other specs add, by name
+            const options = invoke(context + "get#Choices", {
+                choice: "members",
+                term: "commerce.",
+                selected: ids.otherUserId
+            }).options.map(row => row.value)
             const ended = member
                 ? invoke(access + "end#Membership", {
                       userGroupId: bundleId,
