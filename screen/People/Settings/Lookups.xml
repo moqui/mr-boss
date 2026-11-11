@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Settings › Lookups (design-people §12 Lookups; style-guide §3.9 Settings; impl-people P5): People's HR vocabularies,
+    a whitelist of families (termination reasons and types, skill types and levels; later phases add theirs) over
+    mantle.humanres.PeopleServices find#Lookups and store#Lookup. The family chosen lists its values in order with how many
+    records hold each; Add value (the one primary), each value's Edit (name, code, order) and End (a danger dialog naming the
+    value: it stays for the records that hold it and is offered for no new one). Nothing is deleted. The People
+    administrator's (PEOPLE_CONFIGURE, which Mantle checks on every change). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Lookups" default-menu-index="3">
+    <parameter name="enumTypeId"/>
+    <parameter name="includeEnded"/>
+    <!-- a new value, a value's name, code or order, or its end: Mantle checks the administrator, the family and the revision -->
+    <transition name="storeLookup">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#Lookup"
+                    in-map="{enumTypeId:enumTypeId, enumId:(enumId || null), description:(description ?? null), enumCode:(enumCode ?? null),
+                        sequenceNum:(sequenceNum ?? null), end:(endValue == 'Y'), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endValue == 'Y' ? 'Value ended' : 'Value saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="enumTypeId"/></default-response>
+        <error-response url="."><parameter name="enumTypeId"/></error-response>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <if condition="can.configure">
+            <service-call name="mantle.humanres.PeopleServices.find#Lookups" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{enumTypeId:(enumTypeId || 'TerminationReason'), includeEnded:(includeEnded == 'Y')}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="lookupFound" from="!!found?.families"/>
+        <set field="familyList" from="found?.families || []"/>
+        <set field="values" from="found?.values || []"/>
+        <set field="enumTypeId" from="found?.enumTypeId || enumTypeId || 'TerminationReason'"/>
+        <set field="familyTitle" from="(familyList.find(row =&gt; row.enumTypeId === enumTypeId) || {}).title || ''"/>
+        <set field="findValues" from="{enumTypeId: enumTypeId, includeEnded: includeEnded || null}"/>
+        <set field="newValue" from="{enumTypeId: enumTypeId}"/>
+    </actions>
+    <widgets>
+        <section name="NotConfigurer" condition="!can.configure">
+            <widgets>
+                <label text="Lookups" type="h5"/>
+                <label text="HR vocabularies are the People administrator's." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="LookupFamilies" condition="can.configure">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Lookups" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="The values HR records choose from. A value in use is ended, never deleted: the records that hold it keep it."/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="AddValueDialog" button-text="Add value" icon="sym_o_add" type="primary" width="560"
+                                title="Add a value to ${familyTitle}" condition="lookupFound">
+                            <form-single name="AddValue" transition="storeLookup" map="newValue">
+                                <field name="enumTypeId"><default-field><hidden/></default-field></field>
+                                <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="enumCode"><default-field title="Code" tooltip="A short code, a level's number"><text-line size="10"/></default-field></field>
+                                <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add value"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+
+                <form-single name="FindLookups" transition="." map="findValues">
+                    <field name="enumTypeId">
+                        <default-field title="Vocabulary">
+                            <drop-down><list-options list="familyList" key="${enumTypeId}" text="${title}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeEnded"><default-field title=" "><check><option key="Y" text="Include ended values"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="enumTypeId"/><field-ref name="includeEnded"/><field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+
+                <container-box>
+                    <box-header title="${familyTitle}"/>
+                    <box-body-nopad>
+                        <form-list name="LookupValues" list="values" skip-form="true" paginate="false" condition="values.length">
+                            <field name="description"><default-field title="Name"><display/></default-field></field>
+                            <field name="enumCode"><default-field title="Code"><display/></default-field></field>
+                            <field name="sequenceNum"><default-field title="Order"><display/></default-field></field>
+                            <field name="useCount"><default-field title="Records using it"><display format="#,##0"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${ended ? 'grey-8' : 'positive'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditValue_${enumId}" button-text="Edit" icon="sym_o_edit" type="default" width="560"
+                                            title="Edit ${description}" condition="canEdit">
+                                        <form-single name="EditValue" transition="storeLookup"
+                                                map="{enumTypeId:enumTypeId, enumId:enumId, expectedRevision:revision, description:description,
+                                                    enumCode:enumCode, sequenceNum:sequenceNum}">
+                                            <field name="enumTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="enumId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="enumCode"><default-field title="Code"><text-line size="10"/></default-field></field>
+                                            <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndValue_${enumId}" button-text="End" icon="sym_o_event_busy" type="default" width="520"
+                                            title="End ${description}" condition="canEdit">
+                                        <label type="p" text="${description} stays on the records that hold it (${useCount}) and is offered for no new one."/>
+                                        <form-single name="EndValue" transition="storeLookup"
+                                                map="{enumTypeId:enumTypeId, enumId:enumId, expectedRevision:revision, endValue:'Y'}">
+                                            <field name="enumTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="enumId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="endValue"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End value">
+                                                    <submit type="danger" confirmation="End ${description}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="useCount"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="lookupFound &amp;&amp; !values.length"
+                                text="No value yet. Add the first with Add value."/>
+                        <label type="p" style="q-pa-md text-negative" condition="!lookupFound"
+                                text="This vocabulary is not available just now."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

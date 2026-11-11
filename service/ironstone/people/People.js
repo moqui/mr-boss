@@ -130,7 +130,11 @@ const linkPaths = [
     "Staffing/PositionDetail",
     "Staffing/JobClasses",
     "Staffing/JobClassDetail",
-    "Staffing/PayGrades"
+    "Staffing/PayGrades",
+    // P5: the approvals list and the People administrator's approval rules and HR vocabularies (design §12, §13)
+    "Approvals",
+    "Settings/ApprovalPolicies",
+    "Settings/Lookups"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -204,7 +208,8 @@ function checkRecord(p) {
 // Each People drop-down: its options for the user, searched in the query ignoring case, with the selected value's label when it
 // is in scope but not on the page. An unknown choice throws. Later phases add sources (positions, pay groups). P3: employees (one
 // employer's current employees, the managers and members OrgStructure and OrgChart choose). P4: departments (one employer's), job
-// classes and pay grades (names only: a grade's amounts are payroll's, PayrollSetupServices.find#PayGrades).
+// classes and pay grades (names only: a grade's amounts are payroll's, PayrollSetupServices.find#PayGrades). P5: staff (one
+// employer's current employees and agents, who an approval rule names to decide).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -293,6 +298,9 @@ const choiceSources = {
     // P3: one employer's current employees (organizationPartyId), else those of every employer a staff reader sees: the managers
     // and members OrgStructure and OrgChart choose
     employees: (userScope, term, selected, p) => employeeOptions(userScope, term, selected, p),
+    // P5: one employer's current employees and agents (organizationPartyId; none without one), who an approval rule names
+    staff: (userScope, term, selected, p) =>
+        employeeOptions(userScope, term, selected, p, ["PrtEmployee", "PrtAgent"], !!p?.organizationPartyId),
     // P4: the departments of one employer (organizationPartyId; none without one), a position's department
     departments: (userScope, term, selected, p) => {
         if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
@@ -382,8 +390,10 @@ const choiceSources = {
     }
 }
 // The current employees of the employers a staff reader sees, or of the one asked for (refused outside, as none): each person once,
-// by name or id; the selected one when it is one of them.
-function employeeOptions(userScope, term, selected, p) {
+// by name or id; the selected one when it is one of them. relationshipTypes widens them (P5's staff: agents too), and a source that
+// needs its employer (required) answers none without one.
+function employeeOptions(userScope, term, selected, p, relationshipTypes = ["PrtEmployee"], required = true) {
+    if (!required) return []
     const employers = p?.organizationPartyId
         ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
         : employerIds(userScope)
@@ -391,7 +401,7 @@ function employeeOptions(userScope, term, selected, p) {
     const factory = ec.entity.conditionFactory
     const base = () =>
         find("mantle.party.PartyFromAndRelationship")
-            .condition("relationshipTypeEnumId", "PrtEmployee")
+            .condition("relationshipTypeEnumId", "in", relationshipTypes)
             .condition("toPartyId", "in", employers)
             .conditionDate("fromDate", "thruDate", null)
             .selectField(["fromPartyId", "firstName", "lastName"])

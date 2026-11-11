@@ -1,5 +1,6 @@
 # IronStone BOSS — People design
 
+Nov 11, 2026 — impl-people P5 as built: Approvals (the Commons Notifications list of People's topics) and the key `g a`, and Settings' Approval rules and Lookups tabs (§1.2); a planned seat's activation asked for and decided on PositionDetail (§5 PositionDetail); dated approval rules routed employee override, nearest department, employer, manager or department head, with the step's alternate and an HR fallback, never the requester, an unresolved route waiting, new terms superseding a waiting request and a retried decision answering the first; the `PeoplePositionApproval` topic's approve and refuse handlers (§12 ApprovalPolicies); HR vocabularies ended, never deleted (§12 Lookups); People's lifecycle participant (design-admin §14).
 Nov 11, 2026 — impl-people P4's review, on the user's calls: a pay grade is owned by an employer or shared by every employer, an owned one read by that employer's readers and changed by its payroll editors, a shared one changed only with `PEOPLE_ALL_ORGANIZATIONS` (§5, §5 PayGrades); a pay grade is changed with `PAYROLL_VIEW` and `PAYROLL_EDIT`, and `PEOPLE_CONFIGURE` stays for pay components, structures and groups (§1.1).
 Nov 11, 2026 — impl-people P4 as built: Positions & recruiting (Staffing) with Positions, Job classes and Pay grades and the key `g s` (§1.2); a seat's holders are dated occupancy rows, one at a time, and vacancy is computed from them; a job class is ended, never deleted; a pay grade's band is payroll's alone, every other reader getting its name (§5 JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades).
 Nov 11, 2026 — impl-people P3 as built and reviewed: OrgStructure and OrgChart under Employees (§1.2, §4 OrgStructure and OrgChart); a reporting line is per employment, the manager's line at the employers that employ both, changed only by an editor who reads each of them (§4, §4 Employees); a department or team is never one of a user's organizations, Admin's child organizations or a cost centre (§4); the department memberships P6 makes the assignments' and the emergency contact P8 adds (§4 OrgStructure, Employee360).
@@ -53,7 +54,7 @@ XML screens use standard record headers, one status-dependent primary action, se
 
 ### 1.2 Menu
 
-Menu entries name the landing screens; detail routes are in §2 and reached from records. A section with no available capability is omitted. The `people` keymap scope has `g p` for People home (as built, impl-people P1), `g e` for Employees (P2), `g o` and `g c` for Organization and Org chart (P3), and `g s` for Positions (P4); each phase adds the keys of its screens. Employees is a menu group: Employees (the directory), Organization and Org chart (as built, impl-people P3). Positions & recruiting is a menu group, `People/Staffing`: Positions, Job classes and Pay grades (as built, impl-people P4); Openings, Applicants and Interviews join it with P16.
+Menu entries name the landing screens; detail routes are in §2 and reached from records. A section with no available capability is omitted. The `people` keymap scope has `g p` for People home (as built, impl-people P1), `g e` for Employees (P2), `g o` and `g c` for Organization and Org chart (P3), `g s` for Positions (P4) and `g a` for Approvals (P5); each phase adds the keys of its screens. Approvals is every People user's: it lists only the user's own notices (as built, impl-people P5). Settings' tabs are Settings (the readiness), Approval rules and Lookups, the People administrator's (P5). Employees is a menu group: Employees (the directory), Organization and Org chart (as built, impl-people P3). Positions & recruiting is a menu group, `People/Staffing`: Positions, Job classes and Pay grades (as built, impl-people P4); Openings, Applicants and Interviews join it with P16.
 
 - Home — `Home`; My team — `MyTeam`; Approvals — `Approvals`.
 - Employees — `Employees`; Organization — `OrgStructure`; Org chart — `OrgChart`; Grievances — `Grievances`.
@@ -511,7 +512,9 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 
 
 
-**As built (impl-people P4).** `People/Staffing/PositionDetail` (out of the menu): the record header (name; class, department and employer; state and vacancy chips), Terms (employer, department, class, grade by name, dates, hours a week, full time, temporary, salaried, paid overtime; a link to the class) and Holders (every dated holding, read only, with its state and the person's Employee360 on that employment). An HR editor has Edit terms (the one primary; the department, class and grade audited with the reason) and End position under More (refused before a holder's last day). A seat is filled by P6's hire and employment change; the Requisition is P5's. The budget reference is not built.
+**As built (impl-people P4).** `People/Staffing/PositionDetail` (out of the menu): the record header (name; class, department and employer; state and vacancy chips), Terms (employer, department, class, grade by name, dates, hours a week, full time, temporary, salaried, paid overtime; a link to the class) and Holders (every dated holding, read only, with its state and the person's Employee360 on that employment). An HR editor has Edit terms (the one primary; the department, class and grade audited with the reason) and End position under More (refused before a holder's last day). A seat is filled by P6's hire and employment change. The budget reference is not built.
+
+**As built (impl-people P5).** The Requisition: an HR editor asks for a planned seat's activation (Request activation, the primary while the seat is planned and nothing waits; the effective date and why it is needed; `mantle.humanres.PositionServices.request#PositionApproval` at the revision read), routed by the employer's approval rules for the seat's department (§12 ApprovalPolicies) and never to the requester; with no rule the head of its department decides. The Approval box shows the latest request: its state, who asked and why, each step with who decides it and why, and the decisions. An approver of the step waiting decides here (Approve, the primary; Refuse with a reason under More) as from Approvals or the notification tray; the last approval activates the seat (`EmpsActive`), a refusal leaves it planned, and new terms supersede a request waiting (asked for again). Backfill (a vacant active seat refilled) waits for openings (P16).
 
 **Source:** research §4, §5
 
@@ -1600,7 +1603,7 @@ The target is a `rows`-mode `moqui.server.TransferTarget` that Mantle seeds, on 
 | `PeopleAttendanceApproval` | `mantle.humanres.AttendanceServices.decide#Correction` |
 | `PeopleExpenseApproval` | `mantle.humanres.ExpenseServices.decide#Claim` |
 | `PeopleAdvanceApproval` | `mantle.humanres.ExpenseServices.decide#Advance` |
-| `PeoplePositionApproval` | proposed `mantle.humanres.PositionServices.decide#PositionApproval` |
+| `PeoplePositionApproval` | `mantle.humanres.PositionServices.decide#PositionApproval`, through the topic's `approve#PositionApproval` and `refuse#PositionApproval` (as built, P5) |
 | `PeopleOfferApproval` | `mantle.humanres.RecruitingServices.change#OfferState` |
 | `PeopleEmploymentChangeApproval` (transfer, pay change, separation) | proposed `mantle.humanres.PeopleServices.decide#EmploymentChange` |
 | `PeoplePayAdjustmentApproval` | `mantle.humanres.PayrollInputServices.decide#Adjustment` |
@@ -1609,6 +1612,8 @@ The target is a `rows`-mode `moqui.server.TransferTarget` that Mantle seeds, on 
 | `PayrollRunApproval` | `mantle.humanres.PayrollRunServices.approve#Run`; refuse returns the run to Review through proposed `return#Run` |
 
 These topics have lock-screen-safe titles (§1.4).
+
+**As built (impl-people P5).** `People/Settings/ApprovalPolicies` (tab "Approval rules", the People administrator's): Policies (employer, kind, the scope it applies to, step, who decides, the person, the alternate, from, state; ended rows when asked), New rule (the one primary), and each row's Change (dated: the row in effect ends and the next starts, with the reason in the audit log) and End; ResolvePreview ("Who would decide": employer, kind, department, the employee it is about and who asks, answered step by step with who decides and why). The records are `mantle.humanres.approval.PeopleApprovalPolicy` (a dated step of an employer and a kind, `PeopleApprovalKind`, for the whole employer, a department or one employee, decided by a role, `PeopleApproverRole`: department head, manager, named person or HR officer, with an alternate; a `ParHrFallback` row names the employer's HR fallback for the kind), `PeopleApproval` (a request bound to its source's revision: waiting, approved, refused or superseded) and `PeopleApprovalDecision` (actor, step, rule row, role, revision, time, reason), over `mantle.humanres.PeopleApprovalServices` (find#Policies, store#Policy, resolve#Approvers, record#Decision). Routing: the rules naming the request's employee, else those of the nearest department at or above the source's, else the employer's; with none, the person's manager (the head of the department for a position). A step's approvers are those of its role who hold `PEOPLE_REQUEST_APPROVE` (HR's roles also `PEOPLE_HR_EDIT`), never the requester or the person the request is about, nor one who decided another step; when none may, the alternate, then the HR fallback, else the request waits and nothing is approved. A rule change routes the waiting requests again. A decision rechecks the approver and the source's revision; new terms supersede a request waiting (`SOURCE_CHANGED` when changed outside the domain's service), and a decision retried by the same user answers the first. Rules are read by the People administrator and an HR reader and changed with `PEOPLE_CONFIGURE`. Each kind and topic is seeded with the phase that builds its decision service: P5's is the position's activation. The framework passes no action to a topic's service, so each People topic names an approve and a refuse handler over the decision service.
 
 
 
@@ -1647,6 +1652,8 @@ These topics have lock-screen-safe titles (§1.4).
 | Lookup | dialog | Add or end a permitted value | family, code, description, sequence, effective state | controlled fields | proposed `mantle.humanres.PeopleServices.store#Lookup` | Mantle SkillType, TerminationReason and BenefitType |
 
 **Actions and states:** Whitelist HR-owned families; do not expose arbitrary enum/status/service editing. Required seeds include applicant role/stages, skill types/levels, termination reasons and new domain status flows. Referenced values are ended, not deleted; localization-owned statutory codes are read-only here.
+
+**As built (impl-people P5).** `People/Settings/Lookups` (the People administrator's): a vocabulary chosen from the whitelist (termination reasons, termination types, skill types and skill levels, Mantle's `SkillLevel` seeded 1 Basic to 5 Expert; later phases add theirs), its values in order with how many records hold each, Add value (the one primary), Edit (name, code, order) and End per value; ended values listed when asked. A value is ended by `Enumeration.thruDate` (a Mantle extension of the framework's entity), never deleted, over `mantle.humanres.PeopleServices.find#Lookups` and `store#Lookup` (read by the administrator and an HR reader, changed with `PEOPLE_CONFIGURE`). BenefitType is not among the families yet.
 
 
 
@@ -1733,6 +1740,8 @@ These mounts reuse their owner’s forms and services. Crosscut §3.4 registers 
 | Mount | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | `People/Approvals` → Commons §4 Approvals; crosscut §3.15 | the Approvals list with balance or amount context | the People approval topics of §12 ApprovalPolicies addressed to the user | approve, refuse with reason, bulk approve (each record through its decision service), open | leave balance, claim total and request dates |
+
+As built (impl-people P5): `People/Approvals` (menu index 3, key `g a`, every People user's) mounts `Commons/Notifications.xml` with `notificationTopics` `PeoplePositionApproval` and the title Approvals, as Accounting's and Purchasing's do; the root's shell providers register the topic. A row opens PositionDetail (BossSetupData's link); approve and refuse go through the topic's handlers, as from the notification tray.
 
 **Source:** Commons §4 Notifications; crosscut §3.15; research §16.
 

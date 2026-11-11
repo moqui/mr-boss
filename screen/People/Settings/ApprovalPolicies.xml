@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Settings › Approval rules (design-people §12 ApprovalPolicies; style-guide §3.9 Settings; impl-people P5): the People
+    administrator's dated approval rules over mantle.humanres.PeopleApprovalServices. Policies (find#Policies: employer, kind,
+    scope, step, who decides, the alternate, dates and state; ended rows when asked), New rule (store#Policy: a step of the whole
+    employer, a department or one employee, decided by the department head, the manager, a named person or HR, with an
+    alternate; or the employer's HR fallback), each row's Change (a dated change: the row in effect ends and the next starts,
+    with the reason) and End (a danger dialog naming the rule), and ResolvePreview (resolve#Approvers: who would decide an
+    example request and why, never its requester; a step no one may decide waits). Mantle checks PEOPLE_CONFIGURE and the
+    employer on every change. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Approval rules" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="approvalKindEnumId"/>
+    <parameter name="includeEnded"/>
+    <parameter name="departmentPartyId"/>
+    <parameter name="subjectPartyId"/>
+    <parameter name="requesterPartyId"/>
+    <parameter name="preview"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new rule row, a row's dated change or its end: Mantle checks the administrator, the employer, the people named and the
+        revision read -->
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.humanres.PeopleApprovalServices.store#Policy"
+                    in-map="{peopleApprovalPolicyId:(peopleApprovalPolicyId || null), organizationPartyId:(organizationPartyId || null),
+                        approvalKindEnumId:(approvalKindEnumId || null), departmentPartyId:(departmentPartyId ?? null),
+                        employeePartyId:(employeePartyId ?? null), sequenceNum:(sequenceNum ?? null),
+                        approverRoleEnumId:(approverRoleEnumId || null), approverPartyId:(approverPartyId ?? null),
+                        alternatePartyId:(alternatePartyId ?? null), description:(description ?? null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || (endRule == 'Y' ? ec.user.nowTimestamp : null)), changeReason:(changeReason || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endRule == 'Y' ? 'Rule ended' : 'Rule saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <if condition="can.configure">
+            <service-call name="mantle.humanres.PeopleApprovalServices.find#Policies" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null), approvalKindEnumId:(approvalKindEnumId || null),
+                        includeEnded:(includeEnded == 'Y'), pageIndex:(pageIndex || 0)}"/>
+            <script>ec.message.clearErrors()</script>
+            <if condition="preview &amp;&amp; organizationPartyId">
+                <service-call name="mantle.humanres.PeopleApprovalServices.resolve#Approvers" out-map="resolved" transaction="force-new"
+                        ignore-error="true" in-map="{organizationPartyId:organizationPartyId, approvalKindEnumId:(approvalKindEnumId || 'PakPosition'),
+                            departmentPartyId:(departmentPartyId || null), subjectPartyId:(subjectPartyId || null),
+                            requesterPartyId:(requesterPartyId || null)}"/>
+                <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )+/, '').replace(/^[A-Z_]+: /, '') : null"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="policiesFound" from="!!found?.policies"/>
+        <set field="policies" from="found?.policies || []"/>
+        <set field="policiesCount" from="found?.policiesCount || 0"/>
+        <set field="policiesPageIndex" from="found?.policiesPageIndex || 0"/>
+        <set field="policiesPageSize" from="found?.policiesPageSize || 20"/>
+        <set field="policiesPageMaxIndex" from="found?.policiesPageMaxIndex || 0"/>
+        <set field="policiesPageRangeLow" from="found?.policiesPageRangeLow || 0"/>
+        <set field="policiesPageRangeHigh" from="found?.policiesPageRangeHigh || 0"/>
+        <set field="previewSteps" from="resolved?.steps || []"/>
+        <set field="previewBasis" from="resolved?.basisText || ''"/>
+        <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null, approvalKindEnumId: approvalKindEnumId || null,
+                includeEnded: includeEnded || null}"/>
+        <set field="newPolicy" from="{organizationPartyId: organizationPartyId || null, approvalKindEnumId: approvalKindEnumId || 'PakPosition',
+                sequenceNum: 1, approverRoleEnumId: 'ParDepartmentHead'}"/>
+        <set field="previewValues" from="{organizationPartyId: organizationPartyId || null, approvalKindEnumId: approvalKindEnumId || 'PakPosition',
+                departmentPartyId: departmentPartyId || null, subjectPartyId: subjectPartyId || null,
+                requesterPartyId: requesterPartyId || null, preview: 'Y'}"/>
+    </actions>
+    <widgets>
+        <section name="NotConfigurer" condition="!can.configure">
+            <widgets>
+                <label text="Approval rules" type="h5"/>
+                <label text="Approval rules are the People administrator's." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ApprovalRules" condition="can.configure">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Approval rules" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="Who decides each kind of request: an employee's own rule first, then their department's, then the employer's, else their manager. Nobody approves their own request, and a request no one may decide waits."/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="NewRuleDialog" button-text="New rule" icon="sym_o_add" type="primary" width="720"
+                                title="New approval rule">
+                            <label type="p" text="A step of a kind of request, for the whole employer, one department or one employee. Several steps are decided in order, each by a different person. The HR fallback decides any step no one else may."/>
+                            <form-single name="NewRule" transition="storePolicy" map="newPolicy">
+                                <field name="organizationPartyId">
+                                    <default-field title="Employer">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'employers', selected:newPolicy.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approvalKindEnumId">
+                                    <default-field title="Kind of request">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="PeopleApprovalKind"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approverRoleEnumId">
+                                    <default-field title="Decided by">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="PeopleApproverRole"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum"><default-field title="Step" tooltip="The step's place, from 1"><text-line size="4" input-type="number"/></default-field></field>
+                                <field name="departmentPartyId">
+                                    <default-field title="Department" tooltip="Empty for the whole employer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                    parameter-map="{choice:'departments'}">
+                                                <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="employeePartyId">
+                                    <default-field title="Only for employee" tooltip="A rule of its own for this employee's requests">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                    parameter-map="{choice:'employees'}">
+                                                <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approverPartyId">
+                                    <default-field title="Person" tooltip="The named person or HR fallback; for HR, a designated officer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                    parameter-map="{choice:'staff'}">
+                                                <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="alternatePartyId">
+                                    <default-field title="Alternate" tooltip="Decides when no one of the role may">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                    parameter-map="{choice:'staff'}">
+                                                <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                <field name="description"><default-field title="Note"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add rule"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="organizationPartyId"/><field-ref name="approvalKindEnumId"/></field-row>
+                                    <field-row><field-ref name="approverRoleEnumId"/><field-ref name="sequenceNum"/></field-row>
+                                    <field-row><field-ref name="departmentPartyId"/><field-ref name="employeePartyId"/></field-row>
+                                    <field-row><field-ref name="approverPartyId"/><field-ref name="alternatePartyId"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="description"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+
+                <form-single name="FindPolicies" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="approvalKindEnumId">
+                        <default-field title="Kind of request">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${enumId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                        <econdition field-name="enumTypeId" value="PeopleApprovalKind"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeEnded"><default-field title=" "><check><option key="Y" text="Include ended rules"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="organizationPartyId"/><field-ref name="approvalKindEnumId"/>
+                            <field-ref name="includeEnded"/><field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+
+                <container-box>
+                    <box-header title="Rules"/>
+                    <box-body-nopad>
+                        <form-list name="Policies" list="policies" skip-form="true" condition="policies.length">
+                            <field name="scopeText">
+                                <default-field title="Applies to"><display/></default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                            <field name="roleText"><default-field title="Decided by"><display/></default-field></field>
+                            <field name="approverName"><default-field title="Person"><display/></default-field></field>
+                            <field name="alternateName"><default-field title="Alternate"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ChangeRule_${peopleApprovalPolicyId}" button-text="Change" icon="sym_o_edit" type="default"
+                                            width="640" title="Change the rule: ${scopeText}, ${stepText}" condition="canEdit">
+                                        <label type="p" text="A change takes effect from the date given; the rule before it ends then and stays on record with the reason."/>
+                                        <form-single name="ChangeRule" transition="storePolicy"
+                                                map="{peopleApprovalPolicyId:peopleApprovalPolicyId, expectedRevision:revision, organizationPartyId:organizationPartyId,
+                                                    approverRoleEnumId:approverRoleEnumId, approverPartyId:approverPartyId, alternatePartyId:alternatePartyId}">
+                                            <field name="peopleApprovalPolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="approverRoleEnumId">
+                                                <default-field title="Decided by">
+                                                    <drop-down>
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                <econdition field-name="enumTypeId" value="PeopleApproverRole"/>
+                                                                <order-by field-name="sequenceNum"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="approverPartyId">
+                                                <default-field title="Person">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'staff', choiceOrganizationPartyId:organizationPartyId, selected:approverPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="alternatePartyId">
+                                                <default-field title="Alternate">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'staff', choiceOrganizationPartyId:organizationPartyId, selected:alternatePartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Save change">
+                                                    <submit confirmation="Change this rule of ${organizationName}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndRule_${peopleApprovalPolicyId}" button-text="End" icon="sym_o_event_busy" type="default"
+                                            width="520" title="End the rule: ${scopeText}, ${stepText}" condition="canEdit">
+                                        <label type="p" text="The rule ends on the date given and stays on record; requests waiting are routed again."/>
+                                        <form-single name="EndRule" transition="storePolicy"
+                                                map="{peopleApprovalPolicyId:peopleApprovalPolicyId, expectedRevision:revision, organizationPartyId:organizationPartyId,
+                                                    endRule:'Y'}">
+                                            <field name="peopleApprovalPolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="endRule"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="thruDate"><default-field title="Ends on" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End rule">
+                                                    <submit type="danger" confirmation="End the rule ${scopeText}, ${stepText} of ${organizationName}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="scopeText"/><field-ref name="roleText"/><field-ref name="stepText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="policiesFound &amp;&amp; !policies.length"
+                                text="No rule yet: each request goes to its person's manager, or to the head of a position's department. Add a rule with New rule."/>
+                        <label type="p" style="q-pa-md text-negative" condition="!policiesFound"
+                                text="This employer is not available to you."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Who would decide"/>
+                    <box-body>
+                        <label type="p" style="m-muted" text="Explain the route of an example request: who decides each step, and why."/>
+                        <form-single name="ResolvePreview" transition="." map="previewValues">
+                            <field name="preview"><default-field><hidden/></default-field></field>
+                            <field name="organizationPartyId">
+                                <default-field title="Employer">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'employers', selected:previewValues.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="approvalKindEnumId">
+                                <default-field title="Kind of request">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="PeopleApprovalKind"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="departmentPartyId">
+                                <default-field title="Department">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                parameter-map="{choice:'departments', selected:previewValues.departmentPartyId}">
+                                            <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="subjectPartyId">
+                                <default-field title="About employee">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                parameter-map="{choice:'employees', selected:previewValues.subjectPartyId}">
+                                            <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="requesterPartyId">
+                                <default-field title="Asked by">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                parameter-map="{choice:'staff', selected:previewValues.requesterPartyId}">
+                                            <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Explain"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="organizationPartyId"/><field-ref name="approvalKindEnumId"/></field-row>
+                                <field-row><field-ref name="departmentPartyId"/><field-ref name="subjectPartyId"/></field-row>
+                                <field-row><field-ref name="requesterPartyId"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                        <label type="p" style="text-negative" text="${previewError}" condition="previewError"/>
+                        <section name="PreviewResult" condition="previewSteps.length">
+                            <widgets>
+                                <label type="p" style="text-weight-medium" text="${previewBasis}"/>
+                                <form-list name="PreviewSteps" list="previewSteps" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides, and why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/></column>
+                                        <column><field-ref name="explanation"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

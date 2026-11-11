@@ -5139,4 +5139,20 @@ along with this software (see the LICENSE.md file). If not, see
             description="Each employer's setup checks: departments, and a manager for every employee"
             settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="People/Settings"
             viewPermission="PEOPLE_CONFIGURE" configuredBy="People administrator" providerKey="people.setup" sequenceNum="85"/>
+    <!-- impl-people P5: a position's activation to approve (Mantle's PeoplePositionApproval topic, PeopleApprovalSetupData.xml) opens
+        the position under People, decided there, from People's Approvals or from the notification tray -->
+    <moqui.security.user.NotificationTopic topic="PeoplePositionApproval"
+            linkTemplate="/qapps/People/Staffing/PositionDetail?emplPositionId=${emplPositionId}"/>
+    <!-- impl-people P5 (owner contract, design-admin §14; impl-people §4): People's lifecycle participant, the waiting People
+        decisions and the approval rules that name the user, through Mantle's own services (the owned-resource contract). A
+        rule is handed to a new approver who works for its employer; a waiting request follows its route and is not transferred.
+        The services check PEOPLE_APPROVAL_OWNER_CHANGE for another user's; the identity operator and the administrator, who
+        offboard, hold it. Openings and review steps join the same lookup with their phases. -->
+    <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
+            description="The People approval rules that name the user to decide, handed to a new approver, and the requests waiting for their decision."
+            resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
+            transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
+            requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="PEOPLE_APPROVAL_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="PEOPLE_APPROVAL_OWNER_CHANGE" fromDate="0"/>
 </entity-facade-xml>

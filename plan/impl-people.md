@@ -1278,6 +1278,141 @@ Design §12 ApprovalPolicies, Lookups, §13 Approvals, §5 PositionDetail's Requ
   department head; `people.hr` requests a seat's activation and cannot approve it; the head approves it from
   Approvals and from the notification tray; ResolvePreview explains the route.
 
+**Built Nov 11 (P5).** mr-mantle 03b6a241, mr-boss (branch `ppl/p5`).
+- Checked first (the code over the plan): F18 (Accounting's and Purchasing's Approvals mount `Commons/Notifications.xml` with
+  `notificationTopics`), F42 (a topic's `approveServiceName` and `refuseServiceName`, seeded in Mantle beside the service, and the
+  app's link in BossSetupData), F27 (the lifecycle participant rows and the owned-resource contract), F50 (a line from the manager to
+  the report) and P3's leads (a `Manager` membership from the lead to the unit). Also: the framework's `decide#NotificationMessage`
+  calls a topic's service with `recordEntityName`, `recordId`, `message`, `notificationMessageId` and, for a refusal, `reason`, and
+  no action, so one decision service cannot be both the approve and the refuse service (Purchasing names `approve#` and
+  `refuse#PurchaseSource`); an `update#` of a `statusId` with no `StatusFlowTransition` row is refused, and `EmplPosition` had none,
+  so nothing could activate a planned seat; `moqui.basic.Enumeration` has no date to end a value by; a retried tray decision calls
+  the topic's service again (the recipient's row stays, read).
+- Mantle (`entity/PeopleApprovalEntities.xml`, `data/PeopleApprovalSetupData.xml`, `PEOPLE_APPROVAL_OWNER_CHANGE` in
+  MantleSetupData):
+  - the records: `mantle.humanres.approval.PeopleApprovalPolicy` (a dated step of an employer and a kind, `PeopleApprovalKind`, only
+    `PakPosition` now, for the whole employer, a department or one employee, decided by a role, `PeopleApproverRole`: `ParDepartmentHead`,
+    `ParManager`, `ParPerson`, `ParHr`, with an alternate; a `ParHrFallback` row names the employer's HR fallback for the kind; the key
+    fields audit-logged), `PeopleApproval` (a request of a source at its revision, the requester, the employer and department it routes
+    by, the person it is about, the effective date and why; `PapPending`, `PapApproved`, `PapRefused`, `PapSuperseded` with their
+    transitions) and `PeopleApprovalDecision` (actor, step, rule row, role, revision, time, reason); `EmplPosition`'s `EmpsPlanned` to
+    `EmpsActive` transition; `Enumeration.thruDate` (an HR vocabulary value ended, a Mantle extension of the framework's entity);
+  - `mantle.humanres.PeopleApprovalServices` over a new module `Approvals.js`: `find#Policies` (the rows of the employers in scope,
+    current or with ended ones; the People administrator and an HR reader), `store#Policy` (`PEOPLE_CONFIGURE`: a new row, a dated
+    change that ends the row in effect and starts the next, a change in place of a row not yet in effect, an end; refusals
+    `ORGANIZATION_REQUIRED`, `ORGANIZATION_DENIED`, `KIND_INVALID`, `ROLE_INVALID`, `APPROVER_REQUIRED`, `STEP_INVALID`, `NOT_A_DEPARTMENT`,
+    `DEPARTMENT_OUTSIDE`, `NOT_EMPLOYED` (an employee not employed, an approver or alternate who does not work for the employer),
+    `SELF_APPROVAL`, `STEP_EXISTS`, `DATES_INVALID`, `RULE_ENDED`, `REVISION_CHANGED`; the employer's waiting requests of the kind are routed
+    again), `resolve#Approvers` (the route explained step by step: the basis, each step's role, who decides and how, or why no one may),
+    `record#Decision` (the shared decision the domain services call: `PEOPLE_REQUEST_APPROVE` or `PEOPLE_HR_EDIT`; the caller's earlier
+    decision of the request answers the first, `ALREADY_DECIDED` for another; `NOT_PENDING`, `REVISION_CHANGED` for a notice of an earlier
+    revision, `SOURCE_CHANGED` for a source changed since the request, `REASON_REQUIRED`, `SELF_APPROVAL`, `NOT_APPROVER`; the request row
+    locked; the last approval approves it, a refusal refuses it, either reads its notices, an earlier step's approval sends the next
+    step's) and People's lifecycle participant on the owned-resource contract, `find#OwnedApprovals` (the rule rows naming the user as
+    approver, alternate or HR fallback, transferable, and the requests waiting for their decision, listed and not transferable) and
+    `transfer#ApprovalOwner` (a rule row ends and its copy names the new approver, who must work for the employer; `NOT_TRANSFERABLE`,
+    `OWNER_INVALID`, `RECORD_UNAVAILABLE`; `PEOPLE_APPROVAL_OWNER_CHANGE` for another user's). Routing: the rules naming the request's
+    employee, else those of the nearest department at or above the source's department, else the employer's; with none, the person's
+    manager at the employer, or for a request about no one (a position) the head of its department, the nearest lead up the
+    departments. A step's approvers hold `PEOPLE_REQUEST_APPROVE` (HR's roles also `PEOPLE_HR_EDIT`) through an active group and an
+    enabled account, never the requester or the person it is about nor one who decided another step; none: the alternate, then the HR
+    fallback, else the step is unresolved and the request waits. Authority is recomputed at the decision from the rules and lines in
+    effect then. The step waiting gets one `PeoplePositionApproval` notice (reason approval, the position's name, employer, department
+    and step; no pay), sent again only when its approvers change;
+  - `PositionServices` (Positions.js): `request#PositionApproval` (`PEOPLE_HR_VIEW` and `PEOPLE_HR_EDIT`, a planned seat in scope at the
+    revision read, a justification; `NOT_PLANNED`, `JUSTIFICATION_REQUIRED`, `REVISION_CHANGED`, `APPROVAL_PENDING`; an operation key's
+    retry answers the first), `decide#PositionApproval` (over `record#Decision`; the last approval sets the seat `EmpsActive`, a retry
+    activates nothing again), the topic's `approve#PositionApproval` and `refuse#PositionApproval` (the message's request and revision);
+    `store#Position`'s change supersedes a request waiting at the earlier revision and reads its notices; `get#Position` answers the
+    latest request (`approval`: state, who asked, why, each step with who decides and why, the decisions, `canDecide`) and the seat's
+    `canRequestApproval`;
+  - the `PeoplePositionApproval` topic (refusal reason required, a title naming the position and step) and the `SkillLevel` family
+    (1 Basic to 5 Expert, each `enumCode` its number) in `PeopleApprovalSetupData.xml`;
+  - `PeopleServices.find#Lookups` and `store#Lookup` over a new module `Lookups.js`: the whitelist (termination reasons, termination
+    types, skill types, skill levels), each value's use counted from the fields that hold it, a value added, renamed, reordered or
+    ended, never deleted (`FAMILY_INVALID`, `DESCRIPTION_REQUIRED`, `DUPLICATE_VALUE`, `SEQUENCE_INVALID`, `VALUE_ENDED`,
+    `REVISION_CHANGED`); read by the administrator and an HR reader, changed with `PEOPLE_CONFIGURE`.
+- BOSS:
+  - Screens: `People/Approvals` (menu index 3, key `g a`, every People user's: Commons' Notifications with `notificationTopics`
+    `PeoplePositionApproval`; the root registers the topic as a `notification-topic`); `Settings/ApprovalPolicies` (tab "Approval rules":
+    FindPolicies, Policies with each row's Change and End dialogs, New rule the one primary, and "Who would decide", the ResolvePreview
+    over `resolve#Approvers`) and `Settings/Lookups` (FindLookups, LookupValues with Edit and End, Add value the one primary), both the
+    People administrator's under BOSS_PPL_SETTINGS; PositionDetail's Requisition: Request activation (the primary while the seat is
+    planned and nothing waits; Edit terms then a default button), the Approval box (state, who asked, why, the route's steps while it
+    waits, the decisions), and for an approver of the step waiting Approve (the primary) and Refuse under More.
+  - `ironstone.people`: the choice `staff` (one employer's current employees and agents, who a rule names), `sharedLinks` for the three
+    routes. No new BOSS access rule: Approvals lists the user's own notices, Settings is the administrator's area, and Mantle checks every
+    read, change and decision.
+  - BossSetupData: the topic's link to PositionDetail; People's lifecycle participant `people.approvals` (sequence 70) and
+    `PEOPLE_APPROVAL_OWNER_CHANGE` for the identity operator and the administrator. No demo rule: with none, a Retail seat goes to its
+    department's head (Store Operations' Hannah, `people.manager`).
+- Specs: Mantle `test/humanres/PeopleApprovals` (7 features, 3.0 s feature time: the routing order with the manager, the employer's rule,
+  the department's (a department without a lead taking its parent's head), an employee's override, the requester excluded and the
+  request waiting, the HR fallback and the alternate, the store refusals, the dated change and the HR reader's list; HR's request with
+  its refusals and retry, HR, another person and a reader refused the decision, the head's approval through `approve#NotificationMessage`
+  activating the seat, the same notice and a direct decision answering the first, one decision kept; new terms superseding a waiting
+  request and its notice, the old notice `NOT_PENDING`, a source changed outside the service `SOURCE_CHANGED`; an unresolved request
+  waiting with no notice and sent once its rule names an alternate; a two-step rule, the second approver refused early, the head's retry
+  answering the first, a refusal needing its reason; the lookups' whitelist, duplicate, permission and order refusals, a value renamed and
+  ended, kept and listed only with ended ones, the skill levels; the owner lookup and transfer, a waiting request not transferable,
+  another user's refused). BOSS `test/People/PeopleApprovals` (3 features, 0.3 s: Approvals' one qvt render as Hannah, the People notice
+  listed and another app's approval sent to her absent; Approval rules' one qvt render with the preview, the department head; Lookups' one
+  qvt render with the skill levels; the request refused and the other notice read at the end). `PeopleAccess` gains one feature (0.3 s:
+  a rule's and a lookup's change, the administrator answered for what they ask with the parameters HR is refused with, a route read by
+  Retail's HR and refused to the reader and for Services' position, a decision past the manager's permission and refused to the reader)
+  and its menu feature checks Approvals, `g a` and Settings' tabs (PeopleSpecLib `staffMenu`, `adminMenu`, `settingsMenu`, `keys`,
+  `plannedPositionId`). Acceptance, written and not run: `acceptance/People/PeopleApprovalsUsable` (3 features: the administrator's rule
+  through Approval rules, the preview in html and tui and Hannah's own request waiting; HR's request of the seasonal seat through
+  PositionDetail, HR's decision refused, the reader and HR with no notice, Hannah's approval from People's Approvals activating it and
+  PositionDetail in tui; a second seat approved from the tray, Commons' `Panel/Notifications`, twice, one decision kept).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleApprovals, PeoplePositions, PeopleScope, PeopleDirectory,
+  PeopleOrganization, HumanResServices, PayrollServices, PayrollAdjustments and WorkResources, 57 of 57 (mr-mantle 12.4 s feature time);
+  BOSS PeopleApprovals, PeopleAccess (11 of 11), PeoplePositions, PeopleEmployees, PeopleOrganization, AdminLifecycle, InsightsAlerts,
+  InsightsDelivery (with InsightsDatasets) and PurchasingAccess, 66 of 66 (mr-boss 15.2 s), and after Prettier PeopleApprovals,
+  PeoplePositions (Mantle) and PeopleApprovals, PeopleAccess, PeoplePositions, KnowledgeReview and TodayPanel (BOSS), 43 of 43. A one-off
+  qvt, tui and html render of PositionDetail (HR before and after the request, Hannah with Approve), Approvals in tui, Approval rules and
+  Lookups in tui and html, and a post to each new transition (not kept) found nothing to fix. `moqui lint --screens`: 135 flagged sites,
+  as on master, none in the People screens. Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance
+  suite.
+- Inventories: usl-inventory's People Added table gains the four PositionServices, six PeopleApprovalServices and two PeopleServices of
+  P5 and `get#Position`'s Approval box. ss-inventory has no HumanRes approval or vocabulary form.
+- Design edits: design-people (header; §1.2 Approvals, `g a` and Settings' tabs; §5 PositionDetail's Requisition as built; §12
+  ApprovalPolicies and Lookups as built and the topic's handlers; §13 Approvals as built); design-admin §14 (People's participant as
+  built); design-drawers-commons §4 (the `PeoplePositionApproval` row: its approve and refuse handlers).
+- Findings (provisional, numbered by the lead):
+  - a topic's service gets no action from `decide#NotificationMessage`, so design §12's one decision service per topic cannot be both
+    services: P5 names `approve#` and `refuse#PositionApproval` over `decide#PositionApproval`, and each later People topic needs the same
+    pair (design-drawers-commons' table, written for the position topic only, says otherwise for the others);
+  - `EmplPosition` had no status transitions, and the framework refuses a status change without one: P5 seeds `EmpsPlanned` to
+    `EmpsActive` only; a seat is still closed by its end date, never `EmpsInactive`, and nothing reopens one;
+  - `Enumeration.thruDate` is a Mantle extension of a framework entity; no built choice reads it yet: JobClassDetail's skill drop-down
+    (an `entity-options` of `SkillType`) still offers an ended skill type and `store#JobRequirement` takes it; each later phase's
+    vocabulary choice should leave ended values out;
+  - authority is recomputed when the decision is made, so a rule or reporting-line change between the request and the decision moves
+    the step to its new approvers (routed again on a rule change; on a manager change, P3's `change#Manager`, only at the next read or
+    rule change, the old approver's notice staying until then);
+  - a waiting request is listed by the lifecycle lookup and not transferred (it follows its route); a leaver's waiting requests move
+    only when their rule or reporting line changes, which P6's separation should do;
+  - a named approver or HR fallback who is not the department's lead reads no position (P4's reach), so a notice's link opens "Not
+    available" for them and they decide from Approvals or the tray only;
+  - not built: a backfill request (a vacant active seat refilled, with P16's openings), the Requisition's budget, the effective date's
+    use (an approval activates the seat at once; the date is kept on the request), a request's withdrawal, and a readiness check of an
+    employer's routes;
+  - People's demo has no approval rule: a Retail seat's request goes to its department's head by the default route.
+- For the lead:
+  - the budget: mr-mantle's share PeopleApprovals about 3.0 s; mr-boss's PeopleApprovals about 0.3 s and PeopleAccess's new feature 0.3 s,
+    within §4's estimates (no client spec);
+  - merge hot spots: mr-mantle `Positions.js` (the header, `getPosition`, `storePosition`'s hook, the new operations),
+    `PositionServices.xml` and `PeopleServices.xml` (appended), `data/MantleSetupData.xml` (the permission); mr-boss
+    `service/ironstone/people/People.js` (`linkPaths`, `choiceSources`, `employeeOptions`), `screen/People.xml` (the comment, keymap and
+    providers), `screen/People/Settings.xml`, `Staffing/PositionDetail.xml`, `data/BossSetupData.xml` (appended at its end),
+    `test/People/PeopleSpecLib.js` (menus, keys, ids) and `PeopleAccess.spec.js` (header, menu feature, the appended feature),
+    `plan/usl-inventory.md` (the People Added table), design-people's header, §1.2, §5, §12 and §13, design-admin §14,
+    design-drawers-commons §4;
+  - the user's call: whether an HR vocabulary is ended by a Mantle extension of the framework's `Enumeration` (built) or by a People
+    record of its own; whether offboarding should hand a leaver's waiting requests to a delegate rather than leave them to their route;
+    and whether HR officers decide HR-routed steps with `PEOPLE_HR_EDIT` (built) or need `PEOPLE_REQUEST_APPROVE` as managers do.
+
 ### P6 — Hire and employment change
 
 Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
