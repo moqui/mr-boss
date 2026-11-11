@@ -12,10 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone People settings (initial-design.md); design-people.md decides them. -->
+<!-- The Settings area of IronStone People (design-people §12 Settings, §1.2; impl-people P1), the People administrator's
+    (BOSS_PPL_SETTINGS denies the root user group; BOSS_PEOPLE_ADMIN and ADMIN open it through the root): SettingsHome (the
+    default: SetupReadiness over mantle.humanres.PeopleServices.get#Readiness). PeoplePreferences is P29's; the domain editors
+    of design §1.2's Settings group (pay components, structures and groups, leave policies and allocations, holidays, approval
+    rules, checklists, forms, lookups, EmployeeImport) join with their phases, each opening it to its own groups. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="8" menu-image="sym_o_settings" menu-image-type="icon">
+        default-menu-title="Settings" default-menu-index="20" menu-image="sym_o_settings" menu-image-type="icon">
+    <subscreens default-item="SettingsHome" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: People settings." type="p"/>
+        <subscreens-menu id="PeopleSettingsTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

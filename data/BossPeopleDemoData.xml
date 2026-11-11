@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- People P1 (impl-people P1, F12, F59; design-people §1.1, §4): the demo's employees. Ziziwork Retail & Wholesale and Ziziwork
+        Services are the employers. Each employee is a Person (owner left as it is, _NA_) with an Employment: a PrtEmployee
+        relationship from the person to the employer (Employee to OrgEmployer) and its Employment row, a work email and phone,
+        and a manager by a live PrtManager relationship from the manager to the report (F50). Retail: Greta Haugen leads, Hannah
+        Okafor reports to her and leads Tomas Lindqvist, Ines Varga and Rafael Mbeki (who joined last month); Leon Ferreira has no
+        manager yet; Walter Pruitt's employment ended in June. Priya Natarajan is employed by both Retail and Services and reports
+        to Greta. Services: Amara Diallo leads Kenji Arakawa, Sofia Brandt and Owen Castillo (Services' earlier employees, Joe and
+        Bob Developer and Ana Designer, are Mantle's and Projects'). Nadia Kowal is a contractor of Retail (PrtAgent), not an
+        employee. No department is set up (OrgStructure, P3, adds them), so People's setup readiness warns. Hannah is
+        people.manager and Tomas people.employee (data/BossUsersDemoData.xml). -->
+    <mantle.party.Party partyId="BOSS_PPL_GRETA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_GRETA" firstName="Greta" lastName="Haugen"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_GRETA" roleTypeId="Employee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_GRETA" roleTypeId="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_GRETA_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_GRETA" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2019-02-04 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_GRETA_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_GRETA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="greta.haugen@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_GRETA" contactMechId="BOSS_PPL_GRETA_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2019-02-04 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_GRETA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_GRETA_PW" countryCode="1" areaCode="801" contactNumber="555-0141"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_GRETA" contactMechId="BOSS_PPL_GRETA_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2019-02-04 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_HANNAH" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_HANNAH" firstName="Hannah" lastName="Okafor"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_HANNAH" roleTypeId="Employee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_HANNAH" roleTypeId="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_HANNAH_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_HANNAH" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2021-03-01 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_HANNAH_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_HANNAH_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="hannah.okafor@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_HANNAH" contactMechId="BOSS_PPL_HANNAH_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2021-03-01 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_HANNAH_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_HANNAH_PW" countryCode="1" areaCode="801" contactNumber="555-0142"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_HANNAH" contactMechId="BOSS_PPL_HANNAH_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2021-03-01 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_TOMAS" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_TOMAS" firstName="Tomas" lastName="Lindqvist"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_TOMAS" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_TOMAS_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_TOMAS" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_TOMAS_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_TOMAS_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="tomas.lindqvist@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_TOMAS" contactMechId="BOSS_PPL_TOMAS_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_TOMAS_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_TOMAS_PW" countryCode="1" areaCode="801" contactNumber="555-0143"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_TOMAS" contactMechId="BOSS_PPL_TOMAS_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_INES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_INES" firstName="Ines" lastName="Varga"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_INES" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_INES_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_INES" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_INES_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_INES_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="ines.varga@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_INES" contactMechId="BOSS_PPL_INES_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_INES_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_INES_PW" countryCode="1" areaCode="801" contactNumber="555-0144"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_INES" contactMechId="BOSS_PPL_INES_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_RAFAEL" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_RAFAEL" firstName="Rafael" lastName="Mbeki"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_RAFAEL" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_RAFAEL_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_RAFAEL" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2026-10-26 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_RAFAEL_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_RAFAEL_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="rafael.mbeki@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_RAFAEL" contactMechId="BOSS_PPL_RAFAEL_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2026-10-26 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_RAFAEL_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_RAFAEL_PW" countryCode="1" areaCode="801" contactNumber="555-0145"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_RAFAEL" contactMechId="BOSS_PPL_RAFAEL_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2026-10-26 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_LEON" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_LEON" firstName="Leon" lastName="Ferreira"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_LEON" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_LEON_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_LEON" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2024-01-15 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_LEON_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_LEON_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="leon.ferreira@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_LEON" contactMechId="BOSS_PPL_LEON_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2024-01-15 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_LEON_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_LEON_PW" countryCode="1" areaCode="801" contactNumber="555-0146"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_LEON" contactMechId="BOSS_PPL_LEON_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2024-01-15 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_WALTER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_WALTER" firstName="Walter" lastName="Pruitt"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_WALTER" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_WALTER_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_WALTER" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2018-05-01 09:00:00" thruDate="2026-06-30 17:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_WALTER_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_WALTER_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="walter.pruitt@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_WALTER" contactMechId="BOSS_PPL_WALTER_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2018-05-01 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_WALTER_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_WALTER_PW" countryCode="1" areaCode="801" contactNumber="555-0147"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_WALTER" contactMechId="BOSS_PPL_WALTER_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2018-05-01 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_PRIYA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_PRIYA" firstName="Priya" lastName="Natarajan"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_PRIYA" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PRIYA_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_PRIYA" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgEmployer"
+            fromDate="2020-08-17 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_PRIYA_EMP"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PRIYA_EMP2" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_PRIYA" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgEmployer"
+            fromDate="2025-02-03 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_PRIYA_EMP2"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_PRIYA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="priya.natarajan@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_PRIYA" contactMechId="BOSS_PPL_PRIYA_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2020-08-17 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_PRIYA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_PRIYA_PW" countryCode="1" areaCode="801" contactNumber="555-0148"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_PRIYA" contactMechId="BOSS_PPL_PRIYA_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2020-08-17 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_AMARA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_AMARA" firstName="Amara" lastName="Diallo"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_AMARA" roleTypeId="Employee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_AMARA" roleTypeId="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_AMARA_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_AMARA" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgEmployer"
+            fromDate="2020-01-06 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_AMARA_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_AMARA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="amara.diallo@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_AMARA" contactMechId="BOSS_PPL_AMARA_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2020-01-06 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_AMARA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_AMARA_PW" countryCode="1" areaCode="801" contactNumber="555-0151"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_AMARA" contactMechId="BOSS_PPL_AMARA_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2020-01-06 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_KENJI" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_KENJI" firstName="Kenji" lastName="Arakawa"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_KENJI" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_KENJI_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_KENJI" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgEmployer"
+            fromDate="2022-04-11 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_KENJI_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_KENJI_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="kenji.arakawa@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_KENJI" contactMechId="BOSS_PPL_KENJI_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2022-04-11 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_KENJI_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_KENJI_PW" countryCode="1" areaCode="801" contactNumber="555-0152"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_KENJI" contactMechId="BOSS_PPL_KENJI_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2022-04-11 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_SOFIA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_SOFIA" firstName="Sofia" lastName="Brandt"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_SOFIA" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_SOFIA_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_SOFIA" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgEmployer"
+            fromDate="2023-11-20 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_SOFIA_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_SOFIA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="sofia.brandt@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_SOFIA" contactMechId="BOSS_PPL_SOFIA_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2023-11-20 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_SOFIA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_SOFIA_PW" countryCode="1" areaCode="801" contactNumber="555-0153"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_SOFIA" contactMechId="BOSS_PPL_SOFIA_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2023-11-20 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_OWEN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_OWEN" firstName="Owen" lastName="Castillo"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_OWEN" roleTypeId="Employee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_OWEN_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="BOSS_PPL_OWEN" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgEmployer"
+            fromDate="2021-07-19 09:00:00"/>
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_OWEN_EMP"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_OWEN_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="owen.castillo@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_OWEN" contactMechId="BOSS_PPL_OWEN_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2021-07-19 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_OWEN_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
+    <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_OWEN_PW" countryCode="1" areaCode="801" contactNumber="555-0154"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_OWEN" contactMechId="BOSS_PPL_OWEN_PW" contactMechPurposeId="PhoneWork"
+            fromDate="2021-07-19 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_HANNAH_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_GRETA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_HANNAH" toRoleTypeId="Employee"
+            fromDate="2021-03-01 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_TOMAS_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_HANNAH" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_TOMAS" toRoleTypeId="Employee"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_INES_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_HANNAH" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_INES" toRoleTypeId="Employee"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_RAFAEL_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_HANNAH" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_RAFAEL" toRoleTypeId="Employee"
+            fromDate="2026-10-26 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PRIYA_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_GRETA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_PRIYA" toRoleTypeId="Employee"
+            fromDate="2020-08-17 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_KENJI_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_AMARA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_KENJI" toRoleTypeId="Employee"
+            fromDate="2022-04-11 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_SOFIA_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_AMARA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_SOFIA" toRoleTypeId="Employee"
+            fromDate="2023-11-20 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_OWEN_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_AMARA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_OWEN" toRoleTypeId="Employee"
+            fromDate="2021-07-19 09:00:00"/>
+    <!-- the contractor: an agent of Retail, not an employee -->
+    <mantle.party.Party partyId="BOSS_PPL_NADIA" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PPL_NADIA" firstName="Nadia" lastName="Kowal"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_NADIA_AGENT" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PPL_NADIA" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2025-05-05 09:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_NADIA_EM" contactMechTypeEnumId="CmtEmailAddress"
+            infoString="nadia.kowal@kowalconsulting.example"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_NADIA" contactMechId="BOSS_PPL_NADIA_EM" contactMechPurposeId="EmailPrimary"
+            fromDate="2025-05-05 09:00:00"/>
+</entity-facade-xml>

@@ -1,5 +1,6 @@
 # IronStone BOSS — People design
 
+Nov 11, 2026 — impl-people P1 as built: the root user group `BOSS_PEOPLE` and the Settings area (§1.1), the `people` keymap (§1.2), Home's counts and due work from `get#Home` (§3 Home). Its review, on the user's call: `PEOPLE_ALL_ORGANIZATIONS`, the People administrator's (§1.1).
 Nov 11, 2026 — impl-people P0's last checks (impl-people F55, F65, F66): ClockingKiosk on Admin's built device credential, a page of its own that a device reads as a display account (§1.4 Devices, ClockingKiosk); each mail intake action finds its own target (§1.4 Mail intake); an HR host's files have no Records-drive folder and so no public sharing (§13 RecordFiles, PE-01).
 Nov 11, 2026 — implementation plan written ([impl-people.md](impl-people.md)) and its open questions answered; its decisions and findings are made here (impl-people §4; F11, F20, F30, F34, F42, F51, F52, F54): the import permission `PEOPLE_IMPORT` and the import targets as built registrations (§1.1, §6 TimeImport, §12 EmployeeImport, PE-19); a hire's provisioning proposal (§1.1, §4); the process engine's split with Maintenance and the equipment return (§4, PE-02); payroll generic in the build and external processing gated on AC-23, which People builds (§8, §8.3, §8.4, §14.4, PE-11); approval topics seeded in Mantle (§12, PE-15); the survey builder's generalization (§13 Forms, PE-18); the projected calendar kind (PE-24); one costing purpose `RaprCost` (PE-23, §17).
 Nov 1, 2026 — draft; reviewed against research-people.md, the reference apps and the other designs (the suite-app review, since removed from the tree; read it with `git show bd74564^:plan/review-suite-apps.md`); consistency pass.
@@ -29,7 +30,9 @@ Root `screen/People.xml`, mounted as `People`, uses artifact group `BOSS_PEOPLE`
 | Payroll approver / BOSS_PEOPLE_PAYROLL_APPROVE | PAYROLL_VIEW (existing), PAYROLL_APPROVE | Review exact run population and calculated results; cannot approve own prepared run |
 | Learning/review administrator / BOSS_PEOPLE_DEVELOP | PEOPLE_DEVELOP_VIEW, PEOPLE_DEVELOP_EDIT | Skills, training and review administration; private review text still respects participant/reviewer scope |
 | Confidential case handler / BOSS_PEOPLE_CASE | PEOPLE_CASE_HANDLE | Explicit case assignment, not every HR grievance |
-| People administrator / existing BOSS_PEOPLE_ADMIN | PEOPLE_CONFIGURE plus explicit domain grants | Policy and setup; organization scope still checked by services; no implied bank/gateway administration |
+| People administrator / existing BOSS_PEOPLE_ADMIN | PEOPLE_CONFIGURE and PEOPLE_ALL_ORGANIZATIONS plus explicit domain grants | Policy and setup in every internal organization (or the active one); organization scope still checked by services; no implied bank/gateway administration |
+
+**Root user group (as built, impl-people P1).** On Commerce's pattern, `BOSS_PEOPLE` is the root user group: it opens the People root (ALLOW, with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`) and the `ironstone.people` services, and each user of a capability group above but `BOSS_PEOPLE_SELF` is also in it; the root grant opens navigation only. `BOSS_PEOPLE_ADMIN` keeps its ALWAYS on the root. An area only some groups see denies the root user group and allows its groups: Settings is the People administrator's in P1. A staff reader's employers are the internal organizations among their own (the active one when it is theirs), and the units under them are walked by `PrtOrgRollup` (`mantle.humanres.PeopleServices.get#Scope`); an edit, import or approve permission alone reads no employer. `PEOPLE_ALL_ORGANIZATIONS` (the user's call, Nov 11, 2026; Mantle grants it to `ADMIN`, BossSetupData to `BOSS_PEOPLE_ADMIN`), as Commerce's and Warehouse's `*_ALL_ORGANIZATIONS`, makes a staff reader's employers every internal organization, or the active one; it reads nothing by itself.
 
 Payroll configuration requires both PAYROLL_EDIT and PEOPLE_CONFIGURE; operational preparation alone cannot publish configuration. Permissions are intersected with organization, employment, relationship dates, record participation and field category. Separate view and edit grants. Employee and manager access never inherit private pay data merely from a Party or Project grant. Missing and unauthorized records both show “Not available”. Reject self-approval for leave, expenses, offers/pay changes and payroll; a configured alternate approver handles an absent or conflicted manager, and unresolved routing stays waiting rather than auto-approving.
 
@@ -45,7 +48,7 @@ XML screens use standard record headers, one status-dependent primary action, se
 
 ### 1.2 Menu
 
-Menu entries name the landing screens; detail routes are in §2 and reached from records. A section with no available capability is omitted.
+Menu entries name the landing screens; detail routes are in §2 and reached from records. A section with no available capability is omitted. The `people` keymap scope has `g p` for People home (as built, impl-people P1); each phase adds the keys of its screens.
 
 - Home — `Home`; My team — `MyTeam`; Approvals — `Approvals`.
 - Employees — `Employees`; Organization — `OrgStructure`; Org chart — `OrgChart`; Grievances — `Grievances`.
@@ -191,8 +194,8 @@ Every service in a form is fully qualified at its first use or in §16.2; **prop
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| Summary | display | Link counts to work queues | organization, as-of date, headcount, joins, exits, out, vacancies, decisions | dashboard, number cards | proposed `mantle.humanres.PeopleServices.get#Home` | Frappe HR workspaces; HumanRes/dashboard |
-| DueWork | list, read | Surface exceptions and due work | employee, event, due date, assignee, state | record links | proposed `mantle.humanres.PeopleServices.find#DueWork` | Frappe HR number cards |
+| Summary | display | Link counts to work queues | organization, as-of date, headcount (distinct people), employments, joins, exits, out, vacancies, decisions | dashboard, number cards | `mantle.humanres.PeopleServices.get#Home` (built in impl-people P1: headcount and employments for a staff reader, joins and exits of 30 days for an HR reader) | Frappe HR workspaces; HumanRes/dashboard |
+| DueWork | list, read | Surface exceptions and due work | employee, event, due date, assignee, state | record links | `get#Home`'s due work (built in impl-people P1: an HR reader's employees with no manager); proposed `mantle.humanres.PeopleServices.find#DueWork` when the list needs paging | Frappe HR number cards |
 
 **Actions and states:** Hire employee is primary for HR; otherwise open the first authorized queue. Empty setup links to Settings; no inaccessible totals or salary charts.
 
