@@ -554,12 +554,14 @@ Period comparison and commentary distinguish facts from authored explanation; an
 - **The framework** (mr-moqui `crates/moqui-report/src/delivery.rs`, docs/tools/Monitoring.md "Report delivery"): the services
   of §15.2's delivery row are built, with `reconcile#ReportRecipient` and `find#OwnedSchedules` beside them. The scope
   fingerprint is a hash of what the user reads of the definition and everything it references, the documents of each dataset
-  they may read, each dataset's resolved row filter and, where a dataset's records are restricted, whether they hold them; it
+  they may read, each dataset's resolved row filter and, where a dataset's records are restricted, whether they hold them, and of what a dashboard reads without naming it (a query's default telemetry dataset, the change markers and,
+  over a business dataset, each registered source of business events); it
   is computed in a context of its own signed in as that user. The organization scope is in it through the organization row
   filter of each dataset, not as a value of its own. A definition over a service source is not comparable (the service decides
   its scope in its own code), so it is delivered to its owner alone until a service source can declare its scope.
 - **Which schedules.** One saved by `store#Schedule` (`deliveryMode` personal or group), and any report schedule whose
-  definition reads a business dataset, whatever wrote its row (the "direct calls must not bypass the business mode" of §7.3):
+  definition reads a business dataset or another whose rows depend on the viewer (a `rowFilterService` or `contextFilters`:
+  `mantle-business-events`), whatever wrote its row (the "direct calls must not bypass the business mode" of §7.3):
   one made by Tools' `create#Schedule` is checked recipient by recipient at each run. Technical schedules are unchanged.
 - **Records.** `moqui.report.ReportScheduleRecipient`, `ReportOccurrence` (keyed by the schedule and the cron instant, or a
   Send now) and `ReportRecipientDelivery` (unique by occurrence, recipient and channel; pending, sending, sent, skipped, failed,
@@ -568,10 +570,12 @@ Period comparison and commentary distinguish facts from authored explanation; an
   artifacts with retention wait for Admin's retention policy.
 - **The cap** is `recipientCap` on the schedule, 50 from Insights until Settings holds it (P10), held by the engine under
   Admin's instance preference `report.groupRecipientCeiling`. A group that grows past it is sent to in user order up to the
-  cap, the rest skipped (`over-cap`).
+  cap, the rest skipped (`over-cap`). An occurrence that runs again (a run that ended before the schedule's last run time was kept) sends to nobody
+  whose delivery is sent or not known.
 - **Group delivery** needs the engine's artifact `org.moqui.report.delivery.group`, which setup grants the distributor; the
   five reading groups hold `INSIGHTS_SCHEDULE` and the engine's own-schedule operations, so every reader schedules for
-  themselves. A distributor proposes Insights readers (holders of `INSIGHTS_VIEW`) and groups they belong to; the check
+  themselves (§1.1's table lists the permission for the distributor alone and §7.1 says "any reader with
+  `INSIGHTS_SCHEDULE`": whether every reading group holds it by default is open, impl-insights P7's review). A distributor proposes Insights readers (holders of `INSIGHTS_VIEW`) and groups they belong to; the check
   decides. A recipient must read the report itself as well as its data: a private dashboard or digest is refused for
   anyone else (`not-shared`) until its owner shares it with a group they are in. A named recipient who may not receive refuses the save; a group's member without an address or an active account
   is skipped at each run instead.

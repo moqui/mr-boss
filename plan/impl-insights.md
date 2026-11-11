@@ -1602,6 +1602,93 @@ INS-06 (its first release), INS-11 (legacy schedules).
     participant (P8); a period comparison of the digest's own; an Assist draft of the commentary (P10);
   - `find#ReportOccurrences` with `administrative: true` is Admin P16's read (status and counters, no title, no content).
 
+**Review Nov 10 (P7).** Fresh review of mr-moqui b0668cf9 and mr-boss 380f0bf6; fixes mr-moqui 4dd40dfe, mr-boss 18adcaa2 and
+this note (branch `ins/p7`).
+- Checked and kept:
+  - **The scope fingerprint** (delivery.rs `scope`, `scope_as`): the definition and every definition it reaches by
+    `panelRef`, `dashboardRef` or `definitionId` (the engine's own reference keys, definitions.rs), read or not as that user
+    (`definitions::read`: owner or share group, not an authorization a disabled check could pass); every `datasetId` at any
+    depth (a library panel's, a query variable's), each resolved as that user by `resolve_dataset`: its artifact
+    (`authorize_own`), admission, the documents their groups read, and `rowFilter`, `contextFilters` and the
+    `rowFilterService`'s answer in a canonical form; the rows artifact of a restricted dataset. It runs in a context of its
+    own signed in as the user, so no screen grant and no disabled authorization enters it. A filter that names the viewer
+    (`userId`, their groups, an account field, the active organization Mantle's policy narrows to) is in the resolved filter,
+    so it differs: strict, never loose (F-P7-1). A service source is not comparable, and a business dataset cannot be one
+    (`check_admitted`). An organization fixed by a dashboard variable narrows inside the row filter and is the same for
+    everyone. The engine has no field permission: a restricted value (`PRODUCT_COST_VIEW`) reaches a report only through an
+    owner's service, which is a service source. The locale is not in the hash; a render is reused only within a locale.
+  - **Save and run**: `store#Schedule` and a resume refuse an active schedule with a blocking recipient; `send_each` computes
+    the owner's scope and each recipient's again just before their message, with the lease, the owner and the schedule
+    checked again; a recipient who cannot sign in (disabled, terminated) is `inactive`, an external one `external`, an id
+    that is no account is left out. The owner's render is made in a context signed in as the owner, authorization on.
+  - **The send**: `mail` is called with one address; no cc or bcc; no message names another recipient (the template has the
+    title, the link and the picture). `get#RecipientReport` takes only the caller's own sent delivery and renders as the
+    caller.
+  - **The caps**: `caps` in the engine (50 without one, clamped to 1..ceiling, the ceiling from `get#InstancePreference`,
+    200 when it cannot be read), at the save (`RECIPIENT_CAP`) and by position at the run (`over-cap`), also for a
+    `create#Schedule` row.
+  - **The old paths**: `list#Schedules`, `pause#Schedule` and `send#Report` are the owner's own; Tools' screens need
+    `DASHBOARDS_APP`; `render#ScheduledScreen` sends to a group only through a registered adapter (none is); `clearFields`
+    empties three named fields. A technical schedule takes the old code unchanged: moqui-host `report_` 9 of 9 and
+    `scheduled_reports` pass after the fixes.
+  - **Retry and reconcile**: the owner only, failed rows only, the occurrence's revision, the schedule's revision and the
+    definition's version unchanged; an uncertain row is refused until reconciled, with a reason.
+  - **Ownership**: `owner_authority` (the user themselves or `REPORT_OWNER_CHANGE`); a transfer needs an active internal
+    user who holds `store#Schedule` by their own grants, reads every source and, for a group, holds the group artifact; it
+    stays paused, and the resume is the new owner's with the recipients checked against their scope. The services are not
+    remote, so an identity operator reaches them only through Admin's lifecycle, which scopes the leaver and the new owner
+    (`identityLib.identity`). `AdminLifecycle`'s changed expectation is right: the participant has a pause service, so every
+    disable records its pause step after the drive's transfer step.
+  - **`find#ReportOccurrences` administrative**: `ADMIN_TRANSFER_VIEW`; ids, states and counters, no title and no recipient.
+    `get#ReportOccurrence` gives that administrator each recipient's name and outcome, as the plan says.
+  - **BOSS**: every transition reaches a `DeliveryServices` operation (`allow-remote="false"`) that checks its permission;
+    a group must be one the distributor belongs to and a person an Insights reader before the engine is asked; the
+    distributor's `save#Definition` is reachable only through `store#Digest`, which builds the definition itself (the
+    editors stay denied). Refusals are answers (`applied`, `reasonCode`, `reason`), not `ec.message` after `ignore-error`.
+  - **The acceptance edits** (read, not run): `AppStructure`'s five entries and `TuiRender`'s one name screens and texts
+    that exist; `InsightsFoundationWalk` walks `readerMenu`, which now has every entry.
+  - **Spec leanness**: `InsightsDelivery` renders ScheduledReportDetail once (qvt) and no other screen; `ReportAudience`
+    renders none.
+- Fixes:
+  - **R1** (high, delivery; mr-moqui) A cron occurrence is run again under its own key when the run before it ended before
+    the schedule's last run time was kept (a process that died, a failure before the first message), and `send_each` then
+    sent to every recipient again: one already sent got a second message, and one whose outcome was not known was sent
+    again without a person's word. Two retries read before either ran did the same to a failed one. A recipient whose
+    delivery stands as sent or uncertain is now passed over, their row left as it is.
+  - **R2** (high, access; mr-moqui) "Business" was the dataset's `signal` alone. `mantle-business-events` (the annotations
+    scoped by the viewer's organizations, every reading group's) has none, so a schedule the distributor makes with
+    `create#Schedule` (F-P7-10) over a dashboard of it alone took the technical path: one message to any `userId` and
+    `userGroupId`, unchecked. A schedule is now held to the check when its definition reads any dataset whose rows depend
+    on the viewer (a `rowFilterService` or `contextFilters`), whatever its signal. No shipped technical dataset has either.
+  - **R3** (medium, access; mr-moqui) The fingerprint left out what a dashboard reads without naming it: the change
+    markers (`monitor_annotations`), each registered business event source (read as the viewer over a business dataset), and
+    the telemetry dataset of a query or query variable that names none. An owner who reads one of these and a recipient
+    who does not had equal fingerprints. They are counted now (the markers as read or unread, without making the report
+    denied); no shipped definition has a query without a dataset.
+  - **R4** (low; mr-moqui) A walk past 500 definitions stopped without a word, so what lay beyond was in nobody's
+    fingerprint; it is now marked unread, and nobody is equivalent.
+  - **R5** (medium, injection; mr-boss) A copied screen schedule's subject is expanded by `render#ScheduledScreen` when it
+    runs (`ec.resource.expand`), and P7 opened the subject to every reader who has such a schedule. `storeLegacy` refuses
+    a changed subject that holds `${` or is over 255 characters.
+- Tests (this worktree's Debug binary, rebuilt): framework ReportAudience 7 of 7 (1.1 s; the new feature, an occurrence
+  run again, 0.09 s), ReportDrill, ReportAnnotations, BusinessDatasets; tools ReportMounts, DocumentExport; BOSS
+  InsightsDelivery 4 of 4 (2.0 s on this run), InsightsAccess, InsightsHome, InsightsDashboards, AdminLifecycle (with
+  InsightsDatasets) 25 of 25. Cargo: moqui-report 86 of 86 (`delivery::tests` 5), clippy clean, moqui-host `--test it report_`
+  9 of 9 and `scheduled_reports` 1 of 1. Prettier and rustfmt on what changed. Not run: the full suites, any acceptance
+  test. R1's check was not seen failing against the old binary.
+- For the lead:
+  - budget share: framework ReportAudience 1.1 s (was 1.0);
+  - the user's call: every reading group holds `INSIGHTS_SCHEDULE` (design §1.1's table gives it to the distributor and
+    says personal scheduling "adds" it to a reader; §7 "As built" now says it is open); F-P7-13 and the worker's other items
+    stand;
+  - findings: a skipped recipient sees the run in Received with its safe reason (their own delivery row; no content); a
+    digest's definition id carries its title's slug, which the administrative list shows as an id; the old owner still
+    lists a transferred schedule's past occurrences (counters only) and cannot open them;
+  - `create#Schedule` stays the distributor's (F-P7-10): with R2 nothing Insights reads goes out unchecked through it, and
+    removing the row is P1's block to change;
+  - an existing instance: an owner-mode schedule over a dataset with a `rowFilterService` or `contextFilters` (none shipped
+    outside the business ones and the events) now sends each recipient their own message, checked.
+
 ### P8 — Business alerts
 
 Design §8; INS-07 (its first release), INS-03.
