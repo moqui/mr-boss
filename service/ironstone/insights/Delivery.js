@@ -563,6 +563,12 @@ function storeLegacy(p, cron) {
         }
     }
     if (p.renderMode && !legacyFormats.some(format => format.value === p.renderMode)) denied("VALUE_INVALID", "Choose a format")
+    // the framework's screen schedule expands its subject when it runs (org.moqui.impl.ScreenServices render#ScheduledScreen,
+    // ec.resource.expand), so a subject set here is plain text: one that holds an expression is refused, as the expander
+    // reads it. A subject the row already has is left as it is (a pause changes none).
+    const subject = text(p.emailSubject)
+    if (subject !== text(legacy.emailSubject) && (subject.includes("${") || subject.length > 255))
+        denied("VALUE_INVALID", "A subject is plain text of at most 255 characters, without ${ }")
     // the user's own row, already checked: its timing, format and subject, never its screen, find, user or group
     const row = find(SCHEDULE).condition("screenScheduledId", legacy.screenScheduledId).one()
     row.cronExpression = cron || null

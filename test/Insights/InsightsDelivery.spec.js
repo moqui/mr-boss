@@ -101,6 +101,10 @@ feature(
                 invoke(D + "store#Schedule", schedule({recipientUserIds: ["BOSS_ADM_IDENTITY"]}))
             )
             const administrator = asUser(users.admin, () => refusal(D + "store#Schedule", schedule({})))
+            // a copied screen schedule's subject is expanded when it runs, so one that holds an expression is refused
+            const legacySubject = asUser(users.system, () =>
+                invoke(D + "store#Schedule", {screenScheduledId: "BOSS_DEMO_MY_TASKS", emailSubject: "Tasks ${ec.user.userId}"})
+            )
             const checked = asUser(users.distributor, () =>
                 invoke(D + "check#Audience", {definitionId: boardId, recipientUserIds: [people.author, people.services]})
             )
@@ -116,6 +120,7 @@ feature(
                 foreignGroup,
                 notReader,
                 administrator,
+                legacySubject,
                 author: result(people.author),
                 services: result(people.services),
                 choices: Array.from(choices.options || [])
@@ -133,6 +138,7 @@ feature(
             foreignGroup,
             notReader,
             administrator,
+            legacySubject,
             author,
             services,
             choices,
@@ -154,6 +160,8 @@ feature(
             foreignGroup.reasonCode == "RECIPIENT_GROUP_UNAVAILABLE"
             notReader.reasonCode == "RECIPIENT_UNAVAILABLE"
             administrator.includes("INSIGHTS_SCHEDULE_REQUIRED")
+            legacySubject.applied == false
+            legacySubject.reasonCode == "VALUE_INVALID"
             author.eligible == true
             services.eligible == false
             services.resultText.includes("differs")
