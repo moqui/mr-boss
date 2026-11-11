@@ -175,7 +175,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | built and reviewed Nov 10, merged |
 | P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | built and reviewed Nov 10, merged |
 | P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | built and reviewed Nov 10, merged |
-| P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | — |
+| P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | built and reviewed Nov 10, merged |
 | P11 Wall displays on shared devices | BOSS | Playlists on a registered device | — |
 | P12 Finish | all | the sweeps and the review walk (acceptance) | — |
 
@@ -2260,14 +2260,14 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
   - the cap: the engine takes a schedule's or a rule's own `recipientCap` (`delivery.rs` `caps`: 50 without one, held to
     1..ceiling, the ceiling `get#InstancePreference` `report.groupRecipientCeiling`), and BOSS passed the constant 50 from
     Delivery.js and Alerts.js. So the organization's setting is the value BOSS passes; the framework is unchanged and names
-    neither Mantle nor BOSS (F-P10-1);
+    neither Mantle nor BOSS (F130);
   - Admin's registries as built (`get#Readiness`, `request#Refresh`, `find#Settings`; impl-admin P2) and P3's eight dataset
     providers and refreshes; `store#OrganizationDefault` changes only a typed or validated type (impl-admin F104);
   - Assist: an `AgentToolExposure` row is one service with one `exposeMcp` flag, and a READ tool runs as the user under the
     read fence after the user's own service authorization (`tools/catalog.rs` `user_permitted`); three exposures existed, none
-    of the report engine (F-P10-2);
+    of the report engine (F131);
   - no dataset or field class exists (design §17 item 6), and `mantle-sales-orders` carries no cost field: the item cost and
-    margin totals are the items document's (F-P10-3, F-P10-4).
+    margin totals are the items document's (F132, F133).
 - **Settings** (`service/ironstone/insights/Settings.js`, the readers in `Insights.js`):
   - seven PartySetting types for the OrgInternal role, seeded by mr-boss (§4): `InsightsDefaultDashboard`, `InsightsDefaultMap`,
     `InsightsDefaultDigest`, `InsightsDisplayTimeZone`, `InsightsWeekStart` and `InsightsFreshnessPolicy` (an enumeration each,
@@ -2298,7 +2298,7 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
     stale?" (Insights), and the response action "Add to my dashboard" (`Insights/AddToDashboard`, `answerText`);
   - READ exposures: `insights_find_reports` and `insights_get_metric` (`RegistryServices.find#Reports`, `get#Metric`; Assist and
     MCP: navigation and wording, no figure), and for the numbers, a pair per tool since a row is offered to one surface or the
-    other (F-P10-2): `insights_panel` / `insights_operations_panel` (`run#PanelQuery`, `run#OperationsPanel`: a saved panel's
+    other (F131): `insights_panel` / `insights_operations_panel` (`run#PanelQuery`, `run#OperationsPanel`: a saved panel's
     own result by definition and panel id through Drill.js, so the dashboard's number with its exclusions and its registered
     meaning; no record), `insights_datasets` / `insights_operations_datasets` (`find#QuerySources`, `find#OperationsSources`)
     and `insights_query` / `insights_operations_query` (`run#DatasetQuery`, `run#OperationsQuery`: Analysis' typed choices run
@@ -2355,41 +2355,41 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
   default map), §11 "As built", §15.2 (get#Settings, AssistServices), §17 item 6; design-admin §14.2 (Insights' row, one
   line of Admin's design).
 - Findings (provisional, for the lead to number):
-  - F-P10-1: the engine keeps the cap a schedule or rule was saved with and knows no organization, so the organization's cap
+  - F130: the engine keeps the cap a schedule or rule was saved with and knows no organization, so the organization's cap
     is applied by BOSS at each save and check; a lowered cap reaches an existing schedule or rule at its next save, not at
     its next run (ScopeAndDelivery says so). Applying it at each run needs the schedule to carry its organization (as F118).
-  - F-P10-2: "`exposeMcp` by the dataset's class" cannot be a flag on `run#Query`: an exposure is per service and a service
+  - F131: "`exposeMcp` by the dataset's class" cannot be a flag on `run#Query`: an exposure is per service and a service
     cannot tell the surface. Built as a service per surface over typed choices and saved panels; the engine's query stays
     unexposed.
-  - F-P10-3: no dataset or field class in the framework (design §17 item 6): the class is a BOSS registration read by the
+  - F132: no dataset or field class in the framework (design §17 item 6): the class is a BOSS registration read by the
     Assist services only, and a cost or margin field is told by its name, as P6's drill (F83). F83 itself is unchanged for
     Explore, a direct query, Analysis' measure list and a panel's own aggregate, and so for Assist's built-in `screen` tool,
     which reads what the user's own screens show.
-  - F-P10-4: `mantle-sales-orders` has no cost field; `mantle-sales-items` is the one shipped cost dataset, and
+  - F133: `mantle-sales-orders` has no cost field; `mantle-sales-items` is the one shipped cost dataset, and
     `mantle-inventory` carries none.
-  - F-P10-5: a reader could read no source's readiness: `check#DatasetReadiness` reads the engine's `find#BusinessDatasets`,
+  - F134: a reader could read no source's readiness: `check#DatasetReadiness` reads the engine's `find#BusinessDatasets`,
     which P3 granted the author and the steward only. The reading groups now hold that listing and `get#Readiness`.
-  - F-P10-6: from an Insights screen the root's inheritable grant reaches Admin's `request#Refresh` for every Insights user,
+  - F135: from an Insights screen the root's inheritable grant reaches Admin's `request#Refresh` for every Insights user,
     so the registration's permission (and the dataset's update grant below it) is the check, as design §11 says;
     DataReadiness's transition takes only Insights' registrations (`insights.`), so it is no second door to another owner's.
-  - F-P10-7: no provider registers `maxLagMinutes`, so nothing was stale by Admin's rule; Insights applies the
+  - F136: no provider registers `maxLagMinutes`, so nothing was stale by Admin's rule; Insights applies the
     organization's policy from `lagMinutes`. A dataset's watermark is its last rebuild (`index#BusinessDataset`), not its
     feed's last write, so an index fed as records are written reads Stale a day after its last rebuild. A feed watermark is
     a framework ask.
-  - F-P10-8: a typed query cannot say a panel's exclusions (the orders panel leaves out recurring base orders, X5), so "orders
+  - F137: a typed query cannot say a panel's exclusions (the orders panel leaves out recurring base orders, X5), so "orders
     last month" from typed choices would not be the dashboard's number: `run#PanelQuery` asks the saved panel instead and the
     skill sends a dashboard number there.
-  - F-P10-9: the response action hands over the answer's text only, so "an Assist-drawn panel" is the query the answer ends
+  - F138: the response action hands over the answer's text only, so "an Assist-drawn panel" is the query the answer ends
     with (the `Panel:` line the skill asks for), not a canvas; an answer from `insights_panel` has nothing to save (it is on
     a dashboard already).
-  - F-P10-10: the display zone and week start reach Insights' own typed queries; a saved dashboard's buckets follow the
+  - F139: the display zone and week start reach Insights' own typed queries; a saved dashboard's buckets follow the
     viewer's zone and the instance's `report` week start, the engine's rule. An organization calendar for every panel is a
     framework ask.
-  - F-P10-11: a user of several organizations with none active has no organization in scope: Settings asks them to choose
+  - F140: a user of several organizations with none active has no organization in scope: Settings asks them to choose
     one, the cap is the lowest of theirs and the freshness policy the strictest.
-  - F-P10-12: a settings index entry names one readiness provider and Insights has one a source, so `insights.settings`
+  - F141: a settings index entry names one readiness provider and Insights has one a source, so `insights.settings`
     names none; its sources' readiness is the tab beside it.
-  - F-P10-13: the Insights administrator is not in the root user group that holds the `ironstone.insights` service pattern,
+  - F142: the Insights administrator is not in the root user group that holds the `ironstone.insights` service pattern,
     so Assist offers them no Insights tool: as their role, which reads no business data.
   - F58 (a steward's field change reaching every dataset over the document) is not taken up here; it stays open for the
     framework's next report work.
@@ -2412,9 +2412,9 @@ Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, 
   - user's call, built as the default:
     - P7's question stands: every reading group holds `INSIGHTS_SCHEDULE`; ScopeAndDelivery shows who may schedule and
       distribute from the permissions as they are;
-    - a lowered cap holds from a schedule's or rule's next save (F-P10-1): whether lowering it should also pause or cut
+    - a lowered cap holds from a schedule's or rule's next save (F130): whether lowering it should also pause or cut
       the existing ones;
-    - readers read DataReadiness and ask "Which source is stale?" (F-P10-5): or keep it to the author, steward and
+    - readers read DataReadiness and ask "Which source is stale?" (F134): or keep it to the author, steward and
       administrator as design §2 had it;
     - a reader cannot keep an Assist answer (Home arranges a dashboard's panels, it adds none): whether readers get a
       personal panel;
@@ -2444,7 +2444,7 @@ this note (branch `ins/p10`).
   - **The exposure rows**: eight, all `AgclRead` (the row's class is the one the catalog uses, so each runs fenced),
     `previewMode` none; the three Assist number tools `exposeMcp` N, their twins `exposeAssistant` N; no row names an
     engine service. A tool is offered to a user who holds the service (the root group's `ironstone.insights` pattern), so
-    the administrator, outside that group, gets none (F-P10-13: as their role). The descriptions, the skill and the
+    the administrator, outside that group, gets none (F142: as their role). The descriptions, the skill and the
     prompts name no field, dataset or person that is restricted and tell the model to give a refusal as the answer.
   - **Add to my dashboard**: own names of the choice list only, each a short scalar; the class and the name rule, then
     `store#Analysis` as the caller in its own transaction (author check, dataset, fields, the guards by running it, a
@@ -2459,7 +2459,7 @@ this note (branch `ins/p10`).
     Insights screen or service takes a cap from a request: Delivery.js and Alerts.js set `insights.recipientCap()` at
     every save and audience check, and a default dashboard, map or digest is used only where the viewer reads it (the
     map through FlowMaps' own `readableMaps`; a user's own default stays P9's `store#DefaultMap`).
-  - **DataReadiness for a reader** (F-P10-5, F-P10-6): `get#Readiness` answers a provider only with its
+  - **DataReadiness for a reader** (F134, F135): `get#Readiness` answers a provider only with its
     `requiredPermission` and each Insights provider only a dataset the engine lists to the viewer (admitted and theirs to
     read; the spec's unadmitted inventory is absent); a row is the source's title, state, last rebuild, lag and expected
     frequency. `request#Refresh` checks the registration's `INSIGHTS_DATASET_EDIT` before the owner's service, which
@@ -2484,7 +2484,7 @@ this note (branch `ins/p10`).
     so the answer does not depend on the panel).
   - **R3, Low.** `recipientCap` for a viewer of every organization with none active (ADMIN, the administrator) took the
     type's default, which can be above an organization's own cap; it is now the lowest of the organizations in scope, as
-    F-P10-11 has it for everyone else.
+    F140 has it for everyone else.
   - **R4, Low.** A dataset's readiness told every reader "N documents at the last rebuild", the index's size over every
     organization. The count is now the author's and the steward's; a reader's row has freshness only. Spec assertion added.
 - Spec: `InsightsSettings` is 7 features, 2.3 s, the slowest 0.60 s (the Assist feature had grown to 1.06 s with the
@@ -2495,7 +2495,7 @@ this note (branch `ins/p10`).
 - For the lead:
   - user's call, as the worker left them: readers reading DataReadiness (now freshness only, R4); every reading group
     holding `INSIGHTS_SCHEDULE`; a lowered cap reaching a schedule at its next save;
-  - the organization's cap is BOSS's to apply (F-P10-1): the engine's `store#Schedule` and a rule's definition, which the
+  - the organization's cap is BOSS's to apply (F130): the engine's `store#Schedule` and a rule's definition, which the
     reading and authoring groups hold directly, are held to the instance ceiling only. No Insights screen passes them a
     cap, but an organization cap the engine enforces needs the schedule to carry its organization (framework, with F118);
   - a tool's saved panel is now refused where it could have answered in part (a mixed panel, a variable in a query, a
