@@ -12,9 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone People: root of the app for HR and managers (initial-design.md app table); its sections follow
-    design-people.md when that file is written. Not yet implemented: its BOSS_PEOPLE grant in data/BossSetupData.xml
-    is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone People (design-people §1): the root of the app for HR officers, managers, recruiters, payroll and development
+    staff, case handlers and the People administrator. The root user group BOSS_PEOPLE and the administrator group
+    BOSS_PEOPLE_ADMIN open it (data/BossSetupData.xml), as ADMIN does; BOSS_PEOPLE_SELF has no root grant (an employee's
+    self-service is Commons', impl-people P8). The root grant opens navigation only: ironstone.people.ContextServices
+    .get#SharedContext checks the user and resolves their capabilities, employers, units, own employments and links for every
+    subscreen, and each Mantle service (mantle.humanres.PeopleServices) checks the scope again. The menu of design §1.2 grows by
+    phase: P1 builds Home (every People user's) and Settings (the People administrator's, BOSS_PPL_SETTINGS); each later phase
+    adds its entries, and the design's later entries stay absent. The palette, quick create and Today sources arrive with their
+    records. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -22,6 +28,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="People"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.people.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="people"/>
+        <set field="sharedLinks" from="people.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -30,6 +38,13 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
+
+    <!-- P1: the people keymap; the palette's directory (P2), quick create and Today (design §1.4) come with their records -->
+    <shell-providers>
+        <keymap scope="people">
+            <key keys="g p" label="People home" screen="People/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>
 </screen>

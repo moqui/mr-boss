@@ -411,6 +411,117 @@ permissions, scope), PE-18 (the root).
   service; Admin's Health shows People's setup check and SettingsHome People's entry, each only to a user who may
   open it.
 
+**Built Nov 11 (P1).** mr-mantle 5095ffb4, mr-boss (branch `ppl/p1`).
+- Checked first (the code over the plan): F1 (the root grant is live for `ADMIN` and `BOSS_PEOPLE_ADMIN`, ALWAYS, and the
+  root's comment said otherwise), F2 (`PAYROLL_VIEW` and `PAYROLL_EDIT` in Mantle), F26 (the deny rows; there are thirteen,
+  not twelve: Admin P6's `pause|reconcile|retry|transfer` row at the end of BossSetupData names the packages too), F27 and F58
+  (the readiness contract: Registry.js reads a provider with no adapter as the `checks` list and leaves out a refusal whose
+  code is in its list, `ORGANIZATION_DENIED` among them), F39 and F49 (no PartyRelationship filter; `userOrgIds` reaches the
+  direct `PrtOrgRollup` children only), F50 (manager to report), F59 (Party owner `_NA_`).
+- Access (`data/BossSetupData.xml`, appended but for the deny rows and the registry comment):
+  - the groups `BOSS_PEOPLE` (root user group) and `_READ`, `_SELF`, `_MANAGER`, `_HR`, `_RECRUIT`, `_PAYROLL`,
+    `_PAYROLL_APPROVE`, `_DEVELOP`, `_CASE`; on the `BOSS_PEOPLE` artifact group (a second element of the same id) the
+    `ironstone\.people\..*` service pattern and the root authz `BOSS_PEOPLE_ROOT` (ALLOW, `MANTLE_USER_ORG`,
+    `MANTLE_PRIVATE_CONTACT`); `BOSS_PEOPLE_ADMIN` keeps its ALWAYS row (AppOrganizationFilters asks ALWAYS of every app
+    administrator but Admin's and Insights') and gains `PEOPLE_CONFIGURE`; `BOSS_PEOPLE_SELF` has no root grant;
+  - `BOSS_PPL_SETTINGS`: the Settings area denied to `BOSS_PEOPLE`, so only the People administrator and `ADMIN` (through
+    their ALWAYS on the root) open it;
+  - design §1.1's grants; `PEOPLE_IMPORT` to `BOSS_PEOPLE_HR`;
+  - `people` in all thirteen client deny rows (the longest 244 of 255, the next 240); no grant of a `mantle.humanres` entity
+    or REST path.
+- Mantle (`data/MantleSetupData.xml`): the thirteen `PEOPLE_*` permissions and `PAYROLL_APPROVE`, each granted to `ADMIN`,
+  beside `PAYROLL_VIEW` and `PAYROLL_EDIT`. `mantle.humanres.PeopleServices` over `People.js` (tables `capabilityPermissions`,
+  `homeCounts`, `readinessChecks` for later phases):
+  - `get#Scope`: capabilities (sixteen, and `staff`: a view of an employer from `PEOPLE_DIRECTORY_VIEW`, `_HR_VIEW`,
+    `_RECRUIT_VIEW`, `_DEVELOP_VIEW`, `_CASE_HANDLE`, `_CONFIGURE` or `PAYROLL_VIEW`; an edit, import or approve permission
+    alone reads nothing); a staff reader's employers (their `userOrgIds` holding `OrgInternal`, only the active one when it is
+    theirs; every internal organization, or the active one, for `ADMIN`); `unitPartyIds` (the `OrgDepartment` and `OrgTeam`
+    organizations rolling up to them, walked level by level, at most twelve); own current employments; a holder of
+    `PEOPLE_TEAM_VIEW`'s live reports. With `organizationPartyId`, narrows and refuses one outside (`ORGANIZATION_DENIED`);
+    with `partyId`, answers `partyAccess` (self with `PEOPLE_SELF_SERVICE`, team, staff: an employment by an employer in scope,
+    in effect on `asOfDate` for a directory reader, any for an HR reader) and the employments it shows, and refuses as a
+    missing person (`RECORD_UNAVAILABLE`);
+  - `get#Home`: refused without a staff read (`PERMISSION_DENIED`); headcount (distinct people) and employments for a staff
+    reader, joins and exits of 30 days for an HR reader, `hasEmployees`, and the due work an HR reader clears (employees with no
+    live manager, the first 20 by name, with `dueWorkCount`); no pay;
+  - `get#Readiness`: the registry's contract with no adapter, `PEOPLE_CONFIGURE`, per employer in scope (or the one asked,
+    `ORGANIZATION_DENIED` outside): for an employer with current employees, `people.departments` (warning
+    `NO_DEPARTMENT`) and `people.managers` (warning `EMPLOYEE_NO_MANAGER` with the count), `fixPath` People/Settings, each check
+    that fails shown unavailable and the others going on; an employer with no employees answers no check.
+- BOSS `ironstone.people.ContextServices` over `service/ironstone/people/People.js` (tables `areas`, `recordKinds`,
+  `searchFinds`, `choiceSources`, `linkPaths`): `get#SharedContext` (the root grant read from the user's own groups, as
+  Insights.js; Mantle's scope, the Settings area, employer options, units, own party and employments, `sharedLinks`; refusals
+  `PEOPLE_UNAVAILABLE`, `PEOPLE_CONTEXT`), `check#Record` (`organization`, `person` through `get#Scope`; `RECORD_UNAVAILABLE`),
+  `get#Choices` (`employers`, `units`, `people`: current employees of the employers, live reports and self, by name in the
+  query ignoring case, a person employed by two employers once) and `search#Records` (no source yet: P2's directory).
+  `template/PeopleParts.xml` holds the `choices` transition.
+- Screens: the root (`get#SharedContext` in always-actions; `<shell-providers>` with the `people` keymap, `g p` People home;
+  the stale comment replaced, F1); Home (HomeScope: employer and as-of date; Summary's number cards; DueWork, an HR reader's;
+  the first-use state linking Settings for the administrator; a user who reads no employer is told so); Settings, a parent
+  with SettingsHome (SetupReadiness over `get#Readiness`, by employer, state chips with tui texts). The six other placeholders
+  are removed. Menus: a staff group's is Home; the administrator's and `ADMIN`'s Home and Settings.
+- Admin's registries (owner contracts): People's ten capability bundles (sequence 1100–1200; the launcher's artifact with the
+  root's filter sets; private person data, pay and cases as sensitive), the readiness provider `people.setup` (business,
+  organization scope, `PEOPLE_CONFIGURE`, fix People/Settings) and the settings entry `people.settings` (People/Settings,
+  view `PEOPLE_CONFIGURE`); the registry comment no longer lists People as left out.
+- Demo: `data/BossPeopleDemoData.xml` (Retail: Greta Haugen leading Hannah Okafor, who leads Tomas Lindqvist, Ines Varga and
+  Rafael Mbeki, joined Oct 26; Leon Ferreira with no manager; Walter Pruitt's employment ended Jun 30; Priya Natarajan employed
+  by Retail and Services; Services: Amara Diallo leading Kenji Arakawa, Sofia Brandt and Owen Castillo; each with a work email
+  and phone; Nadia Kowal a contractor of Retail by `PrtAgent`; no department). `BossUsersDemoData`: `people.reader`, `.hr`
+  (Retail only), `.recruiter`, `.payroll`, `.payapprover`, `.develop`, `.case` (Retail agents in `BOSS_PEOPLE` and their
+  group), `people.manager` (Hannah) and `people.employee` (Tomas, `BOSS_PEOPLE_SELF` alone), `people.admin`
+  (`BOSS_PEOPLE_ADMIN` alone, Retail and Services); each in `BOSS_USERS`, none in `ADMIN`.
+- Specs: `test/People/PeopleSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`, `screenRefusal`,
+  `hit`, `shell`); `PeopleAccess` (7 features, 2.1 to 3.8 s feature time over five runs, the slowest feature 0.6 s: the context and its refusals; the
+  menu, keys and launcher; each group's capabilities exactly, with a spec-local user in `BOSS_PEOPLE` holding `PEOPLE_HR_EDIT`
+  alone reading no employer, person or choice; the HR officer refused Services' employee and employer with Retail's
+  parameters, the manager refused a colleague; the raw `mantle.humanres` REST paths and `get#Home` called directly refused;
+  Home's one qvt render as `people.hr` and Settings' one html render as `people.admin`, the HR officer's a refusal; Admin's
+  `get#Readiness` reading `people.setup` for Retail and `find#Settings` showing `people.settings` to the administrator and not
+  the HR officer). Mantle `test/humanres/PeopleScope` (4 features, 1.1 to 1.8 s: employers and units, another and a forged
+  employer refused, an edit permission alone reading nothing; a person admitted by employment and its dates, the reporting line
+  and self, refused by reason code otherwise; Home's distinct headcount against employments, joins, exits and due work; the
+  readiness contract and its refusals). Acceptance, written and not run: `acceptance/People/PeopleFoundationWalk` (4 features:
+  every group's menu with each entry opened and the other refused; `people.hr`'s Home of Retail and not Services, the
+  administrator's of Services, the manager's notice, `people.employee` refused; the client and the PASS account refused the
+  root and every `ironstone.people` service; Admin's Health and settings index showing People's rows to `ADMIN` and not to the
+  Admin reader).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): PeopleScope 4 of 4 and PeopleAccess 7 of 7; the shared
+  files' specs: ProjectsAccess (the deny rows), AdminAccess, AdminRegistries, AdminCapabilities, AdminGroups,
+  AdminOrganizations, AdminUsers, AdminLifecycle, AppOrganizationFilters, InsightsAccess, CommerceAccess, Contacts and Resources
+  (the demo's new employees), 120 of 120 with PeopleAccess (mr-boss 25.9 s feature time); Mantle's HumanResServices,
+  PayrollServices, PayrollAdjustments, InternalOrganizations, OrganizationRowFilter, ContactBooks, StaffIdentity, UserLifecycle,
+  WorkResources, WorkTimeEntries, UniversalSearch, MantleSearch, BusinessTime and TimeImports with PeopleScope, 115 of 115.
+  `moqui lint --screens`: 135 flagged sites, as on master, none in the People screens. Prettier clean on the new JavaScript.
+  Not run: `./moq test-apps`, the acceptance suite (AppStructure renders the People root's default screen, and TuiRender and
+  the sweeps find no People placeholder now).
+- Inventories: no ss-inventory or usl-inventory row is implemented by P1 (HumanRes/dashboard has no form; the HumanRes rows
+  are P4, P10 and P23's).
+- Design edits: design-people §1.1 (the root user group, the Settings area, the employers and units of a staff reader), §1.2
+  (the `people` keymap), §3 Home (Summary's counts and DueWork from `get#Home`).
+- Findings (provisional, numbered by the lead):
+  - the client deny pattern has thirteen rows, not twelve (F26): Admin P6's transfer row at the end of BossSetupData names the
+    packages too; `people` is in it, and Maintenance's split should count it (226 characters with `people`);
+  - a comparison condition (`>`, `<=`) on a timestamp field is not converted from a number of milliseconds, which reaches
+    Postgres as text ("date/time field value out of range"), though docs/dev/JS-Globals.md "Dates and times" says a find
+    condition on a date field takes one; `conditionDate` does convert it. People passes a JavaScript `Date`, as
+    ReturnPolicies.js's `stamp` does. A framework note: the conversion, or the reference;
+  - Warehouse's returns organization `BOSS_WH_RETURNS` (OrgInternal, rolling up to Retail) is among a Retail staff reader's
+    employers, as F49's one level of children makes it in every app; it has no employees, so it counts nothing and has no
+    readiness check, but it is an employer choice. P3's OrgStructure shows it as a legal organization under Retail (§5 Q6);
+  - People has no all-organizations permission: a People administrator who is not `ADMIN` works in the organizations they are
+    a member of, whatever their root grant's `MANTLE_ACTIVE_ORG` (Mantle reads no BOSS grant), where Commerce and Warehouse have
+    `COMMERCE_ALL_ORGANIZATIONS` and `FACILITY_ALL_ORGANIZATIONS`. The demo administrator is an agent of Retail and Services.
+- For the lead:
+  - the budget: mr-boss's share is PeopleAccess's 2 to 4 s server (no client spec), mr-mantle's PeopleScope's 1 to 2 s, within
+    §4's estimates;
+  - merge hot spots: `data/BossSetupData.xml` (the thirteen deny rows, the registry comment near the capability bundles, and
+    the People block appended at the end), `data/BossUsersDemoData.xml` (appended at the end), mr-mantle
+    `data/MantleSetupData.xml` (after `PAYROLL_EDIT`); Maintenance's P1 adds `maintenance` to the same deny rows;
+  - the user's call: whether People gets an all-organizations permission for its administrator (the last finding), and
+    whether an OrgInternal child organization with no employees should be an employer choice;
+  - Commons' palette has a "People" group (contacts); P2's directory source needs another group name.
+
 ### P2 — Employees and Employee360
 
 Design §4 Employees and Employee360 (Overview, EmploymentHistory, PersonalInfo, FilesAndActivity), §15 (the

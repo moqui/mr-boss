@@ -12,10 +12,119 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone People landing page (initial-design.md); design-people.md designs it. -->
+<!-- People Home (design-people §3 Home, §1.2; style-guide §3.1 Landing; impl-people P1): HomeScope (the employer, from the
+    employers the user sees, and the as-of date), Summary over mantle.humanres.PeopleServices.get#Home (headcount as distinct
+    people and the employments of the employers in scope for a staff reader, joins and exits of the last 30 days for an HR
+    reader; each count of a later phase absent, no pay), DueWork (the employees with no manager, an HR reader's), and the
+    first-use state when no employer in scope has employees, which links Settings for the People administrator. A People user
+    who reads no employer (a manager, the root group alone) is told what Home holds. Hire employee, the cards' list links and
+    the other counts of design §1.2 (people out, vacancies, decisions, payroll exceptions, expiring qualifications) come with
+    the phases that build them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="asOfDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <if condition="can.staff">
+            <service-call name="mantle.humanres.PeopleServices.get#Home" out-map="home" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:(organizationPartyId || null), asOfDate:(asOfDate || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="homeFound" from="!!home?.counts"/>
+        <set field="counts" from="home?.counts || {}"/>
+        <set field="countText" from="Object.fromEntries(Object.entries(counts).map(([name, value]) =&gt; [name, String(value)]))"/>
+        <set field="dueRows" from="home?.dueWork || []"/>
+        <set field="dueMoreText" from="home &amp;&amp; home.dueWorkCount &gt; dueRows.length ? 'The first ' + dueRows.length + ' of ' + home.dueWorkCount + ', by name.' : ''"/>
+        <set field="scope" from="{organizationPartyId: organizationPartyId || null, asOfDate: asOfDate || null}"/>
+        <set field="scopeText" from="(organizationPartyId &amp;&amp; homeFound ? (people.organizationOptions.find(option =&gt; option.value === organizationPartyId)?.label || organizationPartyId)
+                : people.allOrganizations ? 'Every employer' : 'Your employers') + (homeFound ? ', as of ' + ec.l10n.format(home.asOfDate, 'yyyy-MM-dd') : '')"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The People landing page for HR and managers." type="p"/>
+        <label text="People" type="h5"/>
+        <section name="NotStaff" condition="!can.staff">
+            <widgets>
+                <label text="Home summarizes the employers you read for HR, payroll and People administration. Nothing of it is open to you."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="StaffHome" condition="can.staff">
+            <widgets>
+                <form-single name="HomeScope" transition="." map="scope">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:scope.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate">
+                        <default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="asOfDate"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <label text="This employer is not available to you." type="p" style="text-negative"
+                        condition="organizationPartyId &amp;&amp; !homeFound"/>
+                <label text="People's summary is not available just now." type="p" style="m-muted"
+                        condition="!organizationPartyId &amp;&amp; !homeFound"/>
+                <label text="${scopeText}" type="p" style="text-caption m-muted" condition="homeFound"/>
+                <section name="FirstUse" condition="homeFound &amp;&amp; home.hasEmployees === false">
+                    <widgets>
+                        <container-box>
+                            <box-header title="No employees yet"/>
+                            <box-body>
+                                <label text="No employer you read has employees yet. People's setup checks are in Settings." type="p"
+                                        condition="can.settings"/>
+                                <label text="No employer you read has employees yet." type="p" condition="!can.settings"/>
+                                <link url="${sharedLinks['Settings']}" text="Settings" link-type="anchor-button" btn-type="primary"
+                                        icon="sym_o_settings" condition="can.settings"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="Summary" condition="homeFound &amp;&amp; home.hasEmployees !== false">
+                    <widgets>
+                        <dashboard min-width="160">
+                            <number-card title="Headcount" value="${countText.headcount}" icon="sym_o_groups" size="sm"
+                                    condition="countText.headcount != null"/>
+                            <number-card title="Employments" value="${countText.employments}" icon="sym_o_badge" size="sm"
+                                    condition="countText.employments != null"/>
+                            <number-card title="Joined, last 30 days" value="${countText.joins}" icon="sym_o_person_add" size="sm"
+                                    condition="countText.joins != null"/>
+                            <number-card title="Left, last 30 days" value="${countText.exits}" icon="sym_o_person_remove" size="sm"
+                                    condition="countText.exits != null"/>
+                        </dashboard>
+                        <label text="Headcount counts each person once; a person employed by two employers has two employments."
+                                type="p" style="text-caption m-muted"/>
+                    </widgets>
+                </section>
+                <section name="DueWork" condition="homeFound &amp;&amp; can.hrView &amp;&amp; home.hasEmployees !== false">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Due work"/>
+                            <box-body>
+                                <label text="Nothing is due." type="p" condition="!dueRows.length"/>
+                                <label text="${dueMoreText}" type="p" style="text-caption m-muted" condition="dueMoreText"/>
+                                <form-list name="DueWorkRows" list="dueRows" skip-form="true" paginate="false" condition="dueRows.length">
+                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="dueText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
     </widgets>
 </screen>

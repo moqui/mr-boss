@@ -441,30 +441,31 @@ along with this software (see the LICENSE.md file). If not, see
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
             not in this pattern: each checks the client's access itself. The verbs are split over several rows, as an
             artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to (admin and insights were added
-            in Admin P1 and the two rows they took past 255 split, impl-admin F14: twelve rows, the longest 237) -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut)#.*"
+            in Admin P1 and the two rows they took past 255 split, impl-admin F14: twelve rows; people in People P1, impl-people
+            F26: the longest 244) -->
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refresh|refuse|release|remove|rename|reopen|replace|reply)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refresh|refuse|release|remove|rename|reopen|replace|reply)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees)"
@@ -2668,7 +2669,8 @@ along with this software (see the LICENSE.md file). If not, see
         Warehouse, Manufacturing, Accounting, Projects, Insights and Admin), each with the permissions it carries (its
         UserGroupPermission rows above and in BossAccountingSetupData; kind view, edit, export or sensitive: costs, supplier prices,
         pay and credit) and, for an app's root user group, its launcher as an artifact binding with the root's filter sets. Left out:
-        the groups of the apps not built (Sales, Marketing, Maintenance, People), the Projects client contacts' BOSS_PROJECT_CLIENT
+        the groups of the apps not built (Sales, Marketing, Maintenance; People's are with its groups, People P1), the Projects
+        client contacts' BOSS_PROJECT_CLIENT
         (external users, given in Projects) and the service teams. The privileged groups are registered: the privileged-group EECA
         and AccessServices still refuse a non-member. A later phase or app adds its own rows; the registry describes and never
         grants (impl-admin §4). -->
@@ -4084,7 +4086,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the client deny pattern (BOSS_PROJECTS_INTERNAL, impl-admin F14): P6's new write verb, transfer
         (ironstone.admin.LifecycleServices transfer#OwnedResource, transfer#Assignments) -->
     <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL">
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
     </artifactGroups>
 
@@ -5031,4 +5033,106 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_DISPLAY" appName="Insights" description="Insights wall display: plays a registered playlist on a shared device, with the reader bundle (display accounts only)" scopeDependency="organization; each source by its own view permission" sequenceNum="935"/>
+    <!-- People P1 (impl-people P1, F1, F2, F26, F27, F58; design-people §1.1, design-crosscut §1.4): the root user group and the
+        capability groups; the administrator group BOSS_PEOPLE_ADMIN is above, with its ALWAYS on the root (F1), and keeps its payroll
+        grants. Groups are not nested: a People user is in BOSS_USERS, BOSS_PEOPLE and a capability group, the administrator in
+        BOSS_USERS and BOSS_PEOPLE_ADMIN. BOSS_PEOPLE_SELF gets no grant on the root: an employee's self-service routes are
+        Commons' (P8). -->
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE" description="People app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_READ" description="People directory reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_SELF" description="Employee self-service"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_MANAGER" description="People manager"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_HR" description="HR officer"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_RECRUIT" description="Recruiter"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_PAYROLL" description="Payroll operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" description="Payroll approver"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_DEVELOP" description="Learning and review administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_CASE" description="Confidential case handler"/>
+    <!-- the root user group's authorization on the People root and the app's services (ironstone.people: its context, choices
+        and palette), beside the administrators' rows of the BOSS_PEOPLE artifact group above. The root grant opens navigation
+        only; each Mantle service (mantle.humanres.PeopleServices) checks the People permissions and scope itself, and no
+        mantle.humanres entity or REST path is granted (PE-01). -->
+    <artifactGroups artifactGroupId="BOSS_PEOPLE" description="IronStone People App (via root screen)">
+        <artifacts artifactName="ironstone\.people\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PEOPLE_ROOT" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the Settings area (design §12), the People administrator's: denied to the root user group, as impl-commerce F45's areas;
+        BOSS_PEOPLE_ADMIN and ADMIN open it through their ALWAYS on the root. A later phase that puts another group's editor
+        under Settings allows that group here. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_SETTINGS" description="People settings">
+        <artifacts artifactName="component://mr-boss/screen/People/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_SETTINGS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- design §1.1's table (Mantle seeds the permissions, each granted to ADMIN, §4): the directory reader PEOPLE_DIRECTORY_VIEW;
+        the employee PEOPLE_SELF_SERVICE; the manager PEOPLE_TEAM_VIEW and PEOPLE_REQUEST_APPROVE; the HR officer PEOPLE_HR_VIEW,
+        PEOPLE_HR_EDIT and PEOPLE_IMPORT, People's own import permission, which its import targets name (P7, P13); the recruiter
+        PEOPLE_RECRUIT_VIEW and _EDIT; the payroll operator PAYROLL_VIEW and PAYROLL_EDIT; the payroll approver PAYROLL_VIEW and
+        PAYROLL_APPROVE; the learning and review administrator PEOPLE_DEVELOP_VIEW and _EDIT; the case handler PEOPLE_CASE_HANDLE;
+        the People administrator PEOPLE_CONFIGURE beside its payroll grants. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_REQUEST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_CASE" userPermissionId="PEOPLE_CASE_HANDLE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" fromDate="0"/>
+    <!-- People's capability bundles in Admin's registry (owner contract, impl-people F27; design-crosscut §1.4's rows, as the
+        built apps' above): each group with the permissions it carries (view, edit or sensitive: private person data, pay and
+        cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle. -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_ADMIN" appName="People" description="People administrator" scopeDependency="organization, employment" sequenceNum="1100"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE" appName="People" description="People app users (the launcher)" scopeDependency="organization, employment" sequenceNum="1110"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PEOPLE" artifactGroupId="BOSS_PEOPLE" description="People launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_READ" appName="People" description="People directory reader" scopeDependency="organization, employment" sequenceNum="1120"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_SELF" appName="People" description="Employee self-service" scopeDependency="own party and employments" sequenceNum="1130"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_MANAGER" appName="People" description="People manager" scopeDependency="live reporting lines, assigned approval steps" sequenceNum="1140"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_REQUEST_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_HR" appName="People" description="HR officer" scopeDependency="organization, employment" sequenceNum="1150"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_IMPORT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_RECRUIT" appName="People" description="Recruiter" scopeDependency="organization, assigned openings" sequenceNum="1160"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL" appName="People" description="Payroll operator" scopeDependency="organization, employment" sequenceNum="1170"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" appName="People" description="Payroll approver" scopeDependency="organization, employment" sequenceNum="1180"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_DEVELOP" appName="People" description="Learning and review administrator" scopeDependency="organization, review participation" sequenceNum="1190"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_CASE" appName="People" description="Confidential case handler" scopeDependency="organization, case participation" sequenceNum="1200"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_CASE" userPermissionId="PEOPLE_CASE_HANDLE" capabilityKindEnumId="CpkSensitive"/>
+    <!-- People's row in Admin's settings index and its readiness provider (owner contract, impl-people F27, F58; design-admin
+        §14.2): the setup checks of each employer for the People administrator, called as the viewer, organization by
+        organization. get#Readiness answers the registry's contract with no adapter, refusing an organization outside the
+        viewer's scope by reason code. -->
+    <ironstone.admin.ReadinessProvider providerKey="people.setup" version="1" ownerApp="People" title="People setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization" serviceName="mantle.humanres.PeopleServices.get#Readiness"
+            requiredPermission="PEOPLE_CONFIGURE" fixPath="People/Settings" sequenceNum="150"/>
+    <ironstone.admin.SettingsEntry settingsKey="people.settings" version="1" ownerApp="People" title="People settings"
+            description="Each employer's setup checks: departments, and a manager for every employee"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" screenPath="People/Settings"
+            viewPermission="PEOPLE_CONFIGURE" configuredBy="People administrator" providerKey="people.setup" sequenceNum="85"/>
 </entity-facade-xml>

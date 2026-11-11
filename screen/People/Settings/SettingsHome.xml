@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Settings › Settings (design-people §12 Settings; style-guide §3.9 Settings; impl-people P1): SetupReadiness, the
+    checks of what is built for each employer in the People administrator's scope that has employees (a department set up,
+    every employee with a manager), over mantle.humanres.PeopleServices.get#Readiness, the same checks Admin's Health shows
+    from its readiness registry (people.setup). An employer with no employees has no check yet. The readiness grows with the
+    phases (positions, policies, payroll); PeoplePreferences is P29's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <actions>
+        <if condition="people.capabilities.configure">
+            <service-call name="mantle.humanres.PeopleServices.get#Readiness" out-map="readiness" transaction="force-new"
+                    ignore-error="true" in-map="{providerKey:'people.setup', organizationPartyId:(organizationPartyId || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="readinessFound" from="!!readiness?.checks"/>
+        <set field="stateNames" from="{ready: 'Ready', warning: 'Warning', failed: 'Failed', unavailable: 'Unavailable'}"/>
+        <set field="stateColors" from="{ready: 'positive', warning: 'warning', failed: 'negative', unavailable: 'grey-8'}"/>
+        <set field="checkRows" from="(readiness?.checks || []).map(row =&gt; Object.assign({}, row, {
+                stateName: stateNames[row.state] || stateNames.unavailable, stateColor: stateColors[row.state] || stateColors.unavailable}))"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
+    </actions>
+    <widgets>
+        <label text="People settings" type="h5"/>
+        <label text="People's setup checks are the People administrator's." type="p" style="m-muted"
+                condition="!people.capabilities.configure"/>
+        <section name="SetupReadiness" condition="people.capabilities.configure">
+            <widgets>
+                <form-single name="ReadinessFind" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Check"><submit/></default-field></field>
+                    <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+                </form-single>
+                <label text="This employer is not available to you." type="p" style="text-negative"
+                        condition="organizationPartyId &amp;&amp; !readinessFound"/>
+                <label text="Setup readiness is not available just now." type="p" style="m-muted"
+                        condition="!organizationPartyId &amp;&amp; !readinessFound"/>
+                <label text="No employer you administer has employees yet, so there is nothing to check." type="p" style="m-muted"
+                        condition="readinessFound &amp;&amp; !checkRows.length"/>
+                <section name="ReadinessRows" condition="checkRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Setup readiness"/>
+                            <box-body>
+                                <form-list name="SetupReadinessRows" list="checkRows" skip-form="true" paginate="false">
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="title"><default-field title="Check"><display/></default-field></field>
+                                    <field name="stateName"><default-field title="State">
+                                        <render-mode>
+                                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                                WebUtilities.encodeHtml(stateName)}</q-chip>]]></text>
+                                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateName})}]]></text>
+                                            <text type="html">${stateName}</text>
+                                        </render-mode>
+                                    </default-field></field>
+                                    <field name="message"><default-field title="Explanation"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="organizationName"/><field-ref name="message"/></column>
+                                        <column><field-ref name="stateName"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
