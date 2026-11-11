@@ -22,7 +22,9 @@ along with this software (see the LICENSE.md file). If not, see
     now, queue again, cancel) and a reason, reviewed message by message (preview#Recovery: each one's eligibility and what the
     action would do), then run by execute#Recovery, which names a result for each and goes on past one that is refused or
     fails; the review's operation key answers a second submit with the first results. A message whose outcome is unknown is
-    never in a retry: it is settled in SystemMessageDetail. What may be done to a message is what its owner registered
+    never in a retry: it is settled in SystemMessageDetail, which records what a person reported beside the message and
+    never marks it sent or consumed (a settled message is its own state, out of Needs attention; one reported not done may
+    be retried). What may be done to a message is what its owner registered
     (moqui.server.RecoveryDescriptor), and an owner's own service checks its own permission and scope. Reading needs
     ADMIN_OPERATION_VIEW and an action ADMIN_OPERATION_MANAGE, checked by the services; every refusal comes back as a reason
     shown here. -->
@@ -78,7 +80,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="available" from="!!found?.messageList"/>
         <script><![CDATA[
             ec.message.clearErrors()
-            const colors = {failed: 'negative', retrying: 'warning', uncertain: 'deep-orange', inProgress: 'info', waiting: 'info', done: 'positive',
+            const colors = {failed: 'negative', retrying: 'warning', uncertain: 'deep-orange', settled: 'purple', inProgress: 'info', waiting: 'info', done: 'positive',
                 staged: 'grey-7', rejected: 'grey-7', cancelled: 'grey-7'}
             const when = value => value ? ec.l10n.format(Date.parse(value), 'yyyy-MM-dd HH:mm') : ''
             // the owner's own place for a message, by the key its registration names (never a URL from data)
@@ -90,7 +92,8 @@ along with this software (see the LICENSE.md file). If not, see
                 timeText: when(row.initDate),
                 attemptText: row.failCount ? row.failCount + ' failed' + (row.lastAttemptDate ? ', last ' + when(row.lastAttemptDate) : '') : '',
                 referenceText: [row.messageId, row.remoteMessageId && row.remoteMessageId !== row.messageId ? row.remoteMessageId : ''].filter(Boolean).join(' · '),
-                problemText: [row.errorClass, row.errorText].filter(Boolean).join(': '),
+                problemText: row.settlement ? ['Settled' + (row.settledByName ? ' by ' + row.settledByName : ''), when(row.settledDate), row.settledReason].filter(Boolean).join(' · ')
+                    : [row.errorClass, row.errorText].filter(Boolean).join(': '),
                 ownerUrl: row.ownerRef && Object.hasOwn(ownerRoutes, row.ownerRoute || '') ? ownerRoutes[row.ownerRoute](row) : '',
                 ownerText: [row.ownerApp, row.ownerStateText].filter(Boolean).join(' · ') || 'Not registered'}))
             messagesCount = Number(found?.messageCount || 0)
@@ -148,7 +151,7 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col">
                 <label text="System messages" type="h5"/>
-                <label text="What became of the messages this instance sends to and receives from other systems: what failed, what is tried again, and what may or may not have gone through. A message's content is not shown here."
+                <label text="What became of the messages this instance sends to and receives from other systems: what failed, what is tried again, and what may or may not have gone through. Sent or consumed is only what a send or a consume succeeded in: what a person reported of an unknown outcome is listed as settled. A message's content is not shown here."
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
         </container>
@@ -263,7 +266,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="timeText"><default-field title="Since"><display/></default-field></field>
                     <field name="attemptText"><default-field title="Attempts"><display/></default-field></field>
                     <field name="referenceText"><default-field title="References"><display/></default-field></field>
-                    <field name="problemText"><default-field title="Last failure"><display/></default-field></field>
+                    <field name="problemText"><default-field title="Last failure, or who settled it"><display/></default-field></field>
                     <field name="owner">
                         <default-field title="Owner">
                             <link url="${ownerUrl}" url-type="plain" text="${ownerText}" link-type="anchor" condition="ownerUrl"/>

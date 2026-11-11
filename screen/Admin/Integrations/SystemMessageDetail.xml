@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     attempted and the error's class; then the status history from the audit log, with who and why. MessageRecovery: each action
     its owner registered that may be taken now, in a dialog that says what it does, with a reason and the revision read
     (execute#Recovery); a message whose outcome is unknown is offered Settle (what was found on the other side: nothing is sent
-    or consumed) and never a retry; an action that may not be taken is listed with why. The message's content is shown only
+    or consumed, and the message is not marked sent or consumed: the report is kept beside it, with who, when and why, and
+    shown in MessageEvidence) and never a retry; one reported not done may then be retried; an action that may not be taken is listed with why. The message's content is shown only
     when asked for, only to a reader who holds the permission its owner registered for it, and only where that owner lets it;
     otherwise the screen says why not. Reading needs ADMIN_OPERATION_VIEW and an action ADMIN_OPERATION_MANAGE (and the owner's
     permission where it registered one), checked by the services; every refusal comes back as a reason shown here. -->
@@ -38,6 +39,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <script><![CDATA[
                     const result = Array.from(done.resultList || [])[0] || {}
                     ec.message.addMessage(done.applied ? (done.repeated ? 'Already done. ' : 'Done. ') + 'The message is now: ' + (result.stateText || 'changed')
+                            + (action === 'reconcile' ? '. It is not marked sent or consumed.' : '')
                         : (result.reason || done.reason || 'Not done'), done.applied ? 'success' : 'warning')
                 ]]></script>
             </if>
@@ -53,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!found?.message"/>
         <script><![CDATA[
             ec.message.clearErrors()
-            const colors = {failed: 'negative', retrying: 'warning', uncertain: 'deep-orange', inProgress: 'info', waiting: 'info', done: 'positive'}
+            const colors = {failed: 'negative', retrying: 'warning', uncertain: 'deep-orange', settled: 'purple', inProgress: 'info', waiting: 'info', done: 'positive'}
             const when = value => value ? ec.l10n.format(Date.parse(value), 'yyyy-MM-dd HH:mm') : ''
             message = found?.message || {}
             stateColor = colors[message.state] || 'grey-7'
@@ -68,6 +70,8 @@ along with this software (see the LICENSE.md file). If not, see
                 {label: 'Last attempt', value: when(message.lastAttemptDate)},
                 {label: message.direction === 'out' ? 'Sent' : 'Consumed', value: when(message.processedDate)},
                 {label: 'Failed attempts', value: String(message.failCount || 0)},
+                {label: 'Settled', value: message.settlement ? [message.settlementText + (message.settledByName ? ' by ' + message.settledByName : ''), when(message.settledDate),
+                    message.settledReason].filter(Boolean).join(' · ') + '. The message is not marked ' + (message.direction === 'out' ? 'sent' : 'consumed') + '.' : ''},
                 {label: 'Envelope id', value: message.messageId},
                 {label: 'Id at the other system', value: message.remoteMessageId},
                 {label: 'Document', value: message.docType},
@@ -86,8 +90,8 @@ along with this software (see the LICENSE.md file). If not, see
                 resolutionOptions: Array.from(row.resolutionList || []).map(option => ({value: option.resolution, label: option.label})),
                 values: {systemMessageId: message.systemMessageId, action: row.action, expectedRevision: message.revision, operationKey: keyOf(row.action)}}))
             // why the others are not offered, where a reader would look for them
-            const open = ['failed', 'retrying', 'uncertain'].includes(message.state)
-            refusedActions = open ? offered.filter(row => !row.eligible && !['NOT_UNCERTAIN', 'NOT_FAILED'].includes(row.reasonCode)) : []
+            const open = ['failed', 'retrying', 'uncertain', 'settled'].includes(message.state)
+            refusedActions = open ? offered.filter(row => !row.eligible && !['NOT_UNCERTAIN', 'NOT_FAILED', 'ALREADY_SETTLED'].includes(row.reasonCode)) : []
         ]]></script>
     </actions>
     <widgets>

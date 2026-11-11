@@ -9,8 +9,9 @@
 // - a batch of three with one ineligible (an order already applied) names it and retries the other two, each on its own,
 //   and the same form sent again answers the first results;
 // - a message whose outcome is unknown (a send that never answered, of a type whose owner registered the message service's
-//   own recovery) is offered Settle and never a retry: a retry of it is refused and sends nothing, and once it is settled
-//   as not sent it is retried as itself.
+//   own recovery) is offered Settle and never a retry: a retry of it is refused and sends nothing; settling it records
+//   the report beside the message and leaves its status as the transport left it; and once it is settled as reported not
+//   sent it is retried as itself.
 // The HTTP fixtures answer every send: no request leaves the machine. The rules are the framework's AdminRecovery, Mantle's
 // StoreChannels and BOSS's AdminSystemMessages.
 // Run: ./moq accept mr-boss --spec AdminRecoveryUsable
@@ -335,7 +336,9 @@ feature("a message whose outcome is unknown is offered Settle, never a retry; se
         out.detail.output.includes("May have been sent")
         out.detail.output.includes("Recover_reconcile") && !out.detail.output.includes("Recover_retry")
         out.afterRetry == "SmsgSending" && out.sendsAfterRetry == 0
-        out.afterSettle.state == "failed" && out.afterSettle.retryEligible == true
+        // the report is beside the message, which stays as the transport left it until the retry's claim takes it
+        out.afterSettle.state == "settled" && out.afterSettle.settlement == "notDone" && out.afterSettle.retryEligible == true
+        out.afterSettle.statusId == "SmsgSending"
         out.sendsAfterSettle == 0
         out.sends == 1
         message(unknownId).statusId == "SmsgSent"

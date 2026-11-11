@@ -3194,6 +3194,102 @@ ADM-OPERATIONS.
     acceptance test run once): it leans on the demo store's channel intake and on the operator's organization scope
     outside a screen, which no regression spec here proves, so run it when asked and expect to adjust it.
 
+**Review Nov 10 (P13).**
+- Checked (the code paths, not the Built note): `preview#Recovery` and `execute#Recovery` (the kind from a fixed table by
+  own name; no service, status or descriptor named by a request; a descriptor read and checked each time; eligibility in
+  `evaluate` for the preview and again per record at execute, after the revision read is compared, then once more under
+  the row's lock in `apply#MessageRecovery`; `ADMIN_OPERATION_MANAGE` and the descriptor's `managePermission` both by
+  `ec.user.hasPermission`; nothing runs with authorization off: an owner's service is called as the operator, under the
+  inherited grant of `execute#Recovery`, and Commerce's `retry#StoreMessages` and `retry#StoreMessage` each compute
+  `COMMERCE_VIEW`, `COMMERCE_CHANNEL_OPERATE` and the store scope from the user's permissions, organizations and StoreStaff
+  rows, not from a filter set of the grant, so the registration adds no right); the native actions (only under a
+  descriptor's native mode; a disabled remote held in the baseline for retry and requeue, whatever the mode, and again by
+  `send#ProducedSystemMessage`; an unknown outcome held before the mode is read; cancel and requeue of Error only); the
+  batch (a result per record, `executeOne` never throws, each step and each action a transaction of its own, 25 at most,
+  the key by user, kind, action and the ids' digest; `OperationLib.once`'s fifth parameter defaults to the whole result,
+  so P12's three mail callers store what they stored); `find#Messages` and `get#Message` (no message text; a payload only
+  with a descriptor's `dataPermission`, held, asked for and, where the owner answers, its word: no descriptor registers one
+  today; `safeText` on every error line, owner text and failure); `store#MessageType` (a handler only by a registered key
+  of that type and role, never cleared, the receive service never written; the three paths are paths on the type's remote
+  file server, read by `sftp.rs` and `backup.rs` and expanded as a script template: `${` refused but for the sender's six
+  names in the send path, a `..` segment and control characters refused; no path is a local file or a resource location, so
+  a scheme in one names nothing here); the seed transition (the flow already let Sending go to Sent, Produced and
+  Cancelled; Error is one more, used by the framework's own revert); Mantle's adapter (one message, the caller's own scope,
+  an out-of-scope store's message answered with no state, reference or integration; the EDI descriptor answers only a
+  store partner's interchanges); `BOSS_ADM_INTEGRATIONS_OPS` (the area's screen not inherited; the two screens' transitions
+  each reach `execute#Recovery`); F-P13-13 (the integration administrator's renders of SystemMessages and
+  SystemMessageDetail call `find#Messages` and `get#Message` only, which refuse her: the screens then say "not available"
+  and compute nothing else); the specs (one qvt render per screen; the refused opens are not renders).
+- Fixes:
+  - **R1 (high: a message sent or consumed twice; F-P13-10).** `send#ProducedSystemMessage` and
+    `consume#ReceivedSystemMessage` read the status and then set Sending or Consuming unconditionally, so the scheduled job
+    (whose async call for a "failed, tried again on its own" message was already queued) and an operator's retry could both
+    pass the check and both send, or both run the consuming service; the queue's own claim only pushed the next job run
+    away. Fixed in the framework's services, for every caller (the job, Tools, Admin): `claim#SystemMessage`, in a
+    transaction of its own with the row locked, sets Sending or Consuming only while the message is still in the status
+    read; the loser returns an error and sends nothing, and the queue answers it as IN_PROGRESS. Parity-Diffs P8c-26.
+  - **R2 (high: against the Nov 10 decision).** The native reconciliation set `SmsgSent` or `SmsgConsumed` (with a
+    processed date) or `SmsgError` on a person's word, which every reader of the status, a status hook or a rule takes for
+    a delivery. Made a settlement apart, as mail's: `SystemMessage.outcomeSettlement` (done, notDone; audit logged) with
+    `outcomeSettledByUserId`, `outcomeSettledDate` and `outcomeSettledReason`; the status, the processed date and the
+    attempts stay as the transport left them. A settled message is its own state (`settled`, "Settled: reported sent" and
+    the like, with `settlement`, `settlementText`, `settledByName`, `settledDate`, `settledReason`), out of Needs attention
+    and of the unknown and done lists, with its own filter ("Settled by a person"). One reported done is never sent or
+    consumed again (SETTLED) and is not settled twice (ALREADY_SETTLED); one reported not done may be retried: the retry's
+    claim moves it to Error and clears the settlement, and the send's own result is its state. The framework's claim (R1)
+    clears a settlement too, so a send from outside the queue never leaves a stale one (mail's F179 does not arise here).
+    An owner's reconciliation records the same settlement beside the message where its transport outcome is unknown.
+    Screens, the audit text ("Settle (reported done): reason"), design-admin §8 and §14, Attack-Surface changed.
+  - **R3 (medium: an owner's reconciliation or cancellation could never run).** Every owner action was claimed first with
+    the retry's claim, which takes only a failed message, so a registered owner reconciliation of an unknown outcome (or
+    of a message only the owner calls unknown) answered STALE_REVISION for good. Only an owner's retry is claimed now; its
+    settlement and cancellation are guarded by the owner's own state and the operation key. No descriptor registers one
+    yet.
+  - **R4 (medium, disclosure).** A message its owner holds from the reader (another organization's store, or an owner that
+    cannot be asked) still answered its remote's id and name (a store binding's remote names the store and the channel)
+    and, in the detail, who changed its status and the reasons they typed. Neither is answered now; the row keeps its id,
+    type, direction, status, times, attempts and the class of its error.
+- Tests (the shared release binary, this phase's runtime): framework AdminRecovery 3 of 3 (0.2 s; changed: the settlement
+  beside a message left Sending, no status row to Sent, the lists, SETTLED and ALREADY_SETTLED, the not-done one sent again
+  with its settlement cleared, two claims of one status of which one is taken, a held message's row), AdminMailOutcomes,
+  AdminConnectionServices, AdminProtocols, AdminConfiguration 16 of 16; mr-mantle StoreChannels, EdiX12, GatewayContracts,
+  AuthorizeNetGateway, PayTraceGateway, ShippoGateway, BankFileServices, BankOutputFiles, StoreFeeds, DeliveryLedger 105 of
+  105 (every spec that sends or consumes a system message, for R1); mr-boss AdminSystemMessages 2 of 2 (0.8 s; the list's
+  one render now of every state with a settled row, the transition leaves the message Sending with its settlement),
+  AdminAccess, AdminRegistries, AdminMailQueue, ProjectsAccess, CommerceChannels 27 of 27. Prettier clean. Acceptance
+  `AdminRecoveryUsable` changed to expect the settlement, not run. Not run: the suites, cargo (no Rust changed, but
+  `moqui-core` `system_sync` tests, `moqui-git` hosting tests and `moqui-host` `ssh.rs` call `send#ProducedSystemMessage`
+  from the runtime's XML and so run R1's claim: they are the final suite's to confirm), `lint --screens` (no widget
+  changed), a tui or browser render.
+- For the lead:
+  - a database made before needs `SystemMessage`'s four new columns; no Rust changed, so no rebuild;
+  - merge: `impl/SystemMessageServices.xml` (one new service before `send#ProducedSystemMessage`, and the two claim calls),
+    `entity/ServiceEntities.xml` (four fields after `triggerVisitId`), Parity-Diffs (P8c-26 after P8c-25); master's P12
+    follow-up touched `OperationServices.xml`'s mail section and `OperationMail.js`, which this review did not;
+  - F-P13-6, as it is now, for the user's call: for a type no owner answers per message (every type but Commerce's two
+    today) an `ADMIN_OPERATION_VIEW` holder reads, of every organization's messages: the id, type, remote (id and name),
+    direction, status, times and attempts, the envelope id, the other system's id and the document type, the class and
+    one masked line (200 characters; addresses, URL paths, credentials and long tokens struck out, a remote's answer cut
+    to its status) of the last twenty failures, the status history with who and the reasons typed, the text's length and
+    the count of messages split from it. Never the text. An error line is whatever the consuming service wrote, so it can
+    name an order, a customer or an amount. Commerce's messages of a store outside the operator's scope answer the
+    transport row only (R4). A whole reference still finds a held message by its envelope id (an oracle for a guessed id);
+  - F-P13-9 stands: masking is by pattern and field name. No payload is readable today (no `dataPermission` is
+    registered); an owner that registers one should know a value is hidden only when its field is named like a
+    credential;
+  - the user's call on MessageTypeDetail's file paths stands with one thing to weigh: there is no allowed root, so for a
+    type its owner registered a handler for, a `ADMIN_CONNECTION_MANAGE` holder may point the receive path at any directory
+    the remote's account reads, and with the delete response the poll then removes what it took there. P11 keeps a
+    remote of a file type read only in Connections. No type is changeable on the demo (F-P13-4);
+  - a settled message reported done stays Sending or Consuming for good, as evidence: nothing here closes it (mail has
+    Close); cancel takes a message in Error only. The user's call whether a settled one may be cancelled;
+  - a native retry passes `willRetry` false also for a message the job will try again, so its business operation records a
+    rollback, not a retry (low; left);
+  - Mantle's StoreChannels feature the worker extended runs 3.2 s as a whole (within the spec limit; not measured against
+    master);
+  - provisional findings: **F-P13-15** the framework's send and consume were not atomic for any caller (R1); **F-P13-16**
+    a status hook or rule on Sent or Consumed would have fired on an operator's word (R2).
+
 ### P14 — Jobs and topics
 
 Design §10 Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail; ADM-OPERATIONS, ADM-REPORTS.

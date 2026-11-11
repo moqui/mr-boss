@@ -5,7 +5,8 @@
 // message whose outcome is unknown Settle and no retry, and says why its content is not shown; MessageTypes' and
 // MessageTypeDetail's one qvt render each, as the integration administrator, tell a type changed here from its owner's
 // deployment and offer only its registered handlers. The actions go through the screens' transitions: a batch of three with
-// one ineligible names it and retries the others, once for its key; the unknown one is settled and never sent; a type is
+// one ineligible names it and retries the others, once for its key; the unknown one is settled (its report kept beside it, its
+// status left as the transport left it) and never sent; a type is
 // given its registered handler by the integration administrator only. The area opens to the operator for the two message
 // screens only, and to the reader not at all. The framework's rules are the framework's AdminRecovery spec, Commerce's
 // registered retry Mantle's StoreChannels. The HTTP fixtures answer every send: nothing leaves the machine.
@@ -19,7 +20,13 @@ const REST = "org.moqui.impl.SystemMessageServices.send#SystemMessageRest"
 const NOOP = "org.moqui.impl.BasicServices.noop"
 const types = {out: "SpecAdmSmOut", plain: "SpecAdmSmPlain", incoming: "SpecAdmSmIn"}
 const remoteId = "SpecAdmSmRemote"
-const ids = {first: "SPEC_ADM_SM_1", second: "SPEC_ADM_SM_2", plain: "SPEC_ADM_SM_PLAIN", unknown: "SPEC_ADM_SM_UNKNOWN"}
+const ids = {
+    first: "SPEC_ADM_SM_1",
+    second: "SPEC_ADM_SM_2",
+    plain: "SPEC_ADM_SM_PLAIN",
+    unknown: "SPEC_ADM_SM_UNKNOWN",
+    settled: "SPEC_ADM_SM_SETTLED"
+}
 const url = "https://adminmessages.example.test/hook"
 const payload = '{"order":"spec admin private payload"}'
 const http = ec.factory.getTool("HttpFixtures")
@@ -105,6 +112,14 @@ spec({
             failed(ids.plain, {systemMessageTypeId: types.plain})
             // a send that never answered
             failed(ids.unknown, {statusId: "SmsgSending", failCount: 0})
+            // and one a person settled: the report is beside it, its status as the transport left it
+            failed(ids.settled, {
+                statusId: "SmsgSending",
+                failCount: 0,
+                outcomeSettlement: "notDone",
+                outcomeSettledDate: Date.now() - hours,
+                outcomeSettledReason: "Spec: not in the log of the remote"
+            })
         })
     },
     cleanupSpec() {
@@ -132,6 +147,7 @@ feature(
                 // the four screens' one render each
                 list: asUser(users.operations, () =>
                     page("Integrations/SystemMessages", {
+                        state: "all",
                         systemMessageRemoteId: remoteId,
                         bulkIds: [ids.first, ids.plain, ids.unknown].join(","),
                         bulkAction: "retry"
@@ -152,6 +168,9 @@ feature(
             list.output.includes("Failed") && list.output.includes("May have been sent")
             list.output.includes("HTTP 500: the remote failed") && list.output.includes("Spec owner")
             list.output.includes("No recovery is registered")
+            // a settled one is its own state, with the report and no word that it was sent
+            list.output.includes("Settled: reported not sent") && list.output.includes("Spec: not in the log of the remote")
+            list.output.includes("Settled by a person")
             // the review: each message's own answer for the chosen action
             list.output.includes("BulkRecoveryReview") && list.output.includes("BulkRecoveryConfirm")
             list.output.includes("it is settled first") && list.output.includes("The receiver keeps one message for an id.")
@@ -162,7 +181,7 @@ feature(
             detail.output.includes("May have been sent") && detail.output.includes("ENV-" + ids.unknown)
             // an unknown outcome: settled, never retried
             detail.output.includes("Recover_reconcile") && !detail.output.includes("Recover_retry")
-            detail.output.includes("It was sent (the remote has it)")
+            detail.output.includes("Reported sent (the remote has it)")
             // its owner registered no permission that reads its content: asked for or not, it is not shown
             detail.output.includes("shows what this message holds in its own screens only")
             !detail.output.includes("private payload")
@@ -243,7 +262,10 @@ feature(
             out.sends == 2
             http.requests().every(request => request.body === payload)
             out.unknownAfterRetry == "SmsgSending"
-            message(ids.unknown).statusId == "SmsgSent"
+            // settled: the report is beside the message, which is not marked sent
+            message(ids.unknown).statusId == "SmsgSending"
+            message(ids.unknown).outcomeSettlement == "done"
+            message(ids.unknown).outcomeSettledReason == "Spec: the remote's log has it"
             out.sendsAtEnd == 2
             out.operatorHandler == null
             type(types.incoming).consumeServiceName == NOOP
