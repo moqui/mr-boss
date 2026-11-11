@@ -18,8 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
     transition by name (transition-include), so a form here posts to the screen it is on, and sets, before its widgets:
     adapterKey, connectionKey, found (get#Connection's answer), connection, recordFound, canManage, listPath (its list screen)
     and what its actions derive (see ConnectionDetail.xml).
-    - storeConnection: NativeConnection's save: the rows fieldName_N and fieldValue_N as the kind's values (the kind takes only
-      the names it declares, validates each, and keeps a secret left empty), at the revision read.
+    - storeConnection: NativeConnection's save: the rows fieldName_N and fieldValue_N (a secret's secretPassword_N) as the
+      kind's values (the kind takes only the names it declares, validates each, and keeps a secret left empty), at the
+      revision read.
     - testConnection: the explicit test; its checks come back as messages and stay on the record.
     - setEnabled: enable (needs a passing test of the configuration as it is) or disable.
     Each reaches the framework service, which checks ADMIN_CONNECTION_MANAGE whatever opens the screen; every refusal comes
@@ -28,8 +29,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="storeConnection">
         <actions>
             <set field="rowNumbers" from="Object.keys(ec.web.parameters).filter(key =&gt; /^fieldName_\d+$/.test(key)).map(key =&gt; key.slice(10))"/>
+            <!-- a secret comes as secretPassword_N: a name the framework takes for a credential, so a refused save keeps it
+                in no session and no request detail (a parameter is left out of both by its name) -->
             <set field="entered" from="rowNumbers.map(n =&gt; ({name: String(ec.web.parameters['fieldName_' + n] || ''),
-                    value: ec.web.parameters['fieldValue_' + n]}))"/>
+                    value: ec.web.parameters['secretPassword_' + n] || ec.web.parameters['fieldValue_' + n]}))"/>
             <set field="values" from="Object.fromEntries(entered.filter(row =&gt; row.name &amp;&amp; row.name !== '_reason')
                     .map(row =&gt; [row.name, row.value == null ? '' : String(row.value)]))"/>
             <set field="reason" from="entered.find(row =&gt; row.name === '_reason')?.value || null"/>
@@ -217,7 +220,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="fieldName"><default-field><hidden/></default-field></field>
                                     <field name="fieldLabel"><default-field title="Setting"><display/></default-field></field>
                                     <field name="fieldValue">
-                                        <conditional-field condition="fieldKind === 'secret'" title="Value"><password size="40"/></conditional-field>
+                                        <conditional-field condition="fieldKind === 'secret'" title="Value"><display text=""/></conditional-field>
                                         <conditional-field condition="fieldKind === 'choice'" title="Value">
                                             <drop-down allow-empty="true"><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </conditional-field>
@@ -226,11 +229,20 @@ along with this software (see the LICENSE.md file). If not, see
                                         </conditional-field>
                                         <default-field title="Value"><text-line size="50"/></default-field>
                                     </field>
+                                    <field name="secretPassword">
+                                        <conditional-field condition="fieldKind === 'secret'" title=""><password size="40"/></conditional-field>
+                                        <default-field title=""><display text=""/></default-field>
+                                    </field>
                                     <field name="fieldNote"><default-field title="Note"><display/></default-field></field>
                                     <field name="submitButton"><default-field title=""><submit text="Save configuration" type="primary"/></default-field></field>
+                                    <columns>
+                                        <column><field-ref name="fieldLabel"/></column>
+                                        <column><field-ref name="fieldValue"/><field-ref name="secretPassword"/></column>
+                                        <column><field-ref name="fieldNote"/></column>
+                                    </columns>
                                     <columns type="mobile">
                                         <column><field-ref name="fieldLabel"/><field-ref name="fieldNote"/></column>
-                                        <column><field-ref name="fieldValue"/></column>
+                                        <column><field-ref name="fieldValue"/><field-ref name="secretPassword"/></column>
                                     </columns>
                                 </form-list>
                             </widgets>

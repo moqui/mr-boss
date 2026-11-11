@@ -38,7 +38,8 @@ const rows = values =>
     Object.fromEntries(
         Object.entries(values).flatMap(([name, value], index) => [
             ["fieldName_" + index, name],
-            ["fieldValue_" + index, value]
+            // a secret is posted under a name the framework takes for a credential
+            [(/password|secret/i.test(name) ? "secretPassword_" : "fieldValue_") + index, value]
         ])
     )
 const post = (user, transition, parameters) =>

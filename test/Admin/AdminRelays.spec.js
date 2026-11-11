@@ -27,7 +27,8 @@ const rows = values =>
     Object.fromEntries(
         Object.entries(values).flatMap(([name, value], index) => [
             ["fieldName_" + index, name],
-            ["fieldValue_" + index, value]
+            // a secret is posted under a name the framework takes for a credential
+            [(/password|secret/i.test(name) ? "secretPassword_" : "fieldValue_") + index, value]
         ])
     )
 
@@ -191,6 +192,8 @@ feature(
             detail.output.includes("OrganizationAvailability") && detail.output.includes("Ziziwork Retail")
             detail.output.includes("ConnectionChecks") && detail.output.includes("Consumers")
             !detail.output.includes(secret) && !relays.output.includes(secret)
+            // a secret is entered under a name the framework takes for a credential (kept in no session after a refusal)
+            detail.output.includes("secretPassword") && detail.output.includes("Save configuration")
             reader.includes("ADMIN_CONNECTION_VIEW")
         }
     }
