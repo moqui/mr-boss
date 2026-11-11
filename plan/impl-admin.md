@@ -2996,6 +2996,86 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   - `AdminMailOutcomes` and `DeliveryLedger` look up `mail.nowhere.invalid` once each with capture off (a resolver
     question, no connection).
 
+**Follow-up Nov 10 (P12: settlement apart from the sent state).**
+- The user's decision (Nov 10, §4): a person never sets a message's sent state; settling an uncertain send records the
+  settlement apart and takes the message out of Needs attention, and does not mark it Sent. As built, `reconcile#MailOutcome`
+  wrote `ES_SENT` for "sent" and `sendOutcome` retryable for "notSent" on the operator's word; every reader of the status
+  then took it for a delivery.
+- mr-moqui (no Rust; the shared release binary):
+  - `entity/BasicEntities.xml`: `EmailMessage.sendSettlement` (delivered or notDelivered; audit logged),
+    `sendSettledByUserId`, `sendSettledDate`, `sendSettledReason`, beside `sendOutcome`. No new entity.
+  - `OperationMail.js`: `reconcile#MailOutcome` takes `delivered`, `notDelivered` or `abandon` and, for the first two, writes
+    only the four settlement fields (the reason also as the audit row's): `statusId`, `sendOutcome`, `sendError`, `sentDate`
+    and the claim stay as the transport left them. A new state `settled` (stateOf: a settlement over a send that is
+    uncertain; text "Settled: reported delivered" or "Settled: reported not delivered"), answered with `settlement`,
+    `settlementText`, `settledByUserId`, `settledByName`, `settledDate` and `settledReason`. Filters: `attention` and
+    `uncertain` leave a settled message out, `settled` is new ("Settled by a person"), `sent` is `ES_SENT` alone, which now
+    only a send writes. A settled message is not settled again (`ALREADY_SETTLED`; its operation key answers the first
+    result) and offers no Settle or Close. Reported delivered is never sent again (`SETTLED`). Reported not delivered is
+    eligible for Send again as a failed message is (not sign-in mail, not an owner's, not while an owner cannot be asked):
+    `retry#MailOutcome` goes through `claim#MailOutcomeRetry`, which now also takes that state and clears the settlement
+    with the claim (it was of the send before; the audit log keeps it), and the send's result is the state. A registered
+    owner's message: the owner's service is called as before (the contract's words `sent` and `notSent` unchanged), then
+    the settlement is recorded here the same way, the message never marked Sent.
+  - `OperationServices.xml`: the descriptions of `find#MailOutcomes`, `retry#MailOutcome`, `reconcile#MailOutcome` (and its
+    four new out-parameters) and one line of `claim#MailOutcomeRetry`'s.
+  - `docs/security/Attack-Surface.md`: the mail queue's line.
+- mr-mantle: `test/party/DeliveryLedger.spec.js` only (its queue feature expected the message `ES_SENT`). No service changed.
+- BOSS: `Protocols/MailQueue.xml`: the dialog's options are "Reported delivered" and "Reported not delivered", its text says
+  the record is kept beside the message and does not mark it sent, the button is Record; the answers "Settled as reported
+  delivered. The message is not marked sent." and "Settled as reported not delivered. It can be sent again from the Settled
+  list."; a "Settled by" column (who, when, the reason, through `display`, so escaped); the state chip's own color; the
+  caption says Sent is only what a send succeeded in. The State filter's options are the service's (`stateList`), so
+  "Settled by a person" is there in qvt and tui. ProtocolsHome's cards and the `admin.protocols` readiness provider count
+  no message, so neither changed.
+- Readers checked (what would have counted an operator-marked Sent, and no longer can): Mantle's `EmailMessageFiling` EECA
+  (a mail account's message only, which is never settled here), `Sourcing`, `Awards`, `PurchaseOrderDocuments`,
+  `PurchaseRevisions`, `SupplierScorecards`, `Sla`, `SavedReplies`, `SupportPortal`, `InvoiceServices` and `CollectionServices`
+  (`sendStatus`), `OrderInfoServices`, the communication event status map (`ES_SENT` to `CeSent`), BOSS `Receivables.js`. None
+  reads the settlement fields; none changed.
+- Specs (adjusted, no render added): framework `AdminMailOutcomes` 3 of 3 (0.13 s: the settled message stays `ES_READY` and
+  uncertain with no status audit row to `ES_SENT`, the settlement's four fields and its audit row, the state and its name in
+  the list, the key's repeat, `ALREADY_SETTLED`, `SETTLED`, the four filters, the not-delivered one sent again once with its
+  settlement cleared and the audit log keeping it); mr-mantle `DeliveryLedger` 4 of 4 (0.1 s); mr-boss `AdminMailQueue` 2
+  of 2 (0.84 s: the one qvt render now of every state, with a settled row, its reason and no Settle on it; the transition
+  leaves the message `ES_READY` and uncertain with the settlement). `lint --screens`: MailQueue's three `container` sites, as
+  before. Acceptance `AdminProtocolsUsable` changed to expect the same, written and not run. Prettier clean. Not run: the
+  suites, the acceptance tests, a tui or browser render.
+- Design edits: design-admin §9 MailQueue (as built), design-crosscut CX-DELIVERY (one clause).
+- Findings (provisional):
+  - **F-P12F-1** Mantle's ledger marks its own delivery `MdsSent` on a person's word (`resolve#Delivery` with
+    `MESSAGE_DELIVERY_REVIEW`, from before this build), and the queue's Settle of a ledger message reaches it. Left as it is:
+    the owner's record is the owner's. The stored message is no longer marked Sent with it. The user's call whether the
+    ledger gets a settled state of its own.
+  - **F-P12F-2** Close (`abandon`) still writes `ES_CANCELLED` by a person, with the reason in the status audit row. It is
+    not a sent state, so it is left.
+  - **F-P12F-3** A settlement holds for the send it was made for, and only the queue's claim clears it. A send of a settled
+    message from outside the queue (BasicComms MessageDetail `resend`, ADMIN, the Review's open item) leaves it on the row:
+    a result of Sent, refused or not sent reads as that, but if that send is lost part way the message still reads
+    settled. To close it the mail service clears the settlement when it begins a send (Rust), or that resend goes through
+    `retry#MailOutcome`.
+  - **F-P12F-4** A message reported not delivered leaves Needs attention like one reported delivered (the decision's
+    words) and waits in the Settled list with Send again; it is not offered Close, and sign-in mail settled so has no
+    action left.
+  - **F-P12F-5** Many readers take `ES_READY` for "queued" or "went" (`Collections`, `CaseFeedback`, `PurchaseOrderDocuments`,
+    `Sourcing`, `SupplierPortal`, BOSS `Receivables` "Queued for delivery"): a failed, an uncertain and a settled message all
+    read so there, as before P12. Not changed.
+  - **F-P12F-6** The resolution values are renamed (`sent`, `notSent` to `delivered`, `notDelivered`); the old ones are
+    refused as malformed. The only callers were the screen and the specs.
+- Decisions: the settlement is fields on the message row, not a record of its own (the filters stay conditions of one
+  find; the audit log is the history); one settlement for a send, and a later send that is uncertain again may be settled
+  again; a settlement is read only over an uncertain send, so a stale one never hides a known failure or a bounce; the
+  settlement itself is the decision that lets a not-delivered message be sent again; who settled is answered by name to
+  every reader of the queue.
+- For the lead:
+  - a database made before needs the four new `EmailMessage` columns (as `sendOutcome` did); no Rust, no rebuild;
+  - shared lines with P13: `OperationServices.xml` only inside the mail section (the three services' descriptions,
+    `reconcile#MailOutcome`'s out-parameters, one description line of `claim#MailOutcomeRetry`); the file's head comment and
+    the two interface services at its end are untouched, and so is `OperationLib.js`;
+  - mr-mantle has a commit (the spec's expectation only);
+  - the user's calls: F-P12F-1, F-P12F-3 (whether to close it in Rust), F-P12F-4;
+  - budget shares unchanged (no feature added).
+
 ### P13 — System messages and recovery
 
 Design §8 MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail, §14 operational recovery;

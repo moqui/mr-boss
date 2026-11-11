@@ -19,8 +19,11 @@ along with this software (see the LICENSE.md file). If not, see
     MailQueueList shows each message's id, time, server and template, the number of its recipients, the outcome, the error
     with every address struck out, its owner and the next step; never a subject, a body or an address, which the service
     does not return. A row's actions are what its owner allows: Send again for a message known not sent that is the mail
-    service's own (the same stored message, never a new one); Settle for one that may have been sent (what the mail server's
-    own log shows: sent, or not sent, with the reason, and nothing is sent) or to close a failed one. A mail account's
+    service's own (the same stored message, never a new one); Settle for one that may have been sent, which records what
+    a person found in the mail server's own log (reported delivered, or reported not delivered) with the reason, their name
+    and the time, beside the message: it never marks the message sent (Sent is only what a send succeeded in), sends
+    nothing, and takes the message out of Needs attention into Settled, where one reported not delivered may be sent again;
+    or Close for a failed one. A mail account's
     message is its sender's, in Comms; a registered owner's (the delivery ledger's) is retried and reconciled by that owner.
     Reading needs ADMIN_OPERATION_VIEW (the integration administrator, with ADMIN_CONNECTION_VIEW alone, reads the mail the
     instance itself sent through its relays, never a mail account's) and an action ADMIN_OPERATION_MANAGE, checked by the
@@ -67,8 +70,9 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{emailMessageId:emailMessageId, resolution:resolution, reason:reason, expectedRevision:expectedRevision,
                         operationKey:operationKey}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(!done.applied ? done.reason : done.resolution === 'sent' ? 'Marked as sent' : done.resolution === 'notSent'
-                    ? 'Known not sent: it can be sent again' : 'Closed', done.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(!done.applied ? done.reason : done.resolution === 'delivered'
+                    ? 'Settled as reported delivered. The message is not marked sent.' : done.resolution === 'notDelivered'
+                    ? 'Settled as reported not delivered. It can be sent again from the Settled list.' : 'Closed', done.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."/>
@@ -83,10 +87,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="available" from="!!found?.outcomeList"/>
         <script><![CDATA[
             ec.message.clearErrors()
-            const colors = {retryable: 'warning', permanent: 'negative', bounced: 'negative', uncertain: 'deep-orange', sending: 'info', sent: 'positive', cancelled: 'grey-7'}
+            const colors = {retryable: 'warning', permanent: 'negative', bounced: 'negative', uncertain: 'deep-orange', settled: 'blue-grey', sending: 'info', sent: 'positive', cancelled: 'grey-7'}
             const relays = !!admin.capabilities.connectionView
-            const sentOptions = [{value: 'sent', label: 'It was sent (the mail server shows it)'},
-                {value: 'notSent', label: 'It was not sent (it may then be sent again)'}]
+            // a settlement is what a person reports, kept beside the message: neither marks it sent
+            const settleOptions = [{value: 'delivered', label: 'Reported delivered (the mail server shows it went)'},
+                {value: 'notDelivered', label: 'Reported not delivered (it may then be sent again)'}]
             const closeOptions = [{value: 'abandon', label: 'Close it: it is not to be sent'}]
             const templateOf = row => row.binding === 'account' ? '' : row.emailTemplateId
             outcomes = Array.from(found?.outcomeList || []).map(row => Object.assign({}, row, {
@@ -99,7 +104,9 @@ along with this software (see the LICENSE.md file). If not, see
                         ? '/qapps/Admin/Protocols/MailRelayDetail?connectionKey=' + encodeURIComponent(row.emailServerId) : '',
                 ownerText: row.ownerKind === 'mailAccount' ? 'Mail account, in Comms'
                     : [row.ownerTitle, row.ownerRef, row.ownerStateText].filter(Boolean).join(' · '),
-                resolutionOptions: (row.reconcileEligible ? sentOptions : []).concat(row.abandonEligible ? closeOptions : []),
+                settledText: row.settlement ? [row.settledByName, row.settledDate ? ec.l10n.format(Date.parse(row.settledDate), 'yyyy-MM-dd HH:mm') : '',
+                    row.settledReason].filter(Boolean).join(' · ') : '',
+                resolutionOptions: (row.reconcileEligible ? settleOptions : []).concat(row.abandonEligible ? closeOptions : []),
                 operationKey: (row.emailMessageId + '.' + row.revision).replace(/[^\w.-]/g, '_').slice(0, 56),
                 dialogKey: String(row.emailMessageId).replace(/\W/g, '_')}))
             outcomesCount = Number(found?.outcomeCount || 0)
@@ -118,7 +125,7 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col">
                 <label text="Mail queue" type="h5"/>
-                <label text="What became of the mail this instance sent: what was not sent, what a server refused, and what may or may not have gone. A message's subject, text and addresses are not shown here."
+                <label text="What became of the mail this instance sent: what was not sent, what a server refused, and what may or may not have gone. Sent is only what a send succeeded in; what a person reported of an uncertain one is shown as Settled. A message's subject, text and addresses are not shown here."
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
         </container>
@@ -181,6 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="errorText"><default-field title="What the server said"><display/></default-field></field>
+                    <field name="settledText"><default-field title="Settled by"><display/></default-field></field>
                     <field name="owner">
                         <default-field title="Owner">
                             <link url="${ownerUrl}" url-type="plain" text="${ownerText}" link-type="anchor" condition="ownerUrl"/>
@@ -196,7 +204,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container-dialog id="Settle_${dialogKey}" button-text="${reconcileEligible ? 'Settle' : 'Close'}" icon="sym_o_rule" width="560"
                                     title="${reconcileEligible ? 'Settle' : 'Close'} message ${emailMessageId}" condition="resolutionOptions.length">
                                 <label type="p" condition="reconcileEligible"
-                                        text="This message may or may not have been sent. Look in the mail server's own log for it, then say which it was. Nothing is sent by this."/>
+                                        text="This message may or may not have been sent. Look in the mail server's own log for it, then record what you found. The record is kept beside the message with your name, the time and the reason. It does not mark the message sent, and nothing is sent by this."/>
                                 <label type="p" condition="!reconcileEligible" text="A closed message is not offered again and is not sent. Nothing is sent by this."/>
                                 <form-single name="SettleOutcome" transition="settleOutcome"
                                         map="{emailMessageId:emailMessageId, expectedRevision:revision, operationKey:'settle.' + operationKey, filterJson:filterJson}">
@@ -209,15 +217,15 @@ along with this software (see the LICENSE.md file). If not, see
                                             <drop-down><list-options list="resolutionOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
-                                    <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log"><text-line size="50"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    <field name="reason"><default-field title="Reason" tooltip="Kept with the record and in the audit log"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Record"><submit/></default-field></field>
                                 </form-single>
                             </container-dialog>
                         </default-field>
                     </field>
                     <columns type="mobile">
                         <column><field-ref name="emailMessageId"/><field-ref name="transportText"/><field-ref name="nextStep"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="settledText"/><field-ref name="actions"/></column>
                     </columns>
                 </form-list>
             </widgets>

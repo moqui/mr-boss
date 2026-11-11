@@ -540,7 +540,8 @@ Contracts:
   `moqui.server.MailOutcomeOwner`, `mantle.party.MessageServices.find#MailOutcomeOwners` and
   `recover#OwnedMailOutcome`): Admin's MailQueue shows the stored message of each attempt with its
   delivery, offers no retry beside the ledger's own, and reconciles an uncertain one through
-  `resolve#Delivery` with `MESSAGE_DELIVERY_REVIEW`.
+  `resolve#Delivery` with `MESSAGE_DELIVERY_REVIEW`; the stored message is never marked Sent by
+  that (its settlement is kept apart, design-admin §9 MailQueue).
 - **CX-DEVICE (L5).** A shared device signs in with a revocable device credential limited to one route
   group, a new framework need (Admin ADM-DEVICES, which People PE-22 references) that gates People
   ClockingKiosk. Each action identifies its person by a badge `scan-input` and a PIN, on a

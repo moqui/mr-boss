@@ -3,8 +3,8 @@
 // operator lists a failed send with its owner's link and the next step, and no subject, body or address; ProtocolsHome's and
 // ServerConfiguration's one qvt render each, as the integration administrator, tell a protocol that is off from one that is
 // not in the build and show the configuration read only; the queue's actions go through the screen's transitions (a
-// message known not sent is sent again as itself, one that may have gone is settled and never sent, a mail account's is
-// left to its sender); the area opens to the operator for these three screens only, and to the reader not at all. The
+// message known not sent is sent again as itself, one that may have gone is settled and never sent or marked sent, a mail
+// account's is left to its sender); the area opens to the operator for these three screens only, and to the reader not at all. The
 // framework's rules are the framework's AdminProtocols and AdminMailOutcomes specs, the delivery ledger's Mantle's
 // DeliveryLedger. Mail is captured: nothing leaves the machine.
 // Run: ./moq test mr-boss --spec AdminMailQueue
@@ -14,7 +14,13 @@ const MESSAGE = "moqui.basic.email.EmailMessage"
 const SERVER = "moqui.basic.email.EmailServer"
 const CHECK = "moqui.server.ConnectionCheck"
 const serverId = "SpecAdmMqRelay"
-const ids = {failed: "SPEC_ADM_MQ_FAILED", maybe: "SPEC_ADM_MQ_MAYBE", account: "SPEC_ADM_MQ_ACCT", other: "SPEC_ADM_MQ_OTHER"}
+const ids = {
+    failed: "SPEC_ADM_MQ_FAILED",
+    maybe: "SPEC_ADM_MQ_MAYBE",
+    settled: "SPEC_ADM_MQ_SETTLED",
+    account: "SPEC_ADM_MQ_ACCT",
+    other: "SPEC_ADM_MQ_OTHER"
+}
 const subject = "Spec admin queue private subject"
 const body = "Spec admin queue private body"
 const capture = ec.factory.getTool("MailCapture")
@@ -58,6 +64,15 @@ spec({
             failed(ids.failed)
             failed(ids.other)
             failed(ids.maybe, {sendOutcome: "uncertain", sendError: "The SMTP session stopped before its end"})
+            // settled by a person before: listed as settled with who and why, never as sent
+            failed(ids.settled, {
+                sendOutcome: "uncertain",
+                sendError: "The SMTP session stopped before its end",
+                sendSettlement: "delivered",
+                sendSettledByUserId: users.operations,
+                sendSettledDate: ec.user.nowTimestamp,
+                sendSettledReason: "Spec: the relay's log shows it"
+            })
             failed(ids.account, {emailAccountId: ids.account})
         })
     },
@@ -81,7 +96,7 @@ feature(
         when() {
             return {
                 // the three screens' one render each
-                queue: asUser(users.operations, () => page("Protocols/MailQueue", {emailServerId: serverId})),
+                queue: asUser(users.operations, () => page("Protocols/MailQueue", {emailServerId: serverId, state: "all"})),
                 home: asUser(users.integrations, () => page("Protocols/Home")),
                 configuration: asUser(users.integrations, () => page("Protocols/ServerConfiguration", {protocolKey: "smtpIn"}))
             }
@@ -94,6 +109,10 @@ feature(
             queue.output.includes("Send again") && queue.output.includes("Settle_" + ids.maybe)
             queue.output.includes("Comms/Settings/MailAccounts") && queue.output.includes("Mail account, in Comms")
             queue.output.includes("(address)")
+            // a settlement is shown as that, with its reason, and is offered nothing; no row reads Sent
+            queue.output.includes(ids.settled) && queue.output.includes("Settled: reported delivered")
+            queue.output.includes("Spec: the relay's log shows it") && !queue.output.includes("Settle_" + ids.settled)
+            queue.output.includes("Reported not delivered") && !queue.output.includes(">Sent<")
             !queue.output.includes("Settle_" + ids.account)
             // no subject, body or address
             !/private subject|private body|adminqueue\.example\.test/.test(queue.output)
@@ -137,7 +156,7 @@ feature("the queue's actions go through its transitions; the area opens to the o
         out.sends = capture.count()
         post(users.operations, "Protocols/MailQueue/settleOutcome", {
             emailMessageId: ids.maybe,
-            resolution: "notSent",
+            resolution: "notDelivered",
             reason: "Spec: the relay's log has no such message",
             expectedRevision: revision(ids.maybe)
         })
@@ -164,7 +183,9 @@ feature("the queue's actions go through its transitions; the area opens to the o
         out.untouched == "ES_READY" && out.refusedSends == 0
         message(ids.failed).statusId == "ES_SENT"
         out.sends == 1
-        message(ids.maybe).statusId == "ES_READY" && message(ids.maybe).sendOutcome == "retryable"
+        // settled apart: the message stays as the transport left it, with what the operator reported beside it
+        message(ids.maybe).statusId == "ES_READY" && message(ids.maybe).sendOutcome == "uncertain"
+        message(ids.maybe).sendSettlement == "notDelivered" && !!message(ids.maybe).sendSettledByUserId
         message(ids.account).statusId == "ES_READY" && message(ids.account).sendClaimDate == null
         message(ids.other).statusId == "ES_CANCELLED"
         out.operatorChecks == 0
