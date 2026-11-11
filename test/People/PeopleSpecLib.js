@@ -18,9 +18,17 @@ const ids = {
     // P2: the employments of Tomas (Retail) and Kenji (Services), the employment content hosts
     employmentId: "BOSS_PPL_TOMAS_EMP",
     otherEmploymentId: "BOSS_PPL_KENJI_EMP",
-    // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's
+    // P3: Retail's Store Operations department with its Sales Floor team (lead Ines; Tomas), Services' Service Delivery
+    // department; Priya reports to Greta at Retail and to Amara at Services
+    departmentId: "BOSS_PPL_D_STORE",
+    teamId: "BOSS_PPL_T_FLOOR",
+    otherDepartmentId: "BOSS_PPL_D_DELIVERY",
+    // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
+    // the directory, Organization and Org chart
     staffMenu: ["Home", "Employees"],
-    adminMenu: ["Home", "Employees", "Settings"]
+    adminMenu: ["Home", "Employees", "Settings"],
+    employeesMenu: ["List", "OrgStructure", "OrgChart"],
+    keys: ["g p", "g e", "g o", "g c"]
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

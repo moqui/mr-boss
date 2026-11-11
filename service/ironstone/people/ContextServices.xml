@@ -96,13 +96,15 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="Choices" allow-remote="false">
         <description>The options of a People drop-down the user may choose, searched by term in the query ignoring case, with
             the selected value's label: employers (those a staff reader sees), units (the employers and the departments and
-            teams under them) and people (the current employees of those employers, the user's live reports and the user with
-            self-service). Refuses a user without People and an unknown choice.</description>
+            teams under them), people (the current employees of those employers, the user's live reports and the user with
+            self-service) and employees (P3: the current employees of organizationPartyId, else of every employer the user reads,
+            the managers and members OrgStructure and OrgChart choose). Refuses a user without People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
             <parameter name="term"/>
             <parameter name="selected"/>
+            <parameter name="organizationPartyId"><description>employees: the employer whose employees are offered</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
