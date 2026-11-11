@@ -174,7 +174,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | built and reviewed Nov 10, merged |
 | P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | built and reviewed Nov 10, merged |
 | P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | built and reviewed Nov 10, merged |
-| P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | — |
+| P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | built and reviewed Nov 10, merged |
 | P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | — |
 | P11 Wall displays on shared devices | BOSS | Playlists on a registered device | — |
 | P12 Finish | all | the sweeps and the review walk (acceptance) | — |
@@ -2103,44 +2103,44 @@ Design §9; INS-08.
 - Design edits: design-insights §9 (FlowMap's layout and ProcessLanes, "As built"), §15.1 (INS-08), §15.2 (the service
   row), §16 (the storage row), §17 item 1 (answered). mr-boss README's Insights line.
 - **Findings** (provisional, for the lead to number):
-  - F-P9-1: the node-graph panel reads engine queries, not a service's rows, beside F26's missing groups, names and
+  - F115: the node-graph panel reads engine queries, not a service's rows, beside F26's missing groups, names and
     links; rejected for the map body, and the lanes are XML widgets, not a `.qvue` (design §17 item 1).
-  - F-P9-2: a shipped definition's version is always 0 (F7), so a copy could not record which template it came from; the
+  - F116: a shipped definition's version is always 0 (F7), so a copy could not record which template it came from; the
     templates carry `templateVersion`, raised by hand when one changes. Reapplying selected changes of a newer template
     (design §9.1) is not built: the map says its source changed and both can be opened.
-  - F-P9-3: the engine saves a definition only for its owner and shares it with one group, so an organization's map is
+  - F117: the engine saves a definition only for its owner and shares it with one group, so an organization's map is
     its copier's: another flow editor of the organization reads it and copies it, and nobody takes it over when its owner
     leaves (the lifecycle's participants are schedules and alert rules). "Maintain maps for authorized organizations"
     (design §1.1) by any of its flow editors needs an owner transfer or a group edit in the engine.
-  - F-P9-4: the engine knows no organization on a definition; the organization is the body's, checked by `get#Map`,
+  - F118: the engine knows no organization on a definition; the organization is the body's, checked by `get#Map`,
     `find#Maps` and Saved reports. Tools' definition list and an Insights author's DashboardEditor still open a shared
     map's body by id for a member of its group who does not see its organization: its texts and registration keys, no
     data.
-  - F-P9-5: a metric registration computes no value (P4), so "counts from the registered metrics" has nothing to call: a
+  - F119: a metric registration computes no value (P4), so "counts from the registered metrics" has nothing to call: a
     step's count is an attention provider's, and a step's metric gives its name.
-  - F-P9-6: Customer Service's cases, Warehouse's picking and shipping and Accounting's receivables have no registered
+  - F120: Customer Service's cases, Warehouse's picking and shipping and Accounting's receivables have no registered
     attention provider (F29, F68), so those steps link and show no count; "each step's count" holds where an owner
     registered one. Only Accounting's counts take the map's organization (F69): the others keep their owner's scope, which
     StepDetail says.
-  - F-P9-7: the flow editor's group had no engine save. The grant is the operation's (as the distributor's since P7), so a
+  - F121: the flow editor's group had no engine save. The grant is the operation's (as the distributor's since P7), so a
     flow editor can also save a playlist or a saved search from the Insights screens every user opens, and remove a panel
     from a dashboard of their own; no data.
-  - F-P9-8: Saved reports' SaveAs would have copied a flow map for any author, without provenance or the flow editor's
+  - F122: Saved reports' SaveAs would have copied a flow map for any author, without provenance or the flow editor's
     permission; it refuses a flow map now.
-  - F-P9-9: `get#DefinitionDiff` answers a list as one value, so a version's change of one step read as the whole
+  - F123: `get#DefinitionDiff` answers a list as one value, so a version's change of one step read as the whole
     `steps` array; MapVersions compares the two snapshots by lane and step itself.
-  - F-P9-10: text safety as found: a screen attribute's `${}` is expanded once (a stored `${1+1}` stays text), the qvt
+  - F124: text safety as found: a screen attribute's `${}` is expanded once (a stored `${1+1}` stays text), the qvt
     renderer escapes `{{`, and the service layer refuses HTML in a parameter; FlowMaps.js still refuses `${` at save and
     breaks it at read, so no later renderer or message that expands a text is handed one.
-  - F-P9-11: a page's title is its first heading, which only reading the page's text gives (`get#PageView` would also
+  - F125: a page's title is its first heading, which only reading the page's text gives (`get#PageView` would also
     record it as recently opened); `get#Map` reads the text through `get#PageRef`'s reference, once a step with a page.
-  - F-P9-12: ProcessStory's return link is the wrapper's, from the `definitionId` and `stepId` it was opened with;
+  - F126: ProcessStory's return link is the wrapper's, from the `definitionId` and `stepId` it was opened with;
     whether Knowledge's component keeps them in the URL while the reader moves between pages was not checked in a browser.
-  - F-P9-13: the organization's default map (design §9 FlowMaps) is a setting, which waits for P10's Settings; a map made
+  - F127: the organization's default map (design §9 FlowMaps) is a setting, which waits for P10's Settings; a map made
     from nothing (New map) is not offered: a map starts as a copy.
-  - F-P9-14: no demo user reads Insights and opens Commerce, so the acceptance test opens Commerce's orders as the system
+  - F128: no demo user reads Insights and opens Commerce, so the acceptance test opens Commerce's orders as the system
     administrator and Customer Service's cases as insights.servicemanager.
-  - F-P9-15: a spec that makes a party cannot delete it after that user signs in: the forum's ForumTrackingMode row is
+  - F129: a spec that makes a party cannot delete it after that user signs in: the forum's ForumTrackingMode row is
     made at first sign-in; InsightsFlowMaps deletes it first.
 - **Decisions** (for §4): the map body is XML widgets, with neither the node-graph panel nor a `.qvue`; a step names a
   FlowTarget with typed parameters (a choice or the map's organization), an attention provider, a metric, a catalog entry
@@ -2158,16 +2158,16 @@ Design §9; INS-08.
     Registry.js, Insights.js and `screen/Insights.xml` are Insights' own;
   - not verified: the acceptance test (written, not run); Knowledge's component under the mount and the lanes at phone
     width in a browser;
-  - the user's call: whether an organization's map should be editable by every flow editor of the organization (F-P9-3:
-    a framework change) or stay its owner's; whether the flow editor's engine grant (F-P9-7) should instead be a call
+  - the user's call: whether an organization's map should be editable by every flow editor of the organization (F117:
+    a framework change) or stay its owner's; whether the flow editor's engine grant (F121) should instead be a call
     FlowMapServices makes past the engine's authorization after its own check, which would keep the group to flow maps; a
-    demo user who reads Insights and opens Commerce (F-P9-14); the wording and steps of the three templates;
+    demo user who reads Insights and opens Commerce (F128); the wording and steps of the three templates;
   - the next phase: P10 (the organization's default map is a setting; the `insights-analyst` skill may name FlowMap).
 
 **Review Nov 10 (P9).** Fresh review of mr-boss fd3dbab9; fixes in mr-boss ("Insights P9 review: …") and this note (branch
 `ins/p9`).
 - Checked and kept:
-  - **Stored text** (F-P9-10, confirmed by running it): a map saved through the engine as Tools saves one, with
+  - **Stored text** (F124, confirmed by running it): a map saved through the engine as Tools saves one, with
     `<img src=x onerror=…>`, `</script>`, `<b>`, quotes and `{{7*7}}` in its title, description, lane and step names and
     descriptions, rendered in FlowMap, FlowMaps and FlowMapEditor (with a step's Edit dialog and a version's changes) in
     qvt, html and tui. No raw tag in qvt or html: every text is entity-escaped, in text nodes, in plain attributes (a box
@@ -2206,7 +2206,7 @@ Design §9; INS-08.
     a flow map; `g m` is used by no other keymap.
   - **Spec leanness**: `InsightsFlowMaps` renders FlowMap once (qvt) and one refusal; no other screen.
 - Fixes:
-  - **R1** (medium, access; F-P9-7) `BOSS_INS_REPORT_FLOW` gave the flow editor's group the engine's `save#Definition`,
+  - **R1** (medium, access; F121) `BOSS_INS_REPORT_FLOW` gave the flow editor's group the engine's `save#Definition`,
     `restore#Definition` and `delete#Definition`. The engine holds a save to the definition's owner and nothing else, so
     a flow editor who is not an author could make a definition of any type but a dataset; from the Insights screens every
     user opens that was a playlist (Playlists' `createPlaylist`) and a saved search (Explore's `saveSearch`), and changing
@@ -2225,8 +2225,8 @@ Design §9; INS-08.
   mount and the grant, not kept. Prettier clean. Not run: the full suites, any acceptance test, lint (no screen changed).
 - For the lead:
   - R1 answers the worker's user's-call item on the grant; design-insights §9 "As built" (Grants) says so.
-  - Open, as the worker found, unchanged: F-P9-3 (a map is its copier's); F-P9-4 (the engine knows no organization).
-    To F-P9-4 add: an Insights author, who holds the engine's save, can still make a `report` of kind `flowmap` in the
+  - Open, as the worker found, unchanged: F117 (a map is its copier's); F118 (the engine knows no organization).
+    To F118 add: an Insights author, who holds the engine's save, can still make a `report` of kind `flowmap` in the
     definition editor, with any organization id and shared with any group (the engine checks no membership); it is read
     in Business flows only by members of that group who see that organization, checked and escaped as any map, with
     "Shared" as its owner. Holding a map to `INSIGHTS_FLOW_EDIT` there needs the engine to know the kind.
