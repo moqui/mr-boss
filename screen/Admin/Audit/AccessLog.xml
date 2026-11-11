@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AccessLog (design-admin §12 AccessLog, §16 "Audit evidence"; style-guide §3.2 List; impl-admin P17): who requested or
+    received report output, and what was done in monitoring, from the shipped dataset admin-access-log (the log lines of the
+    report engine's and monitoring's audit targets and no other line), read by the report engine as the user through
+    ironstone.admin.AuditServices.get#AccessLog. AccessFind: the source and a range of dates; a row's own links narrow to its
+    actor, what it was about or its trace. No search of a line's text. AccessEvidence: when, the source, what was done, who,
+    what it was about, the kind and format, the counts, the outcome and the reason; a line's other attributes (a value, the
+    addresses a report went to) are never shown. A reader of some organizations reads the lines of those organizations'
+    people. The print and the CSV are the same projection, one bounded page of it. Reading needs ADMIN_AUDIT_VIEW and the
+    dataset's own grant; raw logs, traces and replay keep their own grants in System › Monitor. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Access log" menu-image="sym_o_receipt_long" menu-image-type="icon">
+    <parameter name="source"/>
+    <parameter name="actorUserId"/>
+    <parameter name="subject"/>
+    <parameter name="correlation"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageNoLimit"/>
+
+    <actions>
+        <set field="renderMode" from="sri.getRenderMode()"/>
+        <set field="printing" from="renderMode === 'html-print'"/>
+        <set field="exporting" from="printing || pageNoLimit === 'true' || ['csv', 'xlsx', 'text'].includes(renderMode)"/>
+        <set field="findValues" from="{source:source, actorUserId:actorUserId, subject:subject, correlation:correlation,
+            fromDate:fromDate, thruDate:thruDate}"/>
+        <service-call name="ironstone.admin.AuditServices.get#AccessLog" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="Object.assign({}, findValues, {pageIndex:(pageIndex || 0), forExport:exporting})"/>
+        <!-- ignore-error clears a refusal's message: a list answered is the sign it was read; the service says why not -->
+        <set field="available" from="!!found?.accessList &amp;&amp; !found.unavailable"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            accessList = Array.from(found?.accessList || []).map(row => Object.assign({}, row, {
+                traceText: row.correlation ? row.correlation.slice(0, 12) : ''}))
+            accessListCount = Number(found?.accessListCount || 0)
+            accessListPageIndex = Number(found?.accessListPageIndex || 0)
+            accessListPageSize = Number(found?.accessListPageSize || 50)
+            accessListPageMaxIndex = Number(found?.accessListPageMaxIndex || 0)
+            accessListPageRangeLow = Number(found?.accessListPageRangeLow || 0)
+            accessListPageRangeHigh = Number(found?.accessListPageRangeHigh || 0)
+            sourceOptions = Array.from(found?.sourceOptions || [])
+            narrowed = [actorUserId && 'one user', subject && 'one subject', correlation && 'one trace'].filter(Boolean).join(', ')
+            clearValues = {source: source, fromDate: fromDate, thruDate: thruDate}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Access log" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none" condition="available"
+                        text="Who requested or received report output, and what was done in monitoring. ${found?.scopeText}. Addresses and values are not shown: recipients are counted. The instance keeps these lines as long as it keeps its logs (seven days unless its telemetry settings say otherwise). Prepared ${ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')} by ${ec.user.username}."/>
+            </container>
+            <container style="col-auto">
+                <link url="." text="Print" icon="sym_o_print" target-window="_blank" condition="available &amp;&amp; !printing"
+                        parameter-map="Object.assign({}, findValues, {renderMode:'html-print'})"/>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="!available"
+                text="${found?.unavailable || 'The access log is not available to you: reading it needs ADMIN_AUDIT_VIEW.'}"/>
+        <section name="AccessSection" condition="available">
+            <widgets>
+                <section name="AccessFindSection" condition="!printing">
+                    <widgets>
+                        <form-single name="AccessFind" transition="." map="findValues">
+                            <field name="actorUserId"><default-field><hidden/></default-field></field>
+                            <field name="subject"><default-field><hidden/></default-field></field>
+                            <field name="correlation"><default-field><hidden/></default-field></field>
+                            <field name="source">
+                                <default-field title="Source"><drop-down allow-empty="true"><list-options list="sourceOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty shows what the instance still keeps"><date-time type="date"/></default-field></field>
+                            <field name="thruDate"><default-field title="Before"><date-time type="date"/></default-field></field>
+                            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row-big><field-ref name="source"/><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="submitButton"/></field-row-big>
+                            </field-layout>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container style="row items-center q-gutter-sm" condition="!!narrowed">
+                    <label type="span" text="Narrowed to ${narrowed}."/>
+                    <link url="." text="Show all" link-type="anchor" condition="!printing" parameter-map="clearValues"/>
+                </container>
+                <label type="p" style="text-warning" condition="found.truncated" text="Only the newest ${found.exportRows} lines are in this print or file: narrow the dates for the rest."/>
+                <label type="p" style="m-muted" condition="!accessList.length" text="No line matches."/>
+                <form-list name="AccessEvidence" list="accessList" skip-form="true" paginate="true" show-csv-button="true">
+                    <field name="timeText"><default-field title="When"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                    <field name="actionText"><default-field title="What was done"><display/></default-field></field>
+                    <field name="actorName">
+                        <conditional-field condition="!!actorUserId &amp;&amp; !exporting" title="Who">
+                            <link url="." text="${actorName}" link-type="anchor" tooltip="Only this user's lines"
+                                    parameter-map="Object.assign({}, clearValues, {actorUserId:actorUserId})"/>
+                        </conditional-field>
+                        <default-field title="Who"><display/></default-field>
+                    </field>
+                    <field name="subjectText">
+                        <conditional-field condition="!!subjectId &amp;&amp; !exporting" title="About">
+                            <link url="." text="${subjectText}" link-type="anchor" tooltip="Only lines about this"
+                                    parameter-map="Object.assign({}, clearValues, {subject:subjectId})"/>
+                        </conditional-field>
+                        <default-field title="About"><display/></default-field>
+                    </field>
+                    <field name="kindText"><default-field title="Kind and format"><display/></default-field></field>
+                    <field name="countText"><default-field title="Counts"><display/></default-field></field>
+                    <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                    <field name="traceText">
+                        <conditional-field condition="!!correlation &amp;&amp; !exporting" title="Trace">
+                            <link url="." text="${traceText}" link-type="anchor" tooltip="Every line of this trace"
+                                    parameter-map="Object.assign({}, clearValues, {correlation:correlation})"/>
+                        </conditional-field>
+                        <default-field title="Trace"><display/></default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="timeText"/><field-ref name="actionText"/><field-ref name="subjectText"/></column>
+                        <column><field-ref name="actorName"/><field-ref name="countText"/><field-ref name="outcomeText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

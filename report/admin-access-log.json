@@ -1,0 +1,22 @@
+{
+  "id": "admin-access-log",
+  "type": "dataset",
+  "title": "Access log",
+  "body": {
+    "folder": "Admin",
+    "description": "Access evidence for Admin › Audit › Access log: the audit lines of the report engine (who exported, scheduled, delivered, paused or transferred report data and definitions) and of monitoring (incidents, recovery, runtime settings, deployed components), and no other log line. The row filter is the dataset's own and holds for every query of it; the row-filter service keeps a reader to the lines of the people of the organizations they administer.",
+    "indexName": "otel_logs",
+    "timeField": "timestamp",
+    "rowFilter": {
+      "field": {
+        "name": "scope_name",
+        "op": "in",
+        "values": [
+          "moqui.report.audit",
+          "moqui.monitor.audit"
+        ]
+      }
+    },
+    "rowFilterService": "ironstone.admin.AuditServices.get#AccessLogRowFilter"
+  }
+}

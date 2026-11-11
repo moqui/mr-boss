@@ -89,6 +89,8 @@ const areas = {
     // Exports, DataExport and Backups to it, and opens the area to the backup operator too, for Backups alone
     // (BOSS_ADM_DATA_BACKUPS: the area's screen without its other subscreens)
     data: "Data",
+    // P17: Audit (AuditChanges, AccessLog) for the audit reader and the administrator (BOSS_ADM_AUDIT)
+    audit: "Audit",
     agents: "Agents",
     developer: "Developer"
 }
@@ -336,6 +338,9 @@ const linkPaths = [
     "Data/Exports",
     "Data/DataExport",
     "Data/Backups",
+    // P17: change and access evidence
+    "Audit/AuditChanges",
+    "Audit/AccessLog",
     "Agents/Home",
     "System",
     "Developer/Home"
