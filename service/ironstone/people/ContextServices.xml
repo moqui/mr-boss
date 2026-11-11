@@ -190,8 +190,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>People's record-lookup provider (People.xml shell-providers, people.records; design §1.4 Comms hooks): the
             Person over the directory projection. search: the people find#Employees reaches for text, as optionList of
             {value: mantle.party.Party|id, label}; info and card: a person the user's People scope admits, as their public work
-            identity, with their Employee360 link (others visible false, or no card); links: the people a message's Employee360
-            links name, up to five.</description>
+            identity, with their Employee360 link (a person it does not admit is left out, so another provider answers for them);
+            links: the people a message's Employee360 links name, up to five.</description>
         <out-parameters>
             <parameter name="recordList" type="List"/>
             <parameter name="card" type="Map"/>

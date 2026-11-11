@@ -1,6 +1,7 @@
 // People's employee record (impl-people P2; design-people §4 Employees and Employee360, §15 the directory export, §1.4 the
 // palette and record-lookup; crosscut §3.4): Employee360's one qvt render, as an HR officer of the employer, with every region
-// HR reads; the directory export's columns, the public work identity for a directory reader and the HR columns for HR; the per-app
+// HR reads; the directory export's one csv render, the public work identity for a directory reader (HR's columns are Mantle's
+// PeopleDirectory); the per-app
 // context narrowing Mantle's answer (Commons the user's own personal information, Insights the Overview alone, another root
 // refused); and the links of the apps with no context (Projects' PersonDetail, Admin's UserDetail), the palette's directory rows
 // and the Person record-lookup, each for the audience Mantle admits, with Commons' mount rendered once in html for the employee's
@@ -51,12 +52,13 @@ feature(
     }
 )
 
-feature("the directory export is the public work identity for a directory reader and adds the employment's dates for HR", {
+feature("the directory export is the public work identity for a directory reader, without the employment's dates", {
     when() {
-        const csv = user => asUser(user, () => page("Employees/List", {pageNoLimit: "true", term: "Lindqvist"}, "csv"))
-        return {reader: csv(users.reader), hr: csv(users.hr)}
+        return {
+            reader: asUser(users.reader, () => page("Employees/List", {pageNoLimit: "true", term: "Lindqvist"}, "csv"))
+        }
     },
-    then({reader, hr}) {
+    then({reader}) {
         reader.status == 200
         reader.errors.length == 0
         reader.output.includes("Tomas Lindqvist")
@@ -64,9 +66,7 @@ feature("the directory export is the public work identity for a directory reader
         reader.output.includes("tomas.lindqvist@ziziwork.example")
         reader.output.includes("Ziziwork Retail")
         !reader.output.includes("Started")
-        hr.errors.length == 0
-        hr.output.includes("Started")
-        hr.output.includes("2023-06-12")
+        !reader.output.includes("2023-06-12")
     }
 })
 
@@ -124,6 +124,18 @@ feature(
                         recordId: ids.employeePartyId
                     }).card
             )
+            // info: a person People does not admit (another employer's) is left to the other providers
+            const info = asUser(
+                users.reader,
+                () =>
+                    invoke(C + "lookup#Records", {
+                        operation: "info",
+                        records: [ids.employeePartyId, ids.otherEmployeePartyId].map(recordId => ({
+                            recordEntityName: "mantle.party.Party",
+                            recordId
+                        }))
+                    }).recordList
+            )
             const commons = asUser(users.employee, () =>
                 page("People/Employee360", {partyId: ids.employeePartyId}, "html", "Commons")
             )
@@ -136,10 +148,11 @@ feature(
                 palette,
                 lookup,
                 card,
+                info,
                 commons
             }
         },
-        then({hr, own, colleague, otherApp, otherEmployer, palette, lookup, card, commons}) {
+        then({hr, own, colleague, otherApp, otherEmployer, palette, lookup, card, info, commons}) {
             hr == "/qapps/People/Employees/Employee360?partyId=" + ids.employeePartyId
             own == "/qapps/Commons/People/Employee360?partyId=" + ids.employeePartyId
             colleague == ""
@@ -151,6 +164,7 @@ feature(
             lookup.map(option => option.value) == ["mantle.party.Party|" + ids.employeePartyId]
             card.title == "Tomas Lindqvist"
             card.lines.includes("tomas.lindqvist@ziziwork.example")
+            info.map(row => row.recordId) == [ids.employeePartyId]
             commons.status == 200
             commons.errors.length == 0
             commons.output.includes("Personal information")

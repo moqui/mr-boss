@@ -744,6 +744,89 @@ directory export); PE-01 (projections, the employment content host), PE-02 (hist
   - the user's call: whether Mantle seeds an `EmailWork` purpose for the work identity (the first finding), and whether the
     person may see their own employment's files (P2 gives them to HR only; the design's Commons row lists none).
 
+**Review Nov 11 (P2).** A fresh review of `git diff master...ppl/p2` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 Employees and Employee360, §13, §15, §14.3 "Confidentiality across every path" (its directory half) and crosscut §3.4,
+confidentiality first; fixes committed apart per repository ("People P2 review: …"; mr-mantle 42b38ad2).
+- Checked and found sound:
+  - Every Mantle service checks its own permission and scope after `get#Scope` and reads with authorization off only then;
+    a supplied party, employment or `appRoot` grants nothing: `find#Employees` reaches only its staff, team and self rows and
+    refuses another employer by code; `get#Employee360` opens only an employment the scope shows; `store#PersonalInfo` takes
+    the person's three fields or an HR editor's, refuses another field unless unchanged, and checks the revision read (a hash of
+    the personal information); `get#EmploymentHistory` is HR's of their employers and the person's own; `check#EmploymentAccess`
+    and `create#EmploymentContent` admit an HR reader (editor) of the employer only. Missing and unauthorized answer alike
+    (`RECORD_UNAVAILABLE`, "Not available").
+  - Restricted values are left out by the service on every path: no private contact, identification, birth date, home address
+    or pay in the list, the CSV (the same projection), the palette, the record-lookup card, Employee360's Overview or the
+    Insights and Commons mounts (each narrows Mantle's answer and adds nothing); identifications are HR's, masked, never tax
+    ones; no tax or bank parameter. The employment content host is in `get#RecordLinkInfo`'s map with a visibility branch that
+    holds with authorization off and for no user, and in RecordFiles' map with an HR editor's change right; the People root's
+    panels refuse any other record; a Party's timeline carries none of it.
+  - Owner contracts: PersonDetail and UserDetail only add a header link from `get#Employee360Link` (in an error frame, no link
+    on a refusal); Insights' Records mount stays read only by its path check (no transition of Employee360 is served there);
+    Commons' `get#RecordInfo`, `get#RecordLink` and RecordFiles' `get#ContentType` gain an employment branch after the
+    existing visibility check; `Records.js`' `returnOf` is a pure extraction.
+  - Screens: no route fixture; Employee360 rendered once in qvt (People) and once in html (Commons), its own `render-mode`
+    section allowing the second mode; specs well under 15 s.
+- Fixes:
+  - **R1 (the user's call 1).** Mantle seeds `EmailWork` ("Email - Work", PartyEntities); `Employees.js` reads the work email
+    from it alone, so `EmailPrimary` (perhaps personal) reaches no People projection; People's demo stores the twelve
+    employees' work emails under it (the contractor keeps her `EmailPrimary`). PeopleDirectory stores a personal `EmailPrimary`
+    beside the work one and checks the list and Employee360 never show it. No other app's spec reads the demo employees'
+    emails; Commons' contact purpose drop-down now offers "Email - Work". §4, design §4 Employees.
+  - **R2 (medium, the worker's flag).** A manager was any live `PrtManager`, so a reader (or HR) of one employer saw, in the
+    list and the Overview, the manager a person employed by two has at the other employer, and the manager filter matched rows
+    of an employer the manager does not work for. A manager is now shown on an employment when employed by its employer or by
+    none (`managersAt`), and the filter keeps the manager's employers. PeopleDirectory: B's HR sees the dual employee with no
+    manager of A's.
+  - **R3 (medium).** HR's columns (the employment's id, dates and termination reason) and Employee360's employment ids were
+    given for every row an HR reader reached, also a report's employment at an employer outside their scope (team reach). They
+    are now per row, for an employment by an employer in the HR reader's scope (the person still sees their own ids).
+    PeopleDirectory: an HR officer of A who manages a person employed by A and B gets the dates and id of A's employment only,
+    in the list and Employee360.
+  - **R4 (low, the worker's flag).** An expected "no" was a refusal thrown by a Mantle service, logged at ERROR with its stack
+    on every Projects PersonDetail and Admin UserDetail view of a person the viewer may not read, every record-lookup card of
+    such a Party and every "Not available" Employee360. `get#Scope` and `get#Employee360` take `checkOnly` (as
+    `get#RecordLinkInfo` does): a person or employment missing or outside the scope answers no access instead, alike either
+    way; `get#Employee360Context`, `get#Employee360Link` and the lookup use it. PeopleDirectory checks both answers; a
+    PeopleEmployees run now logs only its deliberate `PEOPLE_CONTEXT` refusal.
+  - **R5 (low, the worker's flag).** The record-lookup answered `visible: false` for a person People does not admit; the hook
+    keeps the first provider's answer per record, so placed first it would hide Comms' answer for every customer and contact.
+    It now leaves such a person out (PeopleEmployees checks it). Its order behind Comms' `boss.records` is left as it is (a
+    provisional finding).
+  - **R6 (low).** `capabilities.selfFields` listed every field for a reader who may change nothing; it is now empty unless the
+    caller is the person (three fields) or an HR editor (all). `get#Employee360Link` labelled the Commons link "My employee
+    record" for anyone but a People user; it says so only for the person.
+  - **R7 (low, conventions).** PeopleEmployees rendered `Employees/List` twice in csv (reader and HR); it renders it once, as the
+    reader (the public columns, no dates); HR's columns are Mantle's PeopleDirectory.
+- Provisional findings (for the lead to number):
+  - the record-lookup hook keeps the first provider's info and card, and Comms' `boss.records` (sequence 0) comes before
+    `people.records` (30) and answers every visible Party, so People's Person info and card never show; its search and links do.
+    Putting People first (a negative sequence) now leaves non-employees to Comms (R5) but changes Comms' room titles and cards
+    for every employee a People user reads: an owner decision with Comms, not made here;
+  - team access (P1's `partyAccess`) shows a manager every current employment of a report, at any employer, and Home's due work
+    counts a person managed at one employer as managed at both; P3's reporting lines per employment should settle both, with
+    `managersAt` (R2) replaced by them;
+  - every refusal a JavaScript service throws is logged at ERROR with its stack (`core::service::call` `record_failure`), across
+    the apps; People now avoids it where a "no" is expected (R4), but a framework note (a refusal with a reason code logged at
+    INFO or WARN without the stack) would serve every app;
+  - `create#EmploymentContent` takes `userId` and `contentDate` from the caller, as Mantle's other `create#*Content` services do
+    (auto-parameters `nonpk`); the uploader recorded is the caller's word.
+- Tests (release binary, `--nobuild`, this runtime): before the fixes PeopleDirectory and PeopleScope 8 of 8 (mr-mantle 4.9 s
+  feature time), PeopleEmployees and PeopleAccess 12 of 12 (mr-boss 5.7 s). The new PeopleDirectory checks failed on the
+  unfixed `Employees.js` (the manager across employers, the reader's field list) and pass after. After: PeopleDirectory and PeopleScope 8 of 8 (mr-mantle 3.0 s; PeopleDirectory 1.7 s), PeopleEmployees and
+  PeopleAccess 12 of 12 (mr-boss 3.5 s; PeopleEmployees 0.9 s, PeopleAccess 2.6 s); the
+  touched specs: Mantle RecordLinks, RecordVisibility, HumanResServices, ContactBooks, PartyServices and StaffIdentity 76 of 76
+  (7.2 s); BOSS Resources, AdminUsers, InsightsRecords, InsightsAccess, Contacts, Chatter and RecordFiles (with a dependency) 104
+  of 104 (13.6 s). Prettier clean on the changed JavaScript. No screen changed, so no lint run. Not run: `./moq test-apps`, the
+  acceptance PeopleDirectoryUsable.
+- For the lead:
+  - budget share: PeopleDirectory gains a person, a user and five calls (about 0.1 s); PeopleEmployees renders one csv fewer;
+    both within §4's estimates;
+  - merge hot spots beside the Built note's: mr-mantle `entity/PartyEntities.xml` (the email purposes' seed),
+    `People.js` (`checkedAccess` and its export), `PeopleServices.xml` (`get#Scope`'s and `get#Employee360`'s `checkOnly`);
+    mr-boss `data/BossPeopleDemoData.xml` (the purposes), §4's two new rows and design-people's header and §4;
+  - the user's calls are in §4: 1 built (R1), 2 left as built (design §4 Employee360 says so).
+
 ### P3 — Organization and reporting
 
 Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
@@ -1510,6 +1593,8 @@ the owner's design.
 | Nov 11, 2026 | An internal child organization with no employees (Warehouse's `BOSS_WH_RETURNS` under Retail, among a Retail reader's organizations by F49's one level of children) stays an employer choice | The user's call on P1's question: left as built. It counts nothing and has no readiness check; P3's OrgStructure shows it as a legal organization under Retail |
 | Nov 11, 2026 | Projects' time screens are mounted under People as the row above says; P10 changes Projects' `TimeServices` and time screens as an owner contract to read their context from the mount (F57's list), and sets the `line` `ProjTimesheetPolicy` on People's demo employers | The user's call (from P0's F57), for P10: P10's text already lists the changes; nothing changes in P1 |
 | Nov 11, 2026 | At most two phase workers run at once, and only as a pair §1 lets run side by side: P9 with P10; in stage 3 two of the tracks P15, P16–P17, P18 and P21 (P19 and P20 after both P16 and P18); P22–P23 beside a stage 3 track. Every other phase runs alone, in §1's order | The user's call. A pair that appends to the same file rebases before merging (§1) |
+| Nov 11, 2026 | Mantle seeds an `EmailWork` contact purpose; the directory and every People projection of a work email (the list, the export, Employee360's Overview, the palette and the record-lookup card) show only `EmailWork`, never `EmailPrimary`; People's demo stores its employees' work emails under `EmailWork` | The user's call on P2's question (built in P2's review, R1). `EmailPrimary` may be a person's own address. No other app's spec or screen reads the demo employees' emails; a purpose drop-down offers "Email - Work" |
+| Nov 11, 2026 | An employment's files and activity stay HR's (an HR reader of its employer, as built in P2): the person does not read the files on their own employment | The user's call on P2's question: left as built (design §4 Employee360) |
 
 ## 5. Open questions
 

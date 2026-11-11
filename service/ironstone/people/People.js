@@ -373,16 +373,14 @@ function employee360(p) {
     if (!app) denied("PEOPLE_CONTEXT", "This person's record is not available here")
     if (p.appRoot === "People") required()
     else if (!ec.user.userId) denied("PEOPLE_UNAVAILABLE", "People is not available")
-    let found
-    try {
-        found = lib.probe("mantle.humanres.PeopleServices.get#Employee360", {
-            partyId: p.partyId,
-            partyRelationshipId: p.partyRelationshipId || null
-        })
-    } catch (error) {
-        if (codeOf(error) === "RECORD_UNAVAILABLE") return {recordFound: false, regions: [], record: {}}
-        throw error
-    }
+    // checkOnly: a person or employment the user may not read answers no region, as a missing one, rather than a refusal
+    // logged as a failed service on every "Not available" view
+    const found = call("mantle.humanres.PeopleServices.get#Employee360", {
+        partyId: p.partyId,
+        partyRelationshipId: p.partyRelationshipId || null,
+        checkOnly: true
+    })
+    if (!Array.from(found.access || []).length) return {recordFound: false, regions: [], record: {}}
     const own = Array.from(found.access || []).includes("self")
     const regions = Array.from(found.regions || []).filter(
         region => app.regions.includes(region) && (!app.ownOnly.includes(region) || own)
@@ -418,18 +416,14 @@ function employee360(p) {
 function employee360Link(p) {
     const none = {url: null, label: null}
     if (!p.partyId || !ec.user.userId) return none
-    let admitted
-    try {
-        admitted = lib.probe("mantle.humanres.PeopleServices.get#Scope", {partyId: p.partyId})
-    } catch (error) {
-        if (codeOf(error) === "RECORD_UNAVAILABLE") return none
-        throw error
-    }
+    // checkOnly: a person the user may not read is no link, not a refusal logged on every view of PersonDetail or UserDetail
+    const admitted = call("mantle.humanres.PeopleServices.get#Scope", {partyId: p.partyId, checkOnly: true})
     const kinds = Array.from(admitted.partyAccess || [])
+    if (!kinds.length) return none
     const peopleUser = rootGrants().read && (kinds.includes("staff") || kinds.includes("team"))
     return {
         url: employee360Path(peopleUser ? "People" : "Commons") + "?partyId=" + encodeURIComponent(p.partyId),
-        label: peopleUser ? "Employee record" : "My employee record"
+        label: peopleUser || !kinds.includes("self") ? "Employee record" : "My employee record"
     }
 }
 // The People link of an employment (the employment content host's record, for the Chatter and RecordFiles panels and the
@@ -453,13 +447,8 @@ function employmentLink(partyRelationshipId) {
 // people a message's Employee360 links name. A person the scope does not admit is answered visible false, or not at all.
 const PARTY = "mantle.party.Party"
 function personCard(partyId) {
-    let found
-    try {
-        found = lib.probe("mantle.humanres.PeopleServices.get#Employee360", {partyId})
-    } catch (error) {
-        if (codeOf(error) === "RECORD_UNAVAILABLE") return null
-        throw error
-    }
+    const found = call("mantle.humanres.PeopleServices.get#Employee360", {partyId, checkOnly: true})
+    if (!Array.from(found.access || []).length) return null
     const overview = found.overview || {}
     return {
         partyId,
@@ -487,15 +476,17 @@ function lookup(p) {
         const recordList = []
         for (const wanted of Array.from(p.records || [])) {
             if (wanted.recordEntityName !== PARTY && wanted.recordEntityName !== "Party") continue
+            // a person People does not admit is left to the other providers (the hook keeps the first answer per record)
             const card = personCard(wanted.recordId)
+            if (!card) continue
             recordList.push({
                 recordEntityName: wanted.recordEntityName,
                 recordId: wanted.recordId,
                 entity: PARTY,
-                visible: !!card,
-                title: card ? card.title : null,
-                typeLabel: card ? "Employee" : null,
-                url: card ? url(wanted.recordId) : null,
+                visible: true,
+                title: card.title,
+                typeLabel: "Employee",
+                url: url(wanted.recordId),
                 icon: recordKinds.person.icon
             })
         }

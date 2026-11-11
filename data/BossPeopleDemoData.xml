@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <entity-facade-xml type="demo">
     <!-- People P1 (impl-people P1, F12, F59; design-people §1.1, §4): the demo's employees. Ziziwork Retail & Wholesale and Ziziwork
         Services are the employers. Each employee is a Person (owner left as it is, _NA_) with an Employment: a PrtEmployee
-        relationship from the person to the employer (Employee to OrgEmployer) and its Employment row, a work email and phone,
+        relationship from the person to the employer (Employee to OrgEmployer) and its Employment row, a work email (EmailWork, the
+        directory's work identity, P2 review) and phone,
         and a manager by a live PrtManager relationship from the manager to the report (F50). Retail: Greta Haugen leads, Hannah
         Okafor reports to her and leads Tomas Lindqvist, Ines Varga and Rafael Mbeki (who joined last month); Leon Ferreira has no
         manager yet; Walter Pruitt's employment ended in June. Priya Natarajan is employed by both Retail and Services and reports
@@ -32,7 +33,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2019-02-04 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_GRETA_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_GRETA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="greta.haugen@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_GRETA" contactMechId="BOSS_PPL_GRETA_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_GRETA" contactMechId="BOSS_PPL_GRETA_EM" contactMechPurposeId="EmailWork"
             fromDate="2019-02-04 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_GRETA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_GRETA_PW" countryCode="1" areaCode="801" contactNumber="555-0141"/>
@@ -47,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2021-03-01 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_HANNAH_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_HANNAH_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="hannah.okafor@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_HANNAH" contactMechId="BOSS_PPL_HANNAH_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_HANNAH" contactMechId="BOSS_PPL_HANNAH_EM" contactMechPurposeId="EmailWork"
             fromDate="2021-03-01 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_HANNAH_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_HANNAH_PW" countryCode="1" areaCode="801" contactNumber="555-0142"/>
@@ -61,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2023-06-12 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_TOMAS_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_TOMAS_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="tomas.lindqvist@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_TOMAS" contactMechId="BOSS_PPL_TOMAS_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_TOMAS" contactMechId="BOSS_PPL_TOMAS_EM" contactMechPurposeId="EmailWork"
             fromDate="2023-06-12 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_TOMAS_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_TOMAS_PW" countryCode="1" areaCode="801" contactNumber="555-0143"/>
@@ -75,7 +76,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2022-09-05 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_INES_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_INES_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="ines.varga@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_INES" contactMechId="BOSS_PPL_INES_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_INES" contactMechId="BOSS_PPL_INES_EM" contactMechPurposeId="EmailWork"
             fromDate="2022-09-05 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_INES_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_INES_PW" countryCode="1" areaCode="801" contactNumber="555-0144"/>
@@ -89,7 +90,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2026-10-26 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_RAFAEL_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_RAFAEL_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="rafael.mbeki@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_RAFAEL" contactMechId="BOSS_PPL_RAFAEL_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_RAFAEL" contactMechId="BOSS_PPL_RAFAEL_EM" contactMechPurposeId="EmailWork"
             fromDate="2026-10-26 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_RAFAEL_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_RAFAEL_PW" countryCode="1" areaCode="801" contactNumber="555-0145"/>
@@ -103,7 +104,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2024-01-15 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_LEON_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_LEON_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="leon.ferreira@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_LEON" contactMechId="BOSS_PPL_LEON_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_LEON" contactMechId="BOSS_PPL_LEON_EM" contactMechPurposeId="EmailWork"
             fromDate="2024-01-15 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_LEON_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_LEON_PW" countryCode="1" areaCode="801" contactNumber="555-0146"/>
@@ -117,7 +118,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2018-05-01 09:00:00" thruDate="2026-06-30 17:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_WALTER_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_WALTER_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="walter.pruitt@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_WALTER" contactMechId="BOSS_PPL_WALTER_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_WALTER" contactMechId="BOSS_PPL_WALTER_EM" contactMechPurposeId="EmailWork"
             fromDate="2018-05-01 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_WALTER_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_WALTER_PW" countryCode="1" areaCode="801" contactNumber="555-0147"/>
@@ -135,7 +136,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2025-02-03 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_PRIYA_EMP2"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_PRIYA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="priya.natarajan@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_PRIYA" contactMechId="BOSS_PPL_PRIYA_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_PRIYA" contactMechId="BOSS_PPL_PRIYA_EM" contactMechPurposeId="EmailWork"
             fromDate="2020-08-17 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_PRIYA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_PRIYA_PW" countryCode="1" areaCode="801" contactNumber="555-0148"/>
@@ -150,7 +151,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2020-01-06 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_AMARA_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_AMARA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="amara.diallo@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_AMARA" contactMechId="BOSS_PPL_AMARA_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_AMARA" contactMechId="BOSS_PPL_AMARA_EM" contactMechPurposeId="EmailWork"
             fromDate="2020-01-06 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_AMARA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_AMARA_PW" countryCode="1" areaCode="801" contactNumber="555-0151"/>
@@ -164,7 +165,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2022-04-11 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_KENJI_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_KENJI_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="kenji.arakawa@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_KENJI" contactMechId="BOSS_PPL_KENJI_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_KENJI" contactMechId="BOSS_PPL_KENJI_EM" contactMechPurposeId="EmailWork"
             fromDate="2022-04-11 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_KENJI_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_KENJI_PW" countryCode="1" areaCode="801" contactNumber="555-0152"/>
@@ -178,7 +179,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2023-11-20 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_SOFIA_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_SOFIA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="sofia.brandt@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_SOFIA" contactMechId="BOSS_PPL_SOFIA_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_SOFIA" contactMechId="BOSS_PPL_SOFIA_EM" contactMechPurposeId="EmailWork"
             fromDate="2023-11-20 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_SOFIA_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_SOFIA_PW" countryCode="1" areaCode="801" contactNumber="555-0153"/>
@@ -192,7 +193,7 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2021-07-19 09:00:00"/>
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_OWEN_EMP"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_OWEN_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="owen.castillo@ziziwork.example"/>
-    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_OWEN" contactMechId="BOSS_PPL_OWEN_EM" contactMechPurposeId="EmailPrimary"
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_OWEN" contactMechId="BOSS_PPL_OWEN_EM" contactMechPurposeId="EmailWork"
             fromDate="2021-07-19 09:00:00"/>
     <mantle.party.contact.ContactMech contactMechId="BOSS_PPL_OWEN_PW" contactMechTypeEnumId="CmtTelecomNumber"/>
     <mantle.party.contact.TelecomNumber contactMechId="BOSS_PPL_OWEN_PW" countryCode="1" areaCode="801" contactNumber="555-0154"/>
