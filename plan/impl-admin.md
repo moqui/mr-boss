@@ -4775,6 +4775,263 @@ second release (§4).
   the Insights reader bundle for ORG_ZIZI_RETAIL; its code works once; the browser opens nothing outside the route
   group; revoking the device ends its session at once.
 
+**Built Nov 11 (P18).**
+- Checked first (the plan's proposal against CX-DEVICE and the code, as the phase asks; the answer is in design-admin §6 and
+  §19 item 7 and crosscut CX-DEVICE):
+  - The proposal stands, with one change of substance. A device identifies no person and reads as a display account: a
+    UserAccount nothing signs in, with a Person party that is a member of each organization it shows
+    (`store#OrganizationMembership`, so `setup#UserOrganizationInfo`, `MANTLE_USER_ORG` and Insights' row filter scope
+    it, F33) and the registered bundles its registrar could assign. The change: the plan had "its requests run as it"
+    and "its sessions ended at once", which reads as a signed-in session of the display account. The code says no to
+    that. The framework's nearest credentials (an API or device key, `login.rs` `check_login_key`; an app password) all
+    end by making their account the web session's user, and three places outside the screens read a session's user
+    from its row or live copy (the notification socket, the terminal socket, the Assistant's event stream), and many
+    paths ask only for a signed-in user. So the display account is the user of a device's request only, held in the
+    request's context and never written to the session (F-P18-1); there is no session of it to end, and revocation is
+    the device row, read on every request (F-P18-4).
+  - Artifact authorization cannot confine a device: `ALL_USERS` holds an inheritable ALLOW on the Admin service
+    families (each refuses by permission), the app list and shell transitions, and a display account's own bundle
+    reaches more than one screen. And the display account's own authorization cannot be cut down to the route group
+    either: a dataset's artifact is checked with `authorize_own` under its own grant, which a playlist's panels need
+    (F-P18-2, F-P18-3). So the route group is an allow-list of the request's target, checked by the framework before
+    the target runs, and what it admits is authorized as the display account as ever.
+  - A display account must be refused by every sign-in. Beside the password and key logins, a dozen entry points check
+    a credential of their own and then call `internal_login_user` (SSH keys, SFTP, XMPP, the terminal, git, the report
+    schedules), so the refusal is in `internal_login` itself, with one named exception for the work a request queued
+    (`service/pool.rs`), which a worker runs as its user with no client attached (F-P18-5).
+  - `create#PartyUserAccount` requires an email address, unique among accounts: a display account has none, so Mantle
+    creates its account itself (F-P18-6). P4's `store#OrganizationMembership` needs `ADMIN_IDENTITY_MANAGE` and P3's
+    grant proposal `ADMIN_ACCESS_MANAGE` or `ADMIN_IDENTITY_MANAGE`; the identity operator opens no Security area and
+    the access administrator no Users area (F-P18-7).
+  - Upstream's `/qapps` shell: a browser's page under `/qapps` is the shell screen itself, which then asks for the
+    menu, the shell data, notifications and each screen. None of that is in a route group, so a device cannot load the
+    BOSS shell: Insights P11's display needs a page of its own or members for what it loads (F-P18-8).
+- mr-moqui (Rust changed: a Debug build in the worktree; no release build):
+  - `crates/moqui-core/src/user/device.rs` (new): the credential. `begin_request` (the cookie `moqui.device`,
+    `<deviceId>.<secret>`; the secret compared first, by its SHA-256, so a request without it learns nothing; then
+    revoked, stopped, the end date, the idle timeout, `ipAllowed`, the display account's fitness, the route group; no
+    cache), `enter`/`leave` of the request's identity, the daily replacement of the secret with the ten-minute grace
+    and the stop of a device whose earlier secret comes back (`copied`), last seen at most once a minute, `redeem` (the
+    code once, the write holding only while unredeemed; the session's user signed out), `check_route` (the gate),
+    `display_account_refusal` (displayAccount, not closed, no password or external identity, no privileged group, no
+    sealed permission), and the evidence rows.
+  - `user/session.rs`: a device's hold in the context's session memory; `thread_view` stores the session's own
+    identity whatever the context's user is, so no flush, sync or guard order can write the display account.
+    `user/login.rs`: the display-account refusals (password, `internal_login`), `internal_login_queued_user` for
+    `service/pool.rs`, and no login at all inside a device's request.
+  - `screen/mod.rs` `handle`: the device begins after the session is bound; a refused one is 403 (its cookie removed
+    when the refusal is final); the registration's fixed parameter replaces the request's; `authenticate` is skipped;
+    a script servlet is refused. `screen/render.rs`: the gate before anything of the target, and a screen test's
+    render with a device cookie header is that device's request. `token_route.rs`: `Device` reserved.
+  - `script/host/globals.rs`: `UserSecurityChecks.newDeviceCode`, `redeemDeviceCode` (the cookie goes on the response,
+    never to the script), `displayAccountRefusal`, `currentDevice`.
+  - Entities (`SecurityEntities.xml`): `UserAccount.displayAccount` (audit-logged), `moqui.security.DeviceRouteGroup`
+    (the registry row) and `DeviceCredential`.
+  - `service/org/moqui/admin/DeviceServices.xml` and `Devices.js` (new): `find#RouteGroups`, `find#Devices`,
+    `register#Device`, `issue#DeviceCode`, `revoke#Device`, and the public page's `redeem#Device` and
+    `get#DeviceStatus`. `webroot/screen/webroot/Device.xml` (new): the `/Device` page.
+  - Data: `SecurityTypeData.xml` (the `AdminDeviceServices` grant, appended). No route group is seeded by the
+    framework: each owner seeds its own.
+  - Docs: `docs/security/Shared-Devices.md` (new), Attack-Surface ("Shared devices"), the webroot README's row,
+    Remaining-Work (the device-credential ask rewritten as built with what is left; the `org.moqui.admin` row).
+- Mantle: `service/mantle/party/SharedDevices.js` (new) and five services appended to `IdentityServices.xml` (the
+  package's existing grant covers them): `create#DisplayAccount` (`ADMIN_IDENTITY_MANAGE`: the party, the member
+  relationship through `store#OrganizationMembership`, the account, the grant proposal, all or nothing, and the account
+  must come out fit for a device), `find#DisplayAccounts`, `find#SharedDevices`, `register#SharedDevice`,
+  `reveal#SharedDeviceCode` and `revoke#SharedDevice`, each within the caller's identity scope (the organization entity
+  filters, as every find of the package): another organization's display account and device are not available and
+  are counted, a display account that also shows an organization out of scope needs `ADMIN_IDENTITY_GLOBAL`, and the
+  site is a Facility the caller reads. `find#Users` names a display account as one. `data/PartyAuditData.xml`: six
+  projections (the `displayAccount` flag and the five device events), by Mantle's audit source.
+- BOSS:
+  - `screen/Admin/Security/Devices.xml` (new, the Security area's third tab): DeviceFind, DeviceList with Revoke,
+    RegisterDevice, and the code shown once at the render (`revealDeviceId`). `screen/Admin/Users/Users.xml`:
+    NewDisplayAccount. `Admin.js`: the route row, and Login as refused for a display account with its reason.
+  - `data/BossSetupData.xml` (appended): the route group `INSIGHTS_PLAYLISTS` (owner Insights, parameter
+    `definitionId`, a week's idle timeout) and its artifact group `BOSS_DEV_INS_PLAYLISTS`: the Playlists screen and
+    its `data` transition, no more. Insights P11 adds what its play needs and sets the home path.
+- Specs (feature time on the Debug binary):
+  - cargo `user::device::tests` (3 tests, 0.3 s): the code once and nothing stored in plain text; the request-only
+    identity and the session that never holds it; the daily replacement, the grace and the copy; the idle stop; the
+    sign-ins a display account never passes and the queued work it does; the privileged group, the address and the
+    disabled account.
+  - framework `DeviceCredential` (3 features, 0.5 s): registering and its refusals, the code through `/Device`, the
+    gate beside an instance administrator's own session, revocation, the evidence.
+  - framework client `SecurityDevice` (4 features, 0.1 to 0.4 s; over real HTTP, with fixtures in `ClientFixtures`): the
+    cookie's flags, a second redemption, the device refused another screen, a transition, a REST path with a login key
+    and the REST login (403), its session cookie alone signing no one in, no notification socket, and a forged and a
+    revoked cookie refused and removed.
+  - Mantle `party/SharedDevices` (2 features, 0.8 s): a display account's making and its refusals; a device
+    registered, its code shown once, listed and revoked only within the registrar's organizations.
+  - BOSS `Admin/AdminDevices` (3 features, 0.6 to 1.1 s): the transitions as each role, Devices' one qvt render, the code
+    redeemed and the device refused Admin, Insights' other screens, its account's notifications and Playlists' own
+    editing transition, and its admitted request decided as the display account. `AdminAccess` gains the rule's case
+    (0.3 s): one holder, one non-holder, another organization's display account, a privileged bundle, Login as.
+  - Acceptance, written and not run: `acceptance/Admin/AdminDevicesUsable.spec.js` (the "usable when", with the audit
+    reader's view of it).
+- Tests run: the specs above; framework `AdminSessions`, `PushDevice`, `AdminAccessServices`, `RecentAuth`,
+  `AdminAuditChanges`; the framework's client `SecurityAuthn`, `SecurityAccess`, `SecurityScreens`, `SecurityRest`;
+  Mantle `StaffIdentity`, `IdentityAudit`, `UserLifecycle`; BOSS `AdminUsers`, `AdminSecurity`, `AdminAudit`,
+  `ProjectsAccess`; cargo `-p moqui-core --lib` for `user::`, `screen::`, `service::pool` and `script::host` (583
+  tests), clippy for the crate; `moqui lint --screens` (no parse failure, nothing flagged in the new screens). No
+  suite, no acceptance test.
+- Rendered by hand (a throwaway spec, not kept): Devices in tui, html and qvt as the access administrator and the
+  administrator, as the configuration administrator ("not available to you") and the reader (refused the area);
+  Users in tui and html with NewDisplayAccount; `/Device`. No server was run by hand: the worktree's path is too long
+  for the embedded database's socket (117 bytes), so the HTTP path was proved by the client spec instead.
+- Inventories: none names Devices (design §2's row is "new"); nothing to mark.
+- Design edits: design-admin (the head line, §6 Devices with "What a device reads as" and "As built", §14's row,
+  §17.1 ADM-DEVICES, §17.2's DeviceServices row and the device record, §19 item 7 settled); design-crosscut (CX-DEVICE
+  in §1.5, its need row and the L5 remainder row); design-insights §4 Playlists (the display account, one sentence).
+- Findings:
+  - F-P18-1: a signed-in session of the display account would be a general session to the sockets and to every path
+    that asks only for a user. Resolved: the display account is a request's user, never a session's.
+  - F-P18-2: `ALL_USERS` grants and login-only paths make artifact authorization no fence for a device. Resolved: the
+    route group is an allow-list of the request's target, deny by default, in the framework.
+  - F-P18-3: cutting the display account's authorization down to the route group would refuse the dataset grants a
+    playlist reads by. Resolved: what the gate admits is authorized as the display account, unchanged.
+  - F-P18-4: "its sessions ended at once" has no sessions to end. Resolved: every request reads the device; a
+    revocation holds from the next one on every server, and the cookie is removed.
+  - F-P18-5: a dozen sign-ins end in `internal_login_user` after a check of their own. Resolved: the refusal is there,
+    with `internal_login_queued_user` for queued work.
+  - F-P18-6: `create#PartyUserAccount` needs an email. Resolved: `create#DisplayAccount` writes the account.
+  - F-P18-7: no one delegated role both makes an account and registers a device. Built: the identity operator makes
+    the display account in Users, the access administrator registers the device. Open (the user's call, below).
+  - F-P18-8: the `/qapps` shell is outside every route group. Open, Insights P11's: a page for the display, or the
+    members it loads. A screen's own server-side render of another screen is gated too.
+  - F-P18-9: the Insights reader bundle alone opens nothing: the Insights root is the launcher group's
+    (`BOSS_INSIGHTS`). The "usable when" display account "holding only the reader bundle" is refused its own route
+    group by authorization (the spec shows exactly that). Open, Insights P11's: which bundles a display holds.
+  - F-P18-10: a copy of the cookie used within the day of the copying is not detected; the replacement catches it
+    after. Said in design §6 and the docs; a bound credential is in Remaining-Work.
+  - F-P18-11: a browser that loses the response carrying its new secret is stopped ten minutes later and must be
+    registered again. Kept: re-issuing the secret would let a copy keep up.
+  - F-P18-12: a refused device gets a bare 403. Open, with P11's page (Remaining-Work).
+  - F-P18-13: the framework's client budget is 6 s and five of its six specs with `SecurityDevice` take 6.4 s on the
+    Debug binary (the failing line is 9 s).
+  - F-P18-14: `apps/ScreenTree` fails in a screen test (`sri.getRootScreenDef` is not a function). Not this phase's.
+- Decisions made here:
+  - The display account is the user of a device's request only; revocation is the next request refused.
+  - A route group's artifact group is an allow-list and grants nothing: a screen member admits its render, an
+    inheritable one its transitions and what is below, a transition member that transition; `/Device` and the files
+    anyone may have are always admitted.
+  - The code is about 99 bits, made at the render that shows it (as P5's link), entered at `/Device` within 15 minutes;
+    every refusal of a code gets one answer.
+  - The cookie is `HttpOnly`, `SameSite=Strict`, `Secure` on https; the secret is replaced daily, the one before it
+    works ten minutes and then stops the device.
+  - A wall display's idle timeout is a week by default (5 minutes to 30 days), a registration lasts 365 days (at most
+    730), and a device may be held to addresses.
+  - A display account that stops being fit refuses its devices until it is put right; it does not stop them for good.
+  - A device's evidence is on its display account, so the organization scope of an account's evidence is its scope.
+  - Revoking takes no revision: it only ends, and a second one answers the first (last seen rewrites the row a minute).
+  - Nothing signs in as a display account, Login as included.
+  - Mantle's device services are in `mantle.party.IdentityServices`, bodies in a module of their own.
+- For the lead:
+  - Budgets (Debug feature time): framework server +0.5 s, framework client +0.4 s (see F-P18-13), Mantle +0.8 s,
+    BOSS +1.4 s.
+  - Merge: appended at the end of `BossSetupData.xml`, the framework's `SecurityTypeData.xml`, Mantle's
+    `PartyAuditData.xml` and `IdentityServices.xml`, and `ClientFixtures.spec.js`; one row in `Admin.js`'s route list and
+    two lines in its `loginAsCheck`; `AdminAccess.spec.js` one feature before the last; `Remaining-Work.md` the two
+    rows named. The `crates/moqui-report` work on another branch touches none of these files.
+  - For Insights P11: the route group row and its artifact group are in BossSetupData's last block (add members, set
+    `homePath`); Devices opens RegisterDevice's values from `newRouteGroupId` and `newParameterValue`;
+    `find#SharedDevices` takes `routeGroupId` and `parameterValue` for "the devices showing each playlist";
+    `UserSecurityChecks.currentDevice()` says whether a request is a device's; a refused device gets 403 JSON; see
+    F-P18-8 and F-P18-9.
+  - The user's call: who makes a display account (built: the identity operator; the access administrator alone
+    cannot set a display up, F-P18-7); whether Login as a display account should be allowed to an `ADMIN_LOGIN_AS`
+    holder (built: refused); the defaults (a week idle, 365 days, a daily replacement, 15 minutes for a code).
+  - Not verified: the acceptance test was not run; a real browser (the client spec proves the cookie and the gate over
+    HTTP, not a browser's handling of `SameSite=Strict`); two servers (nothing is cached per server, but no cluster
+    was run); the secret's replacement over HTTP (cargo only).
+
+**Review Nov 11 (P18).** A fresh review of the three repositories' P18 diffs, the Rust line by line (`user/device.rs`,
+`user/session.rs`, `user/login.rs`, `screen/mod.rs` `handle` and `dispatch_request`, `screen/render.rs`, `token_route.rs`,
+`script/host/globals.rs`, `service/pool.rs`), then `Devices.js`, Mantle's `SharedDevices.js` and BOSS's screens and seed;
+the gate probed with a throwaway spec (deleted): as a device, 33 paths. Fixes committed apart in mr-moqui ("Admin P18
+review: …"); Mantle and BOSS unchanged.
+- Checked and found sound:
+  - Confinement. Every HTTP request with a device cookie passes `handle`, and the gate is in `run_job_now` before the
+    redirects, the authentication check, any action and any file: deny unless a member admits the target screen (a
+    non-inheritable screen member admits its render only, not its transitions, its implicit ones such as `actions`, or
+    a subscreen) or the transition; a missing or disabled route group refuses the device (`Account`), a missing artifact
+    group admits nothing. Probed and refused with "This device opens only …": other screens and app transitions (GET
+    and POST), `rest/s1`, `rest/e1`, `rest/m1`, `rest/login`, `Login` and its transitions, `ChangePassword`,
+    `SecondFactor`, `ReAuth`, `sso`, `assist`, `rum`, `WebPush`, `ChatKeys`, `emailOAuth`, `PublicShell`, `echopath`,
+    `status`, `error`, `qapps/<member>` (the shell's mount, not the member), a script servlet; admitted: the member, its
+    `.xml` render mode, `/Device`, `favicon.ico`. `/fop` renders through the same `run_job_now`. The host's own routes
+    (`/notws`, `/termws`, `/xmpp-websocket`, `/callws`, `/git`, `/dav`, `/llm/v1`) never read the device cookie and see
+    the browser's session, which holds no user. A nested render inside an admitted screen is gated too; what the
+    screen itself includes is the screen author's, and its services run with the display account's own authorization,
+    which is right (F-P18-3). `before-request` actions and filters run as the display account before the gate: conf
+    code, not the request's.
+  - Identity. `enter_device` swaps the context's user and `thread_view` stores the held identity, so no flush, sync or
+    `restore_identity` writes the display account to the session row or live session; a visit is made at the bind,
+    before the device, with no user; no login history is written. `finish_login` refuses any sign-in under a device
+    (password, `internal_login_user`, a service's `authUsername`, which `login_user_local` checks through it);
+    `internal_login` refuses a display account everywhere but `pool.rs`'s three queued paths, whose user is the
+    caller's own at queue time (or a persisted queue row's, writable only by an entity administrator who could name any
+    user). Login as: the framework (`internal_login`) and BOSS refuse. A display account has no email, so no reset,
+    invitation or SSO link reaches it; a password or external id makes its devices refuse.
+  - Privileged groups and sealed permissions are not refused on the grant paths (P3's `store#Membership`,
+    `apply#Grants`, imports, Tools, direct writes): a display account may come to hold one, and then every device of
+    it refuses, from the next request, until it is removed; nothing else signs it in, so holding one opens nothing.
+  - The credential. The code is 20 of 31 symbols (about 99 bits, unbiased), single-use-hashed, unique-indexed, good
+    once (the write guarded on `redeemedDate` null), 15 minutes by default; the secret 43 base64url characters (258
+    bits), kept as `hash_login_key`; the secret checked first so a request without it learns nothing; every refusal of
+    a code or secret is `note_auth_failure` for the web protection. No secret in a log line (device ids only), URL,
+    error or audit row. `ipAllowed` against `web::client_ip`, the configured proxy header. Rotation race: the write is
+    guarded on the current hash, the loser's request goes on with no cookie, the old secret works the grace.
+  - Revocation and fitness: the device row is `cache="never"` and read with `use_cache(false)`; the display account's
+    groups, grants and the route group are cached entities the cluster invalidates, as every user's authorization is.
+    The cost on an ordinary request is one cookie header scan. Removing the display account's organization membership
+    does not refuse the device: it then shows that organization nothing (the row filters), which fails safe.
+  - Registration: `register#Device` needs `ADMIN_ACCESS_MANAGE` and a display account whose every current or future
+    group the registrar could assign; Mantle adds the identity scope (another organization's display account and device
+    not available, counted), `ADMIN_IDENTITY_GLOBAL` for one shown beyond it, a Facility the caller reads.
+    `create#DisplayAccount` checks `ADMIN_IDENTITY_MANAGE` and the organization, writes the party, the membership
+    through `store#OrganizationMembership`, the account (no password, email or external id, `displayAccount` Y) and the
+    grant proposal in one transaction, and refuses an account a device could not run as. The framework's
+    `DeviceServices` know no organization and are granted to `ALL_USERS` (`allow-remote` false), as `AccessServices`
+    are: scope is Mantle's, as in gate 1.
+  - The fixed parameter is put last over the query, the form, a JSON body and the saved parameters in `handle` (and in
+    a screen test's render), and a path's inline parameters yield to it in `run_job_now`.
+  - Audit: registered, redeemed, revoked, refused (throttled to one each ten minutes), stopped; never a code or secret;
+    Mantle's six projections. The daily replacement is not audited (a row a day per device would be noise; a copy's
+    use is, as `deviceStopped` `copied`).
+  - Regression: the non-device path of `handle`, `login.rs` and `session.rs` is unchanged but for one cookie scan;
+    `pool.rs`'s queued login differs only for a display account.
+- Fixes (mr-moqui):
+  - R1 (High): the daily new secret was written in `begin_request` and its cookie put in the web slot, which every
+    answer built outside it dropped (a route refusal, a 404, a render error, the error page), so a display whose first
+    request of the day was refused, or failed, was stopped ten minutes later as a copy, with a false `copied` row; and
+    a static answer marked `Cache-Control: public` carried the new secret where a shared cache may keep it. Now
+    `DeviceGuard::rotate` makes the secret at the end of `handle`, on an answer that will carry it (any whole answer, a
+    refusal too); a streamed or public one leaves it to the next request. cargo (`rotate`, nothing made when not
+    called) and `SecurityDevice` (the new secret on a 403, which then works).
+  - R2 (Low): a token route ran its token service as the display account before the gate refused its shell: refused
+    first now. R3 (Low): a device held to addresses passed a request with no known address: it fails closed (cargo).
+    R4 (Low): the refusal throttle's count did not use `ENTAUDLOG_FLD1PK` whole (no display account): it does.
+  - R5 (Low): a refused device request left the live session minted for a cookieless request in the table until its
+    idle timeout, one per request: it is discarded (`SecurityDevice` checks no session cookie).
+  - R6 (Low): a screen test's render inside a device's request began the device again, and its guard's drop ended the
+    outer scope: not begun again.
+  - Shared-Devices.md: the replacement's timing, the token route, the unknown address.
+- F-P18-14 is master's: `ScreenTree.xml` calls `sri.getRootScreenDef()`, which no Rust on master or this branch
+  implements, and the branch does not touch the screen.
+- F-P18-13: on the shared release binary with this runtime the six client specs other than `SecurityDevice` take 4.6 s
+  of 6 s; `SecurityDevice` is 0.4 s on Debug, so the suite is about 5 s on release: the overrun is Debug's. No budget
+  raised.
+- Tests: cargo `user::device` (3) and `-p moqui-core --lib screen:: user::` (565 passed), clippy and fmt of the files
+  touched; framework `DeviceCredential`, `AdminSessions`, `RecentAuth`; client `SecurityDevice` (5 features, 0.4 s on
+  Debug), `SecurityAuthn`; BOSS `AdminDevices`; all pass on the rebuilt Debug binary. No suite, no acceptance test.
+- For the lead:
+  - Budget: framework client +0.02 s (the rotation feature); nothing else.
+  - Open, the user's call or a later phase's: F-P18-11 stands (a lost answer still stops the display after the grace;
+    R1 removed the far commoner cause); whether a grant path should refuse a privileged group to a display account
+    rather than leave its devices refusing; F-P18-8 (the `/qapps` shell) is now also the reason a qvt client asking
+    `actions` or `qapps/<member>` is refused.
+
 ### P19 — Finish
 
 - The tui and server-static screen sweeps of Admin, one acceptance test per mode (each screen's twin is built in its

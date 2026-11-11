@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Devices (design-admin §6 Devices, §14 shared-device registration; crosscut CX-DEVICE; style-guide §3.2 List; impl-admin
+    P18): the shared devices of the organizations the user administers: a browser registered to open one route group (a wall
+    display's playlists first) as a display account, with no person signed in. DeviceFind narrows by name, route group, site,
+    state and last seen; DeviceList shows each with its route group, display account, site, who registered it, when it was
+    last seen and from where, and its state, with Revoke (the device's next request is refused, on every server);
+    RegisterDevice registers one and shows its code once, made at the render that shows it (revealDeviceId), to be entered
+    on the device at /Device. The account a device runs as is made in Users (NewDisplayAccount, the identity operator's).
+    Everything is Mantle's mantle.party.IdentityServices (find#SharedDevices, find#DisplayAccounts, register#SharedDevice,
+    reveal#SharedDeviceCode, revoke#SharedDevice) over the framework's org.moqui.admin.DeviceServices: each checks
+    ADMIN_ACCESS_VIEW or ADMIN_ACCESS_MANAGE and the caller's identity scope
+    itself, whatever opens the screen: another organization's display account or device is not available, and is counted,
+    never named. No code, secret or hash is listed, and the code is in no request, session or message. Another app opens
+    RegisterDevice for its route group with newRouteGroupId and newParameterValue (Insights' Playlists, P11). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Devices" menu-image="sym_o_tv_signin" menu-image-type="icon">
+    <parameter name="text"/>
+    <parameter name="routeGroupId"/>
+    <parameter name="facilityId"/>
+    <parameter name="state"/>
+    <parameter name="seenSinceDays"/>
+    <parameter name="pageIndex"/>
+    <parameter name="revealDeviceId"/>
+    <parameter name="newRouteGroupId"/>
+    <parameter name="newParameterValue"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="registerDevice">
+        <actions>
+            <!-- registered without a code: the code is made at the render that shows it, so nothing carries it there -->
+            <service-call name="mantle.party.IdentityServices.register#SharedDevice" out-map="registered"
+                    in-map="{deviceName:deviceName, routeGroupId:newRouteGroupId, displayUserId:displayUserId,
+                        parameterValue:(newParameterValue || null), facilityId:(newFacilityId || null), ipAllowed:(ipAllowed || null),
+                        idleTimeoutMinutes:(idleTimeoutMinutes || null), lifetimeDays:(lifetimeDays || null), issueCode:false,
+                        operationKey:(operationKey || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !registered.applied"><script>ec.message.addMessage(registered.reason, 'warning')</script></if>
+            <if condition="!ec.message.hasError() &amp;&amp; registered.applied &amp;&amp; registered.repeated">
+                <script>ec.message.addMessage(registered.reason, 'warning')</script></if>
+        </actions>
+        <conditional-response url="." condition="registered?.applied &amp;&amp; !registered?.repeated">
+            <parameter name="revealDeviceId" from="registered.deviceId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="revokeDevice">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.revoke#SharedDevice" out-map="revoked"
+                    in-map="{deviceId:deviceId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !revoked.applied"><script>ec.message.addMessage(revoked.reason, 'warning')</script></if>
+            <if condition="!ec.message.hasError() &amp;&amp; revoked.applied">
+                <message type="success">Device revoked: its next request is refused</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <!-- the registration code, made and shown this once -->
+        <if condition="revealDeviceId">
+            <service-call name="mantle.party.IdentityServices.reveal#SharedDeviceCode" out-map="revealed" transaction="force-new"
+                    ignore-error="true" in-map="{deviceId:revealDeviceId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="registrationCode" from="revealed?.applied ? revealed.registrationCode : null"/>
+        <set field="revealRefused" from="revealDeviceId &amp;&amp; !registrationCode ? (revealed?.reason || 'The code is not available') : null"/>
+        <service-call name="mantle.party.IdentityServices.find#SharedDevices" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{text:(text || null), routeGroupId:(routeGroupId || null), facilityId:(facilityId || null),
+                    state:(state &amp;&amp; state != 'all' ? state : null), includeEnded:(state == 'all'),
+                    seenSinceDays:(seenSinceDays || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="available" from="!!found?.deviceList"/>
+        <script>ec.message.clearErrors()</script>
+        <service-call name="org.moqui.admin.DeviceServices.find#RouteGroups" out-map="groupsFound" transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <service-call name="mantle.party.IdentityServices.find#DisplayAccounts" out-map="displaysFound" transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            const stateColors = {active: 'positive', pending: 'warning', codeExpired: 'grey-7', stopped: 'negative', revoked: 'grey-7'}
+            const stateNames = {active: 'Active', pending: 'Waiting for its code', codeExpired: 'Code not entered', stopped: 'Stopped', revoked: 'Revoked'}
+            canManage = !!admin?.capabilities?.accessManage
+            devices = Array.from(found?.deviceList || []).map(row => Object.assign({}, row, {
+                routeText: [row.routeGroupDescription, row.parameterValue].filter(Boolean).join(' · '),
+                displayText: [row.displayName, row.organizations].filter(Boolean).join(' · '),
+                siteText: row.facilityName || row.facilityId || '',
+                registeredText: [row.registeredByName, when(row.registeredDate)].filter(Boolean).join(' · '),
+                seenText: [when(row.lastSeenDate), row.lastSeenAddress, row.clientSummary].filter(Boolean).join(' · '),
+                stateText: stateNames[row.state] || row.state, stateColor: stateColors[row.state] || 'grey-7',
+                canRevoke: canManage && !['revoked', 'stopped', 'codeExpired'].includes(row.state)}))
+            deviceListCount = Number(found?.deviceCount || 0)
+            deviceListPageIndex = Number(found?.pageIndex || 0)
+            deviceListPageSize = Number(found?.pageSize || 50)
+            routeGroupOptions = Array.from(groupsFound?.routeGroupList || [])
+            displayOptions = Array.from(displaysFound?.displayAccountList || []).filter(row => row.usable)
+            unusableDisplays = Array.from(displaysFound?.displayAccountList || []).filter(row => !row.usable)
+            // the sites the user reads, under the organization filters of the screen's grant
+            facilityOptions = Array.from(ec.entity.find('mantle.facility.Facility').selectField('facilityId').selectField('facilityName')
+                .orderBy('facilityName').limit(200).list()).map(row => ({facilityId: row.facilityId, facilityName: row.facilityName || row.facilityId}))
+            const chosenGroup = routeGroupOptions.find(row => row.routeGroupId === newRouteGroupId) || routeGroupOptions[0] || null
+            registerValues = {newRouteGroupId: chosenGroup?.routeGroupId || null, newParameterValue: newParameterValue || null,
+                idleTimeoutMinutes: chosenGroup?.defaultIdleMinutes || 10080, lifetimeDays: chosenGroup?.defaultLifetimeDays || 365,
+                operationKey: 'device-' + ec.user.userId + '-' + Date.now()}
+            parameterTitle = chosenGroup?.parameterTitle || 'Shows'
+            codeExpiresText = revealed?.codeExpireDate ? ec.l10n.format(Number(revealed.codeExpireDate), 'HH:mm') : ''
+            try { devicePageUrl = (ec.web.getWebappRootUrl() || '') + '/Device' } catch (err) { devicePageUrl = '/Device' }
+        ]]></script>
+        <set field="filtered" from="!!(text || routeGroupId || facilityId || state || seenSinceDays)"/>
+        <set field="findValues" from="{text:text, routeGroupId:routeGroupId, facilityId:facilityId, state:state, seenSinceDays:seenSinceDays}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Devices" type="h5"/>
+                <label text="Shared screens with no one signed in: a registered browser opens only its route group, as its display account, and shows what that account's organizations and access allow. Revoking a device stops it at its next request."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <section name="RegisterSection" condition="canManage &amp;&amp; available"><widgets>
+                    <container-dialog id="RegisterDevice" button-text="Register device" type="primary" icon="sym_o_add" title="Register a device">
+                        <label type="p" style="m-muted" condition="!displayOptions.length"
+                                text="No display account is available to you yet. A device runs as a display account, which an identity operator makes in Users (New display account)."/>
+                        <label type="p" style="m-muted" condition="!routeGroupOptions.length" text="No app has registered a route group for devices."/>
+                        <form-single name="RegisterDevice" transition="registerDevice" map="registerValues">
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="deviceName"><default-field title="Name" tooltip="Where the device is, such as Plant floor east wall"><text-line size="40"/></default-field></field>
+                            <field name="newRouteGroupId">
+                                <default-field title="Opens">
+                                    <drop-down><list-options list="routeGroupOptions" key="${routeGroupId}" text="${description}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="newParameterValue">
+                                <default-field title="${parameterTitle}" tooltip="What this device shows of the route group: a wall display's playlist. The device cannot open another."><text-line size="40"/></default-field>
+                            </field>
+                            <field name="displayUserId">
+                                <default-field title="Runs as" tooltip="The display account whose organizations and access decide what the device shows">
+                                    <drop-down><list-options list="displayOptions" key="${userId}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="newFacilityId">
+                                <default-field title="Site">
+                                    <drop-down allow-empty="true"><list-options list="facilityOptions" key="${facilityId}" text="${facilityName}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="idleTimeoutMinutes">
+                                <default-field title="Idle timeout (minutes)" tooltip="A device not seen for longer stops and is registered again; a wall display that is switched off at night needs more than a night">
+                                    <text-line size="8"/></default-field>
+                            </field>
+                            <field name="lifetimeDays"><default-field title="Registered for (days)" tooltip="At most 730; then it is registered again"><text-line size="6"/></default-field></field>
+                            <field name="ipAllowed">
+                                <default-field title="Allowed addresses" tooltip="Optional: the device works only from these, such as 10.20.*.*">
+                                    <text-line size="40"/></default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Register and show the code"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </widgets></section>
+            </container>
+        </container>
+
+        <section name="CodeShown" condition="registrationCode"><widgets>
+            <container-box type="warning"><box-header title="Registration code for ${revealed.deviceName}"/><box-body>
+                <label type="p" text="On the device, open ${devicePageUrl} and enter this code before ${codeExpiresText}. It works once and is shown only now: to get another, revoke the device and register it again."/>
+                <render-mode>
+                    <text type="qvt"><![CDATA[<q-input class="m-device-code" readonly outlined dense model-value="${registrationCode}" aria-label="Registration code" input-class="text-h6" style="max-width: 24em"><template v-slot:append><q-btn flat round dense icon="sym_o_content_copy" aria-label="Copy the code" @click="$q.copyToClipboard ? $q.copyToClipboard('${registrationCode}') : navigator.clipboard.writeText('${registrationCode}')"></q-btn></template></q-input>]]></text>
+                    <text type="html"><![CDATA[<p><strong>${registrationCode}</strong></p>]]></text>
+                    <text type="tui">${JSON.stringify({t: 'text', text: registrationCode})}</text>
+                </render-mode>
+            </box-body></container-box>
+        </widgets></section>
+        <label type="p" style="text-warning" condition="revealRefused" text="${revealRefused}"/>
+
+        <label type="p" style="text-negative" condition="!available" text="Devices are not available to you."/>
+        <section name="DeviceSection" condition="available"><widgets>
+            <form-single name="DeviceFind" transition="." map="findValues">
+                <field name="text"><default-field title="Device or display"><text-line size="20"/></default-field></field>
+                <field name="routeGroupId">
+                    <default-field title="Opens">
+                        <drop-down allow-empty="true"><list-options list="routeGroupOptions" key="${routeGroupId}" text="${description}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="facilityId">
+                    <default-field title="Site">
+                        <drop-down allow-empty="true"><list-options list="facilityOptions" key="${facilityId}" text="${facilityName}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="state">
+                    <default-field title="State">
+                        <drop-down allow-empty="true">
+                            <option key="active" text="Active"/><option key="pending" text="Waiting for its code"/>
+                            <option key="stopped" text="Stopped"/><option key="revoked" text="Revoked"/><option key="all" text="All, ended too"/>
+                        </drop-down>
+                    </default-field>
+                </field>
+                <field name="seenSinceDays">
+                    <default-field title="Last seen">
+                        <drop-down allow-empty="true"><option key="1" text="In the last day"/><option key="7" text="In the last 7 days"/>
+                            <option key="30" text="In the last 30 days"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                <field-layout>
+                    <field-row-big>
+                        <field-ref name="text"/><field-ref name="routeGroupId"/><field-ref name="facilityId"/><field-ref name="state"/>
+                        <field-ref name="seenSinceDays"/><field-ref name="submitButton"/>
+                    </field-row-big>
+                </field-layout>
+            </form-single>
+            <container-box>
+                <box-body-nopad>
+                    <form-list name="DeviceList" list="devices" skip-form="true" paginate="true">
+                        <field name="deviceName"><default-field title="Device"><display/></default-field></field>
+                        <field name="routeText"><default-field title="Opens"><display/></default-field></field>
+                        <field name="displayText"><default-field title="Runs as"><display/></default-field></field>
+                        <field name="siteText"><default-field title="Site"><display/></default-field></field>
+                        <field name="registeredText"><default-field title="Registered"><display/></default-field></field>
+                        <field name="seenText"><default-field title="Last seen"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State" tooltip="${stateReason}">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${stateText}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="stateReason"><default-field title="Why"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="revokeDevice" text="Revoke" link-type="hidden-form-link" btn-type="danger" condition="canRevoke"
+                                        parameter-map="{deviceId:deviceId}"
+                                        confirmation="Revoke ${deviceName}? Its next request is refused and it must be registered again."/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="deviceName"/><field-ref name="routeText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="seenText"/></column>
+                            <column><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!devices.length &amp;&amp; filtered" text="No device matches."/>
+                    <label type="p" style="q-pa-md m-muted" condition="!devices.length &amp;&amp; !filtered"
+                            text="No device is registered. A wall display is registered here and its code entered on the display's browser."/>
+                    <label type="p" style="q-px-md q-pb-md m-muted" condition="found?.otherCount &gt; 0"
+                            text="${found.otherCount} other device(s) belong to organizations you do not administer."/>
+                    <label type="p" style="q-px-md q-pb-md m-muted" condition="unusableDisplays.length &gt; 0"
+                            text="${unusableDisplays.length} display account(s) cannot run a device now: ${unusableDisplays.map(row => row.displayName + ' (' + row.unusableReason + ')').join('; ')}"/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>
