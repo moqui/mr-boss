@@ -3203,6 +3203,40 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   - the user's calls: F-P12G-1 (attempt records), F-P12G-2 (stands as decided), F-P12G-3 (whether to tidy the texts);
   - budget shares unchanged (no feature added).
 
+**Review Nov 10 (P12 follow-up, F179).**
+- Checked, sound. Ordinary mail: `send#EmailTemplate` is untouched, and `send#EmailMessage` of a Ready message with no
+  outcome and no settlement returns from `begin_send` before any transaction (`superseded_by_send` reads the row the send
+  already read): no write, no lock, no new outcome on any path. The begin writes only for a message sent again (a kept
+  retryable or permanent outcome, a Bounced status, a settlement). Its transaction is separate, so it blocks only if the
+  caller's own transaction holds the row; the send's result writes (`update_sent`, `record_send_failure`) have always
+  been separate in the same way, and no caller writes the row before the call (the queue's claim commits first;
+  BasicComms' resend and Marble's four transitions only call the service). A failed begin write is a service error
+  before the transport: nothing went out and the row is as it was (not sent, or settled), so it can be sent again; only
+  a resend can meet it, never a first send, so no mail is lost by it. Refusals before the begin (no body or address, no
+  server, no host, a host not allowed, no recipient allowed, an attachment) keep the settlement; a transport refusal
+  after it leaves the transport's outcome. The queue: claim, then begin: two Send agains (the second finds the revision
+  changed), a stop after the claim (held, then settled as it was: nothing reached the transport, since the begin always
+  precedes it), a stop after the begin (uncertain, unsettled, RECONCILE_REQUIRED). A mail account's message never
+  reaches the begin. Rust: no `unwrap` on a database path, the test covers the table, the begin alone with its audit
+  row, a whole send and a refusal; clippy clean. The spec's audit checks are order-free.
+- Fix (medium, of P12 itself, not of this change): `stateOf` read a claimed Bounced message as uncertain, not as
+  sending, so it could be settled while its retry was under way; the begin had read no settlement and the message ended
+  Sent, or Bounced and not sent, with a settlement on it. A claim now holds a Bounced message as it holds a Ready one;
+  `AdminMailOutcomes` checks it (an assertion in its second feature).
+- Tests: `cargo test -p moqui-mail` 152 passed, 1 ignored (the note above says 153); framework AdminMailOutcomes,
+  AdminProtocols, AdminConfiguration, AdminConnectionServices, ReportAudience, BusinessAlerts 28 of 28 (3.9 s); mr-mantle
+  DeliveryLedger, StaffInvitation 12 of 12; mr-boss AdminMailQueue, AdminInvitations, InsightsDelivery 13 of 13; Debug
+  binary.
+- For the lead, open:
+  - a send from outside the queue takes no claim, so a person can settle an uncertain message in the queue while
+    BasicComms' resend of it is in the transport: the begin read no settlement and the row keeps one of the send before
+    (read as Sent if it went; as settled if that send ended uncertain). Part of F-P12G-2; closing it needs the resend to
+    take the queue's claim, or the settlement cleared with the result too.
+  - two sends of one message at once from outside the queue can leave `sendOutcome` uncertain on a Sent row (the
+    second's begin after the first's result); the queue reads Sent. With F-P12G-5.
+  - a queue retry of a message that was retryable and is refused before the begin (its server removed since) is left
+    uncertain with the claim's text, though nothing was sent (as before this change; F-P12G-3).
+
 ### P13 — System messages and recovery
 
 Design §8 MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail, §14 operational recovery;
