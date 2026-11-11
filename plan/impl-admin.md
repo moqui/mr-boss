@@ -1,5 +1,8 @@
 # IronStone BOSS — Admin implementation
 
+Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
+and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
+results go in a Final suites note under P19.
 Nov 11, 2026 — gate 4 built: P15–P17 (stage 4), Admin's data and audit, each phase reviewed by a fresh agent and merged on
 its focused specs. Next: stage 5: P18 (shared devices), Insights P11 (wall displays) and the two Finish phases, then the
 full suites.
