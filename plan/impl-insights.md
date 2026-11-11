@@ -1,5 +1,8 @@
 # IronStone BOSS — Insights implementation
 
+Nov 10, 2026 — gate 2 built: P6–P10 (stage 2), Insights' first release, beside Admin's stage 3 (impl-admin P8–P14), each phase
+reviewed by a fresh agent and merged on its focused specs; the full suites run once at the end of the build (the user's
+call). Next: P11 (wall displays) after Admin P18, then P12 with Admin P19.
 Nov 7, 2026 — gate 1 built: P1–P5 with Admin P1–P7 in the one build order (impl-admin §1, stage 1), each phase reviewed
 by a fresh agent and merged in waves with the full suites after each; the gate's suites are under P5. Next: stage 2
 (P6–P10).
@@ -2594,7 +2597,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114 and P9's F115 to F129.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114, P9's F115 to F129 and P10's F130 to F142.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
