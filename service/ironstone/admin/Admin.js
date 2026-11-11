@@ -351,7 +351,9 @@ const linkPaths = [
 // plans/Admin-Screens-Down.md): where a link to a record goes here, by the key its registration or the framework's screen
 // names. Data only, never authority: a screen shown here still asks its service. A user's page is Admin's own, the staff
 // identity in the organizations administered, not System's account record. The paths are relative to a screen of an area
-// (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root.
+// (Admin/<Area>/<Screen>, where every such screen is shown), as the framework's own are, so they hold under any root. A
+// group's page is the same relative path under both roots (../../Access/GroupDetail), so it has no route; a user's is the
+// user route below, which GroupDetail's members and the Sessions list link (mr-moqui plans/Admin-Screens-Down.md A3).
 const mountRoutes = {
     user: {url: "../../Users/UserDetail", idParameter: "userId"},
     // another app's page is a plain URL: Commerce's store integration (a system message's registered owner, by its remote)

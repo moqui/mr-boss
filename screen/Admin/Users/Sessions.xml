@@ -12,13 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Sessions (design-admin §4 Sessions; style-guide §3.2 List): the sessions of the staff identities of the organizations the user
-    administers (Mantle's find#Users for the identities, then the framework's org.moqui.admin.IdentityServices.find#Sessions, the
-    one session definition Commons Account also reads), live ones or the last days', each named by its visit and a client summary,
-    never a cookie, token or user agent. SessionList's bulk revoke ends the chosen sessions on every server (revoke#Sessions,
-    ADMIN_IDENTITY_MANAGE), each account checked first as an Admin record with the account-wide rule (a shared identity's session
-    needs ADMIN_IDENTITY_GLOBAL); a refused one is counted, the others end. A revoked session's next request goes to the sign-in
-    page and its notification socket closes at its next check. -->
+<!-- Sessions (design-admin §4 Sessions; style-guide §3.2 List; mr-moqui plans/Admin-Screens-Down.md): the sessions of the staff
+    identities of the organizations the user administers, as Admin's own screen for what Admin adds to the framework's
+    System › Security sessions screen: the identities are Mantle's (find#Users, narrowed by an organization the user
+    administers), their sessions the framework's org.moqui.admin.IdentityServices.find#Sessions, the one session definition
+    Commons Account also reads, live ones or the last days', each named by its visit and a client summary, never a cookie,
+    token or user agent. The list is the System screen's (SessionsPrepare and SessionListBox, SessionFind extended here
+    with the organization); its bulk revoke is Admin's own transition: the chosen sessions end on every server
+    (revoke#Sessions, ADMIN_IDENTITY_MANAGE), each account checked first as an Admin record with the account-wide rule (a
+    shared identity's session needs ADMIN_IDENTITY_GLOBAL); a refused one is counted, the others end. A revoked session's
+    next request goes to the sign-in page and its notification socket closes at its next check. The System screen's part
+    for the instance administrator (the visits by user) is not here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sessions" menu-image="sym_o_devices" menu-image-type="icon">
     <parameter name="text"/>
@@ -83,25 +87,18 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="found" from="called.out"/>
             <set field="failure" from="failure || called.failure"/>
         </if>
-        <script><![CDATA[
-            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
-            sessions = Array.from(found?.sessionList || []).map(row => Object.assign({}, row, {
-                startedText: when(row.startedDate), seenText: when(row.lastSeenDate),
-                stateText: row.active ? (row.current ? 'This session' : 'Signed in') : row.state === 'ended' ? 'Signed out' : 'Expired',
-                whereText: [row.clientAddress, row.clientPlace].filter(Boolean).join(' · ')}))
-        ]]></script>
         <set field="canRevoke" from="!!admin?.capabilities?.identityManage"/>
         <set field="filtered" from="!!(text || organizationPartyId)"/>
         <set field="findValues" from="{text:text, organizationPartyId:organizationPartyId, recent:recent}"/>
     </actions>
     <widgets>
+        <section-include name="SessionsPrepare" location="component://tools/screen/System/Security/Sessions.xml"/>
         <container style="q-mb-sm">
             <label text="Sessions" type="h5"/>
             <label text="Where the staff of your organizations are signed in. Signing a session out sends its next request to the sign-in page; an identity shared with another organization needs identity-global authority."
                     type="p" style="text-caption m-muted q-mb-none"/>
         </container>
-        <form-single name="SessionFind" transition="." map="findValues">
-            <field name="text"><default-field title="User"><text-find size="20" hide-options="true"/></default-field></field>
+        <form-single name="SessionFind" extends="component://tools/screen/System/Security/Sessions.xml#SessionFind" transition="." map="findValues">
             <field name="organizationPartyId">
                 <default-field title="Organization">
                     <drop-down allow-empty="true">
@@ -109,12 +106,6 @@ along with this software (see the LICENSE.md file). If not, see
                     </drop-down>
                 </default-field>
             </field>
-            <field name="recent">
-                <default-field title="Show">
-                    <drop-down><option key="N" text="Signed in now"/><option key="Y" text="The last 7 days"/></drop-down>
-                </default-field>
-            </field>
-            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
             <field-layout>
                 <field-row-big>
                     <field-ref name="text"/>
@@ -125,35 +116,6 @@ along with this software (see the LICENSE.md file). If not, see
             </field-layout>
         </form-single>
         <label type="p" style="text-negative" condition="failure" text="${failure}"/>
-        <container-box>
-            <box-body-nopad>
-                <form-list name="SessionList" list="sessions" skip-form="true" paginate="true">
-                    <row-selection id-field="sessionKey" parameter="sessionKeys" list-mode="true" condition="canRevoke">
-                        <action>
-                            <dialog button-text="Sign out" title="Sign out the selected sessions"/>
-                            <form-single name="RevokeSelected" transition="revokeSessions">
-                                <field name="note"><default-field title=""><label text="Each selected session's next request goes to the sign-in page. Its user can sign in again."/></default-field></field>
-                                <field name="submitButton"><default-field title="Sign out"><submit type="danger"/></default-field></field>
-                            </form-single>
-                        </action>
-                    </row-selection>
-                    <field name="userFullName">
-                        <default-field title="User">
-                            <link url="../UserDetail" text="${userFullName}" link-type="anchor" parameter-map="{userId:userId}"/>
-                        </default-field>
-                    </field>
-                    <field name="clientSummary"><default-field title="Device"><display/></default-field></field>
-                    <field name="whereText"><default-field title="From"><display/></default-field></field>
-                    <field name="startedText"><default-field title="Started"><display/></default-field></field>
-                    <field name="seenText"><default-field title="Last seen"><display/></default-field></field>
-                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="userFullName"/><field-ref name="clientSummary"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="seenText"/></column>
-                    </columns>
-                </form-list>
-                <label type="p" style="q-pa-md m-muted" condition="!sessions.length &amp;&amp; !failure" text="${filtered ? 'No session matches.' : 'No one is signed in.'}"/>
-            </box-body-nopad>
-        </container-box>
+        <section-include name="SessionListBox" location="component://tools/screen/System/Security/Sessions.xml"/>
     </widgets>
 </screen>

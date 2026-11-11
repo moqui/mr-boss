@@ -74,16 +74,16 @@ feature("the delegated access administrator cannot add anyone to BOSS_ADMIN_ACCE
         const member = {userGroupId: ids.accessGroupId, userId: ids.sharedUserId, fromDate: ec.user.nowTimestamp}
         asUser(users.delegate, () => {
             // through Tools: Admin › System's group screens and the Tools System root are refused to them
-            for (const path of ["System/Security/UserGroup/UserGroupDetail", "System/Security/UserGroup/GroupUsers"]) {
+            for (const path of ["System/Access/GroupDetail"]) {
                 const rendered = lib.page(path, {userGroupId: ids.accessGroupId}, "html")
                 if (opened(rendered)) problems.push(`the delegate opens ${path}`)
             }
             const tools = ec.screen
                 .makeTest()
                 .rootScreen("component://tools/screen/System.xml")
-                .render("Security/UserGroup/GroupUsers", {userGroupId: ids.accessGroupId}, null)
+                .render("Access/GroupDetail", {userGroupId: ids.accessGroupId}, null)
             if (tools.status === 200 && !tools.errorMessages.length)
-                problems.push("the delegate opens Tools System's group users")
+                problems.push("the delegate opens Tools System's group screen")
             ec.message.clearErrors()
             // through the entity-auto service and a direct entity call
             const service = refusal("create#moqui.security.UserGroupMember", member)

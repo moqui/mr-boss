@@ -25,11 +25,15 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Security" default-menu-index="4" menu-image="sym_o_shield_lock" menu-image-type="icon">
     <subscreens default-item="SignInPolicy" always-use-full-path="true">
-        <subscreens-item name="SignInPolicy" location="component://mr-boss/screen/Admin/Security/SignInPolicy.xml" menu-title="Sign-in policy"
+        <!-- the framework's System › Security screens (mr-moqui plans/Admin-Screens-Down.md), by location: no grant names
+            them, they have no instance administrator's transition and Admin adds nothing. System's Users (its own account
+            administration) is not shown here: Admin's users are the Users area's, and its Sessions screen (the sessions of
+            the staff of the organizations administered) is there too, around the framework's list -->
+        <subscreens-item name="SignInPolicy" location="component://tools/screen/System/Security/SignInPolicy.xml" menu-title="Sign-in policy"
                 menu-index="1"/>
-        <subscreens-item name="IdentityProviders" location="component://mr-boss/screen/Admin/Security/IdentityProviders.xml"
+        <subscreens-item name="IdentityProviders" location="component://tools/screen/System/Security/IdentityProviders.xml"
                 menu-title="Identity providers" menu-index="2"/>
-        <subscreens-item name="IdentityProviderDetail" location="component://mr-boss/screen/Admin/Security/IdentityProviderDetail.xml"
+        <subscreens-item name="IdentityProviderDetail" location="component://tools/screen/System/Security/IdentityProviderDetail.xml"
                 menu-include="false"/>
         <subscreens-item name="Devices" location="component://mr-boss/screen/Admin/Security/Devices.xml" menu-title="Devices" menu-index="3"/>
     </subscreens>

@@ -12,13 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- AccessReview (design-admin §16 "Access/grant review"): the access and grant review of the groups chosen in Capabilities
-    or of one group from GroupDetail, as of a date and time: each group's permission grants, app gates with their row rules, and
-    the members who work for an organization the user administers. One projection (ironstone.admin.CapabilityServices
-    get#AccessReview over the framework's get#GrantReview, ADMIN_ACCESS_VIEW) for the screen, its print (this screen in
-    html-print) and its CSV (the list's export). Sealed permissions are left out and counted; members outside the user's
-    organizations are counted, never named; allowed IPs, preference values and filter expressions are never in it. For the
-    access administrator and the administrator (BOSS_ADM_ACCESS). -->
+<!-- AccessReview (design-admin §16 "Access/grant review"; mr-moqui plans/Admin-Screens-Down.md): the access and grant
+    review of the groups chosen in Capabilities or of one group from GroupDetail, as of a date and time, as Admin's own
+    screen for what Admin adds to the framework's System › Access review: the organization scope of its members. One
+    projection (ironstone.admin.CapabilityServices get#AccessReview over the framework's get#GrantReview,
+    ADMIN_ACCESS_VIEW) for the screen, its print (this screen in html-print) and its CSV (the list's export): each group's
+    permission grants, app gates with their row rules, and the members who work for an organization the user administers;
+    members outside the user's organizations are counted, never named. The page is the System screen's (ReviewPrepare and
+    ReviewPage). Sealed permissions are left out and counted; allowed IPs, preference values and filter expressions are
+    never in it. For the access administrator and the administrator (BOSS_ADM_ACCESS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Access review" default-menu-include="false">
     <parameter name="groups"/>
@@ -35,64 +37,10 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="failure" from="review?.reviewRows ? (review.failure || null) : 'The access review is not available'"/>
             <set field="review" from="failure ? null : review"/>
         </if>
-        <set field="reviewRows" from="review?.reviewRows || []"/>
-        <set field="groupRows" from="review?.groupRows || []"/>
-        <set field="printing" from="sri.getRenderMode() === 'html-print'"/>
-        <set field="reviewValues" from="{groups:(review?.groups || groupsParameter), appName:appName, asOfDate:asOfDate}"/>
-        <set field="notes" from="groupRows.filter(row => row.noteText).map(row => row.groupDescription + ': ' + row.noteText)"/>
+        <set field="emptyReviewText" value="These groups grant nothing and have no members you administer."/>
     </actions>
     <widgets>
-        <container style="row items-center q-col-gutter-sm q-mb-sm">
-            <container style="col">
-                <label text="Access review" type="h5"/>
-                <label type="p" style="text-caption m-muted q-mb-none" condition="review"
-                        text="${groupRows.length} group(s) as of ${review?.asOfText}; prepared ${ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')} by ${ec.user.username}. App gates are shown as they are now."/>
-            </container>
-            <container style="col-auto">
-                <link url="." text="Print" icon="sym_o_print" target-window="_blank" condition="!!review &amp;&amp; !printing"
-                        parameter-map="Object.assign({}, reviewValues, {renderMode:'html-print'})"/>
-                <link url="../Capabilities" text="Capabilities" icon="sym_o_rule" link-type="anchor" condition="!printing"
-                        parameter-map="{groups:reviewValues.groups, appName:appName}"/>
-            </container>
-        </container>
-        <section name="ReviewOptions" condition="!printing">
-            <widgets>
-                <form-single name="ReviewDate" transition="." map="reviewValues">
-                    <field name="groups"><default-field><hidden/></default-field></field>
-                    <field name="appName"><default-field><hidden/></default-field></field>
-                    <field name="asOfDate"><default-field title="As of" tooltip="Empty reviews access as it is now"><date-time/></default-field></field>
-                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
-                    <field-layout><field-row-big><field-ref name="asOfDate"/><field-ref name="submitButton"/></field-row-big></field-layout>
-                </form-single>
-            </widgets>
-        </section>
-        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
-        <label type="p" style="q-pa-md m-muted" condition="!chosen" text="Choose groups or an app in Capabilities, or open a group, to review its access."/>
-        <section name="Review" condition="review">
-            <widgets>
-                <label type="p" style="text-caption" condition="notes.length" text="${notes.join(' · ')}"/>
-                <container-box>
-                    <box-body-nopad>
-                        <form-list name="AccessReviewList" list="reviewRows" skip-form="true" paginate="false" select-columns="true"
-                                show-csv-button="true">
-                            <field name="groupDescription"><default-field title="Group"><display/></default-field></field>
-                            <field name="userGroupId"><default-field title="Group ID"><display style="text-mono"/></default-field></field>
-                            <field name="entryText"><default-field title="Entry"><display/></default-field></field>
-                            <field name="name"><default-field title="Permission, app gate or member"><display/></default-field></field>
-                            <field name="detail"><default-field title="Description"><display/></default-field></field>
-                            <field name="kindLabel"><default-field title="Kind"><display/></default-field></field>
-                            <field name="fromText"><default-field title="From"><display/></default-field></field>
-                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
-                            <field name="scope"><default-field title="Scope"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="name"/><field-ref name="groupDescription"/></column>
-                                <column><field-ref name="entryText"/><field-ref name="kindLabel"/></column>
-                            </columns>
-                        </form-list>
-                        <label type="p" style="q-pa-md m-muted" condition="!reviewRows.length" text="These groups grant nothing and have no members you administer."/>
-                    </box-body-nopad>
-                </container-box>
-            </widgets>
-        </section>
+        <section-include name="ReviewPrepare" location="component://tools/screen/System/Access/AccessReview.xml"/>
+        <section-include name="ReviewPage" location="component://tools/screen/System/Access/AccessReview.xml"/>
     </widgets>
 </screen>

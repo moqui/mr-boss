@@ -361,11 +361,7 @@ feature("no Admin group's user opens the System mount, by URL or the menu", {
     when() {
         const problems = []
         for (const user of groupUsers) {
-            for (const path of [
-                "System",
-                "System/Security/UserGroup/UserGroupDetail",
-                "System/Security/UserAccount/UserAccountDetail"
-            ]) {
+            for (const path of ["System", "System/Access/GroupDetail", "System/Security/UserAccount/UserAccountDetail"]) {
                 const rendered = page(user, path, {userGroupId: "ADMIN", userId: ids.otherUserId}, "html")
                 if (rendered.status == 200 && rendered.errors.length == 0) problems.push(`${user}: ${path} opened`)
             }

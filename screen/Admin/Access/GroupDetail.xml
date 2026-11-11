@@ -12,16 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- GroupDetail (design-admin §5 GroupDetail; style-guide §3.3 Detail): one group, read with the framework's
-    org.moqui.admin.AccessServices.get#Group (ADMIN_ACCESS_VIEW) after the Admin record check. GroupProfile (store#Group: the
-    description, a custom group's purpose, factor required and allowed IPs, at the group's revision, with a reason);
-    GroupMembers (store#Membership and end#Membership: dated memberships, ended and kept, of the users of the organizations the
-    user administers, each checked as an Admin member record first; members outside them are counted, never named);
-    GroupCapabilities (the permission grants and artifact bindings, with the effective-change preview of preview#Grants before
-    apply#Grants at the previewed revision; grants come only from registered bundles); GroupPreferences (store#GroupPreference,
-    registered keys, typed). Every change the framework refuses (an unregistered bundle, a sealed permission the user does not
-    hold, a privileged group the user is not in, a stale revision, the last administration path) is shown as its reason, never
-    written. For the access administrator and the administrator (BOSS_ADM_ACCESS). -->
+<!-- GroupDetail (design-admin §5 GroupDetail; style-guide §3.3 Detail; mr-moqui plans/Admin-Screens-Down.md): one group, as
+    Admin's own screen for what Admin adds to the framework's System › Access group screen: the organization scope of its
+    members. The group is checked as an Admin record first (check#Record) and read with
+    org.moqui.admin.AccessServices.get#Group; GroupMembers names only the users of the organizations the user administers
+    (get#MemberScope: the others are counted, never named), a member is chosen among them (get#Choices) and each is
+    checked as an Admin member record before the framework's store#Membership and end#Membership. The rest is the System
+    screen's (GroupPrepare, GroupMissing, GroupHeader, GroupProfileBox, GroupCapabilitiesBox and GroupPreferencesBox, with
+    AddMember and GroupMembers extended here), and grantItems, storeGroup, applyGrants and storePreference are taken in
+    from it. The System screen's part for the instance administrator (the group's records changed directly) is not here:
+    its transitions do not exist on this route. Every change the framework refuses (an unregistered bundle, a sealed
+    permission the user does not hold, a privileged group the user is not in, a stale revision, the last administration
+    path) is shown as its reason, never written. For the access administrator and the administrator (BOSS_ADM_ACCESS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Group" default-menu-include="false">
     <parameter name="userGroupId" required="true"/>
@@ -38,33 +40,8 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
-    <!-- the permissions and bindings of a registered bundle, for the grant dialog -->
-    <transition name="grantItems" read-only="true">
-        <actions>
-            <service-call name="org.moqui.admin.AccessServices.get#Group" out-map="found"
-                    in-map="{userGroupId:userGroupId, includeOptions:true}"/>
-            <set field="bundle" from="(found.bundleOptions || []).find(row => row.bundleGroupId == grantBundleGroupId)"/>
-            <script>ec.web.sendJsonResponse(bundle ? [{value: '', label: 'The whole bundle'}]
-                .concat(bundle.permissions.map(row => ({value: 'p:' + row.userPermissionId,
-                    label: row.userPermissionId + (row.description ? ' · ' + row.description : '') + (row.sealed ? ' (sealed)' : '')})))
-                .concat(bundle.artifacts.map(row => ({value: 'a:' + row.artifactGroupId, label: row.description || row.artifactGroupId})))
-                .filter(row => !term || row.label.toLowerCase().includes(String(term).toLowerCase())) : [])</script>
-        </actions>
-        <default-response type="none"/>
-    </transition>
-    <transition name="storeGroup">
-        <actions>
-            <service-call name="org.moqui.admin.AccessServices.store#Group" out-map="stored"
-                    in-map="{userGroupId:userGroupId, expectedRevision:expectedRevision, description:description,
-                        groupTypeEnumId:(groupTypeEnumId || null), requireAuthcFactor:(requireAuthcFactor || 'N'),
-                        ipAllowed:(ipAllowed || ''), reason:(reason || null)}"/>
-            <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Group saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
-            </if>
-        </actions>
-        <default-response url="."><parameter name="userGroupId"/></default-response>
-        <error-response url="."/>
-    </transition>
+    <transition-include name="grantItems" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+    <transition-include name="storeGroup" location="component://tools/screen/System/Access/GroupDetail.xml"/>
     <transition name="addMember">
         <actions>
             <service-call name="ironstone.admin.ContextServices.check#Record"
@@ -97,33 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="userGroupId"/></default-response>
         <error-response url="."/>
     </transition>
-    <transition name="applyGrants">
-        <actions>
-            <service-call name="org.moqui.admin.AccessServices.apply#Grants" out-map="applied"
-                    in-map="{userGroupId:userGroupId, expectedRevision:expectedRevision, reason:(reason || null),
-                        grantList:[{action:grantAction, bundleGroupId:grantBundleGroupId,
-                            userPermissionId:(grantItem?.startsWith('p:') ? grantItem.slice(2) : null),
-                            artifactGroupId:(grantItem?.startsWith('a:') ? grantItem.slice(2) : null)}]}"/>
-            <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(applied.applied ? 'Grants applied: ' + applied.added + ' added, ' + applied.ended + ' ended'
-                    : applied.reason, applied.applied ? 'success' : 'warning')</script>
-            </if>
-        </actions>
-        <default-response url="."><parameter name="userGroupId"/></default-response>
-        <error-response url="."/>
-    </transition>
-    <transition name="storePreference">
-        <actions>
-            <service-call name="org.moqui.admin.AccessServices.store#GroupPreference" out-map="stored"
-                    in-map="{userGroupId:userGroupId, preferenceKey:preferenceKey, preferenceValue:(preferenceValue || ''),
-                        groupPriority:(groupPriority || null), expectedRevision:(expectedRevision || null), reason:(reason || null)}"/>
-            <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Default saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
-            </if>
-        </actions>
-        <default-response url="."><parameter name="userGroupId"/></default-response>
-        <error-response url="."/>
-    </transition>
+    <transition-include name="applyGrants" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+    <transition-include name="storePreference" location="component://tools/screen/System/Access/GroupDetail.xml"/>
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
@@ -135,133 +87,28 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="found" from="called.out"/>
             <set field="failure" from="called.failure"/>
         </if>
-        <set field="group" from="found?.group || null"/>
-        <set field="canManage" from="!!found?.canManage"/>
-        <set field="manageReason" from="found?.manageReason || null"/>
-        <set field="allMembers" from="found?.members || []"/>
-        <if condition="group &amp;&amp; allMembers.length">
+        <!-- the members named here: those of the organizations the user administers; GroupPrepare counts the others -->
+        <if condition="found?.group &amp;&amp; (found.members || []).length">
             <service-call name="ironstone.admin.ContextServices.get#MemberScope" out-map="memberScope"
-                    in-map="{appRoot:appRoot, userIds:allMembers.map(row => row.userId)}"/>
+                    in-map="{appRoot:appRoot, userIds:found.members.map(row => row.userId)}"/>
         </if>
-        <set field="inScope" from="memberScope?.inScopeUserIds || []"/>
-        <set field="outsideCount" from="allMembers.filter(row => !inScope.includes(row.userId)).filter(row => row.active).length"/>
-        <set field="members" from="allMembers.filter(row => inScope.includes(row.userId)).map(row => Object.assign({}, row, {
-                fromText: row.fromDate ? ec.l10n.format(Number(row.fromDate), 'yyyy-MM-dd HH:mm') : '',
-                thruText: row.thruDate ? ec.l10n.format(Number(row.thruDate), 'yyyy-MM-dd HH:mm') : '',
-                stateText: row.active ? (row.thruDate ? 'Member until ' + ec.l10n.format(Number(row.thruDate), 'yyyy-MM-dd') : 'Member')
-                    : row.ended ? 'Ended' : 'Starts ' + ec.l10n.format(Number(row.fromDate), 'yyyy-MM-dd')}))"/>
-        <set field="grants" from="(found?.grants || []).filter(row => !row.ended).map(row => Object.assign({}, row, {
-                kindText: row.capabilityKindEnumId ? row.capabilityKindEnumId.replace('Cpk', '') : '',
-                thruText: row.thruDate ? ec.l10n.format(Number(row.thruDate), 'yyyy-MM-dd') : ''}))"/>
-        <set field="endedGrantCount" from="(found?.grants || []).filter(row => row.ended).length"/>
-        <set field="artifacts" from="found?.artifacts || []"/>
-        <set field="preferences" from="found?.preferences || []"/>
-        <set field="preferenceKeys" from="found?.preferenceKeys || []"/>
-        <set field="purposeOptions" from="found?.purposeOptions || []"/>
-        <set field="bundleOptions" from="(found?.bundleOptions || []).filter(row => row.delegable).map(row => ({value: row.bundleGroupId,
-                label: (row.appName ? row.appName + ': ' : '') + (row.description || row.bundleGroupId) + (row.privileged ? ' (privileged)' : '')}))"/>
-        <set field="profile" from="group ? {userGroupId:userGroupId, expectedRevision:group.revision, description:group.description,
-                groupTypeEnumId:group.groupTypeEnumId, requireAuthcFactor:(group.requireAuthcFactor ? 'Y' : 'N'), ipAllowed:group.ipAllowed} : {}"/>
-        <set field="markerTexts" from="group ? [group.registered ? 'Registered bundle' + (group.appName ? ' · ' + group.appName : '') : '',
-                group.custom ? 'Custom' + (group.purposeName ? ' · ' + group.purposeName : '') : '', group.privileged ? 'Privileged' : '',
-                group.hasSealed ? 'Sealed grants: ' + group.sealedPermissionIds.join(', ') : '',
-                group.requireAuthcFactor ? 'Factor required' : '', group.ipLimited ? 'IP limited' : ''].filter(Boolean) : []"/>
-        <!-- the effective change of the grant asked for, before it is applied -->
-        <if condition="group &amp;&amp; grantAction">
-            <set field="grantList" from="[{action:grantAction, bundleGroupId:(grantBundleGroupId || null),
-                    userPermissionId:(grantItem?.startsWith('p:') ? grantItem.slice(2) : null),
-                    artifactGroupId:(grantItem?.startsWith('a:') ? grantItem.slice(2) : null)}]"/>
-            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.preview#Grants', {userGroupId:userGroupId, grantList:grantList}, 'The change could not be reviewed.')"/>
-            <set field="preview" from="called.out"/>
-            <set field="previewFailure" from="called.failure"/>
-        </if>
-        <set field="previewRows" from="(preview?.changeList || []).map(row => Object.assign({}, row, {
-                actionText: row.action === 'end' ? 'End' : 'Add', kindText: row.kind === 'artifact' ? 'App gate' : 'Permission',
-                resultText: !row.allowed ? row.reason : row.noChange ? 'No change' : row.before + ' → ' + row.after}))"/>
-        <set field="applyValues" from="preview ? {userGroupId:userGroupId, grantAction:grantAction, grantBundleGroupId:grantBundleGroupId,
-                grantItem:grantItem, expectedRevision:preview.revision} : {}"/>
+        <set field="memberScopeIds" from="memberScope?.inScopeUserIds || []"/>
     </actions>
     <widgets>
-        <section name="GroupMissing" condition="!group">
+        <section-include name="GroupPrepare" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+        <section-include name="GroupMissing" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+        <section-include name="GroupHeader" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+        <section-include name="GroupProfileBox" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+        <section name="GroupMembersBox" condition="group">
             <widgets>
-                <container-box type="warning">
-                    <box-header title="Group not available"/>
-                    <box-body>
-                        <label type="p" text="${failure || ('Group ' + userGroupId + ' is not available.')}"/>
-                        <link url="../Groups" text="Back to groups" link-type="anchor"/>
-                    </box-body>
-                </container-box>
-            </widgets>
-        </section>
-        <section name="GroupFound" condition="group">
-            <widgets>
-                <context record-entity="moqui.security.UserGroup" record-id="${userGroupId}" title="Group ${group.description || userGroupId}"/>
-                <container style="m-record-header">
-                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
-                        <container style="col-12 col-md m-record-title">
-                            <label text="${group.description || userGroupId}" type="h5"/>
-                            <label text="${userGroupId} · ${group.memberCount} current member(s)" type="p" style="text-caption m-muted text-mono"/>
-                            <render-mode>
-                                <text type="qvt"><![CDATA[${markerTexts.map(text => '<q-chip dense square class="q-ma-none q-mr-xs m-tonal ' +
-                                    (text === 'Privileged' ? 'text-negative' : text.startsWith('Sealed') ? 'text-warning' : 'text-primary') + '">' +
-                                    WebUtilities.encodeHtml(text) + '</q-chip>').join('')}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "GroupMarkers", text: markerTexts.join(' · ')})}]]></text>
-                                <text type="html">${markerTexts.join(' · ')}</text>
-                            </render-mode>
-                        </container>
-                        <container style="col-12 col-md-auto m-record-actions">
-                            <link url="../AccessReview" text="Access review" icon="sym_o_fact_check" parameter-map="{groups:userGroupId}"/>
-                            <link url="../Capabilities" text="Compare" icon="sym_o_rule" link-type="anchor" parameter-map="{groups:userGroupId}"/>
-                        </container>
-                    </container>
-                    <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="!canManage &amp;&amp; manageReason" text="${manageReason}"/>
-                </container>
-
-                <container-box>
-                    <box-header title="Profile"/>
-                    <box-body>
-                        <section name="ProfileEdit" condition="canManage">
-                            <widgets>
-                                <form-single name="GroupProfile" transition="storeGroup" map="profile">
-                                    <field name="userGroupId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="description"><default-field title="Description"><text-line size="50"/></default-field></field>
-                                    <field name="groupTypeEnumId">
-                                        <conditional-field condition="group.custom" title="Purpose">
-                                            <drop-down><list-options list="purposeOptions" key="${value}" text="${label}"/></drop-down>
-                                        </conditional-field>
-                                        <default-field><hidden/></default-field>
-                                    </field>
-                                    <field name="requireAuthcFactor">
-                                        <default-field title="Factor required" tooltip="Members must complete a second factor to sign in">
-                                            <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="ipAllowed">
-                                        <default-field title="Allowed IPs" tooltip="Comma separated: IPv4 with *, or ranges like 10.0.0.0-31; IPv6 exact. Empty allows any.">
-                                            <text-line size="40"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                </form-single>
-                            </widgets>
-                            <fail-widgets>
-                                <label type="p" text="${group.description || userGroupId}"/>
-                                <label type="p" style="text-caption m-muted" text="${[group.purposeName, group.requireAuthcFactor ? 'Factor required' : 'No factor required', group.ipAllowed ? 'Allowed IPs ' + group.ipAllowed : 'Any IP'].filter(Boolean).join(' · ')}"/>
-                            </fail-widgets>
-                        </section>
-                    </box-body>
-                </container-box>
-
                 <container-box>
                     <box-header title="Members"/>
                     <box-toolbar>
                         <container-dialog id="AddMemberDialog" button-text="Add member" icon="sym_o_person_add" width="560"
                                 title="Add a member to ${group.description || userGroupId}" condition="canManage">
                             <label type="p" text="The member gets this group's permissions and app gates from the date given. Ending a membership keeps it on record."/>
-                            <form-single name="AddMember" transition="addMember" map="{userGroupId:userGroupId}">
-                                <field name="userGroupId"><default-field><hidden/></default-field></field>
+                            <form-single name="AddMember" extends="component://tools/screen/System/Access/GroupDetail.xml#AddMember" transition="addMember"
+                                    map="{userGroupId:userGroupId}">
                                 <field name="memberUserId">
                                     <default-field title="User">
                                         <drop-down>
@@ -270,20 +117,13 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
-                                <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
-                                <field name="thruDate"><default-field title="Until" tooltip="Empty keeps it open"><date-time/></default-field></field>
-                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
-                                <field name="submitButton"><default-field title="Add member"><submit/></default-field></field>
                             </form-single>
                         </container-dialog>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="GroupMembers" list="members" skip-form="true" paginate="true">
-                            <field name="userFullName"><default-field title="User"><display text="${userFullName}"/></default-field></field>
-                            <field name="username"><default-field title="Username"><display/></default-field></field>
-                            <field name="fromText"><default-field title="From"><display/></default-field></field>
-                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                        <!-- the row's End dialog is repeated here: a form inside an extended form's field is the other screen's -->
+                        <form-list name="GroupMembers" extends="component://tools/screen/System/Access/GroupDetail.xml#GroupMembers" list="members" skip-form="true"
+                                paginate="true">
                             <field name="actions">
                                 <default-field title="">
                                     <container-dialog id="EndMember_${userId}_${fromDate}" button-text="End" icon="sym_o_person_remove" width="520"
@@ -302,154 +142,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     </container-dialog>
                                 </default-field>
                             </field>
-                            <columns type="mobile">
-                                <column><field-ref name="userFullName"/><field-ref name="stateText"/></column>
-                                <column><field-ref name="actions"/></column>
-                            </columns>
                         </form-list>
                         <label type="p" style="q-pa-md m-muted" condition="!members.length" text="No members in the organizations you administer."/>
                         <label type="p" style="q-px-md q-pb-md m-muted" condition="outsideCount" text="${outsideCount} more current member(s) work for organizations you do not administer."/>
                     </box-body-nopad>
                 </container-box>
-
-                <container-box>
-                    <box-header title="Capabilities"/>
-                    <box-toolbar>
-                        <container-dialog id="GrantDialog" button-text="Grant" icon="sym_o_add_moderator" width="600"
-                                title="Grant to ${group.description || userGroupId}" condition="canManage">
-                            <label type="p" text="Choose a registered bundle, and one of its permissions or app gates or the whole bundle. You see the effect before it is applied."/>
-                            <form-single name="GrantPick" transition="." map="{userGroupId:userGroupId, grantAction:'add'}">
-                                <field name="userGroupId"><default-field><hidden/></default-field></field>
-                                <field name="grantAction"><default-field><hidden/></default-field></field>
-                                <field name="grantBundleGroupId">
-                                    <default-field title="Bundle">
-                                        <drop-down><list-options list="bundleOptions" key="${value}" text="${label}"/></drop-down>
-                                    </default-field>
-                                </field>
-                                <field name="grantItem">
-                                    <default-field title="What">
-                                        <drop-down allow-empty="true">
-                                            <dynamic-options transition="grantItems" server-search="true" min-length="0"
-                                                    parameter-map="{userGroupId:userGroupId}">
-                                                <depends-on field="grantBundleGroupId"/></dynamic-options>
-                                        </drop-down>
-                                    </default-field>
-                                </field>
-                                <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
-                            </form-single>
-                        </container-dialog>
-                    </box-toolbar>
-                    <box-body-nopad>
-                        <section name="GrantPreview" condition="grantAction">
-                            <widgets>
-                                <container style="q-pa-md">
-                                    <label text="Effect of this change" type="h6"/>
-                                    <label type="p" style="text-negative" condition="previewFailure" text="${previewFailure}"/>
-                                    <label type="p" condition="preview" text="${preview?.summary || ''}"/>
-                                    <label type="p" style="text-warning" condition="preview &amp;&amp; !preview.allowed" text="${preview?.reason || ''}"/>
-                                    <form-list name="GrantChanges" list="previewRows" skip-form="true" paginate="false">
-                                        <field name="actionText"><default-field title="Change"><display/></default-field></field>
-                                        <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                                        <field name="id"><default-field title="Grant"><display text="${id}${label &amp;&amp; label != id ? ' · ' + label : ''}"/></default-field></field>
-                                        <field name="resultText"><default-field title="Result"><display/></default-field></field>
-                                    </form-list>
-                                    <section name="ApplyAllowed" condition="preview &amp;&amp; preview.allowed &amp;&amp; canManage">
-                                        <widgets>
-                                            <form-single name="ApplyGrants" transition="applyGrants" map="applyValues">
-                                                <field name="userGroupId"><default-field><hidden/></default-field></field>
-                                                <field name="grantAction"><default-field><hidden/></default-field></field>
-                                                <field name="grantBundleGroupId"><default-field><hidden/></default-field></field>
-                                                <field name="grantItem"><default-field><hidden/></default-field></field>
-                                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
-                                                <field name="submitButton"><default-field title="Apply"><submit/></default-field></field>
-                                            </form-single>
-                                        </widgets>
-                                    </section>
-                                    <link url="." text="Cancel" link-type="anchor" parameter-map="{userGroupId:userGroupId}"/>
-                                </container>
-                            </widgets>
-                        </section>
-                        <form-list name="GroupCapabilities" list="grants" skip-form="true" paginate="false">
-                            <field name="userPermissionId"><default-field title="Permission"><display text="${userPermissionId}" style="text-mono"/></default-field></field>
-                            <field name="description"><default-field title="Description"><display/></default-field></field>
-                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="sealedText"><default-field title="Sealed"><display text="${sealed ? 'Sealed' : ''}"/></default-field></field>
-                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <link url="." text="End" link-type="anchor-button" icon="sym_o_remove_moderator" condition="canManage"
-                                            parameter-map="{userGroupId:userGroupId, grantAction:'end', grantItem:'p:' + userPermissionId}"/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="userPermissionId"/><field-ref name="kindText"/></column>
-                                <column><field-ref name="sealedText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
-                        <label type="p" style="q-pa-md m-muted" condition="!grants.length" text="No permissions granted."/>
-                        <label type="p" style="q-px-md m-muted" condition="endedGrantCount" text="${endedGrantCount} ended grant(s) kept on record."/>
-                        <form-list name="GroupAppGates" list="artifacts" skip-form="true" paginate="false">
-                            <field name="artifactGroupId"><default-field title="App gate"><display text="${description || artifactGroupId}"/></default-field></field>
-                            <field name="authzTypeEnumId"><default-field title="Type"><display text="${authzTypeEnumId.replace('AUTHZT_', '')}"/></default-field></field>
-                            <field name="filtersText"><default-field title="Scope"><display text="${filterSetIds.join(', ')}"/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <link url="." text="End" link-type="anchor-button" icon="sym_o_block" condition="canManage &amp;&amp; registered"
-                                            parameter-map="{userGroupId:userGroupId, grantAction:'end', grantItem:'a:' + artifactGroupId}"/>
-                                </default-field>
-                            </field>
-                        </form-list>
-                    </box-body-nopad>
-                </container-box>
-
-                <container-box>
-                    <box-header title="Preferences"/>
-                    <box-toolbar>
-                        <container-dialog id="AddPreferenceDialog" button-text="Add default" icon="sym_o_tune" width="520"
-                                title="A default for the members of ${group.description || userGroupId}" condition="canManage &amp;&amp; preferenceKeys.length">
-                            <form-single name="AddPreference" transition="storePreference" map="{userGroupId:userGroupId}">
-                                <field name="userGroupId"><default-field><hidden/></default-field></field>
-                                <field name="preferenceKey">
-                                    <default-field title="Preference">
-                                        <drop-down><list-options list="preferenceKeys" key="${value}" text="${label}"/></drop-down>
-                                    </default-field>
-                                </field>
-                                <field name="preferenceValue"><default-field title="Value"><text-line size="40"/></default-field></field>
-                                <field name="groupPriority"><default-field title="Priority" tooltip="Higher wins when a member's groups disagree"><text-line size="6"/></default-field></field>
-                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
-                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                            </form-single>
-                        </container-dialog>
-                    </box-toolbar>
-                    <box-body-nopad>
-                        <form-list name="GroupPreferences" list="preferences" skip-form="true" paginate="false">
-                            <field name="preferenceKey"><default-field title="Preference"><display text="${description || preferenceKey}"/></default-field></field>
-                            <field name="preferenceValue"><default-field title="Value"><display/></default-field></field>
-                            <field name="valueType"><default-field title="Type"><display/></default-field></field>
-                            <field name="groupPriority"><default-field title="Priority"><display/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <container-dialog id="ChangePreference_${preferenceKey}" button-text="Change" icon="sym_o_edit" width="520"
-                                            title="Change ${description || preferenceKey}" condition="canManage &amp;&amp; registered">
-                                        <form-single name="ChangePreference" transition="storePreference"
-                                                map="{userGroupId:userGroupId, preferenceKey:preferenceKey, preferenceValue:preferenceValue, groupPriority:groupPriority, expectedRevision:revision}">
-                                            <field name="userGroupId"><default-field><hidden/></default-field></field>
-                                            <field name="preferenceKey"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="preferenceValue"><default-field title="Value" tooltip="Empty removes the default"><text-line size="40"/></default-field></field>
-                                            <field name="groupPriority"><default-field title="Priority"><text-line size="6"/></default-field></field>
-                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                        </form-list>
-                        <label type="p" style="q-pa-md m-muted" condition="!preferences.length" text="No defaults for this group's members."/>
-                    </box-body-nopad>
-                </container-box>
             </widgets>
         </section>
+        <section-include name="GroupCapabilitiesBox" location="component://tools/screen/System/Access/GroupDetail.xml"/>
+        <section-include name="GroupPreferencesBox" location="component://tools/screen/System/Access/GroupDetail.xml"/>
     </widgets>
 </screen>
