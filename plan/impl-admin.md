@@ -272,7 +272,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | built and reviewed Nov 10, merged |
 | P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | built and reviewed Nov 10, merged |
 | P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | built and reviewed Nov 10, merged |
-| P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | — |
+| P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | built and reviewed Nov 10, merged |
 | P13 System messages and recovery | mr-moqui, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | — |
 | P14 Jobs and topics | mr-moqui, BOSS | Jobs, JobDetail, JobRuns, JobRunDetail, Topics, TopicDetail | — |
 | P15 Imports | mr-moqui, Mantle, BOSS | Imports, DataImport, ImportDetail; Products' import mount | — |
@@ -2771,9 +2771,9 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
 
 **Built Nov 10 (P12).**
 - Checked first (the code over the plan): no script could read what a listener did at startup or a literal conf attribute
-  (F-P12-1); `EmailMessage` kept no send outcome, so "known failure" and "uncertain" could not be told apart from the
-  record (F-P12-2); most mail is sent by services with no ledger while Mantle's delivery ledger keeps and retries its own
-  attempts (F-P12-3); P0's "Comms' settings and readiness" was answered by F44 in P2 and still holds (F-P12-10).
+  (F161); `EmailMessage` kept no send outcome, so "known failure" and "uncertain" could not be told apart from the
+  record (F162); most mail is sent by services with no ledger while Mantle's delivery ledger keeps and retries its own
+  attempts (F163); P0's "Comms' settings and readiness" was answered by F44 in P2 and still holds (F170).
 - mr-moqui (Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it):
   - Rust. `moqui-core` `service/protocol_admin.rs` (new, std only): `get#ProtocolFacts` (the build's package and features,
     the startup report's entries for a fixed list of listeners and integrations with their state on, off, failed, skipped
@@ -2807,7 +2807,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     its services, and thirty-three read-only settings of five Protocols groups).
   - Docs: Attack-Surface (the protocols and mail queue paragraph), Parity-Diffs (P8c-24), Remaining-Work's `org.moqui.admin`
     row.
-- mr-mantle (not in the plan's repositories: a worktree on `adm/p12` was added for F-P12-3):
+- mr-mantle (not in the plan's repositories: a worktree on `adm/p12` was added for F163):
   - `service/mantle/party/MessageServices.xml`, `MessageDeliveries.js`: `find#MailOutcomeOwners` and
     `recover#OwnedMailOutcome`, the ledger as a registered owner (it claims the stored message of each attempt, offers no
     retry since it tries a waiting delivery itself, and reconciles the last attempt of an uncertain delivery through
@@ -2842,13 +2842,13 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   `AdminAccess` changed: the operator's `protocols` capability. `AdminRegistries` changed: the Instance group's new entry.
   Cargo: `moqui-core` `service::protocol_admin::tests` (2), `moqui-mail`
   `a_failed_delivery_keeps_its_outcome_on_the_message`; `rust_services_tests`' list of registered services gains P12's two
-  and the two P10 left out (F-P12-12). Acceptance, written and not run: `acceptance/Admin/AdminProtocolsUsable` (2 features,
+  and the two P10 left out (F172). Acceptance, written and not run: `acceptance/Admin/AdminProtocolsUsable` (2 features,
   the "usable when"; mail captured, no network).
 - Tests run (the worktree's Debug binary and runtime): framework AdminProtocols, AdminMailOutcomes, AdminConfiguration,
   AdminConnectionServices, AdminIdentityProviders 16 of 16; basic-comms BasicCommsComposeRef, BasicCommsSync 21 of 21 (the
   mail client's send result); mr-mantle DeliveryLedger, GatewayConnections 6 of 6; mr-boss AdminMailQueue, AdminAccess,
   AdminRegistries, AdminSecurity, AdminSettings, AdminRelays 22 of 22; ProjectsAccess 8 of 9, its deny-pattern feature
-  failing on master too for `ironstone.insights` services (F-P12-13); `cargo test -p moqui-mail` 151 passed, `-p moqui-core`
+  failing on master too for `ironstone.insights` services (F173); `cargo test -p moqui-mail` 151 passed, `-p moqui-core`
   `service::protocol_admin` and `rust_services`; clippy clean on `moqui-core` and `moqui-mail`; rustfmt clean on the new file;
   `moqui lint --screens` 132 flagged sites, as master. By hand, not kept: the three screens and Health's Transport group in
   qvt, tui and html as the administrator. Prettier clean on the new and changed JavaScript. Not run: `./moq test-framework`,
@@ -2861,44 +2861,44 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   mail owner registry and the operation results), §14.2 (Admin's row), §17.2 (OperationServices); design-crosscut CX-DELIVERY
   (the ledger as a registered owner: the owner's design, as the registration calls for).
 - Findings (provisional, numbered by the lead):
-  - **F-P12-1** What each listener did at startup lived only in the server's log (`moqui_core::startup`), and the conf's
+  - **F161** What each listener did at startup lived only in the server's log (`moqui_core::startup`), and the conf's
     literal attributes are no property. Built: `get#ProtocolFacts`, a fixed list, as P10's `get#SignInPolicyValues`.
-  - **F-P12-2** `deliveryOutcome` was an answer of the send and nowhere on the message; a template's failed message stayed
+  - **F162** `deliveryOutcome` was an answer of the send and nowhere on the message; a template's failed message stayed
     Ready with no error at all. Built: `EmailMessage.sendOutcome` and the error (P8c-24). A Ready message with no outcome (an
     older failure, a send that stopped) is read as uncertain.
-  - **F-P12-3** A retry here beside Mantle's ledger would send a notice twice (the ledger tries a waiting delivery again
+  - **F163** A retry here beside Mantle's ledger would send a notice twice (the ledger tries a waiting delivery again
     itself), and the ledger's failed attempts did not name their stored message. Built: the owner registry, the ledger as
     its first owner, and the attempt's `emailMessageId`. Other senders with attempts of their own (the report engine's
     deliveries, which keep no stored message; a later Marketing send) register the same way.
-  - **F-P12-4** "RTC absent" (the plan's usable-when): the demo's package builds call media, so it reads off, not absent;
+  - **F164** "RTC absent" (the plan's usable-when): the demo's package builds call media, so it reads off, not absent;
     absent on every package are local speech to text and office documents (WOPI), and call media on a Lite build. The
     acceptance checks call media by the build.
-  - **F-P12-5** "DAV ready" holds on a running server: a command-line run (every spec) opens no listeners, so a protocol
+  - **F165** "DAV ready" holds on a running server: a command-line run (every spec) opens no listeners, so a protocol
     that is turned on reads "Configured" there. The acceptance takes either by `serverStarted`.
-  - **F-P12-6** MailQueueFind's direction and owner-reference filters are not built: only outgoing mail has a stored
+  - **F166** MailQueueFind's direction and owner-reference filters are not built: only outgoing mail has a stored
     outcome, and an owner's reference is its own record's. Nor is a view of subjects or addresses "independently
     authorized": the service returns none.
-  - **F-P12-7** `EmailMessage` carries no organization, so the queue is not scoped by organization: an operations operator
+  - **F167** `EmailMessage` carries no organization, so the queue is not scoped by organization: an operations operator
     sees the transport outcomes (ids, counts, servers, struck-out errors) of every organization's mail on the instance.
-  - **F-P12-8** Design §2 gives MailQueue to "O, I scoped". Built: the operator reads all of it; the integration
+  - **F168** Design §2 gives MailQueue to "O, I scoped". Built: the operator reads all of it; the integration
     administrator, with `ADMIN_CONNECTION_VIEW` alone, the instance's own mail (what goes through the relays she keeps),
     never a mail account's, and no action.
-  - **F-P12-9** The area was the integration administrator's whole (P11). The operator opens three of its screens by a
+  - **F169** The area was the integration administrator's whole (P11). The operator opens three of its screens by a
     second group granted narrowly (the pitfall of an inherited grant), which the spec holds: MailRelays is refused him.
-  - **F-P12-10** P0's Comms check: as F44. Comms' Settings are personal; ProtocolsHome links its MailAccounts and
+  - **F170** P0's Comms check: as F44. Comms' Settings are personal; ProtocolsHome links its MailAccounts and
     TextBlocks; there is no shared templates screen and no mail-account readiness projection, so a shared mailbox's sync
     state is not in ProtocolsHome (Comms' later work, §7).
-  - **F-P12-11** The checks are a TCP connection and the configuration: no certificate expiry, DNS record, SSH host key
+  - **F171** The checks are a TCP connection and the configuration: no certificate expiry, DNS record, SSH host key
     fingerprint, UDP (call media, TURN, SIP) or WebRTC test (§7 with the Monitor checks; Remaining-Work).
-  - **F-P12-12** `moqui-core`'s `registry_keys_are_the_function_paths` failed on master: P10's `get_sign_in_policy_values`
+  - **F172** `moqui-core`'s `registry_keys_are_the_function_paths` failed on master: P10's `get_sign_in_policy_values`
     and `sso::check_flow` were not in its list. Added with P12's.
-  - **F-P12-13** ProjectsAccess's "every IronStone write service is in the client's deny pattern" fails on master for
+  - **F173** ProjectsAccess's "every IronStone write service is in the client's deny pattern" fails on master for
     `ironstone.insights.AlertServices` and `DeliveryServices` (the Insights track's; not touched here).
-  - **F-P12-14** The thirty-three protocol settings are instance settings like the others, so InstanceSettings'
+  - **F174** The thirty-three protocol settings are instance settings like the others, so InstanceSettings'
     "Where each value comes from" lists them too for the configuration administrator.
-  - **F-P12-15** A mail account's failed message can only be sent again or taken back by its sender; for an account whose
+  - **F175** A mail account's failed message can only be sent again or taken back by its sender; for an account whose
     owner has left, that is the lifecycle's owner change of a shared account (P6), and nothing for a personal one.
-  - **F-P12-16** `retry#MailOutcome` holds the request for the SMTP session (up to the mail service's two minutes); a bulk
+  - **F176** `retry#MailOutcome` holds the request for the SMTP session (up to the mail service's two minutes); a bulk
     retry is not built.
 - Decisions: a protocol is a row of one table in the framework, and its state is read from the startup report and the
   build, a probe only on request; a trust mismatch is its own state, never ready; a check's target is the conf's own; the
@@ -2925,14 +2925,14 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     `Protocols.xml`, `Admin.xml` (its comment), `AdminAccess.spec.js`, `AdminRegistries.spec.js` (one expectation),
     `design-admin.md`, `design-crosscut.md` (CX-DELIVERY, five lines: the ledger's owner design, as the registration calls
     for); P13 appends to `OperationServices.xml`, `OperationLib.js`'s users and the `AdminOperationServices` grant's pattern;
-  - the user's call: F-P12-8 (whether the integration administrator reads the queue at all, and whether an operator should
+  - the user's call: F168 (whether the integration administrator reads the queue at all, and whether an operator should
     see a mail account's outcomes, which today show an id, a count and a struck-out error); whether a refused (permanent)
     and a bounced message may be sent again here (built: yes) or only a retryable one; Settle's "sent" marking the message
-    Sent by a person's word (built, audited) or keeping a separate reconciled state; F-P12-7 (no organization scope on the
-    queue); F-P12-14 (the protocol settings also listed in InstanceSettings);
+    Sent by a person's word (built, audited) or keeping a separate reconciled state; F167 (no organization scope on the
+    queue); F174 (the protocol settings also listed in InstanceSettings);
   - to confirm a failure was not this phase's, ProjectsAccess was run once from the main checkout with its own runtime
-    (`--nobuild`, the shared binary): F-P12-13; nothing was built or changed there;
-  - the acceptance AdminProtocolsUsable to run when asked, and ProtocolsHome to look at once on a running server (F-P12-5).
+    (`--nobuild`, the shared binary): F173; nothing was built or changed there;
+  - the acceptance AdminProtocolsUsable to run when asked, and ProtocolsHome to look at once on a running server (F165).
 
 **Review Nov 10 (P12).**
 - Checked (the code paths, not the Built note): `moqui-mail`'s two send paths (only a failed delivery writes `sendOutcome` and
@@ -3231,7 +3231,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
