@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the IronStone Admin connection screens (design-admin §8 ConnectionDetail, §9 MailRelayDetail; impl-admin P11):
+    one connection of a registered kind, read from org.moqui.admin.ConfigurationServices.get#Connection and changed through
+    store#Connection and test#Connection, the same for a gateway, a remote, a printer and a mail relay. A screen includes each
+    transition by name (transition-include), so a form here posts to the screen it is on, and sets, before its widgets:
+    adapterKey, connectionKey, found (get#Connection's answer), connection, recordFound, canManage, listPath (its list screen)
+    and what its actions derive (see ConnectionDetail.xml).
+    - storeConnection: NativeConnection's save: the rows fieldName_N and fieldValue_N as the kind's values (the kind takes only
+      the names it declares, validates each, and keeps a secret left empty), at the revision read.
+    - testConnection: the explicit test; its checks come back as messages and stay on the record.
+    - setEnabled: enable (needs a passing test of the configuration as it is) or disable.
+    Each reaches the framework service, which checks ADMIN_CONNECTION_MANAGE whatever opens the screen; every refusal comes
+    back as a reason shown here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storeConnection">
+        <actions>
+            <set field="rowNumbers" from="Object.keys(ec.web.parameters).filter(key =&gt; /^fieldName_\d+$/.test(key)).map(key =&gt; key.slice(10))"/>
+            <set field="entered" from="rowNumbers.map(n =&gt; ({name: String(ec.web.parameters['fieldName_' + n] || ''),
+                    value: ec.web.parameters['fieldValue_' + n]}))"/>
+            <set field="values" from="Object.fromEntries(entered.filter(row =&gt; row.name &amp;&amp; row.name !== '_reason')
+                    .map(row =&gt; [row.name, row.value == null ? '' : String(row.value)]))"/>
+            <set field="reason" from="entered.find(row =&gt; row.name === '_reason')?.value || null"/>
+            <service-call name="org.moqui.admin.ConfigurationServices.store#Connection" out-map="stored"
+                    in-map="{adapterKey:adapterKey, connectionKey:connectionKey, expectedRevision:expectedRevision, values:values, reason:reason}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? (stored.reason || 'Configuration saved') : stored.reason,
+                    !stored.applied || stored.reason ? 'warning' : 'success')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></default-response>
+        <error-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></error-response>
+    </transition>
+    <transition name="testConnection">
+        <actions>
+            <service-call name="org.moqui.admin.ConfigurationServices.test#Connection" out-map="tested"
+                    in-map="{adapterKey:adapterKey, connectionKey:connectionKey, testKind:(testKind || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script><![CDATA[
+                    if (tested.applied === false) ec.message.addMessage(tested.reason, 'warning')
+                    else {
+                        ec.message.addMessage(tested.passed ? 'The test passed' + (tested.enabledByTest ? ': the connection is enabled' : '')
+                            : 'The test did not pass' + (tested.enabled ? '' : ': the connection stays disabled'), tested.passed ? 'success' : 'warning')
+                        for (const row of Array.from(tested.checkList || []))
+                            ec.message.addMessage(row.check + ': ' + row.text, row.state === 'ok' ? 'info' : 'warning')
+                    }
+                ]]></script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></default-response>
+        <error-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></error-response>
+    </transition>
+    <transition name="setEnabled">
+        <actions>
+            <service-call name="org.moqui.admin.ConfigurationServices.store#Connection" out-map="stored"
+                    in-map="{adapterKey:adapterKey, connectionKey:connectionKey, expectedRevision:expectedRevision, enabled:(enable === 'Y'),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? (stored.enabled ? 'The connection is enabled' : 'The connection is disabled: nothing is sent through it')
+                    : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></default-response>
+        <error-response url="."><parameter name="adapterKey"/><parameter name="connectionKey"/></error-response>
+    </transition>
+
+    <widgets>
+        <!-- the record and what the sections below show of it; a section's actions, so both screens share them -->
+        <section name="ConnectionPrepare">
+            <actions>
+                <service-call name="org.moqui.admin.ConfigurationServices.get#Connection" out-map="found" transaction="force-new" ignore-error="true"
+                        in-map="{adapterKey:adapterKey, connectionKey:connectionKey}"/>
+                <!-- ignore-error clears a refusal's message: a connection that is not answered is not available -->
+                <set field="connection" from="found?.connection || null"/>
+                <set field="recordFound" from="!!connection"/>
+                <set field="canManage" from="!!found?.canManage"/>
+                <if condition="recordFound">
+                    <service-call name="org.moqui.admin.ConfigurationServices.find#ConnectionConsumers" out-map="used" transaction="force-new"
+                            ignore-error="true" in-map="{adapterKey:adapterKey, connectionKey:connectionKey}"/>
+                    <set field="canChange" from="canManage &amp;&amp; !connection.readOnlyReason"/>
+                    <set field="stateColor" from="connection.state === 'ready' ? 'positive' : ['untested', 'needsTest', 'incomplete'].includes(connection.state) ? 'warning' : 'grey-7'"/>
+                    <set field="editRows" from="!canChange ? [] : connection.fieldList.filter(row =&gt; row.kind !== 'display').map(row =&gt; ({
+                            fieldName: row.name, fieldLabel: row.label + (row.endpoint ? ' (endpoint)' : ''),
+                            fieldKind: row.kind === 'choice' || row.kind === 'flag' ? row.kind : 'text', fieldValue: row.value,
+                            fieldOptions: row.options || [], fieldNote: row.help || ''}))
+                        .concat(connection.secretList.filter(row =&gt; !row.fixed).map(row =&gt; ({
+                            fieldName: row.name, fieldLabel: row.label, fieldKind: 'secret', fieldValue: '', fieldOptions: [],
+                            fieldNote: (row.secretSet ? 'One is stored: leave empty to keep it. ' : 'None is stored. ') + (row.help || '')})))
+                        .concat([{fieldName: '_reason', fieldLabel: 'Reason', fieldKind: 'text', fieldValue: '', fieldOptions: [],
+                            fieldNote: 'Kept in the audit log beside the change'}])"/>
+                    <set field="factRows" from="connection.fieldList.filter(row =&gt; !canChange || row.kind === 'display').map(row =&gt; ({
+                            factLabel: row.label,
+                            factValue: row.kind === 'flag' ? (row.value === 'Y' ? 'Yes' : 'No')
+                                : row.kind === 'choice' ? ((row.options || []).find(option =&gt; option.value === row.value)?.label || row.value || '')
+                                : row.value || ''}))
+                        .concat(connection.secretList.filter(row =&gt; !canChange || row.fixed).map(row =&gt; ({
+                            factLabel: row.label, factValue: row.secretSet ? 'Stored' : 'Not stored'})))"/>
+                    <set field="checkRows" from="(connection.checkList || []).map(row =&gt; Object.assign({}, row, {stateText: row.state === 'ok' ? 'Passed' : 'Failed'}))"/>
+                    <set field="testedText" from="!connection.lastCheckDate ? 'Not tested yet'
+                            : 'Last tested ' + ec.l10n.format(Date.parse(connection.lastCheckDate), 'yyyy-MM-dd HH:mm') + ': '
+                                + (connection.lastCheckPassed ? 'passed' : 'did not pass')
+                                + (connection.tested ? ', as it is configured now' + (connection.testedByName ? ', by ' + connection.testedByName : '')
+                                    : connection.lastCheckPassed ? '; its configuration changed since' : '')"/>
+                    <set field="consumerRows" from="(used?.consumerList || []).map(row =&gt; Object.assign({}, row, {
+                            stateText: row.state === 'attention' ? 'Needs attention' : row.state === 'ended' ? 'Ended' : 'In use',
+                            linkKind: !row.recordId ? '' : row.recordType === 'PaymentGatewayConfig' ? 'paymentGateway'
+                                : row.recordType === 'ShippingGatewayConfig' ? 'shippingGateway'
+                                : row.recordType === 'SystemMessageRemote' ? 'remote' : ''}))"/>
+                    <set field="keyValues" from="{adapterKey: adapterKey, connectionKey: connectionKey, testKind: 'connect'}"/>
+                    <set field="testText" from="adapterKey === 'printer' ? 'Prints one fixed test page on the printer.'
+                            : adapterKey === 'relay' ? 'Connects to the relay and signs in. Nothing is sent unless you choose the test message, which goes to your own address only.'
+                            : adapterKey === 'mailOAuth' ? 'Checks that the client is configured. No request is made: the provider proves it when a mail account signs in.'
+                            : 'Sends one request with no credentials and no content to the connection\'s address, to see that it answers. Nothing is changed there, and the sign-in is proven by the first real use.'"/>
+                </if>
+            </actions>
+            <widgets/>
+        </section>
+        <section name="ConnectionUnavailable" condition="!recordFound">
+            <widgets>
+                <label text="${kindTitle}" type="h5"/>
+                <label type="p" text="This connection is not available to you, or it does not exist."/>
+                <link url="${listPath}" text="${listTitle}" link-type="anchor"/>
+            </widgets>
+        </section>
+        <section name="ConnectionHeader" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${connection.name}" type="h5"/>
+                            <label text="${connectionKey} · ${connection.adapterTitle}${connection.providerName &amp;&amp; connection.providerName !== connection.adapterTitle ? ' · ' + connection.providerName : ''}${connection.endpointSummary ? ' · ' + connection.endpointSummary : ''}" type="p" style="text-caption m-muted"/>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${connection.stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ConnectionState", text: connection.stateText})}]]></text>
+                                <text type="html">${connection.stateText}</text>
+                            </render-mode>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-actions">
+                            <!-- one primary action by state: Test, which enables a connection that waits for it -->
+                            <section name="TestAction" condition="canChange">
+                                <widgets>
+                                    <container-dialog id="TestConnection" button-text="Test" icon="sym_o_network_check" title="Test ${connection.name}" type="primary">
+                                        <label type="p" style="m-muted" text="${testText}"/>
+                                        <form-single name="TestConnection" transition="testConnection" map="keyValues">
+                                            <field name="adapterKey"><default-field><hidden/></default-field></field>
+                                            <field name="connectionKey"><default-field><hidden/></default-field></field>
+                                            <field name="testKind">
+                                                <conditional-field condition="adapterKey === 'relay'" title="Test">
+                                                    <drop-down>
+                                                        <option key="connect" text="Connect and sign in"/>
+                                                        <option key="send" text="Connect, then send a test message to my own address"/>
+                                                    </drop-down>
+                                                </conditional-field>
+                                                <default-field><hidden/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Run the test"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </widgets>
+                            </section>
+                            <section name="EnableAction" condition="canChange &amp;&amp; connection.hasEndpoint &amp;&amp; connection.state === 'disabled'">
+                                <widgets>
+                                    <link url="setEnabled" text="Enable" icon="sym_o_toggle_on" link-type="hidden-form-link"
+                                            confirmation="Enable ${connection.name}? It is used again at once. It needs a passing test of its configuration as it is now."
+                                            parameter-map="{adapterKey:adapterKey, connectionKey:connectionKey, expectedRevision:connection.revision, enable:'Y'}"/>
+                                </widgets>
+                            </section>
+                            <section name="DisableAction" condition="canChange &amp;&amp; connection.hasEndpoint &amp;&amp; ['ready', 'untested'].includes(connection.state)">
+                                <widgets>
+                                    <button-menu text="More" icon="more_horiz">
+                                        <link url="setEnabled" text="Disable" btn-type="danger" icon="sym_o_toggle_off" link-type="hidden-form-link"
+                                                confirmation="Disable ${connection.name}? Nothing is sent through it until it is enabled again; what uses it waits or fails."
+                                                parameter-map="{adapterKey:adapterKey, connectionKey:connectionKey, expectedRevision:connection.revision, enable:'N'}"/>
+                                    </button-menu>
+                                </widgets>
+                            </section>
+                        </container>
+                    </container>
+                    <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="connection.readOnlyReason" text="${connection.readOnlyReason}."/>
+                    <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="!connection.readOnlyReason &amp;&amp; connection.problem" text="${connection.problem}."/>
+                    <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="connection.secretCleared"
+                            text="A stored secret was cleared when the endpoint changed. Enter it again: until then a test sends nothing."/>
+                    <label type="p" style="text-caption m-muted q-mt-sm q-mb-none" condition="connection.privateNetwork === false"
+                            text="The server reaches this connection on the public network only. An instance administrator allows a connection on the instance's own network."/>
+                </container>
+            </widgets>
+        </section>
+
+        <section name="NativeConnectionBox" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Configuration"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="canChange &amp;&amp; connection.hasEndpoint"
+                                text="Changing a setting marked endpoint needs every secret entered again: otherwise the stored secrets are cleared. Either way the connection is disabled until a test of it passes. A secret is never shown: leave it empty to keep the stored one."/>
+                        <section name="NativeConnectionRead" condition="!canChange || !editRows.length">
+                            <widgets>
+                                <label type="p" style="text-caption m-muted" condition="!canManage" text="An integration administrator changes the configuration."/>
+                            </widgets>
+                        </section>
+                        <section name="NativeConnectionEdit" condition="canChange &amp;&amp; editRows.length">
+                            <widgets>
+                                <form-list name="NativeConnection" list="editRows" transition="storeConnection" multi="true" paginate="false">
+                                    <hidden-parameters parameter-map="{adapterKey:adapterKey, connectionKey:connectionKey, expectedRevision:connection.revision}"/>
+                                    <field name="fieldName"><default-field><hidden/></default-field></field>
+                                    <field name="fieldLabel"><default-field title="Setting"><display/></default-field></field>
+                                    <field name="fieldValue">
+                                        <conditional-field condition="fieldKind === 'secret'" title="Value"><password size="40"/></conditional-field>
+                                        <conditional-field condition="fieldKind === 'choice'" title="Value">
+                                            <drop-down allow-empty="true"><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </conditional-field>
+                                        <conditional-field condition="fieldKind === 'flag'" title="Value">
+                                            <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                        </conditional-field>
+                                        <default-field title="Value"><text-line size="50"/></default-field>
+                                    </field>
+                                    <field name="fieldNote"><default-field title="Note"><display/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Save configuration" type="primary"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fieldLabel"/><field-ref name="fieldNote"/></column>
+                                        <column><field-ref name="fieldValue"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <form-list name="ConnectionFacts" list="factRows" skip-form="true" paginate="false">
+                            <field name="factLabel"><default-field title="Setting"><display/></default-field></field>
+                            <field name="factValue"><default-field title="Value"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <section name="ConnectionChecksBox" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Checks"/>
+                    <box-body>
+                        <label type="p" text="${testedText}."/>
+                        <label type="p" style="m-muted" condition="!checkRows.length" text="No test has been run. A test contacts the connection's address without changing anything there."/>
+                        <form-list name="ConnectionChecks" list="checkRows" skip-form="true" paginate="false">
+                            <field name="check"><default-field title="Check"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="Result">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<span class="${state === 'ok' ? 'text-positive' : 'text-negative'}">${WebUtilities.encodeHtml(stateText)}</span>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="text"><default-field title="What was found"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="check"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="text"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <section name="ConnectionConsumersBox" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Where it is used"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!consumerRows.length" text="Nothing uses this connection yet."/>
+                        <form-list name="Consumers" list="consumerRows" skip-form="true" paginate="false">
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="recordName">
+                                <conditional-field condition="linkKind" title="Record">
+                                    <link url="${detailPath}" text="${recordName}" link-type="anchor" parameter-map="{adapterKey:linkKind, connectionKey:recordId}"/>
+                                </conditional-field>
+                                <default-field title="Record"><display/></default-field>
+                            </field>
+                            <field name="use"><default-field title="Use"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="ownerName"/><field-ref name="recordName"/></column>
+                                <column><field-ref name="use"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
