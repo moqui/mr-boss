@@ -4449,6 +4449,299 @@ Design §12 AuditChanges and AccessLog, §16 audit evidence; ADM-AUDIT, ADM-REPO
 - **Usable when:** `admin.audit` follows a grant change and a relay credential replacement with the actor and reason
   and no secret, and sees who exported a report.
 
+**Built Nov 11 (P17).**
+- Checked first (the code over the plan):
+  - `EntityAuditLog` (create-only) holds the old and new value of every audit-logged field: about 105,000 rows after
+    the demo load, of about 240 entities, most of them business records of Mantle's (invoices, payments, supplier profiles,
+    party identifications). Encrypted fields are audit-logged too (`EmailServer`'s and `SystemMessageRemote`'s
+    passwords and keys, `PartyIdentification.idValue`): the entity audit log keeps their values encrypted. Tools'
+    System › Audit log reads all of it by entity and field name, for `ADMIN`.
+  - Upstream's Tools reorganization: Monitor is a section of System and `MONITOR_APP` is gone, so the plan's "without
+    `MONITOR_APP`" is "without System's grant" (`SYSTEM_APP`); the telemetry datasets (`org.moqui.report.dataset.otel_.*`)
+    are Tools' grant, `ADMIN`'s.
+  - The report engine (`crates/moqui-report/src/lib.rs` `resolve_dataset`): a dataset definition may alias a telemetry
+    index only with a server-owned row filter (`rowFilter`, `contextFilters` or a `rowFilterService`), and the filter is
+    part of the dataset's resolution, ANDed before the request's query, query text, filters and time range in
+    `constraints`, so no request can remove it (as P6 to P10's reviews established for business datasets). The
+    dataset's artifact is checked with `authorize_own`: the viewer's own grant, never one inherited from the screen or
+    service that asks. A dataset has no field list: a hit is the whole document.
+  - The audit targets. `moqui.report.audit` now carries P7's and P8's lines besides exports and deletes (a schedule or a
+    rule stored, paused, transferred, delivered, retried, reconciled); `moqui.monitor.audit` carries incidents, recovery,
+    runtime settings, conf reloads and edits, component loads and Constitution changes. A line's attributes are its
+    structured fields; two of them hold values: `recipients` of a scheduled export (addresses) and `value` of a runtime
+    setting. F45 stands: the lines are kept `log-retention-days` (seven by default), only what was done is logged (no
+    refused read, no purpose), and a line carries no organization.
+  - What earlier phases wrote, read from their notes and their code: every change the Admin services make to a field
+    the entity audits, or to one they record themselves, is in `EntityAuditLog` with its reason. Left with a log line
+    or nothing (the gaps, below): another user's sessions ended and access revoked (P4, the framework), a password reset
+    sent, a factor reset and a lock released that was no disable (P4, Mantle), an import applied (P15), a mail message
+    closed or sent again from the queue (P12: the close was only in the message's own state rows, which are every send
+    of every user), and Login as (F69). `auditRow` wrote no session.
+- mr-moqui (no Rust changed: everything ran on the shared release binary; no Debug build was made):
+  - `entity/ServerEntities.xml`: `moqui.server.AuditProjection` (a registration: entity, field or `*`, category,
+    description, `valueMode`, `sourceService`, `viewPermission`, the key values' kinds and titles, `linkKey`).
+  - `service/org/moqui/admin/AuditServices.xml` and `Audit.js` (new): `find#Changes`; the owner contract
+    `find#OwnedChanges` (an interface: ids only) and `call#ChangeSource` (not inheritable, as `call#TargetService`).
+    Registered projections only; a value shown only by registration; an encrypted or secret-named field a marker
+    whatever its row says (a flag, a date or an event about a secret, such as `requirePasswordChange`, is not one); `*` for every other field of a configuration entity, never a value and never a field
+    registered on its own; a request narrows by a projection's id or a category, a whole key value, an actor, a session
+    and dates; 2,000 rows deep, 100 a page, an export of 1,000; a source that fails named and the others answered; the
+    registry checked once a request.
+  - `ConfigurationLib.js` `auditRow` writes the session (`changedInVisitId`), for every service's own audit rows.
+    `Identity.js`: another user's sessions ended and `revoke#AccountAccess` each leave a row on the account (kinds and
+    counts, the reason). `DataTransferBatch.js`: an apply that took rows leaves one on its batch. `OperationMail.js`: a
+    close and a retry from the queue leave one each (`queueClose`, `queueRetry`).
+  - Data: `data/AdminAuditData.xml` (new, named in `MoquiDefaultConf.xml`'s `load-data` list): the two services' grants
+    and 36 projections of the framework's own records, all of the whole instance (grants and app gates, row rules,
+    group flags, sign-in providers, instance settings, translations, message types, relays, connections, printers,
+    jobs, topics, a message's state and settlement, the mail queue's actions, exports, imports, backup requests).
+  - Docs: Attack-Surface ("Change evidence"), Remaining-Work's `org.moqui.admin` row. No Parity-Diffs entry.
+- Mantle (a worktree added for it, branch `adm/p17`): the framework knows no organization, so the records that
+  belong to one are Mantle's to find (§4, the decisions of Nov 7).
+  - `entity/IdentityEntities.xml`: seven view entities that join the audit log's rows back to an internal organization
+    (`AuditLogAccountOrganization`, `…Member…`, `…Actor…`, `AuditLogOrganization`, `…Relationship…`, `…Invitation…`,
+    `…Lifecycle…`), each with the row's id, what it is of, who and when, never a value.
+  - `service/mantle/party/IdentityServices.xml` `find#IdentityChanges` and `IdentityAudit.js` (new): the audit source,
+    by the organization entity filters of the authorization the call runs under (Identity.js `scopedFind`, now
+    exported); ids only; an entity it does not know answered nothing; an instance administrator with no organization
+    active reads the log's rows of these entities as they are. `Identity.js` `reset#Authentication`: a row on the
+    account for a reset password sent, a factor ended and a lock released.
+  - `data/PartyAuditData.xml` (new, seed): the views' filters in `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG`, 29
+    projections (a user's account and what was done to it, group memberships, a user's topic subscription, an
+    organization membership's end, invitations, lifecycle operations and steps, an organization's own record and its
+    gateways), and the framework's export and import projections given Mantle's source, by who made them.
+- BOSS:
+  - `report/admin-access-log.json` (new): the dataset, an alias of `otel_logs` with the fixed `rowFilter` of the two
+    audit targets and the row-filter service below.
+  - `service/ironstone/admin/AuditServices.xml` and `admin/Audit.js` (new): `find#ChangeEvidence` (the framework's find
+    with a record's place as a route, only when that screen opens to the user; people's changes unless asked for a data
+    load's too), `get#AccessLog` (the engine's `query#Documents` as the user, structured filters only, each line as its
+    safe fields: addresses counted, values left out) and `get#AccessLogRowFilter` (a reader of every organization
+    every line; another reader the lines written under a user of an organization they administer, at most 5,000
+    accounts; anyone else nothing). `Admin.js`: the `audit` area and two link paths.
+  - Screens `Admin/Audit.xml` (the area: Changes and Access log, menu index 10), `Audit/AuditChanges.xml` (AuditFind,
+    AuditList) and `Audit/AccessLog.xml` (AccessFind, AccessEvidence), each with its print (the screen in html-print)
+    and its CSV (the list's export), one bounded page of the same projection.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_AUDIT` (the area, for the audit reader and the administrator, with
+    the root's filter sets) and `BOSS_ADM_ACCESS_LOG` (the dataset's artifact, view, for the two). No new permission, no
+    client deny pattern change (`find#` and `get#` only). BossUsersDemoData unchanged (`admin.audit` was P1's).
+- Specs: framework `test/AdminAuditChanges` (2 features, 0.15 s: only the registered fields of a record found and
+  counted, not an unregistered entity's, not a field whose permission the reader lacks though its entity has a `*`
+  registration, not one whose source is undefined or lacks the contract; an encrypted field a marker though registered
+  to show, its stored values nowhere, as a field named like a secret is while an event about one is shown; the
+  services' own markers as they are; a shown value with the actor, the reason
+  without control characters, the record's name and link key; by projection, category and actor; an unregistered or
+  unreadable projection, an inherited category name and a named entity refused or ignored; the page, the depth bound
+  and the export; the permission; `revoke#AccountAccess`'s row with the actor, the session and the reason);
+  `AdminMailOutcomes` and `AdminDataTransfer` (a check each of the new rows). Mantle `test/party/IdentityAudit` (2
+  features, 0.27 s: through the framework's service an audit reader of one organization reads its staff's account
+  change with its values and reason, allowed addresses as a marker, the membership, a membership's end, the
+  organization's own record and an export its person made, and nothing of another organization's by key, category or
+  count; the source called directly answers ids only, of the
+  entity it knows, in scope; the instance administrator reads both; a lock release leaves its row). BOSS
+  `test/Admin/AdminAudit` (3 features, 1.1 s: the audit reader, with no System or other area, follows a grant change
+  and a credential's replacement with the actor and the reason, the encrypted values nowhere, no link into a screen it
+  cannot open, the data operator refused; its own organization's person's change and not Services'; the access log as
+  the lines of its own people with the addresses counted and a setting's value left out, never another organization's
+  line or a line of another target, with the engine asked directly four ways to widen it, the telemetry dataset
+  refused and the row filter the viewer's own; one html render each of AuditChanges and AccessLog). `AdminAccess`
+  changed: the audit capability and the menus. Acceptance, written and not run:
+  `acceptance/Admin/AdminAuditUsable` (3 features, the "usable when").
+- Tests run (the shared release binary, this phase's runtime): framework AdminAuditChanges, AdminDataExport,
+  AdminDataTransfer, AdminMailOutcomes, AdminSessions, AdminJobs, AdminRecovery, AdminConfiguration,
+  AdminConnectionServices, AdminBackups, AdminAccessServices 35 of 35; mr-mantle IdentityAudit, StaffIdentity,
+  UserLifecycle, StaffInvitation, InternalOrganizations 28 of 28; mr-boss AdminAudit, AdminAccess, ProjectsAccess,
+  AdminUsers, AdminImports, AdminMailQueue, AdminExports, AdminLifecycle, AdminRegistries, AdminGroups,
+  AdminInvitations, AdminJobRuns 45 of 45. `moqui lint --screens` 133
+  flagged sites, as master, no parse failure; `moqui lint` on the three changed service files clean. Prettier clean on
+  the new JavaScript and the changed files. By hand, not kept: the two screens as the audit reader in qvt, tui,
+  html-print and csv (a reason beginning with `=` written `'=…` in the file), the area's landing, and both refused to
+  the data operator, as Tools' audit log is to the audit reader. Not run: `./moq test-framework`, `./moq test-apps`,
+  the acceptance suite, cargo (no Rust changed); no browser.
+- Inventories: none of ss-inventory's or usl-inventory's rows is P17's (their AuditLogList rows are the business
+  records' own histories).
+- Design edits: design-admin §12 AuditChanges and AccessLog (as built), §14 (an Audit projection row), §16 (Audit
+  evidence), §17.1 (ADM-AUDIT, ADM-REPORTS) and §17.2.
+- Findings (provisional, numbered by the lead):
+  - **F-P17-1** The audit log is read only by registration. Of about 240 audited entities 32 are registered: the
+    administrative records. A business entity (an invoice, a payment, a supplier's terms, an employee's identification)
+    has no projection and is not in AuditChanges: its history is its owner's screen's. An owner that wants one in
+    Admin seeds a projection with its own source.
+  - **F-P17-2** A value is shown only where a row says `show`, and never for an encrypted or secret-named field: the
+    entity audit log's own rows of a relay's or a remote's password hold the encrypted values, which are not answered.
+    Every other field of a connection, a provider, a job, a topic, a message type and a printer is registered as `*`:
+    named, never shown (their columns are their adapters' and change with them).
+  - **F-P17-3** The framework knows no organization, so it registers its own records as the whole instance's and
+    Mantle registers the identity records with its source. A framework-only instance has no account or membership
+    changes in `find#Changes` (Tools has them, for `ADMIN`).
+  - **F-P17-4** Identity scope is the current relationship, as Users (P4): once a person's memberships have all ended,
+    their account's later changes are in no organization's AuditChanges. What ended them is: the membership's end and
+    the lifecycle operation are found by their own organization. An instance administrator with no organization
+    active reads every account's.
+  - **F-P17-5** The administrator's every-organization reading comes from the Audit area's grant
+    (`MANTLE_ACTIVE_ORG`), as in Users (F65): `find#ChangeEvidence` called outside the screen answers the
+    administrator their own organizations only.
+  - **F-P17-6** A group's grants, a connection and a job carry no organization, so every audit reader reads their
+    changes, with an actor who may work for another organization (the usable-when's grant change and relay are such).
+    An export or an import a person made is scoped by its maker's organizations.
+  - **F-P17-7** A data load writes audit rows with no user (the demo load about 1,500 of app gates and grants alone):
+    AuditChanges lists people's changes unless asked for a load's too.
+  - **F-P17-8** The access log is log lines: kept seven days by default, nothing for a refused read or export, no
+    purpose, no organization (F45 stands). AccessEvidence has no "permission result" and no "purpose" column, and says
+    how long lines are kept. A durable evidence store is the framework's (Remaining-Work).
+  - **F-P17-9** A dataset has no field list, so the dataset answers a line whole: `recipients` (a scheduled export's
+    addresses, `audit_export`) and a runtime setting's `value` (`live_settings`) are in it. The screen and its file
+    leave them out; a reader who also holds an Insights group reads them through the engine, within the dataset's two
+    filters. Closing it is Rust: the lines written without the values (Remaining-Work).
+  - **F-P17-10** The design scoped the access log by its two targets only. Built with a row-filter service besides: a
+    reader of some organizations reads the lines written under those organizations' people (the line's `user.id`), so
+    lines no user wrote (a schedule's run, another server's change) are read only by a reader of every organization.
+    Past 5,000 accounts in scope nothing is answered.
+  - **F-P17-11** A line's attributes are searchable only through the pairs the telemetry ingest keeps beside them
+    (`__attributes`): the specs index their lines with those pairs, as the ingest does; a spec's process exports no
+    log lines, so no test reads a line a real export wrote (the framework's report tests do).
+  - **F-P17-12** Evidence added where an action changed no audited field: sessions ended, access revoked, a password,
+    factor or lock reset, an import applied, a mail message closed or sent again. Left as they are: Login as (a log
+    line, F69, Tools'); a group's creation and description; an organization's name and defaults (Mantle's
+    `PartySetting` is not audited); an owner's own import batch (Products' operation record); a self-service
+    revocation; a Constitution change (a line on `moqui.monitor.audit`, so in AccessLog for as long as lines are kept).
+  - **F-P17-13** The services' own audit rows now carry the session; rows written before this phase have none, and a
+    job's or a load's have none by nature. The session is the correlation: a row's link lists everything changed in it.
+  - **F-P17-14** `EntityAuditLog` has no index on its second key value or its actor: a membership's and a maker's
+    rows are found by the entity and field index first. Fast on the demo's 105,000 rows; an index is the framework's
+    to add when a log grows (Remaining-Work).
+  - **F-P17-15** No user picker in the finds: the audit reader holds no identity permission, so a find narrows to an
+    actor, a record or a session by the links of a row, not by a typed id.
+- Decisions: the registry is a framework record its owners seed; a request names a projection or a category, never an
+  entity or a field; `marker` is the default and `show` the exception; a secret-named or encrypted field is a marker
+  whatever is registered; a `*` registration never shows a value and never covers a field registered on its own; an
+  owner's source answers ids only and the framework reads and masks the rows; instance records need
+  `ADMIN_AUDIT_VIEW` alone, organization records the reader's scope; a mail message's own state rows are not
+  registered and the queue's actions are rows of their own; AuditChanges and AccessLog are one area of their own
+  (Audit) for the audit reader and the administrator; the access log is scoped by its lines' users as well as by its
+  targets; the audit reader is given no link into a screen it cannot open.
+- For the lead:
+  - no Rust changed, so the shared release binary needs no rebuild; a database made before needs the new table
+    `AUDIT_PROJECTION` and the seed data loaded again (the framework's new data file, Mantle's, BOSS's two groups);
+  - `MoquiDefaultConf.xml` gains one `load-data` line (after `AdminConfigurationData.xml`);
+  - mr-mantle has a branch `adm/p17` to merge and a worktree at `adm-p17/mr-mantle` (this phase's runtime points at it);
+  - budget shares (release binary): framework about 0.2 s (AdminAuditChanges); mr-mantle about 0.3 s (IdentityAudit);
+    mr-boss about 1.1 s (AdminAudit); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` (an entity appended), `MoquiDefaultConf.xml` (one line), `ConfigurationLib.js`
+    (`auditRow`), `Identity.js`, `DataTransferBatch.js`, `OperationMail.js`, two specs (a check each), Attack-Surface,
+    Remaining-Work (the `org.moqui.admin` row only), the rest new files; mr-mantle `IdentityEntities.xml` (views
+    appended), `IdentityServices.xml` (a service appended), `Identity.js` (three rows and an export), the rest new
+    files; mr-boss `BossSetupData.xml` appended at its end, `Admin.js` (`areas`, `linkPaths`), `AdminAccess.spec.js`
+    (the menus and a capability row), design-admin, the rest new files;
+  - other plans: none edited;
+  - the user's call: F-P17-10 (the access log scoped by its lines' users: built; the design had the two targets only);
+    F-P17-6 (every audit reader reads the changes of the instance's shared records, whoever made them); F-P17-4
+    (whether a leaver's account changes should stay readable to the organization they left); F-P17-9 and F-P17-8
+    (framework work on the audit lines: no values in them, a durable store, refused reads); F-P17-1 (whether any
+    business entity's changes belong in Admin's AuditChanges at all); whether `BOSS_ADMIN_ADMIN` should read the access
+    log (built: yes, as it holds `ADMIN_AUDIT_VIEW`);
+  - the brief had the acceptance test written and not run, AGENTS.md has a new one run once: AdminAuditUsable is not
+    run, to run when asked.
+
+**Review Nov 11 (P17).** A fresh review of the three repositories' P17 diffs, the read paths line by line (the framework's
+`Audit.js`, Mantle's `IdentityAudit.js` and its seven views, BOSS's `Audit.js`, and the report engine's
+`resolve_dataset`, `authorize_own` and definition save in `crates/moqui-report` and `crates/moqui-core/src/user/authz.rs`);
+fixes committed apart per repository ("Admin P17 review: …"). No Rust changed.
+- Checked and found sound:
+  - `find#Changes`. Nothing of a request names an entity or a field: a projection id must be one the caller may read
+    (an unknown one and an unreadable one are the same refusal), a category an own name of the fixed list. The filters
+    are whole values of the actor, either key value, the session and the dates; there is no sort, no text search and no
+    filter on a value, so a count cannot be probed for a value. A row is shown only through `projectionOf` of the
+    projections asked for, whatever a find or a source answered. A `*` registration: `show` is false whatever its row
+    says, so `before` and `after` are null but for the services' three fixed texts (`(set)`, `(replaced)`,
+    `(cleared…)`); the same object is the CSV's and the print's; the error texts carry no row. An encrypted field
+    (`getFieldInfo().encrypt`) and a secret-named one are markers though registered to show.
+  - The framework's 36 projections, all of the whole instance. Values shown: a group permission's dates, an app gate's
+    type, a row rule's id, a group's factor flag, a provider's disabled flag, default group and role-to-group map, an
+    instance setting (five editable ones are registered: display name, locale, time zone, a recipient ceiling, a
+    window of days; a secret is refused as a preference at registration), a translation's text, a relay's and a
+    connection's disabled flag, a job's paused flag and its run and backup requests (fixed state texts), a message's
+    state and settlement words, the mail queue's close and retry words, an export's and an import's counts and field
+    names (these two are Mantle's to find once Mantle loads). Markers: a group's allowed addresses and defaults, and
+    every `*` (a provider's endpoints and client id, a field mapping, a message type, a relay's and a connection's
+    host, user name and URL, a printer, a job's parameters and recipients, a topic). So no address list, URL, client id,
+    job parameter or Constitution text is a shown value. What every row does show: the key values (a job's
+    `recipient.<userId>` and `parameter.<name>` as field names), the actor's username and name, and the reason an
+    administrator typed.
+  - `call#ChangeSource` and Mantle's `find#IdentityChanges` (the P15 lesson). The framework reads the source's
+    projections from the registry, never the request. Mantle's source checks `ADMIN_AUDIT_VIEW` itself and takes its
+    scope from the organization entity filters of the authorization the call runs under (`scopedFind`: nothing when
+    that authorization names no organization filter set, but for an instance administrator), so the area's inheritable
+    ALWAYS grants no row. Called directly with a made-up projection list it answers ids and a count of the entities in
+    its own table only.
+  - Organization scope. Each view joins the audit row to an internal organization and the filters of
+    `MANTLE_USER_ORG` and `MANTLE_ACTIVE_ORG` are seeded for all seven; the actor, key, session and date filters are
+    conditions on the same filtered find, so none of them reaches another organization's row. Key orders checked
+    against the entities (a membership's and a subscription's user is the second key, a gateway's organization the
+    first). F-P17-5 confirmed by reading: outside the area the administrator's call runs under the root group's
+    `MANTLE_USER_ORG`, their own organizations. F-P17-4 as written. A person of two organizations is read by both
+    (as Users, P4).
+  - F-P17-6, exactly: every audit reader reads the framework's projections above but the export and the import. None
+    carries a user as its record; what they reveal of another organization is the actor of a change to a shared record
+    (username and name), a user id inside a job's recipient field name, and the ids and states of system and mail
+    messages (no address, subject or body). A group's membership rows and a transfer's rows are scoped (by the member,
+    by who made it).
+  - The access log's fixed filter. `resolve_dataset` builds the dataset's `rowFilter` and the row-filter service's
+    answer into the dataset's own filter, and `constraints` ANDs a request's time range, query, query text and filters
+    to it: asked four ways by a holder of the artifact, only the two targets' lines come back (the spec).
+    The row-filter service decides by the signed-in user's own Admin scope and permission, whoever calls it.
+  - The evidence rows: counts, kinds, fixed words and ids only; written by `auditRow` in the action's own transaction
+    (rolled back with it); the session recorded is the visit's sequenced id, not `Visit.sessionId` or a token.
+  - Screens and grants: `BOSS_ADM_AUDIT` is the area's screen for the two groups; no transition writes; the lists are
+    display fields (escaped by the renderer; read, not rendered again); the CSV is the framework's render, which guards a formula cell
+    (`csv_guards_formula_text_and_quotes_a_carriage_return`). AdminAudit renders each screen once in html, and
+    AuditChanges once more as a refusal.
+- Fixes:
+  - **R1 (High).** F-P17-9 was wider than a note: the dataset's artifact was granted to `BOSS_ADMIN_AUDIT` and
+    `BOSS_ADMIN_ADMIN`, and a dataset has no field list, so a holder who may also call the engine (with any Insights
+    group) read each line whole: the addresses scheduled exports went to and runtime settings' values (the first build's
+    own spec read whole documents so; an aggregate of an attribute and an agent's report tools resolve the dataset the
+    same way, by the engine's code). Now the artifact is
+    granted to no group; `get#AccessLog` checks `ADMIN_AUDIT_VIEW` under Admin and reads the one dataset with
+    authorization off, under the dataset's two filters, answering its safe fields. The engine refuses the dataset to
+    the audit reader (documents and aggregate: the spec). Left: an instance administrator reads the lines in Tools, as
+    they read the log index.
+  - **R2 (Medium).** F-P17-10's bound was silent: past 5,000 accounts in a reader's organizations the row filter
+    matched nothing and the screen said "No line matches", which reads as nothing having happened. The bound stays
+    (fail closed); `get#AccessLog` now answers `unavailable` with the reason, and the screen shows it.
+  - **R3 (Low).** Mantle: an instance administrator with no organization active read the audit log as it is, so every
+    party's `disabled` change (a customer's, a supplier's) was listed as "Organization disabled" and every
+    relationship's end as an organization membership's. Those two stay on their views, which say what the row is.
+  - **R4 (Low).** A `*` registration found through a source counted, and spent its page on, the fields registered on
+    their own (the framework dropped the rows after the count): the contract's projections now carry
+    `exceptFieldNames` and Mantle's source honors it.
+  - **R5 (Low).** `revoke#Sessions` wrote "sessions ended" on an account whose sessions could not be ended: the row is
+    written only for the accounts ended.
+- Tests (the shared release binary, this phase's runtime): framework AdminAuditChanges, AdminSessions,
+  AdminAccessServices 11 of 11; mr-mantle IdentityAudit, StaffIdentity 10 of 10 (IdentityAudit gains the person's party
+  and the gateway's own field; the party check fails without R3: run); mr-boss AdminAudit, AdminAccess, AdminUsers 13
+  of 13, InsightsAccess, InsightsDatasets 10 of 10; AdminAudit 1.2 s. Prettier clean on the changed JavaScript. Not
+  run: the acceptance walk, the full suites. Not tested: the 5,000-account answer (it needs that many accounts) and
+  R5's failure path (read only); the screens were not rendered again by hand in csv and html-print (the same service
+  answers them).
+- For the lead:
+  - **Open, High, the Insights track's and Rust (found here, confirmed by running it):** a holder of
+    `org.moqui.report.dataset` update (the dataset steward, `BOSS_INSIGHTS_DATA`) saves a dataset `insights-…` with
+    `indexName: otel_logs` and `rowFilter: {match_all: {}}` and reads every log line through it: the engine asks a
+    telemetry alias only for some row filter, and the steward's own pattern grant (`insights-.*`) is its artifact. As
+    `insights.steward`: saved, one hit of an ordinary log line of another target. Sharing the definition would open it
+    to the other Insights groups. No data change closes it without taking the steward's save; the engine should ask an
+    alias's reader (or its saver) for the index's own artifact. Attack-Surface says so.
+  - decisions for §4: the access log dataset is granted to no group and read by Admin's service after its own check
+    (the plan and design §12 had it granted to `BOSS_ADMIN_AUDIT`; design §12 edited); the audit reader therefore
+    cannot chart it in Insights;
+  - F-P17-9 as it now stands: only an instance administrator reads the addresses and values; the lines written
+    without them is still the framework's;
+  - F-P17-10: a scoped reader with more than 5,000 accounts in their organizations is answered no line and is told;
+    widening it (a filter by organization on the line) needs the lines to carry an organization (F45);
+  - the user's call, unchanged: F-P17-6 (actor names of shared records to every audit reader), F-P17-4, F-P17-1;
+  - merge: this review touches only P17's own files, Attack-Surface (one bullet) and `Identity.js` (`revokeSessions`).
+
 ### P18 — Shared devices
 
 Design §6 Devices, §14 shared-device registration; CX-DEVICE, ADM-DEVICES. Stage 5, with Insights P11: Insights'

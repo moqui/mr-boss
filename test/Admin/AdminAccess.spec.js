@@ -144,6 +144,8 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
     when() {
         const rows = [
             {user: users.reader, menu: ["Home", "Settings", "Operations"], keys: ["g a", "g o"], quick: []},
+            // P17: the Audit area, the audit reader's and the administrator's, and no other area but every Admin user's
+            {user: users.audit, menu: ["Home", "Settings", "Audit"], keys: ["g a"], quick: []},
             // P4: the Users area, the identity operator's and the administrator's (the reader's menu above has none); P5: its
             // Invite users in quick create, which opens InviteStaff under that area
             {user: users.identity, menu: ["Home", "Users", "Settings"], keys: ["g a"], quick: ["adminInviteUsers"]},
@@ -162,6 +164,8 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
                     "Operations",
                     // P15: Data (Imports, DataImport, ImportDetail), the data operator's and the administrator's
                     "Data",
+                    // P17: Audit (AuditChanges, AccessLog), the audit reader's and the administrator's
+                    "Audit",
                     "Agents",
                     "Developer"
                 ],
@@ -197,6 +201,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
                 "Protocols",
                 "Operations",
                 "Data",
+                "Audit",
                 "Agents",
                 "System",
                 "Developer"
@@ -250,6 +255,8 @@ const capabilityNames = [
     "operations",
     // P15: Data's Imports, DataImport and ImportDetail (BOSS_ADM_DATA); P16: its Exports, DataExport and Backups
     "data",
+    // P17: Audit's AuditChanges and AccessLog (BOSS_ADM_AUDIT)
+    "audit",
     "agents",
     "developer",
     "system"
@@ -270,7 +277,7 @@ const capabilityUsers = [
     // P13: Integrations' SystemMessages and SystemMessageDetail, the operations operator's too (BOSS_ADM_INTEGRATIONS_OPS)
     {user: users.operations, granted: ["operationView", "operationManage", "integrations", "protocols", "operations"]},
     {user: users.data, granted: ["transferView", "transferRun", "data"]},
-    {user: users.audit, granted: ["auditView"]},
+    {user: users.audit, granted: ["auditView", "audit"]},
     {user: users.privacy, granted: []},
     // P16: Data's Backups alone, the backup operator's too (BOSS_ADM_DATA_BACKUPS)
     {user: users.backup, granted: ["backupView", "backupRun", "data"]},

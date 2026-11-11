@@ -4955,4 +4955,34 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.server.TransferTarget targetId="projectsWorkItemList" direction="export" targetMode="wizard" title="Work items"
             description="The work items of a list as CSV, from the list in Projects"
             ownerApp="Projects" targetVersion="1" ownerRoute="projectsWorkItems" sequenceNum="64"/>
+
+    <!-- Admin P17 (impl-admin P17; design-admin §2, §12): the Audit area (AuditChanges, AccessLog) for the audit reader and
+        the administrator. The area is denied to the root group and opened whole to the two, with the root's filter sets,
+        which Mantle's audit source reads the organizations by (an account's and a membership's changes of the
+        organizations the reader administers; the administrator's MANTLE_ACTIVE_ORG every one with none active). It has no
+        transition that writes. Its reads check ADMIN_AUDIT_VIEW themselves (ironstone.admin.AuditServices, the framework's
+        org.moqui.admin.AuditServices and Mantle's find#IdentityChanges), so the area's inheritable ALWAYS is not what
+        decides one. The audit reader holds no other Admin area, no System, no Dashboards and no dataset grant. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_AUDIT" description="Admin audit">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Audit.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_AUDIT_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_AUDIT_AUDIT" userGroupId="BOSS_ADMIN_AUDIT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_AUDIT_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The access log dataset (report/admin-access-log.json; design-admin §12 AccessLog, ADM-REPORTS): the log lines of the
+        report engine's and monitoring's audit targets, by the dataset's own row filter, and of the reader's organizations'
+        people, by its row-filter service. Its artifact (org.moqui.report.dataset.admin-access-log) is granted to no group,
+        on purpose (P17 review): a dataset has no field list, so a grant of it lets its holder read each line whole through
+        the engine (Explore, a panel, an export, an agent's tools) wherever they may call it, a scheduled export's
+        addresses and a runtime setting's value with it. ironstone.admin.AuditServices.get#AccessLog checks
+        ADMIN_AUDIT_VIEW under Admin and reads the dataset itself, answering only its safe fields. Never grant the
+        artifact to a group, alone or as part of a wider dataset pattern. -->
 </entity-facade-xml>
