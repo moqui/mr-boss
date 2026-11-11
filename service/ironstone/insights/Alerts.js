@@ -229,10 +229,13 @@ function ownDelivery(delivery) {
         definitionId: delivery.definitionId,
         recipientName: delivery.userFullName || delivery.username || "You",
         channelText: pick(channelWords, delivery.channel, text(delivery.channel)),
+        // one skipped was told nothing, and the engine keeps no state for them
         toldText: text(delivery.alertState)
-            .split(", ")
-            .map(name => pick(stateWords, name, [name])[0])
-            .join(", "),
+            ? text(delivery.alertState)
+                  .split(", ")
+                  .map(name => pick(stateWords, name, [name])[0])
+                  .join(", ")
+            : "Nothing",
         stateText: state[0],
         stateColor: state[1],
         reasonText: delivery.reason || "",

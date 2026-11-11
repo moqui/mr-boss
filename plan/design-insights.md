@@ -649,7 +649,9 @@ The current private `ReportAlert` topic is in Updates. Register a separate priva
   shipped templates (Mantle's `mantle-sales-daily-floor`; mr-boss's `boss-service-sla-breach` and Commerce's three, which no
   longer carry a contact point) are listed under Templates, each copied only over a dataset its copier reads.
 - **The topic and the message.** mr-boss seeds `InsightsBusinessAlert` (private, in Notifications); its message is the rule
-  id, the series ids, their states and the recipient's own permitted values, linked to AlertDetail. The email is the
+  id, the series ids, their states and the recipient's own permitted values, linked to AlertDetail, and it goes to that one
+  user whatever subscriptions the topic has (a subscription to all of a topic's messages receives none; review R2). A series
+  removed after going missing is not told as Normal (review R4). The email is the
   `BOSS_INSIGHTS_ALERT` template to the recipient's account address. The topic, the template, the link and the cap (50 until
   Settings holds it, P10) are Insights', not a caller's.
 - **Screens.** `Insights/Alerts` is a parent whose default is the list `Rules` (AlertFind with Mine, Received and Templates;

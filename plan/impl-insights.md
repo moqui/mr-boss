@@ -1882,6 +1882,99 @@ Design §8; INS-07 (its first release), INS-03.
     recipient evaluation (§8.1 later); an Insights Settings cap (P10); the delivery audit export (P12);
   - `find#AlertDeliveries` with `administrative: true` is Admin P16's read (counters by rule, no title, no value).
 
+**Review Nov 10 (P8).** Fresh review of mr-moqui c8ed67a7 and mr-boss 8d1907e1; fixes in mr-moqui and mr-boss ("Insights P8
+review: …") and this note (branch `ins/p8`).
+- Checked and kept:
+  - **What makes a rule business** (`alert_delivery::is_business`, asked of the stored body at every evaluation and of the
+    new body at every save): an `audience` object, or any `datasetId` at any depth of the body, or reached by a `panelRef`,
+    `dashboardRef` or `definitionId` in it, whose dataset is viewer-scoped (P7 R2's test). So a row written past the save
+    (Tools' entity screens, an entity data file, an older stored rule), a rule edited later, and a dataset that became scoped
+    after the rule was saved are all held to it: `evaluate_claimed` replaces whatever contact points and shared contact
+    references the row holds by one contact a channel of its audience (`contact_body`; an unknown channel is dropped), and
+    nobody named is the owner alone on the in-app channel. A query that names no dataset reads the telemetry metrics, which
+    no Insights group reads. Every shipped component dataset has a `rowFilterService`, so nothing Insights reads takes the
+    technical path.
+  - **The saves**: only the owner saves (`save_definition_as`), so the viewer the audience is checked against is the owner;
+    `prepare` runs for every alert save (the editors, `restore#Definition`, `copy#Definition`, `import#Definitions`, a
+    pulled file) before the row is written and `check_saved` after it, in the save's transaction, which BOSS's `engine`
+    opens new, so a refusal leaves no row (the spec counts them).
+  - **The notification**: `Pass::send` judges each recipient with P7's `judge` against the owner's scope computed once a
+    pass (not a copy of the check), owner first under P7's `caps`, the group artifact asked of the owner by their own
+    grants; `inactive`, `external`, `not-shared`, `scope-differs`, `over-cap` and `owner-unauthorized` send nothing. The
+    message (title, series labels, values, link) goes to one user id or one account address a call. The
+    `AlertNotification` row of a business rule keeps the rule id alone; no marker and no incident is written.
+  - **Repeat runs** (P7 R1's lesson): the group's row is put back after a failure, and the next pass passes over everyone
+    whose own row says sent for that state within the repeat interval, so only the failed one is tried again.
+  - **States**: an empty result is No Data, a failed, incomplete or stale reading Error for every series; an owner who
+    cannot sign in pauses the rule in a transaction of its own and tells nobody.
+  - **Reads**: `get#AlertState` gives instances to the owner and to a recipient the audience names whose verdict is clean
+    now; `find#AlertDeliveries` gives the owner's rules, the caller's own rows, or for `ADMIN_TRANSFER_VIEW` counters.
+  - **Ownership**: `owner_authority` (the user themselves or `REPORT_OWNER_CHANGE`); the services are not remote, and BOSS
+    grants them to the identity operator and the administrator, who reach them through Admin's lifecycle as P7's are
+    reached; the new owner must be active, internal, hold `save#Definition` by their own grants, read every source and, for
+    a group audience, hold the group artifact. `AdminLifecycle`'s second `pause:UlstDone` is right: each participant with a
+    pause service records its step.
+  - **Technical rules**: the old path but for `lastValue`; moqui-host `--test it report_` (timers, workers, real SMTP and
+    webhooks, markers and incidents) passes after the fixes.
+  - **BOSS**: every transition of Rules and AlertDetail reaches an `AlertServices` operation (`allow-remote="false"`) that
+    checks `INSIGHTS_VIEW` or author-or-distributor itself, and a refusal is an answer; a person proposed is an Insights
+    reader and a group one of the caller's own before the engine is asked; the three artifact groups name six engine
+    operations and nothing else; `delete#Definition` deletes only the caller's own definition (the engine's owner check);
+    the four templates carry no contact point; New alert from a panel takes the saved query of a panel the caller reads.
+  - **Spec leanness**: `InsightsAlerts` renders AlertDetail once (qvt) and no other screen; `BusinessAlerts` renders none.
+- Fixes:
+  - **R1** (high, injection; mr-moqui) A notification's title is a template, expanded as a script when it is sent
+    (`NotificationMessage::title`), and the engine gave it the rule's title. P8 opens rule titles to Insights authors and
+    distributors (`store#Alert`, `copy#Alert`), so a title holding `${...}` ran server-side script at each notification. A
+    title with a `$` is now taken from the message by name (`${title}`, expanded once), for every rule; the link is checked
+    again as a server path when it is built.
+  - **R2** (high, access; mr-moqui) A user with a `NotificationTopicUser` row saying `allNotifications` receives every
+    message of a topic whoever it is addressed to, a private topic too, so each business alert (title, labels, values) also
+    went to such a subscriber, unchecked. mr-marble's MyAccount › Notifications stores that row from the request's
+    parameters for any topic, so a customer account can make one. `NotificationMessage::direct_only` (moqui-core) sends to
+    the named users alone, and a business rule's notifications use it. Seen failing before the fix
+    (`RDA_EQUAL+RDA_OTHER`).
+  - **R3** (medium, access; mr-moqui) A transferred rule kept its `AlertInstance` rows, so the new owner (qualified, not
+    equivalent) read the leaving owner's series labels and last values through `get#AlertState`, and the first evaluations
+    told those series on as No data. A transfer now deletes the rule's instances and notification rows and releases its
+    claim.
+  - **R4** (medium; mr-moqui) A series removed after going missing was told as Normal (F-P8-8), which a business recipient
+    reads as a recovery nobody observed. A business rule's recipients are told nothing more of a removed series.
+  - **R5** (low, access; mr-moqui, mr-boss) A skipped recipient's delivery row kept the state's name, which they read as
+    their own (`find#AlertDeliveries` received, Rules' Received). It is kept only for one sent or failed; Received says
+    "Nothing" for one skipped.
+  - **R6** (low; mr-moqui) A git sync's pull saved a business rule active as its file said. One not already active here
+    is saved paused (`not-validated`), as a copy and an import (design §13.3 "Definition and source change").
+  - **R7** (low; mr-moqui) A technical rule paused by the lifecycle kept `pausedReason` after its owner resumed it; a
+    save with `paused` false clears it for every rule.
+- Tests (this worktree's Debug binary, rebuilt): framework BusinessAlerts 4 of 4 (0.96 s; the subscriber, the title, the
+  removed series and the transfer's reset added to its features), ReportAudience, ReportDrill 15 of 15; BOSS InsightsAlerts,
+  InsightsAccess, InsightsDelivery, AdminLifecycle (with InsightsDatasets) 21 of 21. Cargo: `clippy -p moqui-report -p moqui-core --all-targets -D warnings` clean, `test -p moqui-report` 89 of 89,
+  `test -p moqui-core notify` 18 of 18, moqui-host `--test it report_` 9 of 9 (mr-moqui 9fe34142). Prettier and
+  rustfmt on what changed. Not run: the full suites, any acceptance test. R1's and R4's checks were not seen failing
+  against the old binary (the spec stopped at R2's).
+- For the lead:
+  - budget share: framework BusinessAlerts 0.96 s (was 0.85); mr-boss unchanged;
+  - merge: mr-moqui `crates/moqui-core/src/notify/message.rs` gains `direct_only` (one field, one builder, one parameter of
+    `resolve_users`); docs/tools/Monitoring.md "Business alerts";
+  - **mr-marble's** (not this phase's repo): `MyAccount/User/Notifications.xml` `topicSubscriptions` stores
+    `NotificationTopicUser` from the whole request context, so any account sets `allNotifications` on any topic, private or
+    not, and receives the technical `ReportAlert` messages and every other topic's. R2 closes it for business alerts only;
+    the transition should name its fields, and `resolve_users` could refuse `allNotifications` on a private topic;
+  - a notification title is a script template for every caller of `NotificationMessage::title` (and of the script API):
+    any other sender that passes stored text as a title has R1's hazard; P7's report mail subject was R5 there;
+  - findings kept as they are: a dataset whose rows differ by the documents a group reads (DataDocumentUserGroup) and by
+    nothing else is not "viewer-scoped" (P7 R2's boundary, the same here); an owner whose own scope narrows still reads
+    the series of the wider scope until they are removed (ten evaluations), and their recipients must equal the narrower
+    scope by then; the placeholder series of a rule that had no data is told as Normal once real series exist; a process
+    that dies between a group's sent mark and its last recipient leaves the rest untold until the repeat interval (as a
+    technical contact); the administrative list and Admin's lookup show a rule's id, which carries its title's slug, and
+    the lookup its title (the contract's `resourceName`); F-P8-13 stands (Tools' Alerts lists `AlertInstance` labels of
+    the rules its `ADMIN` viewer reads: their own and those shared with a group they are in, whatever their scope); an
+    Insights author holds `save#Definition` for the editors, so a rule saved past `store#Alert` (if the mounted editor
+    takes an alert's body: not tried) could name any existing topic or email template, for an alert to themselves alone;
+  - the worker's user's-call items stand.
+
 ### P9 — Flow maps
 
 Design §9; INS-08.
