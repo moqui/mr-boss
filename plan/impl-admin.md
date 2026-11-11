@@ -286,7 +286,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P16 Exports and backups | mr-moqui, BOSS | Exports, DataExport, Backups | built and reviewed Nov 11, merged |
 | P17 Audit and access evidence | mr-moqui, BOSS | AuditChanges, AccessLog | built and reviewed Nov 11, merged |
 | P18 Shared devices | mr-moqui, BOSS | Devices | built and reviewed Nov 11, merged |
-| P19 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P19 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 11, merged |
 
 ### P0 — Checks
 
@@ -5126,7 +5126,7 @@ review: …"); Mantle and BOSS unchanged.
     later sign-in links. The framework's provider records know no organization, so a bound there is either the link rule
     `AflVerifiedEmail` (and enabling a provider with it) kept for `ADMIN_IDENTITY_GLOBAL`, which would change P10's
     usable-when (the Retail access administrator sets it in AdminSecurityUsable), or an organization on the provider that
-    the sign-in's link honors (Rust, a framework ask; in Remaining-Work). The user's call: F-P19-1.
+    the sign-in's link honors (Rust, a framework ask; in Remaining-Work). The user's call: F292.
   - **The notification-title hazard** (Insights P8 R1): every caller searched in mr-moqui (Rust and scripts), Mantle,
     BOSS, mr-pass and mr-marble. Fixed: the job error notice and the agent inbox (Rust), Voice's three alerts (an
     emergency location's or trunk's name, a source address; each was expanded twice), Mantle's approval notices with
@@ -5139,15 +5139,15 @@ review: …"); Mantle and BOSS unchanged.
   - **`apps/ScreenTree`**: not one line (it needs a host member for screen definitions); in Remaining-Work's tests list
     and §7.
 - Findings (provisional, numbered by the lead):
-  - **F-P19-1** (high, the user's call) The identity provider link rule is instance-wide while its enabler may be
+  - **F292** (high, the user's call) The identity provider link rule is instance-wide while its enabler may be
     organization-scoped (above).
-  - **F-P19-2** (medium, fixed) A notification title quoting stored or model-written text ran it as a script: the job
+  - **F293** (medium, fixed) A notification title quoting stored or model-written text ran it as a script: the job
     error notice (its errors), the agent inbox (an approval's summary, which a model writes), Voice's alerts and Mantle's
     approval notices with their own wording (a supplier's name).
-  - **F-P19-3** (low, fixed) F129's dead `failure` captures were in 18 Admin screens (23 reads), P8–P16's too, so a
+  - **F294** (low, fixed) F129's dead `failure` captures were in 18 Admin screens (23 reads), P8–P16's too, so a
     refused list read as empty ("No groups yet.") and a refused record as missing.
-  - **F-P19-4** (low, open) design §16's lifecycle completion and exception notice was never built (§7).
-  - **F-P19-5** (low, open) F73 stands as designed: the framework's `org.moqui.admin` identity services
+  - **F295** (low, open) design §16's lifecycle completion and exception notice was never built (§7).
+  - **F296** (low, open) F73 stands as designed: the framework's `org.moqui.admin` identity services
     (`revoke#AccountAccess`, `revoke#Sessions`) take any account from a holder of their permission and know no
     organization; they are not remote services, and BOSS's and Mantle's record checks come first on every Admin path.
     The review walk checks the record check, not a direct framework call.
@@ -5169,14 +5169,14 @@ review: …"); Mantle and BOSS unchanged.
     Mantle PurchaseApprovals.js;
   - the Apps row "Admin and Insights" of Remaining-Work still says gate 1 and "Next: Admin P8–P14": it is shared with
     Insights and left to the lead;
-  - the phase table's P19 row and §6 (F-P19-1 to -5) are the lead's;
-  - the user's call: F-P19-1 (bound the verified-email link rule to `ADMIN_IDENTITY_GLOBAL`, or an organization on the
-    provider in the framework, or accept it as built); whether to build the lifecycle notice (F-P19-4).
+  - the phase table's P19 row and §6 (F292 to -5) are the lead's;
+  - the user's call: F292 (bound the verified-email link rule to `ADMIN_IDENTITY_GLOBAL`, or an organization on the
+    provider in the framework, or accept it as built); whether to build the lifecycle notice (F295).
 
 **Review Nov 11 (P19).**
 - Checked: `git diff master...adm/p19` in mr-moqui, mr-mantle and mr-boss against the phase's text, §2, §4, design §1.1,
   §15.3 and §16.
-  - Notification titles (F-P19-2): sound. The job error notice takes `${jobName}` and `${errors}` from its message (the
+  - Notification titles (F293): sound. The job error notice takes `${jobName}` and `${errors}` from its message (the
     job's own message map is extended after them, under its own keys); the agent inbox puts the title in the message as
     `inboxTitle`; Voice's three alerts carry their names in the message and expand once; Mantle's approval notice sends
     `${noticeTitle}`. Searched again (`.title(`, `NotificationMessage::new`, `makeNotificationMessage`, `send#Notification`,
@@ -5201,7 +5201,7 @@ review: …"); Mantle and BOSS unchanged.
     `store#Membership`, `check#GrantProposal`, `invite#User`'s `bundleGroupIdList`, `store#IdentityProvider` with the revision
     from `find#IdentityProviders`' `provider`), so its refusals are not vacuous, and each write feature also counts the rows
     written since it started.
-  - F-P19-1 checked against P10's code (framework `ConfigurationProviders.js` `storeIdentityProvider`, `linkedBeyond`;
+  - F292 checked against P10's code (framework `ConfigurationProviders.js` `storeIdentityProvider`, `linkedBeyond`;
     `moqui-core` `service/sso.rs` `link_allowed`, `linked_account`, `unscoped_link_allowed`): the worker's description holds.
     Two facts for the user's decision: (a) the link rule is an access part (`ADMIN_ACCESS_MANAGE` alone): changing it on a
     provider already enabled needs no new test and no `HELD_BEYOND` count, so an organization's access administrator can turn
@@ -5224,7 +5224,7 @@ review: …"); Mantle and BOSS unchanged.
     it as the administrator; design §16 says so.
 - Tests: mr-boss AdminGroups and AdminRegistries 9 of 9 on the shared release binary with this runtime (`--nobuild`). Not
   run: the acceptance specs (the lead's), the Rust (unchanged by the review).
-- For the lead: budget share unchanged in substance (AdminRegistries' feature 0.44 s); F-P19-1's two facts above go with the
+- For the lead: budget share unchanged in substance (AdminRegistries' feature 0.44 s); F292's two facts above go with the
   user's call; nothing else open from the review.
 
 ## 4. Decisions
@@ -5331,7 +5331,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes. P16's F240 to F256 (Nov 11, 2026) are in its Built and Review notes. P17's F257 to F271 (Nov 11, 2026) are in its Built and Review notes. P18's F278 to F291 (Nov 11, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note and F199 to F203 in its second (a settlement cleared when a send begins). P13's F183 to F198 (Nov 10, 2026) are in its Built and Review notes. P14's F204 to F219 (Nov 10, 2026) are in its Built and Review notes. P15's F220 to F239 (Nov 11, 2026) are in its Built and Review notes. P16's F240 to F256 (Nov 11, 2026) are in its Built and Review notes. P17's F257 to F271 (Nov 11, 2026) are in its Built and Review notes. P18's F278 to F291 (Nov 11, 2026) are in its Built and Review notes. P19's F292 to F296 (Nov 11, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
