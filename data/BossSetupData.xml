@@ -4851,4 +4851,30 @@ along with this software (see the LICENSE.md file). If not, see
             description="The kinds of message exchanged with other systems: what sends and consumes each, among the handlers its owner registered, and its transport options"
             settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Integrations/MessageTypes"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="114"/>
+
+    <!-- Admin P14 (impl-admin P14; design-admin §2, §10): notification topics for the configuration administrator. The
+        Operations area is the reader's, the operations operator's and the administrator's whole (BOSS_ADM_OPERATIONS, which
+        now holds Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail too); the configuration administrator opens
+        only Topics and TopicDetail in it: the area's screen itself, not inherited (so Health, Monitoring and the jobs stay
+        refused), and the two screens, each inheritable for its own transitions, which reach framework services that check
+        their own permission (find#Topics and get#Topic ADMIN_OPERATION_VIEW or ADMIN_SETTINGS_VIEW; store#TopicDefaults
+        ADMIN_SETTINGS_MANAGE; store#TopicSubscription ADMIN_OPERATION_MANAGE, which this group does not hold). ALWAYS, to
+        beat the area's deny of the root group, with the root's filter sets. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_OPERATIONS_TOPICS" description="Admin notification topics">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations/Topics.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations/TopicDetail.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_TOPICS_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin's settings index entry of P14 (design §14.2), shown to a user its screen opens to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.topics" version="1" ownerApp="Admin" title="Notification topics"
+            description="What people are notified about and how each topic is delivered when a person chose nothing, for the topics their owners registered"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Operations/Topics"
+            viewPermission="ADMIN_SETTINGS_VIEW" configuredBy="Configuration administrator" sequenceNum="116"/>
 </entity-facade-xml>
