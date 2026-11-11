@@ -4451,4 +4451,67 @@ along with this software (see the LICENSE.md file). If not, see
             description="The outgoing mail servers the instance sends its own mail through"
             settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/MailRelays"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
+    <!-- Insights P8 (impl-insights P8; design-insights §8, §1.1; INS-07): business alerts. No screen grant is added: the root's
+        ALLOW opens Business alerts (the list and AlertDetail), each transition reaches an ironstone.insights AlertServices
+        operation that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself (reading one's own state and deliveries is every
+        reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. A rule is
+        saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
+        (BOSS_INS_REPORT_DISTRIBUTE): the engine holds a rule over business data to an audience in place of contact points and
+        checks every recipient (mr-moqui crates/moqui-report/src/alert_delivery.rs); telling anyone but oneself needs the
+        engine's group delivery artifact, the distributor's (BOSS_INS_GROUP_DELIVERY). Alert evaluation stays the engine's job
+        (BOSS_INS_REPORT_TOOLS). -->
+    <!-- The business-alert topic (design §8.1): private, in Notifications, where someone is expected to act; its message is
+        the rule and series ids, the state and the recipient's own permitted value, sent to one user at a time. The engine's
+        ReportAlert topic (Updates) stays Tools' technical alerts'. -->
+    <moqui.security.user.NotificationTopic topic="InsightsBusinessAlert" inboxEnumId="NinNotifications" description="Business alerts"
+            linkTemplate="/qapps/Insights/Alerts/AlertDetail?definitionId=${ruleId}" showAlert="Y" persistOnSend="Y"
+            receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="warning"/>
+    <!-- The message of an alert sent to a recipient's own account address: the state, the series and a link to AlertDetail -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="BOSS_INSIGHTS_ALERT" description="Insights business alert" emailServerId="SYSTEM"
+            emailTypeEnumId="EMT_SCREEN_RENDER" bodyScreenLocation="component://mr-boss/template/InsightsAlertEmail.xml"
+            webappName="webroot" fromAddress="" fromName="" subject="Alert: ${title}" sendPartial="Y"/>
+    <!-- Reading an alert's state and deliveries, every reading group's and the administrator's: the engine answers a state to
+        the rule's owner and to a recipient whose scope is the owner's, a delivery to its owner or its recipient, and the
+        administrative counters to a holder of ADMIN_TRANSFER_VIEW. -->
+    <artifactGroups artifactGroupId="BOSS_INS_ALERT_READ" description="Insights: reading alert states and deliveries">
+        <artifacts artifactName="org.moqui.report.ReportServices.get#AlertState" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.find#AlertDeliveries" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_READ_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The distributor deletes a rule (or a digest) of their own: the engine deletes only the owner's definition -->
+    <artifactGroups artifactGroupId="BOSS_INS_ALERT_DISTRIBUTE" description="Insights: a distributor's own alert rules">
+        <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_DISTRIBUTE_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Admin's lifecycle (impl-admin P6; design-admin §14 Lifecycle participant, design-insights §7.1 Ownership): the alert
+        rules a user owns, beside their schedules (insights.schedules). Offboarding pauses them and hands each to a new owner,
+        who must be able to save rules, read its sources and, for a group audience, deliver to a group; the rule stays paused
+        until that owner activates it, which checks every recipient against the new owner's scope. The services check
+        REPORT_OWNER_CHANGE for another user's rules. The caller gains no state and no value. -->
+    <ironstone.admin.LifecycleParticipant participantKey="insights.alerts" version="1" ownerApp="Insights" title="Business alerts"
+            description="The alert rules the user owns, paused when access ends and handed to a new owner who passes the same recipient check."
+            resourceKind="alert" lookupService="org.moqui.report.ReportServices.find#OwnedAlertRules"
+            transferService="org.moqui.report.ReportServices.transfer#AlertRuleOwner" resourceParameter="definitionId"
+            pauseService="org.moqui.report.ReportServices.pause#OwnedAlertRules" requiredPermission="REPORT_OWNER_CHANGE" sequenceNum="61"/>
+    <artifactGroups artifactGroupId="BOSS_INS_ALERT_LIFECYCLE" description="Insights: the lifecycle participant's alert rule operations">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#OwnedAlertRules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pause#OwnedAlertRules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.transfer#AlertRuleOwner" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_LIFECYCLE_IDENTITY" userGroupId="BOSS_ADMIN_IDENTITY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ALERT_LIFECYCLE_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

@@ -192,6 +192,10 @@ const demoRecords = {
     "Insights/ScheduledReports/ScheduledReportDetail": { parameters: { screenScheduledId: "BOSS_DEMO_MY_TASKS" }, text: "Open tasks" },
     "Insights/ScheduledReports/ReportDelivery": { parameters: { occurrenceId: "NONE" }, text: "Delivery not available" },
     "Insights/ManagementDigest": { text: "Weekly management digest" },
+    // Insights P8: Business alerts (the list, and a shipped template in AlertDetail)
+    "Insights/Alerts": { text: "Business alerts" },
+    "Insights/Alerts/Rules": { text: "Business alerts" },
+    "Insights/Alerts/AlertDetail": { parameters: { definitionId: "boss-service-sla-breach" }, text: "Service level breaches" },
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list
     // (Time/TimeEntries) john.doe's time
     // Projects P2: Home, the project list (the default of Projects), the NewProject wizard and its steps (the fragment is the

@@ -225,6 +225,17 @@ feature(
                 asUser(users.reader, () => refusal(reports + "check#ReportAudience", audience)),
                 "is not authorized"
             )
+            // alerts (P8): an alert's state is read through the engine by every reading group (it answers by owner and
+            // scope); another user's rules are the lifecycle operator's to list, not the distributor's
+            expect(
+                "the reader reads an alert's state",
+                asUser(users.reader, () => refusal(reports + "get#AlertState", {definitionId: "boss-service-sla-breach"}))
+            )
+            expect(
+                "the distributor lists another user's alert rules",
+                asUser(users.distributor, () => refusal(reports + "find#OwnedAlertRules", {userId: "BOSS_INS_READER"})),
+                "is not authorized"
+            )
             // a telemetry dataset and git sync: no Insights group, the steward neither
             expect(
                 "the steward reads otel_spans",

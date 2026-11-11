@@ -3,7 +3,7 @@
   "type": "alert",
   "title": "Feed build failures",
   "body": {
-    "description": "Fires when a store's product feed build failed in the last day (its site not published, no canonical host, the projection unreadable), by store; what was published stays served. It reads every organization's builds, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "description": "Fires when a store's product feed build failed in the last day (its site not published, no canonical host, the projection unreadable), by store, among the stores its owner reads; what was published stays served. A template: copy it in Insights › Business alerts, set the threshold and the audience, then activate it.",
     "query": {
       "datasetId": "boss-commerce-feed-builds",
       "from": "now-1d",
@@ -49,16 +49,6 @@
     "labels": {
       "team": "commerce",
       "severity": "warning"
-    },
-    "contactPoints": [
-      {
-        "id": "administrators",
-        "type": "notification",
-        "topic": "ReportAlert",
-        "userGroupId": "ADMIN",
-        "groupWaitSeconds": 0,
-        "repeatSeconds": 3600
-      }
-    ]
+    }
   }
 }
