@@ -172,7 +172,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | built and reviewed Nov 7, merged |
 | P5 Home and attention | BOSS | Home | built and reviewed Nov 7, merged |
 | P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | built and reviewed Nov 10, merged |
-| P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | — |
+| P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | built and reviewed Nov 10, merged |
 | P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | — |
 | P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | — |
 | P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | — |
@@ -1539,38 +1539,38 @@ INS-06 (its first release), INS-11 (legacy schedules).
   participant as built). mr-moqui docs/tools/Monitoring.md ("Report delivery", Security, Upgrading) and
   `plans/Remaining-Work.md` (the report-engine row). mr-boss README's Insights line.
 - **Findings** (provisional, for the lead to number):
-  - F-P7-1: a row filter that names the viewer's own groups (the framework's `ReportUserGroups`) differs between users of
+  - F88: a row filter that names the viewer's own groups (the framework's `ReportUserGroups`) differs between users of
     different groups whose rows are the same, so they are not owner-equivalent; only users of the same groups are. Kept (the
     design compares resolved filters); Mantle's organization policy gives every user of the same organizations one filter.
-  - F-P7-2: a service source decides its scope in its own code, which no fingerprint sees. A definition over one is not
+  - F89: a service source decides its scope in its own code, which no fingerprint sees. A definition over one is not
     comparable and goes to its owner alone; a declared scope for a service source is a framework ask.
-  - F-P7-3: a recipient must read the report itself, not only its data: a private dashboard or digest is refused for
+  - F90: a recipient must read the report itself, not only its data: a private dashboard or digest is refused for
     everyone else. The check says `not-shared`, apart from `scope-differs`, so its owner knows to share it.
-  - F-P7-4: the Insights demo users had no mail address, so nobody could be delivered to; added. The demo has one
+  - F91: the Insights demo users had no mail address, so nobody could be delivered to; added. The demo has one
     distributor, so the acceptance test makes the one who leaves and the one who takes over.
-  - F-P7-5: with the mail capture on no recipient's send can be made to fail, so the specs set a delivery to failed
+  - F92: with the mail capture on no recipient's send can be made to fail, so the specs set a delivery to failed
     themselves; on a transport failure `send#EmailTemplate` answers `deliveryOutcome` (retryable, permanent or uncertain)
     and no message id, which the new path reads to tell a failure from an outcome that is not known.
-  - F-P7-6: a definition's ranges are relative to the render, and the engine has no pinned clock, so a retry renders the
+  - F93: a definition's ranges are relative to the render, and the engine has no pinned clock, so a retry renders the
     period again and is refused when the schedule or the definition changed; a schedule has no time zone of its own (the
     scheduler's applies). Design §7's absolute period and explicit zone are not built.
-  - F-P7-7: the engine's link in a report's message is Tools' `/apps/dashboards/Dashboard`; Insights' template rewrites
+  - F94: the engine's link in a report's message is Tools' `/apps/dashboards/Dashboard`; Insights' template rewrites
     it to its own Dashboard. A link base on the schedule or the mount is a framework ask.
-  - F-P7-8: no report is stored, so OwnArtifact is a new render as the recipient, and "expires" and retention have nothing
+  - F95: no report is stored, so OwnArtifact is a new render as the recipient, and "expires" and retention have nothing
     to apply to; stored private artifacts wait for Admin's retention policy.
-  - F-P7-9: Admin's `AdminLifecycle` spec listed a disable's exact steps; Insights' participant adds a pause step to
+  - F96: Admin's `AdminLifecycle` spec listed a disable's exact steps; Insights' participant adds a pause step to
     every disable, so its expectation gained `pause:UlstDone`.
-  - F-P7-10: P1's `BOSS_INS_REPORT_SCHEDULE` still grants the distributor `create#Schedule` (owner mode) on an existing
+  - F97: P1's `BOSS_INS_REPORT_SCHEDULE` still grants the distributor `create#Schedule` (owner mode) on an existing
     instance and a fresh one; no Insights screen calls it and a schedule it makes over business data is checked at each
     run. BOSS_INS_LEGACY keeps its group and its denies over a name that matches nothing.
-  - F-P7-11: the design's ScheduledReports as a list with child routes would make the list render its children (F46), so
+  - F98: the design's ScheduledReports as a list with child routes would make the list render its children (F46), so
     it is a parent whose default is `Schedules`; ScheduledReportDetail is one page of boxes, not tabs; DigestComposition
     is a form, not the framework's composition editor (an author still opens a digest in DashboardEditor).
-  - F-P7-12: a form posts an emptied field as no value, and the engine keeps a value not sent, so `store#Schedule` takes
+  - F99: a form posts an emptied field as no value, and the engine keeps a value not sent, so `store#Schedule` takes
     `clearFields` and Insights' timing form says which it posted (`timingGiven`); likewise recipients (`recipientsGiven`).
-  - F-P7-13: a schedule paused for its owner's sake is resumed by that owner once they are active again, not only by a
+  - F100: a schedule paused for its owner's sake is resumed by that owner once they are active again, not only by a
     new owner after a transfer (the engine has no administrator's resume).
-  - F-P7-14: P5's and P6's screens read `ec.message` after an `ignore-error` call for a failure text that is no longer
+  - F101: P5's and P6's screens read `ec.message` after an `ignore-error` call for a failure text that is no longer
     there; P7's screens take refusals as answers and a missing record as a not-available state. Home's own captures are
     left as they are.
 - **Decisions** (for §4): a business schedule is one `store#Schedule` saved or one whose definition reads a business
@@ -1587,13 +1587,13 @@ INS-06 (its first release), INS-11 (legacy schedules).
     permissions, `ReportServices.xml` the delivery services in place of the two one-line schedule services after
     `create#Schedule`, `ScreenEntities.xml` four fields on ScreenScheduled, `ScreenServices.xml` the group block of
     `render#ScheduledScreen`; Insights.js (areas, linkPaths), Registry.js (one branch), Home.xml (one box);
-  - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F-P7-9, one expectation) and design-admin §4.1
+  - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F96, one expectation) and design-admin §4.1
     (one "As built" sentence); `acceptance/AppStructure.spec.js` and `TuiRender.spec.js` (the new screens' entries);
   - an existing instance loads ReportSetupData, MonitoringSecurityData and BossSetupData again (Monitoring.md
     "Upgrading"), and sets the `BOSS_INSIGHTS_REPORT` template's mail server and from address. From then on an owner-mode
     schedule over a business dataset sends each recipient their own message and only to owner-equivalent ones, and a
     screen schedule that names a group stops sending to the group until its path is a registered adapter;
-  - the user's call: F-P7-1 (equivalence by resolved filter, strict for group-scoped policies); F-P7-13 (an owner
+  - the user's call: F88 (equivalence by resolved filter, strict for group-scoped policies); F100 (an owner
     resuming a schedule Admin paused); the distributor's `save#Definition` grant; refusing a retry after a change rather
     than sending the changed report; legacy group schedules stopping until registered;
   - not built: a legacy adapter registration (none is registered, so no catalog report is scheduled for a group); a
@@ -1613,7 +1613,7 @@ this note (branch `ins/p7`).
     `rowFilterService`'s answer in a canonical form; the rows artifact of a restricted dataset. It runs in a context of its
     own signed in as the user, so no screen grant and no disabled authorization enters it. A filter that names the viewer
     (`userId`, their groups, an account field, the active organization Mantle's policy narrows to) is in the resolved filter,
-    so it differs: strict, never loose (F-P7-1). A service source is not comparable, and a business dataset cannot be one
+    so it differs: strict, never loose (F88). A service source is not comparable, and a business dataset cannot be one
     (`check_admitted`). An organization fixed by a dashboard variable narrows inside the row filter and is the same for
     everyone. The engine has no field permission: a restricted value (`PRODUCT_COST_VIEW`) reaches a report only through an
     owner's service, which is a service source. The locale is not in the hash; a render is reused only within a locale.
@@ -1657,7 +1657,7 @@ this note (branch `ins/p7`).
     delivery stands as sent or uncertain is now passed over, their row left as it is.
   - **R2** (high, access; mr-moqui) "Business" was the dataset's `signal` alone. `mantle-business-events` (the annotations
     scoped by the viewer's organizations, every reading group's) has none, so a schedule the distributor makes with
-    `create#Schedule` (F-P7-10) over a dashboard of it alone took the technical path: one message to any `userId` and
+    `create#Schedule` (F97) over a dashboard of it alone took the technical path: one message to any `userId` and
     `userGroupId`, unchecked. A schedule is now held to the check when its definition reads any dataset whose rows depend
     on the viewer (a `rowFilterService` or `contextFilters`), whatever its signal. No shipped technical dataset has either.
   - **R3** (medium, access; mr-moqui) The fingerprint left out what a dashboard reads without naming it: the change
@@ -1679,12 +1679,12 @@ this note (branch `ins/p7`).
 - For the lead:
   - budget share: framework ReportAudience 1.1 s (was 1.0);
   - the user's call: every reading group holds `INSIGHTS_SCHEDULE` (design §1.1's table gives it to the distributor and
-    says personal scheduling "adds" it to a reader; §7 "As built" now says it is open); F-P7-13 and the worker's other items
+    says personal scheduling "adds" it to a reader; §7 "As built" now says it is open); F100 and the worker's other items
     stand;
   - findings: a skipped recipient sees the run in Received with its safe reason (their own delivery row; no content); a
     digest's definition id carries its title's slug, which the administrative list shows as an id; the old owner still
     lists a transferred schedule's past occurrences (counters only) and cannot open them;
-  - `create#Schedule` stays the distributor's (F-P7-10): with R2 nothing Insights reads goes out unchecked through it, and
+  - `create#Schedule` stays the distributor's (F97): with R2 nothing Insights reads goes out unchecked through it, and
     removing the row is P1's block to change;
   - an existing instance: an owner-mode schedule over a dataset with a `rowFilterService` or `contextFilters` (none shipped
     outside the business ones and the events) now sends each recipient their own message, checked.
