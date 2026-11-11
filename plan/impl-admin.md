@@ -4043,6 +4043,96 @@ Design §11.1, Imports, DataImport and ImportDetail, Invitations' bulk invite; A
     owners' later work, §7);
   - the acceptance AdminImportsUsable, ProductsImportWalk and AppStructure to run when asked.
 
+**Review Nov 11 (P15).** A fresh review of the three repositories' P15 diffs, the write path first (the three framework
+modules, Mantle's invitation rows and BOSS's mount read line by line; the authorization rule read in
+`moqui-core/src/user/authz.rs`); fixes committed apart per repository ("Admin P15 review: …"). No Rust changed.
+- Checked and found sound:
+  - Dispatch. The service called is `target[contracts[step].field]` of the registration read by `targetId`; the step is
+    an own name of the contracts (`constructor` refused), the parameters the step's allowed names that the service
+    declares, `fixedValues` set from the registration after them; an unknown, disabled or malformed target and a step the
+    mode does not have fail closed; a wizard target is never dispatched; `map#Import` takes only the file's headers, the
+    target's fields and a well-formed option name, and `configure` refuses any other by own name.
+  - How an owner's service is authorized (the Built note and the comments said "as a direct call is"; that is half of
+    it). `call#TargetService`'s own ALLOW is not inheritable, so outside a screen the dispatching service's grant does
+    not carry and the caller needs the owner's own artifact grant (Mantle's identity services have one, the catalog's
+    have none: F-P15-14 is this). Below an app screen the area's inheritable ALWAYS (`BOSS_ADM_DATA`, as every BOSS
+    area's) is taken before any record of the artifact's own (`is_permitted`), so it covers `call#TargetService` and the
+    owner's service after it: there the only wall is the owner's service checking the caller itself. Tried through the
+    Admin mount's `stage` transition (a scratch spec, not kept): the data operator alone is refused by the catalog
+    ("Catalog read authority"), the invitations (`ADMIN_IDENTITY_MANAGE`) and the translations
+    (`ADMIN_SETTINGS_MANAGE`); a data operator who is also the identity operator by the catalog, the translations and
+    another organization's scope; one who is also a catalog editor by the invitations; the identity operator, a reader
+    and a catalog editor without the area get no mount; nothing was staged by any of them. Every registered service
+    checks the caller (the nine catalog steps by kind and owner, the three invitation services, the two translation
+    services, the four find-runs by their owners' policy). The comments and Attack-Surface now say so.
+  - Staff invitations. `invitationProposal` is `invite#User`'s checks moved unchanged (the same order, refusals and
+    errors; `requirePermission` first in both); a row is the batch's organization only, the registration's bundles and
+    the row's go through `check#GrantProposal` and `invitationRefusal` as the importer; ADMIN, a privileged group, a
+    sealed-granting and an unregistered bundle are named and not invited; an existing identity outside the importer's
+    scope needs `ADMIN_IDENTITY_GLOBAL`; each row in its own transaction under a key of the batch, the row and its
+    values, which `invite#User` answers on a resumed apply (one invitation); with no mail server a row reads "resend it
+    from Invitations" and no link is shown or kept.
+  - The mounts. `appRoot` is the root screen's (a request's `appRoot=Admin` under Products staged a catalog import, and
+    `appRoot=Products` under Admin stayed Admin's); the Products mount's target is `catalog` in every transition; the
+    Admin mount asks `ADMIN_TRANSFER_RUN` in each writing transition and the view or run permission to open. The
+    widened pattern (`…|CatalogChecks|DataImport`) is a member of `BOSS_PROJECTS_INTERNAL`, a DENY for client contacts:
+    it grants nothing, and now denies them the screen under Admin too. Nothing else names the old location.
+  - `messageTranslations` (F-P15-13): its apply is `storeLocalizedMessage` itself (`ADMIN_SETTINGS_MANAGE`, P8 R1's
+    placeholder and expression rules, R2's link rule, the revision, the audit row), its validation the same checks
+    without the write, and an import removes none. Kept.
+  - Owners' runs: the four find services answer by their owners' capabilities and organization policy and return
+    nothing on a refusal; `ownerRun` cuts every text to a line, takes six short parameters by name, and the link is one
+    of BOSS's fixed routes; no row content.
+  - Files: bounded before reading (bytes, rows, 50 columns, 2000 characters a cell), UTF-8 by content, a file's name
+    without `${`; the result file writes `= + - @`, a tab and a carriage return as text; labels expand a stored value
+    once. Retention: the job runs with authorization off as every job; only batches past their days.
+  - Concurrency: an apply claims each row with a row lock and reads its result under it, so two applies of one batch
+    apply a row once; the batch's fingerprint is compared with the stored one in each row's transaction.
+  - Specs: AdminImports renders Imports and ImportDetail once each (qvt) and Shared/DataImport never (its transitions
+    answer a redirect or a file); 3 features in 1.7 s.
+- Fixes:
+  - **R1 (medium).** `retry#ImportItems` applied a failed row without the stale-source check, so the row an apply had
+    refused because its source changed after the preview (`STALE_SOURCE`, "validate and review it again") was written
+    over the other change by a retry, unreviewed. A retry now writes only if the source is as the row's preview read
+    it; a stale row is validated and reviewed again.
+  - **R2 (medium).** A batch was read by who staged it for as long as it was kept, whatever they held: a former
+    identity operator, or one moved out of the organization, still read the names and addresses and what was invited.
+    Read now needs the target's import or view permission and its scope for who staged it too (`get#Transfer`,
+    `get#ImportReport`, the runs list).
+  - **R3 (medium).** A validation after a partial apply did not count the applied rows' keys, so a row repeating an
+    applied row (refused as a repeat in the first preview) became valid and would be applied over it.
+  - **R4 (low).** A row with nothing left to do at its apply (already so: another's change, or the row's own apply
+    whose result was not kept, for a target that answers `skip`) was marked failed; it is skipped.
+  - **R5 (low).** `clean#TransferBatches` left a batch in `applying` for ever, so an apply that stopped kept its
+    staged file past the retention. It is left alone only while it was written within a day.
+  - **R6 (low).** `staffInvitations` refuses a user id column too (`userid` in `refusedColumns`).
+  - Comments and Attack-Surface: the ALWAYS rule above, who reads a batch, the retry and the repeat rules.
+- Tests (the shared release binary, this phase's runtime): framework AdminDataTransfer, AdminConfiguration 7 of 7
+  (AdminDataTransfer 0.15 s; added: the stale retry, the repeat after a partial apply, the former importer's read);
+  mr-mantle StaffInvitationImport, StaffInvitation, ProductCatalogImport (added: the user id column); mr-boss
+  AdminImports, AdminAccess, AdminInvitations, ProductsImport, ProjectsAccess 28 of 28 (AdminImports reads the wizard's
+  context as the instance administrator: with authorization off the importer has no organization scope, so R2 refuses
+  the read there). Prettier clean. Not run: the suites, the acceptance test (AdminImportsUsable is unchanged and goes
+  through the screens), cargo, `lint --screens` (a comment only).
+- For the lead:
+  - no Rust and no entity changed by the review; Mantle's seed row `staffInvitations` changed (`refusedColumns`): load
+    the seed data again;
+  - the refusal of a column is a list of names, not an allowlist: only mapped, registered fields reach an owner, but a
+    staged file is kept whole (the columns no field was mapped from too) and shown on ImportDetail and in the result
+    file to its readers until the retention. A secret or a personal column under a name the list does not know is kept
+    30 days. The user's call: refuse a file with a column that maps to no field, or drop unmapped columns at the apply;
+  - a repeat of the same apply request (the fingerprint the first one named) is answered `STALE_PREVIEW` with the
+    import as it stands once the first has finished, since the finish rewrites the fingerprint: nothing is applied
+    twice, but it is not "the first result" for a client that resends blindly. A repeat with the fingerprint read after
+    is answered `repeated`;
+  - a validation or a mapping change made while the same batch is being applied marks the rows not yet reached as
+    failed ("The validation changed"): fails closed, and they are retried or validated again;
+  - F-P15-10 stands and is older than this phase: ProductsImport renders Shared/DataImport twice in each of three
+    modes (empty and with an import), against "once per mode";
+  - provisional findings: **F-P15-R1** a retry wrote over a source changed after the preview; **F-P15-R2** a batch
+    stayed readable by who staged it after they lost the permission or the organization; **F-P15-R3** a repeat of an
+    applied row became valid on a second validation.
+
 ### P16 — Exports and backups
 
 Design §11 Exports, DataExport and Backups; ADM-EXPORT.

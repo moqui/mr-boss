@@ -284,9 +284,11 @@ feature("a bulk invite with a password column is refused, and its accepted rows 
                 mappingRevision: get().mappingRevision
             })
         )
-        // what the wizard shows under Admin for a batch kept by the framework (Shared/DataImport's renders are Products' spec's)
+        // what the wizard shows under Admin for a batch kept by the framework (Shared/DataImport's renders are Products' spec's),
+        // read by the instance administrator: a batch is read within its scope, which for the importer is the organization
+        // filters of the area's grant (none with authorization off, so the importer's own read is ImportDetail's below)
         out.wizard = asUser(
-            importer.username,
+            users.system,
             () =>
                 invoke("ironstone.shared.DataImportServices.get#ImportContext", {
                     appRoot: "Admin",
@@ -354,7 +356,8 @@ feature("a bulk invite with a password column is refused, and its accepted rows 
             .map(option => option.value)
             .join(",") == "emailAddress,partyId,displayName,organizationPartyId,bundleGroupIds"
         Array.from(out.wizard.previewRows).some(found => /privileged group/.test(found.errorMessage))
-        !JSON.stringify(out.wizard).includes("Services")
+        // (an organization's name may hold the word: a service's name is the word and a dot)
+        !JSON.stringify(out.wizard).includes("Services.")
         opened(out.detail)
         out.detail.output.includes("Partly applied")
         out.detail.output.includes(out.one[0].invitationId)
