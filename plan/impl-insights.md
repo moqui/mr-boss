@@ -3163,6 +3163,17 @@ Admin's are impl-admin's). All the Insights failures were spec bugs; none is a p
   second feature (qvt too, so not the tui change; the release binary shows them). A server suite run by mistake (release, the
   fixes without the tui one) passed every Insights spec but InsightsCatalogUsable (panel 17 orders against OnlineSales 15 in
   the latest month, after the other walks' orders; it passes alone and passed in the lead's run): open, order-dependent.
+  Resolved: 17 was right (the store's 17 placed orders that month, as the database and the order-part index have them); a
+  spec artifact, not a disagreement of the two definitions. CommerceReviewsScenario writes its buyers' delivered orders as
+  records (header, part and item created OrderOpen, then header and part set OrderCompleted within milliseconds), and the
+  sales feed left some of those orders' `MantleSalesOrderItem` documents at OrderOpen for good (no pending row, still stale
+  later; which order varies by run), so get#SalesOrderSummary, which needs a placed status on the item document, missed
+  them while the panel's `MantleSalesOrderPart` documents had them (reproduced with CommerceReviewsScenario alone before the
+  spec: 6 against 5). The spec now indexes the month's sales part and item documents again before counting, and passes the
+  panel's range inside the query (beside it, it was ignored and the engine counted the default last 7 days), in the
+  reporting user's calendar month as OnlineSales does. For the lead: the feed leaving an item document behind its order's
+  later status change is a framework finding (moqui-core `search/feed.rs`, a related record's update soon after the
+  primary's create), not fixed here.
 - For the lead: findings, each one line: admin.access cannot revoke a device whose display account has left its organization
   (out of scope reads as not available; the instance administrator can); Playlists lists a playlist's devices only to a
   reader of the playlist who holds `ADMIN_ACCESS_VIEW`, so a playlist shared with the wall displays shows its devices to its
