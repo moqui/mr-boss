@@ -1,5 +1,8 @@
 # IronStone BOSS — Admin implementation
 
+Nov 10, 2026 — gate 3 built: P8–P14 (stage 3), Admin's configuration and operations, beside Insights' stage 2 (impl-insights
+P6–P10, gate 2), each phase reviewed by a fresh agent and merged on its focused specs; the full suites run once at the end
+of the build (the user's call). Next: stage 4 (P15–P17), Admin's data and audit.
 Nov 7, 2026 — gate 1 built: P1–P7 with Insights P1–P5 in the one build order of §1 (stage 1), each phase reviewed by a fresh
 agent and its fixes committed apart, merged in waves with the full suites after each (the Wave lines under the phases)
 and the gate's suites under P7. Next: stage 3 (P8–P14) beside Insights' stage 2.
@@ -3819,7 +3822,7 @@ Design §10 Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail; ADM-
     setting; left as built, the user's call;
   - mr-marble's `topicSubscriptions` transition (above) is the open exposure of F210 and wants its own fix in
     mr-marble (take only `receiveNotifications` and `emailNotifications`, and only for a topic that is not private);
-  - provisional findings: **F-P14R-1** a number-shaped secret was shown (R1); **F-P14R-2** the recovery step marked an
+  - provisional findings: **F218** a number-shaped secret was shown (R1); **F219** the recovery step marked an
     unregistered job due when called apart from `execute#Recovery` (R2).
 
 ### P15 — Imports
