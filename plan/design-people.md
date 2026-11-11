@@ -1,5 +1,7 @@
 # IronStone BOSS — People design
 
+Nov 11, 2026 — impl-people P4's review, on the user's calls: a pay grade is owned by an employer or shared by every employer, an owned one read by that employer's readers and changed by its payroll editors, a shared one changed only with `PEOPLE_ALL_ORGANIZATIONS` (§5, §5 PayGrades); a pay grade is changed with `PAYROLL_VIEW` and `PAYROLL_EDIT`, and `PEOPLE_CONFIGURE` stays for pay components, structures and groups (§1.1).
+Nov 11, 2026 — impl-people P4 as built: Positions & recruiting (Staffing) with Positions, Job classes and Pay grades and the key `g s` (§1.2); a seat's holders are dated occupancy rows, one at a time, and vacancy is computed from them; a job class is ended, never deleted; a pay grade's band is payroll's alone, every other reader getting its name (§5 JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades).
 Nov 11, 2026 — impl-people P3 as built and reviewed: OrgStructure and OrgChart under Employees (§1.2, §4 OrgStructure and OrgChart); a reporting line is per employment, the manager's line at the employers that employ both, changed only by an editor who reads each of them (§4, §4 Employees); a department or team is never one of a user's organizations, Admin's child organizations or a cost centre (§4); the department memberships P6 makes the assignments' and the emergency contact P8 adds (§4 OrgStructure, Employee360).
 Nov 11, 2026 — impl-people P2's review, on the user's call: the work email is Mantle's new `EmailWork` purpose, never `EmailPrimary`; a manager shown is one of that employment's employer (§4 Employees).
 Nov 11, 2026 — impl-people P2 as built: the directory and Employee360 (§4 Employees, Employee360 and its per-app context), the palette's Employees group and the Person record-lookup (§1.4), the employment content host and People's record panels (§13 Chatter, RecordFiles), the directory export (§15); the owner designs' links (crosscut §3.4, design-admin UserDetail, design-projects PersonDetail, design-insights §10, design-drawers-commons).
@@ -37,7 +39,7 @@ Root `screen/People.xml`, mounted as `People`, uses artifact group `BOSS_PEOPLE`
 
 **Root user group (as built, impl-people P1).** On Commerce's pattern, `BOSS_PEOPLE` is the root user group: it opens the People root (ALLOW, with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`) and the `ironstone.people` services, and each user of a capability group above but `BOSS_PEOPLE_SELF` is also in it; the root grant opens navigation only. `BOSS_PEOPLE_ADMIN` keeps its ALWAYS on the root. An area only some groups see denies the root user group and allows its groups: Settings is the People administrator's in P1. A staff reader's employers are the internal organizations among their own (the active one when it is theirs), and the units under them are walked by `PrtOrgRollup` (`mantle.humanres.PeopleServices.get#Scope`); an edit, import or approve permission alone reads no employer. `PEOPLE_ALL_ORGANIZATIONS` (the user's call, Nov 11, 2026; Mantle grants it to `ADMIN`, BossSetupData to `BOSS_PEOPLE_ADMIN`), as Commerce's and Warehouse's `*_ALL_ORGANIZATIONS`, makes a staff reader's employers every internal organization, or the active one; it reads nothing by itself.
 
-Payroll configuration requires both PAYROLL_EDIT and PEOPLE_CONFIGURE; operational preparation alone cannot publish configuration. Permissions are intersected with organization, employment, relationship dates, record participation and field category. Separate view and edit grants. Employee and manager access never inherit private pay data merely from a Party or Project grant. Missing and unauthorized records both show “Not available”. Reject self-approval for leave, expenses, offers/pay changes and payroll; a configured alternate approver handles an absent or conflicted manager, and unresolved routing stays waiting rather than auto-approving.
+Payroll configuration (pay components, structures and groups, P22) requires both PAYROLL_EDIT and PEOPLE_CONFIGURE; operational preparation alone cannot publish configuration. A pay grade and its bands are changed with PAYROLL_VIEW and PAYROLL_EDIT alone, by a payroll editor of the employer that owns the grade (a grade shared by every employer also needs PEOPLE_ALL_ORGANIZATIONS; impl-people §4). Permissions are intersected with organization, employment, relationship dates, record participation and field category. Separate view and edit grants. Employee and manager access never inherit private pay data merely from a Party or Project grant. Missing and unauthorized records both show “Not available”. Reject self-approval for leave, expenses, offers/pay changes and payroll; a configured alternate approver handles an absent or conflicted manager, and unresolved routing stays waiting rather than auto-approving.
 
 **Import permission (decided Nov 11, 2026; impl-people §4).** People's imports need the app's own import permission, `PEOPLE_IMPORT`, beside the People permission the target already names, and no `ADMIN_*` permission: a transfer target's permissions are all required, so Admin's transfer permission beside them would shut HR out of its own import. The `employees` target asks `PEOPLE_IMPORT` and PEOPLE_HR_EDIT to import and PEOPLE_HR_VIEW to view; the time-and-attendance target names `PEOPLE_IMPORT`, which its wizard services check beside People's own permission and scope. `PEOPLE_IMPORT` is in the HR capability bundle. Admin's Imports lists a People run for a data operator who also holds PEOPLE_HR_VIEW.
 
@@ -51,7 +53,7 @@ XML screens use standard record headers, one status-dependent primary action, se
 
 ### 1.2 Menu
 
-Menu entries name the landing screens; detail routes are in §2 and reached from records. A section with no available capability is omitted. The `people` keymap scope has `g p` for People home (as built, impl-people P1), `g e` for Employees (P2), and `g o` and `g c` for Organization and Org chart (P3); each phase adds the keys of its screens. Employees is a menu group: Employees (the directory), Organization and Org chart (as built, impl-people P3).
+Menu entries name the landing screens; detail routes are in §2 and reached from records. A section with no available capability is omitted. The `people` keymap scope has `g p` for People home (as built, impl-people P1), `g e` for Employees (P2), `g o` and `g c` for Organization and Org chart (P3), and `g s` for Positions (P4); each phase adds the keys of its screens. Employees is a menu group: Employees (the directory), Organization and Org chart (as built, impl-people P3). Positions & recruiting is a menu group, `People/Staffing`: Positions, Job classes and Pay grades (as built, impl-people P4); Openings, Applicants and Interviews join it with P16.
 
 - Home — `Home`; My team — `MyTeam`; Approvals — `Approvals`.
 - Employees — `Employees`; Organization — `OrgStructure`; Org chart — `OrgChart`; Grievances — `Grievances`.
@@ -426,6 +428,8 @@ Canonical definition is proposed `Shared/Employee360.xml`, owned here and regist
 
 A job class describes work; a position is a dated seat; vacancy derives from current holders rather than a separate “filled” status. `EmplPosition.organizationPartyId` is the legal employer, because `create#Employment` refuses a position whose organization is not the employer. A proposed `EmplPosition.departmentPartyId` carries the department, and `hire#Employee` and the position services check that the department rolls up (`PrtOrgRollup`) to the employer. Retain active `EmpsPlanned`, `EmpsActive`, `EmpsInactive`. A requisition is approval to activate/open/backfill a position, recorded as an approval decision; do not enable the obsolete JobRequisition sketch or its age/gender criteria. A proposed JobOpening records publication text, recruiting owner and opening/closing dates, linked to one or more approved positions; this is distinct from the internal seat. Public publishing is later PASS work.
 
+**As built (impl-people P4).** A position's holders are dated `EmplPositionParty` rows in role `Employee` (the occupancy a hire and an employment change write, `mantle.humanres.PositionServices.store#PositionHolder`), and an employment that names the position (`Employment.emplPositionId`, over the employment's dates) for a person with no such row; a seat has one holder at a time, so an overlapping holder is refused, and a seat cannot end before its holder's last day. Vacancy is computed from the holders at a date: a seat in effect (planned or active) is filled or vacant, never stored. The department is checked to roll up to the employer through the rollups in effect from the later of the seat's start and today. A new seat is planned; its activation is P5's approval. The directory's job title is the class title of the seat a person holds at that employer on the date. Positions are read by an HR, recruiting, payroll or People configuration reader of the employer and by a manager (`PEOPLE_TEAM_VIEW`) for the units they lead and those under them; a directory reader reads none. Job classes are shared by every employer, read by every staff reader and changed by an HR editor; a used class is ended (`EmplPositionClass.thruDate`, added), keeps its positions and is offered for no new one. A pay grade is owned by an employer (`PayGrade.organizationPartyId`, added) or shared by every employer (no owner; impl-people §4, the user's call): an owned grade is read by that employer's staff readers and changed by its payroll editors, and is a missing grade to every other employer; a shared grade is read by every staff reader and changed only by a payroll editor who also holds `PEOPLE_ALL_ORGANIZATIONS`; a position takes its employer's grades and the shared ones. A grade's name is every reader's, a band's amounts, currency and frequency only a `PAYROLL_VIEW` holder's, on every path (the grades, a position's grade, the choices), and a grade or band is changed with `PAYROLL_VIEW` and `PAYROLL_EDIT` (`mantle.humanres.PayrollSetupServices`).
+
 Applicants remain Person parties with a proposed Applicant role, separate from employee roles and user accounts. Existing EmploymentApplication gets the opening link and a seeded flow: Received → Screening → Interview → Offer → Hired, with Refused/Withdrawn terminal alternatives; these labels and status IDs are proposed. Interviews are private WetEvent records linked to the application and assigned panel. Offer is a separately identified decision/document with employment terms, approvals, expiry and acceptance; accepted is not hired. Hire consumes it exactly once. Reviewer scorecards use the shared form engine with explicit reviewer access and release timing, not public survey links.
 
 ### JobClasses
@@ -442,6 +446,8 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 **Actions and states:** Create opens JobClassDetail. End a used class rather than deleting staffing evidence.
 
 
+
+**As built (impl-people P4).** `People/Staffing/JobClasses` (menu "Job classes", every People user's; a reader of no employer is told it is not open to them): FindJobClasses (title, ended classes) and JobClassList over `find#JobClasses` (title, a summary of the description, skills, the positions of it the reader reads, the state chip), paged; New job class (the one primary, an HR editor's: title and description) opens JobClassDetail.
 
 **Source:** research §4
 
@@ -462,6 +468,8 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 
 
 
+**As built (impl-people P4).** `People/Staffing/JobClassDetail` (out of the menu): the record header (title, skills and positions counts, state; Job classes and "Positions of this class" links), Job profile (the description and work types) and Requirements (the required skills, class and skill only until P18 adds levels and dates). An HR editor has Edit profile (the one primary: title, description, work types, at the revision read), Add skill and Remove, and End job class under More (a danger link with a confirmation). Classifications are not edited here. The assist-prompt "Draft a job description" waits for P16's skill file.
+
 **Source:** research §4, §11
 
 **Needs:** PE-03; PE-14.
@@ -480,6 +488,8 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 **Actions and states:** New starts Planned; vacant/filled is computed from holders at the chosen date. Cost estimates require compensation access.
 
 
+
+**As built (impl-people P4).** `People/Staffing/Positions` (the group's default, menu "Positions", every People user's): FindPositions (name, employer, department of that employer, job class, status, vacancy, as of, ended positions) and PositionList over `find#Positions`, as a list or a board by status (no drag: activation is an approval), each seat's name, class, employer, department, grade name, dates, state and vacancy chips and holder, paged, with the CSV; New position (the one primary, an HR editor's: employer, department, class, grade by name, name, dates, hours a week, full time) plans a seat and opens it. No cost estimate is shown: compensation is P23's.
 
 **Source:** research §4
 
@@ -501,6 +511,8 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 
 
 
+**As built (impl-people P4).** `People/Staffing/PositionDetail` (out of the menu): the record header (name; class, department and employer; state and vacancy chips), Terms (employer, department, class, grade by name, dates, hours a week, full time, temporary, salaried, paid overtime; a link to the class) and Holders (every dated holding, read only, with its state and the person's Employee360 on that employment). An HR editor has Edit terms (the one primary; the department, class and grade audited with the reason) and End position under More (refused before a holder's last day). A seat is filled by P6's hire and employment change; the Requisition is P5's. The budget reference is not built.
+
 **Source:** research §4, §5
 
 **Needs:** PE-03; PE-04; PE-15.
@@ -519,6 +531,8 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 **Actions and states:** Check min ≤ reference ≤ max; require currency/frequency. Changing a band does not rewrite employment salaries.
 
 
+
+**As built (impl-people P4).** `People/Staffing/PayGrades` (menu "Pay grades", every People user's): Grades over `find#PayGrades`; a `PAYROLL_VIEW` holder sees each grade's band in effect (frequency, minimum, reference, maximum in its currency, from) and opens a grade for every dated band, an HR officer or other staff reader sees the names and is told the amounts are payroll's. Each grade shows its employer, or "Shared". A payroll editor has New pay grade (the one primary: a name, the employer that owns it, or none for a shared grade, a People administrator's, comments and its first band) and New band on each grade they change (from a date; it ends the band before it and changes no salary). A band needs a currency, a Payroll frequency and its three amounts in order.
 
 **Source:** research §4, §9
 

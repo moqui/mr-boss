@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Job class (design-people §5 JobClassDetail; style-guide §3.3 Detail; impl-people P4): one job profile, from
+    mantle.humanres.PositionServices.get#JobClass: the record header (title, state), JobProfile (its description and work types)
+    and Requirements (the skills it requires; a skill's minimum level, required or desired, and dates are P18's), with a link to
+    its positions. An HR editor (PEOPLE_HR_EDIT) edits the profile (Edit profile, store#JobClass at the revision read), adds and
+    removes skills (store#JobRequirement) and ends the class (End job class): an ended class keeps its positions and is offered
+    for no new one. The assist-prompt "Draft a job description" (design §1.4) waits for its skill file (P16). No pay band is part
+    of it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Job class" default-menu-include="false">
+    <parameter name="emplPositionClassId"/>
+    <!-- the profile: Mantle checks the editor, the title, the work types and the revision read -->
+    <transition name="storeJobClass">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.store#JobClass"
+                    in-map="{emplPositionClassId:emplPositionClassId, expectedRevision:(expectedRevision || null), title:(title ?? null),
+                        description:(description ?? null), workTypeEnumIds:(workTypeEnumIds ?? [])}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Job class saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="emplPositionClassId"/></default-response>
+        <error-response url="."><parameter name="emplPositionClassId"/></error-response>
+    </transition>
+    <transition name="endJobClass">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.store#JobClass"
+                    in-map="{emplPositionClassId:emplPositionClassId, expectedRevision:(expectedRevision || null), thruDate:ec.user.nowTimestamp}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Job class ended</message></if>
+        </actions>
+        <default-response url="."><parameter name="emplPositionClassId"/></default-response>
+        <error-response url="."><parameter name="emplPositionClassId"/></error-response>
+    </transition>
+    <!-- a skill required, or removed -->
+    <transition name="storeRequirement">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.store#JobRequirement"
+                    in-map="{emplPositionClassId:emplPositionClassId, skillTypeEnumId:(skillTypeEnumId || null), remove:(remove == 'true')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'true' ? 'Skill removed' : 'Skill added'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="emplPositionClassId"/></default-response>
+        <error-response url="."><parameter name="emplPositionClassId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PositionServices.get#JobClass" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{emplPositionClassId:(emplPositionClassId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="jobClass" from="found?.jobClass || null"/>
+        <set field="recordFound" from="!!jobClass"/>
+        <set field="skills" from="found?.skills || []"/>
+        <set field="workTypes" from="found?.workTypes || []"/>
+        <set field="canEdit" from="!!jobClass?.canEdit &amp;&amp; jobClass.state !== 'ended'"/>
+        <set field="stateColors" from="{current: 'positive', ended: 'grey-8'}"/>
+        <set field="workTypeText" from="workTypes.map(row =&gt; row.workTypeName).join(', ')"/>
+        <set field="editValues" from="jobClass ? {emplPositionClassId: jobClass.emplPositionClassId, expectedRevision: jobClass.revision,
+                title: jobClass.title, description: jobClass.description, workTypeEnumIds: workTypes.map(row =&gt; row.workTypeEnumId)} : {}"/>
+    </actions>
+    <widgets>
+        <section name="JobClassMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This job class is not available to you."/>
+                        <link url="${sharedLinks['Staffing/JobClasses']}" text="Back to job classes" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="JobClassRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${jobClass.title}" type="h5"/>
+                            <label text="${jobClass.skillCount} skills${jobClass.positionCount != null ? ' · ' + jobClass.positionCount + ' positions' : ''}"
+                                    type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[jobClass.state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(jobClass.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: jobClass.stateText})}]]></text>
+                                <text type="html">${jobClass.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${sharedLinks['Staffing/JobClasses']}" text="Job classes" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <link url="${sharedLinks['Staffing/Positions']}" text="Positions of this class" link-type="anchor"
+                                    parameter-map="{emplPositionClassId:jobClass.emplPositionClassId}" condition="jobClass.positionCount != null"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="EditJobClassDialog" button-text="Edit profile" icon="sym_o_edit" type="primary" width="720"
+                                    title="Edit ${jobClass.title}" condition="canEdit">
+                                <form-single name="EditJobClass" transition="storeJobClass" map="editValues">
+                                    <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
+                                    <field name="description"><default-field title="Description"><text-area rows="8" cols="70"/></default-field></field>
+                                    <field name="workTypeEnumIds">
+                                        <default-field title="Work types">
+                                            <drop-down allow-multiple="true" allow-empty="true">
+                                                <entity-options key="${enumId}" text="${description}">
+                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                        <econdition field-name="enumTypeId" value="WorkType"/>
+                                                        <order-by field-name="description"/>
+                                                    </entity-find>
+                                                </entity-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit">
+                                <link url="endJobClass" link-type="hidden-form-link" text="End job class" icon="sym_o_event_busy" btn-type="danger"
+                                        confirmation="End ${jobClass.title}? Its positions keep it; no new position takes it."
+                                        parameter-map="{emplPositionClassId:jobClass.emplPositionClassId, expectedRevision:jobClass.revision}"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Job profile"/>
+                    <box-body>
+                        <label text="${jobClass.description}" type="p" condition="jobClass.description"/>
+                        <label text="No description yet." type="p" style="m-muted" condition="!jobClass.description"/>
+                        <label text="Work types: ${workTypeText}" type="p" style="text-caption" condition="workTypes.length"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Requirements"/>
+                    <box-toolbar>
+                        <container-dialog id="AddSkillDialog" button-text="Add skill" icon="sym_o_add" type="default" width="520"
+                                title="Add a skill ${jobClass.title} requires" condition="canEdit">
+                            <form-single name="AddSkill" transition="storeRequirement" map="{emplPositionClassId:jobClass.emplPositionClassId}">
+                                <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                                <field name="skillTypeEnumId">
+                                    <default-field title="Skill">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="SkillType"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add skill"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Requirements" list="skills" skip-form="true" paginate="false" condition="skills.length">
+                            <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="storeRequirement" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
+                                            condition="canEdit" confirmation="Remove ${skillName} from ${jobClass.title}?"
+                                            parameter-map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, remove:'true'}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="skillName"/></column>
+                                <column><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!skills.length"
+                                text="No skill is required yet.${canEdit ? ' Add the skills the work needs.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

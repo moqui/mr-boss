@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Parts of the IronStone People screens (impl-people P1). A screen includes each transition it uses by name
     (transition-include), so a form here posts to the screen it is on.
-    - choices: the app's drop-downs (ironstone.people.ContextServices.get#Choices: employers, units, people, employees), after
-      the root's People check; choiceOrganizationPartyId names the employer of employees (P3). -->
+    - choices: the app's drop-downs (ironstone.people.ContextServices.get#Choices: employers, units, people, employees, departments, job classes, pay grades), after
+      the root's People check; choiceOrganizationPartyId names the employer of employees (P3) and of departments (P4). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="choices" read-only="true">
