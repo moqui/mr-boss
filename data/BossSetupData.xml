@@ -4407,4 +4407,48 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_LIFECYCLE_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+
+    <!-- Admin P11 (design-admin §8 Connections and ConnectionDetail, §9 MailRelays and MailRelayDetail; impl-admin P11): the
+        Integrations area (Connections, ConnectionDetail) and the Mail and protocols area (MailRelays, MailRelayDetail), the
+        integration administrator's and the administrator's, denied to the root group as the other areas. The grants open
+        navigation and lend the organization filters a payment gateway's organizations are read and permitted under; a
+        connection is read with ADMIN_CONNECTION_VIEW and changed or tested with ADMIN_CONNECTION_MANAGE, checked by
+        org.moqui.admin.ConfigurationServices and mantle.account.GatewayConnectionServices whatever opens the screens. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_INTEGRATIONS" description="Admin connections">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_INTEG" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ADM_PROTOCOLS" description="Admin mail relays and protocols">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Protocols.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_INTEG" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin's settings index entries of P11 (design §14.2), each shown to a user its screen opens to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.connections" version="1" ownerApp="Admin" title="Connections"
+            description="The payment, shipping and tax gateways, remote systems, mail sign-in providers and printers this instance reaches, with their addresses and credentials, and the organizations a payment gateway is permitted for"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Integrations/Connections"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="111"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.mailRelays" version="1" ownerApp="Admin" title="Mail relays"
+            description="The outgoing mail servers the instance sends its own mail through"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/MailRelays"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
 </entity-facade-xml>

@@ -201,7 +201,15 @@ feature("a settings entry shows only to those its destination opens to, and its 
         const instance = settings(users.system, {settingsGroupEnumId: "AdmSgInstance"})
         if (
             JSON.stringify(instance) !==
-            JSON.stringify(["voice.system", "admin.instanceSettings", "admin.localization", "admin.referenceData"])
+            // P11: Admin's Connections and Mail relays (design §14.2)
+            JSON.stringify([
+                "voice.system",
+                "admin.instanceSettings",
+                "admin.localization",
+                "admin.referenceData",
+                "admin.connections",
+                "admin.mailRelays"
+            ])
         )
             problems.push(`the instance group: ${instance}`)
         // a Projects client is refused the index

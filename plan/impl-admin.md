@@ -2480,6 +2480,277 @@ Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail;
   disabled with no request sent; enabling it for ORG_ZIZI_SERVICES makes it a choice in that store's checkout settings
   and in Accounting's PaymentMethods, neither of which can change its credentials.
 
+**Built Nov 10 (P11).**
+- mr-moqui (Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it):
+  - Rust. `moqui-lib` `net.rs` (new, std only: `internal_address`, moved from `http.rs`, which re-exports it, and
+    `public_addresses`, the one lookup that refuses an internal address). `moqui-mail` `implementation.rs` `smtp_transport`,
+    where every SMTP connection starts: a server with `disabled` Y sends nothing (`test#EmailServer` still tries it), and one
+    with `allowPrivateNetwork` N is looked up once and connected to at the address found, an internal one refused, TLS still
+    verifying the name. `moqui-core` `service/system_sync/message.rs` `send_rest`: a `disabled` remote refused,
+    `deny_internal` from `allowPrivateNetwork`, and the send's sign-in read from `sendAuthEnumId` then `messageAuthEnumId`, its
+    HMAC secret from `sendSharedSecret` then `sharedSecret`. `service/tools.rs`: a `disabled` printer takes no job but
+    `print#Document`'s `connectionTest`; `print.rs` `PrintServer.deny_internal`, which `moqui-host` `ipp.rs` obeys with a
+    second client (the `PublicOnly` resolver, an address written out refused, no redirect).
+  - `entity/ServiceEntities.xml`, `BasicEntities.xml`: `disabled` and `allowPrivateNetwork` (both audit-logged) on
+    `SystemMessageRemote`, `EmailServer` and `NetworkPrinter`. `entity/ServerEntities.xml` (appended):
+    `moqui.server.ConnectionAdapter` (the registry), `ConnectionConsumerProvider` and `ConnectionCheck` (the last test, the
+    mark of a passing one, whether the connection waits for a test and whether a cleared secret is still missing).
+  - `service/org/moqui/admin/ConfigurationServices.xml` (appended, its bodies in the new `ConfigurationConnections.js`):
+    `find#Connections`, `get#Connection`, `store#Connection`, `test#Connection`, `find#ConnectionConsumers`, and the interfaces a
+    component's kind implements, `run#ConnectionAdapter` and `find#AdapterConsumers`. One engine takes a kind's definition
+    (its parts, fields with kinds and validation, endpoint fields, secrets, what makes it incomplete, read only or not this
+    kind's, its test and its consumers) and gives the list, the detail (secrets as `secretSet`), the save (declared fields
+    only; the revision; the endpoint-change rule; the audit rows, a secret as replaced or cleared) and the test (nothing sent
+    while incomplete or while a cleared secret is missing; a pass marked for the fingerprint and enabling a connection that
+    waited for it; the checks kept as safe text). The framework's kinds: remote (an `https` address with the sender's three
+    `${}` names only, user, sign-in when sending, signature header, usage; its test one HEAD with no credentials and no body),
+    relay (an `EmailServer` no `EmailAccount` owns; SMTP host, port, TLS, users, allowed domains, link base; TLS required when
+    it signs in; its test `test#EmailServer` and, asked, one fixed message to the caller's own address), mailOAuth
+    (`EmailOAuthProvider`'s client id, tenant and secret; no request) and printer (server, port, printer name; a fixed test
+    page). `ConfigurationLib.js` gains `plainText`, `urlText`, `enumValue` and `write`, moved from `ConfigurationProviders.js`
+    (P10's, which now takes them from the lib).
+  - `impl/SystemMessageServices.xml` `send#ProducedSystemMessage`: a message of a `disabled` remote waits, tried again after
+    the retry time, its failures not counted. `impl/PrintServices.xml`: `connectionTest`.
+  - Data: `AdminConfigurationData.xml` (appended: the `AdminConnectionServices` grant naming the five services, and the four
+    `ConnectionAdapter` rows).
+  - Docs: Attack-Surface (the connections paragraph), Parity-Diffs (P8c-22, P8c-23), Remaining-Work's `org.moqui.admin` row.
+- mr-mantle:
+  - `service/mantle/account/GatewayConnectionServices.xml` with `GatewayConnections.js` (new): `run#GatewayConnectionAdapter`
+    (the kinds paymentGateway: `PaymentGatewayConfig` with its type's options and its `SystemMessageRemote`; shippingGateway:
+    `ShippingGatewayConfig` with its remote; taxGateway: `TaxGatewayConfig`; each a definition for the framework's engine),
+    with Mantle's own validation: a gateway is started only as a registered provider type (Authorize.Net, PayTrace, Shippo),
+    whose service names are the type's and never entered; on a production instance its address is one of its provider's; its
+    usage agrees with the address and, for shipping, with its test mode; the type's options are typed.
+    `store#PaymentGatewayOrganization` (F10: the one writer; organization in the caller's scope, gateway, from, thru, enabled,
+    the revision, the reason; never deleted: `remove` ends it now, one in use is ended from now on at the earliest and says
+    who still names it; enabling one that had ended starts a new period). `find#RemoteConsumers` and `find#PrinterConsumers`
+    (the gateways and store integration of a remote; the facilities of a printer).
+  - `data/PaymentGatewayConnectionData.xml` (new, seed): the three `ConnectionAdapter` rows, the two consumer providers, and the
+    grant of `store#PaymentGatewayOrganization` (ALL_USERS with `MANTLE_USER_ORG`, ADMIN with `MANTLE_ACTIVE_ORG`, as the
+    identity services'); the adapter and consumer services are in no grant.
+  - `ext/account/gateway/AuthorizeNet.js`, `PayTrace.js`, `ext/shipment/Shippo.js`: a `disabled` connection is the gateway's
+    problem, and a connection with `allowPrivateNetwork` N is called with `denyInternal()`.
+- BOSS:
+  - Screens: `Admin/Integrations.xml` (new area, menu 6: Connections, ConnectionDetail) and `Admin/Protocols.xml` (new area
+    "Mail and protocols", menu 7: MailRelays, MailRelayDetail). `Integrations/Connections.xml` (ConnectionFind,
+    ConnectionList, NewConnection); `Integrations/ConnectionDetail.xml` (the record header with Test as its primary action,
+    Enable and Disable; NativeConnection, the kind's own form as one multi-row form of its declared fields and secrets;
+    OrganizationAvailability for payment gateways, with Permit an organization, End and Permit again; ConnectionChecks;
+    Consumers); `Protocols/MailRelays.xml` (RelayFind, RelayList, NewRelay); `Protocols/MailRelayDetail.xml`
+    (RelayConfiguration, RelayTest with the choice of the named test message, RelayConsumers). The two detail screens share
+    `template/AdminConnectionParts.xml` (the transitions `storeConnection`, `testConnection` and `setEnabled` and the sections,
+    whose first prepares the record), each fixing its kind in `always-actions`: MailRelayDetail is the relay's alone and
+    ConnectionDetail answers no relay.
+  - `Admin.js`: the `integrations` and `protocols` areas and the four link paths. No new `ironstone` service, so the client
+    deny pattern is unchanged.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_INTEGRATIONS` and `BOSS_ADM_PROTOCOLS` (denied to the root group; the
+    integration administrator with `MANTLE_USER_ORG`, the administrator with `MANTLE_ACTIVE_ORG`) and the settings index entries
+    `admin.connections` and `admin.mailRelays` (`ADMIN_CONNECTION_VIEW`). BossUsersDemoData unchanged.
+- Specs: framework `test/AdminConnectionServices` (3 features, 0.3 s on the Debug binary: a read with no secret; an undeclared
+  field, a `${}` of its own, plain `http` and a stale revision refused; a moved address clearing every secret, disabling and
+  audited with no value; a test with the secret missing sending nothing, counted by the HTTP fixtures; the secret entered
+  again, then a passing test, one HEAD with no credentials, enabling it; no internal address for a connection that may not
+  use the private network, a remote and a relay; a new remote receiving from an authorized user only; a received-message
+  secret and the backup mirror's remote not changed here; a kind with no request enabled by its test, an administrator's
+  disable kept; an account-owned server on no path; a relay without TLS refused; a printer whose page is not taken left
+  disabled; the reader and a user without the permission). Mantle `test/account/GatewayConnections` (2 features, 0.3 s: the
+  kinds registered with their provider types; a test gateway type and an entered service name refused or ignored; the usage
+  and option validation; the live address without the key clearing it, no request; a local gateway with nothing to test; the
+  adapter not callable; the binding permitted, stale, clamped to now when in use, started again, not started later, ended
+  with its reason and its audit rows, never before its start, and refused outside the caller's organizations). BOSS
+  `test/Admin/AdminRelays` (2 features, 0.9 s: a relay started, given its sign-in and repointed through the transitions; the
+  Integrations mount not the relay's; a mail account's server changed and tested on no path; a gateway permitted for the
+  administrator's own organization, not another's, not by the reader; MailRelays' and ConnectionDetail's one qvt render each,
+  no secret). `AdminAccess` changed: the `integrations` and `protocols` capabilities for the integration administrator and
+  the administrator, and the two areas in the administrator's and ADMIN's menus. `AdminRegistries` changed: the Instance group
+  holds Admin's two new entries. Cargo: `moqui-lib` `net::tests`, `moqui-mail`
+  `a_disabled_server_and_an_internal_address_are_refused_before_a_connection`, `moqui-core`
+  `a_disabled_printer_takes_only_its_connection_test`. Acceptance, written and not run:
+  `acceptance/Admin/AdminConnectionsUsable` (3 features, the "usable when", with the HTTP fixtures: no network).
+- Tests run (the worktree's Debug binary and runtime): framework AdminConnectionServices, AdminIdentityProviders,
+  AdminConfiguration 10 of 10; mr-mantle GatewayConnections 2 of 2; mr-boss AdminRelays, AdminAccess, AdminRegistries,
+  AdminSecurity, AdminSettings, ProjectsAccess 29 of 29 (AdminRegistries after its expectation changed); `cargo test` for
+  `moqui-lib` (`net::`, `http::`, 13), `moqui-mail` (3), `moqui-core` (`service::tools`, `service::system_sync`, 22) and
+  `moqui-host` (`ipp`, 8); `moqui lint --screens` 132 flagged sites, as master. By hand, not kept: Connections, ConnectionDetail
+  (a payment gateway with its organizations as the administrator, a gateway started here, a remote, the tax gateway, a relay
+  refused), MailRelays and MailRelayDetail in qvt, tui and html, the reader refused both areas, and the lists as the
+  services answer them on the demo. Prettier clean on the new JavaScript; rustfmt and clippy clean on the changed Rust files
+  and their four crates. Not run: `./moq test-framework`, `./moq test-apps`, the acceptance suite, the rest of cargo; no
+  browser; no request to a real
+  host (a test run is closed to the network), so the SMTP sign-in, the test page and the HEAD are proven against fixtures,
+  refusals and the unit tests only.
+- Inventories: ss-inventory's six Gateway forms (Implemented in).
+- Design edits: design-admin §8 Connections and ConnectionDetail, §9 MailRelays and MailRelayDetail (as built), §14 (the
+  connection adapter row), §17.2 (ConfigurationServices; `store#PaymentGatewayOrganization` is Mantle's); design-accounting
+  (Shared settings access) and design-commerce (Payment choices): who writes the binding.
+- Findings (provisional, numbered by the lead):
+  - **F-P11-1** No native connection record had a disabled state or a test mark (only `EmailOAuthProvider.disabled`), and
+    nothing a sender obeys could be kept beside them. Built: `disabled` and `allowPrivateNetwork` on the three native records,
+    enforced where each is sent through (Rust and `send#ProducedSystemMessage`; Mantle's three gateways for their connection);
+    the mark in `ConnectionCheck`. A remote's own send service is stopped by `send#ProducedSystemMessage` when `disabled`, and
+    reads `allowPrivateNetwork` only where this phase changed it (`send#SystemMessageRest`, Authorize.Net, PayTrace, Shippo).
+  - **F-P11-2** `/rest/sm/{type}/{remote}` takes a message of any type from whoever satisfies the remote's own
+    `messageAuthEnumId` (`SmatNone`: anyone), so an administrator who could choose how a remote receives, or set the secret it
+    verifies by, could send the instance messages of any type. Built: that field is never changed here; a remote or gateway
+    started here receives from a signed-in, authorized user only (`SmatLogin`), so a gateway started in Admin takes no
+    provider webhooks until an instance administrator sets their verification; the shared secret of a remote that verifies
+    received messages by it is not entered here (`SECRET_NOT_DELEGATED`). A framework ask: bind a remote's inbound to its
+    message type, then delegate the webhook key.
+  - **F-P11-3** The backup mirror's remote (`EmbeddedDbBackup`) is a `SystemMessageRemote` whose address is an SFTP target:
+    repointed, the database archives go elsewhere, which `ADMIN_BACKUP_DOWNLOAD` is sealed to prevent. Built: a remote with a
+    send service of its own, of a message type with a file path or a send service, or not posting over `https`, is read only
+    here.
+  - **F-P11-4** `send#SystemMessageRest` expands a remote's `sendUrl` as a template, so a stored `${}` is an expression run at
+    each send. The address may hold the three names the sender gives and no other.
+  - **F-P11-5** `send#SystemMessageRest` read only `messageAuthEnumId` and `sharedSecret`: `sendAuthEnumId` and
+    `sendSharedSecret`, whose descriptions say they are the send's, were not read. They are now read first (P8c-23), which is
+    what lets the send's sign-in be chosen without touching how the remote receives.
+  - **F-P11-6** "MailRelays lists SYSTEM only" (the plan's spec line): by the design's definition (no mail account owns it)
+    the demo lists SYSTEM, the framework's `MOQUI_LOCAL` and the servers the apps' demo templates send through; a mailbox an
+    instance polls without an account would be listed too. The specs check SYSTEM in and an account's server out.
+  - **F-P11-7** The entity audit log's `update` mode writes no row for a value set where there was none (an end date, a first
+    address). The services write those rows themselves (the engine for every audit-logged field; the binding's dates).
+  - **F-P11-8** A remote's or gateway's test proves the address, not the credentials (as P10's F137): one request with none.
+    A relay's test does sign in. A provider's own authenticated check (Authorize.Net's) is the gateways' later work.
+  - **F-P11-9** The demo's payment gateways are local test gateways with no connection, and `BOSS_COM_HOSTED` is already
+    permitted for ORG_ZIZI_SERVICES; the gateway with an address is Mantle's `AuthorizeNetDemo`, which the acceptance uses.
+  - **F-P11-10** The organizations of a payment gateway are read and permitted under the organization filters of the
+    authorization the call runs under (the Admin screens' grants): outside a screen a delegated administrator is answered
+    none (an instance administrator every one), as Mantle's identity scope.
+  - **F-P11-11** The design's NewRelay "permitted organization" and NewConnection "organization" are not built: only
+    `PaymentGatewayOrganization` exists (design §8.1), and a relay has no purpose record.
+  - **F-P11-12** The shipping gateway's carriers, methods, box types and options (`ShippingGatewayOption` rows) are not in its
+    form: Warehouse's Carriers owns the bindings, and the option rows stay Tools'.
+  - **F-P11-13** Consumers links a gateway or a remote to its own detail; links into the owners' apps (PaymentMethods, a
+    store's checkout, Warehouse's printers) are not built, and records of organizations the administrator does not
+    administer are counted or left out.
+  - **F-P11-14** The HTTP fixtures answer before the transport's internal-address guard, so the framework spec turns them off
+    for the one call that shows the guard.
+  - **F-P11-15** `store#Connection` takes no operation key: a repeated New connection with an id is refused (`KEY_IN_USE`), a
+    printer started with no id twice is two printers (as P10's providers).
+- Decisions: the state a sender obeys is on the native record, the test mark beside it; one engine with a definition a kind,
+  a component's kind one adapter service with an operation; a passing test enables a connection the endpoint rule (or its
+  creation) disabled, and an administrator's own Disable stays until Enable, which needs that test; an endpoint change
+  clears every stored secret of the connection; a gateway is a registered provider type, its address its provider's on a
+  production instance; a binding is ended, never deleted, and enabled again starts a new period; a relay that signs in needs
+  TLS; a mail sign-in provider's endpoints are not changed here; Integrations and Mail and protocols are two areas of the
+  integration administrator and the administrator; the kind's form is one multi-row form of what it declares.
+- For the lead:
+  - the shared release binary needs a rebuild after the merge (the Rust above), and a database made before needs the six new
+    columns and three new tables;
+  - budget shares (Debug binary): framework about 0.3 s (AdminConnectionServices); mr-mantle about 0.3 s
+    (GatewayConnections); mr-boss about 0.9 s (AdminRelays); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` and `AdminConfigurationData.xml` appended at their ends, `ConfigurationServices.xml`
+    appended, `ServiceEntities.xml` and `BasicEntities.xml` (two fields in each of three entities), `ConfigurationLib.js` and
+    `ConfigurationProviders.js` (four helpers moved), `SystemMessageServices.xml` and `PrintServices.xml`, the Rust files
+    above, Attack-Surface, Parity-Diffs, Remaining-Work (the `org.moqui.admin` row only); mr-mantle all new files but three
+    gateway modules (two small hunks each); mr-boss `BossSetupData.xml` appended at its end (Insights appends there too),
+    `Admin.js` (`areas`, `linkPaths` after P10's), `AdminAccess.spec.js`, `AdminRegistries.spec.js` (one expectation),
+    `design-admin.md`, `design-accounting.md` and `design-commerce.md` (one sentence each, the other apps' designs, as the
+    phase's binding calls for), `ss-inventory.md`; P12 adds ProtocolsHome as the Protocols area's default and P13 MessageTypes
+    and SystemMessages to Integrations;
+  - the user's call: F-P11-2 (bind a remote's inbound to its type in the framework, then delegate webhook keys and let a
+    gateway started in Admin take its provider's webhooks); whether a passing test alone should enable a repointed connection
+    (built: yes, by the integration administrator who repointed it, so a printer, relay or remote sends what it carries to an
+    address of that administrator's choosing once their own test passes; P10 held enabling apart) or a second person;
+    whether a production gateway's address is its provider's hosts only (built) or any public `https` address; F-P11-6
+    (whether the apps' sending servers and `MOQUI_LOCAL` belong in MailRelays); F-P11-11 (an organization or purpose record
+    for relays and other kinds: later, if a deployment needs one);
+  - by mistake `./moq run lint --screens --debug --nobuild` (the options after the command) started a release build in this
+    worktree: it was stopped at once and its `target/release` removed; the options go before `lint`;
+  - the acceptance AdminConnectionsUsable to run when asked.
+
+**Review Nov 10 (P11).** A fresh review of the three repositories' P11 diffs, existing behavior and secrets first (the Rust,
+the engine and Mantle's adapter read line by line); fixes committed apart per repository ("Admin P11 review: …"). Rust
+changed again (`moqui-mail` `implementation.rs` only: the Debug binary of the worktree was rebuilt).
+- Checked and found sound:
+  - Existing rows. Every new check is an equality with `Y` (`disabled`) or `N` (`allowPrivateNetwork`): a row with neither
+    (demo data, an upgraded instance, Tools' rows, a mail account's server, the backup mirror's remote, Commerce's channel
+    remotes, Mantle's gateways' remotes) takes the same path as before in `send_rest`, `send#ProducedSystemMessage`,
+    `smtp_transport`, `send_job` (one more read of the printer), the IPP client (the same client; the public-only one is a
+    second) and the three gateway modules, loopback and private addresses included. `internal_address` moved unchanged, and
+    the HTTP resolver's refusal reads the same. No view entity joins two of the three entities' new names. P8c-23: no seed
+    or demo row sets `sendAuthEnumId` or `sendSharedSecret`; a row where an instance administrator set one in Tools now
+    sends by it, as its description says (before, it was not read). An empty `sendAuthEnumId` is exactly the old read.
+  - The Rust guards. SMTP with `N`: one lookup, every address checked, the connection made to the address found with TLS
+    still verifying the name; a literal, `localhost` and a name are refused alike. IPP with `N`: a literal refused before
+    the request, a name by the `PublicOnly` resolver, which also pins the address, no redirect followed. HTTP: P10's client
+    (resolver and each redirect hop). `test#EmailServer` ignores `disabled` on its own copy of the row only.
+  - Secrets. `get` and `list` answer `secretSet` only; the engine's own audit rows hold "(set)", "(replaced)" or
+    "(cleared…)"; the entity audit log writes an encrypted field's old and new value encrypted (as before this phase); a
+    test's text is one of a fixed list with the stored secrets struck out, a relay's and a printer's failure a kind, never
+    the server's words; errors name labels, never values. The endpoint rule clears every stored secret of the connection
+    not entered in the same save, fixed ones too (a webhook key, a private key), and the receive path refuses an HMAC or
+    URL-token remote with no secret, so a cleared inbound secret closes the remote. No request while a cleared secret is
+    missing or the configuration is incomplete (counted by the fixtures).
+  - `test#Connection`: the manage permission, hidden and read-only records refused before anything is sent, one HEAD with
+    no credentials for a remote or gateway (ten seconds, status only), the relay's and the printer's own clients' limits;
+    `sendUrl` is expanded as a template literal in which only `${` opens an expression, and the validation refuses every
+    `${` but the three names. Design §8.1 and §15.3 "Endpoint change" say a passing test against the new endpoint enables
+    the connection, with no second person: built as designed (P10 held enabling apart because enabling a provider needs
+    `ADMIN_ACCESS_MANAGE`). On an instance that is not production a test may reach an internal `https` address, as P10's.
+  - Scope of what is editable: an account-owned `EmailServer` on list, get, store, test and consumers; the backup mirror's
+    remote, a remote with a send service or message type of its own or not over `http(s)`; `messageAuthEnumId` in no
+    definition and the inbound secret refused; adapters reached only by `ConnectionAdapter` rows, the client's `adapterKey`
+    looked up among them by own name; Mantle's adapter and consumer services in no grant. Commerce's channel remotes are
+    listed as remotes: their inbound sign-in and secret are not changed here, and nothing of Commerce's sends to their
+    address.
+  - `store#PaymentGatewayOrganization`: the manage permission, the organization among the filtered internal organizations
+    (no organization filter and not an instance administrator: none, so a call outside a screen by a delegate without the
+    grant's filter fails closed), an internal organization only, the row locked, the revision, never a delete, the audit
+    rows; Commerce's and Accounting's reads are untouched files; a binding gives no read of the connection.
+  - BOSS: two inheritable area grants, each transition reaching a framework or Mantle service with its own check
+    (`choices` is `ContextServices.get#Choices`); ConnectionDetail answers no relay and MailRelayDetail only relays
+    (`always-actions`); one qvt render a screen in AdminRelays, the transitions in `html`, no request leaves the machine.
+- Fixes:
+  - **R1 (high).** A gateway's connection is a plain `SystemMessageRemote`, which the remote kind listed and changed like
+    any other: an integration administrator on a production instance could repoint Authorize.Net's remote to any public
+    `https` host there, enter a key of their own, pass the test and have the gateway post payment requests to it, past
+    `PROVIDER_ADDRESS`. Fixed: a consumer a provider answers may say `ownsConnection` (Mantle's `find#RemoteConsumers` does
+    for a payment or shipping gateway), and the remote kind is then read only (`store#` and `test#Connection` answer
+    `READ_ONLY`, naming the gateway), as it is when a provider cannot be asked. The remote is changed as the gateway's
+    connection only.
+  - **R2 (medium).** NativeConnection posts every setting, and the engine validated and compared each: a stored host in
+    capitals (normalized to lower case) or a port with a leading zero was an endpoint change that cleared the stored
+    secrets and disabled the connection on any save, and a stored value today's validation refuses (an `http` address
+    from Tools on a production instance) refused every save. Fixed: a value given as it was read is no change.
+  - **R3 (medium).** `disabled` and `allowPrivateNetwork` are audit-logged for updates, which write no row for a first
+    value (F-P11-7), and the engine wrote its own rows for declared fields only: an administrator's Disable of a connection
+    never disabled before, the endpoint rule's disabling and the first `allowPrivateNetwork` N left no audit row and lost
+    the reason. Fixed: the engine writes those rows.
+  - **R4 (medium).** The secret of NativeConnection was posted as `fieldValue_N`: a refused save keeps the request's
+    parameters in the session for the form, all but names holding "password", and request details strike out by name
+    too. Fixed: a secret row's input is `secretPassword_N`. P10's IdentityProviderDetail posts its `secret` field the same
+    way (for the lead).
+  - **R5 (low).** A mail server refused before any connection (disabled, or an internal address with `N`) gave the
+    delivery outcome "uncertain" (possibly sent), which Mantle's delivery ledger does not retry. Fixed: "retryable"
+    (`moqui-mail` `delivery_outcome`), so mail waits for the relay's test as a system message waits for its remote's.
+  - **R6 (low).** A connection an administrator had disabled was enabled by the test that followed a later endpoint
+    change. Fixed: the test enables what the change disabled (or a new one); one disabled before stays so until Enable.
+  - **R7 (low).** A URL an instance administrator wrote with credentials in it (`https://user:password@host`) was read
+    whole by `get#Connection`: it is now read as `(credentials)@host` (saved back so, it is no change). The consumer
+    providers were asked about a record that is not the kind's (an account-owned server's id): no longer. A binding's first
+    end date was audited as a number of milliseconds. `send#SystemMessageRest`'s description said `messageAuthEnumId` only.
+- Tests (the worktree's Debug binary, rebuilt): framework AdminConnectionServices (3 features, 0.4 s: adds the legacy
+  remote saved as read with its credentials masked, the audit row of the disabling, the repoint of a disabled provider),
+  AdminIdentityProviders, AdminConfiguration 10 of 10; mr-mantle GatewayConnections 2 of 2 (adds the gateway's remote read
+  only as a remote, no request); mr-boss AdminRelays, AdminAccess, AdminRegistries 14 of 14 (AdminRelays posts secrets as
+  the form does and checks the secret input's name); `cargo test -p moqui-mail` 150 passed (the transport test adds the
+  delivery outcomes); clippy clean on `moqui-mail`; Prettier clean; `moqui lint --screens` 132 flagged sites, as master.
+  Not run: the full suites, the acceptance test (its `rows` helper changed with the form's), a browser.
+- For the lead:
+  - the release binary needs the rebuild the Built note asks for, now with `moqui-mail`'s change too;
+  - `find#AdapterConsumers` gains `ownsConnection` (an owner that names a connection its own kind administers); another
+    component with a kind over a remote answers it the same way;
+  - open, not built: `sendUrl`'s query is read whole (a key an operator put in it would be shown to a reader of
+    connections; masking it would make the address write-only); `smtpStartTls` is opportunistic in the transport, as Java
+    (a relay with STARTTLS signs in without TLS when the server offers none, so "a relay that signs in needs TLS" holds
+    for TLS from the start only; requiring it for `allowPrivateNetwork` N servers is a small Rust change); a disabled
+    printer still answers status and cancel requests for its earlier jobs; `print#Document`'s `connectionTest` is open to
+    every caller of that service (a test print to a printer that waits for its test, nothing more); P10's `secret` form
+    field (R4);
+  - the user's call stays as the Built note has it; on "a passing test alone enables": the design says so (§8.1, §15.3).
+
 ### P12 — Protocols and the mail queue
 
 Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.

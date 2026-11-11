@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Connections (design-admin §8.1, §8 Connections; style-guide §3.2 List; impl-admin P11): the infrastructure connections of
+    the registered kinds (payment, shipping and tax gateways, remote systems, mail sign-in providers, network printers), the
+    native records their owners read, listed by org.moqui.admin.ConfigurationServices.find#Connections. ConnectionList shows
+    each with its kind, provider, address (a host, never a path or a credential), the organizations a payment gateway is
+    permitted for, its last test and its state; NewConnection starts one of a kind that is started here, saved disabled, and
+    opens its detail (store#Connection). Mail relays are Mail and protocols' (MailRelays). Reading needs ADMIN_CONNECTION_VIEW
+    and starting one ADMIN_CONNECTION_MANAGE, checked by the services. No secret is shown or listed. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Connections" menu-image="sym_o_hub" menu-image-type="icon">
+    <parameter name="text"/>
+    <parameter name="adapterKey"/>
+    <parameter name="state"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="pageIndex"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="createConnection">
+        <actions>
+            <!-- the kind and, for a gateway, its provider type come as one choice: kind, or kind:type -->
+            <set field="newAdapterKey" from="String(newKind || '').split(':')[0]"/>
+            <set field="newTypeEnumId" from="String(newKind || '').split(':')[1] || null"/>
+            <if condition="newAdapterKey === 'relay'"><set field="newAdapterKey" value="none"/></if>
+            <service-call name="org.moqui.admin.ConfigurationServices.store#Connection" out-map="stored"
+                    in-map="{adapterKey:newAdapterKey, values:{connectionId:(newConnectionId || ''), description:newDescription, gatewayTypeEnumId:newTypeEnumId}}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Connection started. It stays disabled until it is configured and a test of it passes.' : stored.reason,
+                    stored.applied ? 'success' : 'warning')</script>
+                <set field="connectionKey" from="stored.applied ? stored.connectionKey : null"/>
+                <set field="adapterKey" from="newAdapterKey"/>
+            </if>
+        </actions>
+        <conditional-response url="../ConnectionDetail"><condition><expression>!!connectionKey</expression></condition>
+            <parameter name="adapterKey"/><parameter name="connectionKey"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="org.moqui.admin.ConfigurationServices.find#Connections" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{adapterGroup:'integration', text:(text || null), adapterKey:(adapterKey || null), state:(state || null),
+                    organizationPartyId:(organizationPartyId || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="available" from="!!found?.connectionList"/>
+        <set field="connections" from="(found?.connectionList || []).map(row =&gt; Object.assign({}, row, {
+                stateColor: row.state === 'ready' ? 'positive' : ['untested', 'needsTest', 'incomplete'].includes(row.state) ? 'warning' : 'grey-7',
+                kindText: [row.adapterTitle, row.providerName &amp;&amp; row.providerName !== row.adapterTitle ? row.providerName : ''].filter(Boolean).join(' · '),
+                checkText: !row.lastCheckDate ? 'Not tested' : ec.l10n.format(Date.parse(row.lastCheckDate), 'yyyy-MM-dd HH:mm') + (row.lastCheckPassed ? ', passed' : ', did not pass')}))"/>
+        <set field="connectionsCount" from="found?.connectionListCount || 0"/>
+        <set field="connectionsPageIndex" from="Number(pageIndex || 0)"/>
+        <set field="connectionsPageSize" from="50"/>
+        <set field="connectionsPageMaxIndex" from="Math.max(Math.ceil(connectionsCount / 50) - 1, 0)"/>
+        <set field="connectionsPageRangeLow" from="connectionsCount ? connectionsPageIndex * 50 + 1 : 0"/>
+        <set field="connectionsPageRangeHigh" from="Math.min((connectionsPageIndex + 1) * 50, connectionsCount)"/>
+        <set field="kindOptions" from="(found?.adapterList || []).map(row =&gt; ({value: row.adapterKey, label: row.title}))"/>
+        <!-- what New connection offers: each kind that is started here, a gateway as each of its provider types -->
+        <set field="newOptions" from="(found?.adapterList || []).filter(row =&gt; row.creatable).flatMap(row =&gt; (row.typeOptions || []).length
+                ? row.typeOptions.map(type =&gt; ({value: row.adapterKey + ':' + type.value, label: row.title + ': ' + type.label}))
+                : [{value: row.adapterKey, label: row.title}])"/>
+        <set field="filtered" from="!!(text || adapterKey || state || organizationPartyId)"/>
+        <set field="findValues" from="{text:text, adapterKey:adapterKey, state:state, organizationPartyId:organizationPartyId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Connections" type="h5"/>
+                <label text="The gateways, remote systems and printers this instance reaches, with their addresses and credentials. Finance, warehouse and store administrators choose among them; only here are their addresses and secrets changed."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto">
+                <section name="NewConnectionSection" condition="found?.canManage &amp;&amp; newOptions.length">
+                    <widgets>
+                        <container-dialog id="NewConnection" button-text="New connection" type="primary" icon="sym_o_add" title="Start a connection">
+                            <label type="p" style="m-muted" text="A connection is started as one of the kinds this instance has an integration for. It is saved disabled: configure it, then test it."/>
+                            <form-single name="NewConnection" transition="createConnection">
+                                <field name="newKind">
+                                    <default-field title="Kind">
+                                        <drop-down><list-options list="newOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="newDescription"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="newConnectionId">
+                                    <default-field title="Id" tooltip="Letters, digits and underscores, starting with a letter; a printer may leave it empty">
+                                        <text-line size="30"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Start connection"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </widgets>
+                </section>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="!available" text="Connections are not available to you."/>
+        <section name="ConnectionSection" condition="available">
+            <widgets>
+                <form-single name="ConnectionFind" transition="." map="findValues">
+                    <field name="text"><default-field title="Connection"><text-line size="30"/></default-field></field>
+                    <field name="adapterKey">
+                        <default-field title="Kind">
+                            <drop-down allow-empty="true"><list-options list="kindOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Permitted for" tooltip="Payment gateways an organization may use">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="state">
+                        <default-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="enabled" text="Enabled"/><option key="disabled" text="Not enabled"/><option key="attention" text="Needs attention"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="text"/><field-ref name="adapterKey"/><field-ref name="organizationPartyId"/><field-ref name="state"/><field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+                <label type="p" style="m-muted" condition="!connections.length &amp;&amp; !filtered" text="No connection yet. Start one with New connection."/>
+                <label type="p" style="m-muted" condition="!connections.length &amp;&amp; filtered" text="No connection matches."/>
+                <form-list name="ConnectionList" list="connections" skip-form="true" paginate="true">
+                    <field name="name">
+                        <default-field title="Connection">
+                            <link url="../ConnectionDetail" text="${name}" link-type="anchor" parameter-map="{adapterKey:adapterKey, connectionKey:connectionKey}"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="endpointSummary"><default-field title="Address"><display/></default-field></field>
+                    <field name="organizationText"><default-field title="Organizations"><display/></default-field></field>
+                    <field name="checkText"><default-field title="Last test"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/><field-ref name="kindText"/></column>
+                        <column><field-ref name="stateText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

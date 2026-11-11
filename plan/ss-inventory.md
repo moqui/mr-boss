@@ -478,12 +478,12 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditPaymentGateway | EditPaymentGatewayForm | Admin/Integrations/ConnectionDetail |  |
-| FindPaymentGateway | NewPaymentGatewayForm | Admin/Integrations/Connections |  |
-| FindPaymentGateway | PaymentGatewaysForm | Admin/Integrations/Connections |  |
-| EditShippingGateway | EditShippingGatewayForm | Admin/Integrations/ConnectionDetail |  |
-| FindShippingGateway | NewShippingGatewayForm | Admin/Integrations/Connections |  |
-| FindShippingGateway | ShippingGatewaysForm | Admin/Integrations/Connections |  |
+| EditPaymentGateway | EditPaymentGatewayForm | Admin/Integrations/ConnectionDetail |Admin/Integrations/ConnectionDetail#NativeConnection (the payment gateway kind's fields; service names are the provider type's, never entered) |
+| FindPaymentGateway | NewPaymentGatewayForm | Admin/Integrations/Connections |Admin/Integrations/Connections#NewConnection (a registered provider type) |
+| FindPaymentGateway | PaymentGatewaysForm | Admin/Integrations/Connections |Admin/Integrations/Connections#ConnectionList |
+| EditShippingGateway | EditShippingGatewayForm | Admin/Integrations/ConnectionDetail |Admin/Integrations/ConnectionDetail#NativeConnection (the shipping gateway kind's fields; carriers, methods and options stay Warehouse's) |
+| FindShippingGateway | NewShippingGatewayForm | Admin/Integrations/Connections |Admin/Integrations/Connections#NewConnection (a registered provider type) |
+| FindShippingGateway | ShippingGatewaysForm | Admin/Integrations/Connections |Admin/Integrations/Connections#ConnectionList |
 
 ## HumanRes (2 forms)
 

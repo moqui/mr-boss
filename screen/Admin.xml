@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     UserDetail and Sessions in P4, Invitations and InviteStaff in P5, the identity operator's and the administrator's, BOSS_ADM_USERS); 3 Access (Groups and
     GroupDetail in P3, the access administrator's and the administrator's, BOSS_ADM_ACCESS); 5 Settings (the settings
     index in P2, every Admin user's; BOSS users without Admin are granted its SettingsHome alone, impl-admin F46; Organizations,
-    OrganizationDetail and Constitution in P7, the configuration administrator's and the administrator's, BOSS_ADM_ORGANIZATIONS); 8 Operations
+    OrganizationDetail and Constitution in P7, the configuration administrator's and the administrator's, BOSS_ADM_ORGANIZATIONS); 6 Integrations
+    (Connections and ConnectionDetail in P11) and 7 Mail and protocols (MailRelays and MailRelayDetail in P11), the integration
+    administrator's and the administrator's (BOSS_ADM_INTEGRATIONS, BOSS_ADM_PROTOCOLS); 8 Operations
     (Health in P2, Monitoring in P1, the jobs with their phase); 11 Agents; 12 System, the framework's Tools System screens for ADMIN alone
     (impl-admin F2: BOSS_ADMIN and BOSS_ADMIN_ADMIN are denied System.xml, so Tools' SYSTEM_APP grant decides); 13 Developer
     tools. Operations is the reader's, the operations operator's and the administrator's; Agents and Developer tools the
