@@ -114,10 +114,13 @@ function author() {
 }
 
 // ===== rules =====
-// The alert rules the viewer reads; Tools' telemetry rules are not Insights'.
+// The alert rules the viewer reads; telemetry rules are not Insights': Tools' own, and one another component ships over a
+// telemetry dataset (Admin's failing job runs, report/admin-job-runs.json, over otel_spans), which Dashboards' Alerts lists.
+const telemetryRule = definition =>
+    definition.component === "tools" || /^otel_/.test(text(leafQuery(definition.body?.query).datasetId))
 function rules() {
     return Array.from(engine("list#Definitions", {definitionType: "alert"}).definitions || []).filter(
-        definition => definition.component !== "tools"
+        definition => !telemetryRule(definition)
     )
 }
 function readRule(definitionId) {
@@ -127,7 +130,7 @@ function readRule(definitionId) {
     } catch (error) {
         definition = null
     }
-    if (!definition || definition.type !== "alert" || definition.component === "tools")
+    if (!definition || definition.type !== "alert" || telemetryRule(definition))
         denied("ALERT_UNAVAILABLE", "This alert is not available")
     return definition
 }
