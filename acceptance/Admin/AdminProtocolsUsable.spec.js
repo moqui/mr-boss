@@ -11,7 +11,8 @@
 //   notice's template; the relay's link for the integration administrator, who reads the instance's own mail and is
 //   offered no action), the next step and no subject, body or address; the operator sends it
 //   again once the relay answers (mail is captured), as the same stored message; a message that may have been sent is
-//   offered Settle, never Send again, and settling it sends nothing.
+//   offered Settle, never Send again, and settling it sends nothing and never marks it sent: the settlement is kept
+//   apart and the message is listed as settled.
 // No request leaves the machine. The rules are the framework's AdminProtocols and AdminMailOutcomes and BOSS's
 // AdminMailQueue.
 // Run: ./moq accept mr-boss --spec AdminProtocolsUsable
@@ -165,11 +166,12 @@ feature(
             out.sent = stored(failedId)
             post(users.operations, "Protocols/MailQueue/settleOutcome", {
                 emailMessageId: maybeId,
-                resolution: "sent",
+                resolution: "delivered",
                 reason: "Acceptance: the relay's log shows it",
                 expectedRevision: out.maybe.revision
             })
             out.settled = stored(maybeId)
+            out.settledRow = outcome(maybeId)
             out.sendsEnd = capture.count()
             out.messages = system(() => Number(find(MESSAGE, {emailServerId: relayId}).count()))
             return out
@@ -190,7 +192,12 @@ feature(
             out.maybe.state == "uncertain" && out.maybe.retryEligible == false && out.maybe.reconcileEligible == true
             out.uncertainSends == 0
             out.sends == 1 && out.sent.statusId == "ES_SENT" && out.sent.sendOutcome == null
-            out.settled.statusId == "ES_SENT" && out.sendsEnd == 1
+            // settled apart: the message is never marked Sent by a person and keeps what the transport left; the settlement
+            // (what was reported, who, when, why) is beside it and it is listed as settled
+            out.settled.statusId == "ES_READY" && out.settled.sendOutcome == "uncertain" && out.sendsEnd == 1
+            out.settled.sendSettlement == "delivered" && !!out.settled.sendSettledByUserId && !!out.settled.sendSettledDate
+            out.settledRow.state == "settled" && out.settledRow.stateText == "Settled: reported delivered"
+            out.settledRow.retryEligible == false && out.settledRow.reconcileEligible == false
             // no second message was made: the failed one, sent again, and the uncertain one
             out.messages == 2
         }
