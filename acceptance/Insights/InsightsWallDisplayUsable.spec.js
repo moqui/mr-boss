@@ -5,8 +5,8 @@
 // admin.access registers a plant wall screen for the playlist (Security › Devices, RegisterDevice, from Playlists' Register as
 // display) and reads its code once; the code makes one browser the device at /Device, which then plays the playlist with no one
 // signed in (WallDisplay's page, its island and its data), showing Retail's numbers only, and opens nothing else of Insights or
-// the shell; Playlists lists the device showing it; with Retail's membership of the display account ended the display shows no
-// one's numbers; and revoking the device in Admin refuses its next request. The rules are InsightsWallDisplay's, the
+// the shell; the author's Playlists shows it on the wall displays; with Retail's membership of the display account ended the
+// display shows no one's numbers; and revoking the device in Admin refuses its next request. The rules are InsightsWallDisplay's, the
 // credential's the framework's (DeviceCredential, SecurityDevice), registering Admin's (AdminDevices).
 // Run: ./moq accept mr-boss --spec InsightsWallDisplayUsable
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -74,12 +74,18 @@ feature("an author makes Retail's operations playlist and shares it and its dash
                 body: {kind: "playlist", seconds: 30, playlist: [{definitionId: boardId}]}}, note: "Wall display walk"})
             invoke("ironstone.insights.DashboardServices.share#Dashboard", {definitionId: boardId, userGroupId: "BOSS_INSIGHTS_DISPLAY"})
             // Playlists' Share with wall displays
-            const shared = shellPage("apps/Insights/Playlists/sharePlaylist", {definitionId: playlistId, shareWithDisplays: "Y"})
-            return {shared, row: system(() => find("moqui.report.Definition", {definitionId: playlistId}).one())}
+            const shared = request("apps/Insights/Playlists/sharePlaylist", {definitionId: playlistId, shareWithDisplays: "Y"}, null, null, "post")
+            return {
+                shared,
+                row: system(() => find("moqui.report.Definition", {definitionId: playlistId}).one()),
+                board: system(() => find("moqui.report.Definition", {definitionId: boardId}).one())
+            }
         })
     },
-    then({row}) {
+    then({shared, row, board}) {
+        shared.errors == ""
         row.userGroupId == "BOSS_INSIGHTS_DISPLAY"
+        board.userGroupId == "BOSS_INSIGHTS_DISPLAY"
     }
 })
 
@@ -123,7 +129,10 @@ feature("the plant wall plays the playlist with no one signed in, Retail's numbe
             shell: request("qapps/Insights/WallDisplay", {}, cookie),
             apps: request("apps/AppList", {}, cookie),
             write: request("apps/Insights/Playlists/sharePlaylist", {definitionId: playlistId}, cookie, null, "post"),
-            listed: asUser(users.system, () => shellPage("apps/Insights/Playlists"))
+            // the author's Playlists: the playlist is on the wall displays. Its devices are listed to a reader of the playlist
+            // who sees devices (ADMIN_ACCESS_VIEW), here nobody but the display account: a definition has one group (P12), and
+            // the regression InsightsWallDisplay lists them for an owner who registers devices
+            listed: asUser(users.author, () => shellPage("apps/Insights/Playlists"))
         }
     },
     then({page, island, data, home, playlists, explore, shell, apps, write, listed}) {
@@ -133,7 +142,7 @@ feature("the plant wall plays the playlist with no one signed in, Retail's numbe
         organizationsOf(data).every(partyId => partyId == ids.organizationId)
         !organizationsOf(data).includes(ids.otherOrganizationId)
         outside(home) && outside(playlists) && outside(explore) && outside(shell) && outside(apps) && outside(write)
-        listed.output.includes(deviceName)
+        listed.output.includes("Retail operations wall " + run) && listed.output.includes("Stop sharing with wall displays")
     }
 })
 
@@ -144,7 +153,9 @@ feature("with Retail's membership of the display account ended the wall shows no
                 .updateAll({thruDate: new Date(Date.now() - 1000).toISOString()}))
         const out = {unscoped: request("apps/Insights/WallDisplay/data", {index: "0"}, cookie)}
         const device = system(() => find(DEVICE, {deviceName}).one())
-        asUser(admin.users.access, () =>
+        // the display account is no longer Retail's, so it is out of admin.access's organization scope (Mantle SharedDevices:
+        // DEVICE_UNAVAILABLE, as one that does not exist): the instance's administrator revokes it in Admin
+        asUser(admin.users.system, () =>
             ec.screen.makeTest().rootScreen("component://mr-boss/screen/Admin.xml").render("Security/Devices/revokeDevice", {deviceId: device.deviceId}, "post"))
         out.next = request("apps/Insights/WallDisplay/data", {index: "0"}, cookie)
         return out
