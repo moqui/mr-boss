@@ -149,7 +149,8 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
             {user: users.identity, menu: ["Home", "Users", "Settings"], keys: ["g a"], quick: ["adminInviteUsers"]},
             {
                 user: users.admin,
-                menu: ["Home", "Users", "Access", "Settings", "Operations", "Agents", "Developer"],
+                // P10: Security, the access, configuration and integration administrators' and the administrator's
+                menu: ["Home", "Users", "Access", "Security", "Settings", "Operations", "Agents", "Developer"],
                 keys: ["g a", "g o", "g n", "g d"],
                 quick: ["adminInviteUsers"]
             }
@@ -172,7 +173,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
         const systemMenu = shell(users.system, true).names
         if (
             JSON.stringify(systemMenu) !==
-            JSON.stringify(["Home", "Users", "Access", "Settings", "Operations", "Agents", "System", "Developer"])
+            JSON.stringify(["Home", "Users", "Access", "Security", "Settings", "Operations", "Agents", "System", "Developer"])
         )
             problems.push(`ADMIN's menu is ${systemMenu}`)
         // the launcher: the reader has Admin and no business app; another app's user has no Admin
@@ -211,6 +212,8 @@ const capabilityNames = [
     "constitutionGlobal",
     "agentAdmin",
     "access",
+    // P10: Security's SignInPolicy, IdentityProviders and IdentityProviderDetail (BOSS_ADM_SECURITY)
+    "security",
     // P7: Settings' Organizations, OrganizationDetail and Constitution (BOSS_ADM_ORGANIZATIONS)
     "organizations",
     "operations",
@@ -226,9 +229,9 @@ const adminHeld = capabilityNames.filter(
 const capabilityUsers = [
     {user: users.reader, granted: ["overview", "operations"]},
     {user: users.identity, granted: ["identityView", "identityManage"]},
-    {user: users.access, granted: ["accessView", "accessManage", "access"]},
-    {user: users.configure, granted: ["settingsView", "settingsManage", "organizations"]},
-    {user: users.integrations, granted: ["connectionView", "connectionManage"]},
+    {user: users.access, granted: ["accessView", "accessManage", "access", "security"]},
+    {user: users.configure, granted: ["settingsView", "settingsManage", "security", "organizations"]},
+    {user: users.integrations, granted: ["connectionView", "connectionManage", "security"]},
     {user: users.operations, granted: ["operationView", "operationManage", "operations"]},
     {user: users.data, granted: ["transferView", "transferRun"]},
     {user: users.audit, granted: ["auditView"]},
