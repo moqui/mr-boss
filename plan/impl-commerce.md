@@ -2185,7 +2185,7 @@ caller in Mantle, BOSS, PASS or Marble; no reference to the old demo ids. Schema
   button; cart reminders are offered only to a signed-in buyer (a guest's cart is never recovered; review R2: with a verified
   account email); a confirmation grants
   only what is still pending; the news opt-in subscribes through `ConsentServices.set#ContactListPartySubscription` until
-  Marketing's `request#Subscription` exists; a guest's confirmed review requests consent is the guest party's and moves
+  Marketing's `request#Subscription` exists (picked up in impl-marketing P7); a guest's confirmed review requests consent is the guest party's and moves
   with the claim.
 - Findings (provisional):
   - **F118** `PsstCheckoutOptIns` and `PsstNewsList` are store settings that CheckoutSettings does not edit yet (they
@@ -3492,7 +3492,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F129 | P10: "a fresh session" is a new cart capability kept in the PASS session; the HTTP session id is renewed only at a password sign-in, which carries the token over | Accepted; the sign-in page's path untested (the walk uses `login()`) |
 | F130 | P10: the ledger keeps no "redeemed" fact; it is read from `recoveryUsedDate` after the latest send | P11's CartRecovery report reads the same |
 | F131 | P10: the retention setting does not purge ledger rows | Comms and the privacy provider |
-| F132 | P10: the Marketing automation sender is not offered | Marketing (later) |
+| F132 | P10: the Marketing automation sender is not offered | Marketing (later; picked up in impl-marketing P11) |
 | F133 | P10 review: each job run re-reads every signed-in idle cart in the window (up to 500 a store, newest first), most already handled | Done in P15: `StoreCartAccess.recoveryHandledDate` marks the visit handled (queued, already sent, at the most sends); the shopper's next action clears it, and the job's query skips marked carts. Spec: CartRecovery |
 | F134 | P10 review: a staff send's operation key covers only the cart, so a retry with another reason gets the first answer | Accepted |
 | F135 | P10 review: the rendered recovery mail, link included, is kept in EmailMessage (as the download notice's guest link is); usable only signed in as the cart's account | Accepted |
@@ -3552,8 +3552,10 @@ Designed, not in this build:
 - **Other apps' registrations and mounts:** Admin §14 readiness (`check#StoreReadiness`) and recovery
   (`retry#StoreMessages`), Admin §11's ChannelImport import target, Admin's privacy provider and request page with Shop's
   store provider; Insights' catalog registration of Commerce's reports and its attention provider; Marketing's mounts of
-  the promotion screens and Pages with its campaign context, its tracking, visits and conversion, attribution at
-  placement, and the automation sender in RecoveryPolicy; Sales' mount of Subscriptions.
+  the promotion screens and Pages with its campaign context (picked up in impl-marketing P19 and P14), its tracking,
+  visits and conversion, attribution at placement (P15, P20), the automation sender in RecoveryPolicy (P11) and the
+  checkout news opt-in through its subscription service (P7); Sales' mount of Subscriptions (picked up in impl-sales
+  P16).
 - **Video help from an order** (L7), through Customer Service and an Event with a CallLink.
 - **EDI over SPS** (E2 of the payments plan), when that is built.
 

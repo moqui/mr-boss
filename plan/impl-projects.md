@@ -590,7 +590,8 @@ Made during the build; each one that changes the design is also written into des
 | How much of the framework list pieces P1 builds versus P2 building each when first needed | at P1 start | Settled: P1 built them all |
 
 People's working-schedule record and Employee 360 do not exist; design §16 already settles that capacity reads
-`WetAvailable` and PersonDetail is a Projects screen, so P7 does not wait.
+`WetAvailable` and PersonDetail is a Projects screen, so P7 does not wait (capacity reading People's schedules is
+picked up in impl-people P9, the People mounts of the time screens and Rates in P10).
 
 ## 6. Findings
 

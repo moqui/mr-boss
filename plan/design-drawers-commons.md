@@ -1,5 +1,9 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 11, 2026 — the decisions of impl-people, impl-sales and impl-marketing written in: the approval topics are listed in
+§4 and seeded by their owners, People's and Sales' in Mantle and Marketing's with its setup data (§4, §20); BOSS `/u/`
+stays its own page and a token is made for the sending organization's site (§16); the shared sending screens are built
+by Marketing with Comms' mounts later, and the delivery ledger is built and extended for a campaign (§17).
 Oct 18, 2026 — reviewed; mailboxes added after review (§12); terminology pass (tray panel, contact book,
 `EmailClientServices`, meeting room); drives and revision storage after mr-moqui's git and version-diff work (§9,
 §10, §19); implementation review against mr-moqui and Mantle, its findings (R1–R27) and the build plan in
@@ -598,6 +602,8 @@ changing the source. The topic IDs and handlers are proposed and follow the owne
 [Marketing Approvals](design-marketing.md#approvals--context-passed). People topics set a generic push title (no person or amount on a lock
 screen). Maintenance's `ResourceBooking` and `WorkProcessApproval`
 ([design-maintenance §1.2](design-maintenance.md#12-menu-and-shell-contributions)) are seeded the same way.
+The People topics are listed here and seeded in Mantle, each beside its decision service and with the phase
+that builds that service, as Mantle's purchase topics are (impl-people §4, F42; Nov 11, 2026).
 
 | Topic (proposed) | App | Record | Approve and refuse call |
 | --- | --- | --- | --- |
@@ -612,8 +618,8 @@ screen). Maintenance's `ResourceBooking` and `WorkProcessApproval`
 | `PeopleTrainingApproval` | People | training enrollment | proposed `mantle.humanres.DevelopmentServices.decide#Enrollment` |
 | `PeopleReviewStep` | People | performance review step | proposed `mantle.humanres.ReviewServices.change#ReviewState` |
 | `PayrollRunApproval` | People | payroll run | proposed `mantle.humanres.PayrollRunServices.approve#Run`; refuse returns the run to Review through proposed `return#Run` |
-| `SalesQuoteApproval` | Sales | quote (`OrderHeader`) at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote` |
-| `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval` |
+| `SalesQuoteApproval` | Sales | quote (`OrderHeader`) at its commercial revision | proposed `mantle.order.SalesQuoteServices.decide#Quote`; the topic is Mantle's, seeded beside `OrderChangeApproval` as the purchase topics are (impl-sales P9, F26) |
+| `MarketingCampaignApproval`, `MarketingSendApproval`, `MarketingAutomationApproval` | Marketing | campaign, send, automation | proposed `mantle.marketing.CampaignServices.decide#MarketingApproval`; seeded with Marketing's setup data, as the built apps seed theirs, each with a topic registration naming `MARKETING_APPROVE` (impl-marketing P2, F42) |
 | `ResourceBooking` | Maintenance | booking request for a managed meeting room or equipment | proposed `mantle.work.ResourceBookingServices.decide#ResourceBooking` |
 | `WorkProcessApproval` | Maintenance | work process (procedure) definition | proposed `mantle.work.ProcessServices.approve#WorkProcess` |
 
@@ -2017,12 +2023,14 @@ rules. It combines three things:
 - the Forum delivery opt-out ([Forum §12.4](../../mr-pass/plan/design-forum.md#124-consent-and-opt-out)),
   which changes delivery only.
 
-Every way in lands on it. BOSS `/u/<token>` redirects to it with the token, the built PASS
-`Account/Unsubscribe` token page forwards to it, and `List-Unsubscribe` headers name it at the PASS
-canonical host. A one-click POST still unsubscribes without a page. A withdrawal may carry an
+Every way in lands on it where a PASS site mounts Account. As built, `create#UnsubscribeToken`
+names it, in the link and the `List-Unsubscribe` headers at the PASS canonical host, when the site
+the token is made for mounts Account, and the built PASS `Account/Unsubscribe` token page forwards
+to it; a Marketing send makes each token for the sending organization's site. The BOSS `/u/<token>`
+page is still its own page, not a redirect, and serves an instance with no such mount
+(impl-marketing §4, F25, F56). A one-click POST still unsubscribes without a page. A withdrawal may carry an
 optional opt-out reason (too frequent, not relevant, never signed up, other), stored in the
-withdrawal's `PartyConsent.comments`. Until an organization has a PASS site, `/u/` serves this
-section's page as today. The marketing opt-in at Shop checkout records through Marketing
+withdrawal's `PartyConsent.comments`. The marketing opt-in at Shop checkout records through Marketing
 `request#Subscription`, not through this page.
 
 **Per-app context (Email preferences).**
@@ -2039,7 +2047,10 @@ section's page as today. The marketing opt-in at Shop checkout records through M
 ([Marketing §5](design-marketing.md#messagetemplates)), SendingProfiles
 ([Marketing §12](design-marketing.md#12-settings)) and Suppressions
 ([Marketing §4](design-marketing.md#4-audiences)) definition; those sections provide their first full
-form summaries. Marketing mounts promotional/channel context. Admin retains domains, verification,
+form summaries. Marketing mounts promotional/channel context, and builds the four screens
+(CampaignDelivery with them) as `Shared/` files with its own mounts only: Comms has no settings
+area today (`screen/Comms/` holds Consent and Moderation), so the Comms mounts below and a
+Comms-owned readiness provider come later, with one (impl-marketing §4, F16). Admin retains domains, verification,
 relay/gateway credentials and callback configuration; a business profile exposes approved bindings
 and readiness only. Campaign composition is Marketing-owned; personal Compose stays here. These are
 proposed extensions, not claims that the shared editors are already implemented. Their services are
@@ -2059,7 +2070,14 @@ CampaignRecipient as intent and selection; its sends, Shop notices, Commerce car
 notices, Sales reminders and the storeless order confirmation are sources of the ledger, as Forum's
 outbox is. CampaignDelivery below is the campaign's view of the same rows. Proposed as
 `mantle.party.MessageDelivery` and `MessageDeliveryAttempt` with `mantle.party.MessageServices`
-(Need "Delivery ledger", §19).
+(Need "Delivery ledger", §19). The ledger is built (Shop P6), for email and keyed by party.
+Marketing's build extends it for a campaign rather than wrapping it, as an owner contract with
+Comms (impl-marketing §4, F13, F14): the attempt refuses a suppressed destination; a delivery may
+name a sending profile, and receipts are facts apart from the hand-off outcome that never move an
+earlier one back; a source may give the subject and body; a delivery carries its organization and
+its topic's consent; and an SMS channel hands a text to the framework's `send#SmsMessage`, the
+attempt checking `PcpSms` consent on the topic first. A Marketing send registers no mail outcome
+owner of its own, since the ledger is registered as one.
 
 ### Settings
 
@@ -2391,7 +2409,7 @@ bare `entity-find`.
 | Phone installation: a PWA manifest and web push in the framework, built first as step P0 of mr-moqui `plans/Comms-Framework.md` §7 (Oct 30, 2026) | Comms installs on a phone and pushes chat and mail notifications |
 | Git access from desktops: clone, fetch and push over HTTPS and the framework's SSH server (mr-moqui `docs/interfaces/Git-Hosting.md`); a drive's settings show its clone addresses with its WebDAV and SFTP addresses | Built in the framework (impl-drawers-commons §6); a version-controlled drive's repository takes the drive's members by the drive's own rule |
 | A survey builder in Commons (Oct 28, 2026; crosscut §8) | Commons owns one survey builder over framework DbForm and FormResponse, which Customer Service, Marketing and People mount. This reverses the earlier Open recommendation that surveys stay in Marketing. Its screens are designed in a later Commons pass; until then Customer Service's FeedbackForms and FeedbackFormDetail ([design-customer-service §9](design-customer-service.md#9-settings)) carry the form summaries. |
-| People, Sales and Marketing approval topics are seeded here, each approved and refused by its domain decision service (Nov 1, 2026; review R-PPL-17, R-SAL-07, R-MKT-07) | §4 Notifications lists the seventeen topics and their handlers, matching People's ApprovalPolicies table, Sales Approvals, Marketing Approvals and Maintenance's two; People PE-15 owns the routing policy |
+| People, Sales and Marketing approval topics are listed here, each approved and refused by its domain decision service (Nov 1, 2026; review R-PPL-17, R-SAL-07, R-MKT-07); each is seeded by its owner, the People and Sales topics in Mantle beside their decision services and Marketing's with its setup data (Nov 11, 2026; impl-people F42, impl-sales F26, impl-marketing F42) | §4 Notifications lists the seventeen topics and their handlers, matching People's ApprovalPolicies table, Sales Approvals, Marketing Approvals and Maintenance's two; People PE-15 owns the routing policy |
 | Party merge is Commons' one wizard, with its guards inside Mantle `merge#Parties`; Sales MergeAccounts mounts the wizard (Nov 1, 2026; review X15) | A guard only in Sales left the Commons merge and direct calls unguarded, and neither covered external access, PASS accounts, consent or recurring contracts (§6) |
 | The contact record gains Call, Video and Chat (Nov 1, 2026; review R-LV-W01) | Comms calls and chat are built; `template/ContactRecord.xml` serves every mount, so each app gets them at once (§6) |
 | A meeting is an event with a video call link, and outsiders are invited by iMIP; any WorkEffort-backed record offers `.ics`; EventDetail "Add video call" writes the link to `infoUrl` (Nov 1, 2026; review L7, R-LV-W02, R-LV-W03) | One "Add video call" everywhere and a standard invitation for outsiders, so no app designs its own guest link (§7) |
@@ -2400,7 +2418,7 @@ bare `entity-find`.
 | One sessions service over HttpSession and `Visit`, Admin's `IdentityServices.find#Sessions` and `revoke#Sessions`, self-scoped for Account (Nov 1, 2026; review Z6) | Two definitions of a session for one user would disagree (§11) |
 | Comms creates mail aliases and Admin verifies them with `check#AddressClaim`; account mail servers stay in Comms MailAccounts and are not relays, and Admin reads their state only through the Comms mail-account readiness projection (Nov 1, 2026; review Z6, Z1, Z9) | Nobody created aliases, and an Admin relay list over every `EmailServer` would expose personal mailbox credentials (§17) |
 | Chatter on People records follows the host's privacy class and participants, not an HR role (Nov 1, 2026; review R-PPL-18) | General HR must not read grievance notes (§15) |
-| One PASS Account Email preferences page, `PASS:Account/EmailPreferences`, combines list unsubscribe, Marketing topics and the Forum opt-out; BOSS `/u/` and the built `Account/Unsubscribe` land on it (Nov 1, 2026; review X15) | A remote PASS deployment cannot serve `/u/`, and three preference pages disagreed (§16) |
+| One PASS Account Email preferences page, `PASS:Account/EmailPreferences`, combines list unsubscribe, Marketing topics and the Forum opt-out; the built `Account/Unsubscribe` lands on it, and BOSS `/u/` stays its own page for an instance with no PASS Account mount (Nov 1, 2026; review X15; Nov 11, impl-marketing F25) | A remote PASS deployment cannot serve `/u/`, and three preference pages disagreed (§16) |
 | One Mantle FormPublication and FormInvitation over `ExternalAccessCapability`, owned by Commons with the survey builder (Nov 1, 2026; review X16) | Marketing's publication and Customer Service's survey invitation were two models of the same thing; apps keep their context and response scoping (§19) |
 | Comms owns the one outbound delivery ledger, generalized from `ForumDelivery`; Marketing keeps campaign intent and selection (Nov 1, 2026; review X8) | Replaces "durable delivery is Marketing-owned"; four ledgers would mean four retry and uncertain-outcome rules (§17) |
 | Business mail intake is an `EmailRuleAction` naming the owner's service, reached by a plus-tag intake address (Nov 1, 2026; review L3) | As Projects built it; address-routed ECAs stay for addresses that are the identity (§17 Rules) |

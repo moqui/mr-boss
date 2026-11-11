@@ -1722,7 +1722,8 @@ project money. As built in this pass:
 The two grants work together. Projects shows rates only where `TIME_ENTRY_RATE` already shows them,
 so `PAYROLL_VIEW` or `PAYROLL_EDIT` alone shows nothing in Projects. `BOSS_PEOPLE_ADMIN` does not hold
 `TIME_ENTRY_RATE`, and People shows pay rates in its own mounts (below). Project money totals keep
-today's basis until class and work-type costing rates land (crosscut §9; People PE-23, maintained by
+today's basis until class and work-type costing rates land (decided, crosscut §8 "Labor costing rates": the one
+purpose `RaprCost`, impl-people P10; People PE-23, maintained by
 Accounting). A project's actual cost and profit, Unbilled, ProfitabilityReport and the
 `find#TimeEntries` totals still sum every entry's vendor amount, employees' time included, because
 a project's cost is that sum. No row or column shows one employee's rate; the residual risks are in
@@ -2087,7 +2088,7 @@ line waits for Sales.
 ### Rates
 
 - **Layout:** list. Chips: Client billing (`RaprClient`), Worker pay (`RaprVendor`), and, once seeded, Labor costing
-  (proposed `RaprCost`, People PE-23), read-only.
+  (`RaprCost`, the one labor costing purpose, decided in crosscut §8; People PE-23, impl-people P10), read-only.
 - **Forms:**
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
