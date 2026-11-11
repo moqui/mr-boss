@@ -4129,8 +4129,8 @@ modules, Mantle's invitation rows and BOSS's mount read line by line; the author
     failed ("The validation changed"): fails closed, and they are retried or validated again;
   - F229 stands and is older than this phase: ProductsImport renders Shared/DataImport twice in each of three
     modes (empty and with an import), against "once per mode";
-  - provisional findings: **F-P15R-1** a retry wrote over a source changed after the preview; **F-P15R-2** a batch
-    stayed readable by who staged it after they lost the permission or the organization; **F-P15R-3** a repeat of an
+  - provisional findings: **F237** a retry wrote over a source changed after the preview; **F238** a batch
+    stayed readable by who staged it after they lost the permission or the organization; **F239** a repeat of an
     applied row became valid on a second validation.
 
 ### P16 — Exports and backups
