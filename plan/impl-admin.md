@@ -5230,6 +5230,33 @@ review: …"); Mantle and BOSS unchanged.
 - For the lead: budget share unchanged in substance (AdminRegistries' feature 0.44 s); F292's two facts above go with the
   user's call; nothing else open from the review.
 
+- **Acceptance Nov 11 (after gate 5).** `mail_capture_sends=true ./moq accept mr-boss` on master, the first run after the
+  whole Admin and Insights build: eight Admin specs failed (the Insights and sweep failures are the other track's,
+  `acc/insights`). None was a product defect; each was a spec bug, fixed in mr-boss on `acc/admin`. AdminReviewWalk's
+  grant proposal check, taken first as a possible escalation: `check#GrantProposal` allowed admin.access BOSS_ADMIN_ACCESS
+  because admin.access is a member of it, the framework's rule for a privileged group (only a member changes its
+  members; design §1.1 "cannot add anyone to a privileged group it is not in", the UserGroupMemberPrivileged EECA, and
+  `store#Membership` the same); every non-member, admin.delegate among them, is refused every privileged group, and
+  invitations (the bulk import's rows too), SSO role mappings and display accounts refuse a privileged group even for a
+  member. The walk now flags an allowed privileged group only when the user is not in it; the proposal's rule had no
+  regression check, so the framework's AdminAccessServices now asks `check#GrantProposal` for a bundle, the privileged
+  ADMIN_ADV and an unregistered group as its non-member (allowed, PRIVILEGED_GROUP, UNREGISTERED_BUNDLE). The others:
+  AdminAuditUsable made a relay with no TLS and set its password, which `store#Connection` refuses (INSECURE_TRANSPORT,
+  a warning, not an error); the relay now has STARTTLS. AdminConnectionsUsable read the gateway's revision inside
+  `asUser("commerce.services")`, whom `get#Connection` refuses; it is read first. AdminDevicesUsable looked for
+  "Shared device's code redeemed" in html, which escapes the apostrophe. AdminGroupsWalk counted every membership of
+  commerce.manager in BOSS_PURCHASING_BUYER, AdminAuditUsable's ended one among them; it counts its own rows (from its
+  start). AdminImportsUsable compared decimals with `Number()`, which the JS API now refuses; `toDecimal(...).eq`.
+  AdminJobsUsable: its cleanup read the job `forUpdate` with no transaction (dropped); and the alert copy had no data, as a
+  spec's process exports no spans (`moqui test` attaches search but not the telemetry exporter), so the failed run's root
+  span is written to `otel_spans` as the exporter writes it (AdminAuditUsable's pattern for its log line); and in `then`,
+  `Array.from` of `get#AlertState`'s instances gave `[]` (so the template's "no instances" held vacuously), read now as
+  plain rows. AdminProtocolsUsable expected call media off, but every test run merges basic-comms'
+  `test/MoquiConf.xml`, which sets `rtc_media_port`, so where the build has rtc it is configured and not started in a
+  command-line run. Final: each spec alone and all 21 of `acceptance/Admin/` together (`--spec` with a comma list),
+  61 of 61 features passed; framework AdminAccessServices 6 of 6. For the lead: several `--spec` flags run only the last;
+  the `Array.from` behaviour of a service's list in `then` is worth a look in the testkit.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-admin.md or

@@ -9,7 +9,9 @@
 // - the shipped alert template "Failing job runs" (report/admin-job-runs.json) is a template with no state and no contact
 //   point: the operator, who does not open Dashboards, copies nothing; an owner who does copies it, and the copy, evaluated
 //   as its owner over job-run telemetry, fires for a job whose run failed.
-// The rules are the framework's AdminJobs and BOSS's AdminJobRuns. The third part needs the telemetry store (otel_spans).
+// The rules are the framework's AdminJobs and BOSS's AdminJobRuns. The third part needs the telemetry store (otel_spans): a
+// spec's process exports no spans, so the failed run's root span is written there as the telemetry exporter writes one, with
+// the run's own trace id; that a real run's span reaches the index is the framework's telemetry tests.
 // Run: ./moq accept mr-boss --spec AdminJobsUsable
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {users, asUser, system, invoke, refusal, page} = lib
@@ -23,6 +25,7 @@ const failingJob = "AcceptAdmFailing" + stamp
 const plainJob = "AcceptAdmPlain" + stamp
 const copyId = "accept-admin-job-runs-" + stamp
 const walk = {}
+const spanId = "acceptadm" + stamp.padStart(7, "0")
 const find = (entityName, conditions) => ec.entity.find(entityName).condition(conditions).disableAuthz()
 const row = (entityName, conditions) => system(() => find(entityName, conditions).useCache(false).one()?.getMap() || null)
 const post = (user, path, parameters) => asUser(user, () => page(path, parameters, "html"))
@@ -70,7 +73,7 @@ spec({
         ec.message.clearErrors()
         login("john.doe")
         ec.artifactExecution.disableAuthz()
-        const jobRow = ec.entity.find(JOB).condition("jobName", SEND_JOB).forUpdate(true).one()
+        const jobRow = ec.entity.find(JOB).condition("jobName", SEND_JOB).one()
         jobRow.set("paused", walk.pausedBefore)
         jobRow.update()
         try {
@@ -83,6 +86,7 @@ spec({
             ec.logger.warn("AdminJobsUsable: the copied alert rule was not deleted: " + error)
         }
         ec.message.clearErrors()
+        if (walk.spanWritten) ec.search.deleteDocument("otel_spans", spanId)
         ec.entity.find("moqui.service.job.ServiceJobRunLock").condition("jobName", "in", [failingJob, plainJob]).deleteAll()
         ec.entity.find(RUN).condition("jobName", "in", [failingJob, plainJob]).deleteAll()
         ec.entity.find(JOB).condition("jobName", "in", [failingJob, plainJob]).deleteAll()
@@ -165,6 +169,30 @@ feature("the failing job runs alert is a template until an owner copies it; the 
         out.operatorCopy = asUser(users.operations, () =>
             refusal(R + "copy#Definition", {definitionId: "admin-job-runs", newDefinitionId: copyId})
         )
+        // the failed run's root span, as the exporter writes it (the second feature's run, its trace id)
+        system(() => {
+            const start = Number(String(walk.run.startTime))
+            ec.search.indexDocuments([
+                {
+                    _type: "otel_spans",
+                    _id: spanId,
+                    trace_id: walk.run.traceId,
+                    span_id: spanId.slice(0, 16),
+                    parent_span_id: "",
+                    name: "job " + failingJob,
+                    kind: "INTERNAL",
+                    start,
+                    duration_nano: 1000000,
+                    status_code: "ERROR",
+                    sampled: true,
+                    "moqui.job.root": true,
+                    "moqui.job.name": failingJob,
+                    "moqui.job.run.id": walk.run.jobRunId,
+                    events: []
+                }
+            ])
+            walk.spanWritten = true
+        })
         // an owner who opens Dashboards copies it; the copy is evaluated as its owner over the spans of the last hour
         asUser(users.system, () => {
             out.copy = invoke(R + "copy#Definition", {
@@ -175,10 +203,13 @@ feature("the failing job runs alert is a template until an owner copies it; the 
             out.evaluated = invoke(R + "evaluate#Alerts", {definitionId: copyId})
             out.state = invoke("org.moqui.report.ReportServices.get#AlertState", {definitionId: copyId})
         })
+        // the series as plain rows: in then, Array.from of the instances get#AlertState answered gives [] (seen Nov 11)
+        out.templateInstances = JSON.parse(JSON.stringify(out.template.instances || []))
+        out.instances = JSON.parse(JSON.stringify(out.state.instances || []))
         return out
     },
     then(out) {
-        out.template.template === true && Array.from(out.template.instances || []).length == 0
+        out.template.template === true && out.templateInstances.length == 0
         // shipped read only, on job-run telemetry, with no contact point
         out.definition.body.query.datasetId == "otel_spans" && out.definition.body.contactPoints == null
         opened(out.jobs) && out.jobs.output.includes("Failing job runs") && !out.jobs.output.includes("/qapps/dashboards/Alerts")
@@ -186,7 +217,7 @@ feature("the failing job runs alert is a template until an owner copies it; the 
         out.copy.definition != null && out.state.own === true && out.state.template !== true
         out.evaluated.failed == 0
         // the failed run of the second feature: its job is a firing series of the copy
-        Array.from(out.state.instances || []).some(
+        out.instances.some(
             instance =>
                 JSON.stringify(instance.labels || {}).includes(failingJob) &&
                 /firing|alerting|pending/i.test(String(instance.state))

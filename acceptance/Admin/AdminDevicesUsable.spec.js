@@ -200,6 +200,8 @@ feature("revoking the device in Devices refuses its next request, and the audit 
         out.next = request("apps/Insights/WallDisplay/data", {}, "get", cookie)
         out.revoked = deviceRow()
         out.audit = asUser(users.audit, () => page("Audit/AuditChanges", {recordKey: display.userId}, "html"))
+        // the page's text as read: the html render escapes an apostrophe ("Shared device's code redeemed")
+        out.audit.output = out.audit.output.replace(/&#0*39;|&#x0*27;|&apos;/gi, "'")
         return out
     },
     then({afterConfigure, next, revoked, audit}) {

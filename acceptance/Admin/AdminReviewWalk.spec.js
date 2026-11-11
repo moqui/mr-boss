@@ -11,7 +11,8 @@
 // - secrets: a relay's password and an identity provider's client secret set here appear on no page, print, summary, JSON or
 //   service answer;
 // - sealed rights and privileged memberships: through GroupDetail's addMember transition, store#Membership, a grant
-//   proposal, an invitation (whose rules a bulk invitation import applies to each row: AdminImportsUsable walks the import),
+//   proposal (a privileged group only by a member of it, as the framework's rule: admin.access's own group is allowed), an
+//   invitation (whose rules a bulk invitation import applies to each row: AdminImportsUsable walks the import),
 //   an SSO role mapping and direct entity writes, and nothing of it is written;
 // - the System mount: by URL (System and its group screens) and in the menu.
 // The scenarios each phase wrote stay theirs (AdminFoundationWalk, AdminGroupsWalk, AdminUsersUsable, AdminImportsUsable,
@@ -284,9 +285,19 @@ feature(
                     )
                         problems.push(`${user}: a direct UserGroupMember into ${groupId}`)
                 }
+                // a privileged group only by a member of it (design §1.1, the framework's UserGroupMemberPrivileged): the
+                // proposal allows admin.access its own BOSS_ADMIN_ACCESS, as store#Membership would, and nothing else here
+                const memberOf = system(() =>
+                    Array.from(
+                        find("moqui.security.UserGroupMember", {userId}).condition("userGroupId", "in", privilegedGroups).list()
+                    )
+                        .filter(row => row.thruDate == null || Number(String(row.thruDate)) > Date.now())
+                        .map(row => row.userGroupId)
+                )
                 const proposal = call(user, A + "check#GrantProposal", {bundleGroupIdList: privilegedGroups})
-                if ((proposal.out?.bundleList || []).some(row => row.allowed))
-                    problems.push(`${user}: a grant proposal allows a privileged group`)
+                for (const row of Array.from(proposal.out?.bundleList || []))
+                    if (row.allowed && !memberOf.includes(row.bundleGroupId))
+                        problems.push(`${user}: a grant proposal allows the privileged group ${row.bundleGroupId}, not theirs`)
                 const invited = call(user, I + "invite#User", {
                     emailAddress: "review.walk.invitee@example.com",
                     firstName: "Review",

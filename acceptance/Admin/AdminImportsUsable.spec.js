@@ -328,8 +328,8 @@ feature("a catalog price import through Admin gives the result Products' mount g
         !!out.admin.operationKey && !!out.products.operationKey
         result(out.admin) == "1|1|1|1|partial"
         result(out.admin) == result(out.products)
-        out.prices.some(price => Number(price.price) === 17.5 && Number(price.minQuantity) === 5)
-        out.prices.some(price => Number(price.price) === 18.5 && Number(price.minQuantity) === 50)
+        out.prices.some(price => toDecimal(price.price).eq("17.5") && toDecimal(price.minQuantity).eq("5"))
+        out.prices.some(price => toDecimal(price.price).eq("18.5") && toDecimal(price.minQuantity).eq("50"))
         // one wizard, the catalog's own words in both mounts
         out.admin.pageOutput.status == 200 && out.admin.pageOutput.errors.length == 0
         out.products.pageOutput.status == 200 && out.products.pageOutput.errors.length == 0
