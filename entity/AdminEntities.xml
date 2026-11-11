@@ -251,4 +251,29 @@ along with this software (see the LICENSE.md file). If not, see
         <relationship type="one" related="moqui.security.UserPermission" short-alias="permission">
             <key-map field-name="requiredPermission" related="userPermissionId"/></relationship>
     </entity>
+
+    <!-- Insights' flow targets (impl-insights §4, P9; design-insights §9): the worklists a flow map's step may open, each built
+        app's own route with the parameters it takes, BOSS seed records each owner fills in its own block of BossSetupData,
+        beside the catalog entries and attention providers a step may also name. ironstone.insights.FlowMapServices check a
+        step's target and parameters against this when a map is saved and again when it is read, so a map can link nowhere
+        else; a registration grants nothing: the link is answered only to a viewer whose own groups open the route.
+        Configuration rows with no organization, so the view-entity pattern of impl-admin §4 does not apply. -->
+    <entity entity-name="FlowTarget" package="ironstone.insights" use="configuration">
+        <description>A worklist a business flow map's step may open (design §9): the owner's canonical route and its typed
+            parameters. A step stores the target's id and values for its parameters, never a path.</description>
+        <field name="targetId" type="id-long" is-pk="true"><description>Stable: the owner app, a dot and the worklist
+            (Commerce.Orders)</description></field>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"><description>The app that owns the worklist</description></field>
+        <field name="title" type="text-medium"><description>The worklist's name, the owner's own (Store orders)</description></field>
+        <field name="description" type="text-long"><description>What opening it shows, in the owner's words</description></field>
+        <field name="routePath" type="text-medium"><description>The worklist's canonical owner route, a path under /qapps</description></field>
+        <field name="parameterContract" type="text-long"><description>The parameters a step may set, as a JSON map of the
+            route's parameter name to its type: {"type":"choice","values":[...]} (one of the listed values) or
+            {"type":"organization"} (the organization in the map's scope, set when the map is read, never stored on a
+            step). A parameter not listed is refused.</description></field>
+        <field name="requiredPermission" type="id-long"><description>A permission the worklist needs beyond its route</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+    </entity>
 </entities>

@@ -179,7 +179,12 @@ const linkPaths = [
     "ManagementDigest",
     // P8: business alerts (design §8)
     "Alerts/Rules",
-    "Alerts/AlertDetail"
+    "Alerts/AlertDetail",
+    // P9: business flow maps (design §9)
+    "Flows/FlowMap",
+    "Flows/FlowMaps",
+    "Flows/FlowMapEditor",
+    "Flows/ProcessStory"
 ]
 // The record screens with tabs: under Insights their one subscreen is InsightsRecord (Shared/InsightsRecord.xml), which the
 // links name, since a screen's default tab is chosen before the app's context is known.

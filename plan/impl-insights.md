@@ -2000,6 +2000,240 @@ Design §9; INS-08.
   orders and Customer Service's cases from it; a later template change leaves the copy alone; the Sales steps read as
   information.
 
+**Built Nov 10, 2026 (P9).** BOSS only (branch `ins/p9`), on the shared release binary; no framework or Mantle change.
+
+- **P0's open check, the flow-map body** (design §17 Q1; F26 as the code is now). The node-graph panel is rejected as it
+  stands, and no `.qvue` is built either: the lanes are XML widgets.
+  - The browser's (`WebrootReport.js` `report.nodeGraph` and its drawing): nodes in layers by longest path, 220 px a layer
+    in a fixed-width SVG (a lane of ten steps is 2,200 px, scrolled sideways at phone width); a node is a circle with the
+    raw id cut at 28 characters; no group, label or link field, a click opens Explore filtered to `service.name`; a node's
+    number is the sum of its incoming edges and the hover text says calls and errors. The terminal's
+    (`moqui-tui` `components/report/graph.rs` `node_graph`) prints an adjacency list by count. Neither has changed since
+    F26.
+  - A panel's rows come from the report engine's queries over a dataset; `get#Map`'s rows are a BOSS service's, computed as
+    the viewer from registrations, so the panel could not be fed without a service dataset and its grant for every reader.
+  - What the lanes need (a column a lane, a step's name, count, link and next step) is what `container`, `container-box`,
+    `link` with a badge and `label` draw, in qvt, tui and print alike, stacking at phone width. So FlowMap is an XML screen
+    with no `.qvue` and no second template, and its ordered list (StepList) is a form-list.
+  - `get#Map` still answers the frame of F26 (`edges`: source, target, sourceLabel, targetLabel, sourceGroup, targetGroup,
+    count, order) beside the lanes and the list, for a node graph that learns groups (a framework ask, not this phase's).
+- **Checked first:** `report` definitions are saved, read and listed by the engine as F7 says (owner or group reads, only
+  the owner saves, a shipped one is read only with version 0); `references` reads only the keys `definitionId`, `panelRef`,
+  `datasetId` and `dashboardRef`, none of which a map body holds; Insights' Playlists, digests and schedules each filter
+  their own kind; no REST path saves a definition; the flow editor's group read the engine but could not save; Home's
+  attention board computes each card as the viewer and could be asked for a subset; Commons Knowledge is mounted by
+  Customer Service the same way and every BOSS user opens it (`BOSS_USERS`); the demo has Knowledge pages.
+- **Services** (`service/ironstone/insights/FlowMapServices.xml` over `FlowMaps.js`, each `allow-remote="false"`):
+  - `validate#Map` (a body or a readable map against the registrations: each problem with `reasonCode`, `message`, `stepId`
+    and `field`), `get#Map` (the lanes with their steps, the ordered list, the edges and the selected step; validated again
+    at every read; a template's counts for the organization asked, one of the viewer's; without an id the viewer's default,
+    else a map of the organization in scope, else the customer flow), `copy#Map` (the source and its version recorded, the
+    organization one of the caller's, the group one of theirs) and `store#Map` (the typed input of design §9, the version
+    read checked);
+  - around them: `find#Maps` (the engine's `list#Definitions` kept to flow maps the viewer's organizations see),
+    `store#MapLane` and `store#MapStep` (one row added, changed, moved or removed, through the same check and save),
+    `restore#Map` and `delete#Map` (the engine's restore and delete after the kind, owner and version checks),
+    `store#DefaultMap` (a preference), `get#MapEditor` (the stored references with what is wrong with each, the
+    registrations to choose from, the engine's versions and what one changed, by lane and step), `find#MapPages` (the
+    wiki's own search as the caller) and `get#StoryAccess` (whether the caller's own grants open Commons Knowledge).
+  - Reading is `INSIGHTS_VIEW`; copying and changing are `INSIGHTS_FLOW_EDIT` on one's own map (`FLOW_EDIT_REQUIRED`,
+    `MAP_READ_ONLY`, `MAP_NOT_OWNED`, `MAP_CHANGED`); a map the viewer does not read, of another organization or of another
+    kind is one refusal (`MAP_UNAVAILABLE`). Every write answers a refusal as `applied` false with `reasonCode` and `reason`.
+  - A step answers its worklist link only when the target's route opens to the viewer's own groups (`destinationOpens`) and
+    they hold its permission; its count from Registry.js `attention`, now taking the providers to ask (no service
+    parameter), so the board's rules hold and only those owners are called; its report by the catalog's reader; its
+    measure by the registration's permission; its Knowledge page only when the viewer's own grants open Commons Knowledge
+    and `get#PageRef` finds it for them. A step with nothing left reads "Information".
+  - Registry.js also: `definitionRoute` and the palette (`search#Records`) know a flow map, Saved reports lists one only to
+    those who see its organization and does not copy it (`COPY_UNAVAILABLE`). Insights.js: four links.
+- **Data.** `ironstone.insights.FlowTarget` (the registry entity file, at the end): `targetId`, owner, title, description,
+  `routePath`, `parameterContract` (JSON: a parameter is a `choice` of listed values or the `organization` of the map's
+  scope), `requiredPermission`. `data/BossSetupData.xml`, one block appended: 34 flow targets of Commerce (3), Customer
+  Service (2), Warehouse (8), Accounting (6), Purchasing (7), Manufacturing (2), Products (2) and Projects (4), each an
+  existing owner route with the values its screen reads; `BOSS_INS_REPORT_FLOW` (the engine's `save#Definition`,
+  `restore#Definition` and `delete#Definition`, ALWAYS for `BOSS_INSIGHTS_FLOW`).
+- **Templates** (`report/insights-flowmap-customer.json`, `-internal.json`, `-supplier.json`, each `templateVersion` 1):
+  Marble's three actors, each now a map with the built apps as lanes. Customer flow: 5 lanes, 14 steps (Marketing's and
+  Sales' steps information; Commerce's carts, orders, payment holds and approvals with their counts; Warehouse's picking,
+  shipping and returns; Accounting's invoices and payments; Customer Service's cases and returns). Internal flow: 7 lanes,
+  16 steps (Products, Manufacturing, Warehouse, Projects, Accounting; People and Maintenance information). Supplier flow:
+  4 lanes, 12 steps (Purchasing, the supplier's own step as information, Warehouse, Accounting).
+- **Screens.** `Insights/Flows` (a parent, "Business flows", after Business alerts; tabs Flow map and Maps):
+  - `FlowMap` (MapContext: the map, the organization a template's counts are for, counts shown or hidden; ProcessLanes;
+    StepDetail with Open worklist as the primary action, the count's own list, the report and Read procedure; StepList;
+    Copy for an organization, Edit map for its owner, Open here by default);
+  - `FlowMaps` (MapFind, MapList with Copy in a dialog, Edit, Open by default and Remove with a named confirmation);
+  - the hidden `FlowMapEditor` (MapIdentity; Lanes with Add, Edit, Up, Down, Remove; Steps with Add, one Edit dialog opened
+    on the row chosen, Up, Down, Remove; the parameters each worklist takes; MapVersions with What changed and Restore; a
+    template or another's map read only);
+  - the hidden `ProcessStory` (Commons Knowledge and its terminal twin mounted, with "Back to <map> › <step>" above; its
+    always-actions refuse everything below it unless `get#StoryAccess` answers true).
+  - The root: the palette's label, the key `g m`.
+- **Specs.**
+  - BOSS `InsightsFlowMaps` (6 features, 0.1 to 0.45 s each, 1.8 s: the three templates valid and every target's route a
+    screen; a copy's provenance, organization and owner, read by its organization's reader and refused the Services reader
+    in the shared group, a reader's copy, another organization, a stale source version and a foreign group refused; a
+    rename at the version read, then the stale save, an unregistered target, a value outside the choices, an unknown
+    parameter, the organization set on a step, an expression in a name, a page that is not there, a template and a
+    reader's save refused; a map saved through the engine with an unregistered target and count, a stored URL, an extra
+    parameter and `${}` in its texts: FlowMap's one qvt render and the answers, nothing run, no foreign URL, three steps of
+    which one links, the problems for the owner and none for a reader; a link with its parameters, the count and its
+    list, the edges, the organization parameter and counts off for an administrator, no link or count for a reader, a
+    foreign organization refused; a step's page by its title for one who reads it, none for an Insights reader who is not
+    a BOSS user, to whom the mount is refused).
+  - `InsightsAccess`: the menu (eleven entries), the keys, and the flow editor refused the engine's `copy#Definition`.
+  - Acceptance, written and not run: `acceptance/Insights/InsightsFlowMapsUsable` (6 features: the "usable when" through
+    the screens' transitions, the template's later version made by lowering the copy's recorded one, the copy removed at
+    the end). `AppStructure` and `TuiRender` gain the new screens' entries.
+- **Tests run** (the shared release binary, `--nobuild`): InsightsFlowMaps, InsightsAccess, InsightsCatalog, InsightsHome,
+  InsightsDashboards, InsightsDelivery, InsightsRecords (with InsightsDatasets) 37 of 37, mr-boss 10.2 s of 264 s for the
+  eight. `moqui lint --screens`: 132 sites, as before, none in the new screens; `moqui lint` of FlowMapServices.xml clean.
+  Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, any acceptance test, any client spec.
+- **Rendered by hand** (throwaway probe specs, not kept): FlowMap (the supplier template with a step selected as an
+  administrator, and the default map as a reader, in qvt, tui and html), FlowMaps and FlowMapEditor as the flow editor in
+  the three modes (the editor with a version's changes and a step's Edit dialog), the editor refused to a reader,
+  ProcessStory's return link in qvt and tui (html is not a mode of Knowledge's), a name holding `{{ }}` (escaped by the
+  qvt renderer) and one holding HTML (refused by the service layer); every transition as a post with the row after it
+  (copy, name and sharing, a lane added, moved and refused removal while it holds steps, a step added with a page and two
+  handoffs, a bad parameter refused, a step moved and removed, restore, a stale save, a reader's save and delete refused,
+  the default, the page choices, Knowledge's `page` under the mount, delete). Not opened in a browser: Knowledge's
+  component under the ProcessStory mount (it is Customer Service's mount pattern), and the lanes at phone width.
+- **Budget shares**: mr-boss server 1.8 s (InsightsFlowMaps; InsightsAccess gains one call); no client spec.
+- Inventories: ss-inventory's note on the Marble dashboard names the three maps; no usl-inventory row is P9's.
+- Design edits: design-insights §9 (FlowMap's layout and ProcessLanes, "As built"), §15.1 (INS-08), §15.2 (the service
+  row), §16 (the storage row), §17 item 1 (answered). mr-boss README's Insights line.
+- **Findings** (provisional, for the lead to number):
+  - F-P9-1: the node-graph panel reads engine queries, not a service's rows, beside F26's missing groups, names and
+    links; rejected for the map body, and the lanes are XML widgets, not a `.qvue` (design §17 item 1).
+  - F-P9-2: a shipped definition's version is always 0 (F7), so a copy could not record which template it came from; the
+    templates carry `templateVersion`, raised by hand when one changes. Reapplying selected changes of a newer template
+    (design §9.1) is not built: the map says its source changed and both can be opened.
+  - F-P9-3: the engine saves a definition only for its owner and shares it with one group, so an organization's map is
+    its copier's: another flow editor of the organization reads it and copies it, and nobody takes it over when its owner
+    leaves (the lifecycle's participants are schedules and alert rules). "Maintain maps for authorized organizations"
+    (design §1.1) by any of its flow editors needs an owner transfer or a group edit in the engine.
+  - F-P9-4: the engine knows no organization on a definition; the organization is the body's, checked by `get#Map`,
+    `find#Maps` and Saved reports. Tools' definition list and an Insights author's DashboardEditor still open a shared
+    map's body by id for a member of its group who does not see its organization: its texts and registration keys, no
+    data.
+  - F-P9-5: a metric registration computes no value (P4), so "counts from the registered metrics" has nothing to call: a
+    step's count is an attention provider's, and a step's metric gives its name.
+  - F-P9-6: Customer Service's cases, Warehouse's picking and shipping and Accounting's receivables have no registered
+    attention provider (F29, F68), so those steps link and show no count; "each step's count" holds where an owner
+    registered one. Only Accounting's counts take the map's organization (F69): the others keep their owner's scope, which
+    StepDetail says.
+  - F-P9-7: the flow editor's group had no engine save. The grant is the operation's (as the distributor's since P7), so a
+    flow editor can also save a playlist or a saved search from the Insights screens every user opens, and remove a panel
+    from a dashboard of their own; no data.
+  - F-P9-8: Saved reports' SaveAs would have copied a flow map for any author, without provenance or the flow editor's
+    permission; it refuses a flow map now.
+  - F-P9-9: `get#DefinitionDiff` answers a list as one value, so a version's change of one step read as the whole
+    `steps` array; MapVersions compares the two snapshots by lane and step itself.
+  - F-P9-10: text safety as found: a screen attribute's `${}` is expanded once (a stored `${1+1}` stays text), the qvt
+    renderer escapes `{{`, and the service layer refuses HTML in a parameter; FlowMaps.js still refuses `${` at save and
+    breaks it at read, so no later renderer or message that expands a text is handed one.
+  - F-P9-11: a page's title is its first heading, which only reading the page's text gives (`get#PageView` would also
+    record it as recently opened); `get#Map` reads the text through `get#PageRef`'s reference, once a step with a page.
+  - F-P9-12: ProcessStory's return link is the wrapper's, from the `definitionId` and `stepId` it was opened with;
+    whether Knowledge's component keeps them in the URL while the reader moves between pages was not checked in a browser.
+  - F-P9-13: the organization's default map (design §9 FlowMaps) is a setting, which waits for P10's Settings; a map made
+    from nothing (New map) is not offered: a map starts as a copy.
+  - F-P9-14: no demo user reads Insights and opens Commerce, so the acceptance test opens Commerce's orders as the system
+    administrator and Customer Service's cases as insights.servicemanager.
+  - F-P9-15: a spec that makes a party cannot delete it after that user signs in: the forum's ForumTrackingMode row is
+    made at first sign-in; InsightsFlowMaps deletes it first.
+- **Decisions** (for §4): the map body is XML widgets, with neither the node-graph panel nor a `.qvue`; a step names a
+  FlowTarget with typed parameters (a choice or the map's organization), an attention provider, a metric, a catalog entry
+  and a Knowledge page, and nothing else of it is read; an invalid reference is refused at save and cleared at read, its
+  problems shown to flow editors only; a copy is one engine save by the caller (as P4's SaveAs), not `copy#Definition`; a
+  shipped template's version is its `templateVersion`; an organization's map is read by those who see its organization and
+  changed by its owner; Business flows opens to every Insights user and the services check; the flow editor's engine
+  operations are a grant, not a call past the engine's authorization; ProcessStory serves Knowledge only to a user whose
+  own grants open Commons Knowledge, and then all of it; the palette finds flow maps; Saved reports does not copy one.
+- **For the lead:**
+  - budget shares: mr-boss 1.8 s server;
+  - merge: BossSetupData's P9 block and the FlowTarget entity in `entity/AdminEntities.xml` are each one append at the end
+    (Admin P12 may append to both: keep both); `acceptance/AppStructure.spec.js` and `acceptance/TuiRender.spec.js` gain
+    entries after P8's; `test/Insights/InsightsSpecLib.js` (`readerMenu`) and `InsightsAccess` (the keys, one case);
+    Registry.js, Insights.js and `screen/Insights.xml` are Insights' own;
+  - not verified: the acceptance test (written, not run); Knowledge's component under the mount and the lanes at phone
+    width in a browser;
+  - the user's call: whether an organization's map should be editable by every flow editor of the organization (F-P9-3:
+    a framework change) or stay its owner's; whether the flow editor's engine grant (F-P9-7) should instead be a call
+    FlowMapServices makes past the engine's authorization after its own check, which would keep the group to flow maps; a
+    demo user who reads Insights and opens Commerce (F-P9-14); the wording and steps of the three templates;
+  - the next phase: P10 (the organization's default map is a setting; the `insights-analyst` skill may name FlowMap).
+
+**Review Nov 10 (P9).** Fresh review of mr-boss fd3dbab9; fixes in mr-boss ("Insights P9 review: …") and this note (branch
+`ins/p9`).
+- Checked and kept:
+  - **Stored text** (F-P9-10, confirmed by running it): a map saved through the engine as Tools saves one, with
+    `<img src=x onerror=…>`, `</script>`, `<b>`, quotes and `{{7*7}}` in its title, description, lane and step names and
+    descriptions, rendered in FlowMap, FlowMaps and FlowMapEditor (with a step's Edit dialog and a version's changes) in
+    qvt, html and tui. No raw tag in qvt or html: every text is entity-escaped, in text nodes, in plain attributes (a box
+    title, a dialog's title and button, a confirmation) and in the script attributes (`:options`, `:fields-initial`, where
+    the quote is escaped too). In a qvt text node the braces are `&#123;&#123;`; they stay raw only inside attribute
+    values, which the browser's template compiler does not interpolate, and in html and tui, which have no template. The
+    tui output is JSON text. `${` is refused at save and broken at read (the spec).
+  - **Why a name with a tag "came back unsaved"**: the service layer's own check of a text parameter ("HTML not allowed
+    including less-than (<), greater-than (>), etc symbols"), on `store#MapStep`, `store#MapLane`, `store#Map`'s title and
+    `copy#Map`'s title; the transition stops there and shows it. It does not reach inside `store#Map`'s `lanes` and
+    `steps` lists (a tag in a step's name was saved through them) nor the engine's save, an import or a pull; those are
+    held by the escaping above, which is the control. `restore#Map` restores what an earlier save held.
+  - **Links**: a worklist link is `/qapps/` + the FlowTarget row's `routePath` + its contract's parameters only (a
+    `choice` value from the registered list, the map's organization set at read), each name and value URL-encoded; a
+    stored `url`, an unknown parameter or a value outside the choices leaves the step with no link (the spec); a count's
+    and a report's link are their registrations'; a procedure's is ProcessStory with an id matching `pagePattern`. The
+    registrations are read into Maps, so no inherited name is found.
+  - **As the viewer**: `get#Map` checks the body again at each read; the count is Registry.js `attention` with the
+    viewer's grants, route and permission per provider, a refusal left out, a failure named on its own card and the
+    others going on; nothing is kept between calls (no module state); a template's organization is one of the viewer's
+    (`ORGANIZATION_UNAVAILABLE`); problems go to flow editors only.
+  - **Scope and ownership**: every operation of FlowMapServices starts at `readMap` (the engine's read as the viewer, the
+    kind, and `sees` of the body's organization; a map with no organization is nobody's but an unrestricted viewer's), so
+    another organization's map is `MAP_UNAVAILABLE` to read, copy, change, restore, delete and set as default; a change
+    also needs the owner. The version read is checked by `ownMap` and again by the engine's save under its row lock; the
+    screens always send it. `copy#Map` records the source and its version and saves a new definition, so nothing later
+    reaches the copy.
+  - **ProcessStory**, by URL in qvt and tui: an Insights reader who is not a BOSS user is refused
+    (`PROCESS_STORY_UNAVAILABLE`) on the mount, Knowledge, KnowledgeTui, `setup`, `page`, `history`, `search`, `children`,
+    `attachment`, `savePage`, `deletePage`, `uploadAttachment` and the Spaces subscreen; a BOSS user reads a page they may
+    view and, with the page restricted, gets "Page not found" from `page`, `history`, `savePage` and `deletePage` and does
+    not find it in `search`. For a BOSS user the mount serves what Commons/Knowledge serves them (a transition's artifact
+    is its screen's location).
+  - **The palette, Saved reports, the key**: the palette's shipped rows are the business dashboards and the templates, an
+    organization's map comes through `find#SavedReports`, which keeps it to those who see its organization; SaveAs refuses
+    a flow map; `g m` is used by no other keymap.
+  - **Spec leanness**: `InsightsFlowMaps` renders FlowMap once (qvt) and one refusal; no other screen.
+- Fixes:
+  - **R1** (medium, access; F-P9-7) `BOSS_INS_REPORT_FLOW` gave the flow editor's group the engine's `save#Definition`,
+    `restore#Definition` and `delete#Definition`. The engine holds a save to the definition's owner and nothing else, so
+    a flow editor who is not an author could make a definition of any type but a dataset; from the Insights screens every
+    user opens that was a playlist (Playlists' `createPlaylist`) and a saved search (Explore's `saveSearch`), and changing
+    a dashboard of their own (`addPanel`, `duplicatePanel`, `removePanel`); called directly, also a dashboard and a
+    flow map naming another organization and a group they are not in (both seen) and, by the engine's code, an alert rule. Design §1.1 gives the flow editor
+    maps only. The group's grant is now an inheritable ALWAYS on FlowMapServices' six writing operations (`copy#Map`,
+    `store#Map`, `store#MapLane`, `store#MapStep`, `restore#Map`, `delete#Map`): the engine call each makes after its own
+    checks passes `BOSS_INS_REPORT_ENGINE`'s deny, and the engine's operations are refused to the group anywhere else.
+    Seen: the flow editor's copy, lane, restore and delete through the screens' transitions, a reader's change refused,
+    `createPlaylist` and the direct saves refused. Nothing else those six call is denied to the group.
+  - **R2** (low) A copy's "Copied from <source's title>" took the source's title as stored; it is cut and broken as
+    every other text.
+- Tests (the shared release binary, `--nobuild`): InsightsFlowMaps 6 of 6 (1.7 s; the map saved through the engine now
+  holds a tag and braces in a name, checked on the one render) and InsightsAccess 5 of 5 (the flow editor refused the
+  engine's `save#Definition`, in place of `copy#Definition`). Throwaway probe specs for the renders, the write paths, the
+  mount and the grant, not kept. Prettier clean. Not run: the full suites, any acceptance test, lint (no screen changed).
+- For the lead:
+  - R1 answers the worker's user's-call item on the grant; design-insights §9 "As built" (Grants) says so.
+  - Open, as the worker found, unchanged: F-P9-3 (a map is its copier's); F-P9-4 (the engine knows no organization).
+    To F-P9-4 add: an Insights author, who holds the engine's save, can still make a `report` of kind `flowmap` in the
+    definition editor, with any organization id and shared with any group (the engine checks no membership); it is read
+    in Business flows only by members of that group who see that organization, checked and escaped as any map, with
+    "Shared" as its owner. Holding a map to `INSIGHTS_FLOW_EDIT` there needs the engine to know the kind.
+  - Low, left: `expectedVersion` is optional on the services (as on P4's, the screens always send it); the engine's
+    restore brings back the group a version was shared with, also one the owner has since left.
+  - `test/Insights/InsightsAccess.spec.js` changed again (one case), for the merge.
+
 ### P10 — Settings, data readiness and Assist
 
 Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, INS-10. Ends stage 2.

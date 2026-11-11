@@ -56,7 +56,8 @@ EditPageForm (this replaces the earlier notes that left them for future Publishi
 pages are the PASS app Support, so `ServicePortal/*` paths are now `PASS:Support/*`. Maintenance
 adds its WorkOrderDetail assignments, Facilities tree and DueMaintenance reading to the forms they
 derive from. The People, Maintenance, Admin and Insights screen renames had no paths here; the
-Marble dashboard has no form row (Insights maps it to `Insights/Flows/FlowMap`). **Implemented in**
+Marble dashboard has no form row (Insights maps it to `Insights/Flows/FlowMap`, built in impl-insights P9: its three
+actors are the suite's customer, internal and supplier flow maps). **Implemented in**
 is unchanged.
 
 ## MyAccount (49 forms)

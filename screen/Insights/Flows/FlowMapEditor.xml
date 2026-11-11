@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Business flows › Edit map (design-insights §9 FlowMapEditor; impl-insights P9): a flow editor's own map
+    (ironstone.insights.FlowMapServices get#MapEditor; INSIGHTS_FLOW_EDIT, checked by each service). MapIdentity: its name,
+    description and the group it is shared with (its organization is the copy's and stays). Lanes and Steps: ordered lists
+    edited in place, a row at a time (store#MapLane, store#MapStep): a step's worklist, count, measure and report are chosen
+    from the registrations, its link parameters are those its worklist takes, and its procedure is a Knowledge page the
+    editor reads; each save is validated against the registrations and refused with what is wrong, and carries the version
+    read, so a second editor's stale save is refused. MapVersions: the report engine's versions of the map, what one changed
+    and Restore (a new current version). A template, or another editor's map, shows read only: copy it to change it.
+    Nothing typed here is ever run or expanded: a step links only where a registration says. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Edit map" default-menu-include="false">
+
+    <parameter name="definitionId"/>
+    <parameter name="diffVersion"/>
+    <!-- the step whose Edit dialog opens (a step row's Edit reloads with it and _openDialog=EditStep) -->
+    <parameter name="editStepId"/>
+
+    <transition name="storeIdentity" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.store#Map" out-map="saved"
+                    in-map="{definitionId:definitionId, expectedVersion:expectedVersion, title:(mapTitle || ''), description:(mapDescription || ''),
+                        userGroupId:(mapUserGroupId || null), versionNote:'Name and sharing'}"/>
+            <script>ec.message.addMessage(saved.applied ? 'Map saved' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="storeLane" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.store#MapLane" out-map="saved"
+                    in-map="{definitionId:definitionId, expectedVersion:expectedVersion, laneId:(editLaneId || null), title:laneTitle,
+                        description:laneDescription, move:(move || null), remove:(remove === 'true')}"/>
+            <script>ec.message.addMessage(saved.applied ? 'Lanes saved' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="storeStep" method="post">
+        <actions>
+            <set field="nextIds" from="nextStepIds == null || nextStepIds === '' ? [] : (typeof nextStepIds === 'string'
+                    ? nextStepIds.split(',') : Array.from(nextStepIds))"/>
+            <service-call name="ironstone.insights.FlowMapServices.store#MapStep" out-map="saved"
+                    in-map="{definitionId:definitionId, expectedVersion:expectedVersion, stepId:(storeStepId || null), laneId:laneId,
+                        title:stepTitle, description:stepDescription, targetRegistrationId:(targetRegistrationId || null),
+                        targetParametersText:(targetParametersText || null), countProviderKey:(countProviderKey || null),
+                        countMetricId:(countMetricId || null), catalogEntryId:(catalogEntryId || null), wikiPageId:(wikiPageId || null),
+                        nextStepIds:nextIds.join(','), move:(move || null), remove:(remove === 'true')}"/>
+            <script>ec.message.addMessage(saved.applied ? 'Steps saved' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+            <!-- a refused change opens the step's dialog again; a saved one closes it -->
+            <set field="editStepId" from="saved.applied || move || remove === 'true' ? null : (storeStepId || null)"/>
+            <set field="_openDialog" from="editStepId ? 'EditStep' : null"/>
+        </actions>
+        <default-response url="."><parameter name="editStepId"/><parameter name="_openDialog"/></default-response>
+    </transition>
+    <transition name="restoreVersion" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.restore#Map" out-map="saved"
+                    in-map="{definitionId:definitionId, version:restoreVersionNumber, expectedVersion:expectedVersion}"/>
+            <script>ec.message.addMessage(saved.applied ? 'Version restored as the current one' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="deleteMap" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.delete#Map" out-map="deleted"
+                    in-map="{definitionId:definitionId, expectedVersion:expectedVersion}"/>
+            <script>ec.message.addMessage(deleted.applied ? 'Map removed' : deleted.reason, deleted.applied ? 'success' : 'danger')</script>
+        </actions>
+        <conditional-response url="../FlowMaps" condition="deleted?.applied"/>
+        <default-response url="."/>
+    </transition>
+    <!-- the Knowledge pages a step may link: the wiki's own search as the editor -->
+    <transition name="pageChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.find#MapPages" in-map="{term:term, selected:selected}" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found?.pages || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <actions>
+        <service-call name="ironstone.insights.FlowMapServices.get#MapEditor" out-map="editor" transaction="force-new" ignore-error="true"
+                in-map="{definitionId:(definitionId || null), diffVersion:(diffVersion || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="flowDoc" from="editor?.map || null"/>
+        <set field="canEdit" from="!!editor?.canEdit"/>
+        <set field="expectedVersion" from="flowDoc?.version"/>
+        <set field="laneRows" from="editor?.lanes || []"/>
+        <set field="stepRows" from="Array.from(editor?.steps || []).map(row =&gt; Object.assign({}, row, {storeStepId:row.stepId, stepTitle:row.title,
+                stepDescription:row.description}))"/>
+        <set field="problems" from="editor?.problems || []"/>
+        <set field="options" from="editor?.options || {}"/>
+        <set field="versionRows" from="editor?.versions || []"/>
+        <set field="changeRows" from="editor?.changes || []"/>
+        <set field="parameterRows" from="editor?.targetParameters || []"/>
+        <set field="newStepValues" from="{}"/>
+        <set field="identityValues" from="{mapTitle:flowDoc?.title, mapDescription:flowDoc?.description, mapUserGroupId:flowDoc?.userGroupId}"/>
+        <set field="editStep" from="editStepId ? stepRows.find(row =&gt; row.stepId === editStepId) || null : null"/>
+    </actions>
+    <widgets>
+        <section name="EditorNotAvailable" condition="!flowDoc"><widgets>
+            <label text="Edit map" type="h5"/>
+            <label text="This flow map is not available to edit. Changing flow maps needs the flow editor's permission." type="p"/>
+            <link url="../FlowMaps" text="All maps" link-type="anchor"/>
+        </widgets></section>
+
+        <section name="EditorBody" condition="flowDoc"><widgets>
+            <container style="row items-center q-col-gutter-sm q-mb-sm">
+                <container style="col"><label text="${flowDoc.title}" type="h5"/></container>
+                <container style="col-auto row q-gutter-sm">
+                    <link url="../FlowMap" text="View map" link-type="anchor-button" icon="sym_o_account_tree" parameter-map="{definitionId:flowDoc.definitionId}"/>
+                    <link url="deleteMap" link-type="hidden-form" text="Remove map" btn-type="danger" condition="canEdit"
+                            confirmation="Remove ${flowDoc.title} of ${flowDoc.organizationName} with its versions? This cannot be undone."
+                            parameter-map="{definitionId:flowDoc.definitionId, expectedVersion:expectedVersion}"/>
+                </container>
+            </container>
+            <label type="p" style="m-muted" text="${[flowDoc.kindText, flowDoc.organizationName, 'version ' + flowDoc.version, flowDoc.sourceText].filter(Boolean).join(' · ')}"/>
+            <label text="${flowDoc.sourceChangedText}" type="p" style="text-warning" condition="flowDoc.sourceChangedText"/>
+            <label type="p" condition="!canEdit"
+                    text="${flowDoc.template ? 'A suite template is not changed.' : 'Only its owner changes a map.'} Copy it for your organization from Maps to make your own."/>
+
+            <section name="MapProblems" condition="problems.length"><widgets>
+                <container-box>
+                    <box-header title="To fix"/>
+                    <box-body>
+                        <label type="p" style="m-muted" text="Each of these reads as information on the map until it names something registered."/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="ProblemList" list="problems" skip-form="true" paginate="false">
+                            <field name="stepId"><default-field title="Step"><display/></default-field></field>
+                            <field name="message"><default-field title="What is wrong"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="stepId"/></column>
+                                <column><field-ref name="message"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+
+            <!-- MapIdentity -->
+            <section name="MapIdentityBox" condition="canEdit"><widgets>
+                <container-box>
+                    <box-header title="Name and sharing"/>
+                    <box-body>
+                        <form-single name="MapIdentity" transition="storeIdentity" map="identityValues">
+                            <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                            <field name="mapTitle"><default-field title="Name"><text-line size="50"/></default-field></field>
+                            <field name="mapDescription"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                            <field name="organization"><default-field title="Organization" tooltip="A map stays with its organization; copy it for another.">
+                                <display text="${flowDoc.organizationName}"/>
+                            </default-field></field>
+                            <field name="mapUserGroupId"><default-field title="Share with" tooltip="One of your groups; its members who see the organization read the map. Empty keeps it private.">
+                                <drop-down allow-empty="true"><list-options list="options.groups" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="save"><default-field><submit text="Save name and sharing"/></default-field></field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets></section>
+
+            <!-- Lanes -->
+            <container-box>
+                <box-header title="Lanes"/>
+                <box-toolbar>
+                    <container-dialog id="AddLane" button-text="Add lane" condition="canEdit">
+                        <form-single name="AddLaneForm" transition="storeLane">
+                            <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                            <field name="laneTitle"><default-field title="Name" tooltip="Who does these steps: a party, a team or an app."><text-line size="40"/></default-field></field>
+                            <field name="laneDescription"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                            <field name="save"><default-field><submit text="Save lane"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="Lanes" list="laneRows" skip-form="true" paginate="false">
+                        <field name="title"><default-field title="Lane"><display/></default-field></field>
+                        <field name="description"><default-field title="Description"><display/></default-field></field>
+                        <field name="stepCount"><default-field title="Steps" align="right"><display/></default-field></field>
+                        <field name="actions"><default-field title="">
+                            <container-dialog id="EditLane_${laneId}" button-text="Edit" title="Edit lane ${title}" condition="canEdit">
+                                <form-single name="EditLaneForm" transition="storeLane">
+                                    <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                                    <field name="editLaneId"><default-field><hidden default-value="${laneId}"/></default-field></field>
+                                    <field name="laneTitle"><default-field title="Name"><text-line size="40" default-value="${title}"/></default-field></field>
+                                    <field name="laneDescription"><default-field title="Description"><text-area rows="2" default-value="${description}"/></default-field></field>
+                                    <field name="save"><default-field><submit text="Save lane"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="storeLane" link-type="hidden-form" text="Up" condition="canEdit"
+                                    parameter-map="{editLaneId:laneId, move:'up', expectedVersion:expectedVersion}"/>
+                            <link url="storeLane" link-type="hidden-form" text="Down" condition="canEdit"
+                                    parameter-map="{editLaneId:laneId, move:'down', expectedVersion:expectedVersion}"/>
+                            <link url="storeLane" link-type="hidden-form" text="Remove" condition="canEdit"
+                                    confirmation="Remove the lane ${title}? A lane is removed once it holds no step."
+                                    parameter-map="{editLaneId:laneId, remove:'true', expectedVersion:expectedVersion}"/>
+                        </default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="title"/><field-ref name="stepCount"/></column>
+                            <column><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+
+            <!-- Steps -->
+            <container-box>
+                <box-header title="Steps"/>
+                <box-toolbar>
+                    <container-dialog id="AddStep" button-text="Add step" type="primary" width="700" condition="canEdit &amp;&amp; laneRows.length">
+                        <form-single name="AddStepForm" transition="storeStep" map="newStepValues">
+                            <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                            <field name="laneId"><default-field title="Lane">
+                                <drop-down><list-options list="options.lanes" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="stepTitle"><default-field title="Name"><text-line size="50"/></default-field></field>
+                            <field name="stepDescription"><default-field title="What happens"><text-area rows="3"/></default-field></field>
+                            <field name="targetRegistrationId"><default-field title="Worklist" tooltip="The registered list this step's work waits in. Without one the step is information.">
+                                <drop-down allow-empty="true"><list-options list="options.targets" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="targetParametersText"><default-field title="Opened with" tooltip="The worklist's own parameters, as name=value joined with &amp;; those each worklist takes are listed under Worklist parameters.">
+                                <text-line size="50"/>
+                            </default-field></field>
+                            <field name="countProviderKey"><default-field title="Count" tooltip="A registered count: its owner's own count of the list it opens.">
+                                <drop-down allow-empty="true"><list-options list="options.providers" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="countMetricId"><default-field title="Measure">
+                                <drop-down allow-empty="true"><list-options list="options.metrics" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="catalogEntryId"><default-field title="Report">
+                                <drop-down allow-empty="true"><list-options list="options.entries" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="wikiPageId"><default-field title="Procedure" tooltip="A Knowledge page you read. The map links it; who may read the page stays Knowledge's.">
+                                <drop-down allow-empty="true"><dynamic-options transition="pageChoices" server-search="true" min-length="0"/></drop-down>
+                            </default-field></field>
+                            <field name="nextStepIds"><default-field title="Leads to" tooltip="Empty: the next step of its lane.">
+                                <drop-down allow-multiple="true" allow-empty="true"><list-options list="options.steps" key="${value}" text="${label}"/></drop-down>
+                            </default-field></field>
+                            <field name="save"><default-field><submit text="Save step"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="laneId"/><field-ref name="stepTitle"/></field-row>
+                                <field-ref name="stepDescription"/>
+                                <field-row><field-ref name="targetRegistrationId"/><field-ref name="targetParametersText"/></field-row>
+                                <field-row><field-ref name="countProviderKey"/><field-ref name="countMetricId"/></field-row>
+                                <field-row><field-ref name="catalogEntryId"/><field-ref name="wikiPageId"/></field-row>
+                                <field-ref name="nextStepIds"/>
+                                <field-ref name="save"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                    <!-- the selected step's form: one dialog for the list, opened by a row's Edit -->
+                    <container-dialog id="EditStep" button-text="Edit ${editStep?.title}" title="Edit step ${editStep?.title}" width="700"
+                            condition="canEdit &amp;&amp; editStep">
+                        <form-single name="EditStepForm" extends="AddStepForm" transition="storeStep" map="editStep">
+                            <field name="storeStepId"><default-field><hidden/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body>
+                    <label text="Add a lane first, then its steps." type="p" style="m-muted" condition="!laneRows.length"/>
+                </box-body>
+                <box-body-nopad>
+                    <form-list name="Steps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
+                        <field name="laneTitle"><default-field title="Lane"><display/></default-field></field>
+                        <field name="title"><default-field title="Step"><display/></default-field></field>
+                        <field name="referenceText"><default-field title="Opens and counts"><display/></default-field></field>
+                        <field name="problemText"><default-field title="To fix">
+                            <label text="${problemText}" style="text-negative" condition="problemText"/>
+                        </default-field></field>
+                        <field name="actions"><default-field title="">
+                            <link url="." text="Edit" link-type="anchor" condition="canEdit"
+                                    parameter-map="{definitionId:definitionId, editStepId:stepId, _openDialog:'EditStep'}"/>
+                            <link url="storeStep" link-type="hidden-form" text="Up" condition="canEdit"
+                                    parameter-map="{storeStepId:stepId, move:'up', expectedVersion:expectedVersion}"/>
+                            <link url="storeStep" link-type="hidden-form" text="Down" condition="canEdit"
+                                    parameter-map="{storeStepId:stepId, move:'down', expectedVersion:expectedVersion}"/>
+                            <link url="storeStep" link-type="hidden-form" text="Remove" condition="canEdit"
+                                    confirmation="Remove the step ${title} from ${laneTitle}?"
+                                    parameter-map="{storeStepId:stepId, remove:'true', expectedVersion:expectedVersion}"/>
+                        </default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="title"/><field-ref name="laneTitle"/></column>
+                            <column><field-ref name="problemText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+
+            <section name="WorklistParameters" condition="canEdit &amp;&amp; parameterRows.length"><widgets>
+                <container-box>
+                    <box-header title="Worklist parameters"/>
+                    <box-body-nopad>
+                        <form-list name="TargetParameters" list="parameterRows" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Worklist"><display/></default-field></field>
+                            <field name="parametersText"><default-field title="Opened with one of"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="parametersText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+
+            <!-- MapVersions -->
+            <section name="MapVersionsBox" condition="versionRows.length"><widgets>
+                <container-box>
+                    <box-header title="Versions"/>
+                    <box-body-nopad>
+                        <form-list name="MapVersions" list="versionRows" skip-form="true" paginate="false">
+                            <field name="version"><default-field title="Version" align="right"><display text="${version}${current ? ' (current)' : ''}"/></default-field></field>
+                            <field name="note"><default-field title="Change"><display/></default-field></field>
+                            <field name="changedBy"><default-field title="By"><display/></default-field></field>
+                            <field name="changedText"><default-field title="When"><display/></default-field></field>
+                            <field name="actions"><default-field title="">
+                                <link url="." text="What changed" link-type="anchor" parameter-map="{definitionId:definitionId, diffVersion:version}"/>
+                                <link url="restoreVersion" link-type="hidden-form" text="Restore" condition="canEdit &amp;&amp; !current"
+                                        confirmation="Restore version ${version} of ${flowDoc.title}? It becomes a new current version; nothing is lost."
+                                        parameter-map="{restoreVersionNumber:version, expectedVersion:expectedVersion}"/>
+                            </default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="version"/><field-ref name="note"/></column>
+                                <column><field-ref name="changedText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+            <section name="VersionChangesBox" condition="editor.diffVersion"><widgets>
+                <container-box>
+                    <box-header title="What version ${editor.diffVersion} changed"/>
+                    <box-body>
+                        <label text="Nothing in the map's content changed in this version." type="p" style="m-muted" condition="!changeRows.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="VersionChanges" list="changeRows" skip-form="true" paginate="false" condition="changeRows.length">
+                            <field name="op"><default-field title="Change"><display/></default-field></field>
+                            <field name="path"><default-field title="Where"><display/></default-field></field>
+                            <field name="oldText"><default-field title="Before"><display/></default-field></field>
+                            <field name="newText"><default-field title="After"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="op"/><field-ref name="path"/></column>
+                                <column><field-ref name="oldText"/><field-ref name="newText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+        </widgets></section>
+    </widgets>
+</screen>

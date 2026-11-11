@@ -100,7 +100,7 @@ feature("the Insights menu and keys follow the groups; the launcher shows Insigh
             problems.push(`the reader's menu: ${reader.status} ${reader.names}`)
         const keymap = (reader.providers?.keymaps || []).find(keymap => keymap.scope === "insights")
         const keys = (keymap?.keys || []).map(key => key.keys)
-        if (JSON.stringify(keys) !== JSON.stringify(["g s"])) problems.push(`the reader's insights keys: ${keys}`)
+        if (JSON.stringify(keys) !== JSON.stringify(["g s", "g m"])) problems.push(`the reader's insights keys: ${keys}`)
         if ((reader.providers?.quickCreate || []).length) problems.push("the reader is offered quick create")
         if (!reader.apps.includes("Insights")) problems.push(`the reader's launcher has no Insights: ${reader.apps}`)
         const business = ["Products", "Accounting", "Commerce", "Warehouse", "Projects", "Purchasing", "CustomerService", "Admin"]
@@ -234,6 +234,22 @@ feature(
             expect(
                 "the distributor lists another user's alert rules",
                 asUser(users.distributor, () => refusal(reports + "find#OwnedAlertRules", {userId: "BOSS_INS_READER"})),
+                "is not authorized"
+            )
+            // flow maps (P9): the flow editor's maps are saved by FlowMapServices (InsightsFlowMaps); the group holds no
+            // authoring operation of the engine, so no playlist, search or dashboard is theirs to save (the P9 review)
+            expect(
+                "the flow editor saves a playlist through the engine",
+                asUser(users.flow, () =>
+                    refusal(reports + "save#Definition", {
+                        definition: {
+                            id: dashboardId + "-flow",
+                            type: "report",
+                            title: "Flow editor's playlist",
+                            body: {kind: "playlist", seconds: 30, playlist: [{definitionId: "insights-suite"}]}
+                        }
+                    })
+                ),
                 "is not authorized"
             )
             // a telemetry dataset and git sync: no Insights group, the steward neither

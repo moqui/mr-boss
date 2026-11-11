@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Business flows › Process story (design-insights §9 ProcessStory; design-drawers-commons Knowledge; impl-insights
+    P9): a step's procedure, read in Commons Knowledge mounted here with the way back to the map and its step. The page, its
+    history, review, files and editing are Knowledge's own, each through ironstone.commons.KnowledgeServices, which asks the
+    wiki's access rule for every page: reading a map grants no page. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Process story" default-menu-include="false">
+
+    <parameter name="wikiPageId"/>
+    <parameter name="definitionId"/>
+    <parameter name="stepId"/>
+
+    <!-- Only for a user whose own grants open Commons Knowledge (the P6 mount lesson): the Knowledge screen's transitions are
+        authorized by its own location, which the Insights root's inheritable grant covers as it covers any screen below it,
+        so under this mount they would be open to every Insights user, a Commons user or not. Nothing below this screen is
+        served, to anyone, unless Commons/Knowledge opens to the user's own groups (get#StoryAccess); for such a user every
+        transition here is one they already reach in Commons, and the wiki's rules decide each page as they do there. -->
+    <always-actions>
+        <service-call name="ironstone.insights.FlowMapServices.get#StoryAccess" out-map="storyAccess"/>
+        <script><![CDATA[
+            if (!storyAccess || storyAccess.opens !== true)
+                throw new Error('PROCESS_STORY_UNAVAILABLE: Procedures are read in Knowledge, which is not available to you')
+        ]]></script>
+    </always-actions>
+
+    <subscreens default-item="Knowledge" always-use-full-path="true">
+        <subscreens-item name="Knowledge" location="component://mr-boss/screen/Commons/Knowledge.xml" menu-include="false"/>
+        <!-- the terminal twin (Knowledge.xml's tui text names ../KnowledgeTui) -->
+        <subscreens-item name="KnowledgeTui" location="component://mr-boss/screen/Commons/KnowledgeTui.xml" menu-include="false"/>
+    </subscreens>
+
+    <actions>
+        <!-- the return context: the map and the step the procedure was opened from, when the viewer still reads them -->
+        <if condition="definitionId">
+            <service-call name="ironstone.insights.FlowMapServices.get#Map" out-map="story" transaction="force-new" ignore-error="true"
+                    in-map="{definitionId:definitionId, stepId:(stepId || null), counts:'N'}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="storyMap" from="story?.map || null"/>
+        <set field="storyStep" from="story?.selectedStep || null"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-gutter-sm q-mb-sm">
+            <link url="../FlowMap" text="Back to ${storyMap ? storyMap.title : 'the flow map'}${storyStep ? ' › ' + storyStep.title : ''}"
+                    link-type="anchor" icon="sym_o_arrow_back"
+                    parameter-map="{definitionId:(storyMap ? storyMap.definitionId : null), stepId:(storyStep ? storyStep.stepId : null)}"/>
+        </container>
+        <subscreens-active/>
+    </widgets>
+</screen>

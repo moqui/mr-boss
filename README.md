@@ -10,7 +10,8 @@ Admin (`screen/Admin/`) has its first release: groups and grants, users and sess
 (`AcceptInvitation`, the `i` route), lifecycle and offboarding, organizations and the Constitution, Health and the settings
 index ([design](plan/design-admin.md), [impl-admin](plan/impl-admin.md)). Insights (`screen/Insights/`) is browsable:
 dashboards and Explore, admitted datasets, the report catalog and metrics, Home's attention board, analysis and drill, and
-scheduled reports and digests delivered to recipients who read the same data, and business alerts told to them the same way
+scheduled reports and digests delivered to recipients who read the same data, business alerts told to them the same way,
+and business flow maps an organization copies from the suite's templates
 ([design](plan/design-insights.md), [impl-insights](plan/impl-insights.md)). They are built in one order, and the
 rest of each is next.
 
