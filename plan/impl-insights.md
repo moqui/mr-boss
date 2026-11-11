@@ -2340,7 +2340,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101 and P8's F102 to F114.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114 and P9's F115 to F129.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
