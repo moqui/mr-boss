@@ -50,6 +50,17 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="insights" from="{defaults: {from: 'now-30d', thru: 'now', currencyMode: 'native'}, sharedLinks: {}, reportLinks: {}}"/>
         </then><else>
             <service-call name="ironstone.insights.ContextServices.get#Context" in-map="{appRoot:appRoot}" out-map="insights"/>
+            <!-- P12 (the P6 mount lesson): the Chatter and RecordFiles mounts below are served only to a user whose own grants
+                open Commons, who reaches the same panels there under the same filters; this root's inheritable grant would
+                otherwise open their notes, messages and files to a user given Insights without Commons. No Insights screen shows
+                either panel but ProcessStory's Knowledge pages, which are themselves a Commons user's. -->
+            <script><![CDATA[
+                const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+                const panelName = pathNames[pathNames.indexOf('Insights') + 1]
+                if ((panelName === 'Chatter' || panelName === 'RecordFiles') &&
+                        ec.service.sync().name('ironstone.insights.DrillServices.get#RecordPanelAccess').call()?.opens !== true)
+                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files are kept in Commons, which is not available to you')
+            ]]></script>
         </else></if>
         <set field="sharedLinks" from="insights.sharedLinks"/>
         <!-- where the framework report screens' links go under Insights (mr-moqui docs/tools/Monitoring.md, "Mounting the report
@@ -61,7 +72,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <subscreens default-item="Home" always-use-full-path="true">
         <!-- the record panels the chatter and record-files elements load under this app root, hidden from the menu
-            (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
+            (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5), served only to a
+            user whose own grants open Commons (always-actions above, P12) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>

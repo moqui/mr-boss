@@ -78,6 +78,8 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="shareable">
             <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share"/>
             <set field="shareGroups" from="share.groups"/>
+            <!-- a definition has one group (P12): the group it is shared with now, which another choice replaces -->
+            <set field="sharedWithLabel" from="userGroupId ? (shareGroups.find(group =&gt; group.value === userGroupId)?.label || userGroupId) : ''"/>
         </if>
     </actions>
     <widgets>
@@ -115,6 +117,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </form-list>
                 </container-dialog>
                 <container-dialog id="ShareDashboard" button-text="Share" condition="shareable">
+                    <label type="p" style="m-muted" text="A dashboard is shared with one group at a time. It is shared with ${sharedWithLabel} now: choosing another group, or the wall displays, takes it from ${sharedWithLabel}." condition="sharedWithLabel"/>
+                    <label type="p" style="m-muted" text="A dashboard is shared with one group at a time: the one you choose, or the wall displays." condition="!sharedWithLabel"/>
                     <form-single name="ShareDashboardForm" transition="shareDashboard">
                         <field name="definitionId"><default-field><hidden/></default-field></field>
                         <field name="expectedVersion"><default-field><hidden/></default-field></field>

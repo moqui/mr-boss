@@ -49,7 +49,17 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'report'}" out-map="found"/>
             <set field="playlists" from="Array.from(found.definitions || []).filter(row => row.body?.kind === 'playlist')
                     .map(row => ({id: row.id, title: row.title || row.id, count: (row.body.playlist || []).length, seconds: row.body.seconds || 30,
-                        owned: !row.readOnly &amp;&amp; row.ownerId === ec.user.userId, onDisplays: row.userGroupId === 'BOSS_INSIGHTS_DISPLAY'}))"/>
+                        owned: !row.readOnly &amp;&amp; row.ownerId === ec.user.userId, onDisplays: row.userGroupId === 'BOSS_INSIGHTS_DISPLAY',
+                        otherGroupId: (row.userGroupId &amp;&amp; row.userGroupId !== 'BOSS_INSIGHTS_DISPLAY' ? row.userGroupId : null)}))"/>
+            <!-- a definition has one group (P12): a playlist shared with another group is moved to the wall displays only after
+                the owner is told so -->
+            <script><![CDATA[
+                const otherIds = Array.from(new Set(playlists.map(row => row.otherGroupId).filter(Boolean)))
+                const names = {}
+                if (otherIds.length) for (const group of Array.from(ec.entity.find('moqui.security.UserGroup').condition('userGroupId', 'in', otherIds).disableAuthz().list()))
+                    names[group.userGroupId] = group.description || group.userGroupId
+                for (const row of playlists) row.otherGroupName = row.otherGroupId ? (names[row.otherGroupId] || row.otherGroupId) : ''
+            ]]></script>
             <!-- P11: the devices showing each playlist, read only, for an access administrator (within their identity scope) -->
             <set field="wallDisplayPath" from="sri.buildUrl('../WallDisplay').path"/>
             <set field="canRegister" from="ec.user.hasPermission('ADMIN_ACCESS_MANAGE')"/>
@@ -102,7 +112,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="edit"><conditional-field condition="canAuthor"><link url="edit" text="Edit" link-type="anchor" parameter-map="{definitionId:id}"/></conditional-field>
                         <default-field><display text=""/></default-field></field>
                     <field name="fullScreen"><default-field title=""><link url="${wallDisplayPath}" url-type="plain" target-window="_blank" text="Play full screen" parameter-map="{definitionId:id}"/></default-field></field>
-                    <field name="onDisplays"><conditional-field condition="canAuthor &amp;&amp; owned" title="Wall displays">
+                    <field name="onDisplays"><conditional-field condition="canAuthor &amp;&amp; owned &amp;&amp; otherGroupId" title="Wall displays">
+                            <link url="sharePlaylist" text="Share with wall displays" link-type="hidden-form-link"
+                                    confirmation="It is shared with ${otherGroupName} now. A playlist is shared with one group at a time, so sharing it with the wall displays takes it from ${otherGroupName}."
+                                    parameter-map="{definitionId:id, shareWithDisplays:'Y'}"/>
+                            <label text="Shared with ${otherGroupName}" type="p" style="text-caption m-muted q-mb-none"/></conditional-field>
+                        <conditional-field condition="canAuthor &amp;&amp; owned" title="Wall displays">
                             <link url="sharePlaylist" text="${onDisplays ? 'Stop sharing with wall displays' : 'Share with wall displays'}" link-type="hidden-form-link"
                                     parameter-map="{definitionId:id, shareWithDisplays:(onDisplays ? 'N' : 'Y')}"/></conditional-field>
                         <default-field title="Wall displays"><display text="${onDisplays ? 'Shared' : ''}"/></default-field></field>

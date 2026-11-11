@@ -2924,6 +2924,123 @@ With Admin P19.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-boss README's
   Insights line.
 
+**Built Nov 11 (P12).** mr-boss and mr-moqui (branch `ins/p12`; Mantle is not touched; no Rust, on the shared release binary).
+- **Checked first** (the phase against the code and the earlier phases' open items): the copied report screens are all
+  replaced (P7 the last), so the legacy mapping is the saved finds and schedules of their lists; TuiRender already swept
+  Insights in tui as john.doe with authorization off, and no sweep covered it in server-static; the framework's
+  `import#Definitions` already keeps an imported alert rule inactive (`prepare_copy`) and saves each definition through the
+  same save (an imported dataset is a new id, never admitted), and Insights denies import to every group (P1); FlowMap
+  already had the ordered list (StepList, P9); every Insights demo user is in `BOSS_USERS`, so the Chatter and RecordFiles
+  mounts gave them nothing Commons does not, but the root's inheritable grant opened their writes to a user given Insights
+  without Commons (F-P12-1).
+- **Acceptance** (written, not run; the lead runs the suite at the end of the build):
+  - `acceptance/Insights/InsightsTui.spec.js`: every Insights screen file and the ten record mounts (the tabbed ones by
+    their `InsightsRecord` subscreen) render in tui as a model document with no error node, as john.doe with authorization
+    on, on the demo's records; a second feature checks three twins' data (the supplier flow's steps, the shipped alert rule,
+    Retail's settings). `acceptance/TuiRender.spec.js` no longer sweeps Insights (its Insights rows removed): one sweep per
+    app per mode.
+  - `acceptance/Insights/InsightsServerStatic.spec.js`: ServerStaticLib's full check of every plain XML Insights screen (no
+    Insights screen is marked server-static yet; none errors).
+  - WallDisplay is in neither sweep: a device's bare page, not a shell screen, with no terminal twin; it is left to the
+    regression InsightsWallDisplay and the acceptance InsightsWallDisplayUsable, and the review walk's last feature.
+  - `acceptance/Insights/InsightsReviewWalk.spec.js` (design §13.3, §8), `dependsOn` InsightsDatasetsUsable, nine features:
+    rows (each group's Retail user and the Services reader through Explore's page and its value suggestions, the engine's
+    direct query with a forged filter, a terms aggregate and the export, the administrator reading none); dashboards, an
+    embed (`render#Dashboard` of the suite panel with forged variables), Home, the Home layout and the context for another
+    organization; drill (refused for another organization, forged variables reach no other organization's orders) and the
+    record context of another organization's order; costs (Assist refuses `mantle-sales-items` to every user without
+    `PRODUCT_COST_VIEW`, MCP to the financial reader too); Assist (another organization refused, the typed answer of the
+    reader's organization only); schedules and alerts (the Services reader refused with a reason that names no
+    organization, a reader refused the audience check); the palette, saved reports and flow maps (a Retail copy shared with
+    every Insights user is not listed or read for the Services reader); the dataset-alias attack (the steward's alias over
+    `otel_logs`, over the sales document without its signal, and with the business signal over the log index; an author's
+    log alias; the steward's direct log query: all refused, nothing kept); and the wall display (a device plays its
+    registered playlist whatever its request names, reads its organization's numbers only, opens nothing else of Insights,
+    Chatter and the record mounts included, and is refused after revocation).
+- **The §14 outputs:**
+  - **Delivery audit** (built): `DeliveryServices.export#DeliveryAudit` over `Delivery.js deliveryAudit`: one run's statuses
+    as CSV for whom `get#Delivery` answers it (the owner each recipient's result, safe reason and attempts; a recipient their
+    own row, named), no address or content, a formula-leading cell made text, audited by the engine as `delivery-audit`;
+    ReportDelivery's Export status (`exportAudit`).
+  - **Business map print** (built): FlowMap's Print opens the page in `html-print` (to PDF where the server has one) for the
+    same map, organization, counts and step; checked by hand as `insights.reader` (200, no error, the lanes and the steps in
+    order). The ordered list is P9's StepList.
+  - **Definitions bundles** (recorded, not built): the export is already every reading group's (the mounted editor's
+    `export#Definitions`); import stays Tools' and an instance administrator's. The engine already keeps an imported rule
+    inactive and a dataset unadmitted and holds no schedule in a bundle; an author's import waits on `save#Definition`
+    refusing a group the owner is not in (F42), since a bundle names each definition's group (F-P12-4).
+- **The legacy mapping** (design §13.2): `RegistryServices.migrate#LegacySavedFinds` (Registry.js), an instance
+  administrator's upgrade step (`ADMIN_REQUIRED` otherwise): every saved find of an Insights list and every schedule of an
+  Insights screen by ID, owners, groups and list or path, with its action (moved, kept, invalid); with `apply` the moved ones
+  are rewritten (DatasetDetail/FieldList's FieldList and ConditionList to DatasetFields', the copied scheduled finds' list to
+  Scheduled reports' Schedules, and a schedule's old path), each find keeping its owners, groups and fields (a field the new
+  list lacks is named). SavedReports shows a find whose list is gone as "Not valid" with no link (`findList`, `invalid`);
+  no alias route. The demo has no such find (F28); P7 converted the copied scheduled finds.
+- **Loose ends:**
+  - **Chatter and RecordFiles under the Insights mount** (fixed, F-P12-1): the root's always-actions serve its Chatter and
+    RecordFiles mounts only to a user whose own grants open Commons (`DrillServices.get#RecordPanelAccess`, Records.js:
+    `destinationOpens(grants, "Commons")`), who reaches the same transitions in Commons under the same filters; else
+    `RECORD_PANEL_UNAVAILABLE` before any transition runs. ProcessStory's Knowledge pages, the only Insights screen that shows
+    a panel, are a Commons user's already.
+  - **The `ignore-error` capture** (fixed for Insights, impl-admin F129, F101): `Insights.js answering` answers a read's
+    refusal as `refusalCode` and `refusal` when the caller passes `answerRefusal` (any other failure as `FAILED` with a plain
+    sentence, logged); `find#SavedReports`, `find#Reports`, `get#ReportOptions`, `get#Home`, `get#Attention`, `get#Drill`,
+    `get#AnalysisOptions` and `get#AnalysisResult` take it, and SavedReports, Reports, Home, Drill and Analysis pass it and show
+    the reason (Home's attention line now says why). Other callers are unchanged (they still get the error). The other
+    `ignore-error` sites of Insights read no message (they show a not-available state).
+  - **The organization's recipient cap** (recorded, F-P12-2): BOSS applies it (`Insights.js recipientCap` at every save and
+    check of a schedule's or rule's audience); the engine's `store#Schedule` and an alert rule's definition, which the reading
+    and authoring groups hold directly, hold the instance ceiling only. The engine holding it needs a schedule and a rule to
+    carry their organization (framework, with F118); Remaining-Work's report engine row says so.
+  - **Wall-display sharing across organizations** (recorded, §5): a registrar of organization B may register A's wall-shared
+    playlist; A's later edits show on B's wall with B's numbers; an author may put another organization's wall-shared
+    dashboard in their own playlist. The two options are in §5 for the user; nothing changed.
+  - **A definition has one group** (done): design §4 says so (As built, P12); Dashboard's Share dialog names the group the
+    dashboard is shared with now and that another choice replaces it; Playlists names a playlist's other group and asks before
+    Share with wall displays takes it from that group.
+- **Specs** (regression, assertions in existing specs only): InsightsRecords' OrderDetail feature (the record panels: a note
+  and the files refused with the reader's Commons membership ended, the panel answering before; 0.39 s) and its drill
+  feature (the refusal answered with `answerRefusal`; 0.28 s); InsightsDelivery's Send now feature (the status export of the
+  owner, the reader's own row, the outsider refused; 0.51 s); InsightsCatalog gains one feature (a legacy find not valid, the
+  migration's dry run, refusal and apply; 0.10 s, no render).
+- **Tests run** (release binary, `--nobuild`, this phase's runtime): InsightsRecords, InsightsDelivery, InsightsCatalog,
+  InsightsDatasets, InsightsHome, InsightsAccess, InsightsDashboards, InsightsWallDisplay, InsightsFlowMaps, InsightsSettings,
+  InsightsAlerts and ProjectsAccess: 55 of 55 (mr-boss 16.8 s of feature time); `moqui lint --screens` clean (no parse
+  failure; the one Insights flag is P11's). By hand: FlowMap in html-print, Playlists, ReportDelivery. Not run: any
+  acceptance test, the full suites.
+- **Records:** design-insights §2's Impl column names each screen's phase; §4 (one group), §13.2 (the legacy mapping) and §14
+  (each output) gain As built notes; ss-inventory's Insights line and usl-inventory's Insights rows (`setup#UserOrganizationInfo`,
+  `get#PartyOrganizationInfo`, `store#PartySetting`, the attention counts `find#Payables` and `find#Records`, and a note of the
+  newer Mantle services Insights calls that have no row); mr-moqui `plans/Remaining-Work.md`'s report engine row (field
+  classes, an organization on a schedule and a rule, authors' bundle import, more than one group or a per-organization wall
+  share); the mr-boss README's Insights sentence.
+- **Findings** (provisional):
+  - F-P12-1 (medium, fixed): the Chatter and RecordFiles mounts under the Insights root opened their writes (log a note,
+    message, upload, remove) to a user given Insights without Commons, by the root's inheritable grant (the P6 R1 lesson).
+  - F-P12-2 (open, framework): the organization's recipient cap is BOSS's alone; the engine holds the ceiling.
+  - F-P12-3 (open, F83 and F58 restated by the review walk): an admitted `mantle-sales-items` gives every reader its cost and
+    margin fields in Explore, a direct query, an analysis's measure list and a panel's own aggregate; design §13.3's "cost
+    fields never reach an unauthorized response" holds in Assist, MCP and drill only. The walk does not assert it. Until
+    field classes (Remaining-Work), the alternatives are granting `mantle-sales-items` to cost holders only, or a cost-free
+    items dataset for readers: the user's call.
+  - F-P12-4 (open): an author's bundle import waits on F42; the export is every reader's.
+  - F-P12-5 (low): `get#Delivery`'s own delivery, as a recipient reads it, did not carry their name in the export (the
+    engine's row is the recipient's own), so the export names the caller from their account.
+- **For the lead:**
+  - Budgets: mr-boss server +0.1 s (InsightsCatalog's feature; the other assertions sit in features already timed).
+  - Merge: shared with Admin P19: `acceptance/TuiRender.spec.js` (the header, the app list, the feature title and the
+    removed Insights rows), the mr-boss README (the Insights sentence of the paragraph Admin's sentence opens; "They are built
+    in one order" left as it was), mr-moqui `plans/Remaining-Work.md` (the report engine row only), usl-inventory's
+    `setup#UserOrganizationInfo` row (Admin may add its root to the same cell: keep both). Not touched: AppStructure,
+    BossSetupData (no grant changed; the new services' verbs `export`, `migrate` and `get` pass ProjectsAccess).
+  - An existing instance: run `ironstone.insights.RegistryServices.migrate#LegacySavedFinds` once as an administrator
+    (first without `apply` to read the inventory); nothing else to load.
+  - The user's call: §5's wall-display sharing across organizations; F-P12-3 (costs to readers in Explore until field
+    classes); P10's open items stand (readers reading DataReadiness, every reading group holding `INSIGHTS_SCHEDULE`, a lowered
+    cap at a schedule's next save).
+  - The acceptance suite: InsightsReviewWalk, InsightsTui and InsightsServerStatic are new and unrun; InsightsReviewWalk
+    creates a display account and device per run (revoked at its end) and an alert rule and flow map copy (removed).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-insights.md
@@ -2971,6 +3088,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the plan's open question as written (Q1, the recipient cap) was answered on Nov 7 and is in §4 |
+| Should a wall display read only the playlists and dashboards of its own organizations? The wall displays are one group (`BOSS_INSIGHTS_DISPLAY`): a registrar of organization B may register organization A's wall-shared playlist by its id, and A's author's later edits (titles, text panels, which dashboards) then show on B's wall with B's numbers; and an author may put another organization's wall-shared dashboard into their own playlist | the user (P11 review; recorded in P12, not changed) | Options: refuse on a device a playlist or dashboard whose owner shares no organization with the display account; or one display group per organization. No author pushes onto another organization's wall by sharing alone (a wall plays the playlist its registration fixed) |
 | Should an organization's flow map be editable by every flow editor of that organization, or taken over from its owner? Today a map is its copier's: the engine saves only for the owner, another editor copies it, and there is no ownership transfer | a later review of flow maps (with the editor's refactoring, §4) | F117 (P9); left open by the user on Nov 10 for future review |
 
 ## 6. Findings

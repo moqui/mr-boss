@@ -2,7 +2,8 @@
 // ReportDelivery, ManagementDigest): a reader schedules a report for themselves and not for others; a distributor's recipients
 // are checked by the report engine, so the Retail agents pass and the Services reader is refused with the reason, as an
 // answer a screen shows; Send now gives each recipient a message of their own, linking to Insights, and each reads their own
-// delivery and their own report, never another's; ScheduledReportDetail renders once (qvt) with each recipient's result and no
+// delivery and their own report, never another's, and its status export (P12) the same rows; ScheduledReportDetail renders
+// once (qvt) with each recipient's result and no
 // payload; a digest is composed by a distributor over dashboards they read; and Admin's lifecycle finds the distributor's
 // schedule through Insights' participant and hands it only to an owner who qualifies, paused until the recipients pass the
 // new owner's check. The engine's rules are the framework's ReportAudience; the admitted sales dataset and its orders are
@@ -193,6 +194,12 @@ feature(
             const anothers = asUser(users.reader, () => refusal(D + "get#OwnReport", {deliveryId: idOf(people.author)}))
             const notMine = asUser(users.reader, () => refusal(D + "get#Schedule", {screenScheduledId: scheduleId}))
             const outsider = asUser(users.services, () => refusal(D + "get#Delivery", {occurrenceId: row.lastOccurrenceId}))
+            // P12 (design §14 Delivery audit): the run's status as CSV, the owner's every recipient, the reader's own row alone
+            const ownerAudit = asUser(users.distributor, () => invoke(D + "export#DeliveryAudit", {occurrenceId: row.lastOccurrenceId}))
+            const readerAudit = asUser(users.reader, () => invoke(D + "export#DeliveryAudit", {occurrenceId: row.lastOccurrenceId}))
+            const outsiderAudit = asUser(users.services, () =>
+                refusal(D + "export#DeliveryAudit", {occurrenceId: row.lastOccurrenceId})
+            )
             // the one qvt render: the header, each recipient's result, the run; no payload of anyone's
             const page = asUser(users.distributor, () => {
                 const result = ec.screen
@@ -232,10 +239,14 @@ feature(
                 anothers,
                 notMine,
                 outsider,
+                ownerAudit,
+                readerAudit,
+                outsiderAudit,
                 page
             }
         },
-        then({sent, toLists, link, row, delivery, received, readerId, readerView, ownReport, anothers, notMine, outsider, page}) {
+        then({sent, toLists, link, row, delivery, received, readerId, readerView, ownReport, anothers, notMine, outsider, ownerAudit,
+              readerAudit, outsiderAudit, page}) {
             sent.applied == true
             sent.sent == true
             toLists == "insights.author@ziziwork.example,insights.reader@ziziwork.example"
@@ -257,6 +268,12 @@ feature(
             anothers.includes("DELIVERY_UNAVAILABLE")
             notMine.includes("SCHEDULE_UNAVAILABLE")
             outsider.includes("DELIVERY_UNAVAILABLE")
+            ownerAudit.rowCount == 2
+            ownerAudit.csvText.includes("Insights Author") && ownerAudit.csvText.includes("Insights Reader")
+            !/@ziziwork|contentBase64/.test(ownerAudit.csvText)
+            readerAudit.rowCount == 1
+            readerAudit.csvText.includes("Insights Reader") && !readerAudit.csvText.includes("Insights Author")
+            outsiderAudit.includes("DELIVERY_UNAVAILABLE")
             page.status == 200
             page.errors.join(" | ") == ""
             page.output.includes("Orders to deliver")

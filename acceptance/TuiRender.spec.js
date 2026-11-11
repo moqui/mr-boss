@@ -1,6 +1,7 @@
-// The terminal twins of the IronStone screens (style-guide §4.8, §8.1): every screen under the Commons, Comms and Insights
-// roots and in screen/Shared renders in the tui render mode as a document of the TUI model (v 1) with no error node, on the
-// demo records AppStructure uses; the twins of the custom screens show their data (a list's rows, the Inbox's threads).
+// The terminal twins of the IronStone screens (style-guide §4.8, §8.1): every screen under the Commons and Comms roots (and the
+// apps below; Insights has its own sweep, InsightsTui) and in screen/Shared renders in the tui render mode as a document of
+// the TUI model (v 1) with no error node, on the demo records AppStructure uses; the twins of the custom screens show their
+// data (a list's rows, the Inbox's threads).
 // A .qvue screen's twin is its Name.tui.json, mostly a dynamicContainer of a hidden plain-XML twin screen beside it.
 // Run: ./moq test mr-boss --spec TuiRender
 const base = "component://mr-boss/screen"
@@ -54,7 +55,6 @@ const demoParameters = {
     "Product360": {productId: "BOSS_PRD_OWN"},
     "CategoryDetail": {productCategoryId: "BOSS_PRD_CAT"},
     "Products/Categories/CategoryDetail": {productCategoryId: "BOSS_PRD_CAT"},
-    "Insights/Dashboard": {definitionId: "mantle-sales", from: "now-1y", thru: "now"},
     "Commons/QuickCreate": { kind: "task" },
     "Commons/Calendar/EventDetail": { workEffortId: "BOSS_DEMO_EVENT" },
     "Commons/Calendar/Schedules/ResourceDetail": { resourceType: "room", resourceId: "BOSS_DEMO_ROOM_MAPLE" },
@@ -70,16 +70,6 @@ const demoParameters = {
     "Comms/Inbox/MessageDetail": { emailMessageId: "BOSS_DEMO_MAIL_INVOICE" },
     "Comms/Settings/MailAccounts/Account": { emailAccountId: "BOSS_DEMO_MAIL_SUPPORT" },
     "Comms/Consent/Contact": { partyId: "BOSS_DEMO_CON_ALEX" },
-    "Insights/ReportBuilder/DatasetDetail": { datasetId: "boss-service-clocks" },
-    "Insights/ReportBuilder/DatasetFields": { datasetId: "boss-service-clocks" },
-    "Insights/ReportBuilder/DatasetView": { datasetId: "boss-service-clocks" },
-    "Insights/ScheduledReports/ScheduledReportDetail": { screenScheduledId: "BOSS_DEMO_MY_TASKS" },
-    "Insights/ScheduledReports/ReportDelivery": { occurrenceId: "NONE" },
-    "Insights/Alerts/AlertDetail": { definitionId: "boss-service-sla-breach" },
-    "Insights/Flows/FlowMap": { definitionId: "insights-flowmap-supplier", stepId: "order" },
-    "Insights/Flows/FlowMapEditor": { definitionId: "insights-flowmap-internal" },
-    "Insights/Flows/ProcessStory": { definitionId: "insights-flowmap-customer", stepId: "order" },
-    "Insights/Settings/AnalyticsSettings": { organizationPartyId: "ORG_ZIZI_RETAIL" },
     "Chatter": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
     "RecordFiles": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
 }
@@ -114,7 +104,7 @@ function tui(root, path, parameters) {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing", "CustomerService"])
+        screens = findScreenFiles(["Commons", "Comms", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing", "CustomerService"])
         accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [root, path] of screens)
             if (root.endsWith("/Accounting.xml")) demoParameters["Accounting/" + path] = {organizationPartyId: "BOSS_ACCT_ORG"}
@@ -186,7 +176,7 @@ spec({
     cleanup() { ec.artifactExecution.enableAuthz() },
 })
 
-feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufacturing, Purchasing, Customer Service and Shared screen renders in tui as a model document with no error node", {
+feature("every Commons, Comms, Products, Accounting, Warehouse, Manufacturing, Purchasing, Customer Service and Shared screen renders in tui as a model document with no error node", {
     when() {
         const failures = []
         for (const [root, path] of screens) {

@@ -47,12 +47,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="can" from="insights.capabilities"/>
         <if condition="can.view">
             <service-call name="ironstone.insights.RegistryServices.get#Home" out-map="home" transaction="force-new"
-                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null)}"/>
-            <set field="homeFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null), answerRefusal:true}"/>
+            <!-- a refusal is the service's answer (impl-admin F129: ignore-error clears the message) -->
+            <set field="homeFailure" from="home?.refusal || (home?.capabilities ? null : 'Try again in a moment.')"/>
             <script>ec.message.clearErrors()</script>
             <service-call name="ironstone.insights.RegistryServices.get#Attention" out-map="attention" transaction="force-new"
-                    ignore-error="true" in-map="{organizationPartyId:(home?.organizationPartyId || null)}"/>
-            <set field="attentionFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    ignore-error="true" in-map="{organizationPartyId:(home?.organizationPartyId || null), answerRefusal:true}"/>
+            <set field="attentionFailure" from="attention?.refusal || (attention?.groups ? null : 'Try again in a moment.')"/>
             <script>ec.message.clearErrors()</script>
             <service-call name="ironstone.insights.DeliveryServices.get#DigestPreview" out-map="digestPreview" transaction="force-new"
                     ignore-error="true"/>
@@ -148,7 +149,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Needs attention"/>
                 <box-body>
                     <label text="Work waiting in the apps you use${attention?.asOfText ? ', as of ' + attention.asOfText : ''}. Counts are not added together: the same work can be in more than one list." type="p" style="m-muted"/>
-                    <label text="The attention board could not be read just now." type="p" style="text-negative" condition="attentionFailure"/>
+                    <label text="The attention board could not be read just now. ${attentionFailure}" type="p" style="text-negative" condition="attentionFailure"/>
                     <label text="Nothing is waiting in the apps you use." type="p" condition="!attentionFailure &amp;&amp; !attentionGroups.length"/>
                     <section-iterate name="AttentionGroups" list="attentionGroups" entry="group">
                         <widgets>

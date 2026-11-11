@@ -53,6 +53,15 @@ catalog entries name (`sourceReference`) are registrations, not calls: no Insigh
 **Implemented in** is unchanged (design §6.2: a registration does not promote a capability). The Insights paths of their
 **Designed in** cells say `Insights/Panels/PanelDetail`, which was built as `Insights/PanelDetail` (impl-insights F46).
 
+**Insights P12 (Nov 11, 2026):** **Implemented in** checked for every Insights row at the end of the Insights build. The root
+calls `setup#UserOrganizationInfo` and every Insights screen `get#PartyOrganizationInfo` (through `get#Context`); Settings
+writes `store#PartySetting`; Home's attention board calls the registered count services as the viewer (`find#Payables`,
+`AccountingServices.find#Records`). The §6.2 report services stay registrations, not calls (P4's note). Mantle services Insights
+calls that are newer than this inventory have no row: `StoreOperationsServices.get#StoreWorkSummary` and
+`StoreChannelServices.get#ChannelHealth` (Home's attention counts), `PartyServices.get#OrganizationRowFilter` (the report
+engine's scope policy, `MantleOrganization`), `BusinessEventServices.record#BusinessEvent` (the owners' business markers) and
+`IdentityServices.find#SharedDevices` (Playlists' devices, P11).
+
 **Design review fixes (Nov 1, 2026):** after [review-suite-apps.md](review-suite-apps.md),
 renamed paths are replaced in place (`Marketing/Audiences/Import` → `AudienceImport`,
 `Consent/Contact` → `Consent/ConsentDetail`, `PASS:Marketing/Preferences` →
@@ -342,7 +351,7 @@ Added in Accounting P6 (payables), called by built screens:
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills) |
+| InvoiceServices | find#Payables | Accounting/Payables/Bills | Accounting/Payables/Bills; Accounting/Payables/ExpensePosting (through PayableScreenServices.find#Bills); Insights/Home (an attention provider's count, as the viewer; Insights P5) |
 | InvoiceServices | import#Bill | Accounting/Payables/Bills | Accounting/Payables/Bills#BillUploadForm; Accounting/Records/OrderDetail#OrderBillUploadForm; Purchasing/Bills/BillList#UploadSupplierBill; Purchasing/Orders/OrderDetail#PurchaseOrderUploadBillForm (Purchasing P6) |
 | InvoiceServices | create#InvoiceFromSource | Accounting/Records/OrderDetail; Accounting/Records/ShipmentDetail; Sales/Orders/OrderDetail | Accounting/Records/OrderDetail#InvoiceFromOrderForm; Accounting/Records/ShipmentDetail#BillReceiptForm; Purchasing/Receiving/ShipmentDetail (Create draft bill, AP intake, received basis) (Purchasing P5); Purchasing/Orders/OrderDetail#PurchaseOrderDraftBillForm (Purchasing P6) |
 | InvoiceServices | request#PayableApproval |  | Accounting/Payables/BillDetail |
@@ -778,8 +787,8 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1) |
-| PartyServices | get#PartyOrganizationInfo |  |  |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1); Insights (the root's always-actions, Insights P1) |
+| PartyServices | get#PartyOrganizationInfo |  | Insights (every screen, through ironstone.insights.ContextServices.get#Context; Insights P1) |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |
 | PartyServices | create#UserAccountPerson |  |  |
@@ -803,7 +812,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | update#PartyContent |  |  |
 | PartyServices | save#PartyContentFile | Shared/RecordFiles |  |
 | PartyServices | get#PartySettingValue | Admin/Settings/OrganizationDetail |  |
-| PartyServices | store#PartySetting | Admin/Settings/OrganizationDetail |  |
+| PartyServices | store#PartySetting | Admin/Settings/OrganizationDetail | Insights/Settings/AnalyticsSettings (ironstone.insights.ContextServices.store#Settings, Insights P10) |
 | PartyServices | store#PartyRelationshipSetting |  |  |
 | PartyServices | validate#PartySetting | Admin/Settings/OrganizationDetail |  |
 | PartyServices | send#DataDocumentNotifications |  |  |
@@ -1764,7 +1773,7 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | AccountingServices | get#Access | Accounting (scoped records and QuickCreate) | Native contract (not directly mounted) |
-| AccountingServices | find#Records | Accounting (scoped records and QuickCreate) | Accounting/GeneralLedger/ChartOfAccounts; Accounting/GeneralLedger/JournalBatches; Accounting/GeneralLedger/JournalEntries; Accounting/GeneralLedger/JournalTemplates; Accounting/GeneralLedger/TransactionEntries; Accounting/Payables/Bills; Accounting/Payments/Payments; Accounting/PeriodClose/PeriodLocks; Accounting/PeriodClose/Periods; Accounting/Receivables/Invoices |
+| AccountingServices | find#Records | Accounting (scoped records and QuickCreate) | Accounting/GeneralLedger/ChartOfAccounts; Accounting/GeneralLedger/JournalBatches; Accounting/GeneralLedger/JournalEntries; Accounting/GeneralLedger/JournalTemplates; Accounting/GeneralLedger/TransactionEntries; Accounting/Payables/Bills; Accounting/Payments/Payments; Accounting/PeriodClose/PeriodLocks; Accounting/PeriodClose/Periods; Accounting/Receivables/Invoices; Insights/Home (an attention provider's count, as the viewer; Insights P5) |
 | AccountingServices | get#Record | Accounting (scoped records and QuickCreate) | Accounting/GeneralLedger/AccountDetail; Accounting/GeneralLedger/JournalEntryDetail; Accounting/GeneralLedger/JournalTemplates; Accounting/Payables/BillDetail; Accounting/Payments/PaymentDetail; Accounting/Receivables/InvoiceDetail |
 | AccountingServices | create#DraftDocument | Accounting (scoped records and QuickCreate) | Accounting/QuickCreate/NewBill; Accounting/QuickCreate/NewInvoice; Accounting/QuickCreate/NewPayment |
 | JournalServices | store#DraftEntry | Accounting/GeneralLedger/JournalEntryDetail; Accounting/GeneralLedger/JournalBatches; Accounting/GeneralLedger/JournalTemplates | Accounting/GeneralLedger/JournalEntryDetail; Accounting/QuickCreate/NewEntry |

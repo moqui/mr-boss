@@ -261,6 +261,26 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="canRetry" from="found.canRetry"/>
         </actions>
     </service>
+    <service verb="export" noun="DeliveryAudit" allow-remote="false">
+        <description>One run's delivery status as CSV (design §14 Delivery audit; P12), for whom get#Delivery answers it
+            (DELIVERY_UNAVAILABLE otherwise): its schedule's owner gets the run and each recipient's result with its safe reason
+            and attempts, a recipient their own delivery alone. No report content, address or another recipient's report; the
+            export is audited (the report engine's audit#Export, kind delivery-audit).</description>
+        <in-parameters>
+            <parameter name="occurrenceId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="csvText"/>
+            <parameter name="fileName"/>
+            <parameter name="rowCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Delivery.js').execute('deliveryAudit', context)"/>
+            <set field="csvText" from="found.csvText"/>
+            <set field="fileName" from="found.fileName"/>
+            <set field="rowCount" from="found.rowCount"/>
+        </actions>
+    </service>
     <service verb="retry" noun="Recipients" allow-remote="false" transaction="ignore">
         <description>Send again to the failed recipients chosen (deliveryIds) of an occurrence of the caller's schedule, at the revision read
             (expectedRevision): the engine retries only failed deliveries, checks each recipient again and never replays a sent
