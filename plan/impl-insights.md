@@ -2330,12 +2330,14 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Nov 7, 2026 | Monitor's Business operations source is `RegistryServices.get#OperationFailures`, running the shipped dashboard's own rollbacks query as the viewer, so Monitor's grants decide | P5, F19 |
 | Nov 7, 2026 | The suite dashboard `insights-suite` places four shipped library panels by reference; its organization scope is two hidden variables (`organizationPartyId`, `vendorPartyId`) that Home sets; Home's arrangement is `store#HomeLayout` in `InsightsHome`, at most six panels | P5, F67, F71 |
 | Nov 7, 2026 | SaveAs copies a definition through `save#Definition` as the author (one save with the chosen group) rather than `copy#Definition` (which keeps the source's group, F42); a saved find has no SaveAs in Insights | P4; design §6 SavedReports changed |
+| Nov 10, 2026 | Flow-map authorization stays as P9 built it: the flow editor's grant is FlowMapServices' six writing operations, the engine knows no organization or kind on a definition, and an Insights author can still create a `flowmap` definition in the definition editor with any organization and share group. The flow editor will likely be refactored and generalized, and its authorization is revisited then | The user's call (Nov 10), F118, F121 (P9 and its review R1) |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the plan's open question as written (Q1, the recipient cap) was answered on Nov 7 and is in §4 |
+| Should an organization's flow map be editable by every flow editor of that organization, or taken over from its owner? Today a map is its copier's: the engine saves only for the owner, another editor copies it, and there is no ownership transfer | a later review of flow maps (with the editor's refactoring, §4) | F117 (P9); left open by the user on Nov 10 for future review |
 
 ## 6. Findings
 
