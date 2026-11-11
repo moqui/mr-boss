@@ -3116,6 +3116,58 @@ and this note (branch `ins/p12`).
   - Merge: the README's "They are built in one order, and the rest of each is next" now follows "Insights is built"; worth a
     word when Admin P19's sentence is merged beside it.
 
+**Acceptance Nov 11 (after gate 5).** `mail_capture_sends=true ./moq accept mr-boss` on master, release binary, the first
+run after the whole Admin and Insights build; this note is Insights' failures and the screen sweeps' (branch `acc/insights`;
+Admin's are impl-admin's). All the Insights failures were spec bugs; none is a product defect:
+- InsightsReviewWalk "schedules and alerts reach only owner-equivalent recipients" stored the Services reader on a copied
+  rule and expected `RECIPIENT_REFUSED`. Checked as a possible security defect first: a copy is paused (not validated), and
+  a paused rule's audience is a draft that tells nobody; the engine checks every recipient when the rule is saved active
+  (`alert_delivery.rs` `refuse`, BusinessAlerts) and again before each notification (`scope-differs`), as AlertServices
+  documents. The walk now stores the draft (applied, paused), activates it (`pause#Alerts`), which is refused
+  `RECIPIENT_REFUSED` naming the Services reader, and checks the rule stayed paused. The walk's `attempt` also called every
+  service twice (a refusal check, then the call), so each copy was made twice and one left behind (the palette found two
+  maps); it calls once now. Its wall display feature registered the device with a code and then asked `reveal#SharedDeviceCode`
+  for one (refused, so no device cookie): it registers with `issueCode: false`, as Admin's Devices does.
+- InsightsFlowMapsUsable read Commerce's own count by calling `get#StoreWorkSummary` directly as john.doe, a service granted
+  through Commerce Home's screen and not to a direct call; the flow map's count itself is right (the attention board calls the
+  provider inside Insights' service). It reads it with the artifact check off (the service scopes by the user's stores);
+  ProcessStory was rendered as the leaf in qvt, whose default subscreen (Commons Knowledge) is a .qvue screen with no qvt:
+  it is rendered from its own level (`lastStandalone` -4), as the shell loads it.
+- InsightsSettingsUsable expected a 200 from the refused post (a transition redirects, 302); it now checks the redirect and the
+  service's `RECIPIENT_CAP_CEILING`. Its Assist feature read the suite panel from a `Definition` row (a shipped definition is a
+  file: read through `get#Definition`) and the frame by field names the frames do not use (they are the aggregations' ids).
+- InsightsWallDisplayUsable rendered Playlists' `sharePlaylist` (a post transition) as a page, so nothing was shared; it posts
+  now. It then expected john.doe's Playlists to list the device, though he reads only his own playlists and those shared with
+  his groups (a definition has one group): it checks the author's Playlists shows the playlist on the wall displays (the
+  regression InsightsWallDisplay lists devices for an owner who registers them). Its revoke came after the display account's
+  Retail membership was ended, which puts the device outside admin.access's organization scope (`DEVICE_UNAVAILABLE`); the
+  instance administrator revokes it.
+- AppStructure swept Insights' Records group with no record: it is reached from a drill with an order, so the sweep gives it
+  one (`Insights/Records` with `orderId`).
+- Not this build's, upstream of it: TuiRender (Commons and Customer Service ContactDetail) and CommerceTui (Merchandising
+  Reviews) "A dialog of a list row did not render": a `section` in a list row's container-dialog was an error node by design
+  (ScreenTui.js, Oct 21); ContactRecord's contact info dialog has had one since Oct 19 and only renders since mr-moqui
+  9ff43d2e (Nov 9) rendered a container's widgets in a list cell, and Reviews has one since mr-boss dc419165 (Nov 10).
+  Fixed in mr-moqui (ScreenTui.js): a section or section-iterate inside a captured row dialog is its nodes as a value
+  (`sri.renderSectionValue`, Nov 9, which a section in a cell already uses); an include or subscreen there stays an error
+  node. Cargo `a_container_dialog_in_a_list_cell_is_a_dialog_of_its_row` (the section's condition and fail-widgets per row)
+  and the `tui/structure` golden; moqui-core `screen::tests` 365 passed. WarehouseServerStatic is left failing, recorded for
+  the user: mr-boss 35223fd6 (Nov 10) made AssetDetail's Move link a screen path from an expression
+  (`${sharedLinks['Transfers/Move']}`, no longer `url-type="plain"`), which the server-static check reports as
+  `[disable-link] link # is not a screen or transition` for AssetDetail and its marked subscreens Files and Notes (with
+  `url-type="plain"` back the sweep passes); whether to keep the screen path and unmark them, or keep them static, is the
+  app's call. Reviews renders a row dialog only when a review exists (after the Commerce walks), so CommerceTui passes alone.
+- Runs: each fixed spec alone; then the thirteen Insights acceptance specs with AppStructure and WarehouseServerStatic
+  together (release); CommerceTui, TuiRender and InsightsTui on the Debug binary with the fix (no error node). On Debug the
+  Customer Service demo order `BOSS_CS_SO_DELIVERED` and its texts are missing from TuiRender, AppStructure and CommerceTui's
+  second feature (qvt too, so not the tui change; the release binary shows them). A server suite run by mistake (release, the
+  fixes without the tui one) passed every Insights spec but InsightsCatalogUsable (panel 17 orders against OnlineSales 15 in
+  the latest month, after the other walks' orders; it passes alone and passed in the lead's run): open, order-dependent.
+- For the lead: findings, each one line: admin.access cannot revoke a device whose display account has left its organization
+  (out of scope reads as not available; the instance administrator can); Playlists lists a playlist's devices only to a
+  reader of the playlist who holds `ADMIN_ACCESS_VIEW`, so a playlist shared with the wall displays shows its devices to its
+  owner alone (with §5's wall-sharing question).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-insights.md

@@ -13,7 +13,7 @@
 // margin fields in Explore and a direct query, since a dataset has no field classes; Assist, MCP and drill refuse them.
 // Run: ./moq accept mr-boss --spec InsightsReviewWalk
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
-const {ids, users, asUser, system, refusal, invoke} = lib
+const {ids, users, asUser, system, invoke} = lib
 const R = "org.moqui.report.ReportServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
@@ -44,11 +44,19 @@ function page(user, path, parameters) {
         return {status: result.status, output, errors: Array.from(result.errorMessages || []).concat(failed).join(" | ")}
     })
 }
-// a call as the user: its answer, or {refused: the message}
+// a call as the user, made once (a copy or a save is not made twice): its answer, or {refused: the message}
 function attempt(user, service, parameters) {
     return asUser(user, () => {
-        const message = refusal(service, parameters)
-        return message ? {refused: message} : invoke(service, parameters)
+        ec.message.pushErrors()
+        try {
+            const out = ec.service.sync().name(service).parameters(parameters).requireNewTransaction(true).call() || {}
+            return ec.message.hasError() ? {refused: ec.message.getErrorsString()} : out
+        } catch (error) {
+            return {refused: String(error.message)}
+        } finally {
+            ec.message.clearErrors()
+            ec.message.popErrors()
+        }
     })
 }
 // every value of every frame field under a result (the engine's frames: {fields: [{name, values}]}), by field name
@@ -247,29 +255,42 @@ feature("schedules and alerts reach only owner-equivalent recipients, each refus
         const readerAudience = attempt(users.reader, D + "check#Audience", {definitionId: "mantle-sales", recipientUserIds: [people.services]})
         const title = "Review walk breaches " + run
         const copied = attempt(users.distributor, "ironstone.insights.AlertServices.copy#Alert", {definitionId: "boss-service-sla-breach", title})
+        let draft = {}
         let alert = {}
+        let stored = {}
         try {
-            alert = attempt(users.distributor, "ironstone.insights.AlertServices.store#Alert", {
+            // a copy is paused (not validated): its audience is a draft that tells nobody, and activating it is the engine's
+            // check of every recipient (AlertServices pause#Alerts), which refuses the Services reader
+            draft = attempt(users.distributor, "ironstone.insights.AlertServices.store#Alert", {
                 definitionId: copied.definitionId,
                 audienceGiven: "Y",
                 audienceKind: "group",
                 recipientUserIds: [people.reader, people.services],
                 userGroupId: "BOSS_INSIGHTS"
             })
+            const activated = attempt(users.distributor, "ironstone.insights.AlertServices.pause#Alerts", {
+                definitionIds: [copied.definitionId],
+                paused: "false"
+            })
+            alert = Array.from(activated.results || [])[0] || activated
+            stored = system(() => JSON.parse(String(ec.entity.find("moqui.report.Definition").condition("definitionId", copied.definitionId).one().bodyJson)))
         } finally {
             if (copied.definitionId)
                 attempt(users.distributor, "ironstone.insights.AlertServices.delete#Alert", {definitionId: copied.definitionId})
         }
-        return {audience, readerAudience, copied, alert}
+        return {audience, readerAudience, copied, draft, alert, stored}
     },
-    then({audience, readerAudience, copied, alert}) {
+    then({audience, readerAudience, copied, draft, alert, stored}) {
         audience.eligibleCount == 1 && audience.refusedCount == 1
         !JSON.stringify(audience).includes(ids.otherOrganizationId)
         !!readerAudience.refused
         copied.applied == true
+        draft.applied == true && draft.paused == true
         alert.applied == false && alert.reasonCode == "RECIPIENT_REFUSED"
         alert.reason.includes("Insights Services reader (scope-differs)")
         !alert.reason.includes(ids.otherOrganizationId)
+        // the refused activation left the rule paused: it tells nobody
+        stored.paused == true
     }
 })
 
@@ -349,7 +370,7 @@ feature("a wall display opens its registered playlist alone, as its display acco
         const display = invoke("mantle.party.IdentityServices.create#DisplayAccount", {displayName: "Review wall display " + run,
             organizationPartyId: own, bundleGroupIdList: ["BOSS_INSIGHTS_READ", "BOSS_INSIGHTS_DISPLAY"]})
         const registered = invoke("mantle.party.IdentityServices.register#SharedDevice", {deviceName: "Review wall " + run,
-            routeGroupId: "INSIGHTS_PLAYLISTS", displayUserId: display.userId, parameterValue: playlistId})
+            routeGroupId: "INSIGHTS_PLAYLISTS", displayUserId: display.userId, parameterValue: playlistId, issueCode: false})
         const code = invoke("mantle.party.IdentityServices.reveal#SharedDeviceCode", {deviceId: registered.deviceId}).registrationCode
         const redeemed = ec.screen.makeTest().rootScreen(webroot).render("Device/redeem", {code}, "post")
         const cookie = String(redeemed.header("Set-Cookie") || "").split(";")[0].replace("moqui.device=", "")

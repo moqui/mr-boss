@@ -209,6 +209,8 @@ const demoRecords = {
     "Insights/Settings/AnalyticsSettings": { parameters: { organizationPartyId: "ORG_ZIZI_RETAIL" }, text: "Analytics defaults" },
     "Insights/Settings/DataReadiness": { text: "Data readiness" },
     "Insights/AddToDashboard": { text: "Add to my dashboard" },
+    // Insights P6: the record contexts, reached from a drill's records with the record's id; the group opens on an order
+    "Insights/Records": { parameters: { orderId: "BOSS_DEMO_ACME_SO" }, text: "m-record-header" },
     // Insights P11: the wall display's page, with no playlist chosen (a device's is its registration's)
     "Insights/WallDisplay": { text: "This playlist is not available to this display." },
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list
