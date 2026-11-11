@@ -2,7 +2,8 @@
 // Mantle's sales orders once their row filter is bound and their index built, which a reader and an author cannot; a reader of
 // ORG_ZIZI_SERVICES then reads only its own organization's sales rows and a Retail reader only Retail's, whatever filter either
 // sends; DatasetView's one qvt render (the author's, Retail's rows only) and its scoped export, the same rows; the dataset's
-// readiness and its index refresh through Admin's registries, the refresh the steward's. The engine's admission rules are the
+// readiness and its index refresh through Admin's registries, the refresh the steward's; the steward's own dataset names
+// neither the log index nor the sales document without its filter (impl-admin F277). The engine's admission rules are the
 // framework's BusinessDatasets and the organization filter Mantle's OrganizationRowFilter; the screens' access is InsightsAccess's.
 // The "usable when" scenario is the acceptance InsightsDatasetsUsable. Run: ./moq test mr-boss --spec InsightsDatasets
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -169,6 +170,26 @@ feature("DatasetView's one qvt render shows the author Retail's rows and its exp
         exported.content.includes(orders.retail)
         !exported.content.includes(orders.services)
         readerExport.includes("INSIGHTS_DATASETS_UNAVAILABLE") || readerExport.includes("authoring or stewardship")
+    }
+})
+
+feature("the steward's own dataset is no way to the log index or past the sales rows' filter (impl-admin F277)", {
+    when() {
+        // an insights-* dataset's artifact is the steward's by pattern; the log index's and the sales document's own are not
+        const save = (id, body) =>
+            asUser(users.steward, () => refusal(R + "save#Definition", {definition: {id, type: "dataset", title: id, body}}))
+        return {
+            logs: save("insights-spec-logs", {indexName: "otel_logs", timeField: "timestamp", rowFilter: {match_all: {}}}),
+            raw: save("insights-spec-raw", {documentType: "MantleSalesOrderPart", timeField: "_timestamp"}),
+            kept: system(() =>
+                ec.entity.find("moqui.report.Definition").condition("definitionId", "like", "insights-spec-%").count()
+            )
+        }
+    },
+    then({logs, raw, kept}) {
+        logs.includes("needs its own grant (org.moqui.report.dataset.otel_logs)")
+        raw.includes("a business dataset's document")
+        kept == 0
     }
 })
 

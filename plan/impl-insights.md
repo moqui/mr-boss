@@ -745,6 +745,87 @@ filter and admission.
   agents' load (Wave 2: 344.5 and 197.3 s), mr-boss client 52.3 of 57 s; measured on a quiet run before any raise.
   `moqui lint --screens` 132 sites.
 
+**Follow-up Nov 11 (dataset aliases need their index's own grant, impl-admin F277).** mr-moqui fbb2d3da and mr-boss (branch `ins/fix1`;
+Mantle is not touched). Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it.
+- **What was found** (Admin P17's review, R1's "For the lead"; run there as `insights.steward`): a holder of
+  `org.moqui.report.dataset` update who is granted the datasets they name by a pattern (the steward, `insights-.*`, F51) saved
+  `insights-…` with `indexName: otel_logs` and `rowFilter: {match_all: {}}` and read every log line: the engine asked a telemetry
+  alias only for some row filter, and the alias's artifact was the steward's own. Read from the code here, the same reasoning held
+  two more ways (F-P3F-1, F-P3F-2): a definition without the business signal over a business dataset's document (P3 review R1's
+  `check_governed` asked for the alias's own update artifact, which the pattern gives the steward, so `insights-raw` over
+  `MantleSalesOrderPart` read every organization's rows without the registered policy), and a body of signal `business` naming a
+  telemetry index as its `documentType` (the steward passes admission). Neither was run before the fix; both are refused after it.
+- **The rule built** (one place, `crates/moqui-report/src/alias.rs`, asked by `resolve_dataset`, which every read goes through
+  (P3 review), and by `save_definition_as`, which every save does: `save#Definition`, copy, restore, import, git pull,
+  `create#BusinessDataset`). A dataset definition is an alias when it reads a source that has a dataset artifact of its own
+  (`org.moqui.report.dataset.<index or document>`), and the source's own artifact is asked for, not only the alias's:
+  - **a telemetry index** (any signal; view): to save, the saver holds it; to read, the reader holds it, or the saved
+    definition's owner does, asked as the owner at each read (`user::as_user`, authorization on), or the definition is a
+    component's shipped file (reviewed code, never a saved row: a save cannot take a shipped id). The owner clause is what keeps
+    an administrator's shared alias a narrowed view for readers who do not hold the index (the framework's annotation source
+    datasets are that: ReportAnnotations); a reader-only rule would have refused those and Mantle's `mantle-business-events`;
+  - **a business dataset's document, read without the signal** (update): the saver and every reader, shipped or saved, beside
+    the alias's own update artifact (R1). No owner clause: others read a business document through an admitted dataset.
+  A row written past the save (an entity write, an older row) meets the same rule at read. Authorization off (an owner's
+  service after its own check) passes as it passes every engine check.
+- **Each shipped alias under the rule:** `admin-access-log` (`otel_logs`, shipped): unchanged; its artifact is granted to no
+  group and `get#AccessLog` reads it with authorization off after `ADMIN_AUDIT_VIEW` (AdminAudit's access log feature passes,
+  the audit reader still refused by the engine). `mantle-business-events` (`monitor_annotations`, shipped): unchanged, read by
+  its own grant under Mantle's organization filter (Mantle BusinessEvents, InsightsRecords' marker feature). Monitor's and
+  Tools' telemetry datasets are the indexes' own, not aliases; `ADMIN` holds every dataset artifact. The five BOSS datasets and
+  Mantle's sales and inventory datasets are business datasets over their own documents, not aliases. A steward's
+  `create#BusinessDataset` (`insights-<name>`, a registered feed's document, a registered policy) is a business dataset and
+  saves and reads as before (the framework spec's steward does so).
+- **mr-moqui:**
+  - `moqui-report` `alias.rs` (new; `opens`, the rule as a pure function; `target`, what a body reads, now shared with
+    `resolve_dataset`; `check_telemetry` at read; `check_save`; `governed_opens`) and `alias_tests.rs` (4 tests: the steward's
+    alias, the holder, the owner's holding, the shipped file, the business document under no owner or file, what a body reads);
+    `lib.rs` (`resolve_dataset` asks after the row-filter check, so that refusal keeps its words); `business.rs`
+    (`check_governed` also asks for each governed document's own update artifact); `definitions.rs` (`is_shipped`; `check_save`
+    for a dataset before anything is written).
+  - `docs/tools/Monitoring.md` ("Dataset aliases", new, with the Business datasets and Security bullets),
+    `docs/security/Attack-Surface.md` (P17's bullet: closed, and how), `plans/Remaining-Work.md` (the report engine row: built;
+    left, a dataset's field list). No Parity-Diffs row (no Java behavior to differ from).
+  - `framework/test/BusinessDatasets.spec.js`: one feature (0.21 s): a steward as an application grants one (dataset save, a
+    name pattern, the document's group) is refused the save of a log alias, of the same by a business body, of the fixture
+    document without its signal and of its index; the two written past the save are refused at read; the administrator's
+    alias is read by the steward under its filter; the steward's own business dataset is created in review and read.
+- **mr-boss:** `InsightsDatasets` gains one feature (0.08 s, no render): `insights.steward`'s two saves refused and nothing
+  stored; BossSetupData's comment on `BOSS_INS_DATASETS`; design-insights §5 Datasets. No grant changed: the steward holds
+  neither `org.moqui.report.dataset.otel_*` nor a document's own artifact, which is what the rule needs.
+- **Tests** (Debug, `--nobuild`, this worktree's runtime): `cargo test -p moqui-report` 94 of 94, `cargo clippy -p moqui-report
+  --all-targets -D warnings` clean; framework BusinessDatasets, ReportDrill, ReportAudience, BusinessAlerts, ReportAnnotations
+  24 of 24 (4.3 s); tools ReportMounts 2 of 2; mr-mantle SalesReports, SalesReportStoreScope, OrganizationRowFilter,
+  ReportLookups 17 of 17 and BusinessEvents 1 of 1; mr-boss InsightsDatasets, InsightsAccess, InsightsDashboards, InsightsHome,
+  InsightsSettings, AdminAudit 28 of 28 (14.7 s) and InsightsRecords 5 of 5. Prettier clean on the two specs; rustfmt on the
+  two new files only. Not run: the full suites, moqui-host's `report_` integration tests, any acceptance test; the attack was
+  not run again on a served instance (the specs make the same calls as the same users).
+- **Findings** (provisional, for the lead to number):
+  - F-P3F-1 (high, closed here): the steward's dataset without the signal over a business document read it unfiltered across
+    organizations, R1's check being satisfied by the steward's own pattern.
+  - F-P3F-2 (high, closed here): a body of signal `business` with a telemetry index as its `documentType` reached the index for
+    the steward through `save#Definition`; `create#BusinessDataset` alone refused a telemetry source.
+  - F-P3F-3 (design, open): a saved telemetry alias now answers by its owner's grant. One whose owner leaves `ADMIN`, or that
+    is handed to an owner without the index, stops answering its readers (it fails closed, with the reason in the error); a
+    disabled owner who still holds the grant still vouches (`as_user` reads grants, not the account's state).
+  - F-P3F-4 (open, the framework's, as F265): a dataset has no field list, so a reader of a telemetry alias reads each
+    matching line whole; a shipped alias is trusted as its component's code, with no registration.
+  - F-P3F-5 (low, open): `business_documents` counts a business dataset's `documentType` only; a business body with none reads
+    the document of its own id, which is then not counted governed (such a dataset is never admissible and its steward's alone).
+  - F-P3F-6 (low, open): the owner's grant is read in a context of its own at each read of a saved telemetry alias by a
+    non-holder (and for each such dataset in `list#Datasets`), not cached.
+- **For the lead:**
+  - numbering: impl-admin's F277 is this note's subject; F-P3F-1 to F-P3F-6 above; a §4 row if wanted: "an alias needs its
+    source's own grant, of its saver and its reader or owner; a shipped alias is its component's";
+  - the user's call: whether a disabled owner's alias should stop (F-P3F-3), and whether a shipped telemetry alias should need
+    a registration as a scope policy does (F-P3F-4);
+  - an existing instance: a saved dataset over a telemetry index whose owner does not hold the index, and a saved dataset
+    without the signal over a business document, now answer only an instance administrator; none is shipped or seeded;
+  - merge: mr-moqui touches `moqui-report` (`lib.rs` two hunks, `business.rs` `check_governed`, `definitions.rs`
+    `save_definition_as`), Monitoring.md, Attack-Surface (P17's bullet) and the Remaining-Work report engine row, which Admin
+    P18 or a later Insights phase may also edit; mr-boss touches BossSetupData (a comment in P3's block, not an append),
+    InsightsDatasets, design-insights §5 and this note. impl-admin.md is not edited (its P17 "For the lead" item is closed by this).
+
 ### P4 — Report catalog and metrics
 
 Design §6.1, Reports and SavedReports, §6.2 for the built owners, §4 MeasureMeaning and PanelDetail's measure and
