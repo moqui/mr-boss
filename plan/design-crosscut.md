@@ -1,5 +1,7 @@
 # IronStone BOSS — Cross-application design
 
+Nov 11, 2026 — impl-people P2 as built: Employee360's mounts and per-app context, and the links of the apps with no row (§3.4)
+
 Nov 11, 2026 — impl-people P1 review: `BOSS_PEOPLE_ADMIN` holds `PEOPLE_ALL_ORGANIZATIONS` (§1.4; impl-people §4, the user's call)
 
 Nov 11, 2026 — the decisions of the People, Maintenance, Sales and Marketing plans (each `impl-<app>.md` §4) written in: a seller's SalesPolicy approval setting stops every automatic approval of its sales orders; a pre-approval warning, Sales' own too, blocks auto-approval as built, and with the setting on the warnings are for the approver only (§1.3, §1.4, §3.6, §4.7, CX-ORDER-AUTHORITY, §8); the commercial revision flag is built and its snapshot fallback dropped (CX-ORDER-AUTHORITY, §8, §9); `OrderPlacedRecordAttribution` has one handler, `handle#OrderPlaced` (§4.8, CX-ATTRIBUTION, MKT-TRACKING, §8); the BOSS `/u/` unsubscribe page stays its own page (§5.1). From impl-people: `PEOPLE_IMPORT` (§1.4, PE-19); payroll generic in the build, AC-23 built by People and external payroll processing gated on it (§4.5, §9); one costing purpose `RaprCost`, moved from Open to Decided (§4.5, §8, §9); People builds the part of MT-03 it needs and Maintenance extends it (§4.5, §4.6, MT-03); a hire's default grant proposal and the equipment return (§4.5, §8); People's approval topics seeded in Mantle (PE-15). From impl-maintenance: `MAINTENANCE_IMPORT` (§1.4, MT-12); the guarded custody change and `store#Facility` with room features (§3.10); managed work refused by the generic writers, AC-24 built by Maintenance P9 and `report/boss-maintenance-*.json` (§7.6); "in maintenance" read as work in process (§4.6). From impl-marketing: SMS in the build as the last stage, ungated (§1.5, §7.9, §8); the one-person-team self-approval flag and Marketing's topics seeded with its data (§3.15, MKT-APPROVAL); `MARKETING_AUDIENCE_IMPORT`, the registered metric IDs, the readiness provider and lifecycle participant (§7.9); a paid ticket order under the seller's approval setting (§4.8)
@@ -866,6 +868,15 @@ must not disclose medical/identity documents, pay, review notes or grievance exi
 
 Admin does not mount Employee360: Admin UserDetail links it for its authorized audience, and
 account, group and security changes remain Admin services (§3.30, Z10).
+
+As built (impl-people P2): `Shared/Employee360.xml` is mounted at `People/Employees/Employee360`,
+`Commons/People/Employee360` and `Insights/Records/Employee360`. Mantle's `mantle.humanres.PeopleServices.get#Employee360`
+answers the regions the viewer's People scope admits (Overview for any reader; personal information and history for the
+person and HR of an employer of theirs; files and activity, the employment content host, for HR), and the per-app table in
+`ironstone.people`'s People.js (`employee360Apps`, through `ContextServices.get#Employee360Context`) narrows it: People every
+admitted region, Commons the Overview and the user's own personal information, Insights the Overview, read only. Projects
+and Admin have no row: PersonDetail and UserDetail link the People mount for a People user whose scope admits the person and
+the Commons mount for the person themselves (`get#Employee360Link`). Maintenance adds its row with its mount.
 
 [People §3 SelfService](design-people.md#selfservice), proposed `Shared/PeopleSelfService.xml`, mounts at
 `People/SelfService` and `Commons/People/SelfService`; Commons/Home and Today show its authorized cards/shortcuts.

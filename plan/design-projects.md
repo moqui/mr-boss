@@ -1938,7 +1938,10 @@ PersonDetail remains Projects’ resource workbench with the tabs below. [People
 now owns the full HR record, registered in [crosscut §3.4](design-crosscut.md#34-employeeperson-context).
 PersonDetail uses its authorized public work/qualification projection and links to Employee360 where allowed;
 resource/manager access never grants private compensation, review notes or grievance data. People schedules and
-approved leave extend the existing capacity API (PE-06), retaining the current fallback for other resources.
+approved leave extend the existing capacity API (PE-06), retaining the current fallback for other resources. As built
+(impl-people P2, an owner contract): the header's "Employee record" link from
+`ironstone.people.ContextServices.get#Employee360Link`, People's mount for a viewer whose People scope admits the person as
+staff or team, Commons' for the person themselves, else none; Projects mounts no Employee360 and has no row of its context.
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |

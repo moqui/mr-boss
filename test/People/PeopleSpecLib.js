@@ -15,9 +15,12 @@ const ids = {
     // Services' employee, and Retail's contractor (an agent, not an employee)
     otherEmployeePartyId: "BOSS_PPL_KENJI",
     contractorPartyId: "BOSS_PPL_NADIA",
+    // P2: the employments of Tomas (Retail) and Kenji (Services), the employment content hosts
+    employmentId: "BOSS_PPL_TOMAS_EMP",
+    otherEmploymentId: "BOSS_PPL_KENJI_EMP",
     // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's
-    staffMenu: ["Home"],
-    adminMenu: ["Home", "Settings"]
+    staffMenu: ["Home", "Employees"],
+    adminMenu: ["Home", "Employees", "Settings"]
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client
@@ -81,9 +84,12 @@ function invoke(service, parameters = {}) {
     return ec.service.sync().name(service).parameters(parameters).call() || {}
 }
 // A People screen as the shell fetches it (qvt, a fragment of the last standalone screen, with its lists' data), with a widget's
-// render error counted among the errors.
-function page(path, parameters = {}, mode = "qvt") {
-    const renderer = ec.screen.makeTest().rootScreen("component://mr-boss/screen/People.xml").renderMode(mode)
+// render error counted among the errors; root names another app's root for a shared screen's mount (Commons, Insights).
+function page(path, parameters = {}, mode = "qvt", root = "People") {
+    const renderer = ec.screen
+        .makeTest()
+        .rootScreen("component://mr-boss/screen/" + root + ".xml")
+        .renderMode(mode)
     if (mode === "qvt") renderer.withStaticData()
     const result = renderer.render(path, Object.assign({lastStandalone: "-2"}, parameters), null)
     const output = String(result.output || "")

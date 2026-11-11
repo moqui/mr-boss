@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Employee360 (design-people §4 Employee360; design-crosscut §3.4; style-guide §3.4 360; impl-people P2): a person's employee
+    record, shared by the apps that mount it: People/Employees/Employee360, Commons/People/Employee360 and
+    Insights/Records/Employee360. It takes partyId, an optional employment (partyRelationshipId) and the mounting app's appRoot.
+    ironstone.people.ContextServices.get#Employee360Context reads mantle.humanres.PeopleServices.get#Employee360 (the regions the
+    user's People scope admits, each one they may not read absent) and narrows it to the app's context (People.js
+    employee360Apps): People every admitted region, Commons the Overview and the user's own personal information, Insights the
+    Overview alone, read only, with the return to the report. A supplied app, person or employment grants nothing; a person the
+    scope does not admit shows "Not available", whether or not they exist.
+    The regions, as boxes on one page: Overview (the work identity, employments and managers), Personal information (private
+    contacts, birth date, gender and, for HR, identifications other than tax ones, masked; "Edit personal information" for the
+    fields the user may change there), Employment history (HR and the person) and Files and activity (the employment content
+    host's RecordFiles and Chatter, an HR reader's). Compensation (P23), TimeAndLeave (P12), SkillsAndReviews (P18, P20) and
+    AssignedEquipment (P7) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Employee" default-menu-include="false">
+    <parameter name="partyId"/>
+    <parameter name="partyRelationshipId"/>
+
+    <!-- a correction of the person's private data: Mantle checks the caller, the fields and the revision read -->
+    <transition name="storePersonalInfo">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#PersonalInfo" in-map="context"/>
+            <if condition="!ec.message.hasError()"><message type="success">Personal information saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+
+    <actions>
+        <service-call name="ironstone.people.ContextServices.get#Employee360Context" out-map="employee" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, partyId:(partyId || ''), partyRelationshipId:(partyRelationshipId || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!employee?.recordFound"/>
+        <set field="regions" from="employee?.regions || []"/>
+        <set field="record" from="employee?.record || {}"/>
+        <set field="overview" from="record.overview || {employments: [], managers: []}"/>
+        <set field="personal" from="record.personalInfo || {}"/>
+        <set field="editable" from="employee?.editableFields || []"/>
+        <if condition="regions.includes('employmentHistory')">
+            <service-call name="mantle.humanres.PeopleServices.get#EmploymentHistory" out-map="historyFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyId:partyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            const employments = Array.from(overview.employments || [])
+            const opened = employments.find(row => row.partyRelationshipId && row.partyRelationshipId === record.partyRelationshipId) || employments[0] || null
+            stateColors = {current: 'positive', future: 'primary', ended: 'grey-8'}
+            openedState = opened ? {stateText: opened.stateText, stateColor: stateColors[opened.state] || 'grey-8'} : null
+            captionText = [employments.map(row => [row.jobTitle, row.organizationName].filter(Boolean).join(', ')).join(' · '),
+                overview.managers?.length ? 'Reports to ' + overview.managers.map(row => row.personName).join(', ') : ''].filter(Boolean).join(' · ')
+            employmentRows = employments
+            // the employments the record may be opened on (the person's and HR's, each with its id), when there is a choice
+            employmentChoices = employments.filter(row => row.partyRelationshipId).length > 1 ? employments.filter(row => row.partyRelationshipId) : []
+            historyRows = Array.from(historyFound?.history || [])
+            identificationRows = Array.from(personal.identifications || [])
+            canEdit = editable.length > 0
+            canEditHr = editable.includes('firstName')
+            personalValues = Object.assign({}, personal, personal.homeAddressFields || {}, {partyId, partyRelationshipId:
+                record.partyRelationshipId || null, expectedRevision: personal.revision || null})
+            genderText = {F: 'Female', M: 'Male'}[personal.gender] || ''
+            workRows = [['Work email', overview.workEmail], ['Work phone', overview.workPhone], ['Work address', overview.workAddress]]
+                .filter(([, value]) => value).map(([label, value]) => ({label, value}))
+            personalRows = [['Preferred name', personal.preferredName], ['Home phone', personal.homePhone],
+                ['Mobile phone', personal.mobilePhone], ['Home address', personal.homeAddress], ['Birth date', personal.birthDate],
+                ['Gender', genderText]].filter(([, value]) => value).map(([label, value]) => ({label, value}))
+            // Insights: the return to the report (its drill's own parameters), and the person's record in People or Commons for a
+            // user whose own grants open it
+            insightsReturn = appRoot === 'Insights' ? ec.resource.script('component://mr-boss/service/ironstone/insights/Records.js').returnOf(ec.context) : {}
+            ownerLink = appRoot === 'Insights' && recordFound ? ec.service.sync().name('ironstone.people.ContextServices.get#Employee360Link')
+                .parameters({partyId}).call() : null
+            ec.message.clearErrors()
+        ]]></script>
+    </actions>
+
+    <widgets>
+        <section name="EmployeeMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This person's record is not available to you."/>
+                        <link url="${employee?.returnPath}" text="Back to employees" link-type="anchor" condition="employee?.returnPath"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="EmployeeRecord" condition="recordFound">
+            <widgets>
+                <!-- the header card (style-guide §3.4): the person, their employments and managers, the opened employment's state -->
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${overview.preferredName ? overview.personName + ' (' + overview.preferredName + ')' : overview.personName}" type="h5"/>
+                            <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none" condition="captionText"/>
+                            <label text="Read only, as People shows it to you." type="p" style="text-caption m-muted q-mb-none"
+                                    condition="appRoot == 'Insights'"/>
+                        </container>
+                        <section name="EmploymentState" condition="openedState">
+                            <widgets>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${openedState.stateColor}">${
+                                            WebUtilities.encodeHtml(openedState.stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Employment: " + openedState.stateText})}]]></text>
+                                        <text type="html">Employment: ${openedState.stateText}</text>
+                                    </render-mode>
+                                </container>
+                            </widgets>
+                        </section>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${sharedLinks['Drill']}" text="${employee.returnLabel}" link-type="anchor-button" btn-type="primary"
+                                    icon="sym_o_arrow_back" parameter-map="insightsReturn"
+                                    condition="appRoot == 'Insights' &amp;&amp; insightsReturn.definitionId"/>
+                            <link url="${ownerLink.url}" url-type="plain" text="Open ${ownerLink.label.toLowerCase()}" link-type="anchor-button"
+                                    condition="appRoot == 'Insights' &amp;&amp; ownerLink?.url"/>
+                            <link url="${employee.returnPath}" text="${employee.returnLabel}" link-type="anchor-button" icon="sym_o_arrow_back"
+                                    condition="appRoot != 'Insights' &amp;&amp; employee.returnPath"/>
+                            <container-dialog id="EditPersonalInfo" button-text="Edit personal information" icon="sym_o_edit" width="720"
+                                    title="Edit personal information of ${overview.personName}" condition="canEdit">
+                                <form-single name="EditPersonalInfoForm" transition="storePersonalInfo" map="personalValues">
+                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="firstName">
+                                        <conditional-field condition="canEditHr" title="First name"><text-line size="25"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="middleName">
+                                        <conditional-field condition="canEditHr" title="Middle name"><text-line size="20"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="lastName">
+                                        <conditional-field condition="canEditHr" title="Last name"><text-line size="25"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="suffix">
+                                        <conditional-field condition="canEditHr" title="Suffix"><text-line size="8"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="preferredName">
+                                        <default-field title="Preferred name" tooltip="The name colleagues see beside your legal name">
+                                            <text-line size="25"/></default-field>
+                                    </field>
+                                    <field name="homePhone"><default-field title="Home phone"><text-line size="20"/></default-field></field>
+                                    <field name="mobilePhone"><default-field title="Mobile phone"><text-line size="20"/></default-field></field>
+                                    <field name="birthDate">
+                                        <conditional-field condition="canEditHr" title="Birth date"><date-time type="date"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="gender">
+                                        <conditional-field condition="canEditHr" title="Gender">
+                                            <drop-down allow-empty="true"><option key="F" text="Female"/>
+                                                <option key="M" text="Male"/></drop-down>
+                                        </conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="address1">
+                                        <conditional-field condition="canEditHr" title="Home address"><text-line size="40"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="address2">
+                                        <conditional-field condition="canEditHr" title="Address line 2"><text-line size="40"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="city">
+                                        <conditional-field condition="canEditHr" title="City"><text-line size="20"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="postalCode">
+                                        <conditional-field condition="canEditHr" title="Postal code"><text-line size="10"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="countryGeoId">
+                                        <conditional-field condition="canEditHr" title="Country">
+                                            <drop-down allow-empty="true"><entity-options key="${geoId}" text="${geoName}">
+                                                <entity-find entity-name="moqui.basic.Geo" cache="true">
+                                                    <econdition field-name="geoTypeEnumId" value="GEOT_COUNTRY"/><order-by field-name="geoName"/>
+                                                </entity-find>
+                                            </entity-options></drop-down>
+                                        </conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="firstName"/><field-ref name="middleName"/></field-row>
+                                        <field-row><field-ref name="lastName"/><field-ref name="suffix"/></field-row>
+                                        <field-ref name="preferredName"/>
+                                        <field-row><field-ref name="homePhone"/><field-ref name="mobilePhone"/></field-row>
+                                        <field-row><field-ref name="birthDate"/><field-ref name="gender"/></field-row>
+                                        <field-ref name="address1"/>
+                                        <field-ref name="address2"/>
+                                        <field-row><field-ref name="city"/><field-ref name="postalCode"/></field-row>
+                                        <field-ref name="countryGeoId"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- the employments the record may be opened on: its files and activity are the opened employment's -->
+                <section-iterate name="EmploymentChoices" list="employmentChoices" entry="choice">
+                    <widgets>
+                        <label text="${choice.organizationName} · ${choice.stateText}" type="span" style="q-mr-md text-weight-bold"
+                                condition="choice.partyRelationshipId == record.partyRelationshipId"/>
+                        <link url="." link-type="anchor" text="${choice.organizationName} · ${choice.stateText}" style="q-mr-md"
+                                condition="choice.partyRelationshipId != record.partyRelationshipId"
+                                parameter-map="{partyId:partyId, partyRelationshipId:choice.partyRelationshipId}"/>
+                    </widgets>
+                </section-iterate>
+
+                <container-box>
+                    <box-header title="Overview"/>
+                    <box-body>
+                        <form-list name="WorkIdentity" list="workRows" skip-form="true" paginate="false" condition="workRows.length">
+                            <field name="label"><default-field title="Work contact"><display/></default-field></field>
+                            <field name="value"><default-field title=""><display/></default-field></field>
+                        </form-list>
+                        <label text="No work contact is recorded." type="p" style="m-muted" condition="!workRows.length"/>
+                        <form-list name="Employments" list="employmentRows" skip-form="true" paginate="false" condition="employmentRows.length">
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="fromDateText" hide="!employmentRows.some(row =&gt; row.fromDateText)">
+                                <default-field title="Started"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <section name="PersonalInfo" condition="regions.includes('personalInfo')">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Personal information"/>
+                            <box-body>
+                                <form-list name="PersonalRows" list="personalRows" skip-form="true" paginate="false" condition="personalRows.length">
+                                    <field name="label"><default-field title="Detail"><display/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                </form-list>
+                                <label text="No personal contact is recorded." type="p" style="m-muted" condition="!personalRows.length"/>
+                                <form-list name="Identifications" list="identificationRows" skip-form="true" paginate="false"
+                                        condition="identificationRows.length">
+                                    <field name="typeText"><default-field title="Identification"><display/></default-field></field>
+                                    <field name="valueText"><default-field title="Number"><display/></default-field></field>
+                                    <field name="issuedBy"><default-field title="Issued by"><display/></default-field></field>
+                                    <field name="expireDateText"><default-field title="Expires"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="typeText"/><field-ref name="valueText"/></column>
+                                        <column><field-ref name="expireDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="Tax and bank details are kept in payroll setup." type="p" style="text-caption m-muted"
+                                        condition="canEditHr"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="EmploymentHistory" condition="regions.includes('employmentHistory')">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Employment history"/>
+                            <box-body>
+                                <form-list name="EmploymentHistoryRows" list="historyRows" skip-form="true" paginate="false"
+                                        condition="historyRows.length">
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="Started"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Ended"><display/></default-field></field>
+                                    <field name="terminationReason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="organizationName"/><field-ref name="fromDateText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="thruDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No employment history is available." type="p" style="m-muted" condition="!historyRows.length"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the employment content host (PE-01): its files and its notes and messages, never the person's Party record -->
+                <section name="FilesAndActivity" condition="record.hostEmploymentId">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Files and activity"/>
+                            <box-body>
+                                <label text="Files and notes of this employment, seen only by HR of its employer." type="p"
+                                        style="text-caption m-muted"/>
+                                <record-files id="EmploymentFiles" record-entity="mantle.humanres.employment.Employment"
+                                        record-id="${record.hostEmploymentId}"/>
+                                <chatter id="EmploymentChatter" record-entity="mantle.humanres.employment.Employment"
+                                        record-id="${record.hostEmploymentId}" default-tab="log"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

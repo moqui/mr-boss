@@ -113,6 +113,14 @@ along with this software (see the LICENSE.md file). If not, see
                     ec.message.popErrors()
                 }
                 typeLabel = L('Page')
+            } else if (entityName === 'mantle.humanres.employment.Employment') {
+                // People's employment host (impl-people P2): the person and the employer, read after get#RecordLinkInfo admitted
+                // the user as an HR reader of the employer
+                const relationship = ec.entity.find('mantle.party.PartyRelationship').condition('partyRelationshipId', recordId).disableAuthz().one()
+                const person = relationship ? ec.entity.find('mantle.party.Person').condition('partyId', relationship.fromPartyId).disableAuthz().one() : null
+                const employer = relationship ? ec.entity.find('mantle.party.Organization').condition('partyId', relationship.toPartyId).disableAuthz().one() : null
+                title = [[person?.firstName, person?.lastName].filter(Boolean).join(' '), employer?.organizationName].filter(Boolean).join(' at ')
+                typeLabel = L('Employment')
             } else if (entityName === 'moqui.resource.GitMergeRequest') {
                 // a merge request by its number and title (get#RecordLinkInfo checked its repository's view right)
                 title = '!' + record.mergeRequestNum + ' ' + (record.title || '')

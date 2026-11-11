@@ -14,7 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Insights › Records (design-insights §10, §2; impl-insights P6, F16): the record behind a value of a report, each a mount of
     the shared record screen with the Insights context (template/InsightsRecord.xml): read only, with the return to the
-    report. They are reached from a drill's records, not from the menu. Employee360 waits for People. -->
+    report. They are reached from a drill's records, not from the menu. Employee360 (People P2, an owner contract) shows a person's
+    Overview alone, read only, as People's scope admits the person to the viewer (Shared/Employee360 with Insights' context in
+    ironstone.people's employee360Apps), with the return to the report. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Records"
@@ -43,6 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml" menu-include="false"/>
         <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml" menu-include="false"/>
         <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml" menu-include="false"/>
+        <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-active/>

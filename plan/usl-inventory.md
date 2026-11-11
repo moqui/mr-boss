@@ -497,6 +497,21 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
+**Added** (People P1 and P2, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with the
+screens that call it.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| PeopleServices | get#Scope | People | People (the root, through ironstone.people.ContextServices); Projects/Resources/PersonDetail and Admin/Users/UserDetail (the Employee360 link, get#Employee360Link) (People P1, P2) |
+| PeopleServices | get#Home | People/Home | People/Home (People P1) |
+| PeopleServices | get#Readiness | People/Settings | People/Settings/SettingsHome; Admin/Operations/Health (the readiness registry, people.setup) (People P1) |
+| PeopleServices | find#Employees | People/Employees | People/Employees/List (and its CSV export); the People palette's directory and the Person record-lookup (ironstone.people.ContextServices search#Records, lookup#Records) (People P2) |
+| PeopleServices | get#Employee360 | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360; Insights/Records/Employee360 (through get#Employee360Context) (People P2) |
+| PeopleServices | get#EmploymentHistory | People/Employees/Employee360 | People/Employees/Employee360 (Employment history) (People P2) |
+| PeopleServices | store#PersonalInfo | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360 (the person's own) (People P2) |
+| PeopleServices | check#EmploymentAccess | People/Employees/Employee360 | Shared/Chatter; Shared/RecordFiles (through get#RecordLinkInfo and RecordFilesServices.get#ContentType, the employment host) (People P2) |
+| PeopleServices | create#EmploymentContent | People/Employees/Employee360 | Shared/RecordFiles under People/Employees/Employee360 (Files and activity) (People P2) |
+
 ## Ledger (81 services)
 
 | Service XML | Service | Designed in | Implemented in |
@@ -755,7 +770,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | ContactServices | get#PartyContactInfo | Commons/Contacts/ContactDetail; Comms/Inbox; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; Comms/Inbox/Mail; Projects/Billing/InvoiceDetail; Projects/Billing/InvoicePrint; Admin/Settings/OrganizationDetail (Contacts: OrganizationContacts) (Admin P7) |
 | ContactServices | get#PartyContactInfoList | PASS:Shop/Account/Addresses; PASS:Shop/Checkout | — Shop: PASS:Shop/Account/Addresses and Checkout's saved addresses through ShopCustomerServices.get#Addresses (Shop P5, P6) |
 | ContactServices | get#PartyDefaultBilling |  |  |
-| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; — Shop: PASS:Shop/Account/Addresses through ShopCustomerServices.store#Address, Checkout through set#CheckoutAddresses (Shop P5, P6); Admin/Settings/OrganizationDetail (Contacts: storeContacts, after the Admin record check) (Admin P7) |
+| ContactServices | store#PartyContactInfo | Commons/Contacts/ContactDetail; Commons/Settings/Account; PASS:Shop/Account/Addresses; PASS:Shop/Checkout; Marketing/Contacts/ContactDetail; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Settings/Account; — Shop: PASS:Shop/Account/Addresses through ShopCustomerServices.store#Address, Checkout through set#CheckoutAddresses (Shop P5, P6); Admin/Settings/OrganizationDetail (Contacts: storeContacts, after the Admin record check) (Admin P7); People/Employees/Employee360 and Commons/People/Employee360 (through mantle.humanres.PeopleServices.store#PersonalInfo: home and mobile phones, home address) (People P2) |
 | ContactServices | create#PostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout | PASS:Shop/Account/Addresses (ShopCustomerServices.store#Address); PASS:Shop/Checkout (through mantle.order.ShopCheckoutServices; Shop P5) (set#CheckoutAddresses) |
 | ContactServices | update#PartyPostalAddress | PASS:Shop/Account/Addresses; PASS:Shop/Checkout | PASS:Shop/Account/Addresses (ShopCustomerServices.store#Address, end#Address; Shop P6) |
 | ContactServices | get#PostalAddressGeoIdSet |  |  |
@@ -837,7 +852,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | close#ListThread | PASS: Forum/Topics/TopicDetail | Comms/Inbox/Compose; Comms/Inbox/Mail |
 | CommunicationServices | find#InboxThreads |  | Comms; Comms/Home; Comms/Inbox/Mail |
 | CommunicationServices | get#InboxUnreadCounts |  | Comms/Home; Comms/Inbox/Mail |
-| CommunicationServices | get#RecordLinkInfo | Shared/Chatter; Shared/RecordFiles; Sales/Pipeline/OpportunityDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Files; Commons/Knowledge; Commons/Notes; Commons/QuickCreate; Commons/Requests/List; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Comms/Chat; Comms/Inbox/Compose; Comms/Inbox/Mail; Comms/Inbox/MessageDetail; Shared/Chatter; Shared/RecordFiles; Projects: 19 screens (through the ironstone.* access and find services) |
+| CommunicationServices | get#RecordLinkInfo | Shared/Chatter; Shared/RecordFiles; Sales/Pipeline/OpportunityDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Files; Commons/Knowledge; Commons/Notes; Commons/QuickCreate; Commons/Requests/List; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Comms/Chat; Comms/Inbox/Compose; Comms/Inbox/Mail; Comms/Inbox/MessageDetail; Shared/Chatter; Shared/RecordFiles; Projects: 19 screens (through the ironstone.* access and find services); People/Employees/Employee360 (Files and activity: the employment content host, its visibility by check#EmploymentAccess) (People P2) |
 | CommunicationServices | findOrCreate#EmailCommunicationEvent |  | Comms/Inbox/Mail |
 | CommunicationServices | link#CommunicationEventRecord |  | Comms/Chat; Comms/Inbox/Compose; Comms/Inbox/Mail; Comms/Inbox/MessageDetail; Shared/Chatter |
 | CommunicationServices | unlink#CommunicationEventRecord |  | Comms/Inbox/Mail; Shared/Chatter |

@@ -18,9 +18,12 @@ along with this software (see the LICENSE.md file). If not, see
     self-service is Commons', impl-people P8). The root grant opens navigation only: ironstone.people.ContextServices
     .get#SharedContext checks the user and resolves their capabilities, employers, units, own employments and links for every
     subscreen, and each Mantle service (mantle.humanres.PeopleServices) checks the scope again. The menu of design §1.2 grows by
-    phase: P1 builds Home (every People user's) and Settings (the People administrator's, BOSS_PPL_SETTINGS); each later phase
-    adds its entries, and the design's later entries stay absent. The palette, quick create and Today sources arrive with their
-    records. -->
+    phase: P1 builds Home (every People user's) and Settings (the People administrator's, BOSS_PPL_SETTINGS); P2 Employees (the
+    directory and Employee360, every People user's, each seeing what Mantle's scope admits); each later phase adds its entries,
+    and the design's later entries stay absent. P2 adds the palette's directory and the Person record-lookup; quick create and
+    Today arrive with their records. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
+    employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
+    grant opens no other record's panel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -30,6 +33,19 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
         <service-call name="ironstone.people.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="people"/>
         <set field="sharedLinks" from="people.sharedLinks"/>
+        <!-- P2: the record panels serve People's HR hosts only (design §13 Chatter and RecordFiles; F66); a panel request with no
+            record (a person search, an avatar) names none -->
+        <script><![CDATA[
+            const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+            const panelName = pathNames[pathNames.indexOf('People') + 1]
+            const wanted = ec.context.recordEntity
+            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
+                let entityName = String(wanted)
+                try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
+                if (!['mantle.humanres.employment.Employment'].includes(entityName))
+                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+            }
+        ]]></script>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -39,10 +55,15 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- P1: the people keymap; the palette's directory (P2), quick create and Today (design §1.4) come with their records -->
+    <!-- P1: the people keymap. P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
+        record-lookup over the directory projection (design §1.4). Quick create and Today (design §1.4) come with their records. -->
     <shell-providers>
+        <palette-source group="Employees" label="Employee directory" icon="sym_o_badge"
+                service="ironstone.people.ContextServices.search#Records" sequence="25"/>
+        <record-lookup name="people.records" service="ironstone.people.ContextServices.lookup#Records" sequence="30"/>
         <keymap scope="people">
             <key keys="g p" label="People home" screen="People/Home"/>
+            <key keys="g e" label="Employees" screen="People/Employees"/>
         </keymap>
     </shell-providers>
 

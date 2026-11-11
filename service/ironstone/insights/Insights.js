@@ -250,6 +250,8 @@ const linkPaths = [
     "Records/FacilityDetail",
     "Records/EquipmentDetail",
     "Records/InvoiceDetail",
+    // People P2 (owner contract): the employee record's Overview, read only (Shared/Employee360 with Insights' context)
+    "Records/Employee360",
     // P7: scheduled delivery and the management digest (design §7)
     "ScheduledReports/Schedules",
     "ScheduledReports/ScheduledReportDetail",

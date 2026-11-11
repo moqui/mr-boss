@@ -261,7 +261,7 @@ As built (impl-admin P6): an operation is Mantle's `UserLifecycleOperation` with
 
 ### UserDetail
 
-**Layout:** account record header; Account, Access, Credentials, Sessions/history and Lifecycle tabs. The person/profile action opens the shared Contact record; Employee360 is offered only to its authorized audience.
+**Layout:** account record header; Account, Access, Credentials, Sessions/history and Lifecycle tabs. The person/profile action opens the shared Contact record; Employee360 is offered only to its authorized audience. As built (impl-people P2, an owner contract): the header's "Employee record" link from `ironstone.people.ContextServices.get#Employee360Link`, People's mount for a viewer whose People scope admits the account's person as staff or team, Commons' for the person themselves, else none; Admin mounts no Employee360 and the link adds no right.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
