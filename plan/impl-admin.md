@@ -4295,12 +4295,20 @@ the owner's design.
 | Nov 10, 2026 | A refused (permanent) or bounced message may be sent again from the queue, as a retryable one may: left open on purpose, the operator's responsibility, for the valid uses it has. Sign-in mail is still only closed, and an owner's messages are still its owner's (P12 review R1, R2) | The user's call (Nov 10), P12 |
 | Nov 10, 2026 | A person never sets a message's sent state: a stored message's status and outcome are what the transport knows. Settling an uncertain send records the settlement apart (who, when, the reason and what they concluded) and takes the message out of Needs attention; it does not mark the message Sent | The user's call (Nov 10), over P12's built `reconcile#MailOutcome`, which marked it Sent on the operator's word; changed in the P12 follow-up |
 | Nov 10, 2026 | The read-only protocol settings stay listed in InstanceSettings' sources, for now; to be reviewed | The user's call (Nov 10), F174 (P12) |
+| Nov 11, 2026 | Admin's backup request is bounded (30 minutes after the last run or request, three requests a day): a BOSS rule for its delegated backup operator. System and Tools generally carry no restriction of this kind for the instance administrator | The user's call (Nov 11), P16; design §11 Backups |
+| Nov 11, 2026 | Admin's export bounds stand (5,000 rows and 2 MiB by default, at most 50,000 rows and 16 MiB). Larger volumes are not a BOSS export: in the BOSS apps that is "contact a system administrator", who has the tools for volume (Tools' ETL, snapshots and data export, and for some a direct database connection) | The user's call (Nov 11), F246 (P16); design §11 DataExport |
+| Nov 11, 2026 | In BOSS the data operator exports only a contact book they may themselves view: an export target adds no right to read | The user's call (Nov 11), confirming F249 (P16) |
 
 ## 5. Open questions
 
 | Question | Decides | Notes |
 | --- | --- | --- |
 | Further issues discovered during implementation | the affected phase | Record findings and decisions here; the open questions of the plan as written (Q1–Q5) were answered on Nov 7 and are in §4 |
+| Should a contact's birthday and notes, or any registered export field, need a permission of its own? Built: none; they are off unless asked for | a later review of exports | P16, F241; left open by the user on Nov 11 |
+| Should Accounting's and Projects' exports become services Admin dispatches, rather than links to their owners' places? | a later review of exports, with their owners | P16, F240; left open by the user on Nov 11 |
+| Is a stored export download with an expiry wanted at all? Built: the file is only ever the response, and the record is kept 366 days | a later review of exports | P16, F247; left open by the user on Nov 11 |
+| Does the framework keep its message-translations import and export targets? | a later review of the transfer family | P15 F232, P16; left open by the user on Nov 11 |
+| Should Backup now wait for the scheduler (the job resumed first) rather than run the job directly? | a later review of backups | P16, F242 and its review; left open by the user on Nov 11 |
 
 ## 6. Findings
 
