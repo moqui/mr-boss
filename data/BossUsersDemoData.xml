@@ -1229,7 +1229,8 @@ along with this software (see the LICENSE.md file). If not, see
         an agent of Ziziwork Retail only (people.hr is the HR officer of Retail and not of Services); people.manager is Hannah Okafor
         and people.employee Tomas Lindqvist, demo employees of Retail (data/BossPeopleDemoData.xml) whose employment makes Retail
         their organization: the manager in BOSS_PEOPLE and BOSS_PEOPLE_MANAGER, the employee in BOSS_PEOPLE_SELF alone, which opens no
-        People root (self-service is Commons', P8). people.admin is in BOSS_PEOPLE_ADMIN alone, an agent of Retail and Services. -->
+        People root (self-service is Commons', P8). people.admin is in BOSS_PEOPLE_ADMIN alone, an agent of Retail and Services,
+        and reads every employer through the group's PEOPLE_ALL_ORGANIZATIONS. -->
     <mantle.party.Party partyId="BOSS_PPL_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_READER" firstName="People" lastName="Directory reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_READER_ORG" relationshipTypeEnumId="PrtAgent"

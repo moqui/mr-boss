@@ -78,9 +78,11 @@ feature(
                 problems.push(`the HR officer's employers: ${hr.organizationPartyIds}`)
             if (hr.appRoot !== "People" || hr.sharedLinks?.Home !== "//People/Home" || hr.allOrganizations)
                 problems.push(`the HR officer's context: ${JSON.stringify(hr)}`)
+            // the administrator, an agent of Retail and Services, reads every employer (PEOPLE_ALL_ORGANIZATIONS)
             const admin = asUser(users.admin, () => invoke(context, {}))
             if (![ids.organizationId, ids.otherOrganizationId].every(id => admin.organizationPartyIds.includes(id)))
                 problems.push(`the administrator's employers: ${admin.organizationPartyIds}`)
+            if (!admin.allOrganizations) problems.push("the administrator does not read every employer")
             // the manager reads no employer; their own employment is Retail's
             const manager = asUser(users.manager, () => invoke(context, {}))
             if (manager.organizationPartyIds.length || manager.employments?.[0]?.organizationPartyId !== ids.organizationId)
@@ -144,6 +146,8 @@ const capabilityNames = [
     "payrollView",
     "payrollEdit",
     "payrollApprove",
+    // a read's employers every internal organization (PEOPLE_ALL_ORGANIZATIONS)
+    "allOrganizations",
     // a reader of an employer, from the view capabilities
     "staff",
     // the Settings area, the People administrator's
@@ -159,7 +163,7 @@ const capabilityUsers = [
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
     {user: users.develop, granted: ["developView", "developEdit", "staff"]},
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},
-    {user: users.admin, granted: ["configure", "payrollView", "payrollEdit", "staff", "settings"]},
+    {user: users.admin, granted: ["configure", "payrollView", "payrollEdit", "allOrganizations", "staff", "settings"]},
     {user: "people.spec.editonly", granted: ["hrEdit"]},
     {user: users.system, granted: capabilityNames}
 ]
@@ -245,7 +249,7 @@ feature("the raw mantle.humanres entity and REST paths and People's Mantle servi
                 "rest/e1/mantle.humanres.position.EmplPosition"
             ]) {
                 const result = hit(path)
-                if (result.status == 200) problems.push(`${path} is open: ${result.output.slice(0, 120)}`)
+                if (!result.refused) problems.push(`${path} is not refused: ${result.status} ${result.output.slice(0, 120)}`)
             }
             const home = refusal("mantle.humanres.PeopleServices.get#Home", {})
             if (!/is not authorized/.test(home)) problems.push(`get#Home called directly: ${home || "given"}`)

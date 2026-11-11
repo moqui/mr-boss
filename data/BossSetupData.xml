@@ -5072,7 +5072,9 @@ along with this software (see the LICENSE.md file). If not, see
         PEOPLE_HR_EDIT and PEOPLE_IMPORT, People's own import permission, which its import targets name (P7, P13); the recruiter
         PEOPLE_RECRUIT_VIEW and _EDIT; the payroll operator PAYROLL_VIEW and PAYROLL_EDIT; the payroll approver PAYROLL_VIEW and
         PAYROLL_APPROVE; the learning and review administrator PEOPLE_DEVELOP_VIEW and _EDIT; the case handler PEOPLE_CASE_HANDLE;
-        the People administrator PEOPLE_CONFIGURE beside its payroll grants. -->
+        the People administrator PEOPLE_CONFIGURE beside its payroll grants, and PEOPLE_ALL_ORGANIZATIONS, with which Mantle's
+        People scope is every internal organization (or the active one), as BOSS_COMMERCE_ADMIN's COMMERCE_ALL_ORGANIZATIONS (the
+        user's call, impl-people §4, Nov 11, 2026). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" fromDate="0"/>
@@ -5090,6 +5092,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_CASE" userPermissionId="PEOPLE_CASE_HANDLE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_ALL_ORGANIZATIONS" fromDate="0"/>
     <!-- People's capability bundles in Admin's registry (owner contract, impl-people F27; design-crosscut §1.4's rows, as the
         built apps' above): each group with the permissions it carries (view, edit or sensitive: private person data, pay and
         cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle. -->
@@ -5097,6 +5100,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE" appName="People" description="People app users (the launcher)" scopeDependency="organization, employment" sequenceNum="1110"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PEOPLE" artifactGroupId="BOSS_PEOPLE" description="People launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_READ" appName="People" description="People directory reader" scopeDependency="organization, employment" sequenceNum="1120"/>
