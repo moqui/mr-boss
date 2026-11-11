@@ -2828,6 +2828,87 @@ ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4)
   - Not verified: the acceptance tests (not run); a real wall display over a day (the daily secret's replacement on a
     kiosk's answers is P18's); two servers.
 
+**Review Nov 11 (P11).** Fresh review of mr-moqui dc7d01f4 and mr-boss 50e41d1c; fixes in mr-moqui and mr-boss ("Insights
+P11 review: …") and this note (branch `ins/p11`).
+- Checked and kept:
+  - **Confinement, as a device over HTTP** (a throwaway client spec and fixture under `./moq test-client mr-boss --serve
+    --debug`, deleted: a display account with the reader and wall display bundles, a device redeemed by its code, 36
+    requests). Admitted: WallDisplay's html (the bare page), its `.qvt` (the island's one load; `private, no-store`), its
+    tui, text, csv and xml renders (the screen's own render, empty in the modes it has no template for) and `data`.
+    Refused with the plain page (403, `private, no-store`): the Insights root, Home, Dashboards, Dashboard, Playlists and
+    its `data`, Reports, ScheduledReports, Drill, Records, Chatter, `/qapps`, `/qapps/Insights/WallDisplay`,
+    `/qapps/menuData`, `/apps/getPreferences`, WallDisplay's `actions`; 404 plain for `/vapps`, `/apps/menuData`,
+    `WallDisplay.js`, `WallDisplay/menuData`, `WallDisplay/Chatter` (WallDisplay has no subscreen or include); REST the
+    JSON 403. The island needs nothing else: the qvt client's files are static (`check_route` admits a static file no
+    render requires authentication for), and WebrootPublic asks the screen's `.qvt` alone (no `actions`, `menuData`).
+  - **The forced playlist**: `definitionId` in the query string, an extra path segment (`data/OTHER`) or the form is the
+    registration's (`screen::handle` puts it over the merged parameters, the JSON body's included); the transition is GET
+    only (a POST is 405). The index is an integer within the stored playlist (7, -1, 0.5 refused). Each dashboard and each
+    panel's datasets are read as the display account (`get#Definition`, `render#Dashboard`, no authorization switched off
+    on the path), so the row filters and the alias rule hold as for a person; an unreadable dashboard is left out of the
+    page and named in the log, and refused by the data transition.
+  - **The root's skip**: `UserSecurityChecks.currentDevice()` is `user::device::current_scope()`, set only by
+    `begin_request` for a valid device cookie; a person's request cannot set it. A person holding `BOSS_INSIGHTS_DISPLAY`
+    alone still runs `get#Context`, which refuses them, so WallDisplay fails for them.
+  - **The plain page**: one sentence and a link to `/Device`, no script, style sheet, title of the instance, route group,
+    device or error text; `private, no-store`. A refused device's answer returns before the daily rotation and removes the
+    cookie only when the device is no more (revoked, ended, unknown); a page outside the route group carries the day's
+    new secret as any whole answer does (P18 R1). Revoked and ended are told only after the secret matched, Unknown for a
+    wrong secret or no device alike: the page tells an html client nothing the JSON did not.
+  - **Framework playlist changes for ordinary viewers**: outside kiosk the only changes are a playlist of one reloading
+    its dashboard at each turn (keeping the frames shown) and the turn's ceiling (R3); the Playlist screen's `data`
+    answers an unreadable dashboard with its refusal. `InsightsDashboards` and `WebrootReport` (50 features) pass.
+  - **Upgrade**: an instance that loaded P18's seed keeps `BOSS_DEV_INS_PLAYLISTS` and its two members; no
+    `ArtifactAuthz` ever named it (it was only a route group's allow-list) and the seed's `INSIGHTS_PLAYLISTS` row (same
+    key) now names `BOSS_DEV_INS_WALL`, so it grants and admits nothing. Harmless.
+  - **Playlists**: Share with wall displays posts to `share#Dashboard` (owner and authoring checked there), Register as
+    display is a link to Admin (its service checks `ADMIN_ACCESS_MANAGE`), the devices column one `find#SharedDevices`
+    in the viewer's identity scope with its failure logged.
+  - **Specs**: InsightsWallDisplay three features (0.20, 0.05, 0.09 s), WallDisplay rendered once in html and once in
+    qvt, Playlists once in qvt and nowhere else in the regression suite; the client features 0.00 s.
+- Fixes:
+  - **R1, Medium.** WallDisplay took the framework Playlist's `data` transition, which read `from` and `thru` from the
+    request: anyone at an unattended wall's browser could make every panel of the playlist query decades
+    (`from=now-40y` was honored), and a panel's failure went to the wall in full: "User 100000 is not authorized for
+    AT_SERVICE [org.moqui.report.dataset.otel_spans] action view" (the display account's id and the dataset's service).
+    WallDisplay's `data` is now its own: the page's range (now-30d to now) whatever the request says, a dashboard of the
+    playlist only (type checked), each error notice replaced by "This panel is not available to this display." with its
+    text logged by playlist, dashboard and panel, no inspection or request detail, and any failure one fixed message.
+    InsightsWallDisplay asks for 30 years and a panel over a dataset the account may not read, and checks both.
+  - **R2, Medium.** The kiosk's reload on a 401 or 403 had no limit: a refused data request under a page that still
+    renders (a route group admitting the page and not its data, an authorization the page does not need) reloaded the
+    page, scripts and all, as fast as it loaded, for good. `report.reloadPage` now reloads at most once a minute (the
+    time in the tab's `sessionStorage`) and answers false otherwise, and the playlist then goes on to its next turn. And a
+    kiosk whose playlist was reordered under it paused for a Reload button no one presses (the wall froze until someone
+    came): it reloads the page instead, on the same limit. WebrootReport's kiosk test covers both.
+  - **R3, Low.** A playlist's seconds went to `setInterval` unbounded; past about 24.8 days the timer fires at once, so
+    an author's large number made a wall ask for data every millisecond. The player holds a turn to 5 s to a day, and
+    WallDisplay the page's seconds to 5 to 3600.
+- Tests: InsightsWallDisplay, AdminDevices, InsightsDashboards (9 features pass, Debug); client SecurityDevice (6) and
+  WebrootReport (50, offline); `moqui lint --screens` (no parse failure; WallDisplay's flag is the `WebUtilities` note).
+  No cargo test (no `.rs` changed), no suite, no acceptance test.
+- For the lead:
+  - Budgets: unchanged in substance (InsightsWallDisplay 0.34 s of feature time; the client's kiosk test 0.00 s).
+  - The user's call, `BOSS_INSIGHTS_DISPLAY` held by a person: it opens nothing for them (WallDisplay fails without the
+    root grant; with it, WallDisplay shows only what Playlists already plays for them), but membership makes them read
+    every definition shared with the wall displays, every organization's authors' (titles, panels, text panels; the
+    numbers stay row-filtered to their own organizations). Access cannot refuse it today: a display account must hold a
+    registered bundle, and no bundle field says "display accounts only". The fix, if wanted, is framework: a
+    `CapabilityBundle` flag that `storeMembership` and `bundleOptions` refuse to a non-display account (and Mantle's
+    `create#DisplayAccount` allows). Left as is; Low.
+  - The user's call, F-P11-3 across organizations: the wall displays are one group, so a playlist or dashboard shared
+    with it is readable by every organization's display accounts. No author pushes onto another organization's wall
+    by sharing alone: a wall plays only the playlist its registration fixed, chosen by an access administrator within
+    their identity scope. But a registrar of organization B may register organization A's shared playlist by its id, and
+    then A's author's later edits (titles, text panels, which dashboards) appear on B's wall with B's numbers; and an
+    author may put any wall-shared dashboard of another organization in their own playlist. Options: refuse on a device
+    a playlist or dashboard whose owner shares no organization with the display account, or one display group per
+    organization. Recorded, not changed.
+  - Finding: a definition has one group, so sharing a dashboard with the wall displays takes it from the author's team
+    (and Share with wall displays on a playlist shared with a group moves it silently). Worth a line in design §4.
+  - Low, not fixed: under the dev conf's boundary comments WallDisplay's html begins with a comment before
+    `<!DOCTYPE html>`, which puts the page in quirks mode (dev only; production writes no boundary comment).
+
 ### P12 — Finish
 
 With Admin P19.
