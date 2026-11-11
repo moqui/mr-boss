@@ -4154,6 +4154,196 @@ Design §11 Exports, DataExport and Backups; ADM-EXPORT.
   backup and sees it covered with no mirror and the warning; `admin.data` exports a contact book as vCard and sees an
   Insights schedule's delivery status but cannot open its report.
 
+**Built Nov 11 (P16).**
+- Checked first (the code over the plan):
+  - P0's check is F43's and still holds: there is no work-item and no ledger export service. Commons' vCard export
+    (`mantle.party.ContactImportServices.export#Contacts`) is the one business exporter with a service of its own to
+    dispatch; Accounting's `mantle.other.TaxServices.export#Statement` writes on the statement it exports (who exported
+    it and when, which keeps it) and its billing batch's CSV is a screen's transition over a BOSS context service, each on
+    the record it is of. Those, Projects' list CSV and Insights' dataset and report exports are registered as places, not
+    dispatched (F240).
+  - P15 left `TransferTarget.direction` and `targetsOf("export")` for this phase; `find#Transfers` listed imports only.
+    `call#TargetService`, the scopes contract, the option checks and the delimited writer are reused as they are.
+  - The backup: `backup#EmbeddedDatabase` takes a `backupDir`, a mode, the counts and a remote's id as parameters, is
+    `authenticate="false"`, reports `skipped` where the process runs no embedded cluster and adds an error for a cluster
+    or a mirror that failed while the others' archives are in place. Its seeded job is paused, and its remote has no
+    `sendUrl` (F9). Upstream's Tools reorganization shows only whether a backup job is scheduled (System › Home's
+    database row, Tools › Database › Overview's sentence, System's attention list): no screen lists archives, coverage
+    or the last outcome, so nothing is repeated and nothing was there to link but the job itself, which stays Tools'.
+  - A job's run is recorded in `ServiceJobRun` (results as JSON: `archivePath`, `skipped`, `mirrored`), which is what
+    coverage reads; P14's run outside the schedule does not start a paused job, so it could not be BackupNow (F242).
+  - Insights P7's `find#ReportOccurrences` and P8's `find#AlertDeliveries`, each with `administrative: true`, answer
+    ids, states and counters to a holder of `ADMIN_TRANSFER_VIEW`; the occurrence states are `RptOcc*`.
+- mr-moqui (no Rust changed: everything ran on the shared release binary; no Debug build was made):
+  - `entity/ServerEntities.xml`: `TransferTarget` gains `exportService` and `exportPermission` and its description the
+    export modes; `TransferBatch`'s description says it is also the record of one export (state `exported`). No new
+    entity.
+  - `service/org/moqui/admin/DataTransferServices.xml`: the interface `run#TargetExport` (an export target's one
+    service: the scope, the registered selection, the fields already cut to those the caller may read, `countOnly`,
+    `maxRows`; `rowList` or `fileText`), `find#ExportTargets`, `get#ExportFields`, `preview#Export` and `run#Export`, and
+    `find#Transfers` gains `direction` and `kind` (import stays the default, unchanged).
+  - `DataTransferExports.js` (new): the catalog of export targets, what a caller may choose of one (scopes, options,
+    fields with `allowed`), the request as the registration admits it (a scope the caller has; only registered options
+    and field names, by own name; a wanted field the caller may not read named as left out), the owner's answer
+    (refused whole past the rows or the bytes), the file (written here for a rows target from the given fields only; the
+    owner's for a file target, its type one of six and its name made here), the record and the audit row, the operation
+    key, the records a caller may read, and the report engine's two administrative reads as status rows.
+  - `DataTransferLib.js`: a registration's direction and, for an export, its modes (file, rows, wizard), its fields
+    (`columnsJson` with `permission`, `required`, `selected`; a field naming an unknown permission logged and left out)
+    and the `export` step of `call#TargetService` (an import target has no export step and an export target no other).
+    `DataTransferImports.js`: `find#Transfers` hands direction export to the export module. `DataTransferBatch.js`:
+    `optionsOf` shared; the retention removes an export's record after its target's days (366 when none).
+  - `service/org/moqui/admin/BackupServices.xml` and `Backups.js` (new): `get#Coverage`, `find#Archives`, `run#Backup`
+    and the internal `start#BackupRun`. `OperationLib.js` exports the result entity's name.
+  - `ConfigurationServices.xml` and `ConfigurationLocalization.js` (appended): `export#MessageTranslationRows`, the
+    export service of the framework's own export target.
+  - Data: `AdminConfigurationData.xml` (appended: the four export services added to `AdminTransferServices`; the export
+    service to `AdminConfigurationServices`; the target `messageTranslationsExport`; `AdminBackupServices`, an
+    inheritable `ALL_USERS` ALLOW naming the three backup services).
+  - Docs: Attack-Surface (the business exports and the backups paragraphs), Run-Deploy "Backups" (one sentence),
+    Remaining-Work's `org.moqui.admin` row. No Parity-Diffs entry: no existing behavior changed.
+- Mantle (a worktree added for it, branch `adm/p16`):
+  - `service/mantle/party/ContactImportServices.xml`: `export#Contacts` takes an optional `fieldList` (only the named
+    groups of a card's fields are written beside the name; without it every field, as before);
+    `find#ContactExportScopes` (the books the caller owns or is given a share of) and `export#ContactBookTransfer` (a
+    book the caller may view, or its favorites, as vCard 4.0 with the field groups asked for; the count alone with
+    `countOnly` or past `maxRows`), each checking the caller's own permission on the book.
+  - Data: `data/PartyContactExportData.xml` (new, seed): the target `contactBookVCard` (file; nine field groups, the
+    name required, birthdays and notes only when asked for; one option, every contact or the favorites; 5000 rows and
+    2 MiB; `ADMIN_TRANSFER_RUN` to export and `ADMIN_TRANSFER_VIEW` to read others' records).
+- BOSS:
+  - `service/ironstone/admin/DataServices.xml` and `admin/Data.js` (new): `find#ExportRuns`, `get#ExportContext` and
+    `run#AdminExport` over the framework's services, nothing called with authorization off: they add the owners' places
+    as routes (a registration names a key) and the wizard's form values, and ask `ADMIN_TRANSFER_RUN` under Admin.
+  - Screens `Admin/Data/Exports.xml` (ExportFind, ExportList, ExportTargets), `Data/DataExport.xml` (ExportSelection,
+    ExportFields, ExportReview, with the owners' places below; `download`, a posted form whose response is the file)
+    and `Data/Backups.xml` (BackupCoverage with the fixed warning above it and the not-included list, BackupArchives,
+    BackupNow as a dialog with a reason). `Data.xml` mounts the three, and the area starts at Backups for the backup
+    operator. `Admin.js`: three link paths.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_DATA_BACKUPS` (the area's screen, not inherited, and Backups, for the
+    backup operator), and the five export targets exported in their owners' places (`insightsDatasetRows`,
+    `insightsReports`, `accountingTaxStatements`, `accountingInvoiceBatch`, `projectsWorkItemList`). BossUsersDemoData
+    unchanged. `run#AdminExport`'s verb is in the client deny pattern already.
+- Specs: framework `test/AdminBackups` (2 features, 0.03 s: reading and asking each need their permission; never run,
+  a success, a skipped run, a failed one, an archive written with a failure after it, a run that never ended and one
+  that named no archive are seven states and only one is a success, with the last success kept through them and the
+  warning with each; no parameter of the three services names where, what or how; a request carrying a directory, a
+  mode, a remote and a job starts one run with the job's stored parameters; its repeat under the key, a second request
+  and the start called directly start nothing; the archives as two names with sizes and no path; three requests in a
+  day; a run ten minutes ago) and `test/AdminDataExport` (2 features, 0.15 s: an unknown target, an import target, a
+  step of the other direction, an unregistered, an inherited and a dropped field name, an unregistered option, an
+  expression as an option, a scope where there is none; a field asked for by name left out and named, in the preview
+  and in the file, and given to a holder of its permission, whose name is never answered; a formula cell as text; too
+  many rows refused whole and not recorded; the transfer permission, the owner's and neither; one record and one audit
+  row with no content, the repeat under the key, another request and another user under it; who reads the record; the
+  imports' list as it was). Mantle `test/party/ContactBooks` (1 feature added, 0.15 s: the caller's books as scopes,
+  another user's book refused, the count alone, the field groups asked for and no other). BOSS
+  `test/Admin/AdminExports` (3 features, 0.9 s: the vCard through the mount's transition and one record of each export;
+  a field marked as not the caller's to read left out and named, through the real exporter; the data operator, who may
+  view no such book, exporting and listing nothing of it; a user outside the area posting nothing; a scheduled report's
+  delivery as its id, state and counters with its definition never named, and the recipient's copy refused; one qvt
+  render each of Exports, DataExport and Backups; the backup operator opening only Backups and the data operator told
+  it is not available). `AdminAccess` changed: the backup operator's `data` capability. Acceptance, written and not
+  run: `acceptance/Admin/AdminExportsUsable` (3 features, the "usable when").
+- Tests run (the shared release binary, this phase's runtime): framework AdminBackups, AdminDataExport,
+  AdminDataTransfer, AdminConfiguration, AdminJobs, AdminMailOutcomes, AdminRecovery 21 of 21; mr-mantle ContactBooks,
+  StaffInvitationImport 24 of 24; mr-boss AdminExports, AdminAccess, ProjectsAccess, AdminImports, AdminSettings,
+  AdminJobRuns, Contacts 70 of 70. `moqui lint --screens` 133 flagged sites, as master now, no parse failure; `moqui
+  lint` on the five changed service files and `moqui check` on the new files clean. By hand, not kept: Backups in qvt,
+  tui and html as the backup operator, the administrator and the data operator; Exports as the data operator, and
+  refused to the backup operator; DataExport with no target, with an owner's-place target named, for the contact book
+  without a book and for the translations with a review (22,311 rows of `es`), in the three modes; the area's default
+  for the backup operator. Prettier clean on the new JavaScript and on the changed files that were clean. Not run:
+  `./moq test-framework`, `./moq test-apps`, the acceptance suite, cargo (no Rust changed); no browser, and no backup of
+  a running server's embedded database (a spec's process runs none: F245).
+- Inventories: usl-inventory's `ContactImportServices.export#Contacts` row names Admin/Data/DataExport as implemented;
+  none of ss-inventory's rows is P16's.
+- Design edits: design-admin §11 Exports, DataExport and Backups (as built), §14 (Import/export target), §16 (Business
+  export) and §17.2; the owners' designs, one sentence each: design-drawers-commons (the contact book's export
+  registered), design-projects, design-accounting and design-insights (listed with their places; Insights' two
+  administrative finds read here).
+- Findings (provisional, numbered by the lead):
+  - **F240** Of the plan's exporters only Commons' vCard has a service to dispatch. Accounting's tax statement data and
+    billing batch CSV, Projects' work-item CSV and Insights' dataset and report exports are registered as an owner's
+    place (mode wizard, as P15's owner wizards) and never dispatched: each is tied to a record or a list on its owner's
+    screen, and the statement's export writes on it. A work-item and a ledger export service stay their owners' (§7).
+  - **F241** No registered exporter has a field with a permission of its own: what a viewer of a contact book reads
+    of a contact is the whole card, and Commons' own export gives the same. The rule (a field the caller may not read is
+    left out) is the framework's, tested with a restriction the specs set on a registration; birthdays and notes are
+    left out unless asked for, which is a default and not a restriction.
+  - **F242** BackupNow is a run of the seeded job by `ec.service.job(name).run()`: the scheduler's run outside the
+    schedule (P14) does not start a paused job, and the job is paused on a fresh instance. Such a run takes no lock, so
+    a scheduled run can start beside it (the request is refused while the lock is held, not the other way round).
+  - **F243** `ec.service.job(name).run()` writes the run's row in the caller's transaction and hands the run to a
+    worker at once: called inside a transaction (a service, a transition: Tools' Run Job too) the worker's record of the
+    run's start is lost ("could not record a service job run ... does not exist", seen in the spec) and a run shorter
+    than the caller's commit loses its end. `run#Backup` starts the run through `start#BackupRun`, which has no
+    transaction and is called as a future, so the row is committed first. The framework's to fix (the run's row in a
+    transaction of its own; `ServiceJobRun` has a foreign key to its job, so a caller may not hold the job's row for
+    update): Remaining-Work says so.
+  - **F244** Nothing registers a provider's status for an external database, a restore's verification, an archive's
+    checksum or its expiry: coverage says unknown for an external database, "no archive has been verified" always, and
+    retention as the job's counts in words; a physical backup's size is not summed. The design's fields for them are
+    not built.
+  - **F245** A spec's process reports its data sources embedded and runs no embedded cluster, so a backup there is
+    skipped: the specs and the acceptance walk check the truthful states (skipped is not a success), and a real archive
+    is §8's walk by hand on a running server.
+  - **F246** The export bounds are their own (5000 rows and 2 MiB by default, at most 50000 and 16 MiB), not the
+    import's: the demo's Spanish translations alone are 22,311 rows.
+  - **F247** ExportList's expiry and authorized download are not built: an export's file is the response of the
+    request that asked and is kept nowhere, so there is nothing to expire or to download later. Its record is kept 366
+    days by default and removed by P15's cleanup job; the audit log row stays.
+  - **F248** The engine's administrative alert list answers a rule's id, which carries its title's words (Insights P8
+    noted it): Admin shows a digest of it, and of an occurrence only its own id.
+  - **F249** The data operator exports only a contact book they may themselves view (their own, or one shared with
+    them): `BOSS_ADMIN_DATA` holds no domain permission (F223), and no organization-wide contact export exists. The
+    record of an export is likewise listed only to who may view its book.
+  - **F250** Commons' own CSV contact export writes a cell beginning with `=` as it is (and a phone number begins with
+    `+`): Admin registers the vCard only; the CSV writer is Commons' later work.
+  - **F251** The mirror's address is not shown on Backups (it is the read-only remote of Connections, F148): only
+    whether one is set and whether the last archive written reached it.
+  - **F252** DataExport's form shows a target's first three options; a fourth would keep its default (none registered
+    has more than one).
+  - **F253** `moqui lint --screens` counts 133 flagged sites on master now (132 at P15): upstream's Tools changes.
+- Decisions: an export target is the same registration record with a direction, in three modes; the record of an
+  export is a `TransferBatch` row and an audit log row, never the file; an operation key's repeat makes the file again
+  and keeps nothing more; a field's permission is the registration's, and one that does not exist drops the field for
+  everyone; Admin's export of a target asks `ADMIN_TRANSFER_RUN` with the owner's own check, and `ADMIN_TRANSFER_VIEW`
+  reads others' records within the reader's own scope; the framework keeps an export target of its own (message
+  translations, as its import, F232); a delivery's state is the engine's, and by its counters never "delivered" with a
+  failed or an uncertain recipient; coverage is read from the backup job's runs and the archive directory and from
+  nothing a person enters; the seeded job is the backup (another job running the service, or the seeded job repointed,
+  reads as no backup job); a backup may be asked for 30 minutes after the last and three times a day; the Data area is
+  opened to the backup operator for Backups alone.
+- For the lead:
+  - no Rust changed, so the shared release binary needs no rebuild; a database made before needs `TransferTarget`'s two
+    new columns and the seed data loaded again (the framework's grants and target, Mantle's new data file, BOSS's area
+    group and five targets);
+  - mr-mantle has a branch `adm/p16` to merge and a worktree at `adm-p16/mr-mantle` (this phase's runtime points at it);
+  - budget shares (release binary): framework about 0.2 s (AdminBackups, AdminDataExport); mr-mantle about 0.15 s
+    (ContactBooks' new feature); mr-boss about 0.9 s (AdminExports); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` (two fields and two descriptions of P15's entities),
+    `AdminConfigurationData.xml` (appended), `DataTransferServices.xml` (a section appended before the internal
+    services, an interface before `call#TargetService`, `find#Transfers`' parameters), `DataTransferLib.js`,
+    `DataTransferImports.js`, `DataTransferBatch.js` (two lines and the exports), `ConfigurationServices.xml` and
+    `ConfigurationLocalization.js` (appended), `OperationLib.js` (one name), Attack-Surface, Run-Deploy, Remaining-Work
+    (the `org.moqui.admin` row only), the rest new files; mr-mantle `ContactImportServices.xml` (a parameter, a block
+    and two services appended), `ContactBooks.spec.js` (one feature), one new data file; mr-boss `BossSetupData.xml`
+    appended at its end (Insights appends there too), `Admin.js` (`areas`' comment, `linkPaths` after P15's),
+    `Data.xml`, `AdminAccess.spec.js` (one row), the five designs, `usl-inventory.md`, the rest new files;
+  - other plans: none edited;
+  - P17 reads: an export's `EntityAuditLog` row (`moqui.server.TransferBatch`, field `export`, the transfer id, the
+    target id, "N rows of ...; fields: ...") and its `TransferBatch` record; a backup request's row
+    (`moqui.service.job.ServiceJob`, field `backupRequest`, the job, the run id, the reason);
+  - the user's call: F241 (whether a contact's birthday and notes, or any registered field, should need a permission
+    in an export); F249 (whether the data operator should export a book they may not view: built, never); the bounds
+    of asking for a backup (30 minutes, three a day) and of an export (F246); F242 (whether BackupNow should instead
+    wait for the scheduler, which would need the job resumed first); F247 (whether a stored download with an expiry is
+    wanted at all); F240 (whether Accounting's and Projects' exports should become services Admin dispatches);
+    whether the framework keeps its message translations export;
+  - the brief had the acceptance test written and not run, AGENTS.md has a new one run once: AdminExportsUsable is
+    not run, to run when asked.
+
 ### P17 — Audit and access evidence
 
 Design §12 AuditChanges and AccessLog, §16 audit evidence; ADM-AUDIT, ADM-REPORTS.

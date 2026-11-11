@@ -1194,6 +1194,8 @@ wrote rows directly and is fixed in Mantle in this pass.
   (Projects, work items), providing `get#` for its runs so Admin Imports lists them; it does not
   mount Shared/DataImport. Registered (impl-admin P15) as the target `projectsWorkItems` with its place
   and no runs: the import keeps a draft per user and no run record yet (impl-admin F13, F43).
+  The list's CSV is listed in Admin's export targets as `projectsWorkItemList`, with its place (impl-admin
+  P16): there is no work-item export service, so nothing is exported from Admin.
 - **As built (P4c):** `WorkItems/Import.xml` and its steps in `Import/`, the draft in the user's own folder
   (`ironstone.projects.WorkItemImportServices`, as ContactImport's). Source takes the project (one the manager works in). Mapping is a
   field to a column rather than a column to a field (an export with a hundred columns would be a hundred fields): the targets

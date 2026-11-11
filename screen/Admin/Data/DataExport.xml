@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- DataExport (design-admin §11 DataExport; style-guide §3.5 Wizard; impl-admin P16): the export of a registered domain
+    format, on one page: ExportSelection (the target, then one of the scopes it gives this user and its registered options),
+    ExportFields (the registered fields this user may read; one they may not read is named as left out and cannot be chosen),
+    ExportReview (the target and its version, the scope, the fields and the owner's count of rows, then Export). Everything
+    shown is the framework's org.moqui.admin.DataTransferServices' answer for this user (get#ExportFields, preview#Export)
+    through ironstone.admin.DataServices, and the export is its run#Export: the registration alone names what is exported and
+    by which fields, its owner's service runs as this user, and the file is this request's response, never stored or sent
+    anywhere. Under Admin an export is run with ADMIN_TRANSFER_RUN, besides what the target and its owner ask. Dataset and
+    report exports are Insights', linked below; no entity, field, filter or address is typed here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Export data" menu-image="sym_o_file_download" menu-image-type="icon">
+    <parameter name="targetId"/>
+    <parameter name="scopeKey"/>
+    <parameter name="option1"/>
+    <parameter name="option2"/>
+    <parameter name="option3"/>
+    <parameter name="fields"/>
+    <parameter name="review"/>
+
+    <!-- The export: a posted form, since it keeps a record; the file is the response. A refusal a person can act on comes
+        back as a message on the wizard. -->
+    <transition name="download">
+        <actions>
+            <service-call name="ironstone.admin.DataServices.run#AdminExport" out-map="exported"
+                    in-map="{targetId:targetId, scopeKey:scopeKey, option1:option1, option2:option2, option3:option3, fields:fields,
+                        operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    if (exported?.refused) ec.message.addError(exported.reason || 'The export was refused')
+                    else if (exported?.exported) ec.web.sendTextResponse(exported.fileText, exported.contentType, exported.filename)
+                    else ec.message.addError('Nothing was exported')
+                }
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url=".">
+            <parameter name="targetId"/><parameter name="scopeKey"/><parameter name="option1"/><parameter name="option2"/>
+            <parameter name="option3"/><parameter name="fields"/>
+        </error-response>
+    </transition>
+
+    <actions>
+        <service-call name="ironstone.admin.DataServices.get#ExportContext" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{targetId:(targetId || null), scopeKey:(scopeKey || null), option1:option1, option2:option2, option3:option3,
+                    fields:(fields || null), review:(review == 'true' || review === true)}"/>
+        <!-- ignore-error clears a refusal's message: what a person can act on is answered in out-parameters -->
+        <set field="available" from="!!found?.targetOptions"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            found = found || {}
+            exportTarget = found.exportTarget || {}
+            hasTarget = !!found.hasTarget
+            mayExport = hasTarget && !!found.canRun && !!exportTarget.exportAllowed
+            targetOptions = Array.from(found.targetOptions || [])
+            scopeOptions = Array.from(found.scopeOptions || [])
+            scopeLabel = exportTarget.scopeLabel || 'Scope'
+            const slots = Array.from(found.slotList || [])
+            const slot = index => slots[index] || null
+            option1Label = slot(0)?.label || ''; option1Choice = !!slot(0)?.isChoice; option1Choices = slot(0)?.choices || []
+            option2Label = slot(1)?.label || ''; option2Choice = !!slot(1)?.isChoice; option2Choices = slot(1)?.choices || []
+            option3Label = slot(2)?.label || ''; option3Choice = !!slot(2)?.isChoice; option3Choices = slot(2)?.choices || []
+            fieldOptions = Array.from(found.fieldOptions || [])
+            selectedFields = Array.from(found.selectedFields || [])
+            deniedFieldText = found.deniedFieldText || ''
+            selectionValues = {targetId: hasTarget ? targetId : null, scopeKey: scopeKey, option1: slot(0)?.value ?? '', option2: slot(1)?.value ?? '',
+                option3: slot(2)?.value ?? '', fields: selectedFields}
+            preview = found.preview || null
+            previewRefusal = found.previewRefusal || ''
+            const chosen = (list, value) => (Array.from(list || []).find(option => option.value === value) || {}).label || value || ''
+            reviewValues = preview ? {
+                targetText: (exportTarget.title || targetId) + (preview.targetVersion ? ' (version ' + preview.targetVersion + ')' : '') + (exportTarget.ownerApp ? ' · ' + exportTarget.ownerApp : ''),
+                scopeText: preview.scopeTitle || '',
+                optionText: slots.map(found => found.label + ': ' + (found.isChoice ? chosen(found.choices, found.value) : (found.value || 'any'))).join(' · '),
+                fieldText: Array.from(preview.fieldList || []).map(field => field.label).join(', '),
+                omittedText: Array.from(preview.omittedFieldList || []).map(field => field.label).join(', '),
+                countText: preview.rowCount + (preview.rowCount === 1 ? ' row' : ' rows') + ' (at most ' + preview.maxRows + ' in one export)',
+                deliveryText: 'A file in your browser, now. It is not stored or sent anywhere; that it was exported, by whom and how many rows is recorded.'} : {}
+            exportParameters = {targetId: targetId, scopeKey: scopeKey, option1: selectionValues.option1, option2: selectionValues.option2,
+                option3: selectionValues.option3, fields: selectedFields.join(','), operationKey: found.operationKey}
+            // with the permissions and nothing to export from, say that; else what is needed
+            refusalText = !hasTarget || mayExport ? ''
+                : found.canRun && exportTarget.scoped && !scopeOptions.length && !exportTarget.problem
+                    ? 'There is nothing for you to export here: it exports ' + scopeLabel.toLowerCase() + 's you may read, and you may read none.'
+                    : 'You may not export this: it needs ' + ['ADMIN_TRANSFER_RUN'].concat(String(exportTarget.exportPermission || '').split(',')).filter((name, index, all) => name && all.indexOf(name) === index).join(' and ') + '.'
+            elsewhere = Array.from(found.elsewhereList || [])
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Export data" type="h5"/></container>
+            <container style="col-auto"><link url="../Exports" text="Exports" icon="sym_o_list"/></container>
+        </container>
+        <label text="A registered format of its owner's, with the fields you may read, as a file in your browser. What is exported and by which fields is its owner's registration: nothing else can be named here."
+                type="p" style="text-caption m-muted q-mb-none"/>
+        <label type="p" style="text-negative" condition="!available" text="Exporting is not available to you: it needs ADMIN_TRANSFER_VIEW or ADMIN_TRANSFER_RUN."/>
+        <section name="DataExportSection" condition="available">
+            <widgets>
+                <container-box>
+                    <box-header title="1. What to export"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!targetOptions.length" text="No export is registered to be made here."/>
+                        <form-single name="ExportSelection" transition="." map="selectionValues">
+                            <field name="targetId">
+                                <default-field title="Target"><drop-down><list-options list="targetOptions" key="${value}" text="${label}"/></drop-down></default-field>
+                            </field>
+                            <field name="scopeKey">
+                                <conditional-field condition="hasTarget &amp;&amp; !!exportTarget.scoped" title="${scopeLabel}">
+                                    <drop-down allow-empty="true"><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+                                </conditional-field>
+                                <default-field title=""><hidden/></default-field>
+                            </field>
+                            <field name="option1">
+                                <conditional-field condition="!!option1Label &amp;&amp; option1Choice" title="${option1Label}">
+                                    <drop-down><list-options list="option1Choices" key="${value}" text="${label}"/></drop-down>
+                                </conditional-field>
+                                <conditional-field condition="!!option1Label" title="${option1Label}"><text-line size="30"/></conditional-field>
+                                <default-field title=""><hidden/></default-field>
+                            </field>
+                            <field name="option2">
+                                <conditional-field condition="!!option2Label &amp;&amp; option2Choice" title="${option2Label}">
+                                    <drop-down><list-options list="option2Choices" key="${value}" text="${label}"/></drop-down>
+                                </conditional-field>
+                                <conditional-field condition="!!option2Label" title="${option2Label}"><text-line size="30"/></conditional-field>
+                                <default-field title=""><hidden/></default-field>
+                            </field>
+                            <field name="option3">
+                                <conditional-field condition="!!option3Label &amp;&amp; option3Choice" title="${option3Label}">
+                                    <drop-down><list-options list="option3Choices" key="${value}" text="${label}"/></drop-down>
+                                </conditional-field>
+                                <conditional-field condition="!!option3Label" title="${option3Label}"><text-line size="30"/></conditional-field>
+                                <default-field title=""><hidden/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="${hasTarget ? 'Update' : 'Choose'}"><submit/></default-field></field>
+                        </form-single>
+                        <label type="p" style="text-warning" condition="!!refusalText" text="${refusalText}"/>
+                        <label type="p" style="text-warning" condition="hasTarget &amp;&amp; !!exportTarget.problem" text="${exportTarget.problem}. Try again later."/>
+                    </box-body>
+                </container-box>
+                <section name="ExportFieldsSection" condition="mayExport">
+                    <widgets>
+                        <container-box>
+                            <box-header title="2. Fields"/>
+                            <box-body>
+                                <label type="p" style="text-caption m-muted" text="${exportTarget.description || ''}"/>
+                                <form-single name="ExportFields" transition="." map="selectionValues">
+                                    <field name="targetId"><default-field title=""><hidden/></default-field></field>
+                                    <field name="scopeKey"><default-field title=""><hidden/></default-field></field>
+                                    <field name="option1"><default-field title=""><hidden/></default-field></field>
+                                    <field name="option2"><default-field title=""><hidden/></default-field></field>
+                                    <field name="option3"><default-field title=""><hidden/></default-field></field>
+                                    <field name="review" from="'true'"><default-field title=""><hidden/></default-field></field>
+                                    <field name="fields">
+                                        <default-field title="Fields to include" tooltip="The fields this export's owner registered that you may read">
+                                            <drop-down allow-multiple="true"><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                                </form-single>
+                                <label type="p" style="text-warning" condition="!!deniedFieldText" text="Not included, because you may not read them: ${deniedFieldText}."/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ExportReviewSection" condition="mayExport &amp;&amp; (!!preview || !!previewRefusal)">
+                    <widgets>
+                        <container-box>
+                            <box-header title="3. Review and export"/>
+                            <box-toolbar>
+                                <link url="download" text="Export" link-type="hidden-form" btn-type="primary" icon="sym_o_download" condition="!!preview &amp;&amp; preview.rowCount &gt; 0"
+                                        confirmation="Export ${reviewValues.countText} of ${exportTarget.title} to a file in your browser? That you exported it is recorded."
+                                        parameter-map="exportParameters"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" style="text-warning" condition="!!previewRefusal" text="${previewRefusal}"/>
+                                <section name="ExportReviewBody" condition="!!preview">
+                                    <widgets>
+                                        <form-single name="ExportReview" map="reviewValues">
+                                            <field name="targetText"><default-field title="Target"><display/></default-field></field>
+                                            <field name="scopeText">
+                                                <conditional-field condition="!!reviewValues.scopeText" title="${scopeLabel}"><display/></conditional-field>
+                                                <default-field title=""><hidden/></default-field>
+                                            </field>
+                                            <field name="optionText">
+                                                <conditional-field condition="!!reviewValues.optionText" title="Selection"><display/></conditional-field>
+                                                <default-field title=""><hidden/></default-field>
+                                            </field>
+                                            <field name="fieldText"><default-field title="Fields"><display/></default-field></field>
+                                            <field name="omittedText">
+                                                <conditional-field condition="!!reviewValues.omittedText" title="Left out (you may not read them)"><display/></conditional-field>
+                                                <default-field title=""><hidden/></default-field>
+                                            </field>
+                                            <field name="countText"><default-field title="Rows"><display/></default-field></field>
+                                            <field name="deliveryText"><default-field title="Delivery"><display/></default-field></field>
+                                        </form-single>
+                                        <label type="p" style="m-muted" condition="preview.rowCount == 0" text="Nothing matches, so there is nothing to export."/>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ExportElsewhereSection" condition="elsewhere.length &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Exported in their owner's own place"/>
+                            <box-body>
+                                <label type="p" style="text-caption m-muted" text="Dataset rows and report outputs are exported in Insights; the others below from their own screens, each by its owner's permissions."/>
+                                <form-list name="ExportElsewhere" list="elsewhere" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <conditional-field condition="!!ownerUrl" title="Export">
+                                            <link url="${ownerUrl}" url-type="plain" text="${title}" link-type="anchor" icon="sym_o_open_in_new"/>
+                                        </conditional-field>
+                                        <default-field title="Export"><display/></default-field>
+                                    </field>
+                                    <field name="ownerApp"><default-field title="Owner"><display/></default-field></field>
+                                    <field name="description"><default-field title="What it exports"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

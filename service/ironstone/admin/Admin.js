@@ -85,7 +85,9 @@ const areas = {
     // P14 opens Operations to the configuration administrator too, for Topics and TopicDetail alone
     // (BOSS_ADM_OPERATIONS_TOPICS: the area's screen without its other subscreens)
     operations: "Operations",
-    // P15: Data (Imports, DataImport, ImportDetail) for the data operator and the administrator (BOSS_ADM_DATA)
+    // P15: Data (Imports, DataImport, ImportDetail) for the data operator and the administrator (BOSS_ADM_DATA); P16 adds
+    // Exports, DataExport and Backups to it, and opens the area to the backup operator too, for Backups alone
+    // (BOSS_ADM_DATA_BACKUPS: the area's screen without its other subscreens)
     data: "Data",
     agents: "Agents",
     developer: "Developer"
@@ -330,6 +332,10 @@ const linkPaths = [
     "Data/Imports",
     "Data/DataImport",
     "Data/ImportDetail",
+    // P16: exports and backups
+    "Data/Exports",
+    "Data/DataExport",
+    "Data/Backups",
     "Agents/Home",
     "System",
     "Developer/Home"

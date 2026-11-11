@@ -880,7 +880,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactImportServices | parse#ContactFile | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source |
 | ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview |
 | ContactImportServices | import#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Result |
-| ContactImportServices | export#Contacts | Admin/Data/DataExport | Commons/Contacts/ContactDetail; Commons/Contacts/List |
+| ContactImportServices | export#Contacts | Admin/Data/DataExport | Commons/Contacts/ContactDetail; Commons/Contacts/List; Admin/Data/DataExport |
 | DuplicateServices | mark#PartyNotDuplicate |  | Commons/Contacts/Compare; Commons/Contacts/Duplicates |
 | PartyServices | get#ShellCounts |  | shell header (theme value STRT_SHELL_COUNTS_SERVICE) |
 

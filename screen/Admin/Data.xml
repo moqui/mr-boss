@@ -19,14 +19,23 @@ along with this software (see the LICENSE.md file). If not, see
     artifacts below it, an owner's registered services too, so it is not what decides an import. Every read and step is the
     framework's org.moqui.admin.DataTransferServices, which checks ADMIN_TRANSFER_VIEW, each target's own permissions and
     scope, and calls an owner's service as the user; that service checks its own permission and scope itself (a target
-    whose services did not would be open to this area's users: impl-admin P15 Review). Exports and backups are added by
-    P16. -->
+    whose services did not would be open to this area's users: impl-admin P15 Review). P16 adds Exports (the exports made and
+    the deliveries of scheduled reports as status), DataExport (the export of a registered format, by the same services) and
+    Backups (the framework's org.moqui.admin.BackupServices, which check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN): the backup
+    operator opens only Backups here (BOSS_ADM_DATA_BACKUPS: the area's screen without its other subscreens) and lands on
+    it; the data operator opens Backups too and is told it is not available. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Data" default-menu-index="9" menu-image="sym_o_swap_vert" menu-image-type="icon">
     <subscreens default-item="Imports" always-use-full-path="true">
+        <!-- the backup operator opens only the backups here: the area starts at them -->
+        <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ADMIN_TRANSFER_VIEW') &amp;&amp; !ec.user.hasPermission('ADMIN_TRANSFER_RUN') &amp;&amp; ec.user.hasPermission('ADMIN_BACKUP_VIEW')"
+                item="Backups"/>
         <subscreens-item name="Imports" location="component://mr-boss/screen/Admin/Data/Imports.xml" menu-title="Imports" menu-index="1"/>
         <subscreens-item name="DataImport" location="component://mr-boss/screen/Shared/DataImport.xml" menu-title="Import" menu-index="2"/>
         <subscreens-item name="ImportDetail" location="component://mr-boss/screen/Admin/Data/ImportDetail.xml" menu-include="false"/>
+        <subscreens-item name="Exports" location="component://mr-boss/screen/Admin/Data/Exports.xml" menu-title="Exports" menu-index="3"/>
+        <subscreens-item name="DataExport" location="component://mr-boss/screen/Admin/Data/DataExport.xml" menu-title="Export data" menu-index="4"/>
+        <subscreens-item name="Backups" location="component://mr-boss/screen/Admin/Data/Backups.xml" menu-title="Backups" menu-index="5"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminDataPanel" type="tab"/>
