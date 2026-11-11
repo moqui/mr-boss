@@ -173,7 +173,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Home and attention | BOSS | Home | built and reviewed Nov 7, merged |
 | P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | built and reviewed Nov 10, merged |
 | P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | built and reviewed Nov 10, merged |
-| P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | — |
+| P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | built and reviewed Nov 10, merged |
 | P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | — |
 | P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | — |
 | P11 Wall displays on shared devices | BOSS | Playlists on a registered device | — |
@@ -1814,40 +1814,40 @@ Design §8; INS-07 (its first release), INS-03.
   design-admin §4.1 (the participant as built). mr-moqui docs/tools/Monitoring.md ("Business alerts", Security, Upgrading)
   and `plans/Remaining-Work.md` (the report-engine row). mr-boss README's Insights line.
 - **Findings** (provisional, for the lead to number):
-  - F-P8-1: the shipped templates told `ADMIN` as a group in one notification with the owner's values. mr-boss's four
+  - F102: the shipped templates told `ADMIN` as a group in one notification with the owner's values. mr-boss's four
     lose the contact point. Mantle's `mantle-sales-daily-floor` still has one in its file (mr-mantle is read only here): the
     engine drops it from a copy and never delivers to one, so it is harmless; removing it and its "contact points" wording is
     Mantle's.
-  - F-P8-2: the owner is told only when named, or alone when nobody is, as a schedule's owner is (P7): "adds an equivalent
+  - F103: the owner is told only when named, or alone when nobody is, as a schedule's owner is (P7): "adds an equivalent
     colleague" names both. Kept for one rule in both.
-  - F-P8-3: a recipient must read the rule itself (F90's `not-shared`), so a group audience's rule is shared with a group
+  - F104: a recipient must read the rule itself (F90's `not-shared`), so a group audience's rule is shared with a group
     its recipients are in; AlertAudience's form carries the share group. A rule its audience reads without a share would
     need the engine to treat an audience as a reading grant.
-  - F-P8-4: the engine had no per-recipient memory of a notification, so a group put back after one failure would have
+  - F105: the engine had no per-recipient memory of a notification, so a group put back after one failure would have
     told everyone again; `AlertRecipientDelivery` keeps the state each recipient was told. It keeps each recipient's last
     outcome only, an alert email's outcome is sent or failed (the alert contact sender does not tell "not known" apart, as
     P7's report mail does), and there is no manual retry or reconciliation: a failure is tried again at each evaluation.
-  - F-P8-5: "stale" as the engine can know it is the index older than its fields. A feed that has stopped indexing leaves
+  - F106: "stale" as the engine can know it is the index older than its fields. A feed that has stopped indexing leaves
     the last documents in place and the rule reads them as current; index lag is P10's readiness, and a rule that reads it
     is a framework ask.
-  - F-P8-6: `AlertInstance` kept no reading, so OwnAlertState had no value to show; `lastValue` is written for every rule.
-  - F-P8-7: an alert's history was its markers in `monitor_annotations` (any reader of that dataset) and Monitor's
+  - F107: `AlertInstance` kept no reading, so OwnAlertState had no value to show; `lastValue` is written for every rule.
+  - F108: an alert's history was its markers in `monitor_annotations` (any reader of that dataset) and Monitor's
     incidents. A business rule writes neither, so its history is its state and each recipient's last delivery; design §8's
     history, annotations and scoped drill in OwnAlertState are not built.
-  - F-P8-8: a series pruned after going missing is told as Normal with no value and `pruned` true (the engine's rule for
+  - F109: a series pruned after going missing is told as Normal with no value and `pruned` true (the engine's rule for
     every alert). Design §8.1 asks for a neutral explanation: a wording of its own in the notification is a framework ask.
-  - F-P8-9: the engine answers a fractional number of a definition's body to a script as a decimal, which `Number()`
+  - F110: the engine answers a fractional number of a definition's body to a script as a decimal, which `Number()`
     refuses, and `JSON.stringify` does not write as a number. Alerts.js and the email template read them through their text
     and `clone` writes them as numbers; any script that changes and saves a definition body with a fractional number has the
     same hazard.
-  - F-P8-10: a rule made from a panel reads its owner's whole scope: the panel's dashboard variables (Insights' fixed
+  - F111: a rule made from a panel reads its owner's whole scope: the panel's dashboard variables (Insights' fixed
     organization) do not exist in a rule. "For their queue" is the series of the queues the owner reads; a rule narrowed to
     one organization or queue needs a filter on its query, which BusinessAlertBasis does not offer.
-  - F-P8-11: `AdminLifecycle` (Admin's) lists a disable's exact steps; the second participant adds a second
+  - F112: `AdminLifecycle` (Admin's) lists a disable's exact steps; the second participant adds a second
     `pause:UlstDone` (as F96).
-  - F-P8-12: alert.rs is 1,531 lines with P8's fifty (Practices-Rust §2's 1,500): its contact sending and shared-item
+  - F113: alert.rs is 1,531 lines with P8's fifty (Practices-Rust §2's 1,500): its contact sending and shared-item
     validation can move to a module of their own; not done here, to keep the diff the phase's.
-  - F-P8-13: `get#AlertState` is a new read; Tools' Alerts still lists `AlertInstance` by entity for its `ADMIN` users, a
+  - F114: `get#AlertState` is a new read; Tools' Alerts still lists `AlertInstance` by entity for its `ADMIN` users, a
     business rule's series labels among them.
 - **Decisions** (for §4): a business rule is one with an audience or over a viewer-scoped dataset, whatever wrote it; an
   audience replaces contact points and anything else refuses the save rather than being dropped; the channels are the in-app
@@ -1864,7 +1864,7 @@ Design §8; INS-07 (its first release), INS-03.
     `ReportEntities.xml` gains one field on AlertInstance and one entity at the end, `ReportServices.xml` five services
     before `preview#Report` and one sentence of `check#ReportAudience`; no framework seed file changes; Insights.js
     (`reportLinks`, `linkPaths`), Delivery.js (its exports), InsightsSpecLib (`readerMenu`);
-  - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F-P8-11, one expectation) and design-admin §4.1
+  - the other track's files touched: `test/Admin/AdminLifecycle.spec.js` (F112, one expectation) and design-admin §4.1
     (one "As built" sentence in place of "Alert rules join with Insights P8"); `acceptance/AppStructure.spec.js` and
     `TuiRender.spec.js` (the new screens' entries);
   - an existing instance: the entity check adds the table and the field; load BossSetupData again and set the
@@ -1873,12 +1873,12 @@ Design §8; INS-07 (its first release), INS-03.
     that still names one is refused (Monitoring.md "Upgrading");
   - the user's call: who sets a personal alert (built: the author and the distributor; design §7.1 would let every reader
     with `INSIGHTS_SCHEDULE`, which P7 gave every reading group: open with P7's question, and one line in Alerts.js's
-    `author` either way); F-P8-2 (the owner told only when named); F-P8-3 (a recipient must read the rule); a business rule
-    leaving no marker on the time series (F-P8-7); the distributor's `delete#Definition` (their own definitions only);
-  - Mantle's: F-P8-1 (its template's contact point and wording);
+    `author` either way); F103 (the owner told only when named); F104 (a recipient must read the rule); a business rule
+    leaving no marker on the time series (F108); the distributor's `delete#Definition` (their own definitions only);
+  - Mantle's: F102 (its template's contact point and wording);
   - not built: silences, mute timings and shared contact points in Insights (Tools' AlertShared is not mounted); "Send test
     to me"; a registered metric picker (the basis is a panel's saved query with its descriptor); a filter of the rule's own
-    (F-P8-10); a delivery history and a manual retry (F-P8-4); sending profiles; alerts to a chat room (design §17 Q4);
+    (F111); a delivery history and a manual retry (F105); sending profiles; alerts to a chat room (design §17 Q4);
     recipient evaluation (§8.1 later); an Insights Settings cap (P10); the delivery audit export (P12);
   - `find#AlertDeliveries` with `administrative: true` is Admin P16's read (counters by rule, no title, no value).
 
@@ -1938,7 +1938,7 @@ review: …") and this note (branch `ins/p8`).
     equivalent) read the leaving owner's series labels and last values through `get#AlertState`, and the first evaluations
     told those series on as No data. A transfer now deletes the rule's instances and notification rows and releases its
     claim.
-  - **R4** (medium; mr-moqui) A series removed after going missing was told as Normal (F-P8-8), which a business recipient
+  - **R4** (medium; mr-moqui) A series removed after going missing was told as Normal (F109), which a business recipient
     reads as a recovery nobody observed. A business rule's recipients are told nothing more of a removed series.
   - **R5** (low, access; mr-moqui, mr-boss) A skipped recipient's delivery row kept the state's name, which they read as
     their own (`find#AlertDeliveries` received, Rules' Received). It is kept only for one sent or failed; Received says
@@ -1969,7 +1969,7 @@ review: …") and this note (branch `ins/p8`).
     scope by then; the placeholder series of a rule that had no data is told as Normal once real series exist; a process
     that dies between a group's sent mark and its last recipient leaves the rest untold until the repeat interval (as a
     technical contact); the administrative list and Admin's lookup show a rule's id, which carries its title's slug, and
-    the lookup its title (the contract's `resourceName`); F-P8-13 stands (Tools' Alerts lists `AlertInstance` labels of
+    the lookup its title (the contract's `resourceName`); F114 stands (Tools' Alerts lists `AlertInstance` labels of
     the rules its `ADMIN` viewer reads: their own and those shared with a group they are in, whatever their scope); an
     Insights author holds `save#Definition` for the editors, so a rule saved past `store#Alert` (if the mounted editor
     takes an alert's body: not tried) could name any existing topic or email template, for an alert to themselves alone;
