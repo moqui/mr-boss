@@ -268,9 +268,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | built and reviewed Nov 7, merged |
 | P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | built and reviewed Nov 7, merged |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | built and reviewed Nov 7, merged |
-| P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | — |
-| P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | — |
-| P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | — |
+| P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | built and reviewed Nov 10, merged |
+| P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | built and reviewed Nov 10, merged |
+| P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | built and reviewed Nov 10, merged |
 | P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | — |
 | P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | — |
 | P13 System messages and recovery | mr-moqui, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | — |
@@ -1859,6 +1859,177 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
   configuration and need a restart; translates a message with its placeholder kept; ReferenceData sends a unit change
   to Products.
 
+**Built Nov 10 (P8).**
+- mr-moqui (no Rust; the shared release binary):
+  - `entity/ServerEntities.xml` (appended): `moqui.server.InstanceSetting` (the registry: key, title, group, value type, allowed values,
+    limits, default, conf property, editable, secret, restart, manage permission, operator note; the `InstanceSettingValueType`
+    enumerations), `moqui.server.InstancePreference` (the value, audit-logged, with who, when and why) and
+    `moqui.basic.LocalizedLabelTarget` (a label that may be translated).
+  - `service/org/moqui/admin/ConfigurationServices.xml`, organized in parts for P10 to P13 to append: a section per part, its bodies
+    in a module of its own beside `ConfigurationLib.js` (finds, revision, permission checks, refusals, the audit row, paging).
+    - Settings (`ConfigurationSettings.js`): `get#EffectiveSettings` (each registered setting with its value, source: preference,
+      configuration or default, whether it is changed here and by the caller, restart effect, operator note, and a preference's
+      revision and last change; a secret masked, only `valueSet`; `ADMIN_SETTINGS_VIEW`); `get#InstancePreference` (added: one
+      registered preference's effective value and `numberValue`, for the code that uses it; no permission, a preference being
+      nonsecret by registration; the module also exposes `value(key)` to scripts); `store#InstancePreference` (a registered
+      preference only, typed and within its allowed values and limits, at the revision read, empty removing it;
+      `NOT_REGISTERED`, `VALUE_INVALID`, `STALE_REVISION`; `ADMIN_SETTINGS_MANAGE` and the setting's own permission).
+    - Localization (`ConfigurationLocalization.js`): `find#LocalizedMessages` and `find#LocalizedEntityFields` (added: a page by
+      locale and text, or what is missing in a locale), `store#LocalizedMessage` and `store#LocalizedEntityField` (exactly the
+      original's `${}` placeholders, a locale that is one, the revision read, empty removing it; a label only for a registered
+      target the definitions bear out; `PLACEHOLDER_MISMATCH`, `LOCALE_INVALID`, `NOT_REGISTERED`, `LABEL_UNAVAILABLE`,
+      `STALE_REVISION`); each change writes its own audit row.
+  - `data/AdminConfigurationData.xml` (new, named in MoquiDefaultConf's `load-data`): `AdminConfigurationServices` (ALL_USERS, an
+    inheritable ALLOW naming the seven services); the preferences `instance.displayName`, `instance.defaultLocale`,
+    `instance.defaultTimeZone`, `signin.newDeviceWindowDays` (90, 1 to 730) and `report.groupRecipientCeiling` (200, 1 to 500);
+    eight deployment values shown read only (purpose, locale, server and database zones, public host, HTTPS, largest upload,
+    telemetry); the label targets (enumeration, status, unit and place names and their types).
+  - `docs/security/Attack-Surface.md`: the configuration services' paragraph.
+- BOSS:
+  - Screens: `Admin/Settings.xml` gains InstanceSettings (menu 4), Localization (5) and ReferenceData (6).
+    `Settings/InstanceSettings.xml` (InstancePresentation: the preferences, each with its Change dialog, a drop-down from the
+    `valueOptions` transition for a choice, locale or time zone; ConfigurationSources: every setting with its key, value, source,
+    where it is changed, when it takes effect and the operator's note; Open the conf for `ADMIN`); `Settings/Localization.xml`
+    (LocalizationFind: messages or labels, kind of label, locale, text, missing; MessageTranslations and EntityTranslations with a
+    dialog per row, New translation, paging by the service); `Settings/ReferenceData.xml` (ReferenceFind, ReferenceOwners over
+    `find#Settings` for the Reference data group). Home shows the instance name when one is set.
+  - `Admin.js`: links `Settings/InstanceSettings`, `Settings/Localization`, `Settings/ReferenceData`. No new `ironstone` service,
+    so the client deny pattern is unchanged.
+  - `data/BossSetupData.xml` (appended): InstanceSettings and Localization added to `BOSS_ADM_ORGANIZATIONS`; the index entries
+    `admin.instanceSettings`, `admin.localization` (`ADMIN_SETTINGS_VIEW`) and `admin.referenceData`; the index group
+    `AdmSgReference` and eleven reference kinds (Products' units and identification types; Accounting's currencies, payment terms
+    and tax; Customer Service's case types and status categories; Projects' work item types and workflows; Manufacturing's reason
+    codes; Tools' status flows). BossUsersDemoData unchanged.
+- Specs: framework `test/AdminConfiguration` (4 features, 0.2 s: an unregistered key, a configuration key, a value outside its
+  allowed set or limits refused and nothing written; a stale revision refused; each value and the removal in the audit log; a
+  secret-classified setting never returned, a secret made editable left out; a deployment value with its source and restart
+  effect; a user without the permissions refused every read and change but `get#InstancePreference`; a translation that drops or
+  adds a placeholder refused; a label only for a registered target the definitions bear out). BOSS `test/Admin/AdminSettings`
+  (3 features, 0.6 s: InstanceSettings' one qvt render as the configuration administrator; a preference and a translation
+  changed through the transitions, an unregistered key and a dropped placeholder written nowhere, the reader opening neither
+  screen; ReferenceData linking Products' units for ADMIN and not for the configuration administrator). `AdminRegistries`
+  changed: the reader's index now holds `admin.referenceData`, and the Instance group Admin's three entries. Access: the
+  screens fall under P7's `organizations` capability (AdminAccess unchanged); the holder and non-holder are in AdminSettings and
+  AdminConfiguration. Acceptance, written and not run: `acceptance/Admin/AdminSettingsUsable` (3 features, the "usable when").
+- Tests run (release binary, `--nobuild`, this worktree's runtime): framework AdminConfiguration, AdminAccessServices, AdminSessions
+  13 of 13; mr-boss AdminSettings, AdminAccess, AdminRegistries, AdminOrganizations, AdminConstitution, AdminUsers, AdminGroups,
+  ProjectsAccess 34 of 35, the one failure AdminRegistries' two index expectations, then AdminRegistries and AdminSettings 8 of 8
+  with them changed; `moqui lint --screens` 132 flagged sites, as before. InstanceSettings
+  (qvt, tui), Localization (qvt with missing labels, tui), ReferenceData (qvt, tui), Home and SettingsHome (html) and the
+  `valueOptions` transition rendered once by hand without errors, not kept. Prettier clean on the new JavaScript. Not run:
+  `./moq test-framework`, `./moq test-apps`, the acceptance suite; no cargo test (no Rust changed).
+- Inventories: none (design §15.2 traces Tools' Localization forms; ss-inventory and usl-inventory have no row for them).
+- Design edits: design-admin §7 InstanceSettings, Localization and ReferenceData (as built), §17.2 (the ConfigurationServices
+  row, the InstancePreference record), §19 Q6; design-insights §7.1 (the ceiling's key and how it is read).
+- Findings (provisional, numbered by the lead):
+  - **F110** The conf's own view (`org.moqui.dev.ComponentServices.get#ConfView`: file, line and live/apply/restart class of each
+    value) is Rust and for the `ADMIN` group alone, and scripts read a property's value only (`System.getProperty`). Built:
+    deployment values are registered rows (`InstanceSetting`, `editable` N) naming a `default-property`, their restart effect and
+    operator note registered, their source "default" when the value equals the shipped MoquiDefaultConf's and "configuration"
+    otherwise (not which file or the environment); `ADMIN` is linked to System › Conf. P10's EffectiveSignInPolicy needs conf
+    attributes (`user-facade` `password`, `login`), which a property registration cannot name: a framework ask (a masked
+    projection of named conf attributes for `ADMIN_SETTINGS_VIEW`), or P10 registers what it shows another way.
+  - **F111** Nothing reads an instance default for a person with none: the session's locale and time zone fall back to the conf
+    properties read at start (l10n.rs `server_time_zone`, also the zone the server reads timestamps in), and Mantle's
+    `create#StaffAccount` and invitation acceptance set neither. `instance.defaultLocale` and `instance.defaultTimeZone` are
+    registered, stored and shown, and read by nothing yet; applying them (new accounts, or the session fallback apart from the
+    server's zone) is a framework and Mantle follow-up. `instance.displayName` is read by Admin Home only.
+  - **F112** Design §7's approved theme and logo and date and number formats are not registered: the shell reads no instance
+    value of them (themes are `UserGroupScreenTheme` rows, an owner store), so a preference would do nothing.
+  - **F113** Framework seed data is loaded only when MoquiDefaultConf's `load-data` names its file; the new file adds a line
+    there (the plan's "append to framework seed data" would otherwise have meant SecurityTypeData).
+  - **F114** `LocalizedMessage` and `LocalizedEntityField` are not audit-logged, and turning the audit log on would write a row
+    for each of the thousands a data load (mr-l10n) writes; the services write the audit row of each delegated change, and
+    Tools' direct writes stay unaudited.
+  - **F115** Scripts cannot list the localized fields of every entity cheaply (`getEntityDefinition` builds the whole definition,
+    about 6 ms each), and a localized field may be on a business entity (Mantle's `ProductFeature`, owner-scoped). Built: label
+    targets are registered rows checked against the definition (localized, unencrypted, a configuration entity, one key), so
+    translation access never reads a business record; Products' features stay Products › Translations'.
+  - **F116** A translation is shown wherever its original is, and where the original's `${}` is expanded the translation's
+    would be too (not traced through every widget), so a translator adding one could run an expression: the stores require the
+    placeholder sets to be equal (stricter than "kept").
+  - **F117** ReferenceData's kinds are settings entries, so they also show in SettingsHome under a fourth group, and the reader's
+    index is no longer empty (it holds Admin's reference data landing, which lists the reader no kind).
+- Decisions: settings are seed rows of two kinds in one registry, with secrets refused by flag and by name; a preference falls
+  back to the conf property it names, then its default; `get#InstancePreference` needs no permission; an empty value removes a
+  preference or a translation; label targets are registered and checked against the definitions; InstanceSettings and
+  Localization join `BOSS_ADM_ORGANIZATIONS` (no new capability), ReferenceData is every Admin user's; reference kinds are a
+  fourth group of the settings index.
+- For the lead:
+  - budget shares: framework about 0.2 s (AdminConfiguration); mr-boss about 0.6 s (AdminSettings); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` appended at its end, one `load-data` line added after SftpDemoData's in
+    MoquiDefaultConf, the rest new files; mr-boss `BossSetupData.xml` appended at its end (Insights P6 appends there too),
+    `Admin.js` `linkPaths` rows, `Settings.xml` subscreens, `Home.xml` (one service call and a label), `AdminRegistries.spec.js`
+    (two expectations), `design-insights.md` §7.1 (one sentence, the other app's design, as the phase's ceiling calls for);
+  - Insights P7 reads the ceiling with `org.moqui.admin.ConfigurationServices.get#InstancePreference`
+    (`settingKey: "report.groupRecipientCeiling"`, `numberValue`), from Rust by a service call or by the two rows
+    (`InstancePreference.preferenceValue`, else `InstanceSetting.defaultValue`); P10 reads `signin.newDeviceWindowDays` the same way;
+  - P10 to P13 append a section to `ConfigurationServices.xml`, a module beside `ConfigurationLib.js`, their services' names to
+    a grant of their own in `AdminConfigurationData.xml` (never a pattern over the file) and their settings rows there;
+  - the user's call: F111 (where the default locale and time zone apply) and F112 (theme, logo and formats: build with a
+    reader, or drop from design §7); whether reference kinds belong in SettingsHome's list (F117); F110's framework ask;
+  - the acceptance AdminSettingsUsable to run when asked.
+
+**Review Nov 10 (P8).** A fresh review of both repositories' P8 diffs, security first; fixes committed apart per repository
+("Admin P8 review: …").
+- Checked: `get#EffectiveSettings` (`ADMIN_SETTINGS_VIEW` or `_MANAGE`, checked in the service; each row a registered
+  `InstanceSetting`; a value read only through the property its registration names; a secret answered as `value` null,
+  `defaultValue` null and `valueSet`; the eight registered deployment values against MoquiDefaultConf: purpose, locale, the two
+  zones, public host, HTTPS, largest upload and telemetry, none marked `is-secret` or holding a credential); `get#InstancePreference`
+  (no permission: only a registered row with `editable` Y, which the registry refuses for a secret by flag or name, so nothing
+  but a nonsecret registered preference; not remote, and an anonymous caller has no authorization for it);
+  `store#InstancePreference` (`ADMIN_SETTINGS_MANAGE` and the setting's own permission; registered and editable only; type,
+  allowed values and limits; the revision before any write; who and when on the row, each value and the removal in the audit
+  log; a stored value a narrowed registration no longer accepts passed over); the localization stores (a registered target
+  the definitions bear out: localized, unencrypted, a `use="configuration"` entity with one key; the label read only by that
+  key; the finds under `ADMIN_SETTINGS_VIEW` and only over registered targets); the `AdminConfigurationServices` grant (the
+  seven services by name, never a pattern over the file; inheritable as gate 1's, the bodies calling fixed entities only); the
+  BOSS screens (`BOSS_ADM_ORGANIZATIONS` denies the root group and allows the configuration administrator and the
+  administrator; `storePreference`, `storeMessage`, `storeLabel` and `valueOptions` each call one fixed framework service that
+  checks its own permission; ReferenceData reads `find#Settings`, which shows an entry only to a viewer its destination opens
+  to, and changes nothing; Home's `get#InstancePreference` of the display name); the eleven reference kinds' screen paths
+  (each exists); the `load-data` line and the seed file (no Mantle or BOSS entity, service or group; the plan references are
+  comments, as gate 1's); the specs' renders.
+- Fixes:
+  - **R1 (medium, security)** A translation is expanded wherever its original is (`expand_localized`: the text is localized,
+    then run as a template literal), and the stores compared placeholders found by a pattern (`${` to the first `}`), which is
+    not how the expander finds them (`scan_expression`: strings, nested braces, templates, comments, regular expressions).
+    For an original whose value has a `}` inside it (`${ok ? '}' : no}`), a translation could keep "the same" placeholder and
+    add an expression after it that the server would run as whoever reads the screen. `ConfigurationLocalization.js`
+    `placeholders` now reads the values as the expander does for plain ones (names, paths, calls, quoted text, balanced `(`
+    and `[`; an escaped `\${` is text) and refuses a text with any other (`PLACEHOLDER_UNSUPPORTED` for the original, which
+    stays Tools'; `PLACEHOLDER_MISMATCH` for the translation).
+  - **R2 (medium, security)** The framework localizes a link's `url` and `url-type` before it expands them (urls.rs
+    `make_url_by_type`, `url_type_of`, as Java), so a translator could "translate" `${url}` or `transition` and send every
+    such link of a locale elsewhere. The stores refuse an original that is a link, a path or a link type, and a translation
+    that is a link or a path (`://`, a leading `/`, `\`, `./` or a scheme). A translation of a relative url that holds words
+    can still be changed to another relative path: see For the lead.
+  - **R3 (low, secrets)** A setting was secret by its own flag or by its property's name (pass, pw, key, secret, token,
+    credential), but the conf marks secrets whose names do not read as one (`fcm_service_account`, `cluster_tls_cert`), which
+    a registration naming them would have returned. `ConfigurationSettings.js` now also reads the shipped conf's `is-secret`
+    marks (one parse with the shipped values, attributes in any order) and masks those properties.
+  - **R4 (low)** A text preference with `${` in it is refused (`VALUE_INVALID`): the value is shown, never run, whatever
+    screen shows it later.
+  - **R5 (low)** `find#LocalizedEntityFields` read at most 2,000 translations and did not say when it stopped; it sets
+    `truncated` now, as the "missing" search does. The services file's comment named the wrong data file; a comment in the
+    framework seed file named Insights.
+  - **R6 (spec leanness)** `AdminSettings` rendered ReferenceData twice in html; the configuration administrator's case now
+    reads the list's service (`find#Settings`, the Reference data group), one render left.
+- Tests (release binary, `--nobuild`, this worktree's runtime): framework `AdminConfiguration` 4 of 4 (0.2 s; added cases: the
+  kept-and-extended placeholder, an unsupported original, a link as a translation, the conf-marked secret, `${` in a text
+  preference); mr-boss `AdminSettings` and `AdminRegistries` 8 of 8 (AdminSettings 0.7 s). Prettier clean. Not run: the full
+  suites, the acceptance suite.
+- For the lead:
+  - **F118 (framework ask, the user's call)** The sound fix of R2 is in the framework: do not localize a link's `url` and
+    `url-type` (or localize only texts), which departs from Java; until then a holder of `ADMIN_SETTINGS_MANAGE` can still
+    retarget, within the app, a relative url whose text has words (`editItem?id=${id}`), for one locale. Tools' Localization
+    (`ADMIN`) writes any translation, as before.
+  - F114 stands: translations written by Tools or a data file are not audited; only the delegated services' changes are.
+  - `InstanceSetting`, `InstancePreference` and `LocalizedLabelTarget` are plain entities: whoever may write them directly
+    (`ADMIN`, Tools' entity screens, a data load) registers settings and targets; the services trust the registry and check
+    each row against the definitions and the secret rules when read.
+  - A reason code was added (`PLACEHOLDER_UNSUPPORTED`); design-admin §7 Localization says so. No budget raised.
+
 ### P9 — Capabilities and row rules
 
 Design §5 Capabilities and RowRules; ADM-ACCESS.
@@ -1873,6 +2044,169 @@ Design §5 Capabilities and RowRules; ADM-ACCESS.
 - **Specs:** BOSS `AdminCapabilities` (a launcher grant implies no view or edit; the matrix and its list agree).
 - **Usable when:** `admin.access` gives a custom group the Warehouse reader bundle with its organization filter and
   prints the review; an unsupported artifact rule shows read only.
+
+**Built Nov 10 (P9).**
+- mr-moqui (no Rust; the shared release binary):
+  - `service/org/moqui/admin/AccessServices.xml` (appended) with a new module `AccessCapabilities.js` beside `Access.js`, which now
+    gives it its helpers (`lib`): three read projections, each `ADMIN_ACCESS_VIEW`, writing and evaluating nothing.
+    - `get#Capabilities` (added: the matrix's one read; the design names only `preview#Grants` and `apply#Grants`): the registered
+      capabilities of an app as rows, one per launcher binding and per permission by its kind (launcher, view, edit, export,
+      sensitive), against at most 8 groups (an app's first 6 registered bundles when none are named); each cell granted,
+      scheduled, none or advanced (another authorization type on the artifact group), a launcher's bound filter sets and whether
+      a registered one is missing, whether the actor may grant or end it and why not, and the change proposed for it; `cellList`
+      the same cells one a row (the list twin); `unsupportedList` what the groups hold that no registered bundle describes.
+    - `get#ScopeRules`: each `EntityFilterSet` bound to a group's `ArtifactAuthz` with its source (`registered`: the group's own
+      bundle; `bundle`: another registered bundle names it, as a grant copies it; `configuration`: seed data or Tools), a page by
+      group, artifact group, filter set, state and source; the registered sets a registered binding lacks (`missing`, with
+      `canBind` and the group's grant revision); every filter set with the entities it narrows. No `filterMap` or `applyCond`.
+    - `get#GrantReview` (added): up to 60 groups (named, or an app's bundles) as of a date and time: permission grants open
+      then, app gates with their filter sets (as now), members then; sealed permissions left out and counted.
+  - `Access.js`: `preview#Grants` and `apply#Grants` take a row rule (`artifactGroupId` with `entityFilterSetId`): a filter set a
+    registered bundle the actor may assign names for that artifact group, added to the group's bindings of the registered type;
+    refused as `UNREGISTERED_SCOPE`, `SCOPE_UNBOUND` (no such binding, unless the request adds it), `SCOPE_CONFIGURED` (the
+    binding carries a filter set of its own) and `SCOPE_REMOVAL` (an end); an explicit audit row per bound rule. The grant
+    revision now covers each binding's filter sets.
+  - `data/SecurityTypeData.xml`: a second `AdminAccessServices` member row naming the three reads (the first row's name is its
+    key, so an installed database gets the new one beside it).
+  - Docs: Attack-Surface (the projections and the row-rule refusals); Remaining-Work's `org.moqui.admin` row.
+- BOSS:
+  - `service/ironstone/admin/CapabilityServices.xml` with `Capabilities.js` (new): `get#MatrixContext` (the screen's context over
+    `get#Capabilities`: columns, matrix rows and list rows with each cell's text and next proposal, the proposal's effect per
+    group from `preview#Grants`, the revisions to apply at), `apply#MatrixChanges` (the proposal group by group through
+    `apply#Grants`, each group as one change at its previewed revision in its own transaction, a refused or failed group named
+    and left proposed) and `get#AccessReview` (the review's one list, members by `get#MemberScope`, the others counted). `apply`
+    is in the client deny pattern already; no data change.
+  - Screens: `Admin/Access.xml` gains Capabilities (menu 2), RowRules (3) and AccessReview (contextual).
+    `Access/Capabilities.xml` (CapabilitySelection; ProposedChanges with Apply and its confirmation; CapabilityMatrix, a form-list
+    of up to eight group columns; CapabilityList, its twin, in place of the matrix below the `md` width and in the terminal;
+    Advanced rules, read only); `Access/RowRules.xml` (ScopeRuleFind, ScopeRules with SupportedScopeBinding's Bind dialog on a
+    missing rule, paging by the service, the filter sets); `Access/AccessReview.xml` (ReviewDate, AccessReviewList with its CSV,
+    Print in html-print). GroupDetail's header links Access review and Compare.
+  - `Admin.js`: links `Access/Capabilities`, `Access/RowRules`, `Access/AccessReview`. BossSetupData and BossUsersDemoData unchanged.
+- Specs: framework `test/AdminAccessCapabilities` (3 features, 0.25 s: a launcher granted alone leaves view and edit none, the
+  list holds the matrix's cells, an unregistered rule and permission and a sealed grant listed read only, more than 8 groups and
+  a user without the permission refused; a row rule bound only as a registered set on a registered binding at the revision,
+  with its audit row, the unregistered, removal, unbound, configured and stale cases refused, no expression in the answer; the
+  review as of now and of twenty days ago, the sealed grant left out and counted). BOSS `test/Admin/AdminCapabilities` (4
+  features, 0.6 to 0.8 s: Capabilities' one qvt render with a proposal, and the matrix context's cells equal to its list rows; a
+  launcher granted through the `applyChanges` transition with its two row rules and no permission, a privileged group of the
+  same proposal named and not changed, the identity operator and the reader refused; RowRules' one qvt render with the rule's
+  source; AccessReview's one html-print render, the sealed grant not in it, and another organization's member counted and not
+  named). Access: the screens fall under P3's `access` area (`BOSS_ADM_ACCESS`; AdminAccess unchanged). Acceptance, written and
+  not run: `acceptance/Admin/AdminCapabilitiesUsable` (4 features, the "usable when").
+- Tests run (release binary, `--nobuild`, this worktree's runtime): framework AdminAccessCapabilities, AdminAccessServices,
+  AdminSessions 12 of 12 (0.4 s); mr-boss AdminCapabilities, AdminGroups, AdminAccess, AdminUsers, AdminInvitations, ProjectsAccess
+  27 of 27; `moqui lint --screens` 132 flagged sites, as before, none in the new screens. Capabilities (qvt, tui, html; the list
+  view; no selection; the Admin app with privileged groups), RowRules (qvt, tui, html), AccessReview (qvt, tui, html,
+  html-print, csv; no selection) and GroupDetail (html) rendered once by hand without errors, not kept. Prettier clean on the
+  JavaScript. Not run: `./moq test-framework`, `./moq test-apps`, the acceptance suite; no cargo test (no Rust changed); no
+  browser (the group multi-select's post is read as a list or a comma separated text, not seen in a browser).
+- Inventories: none (the forms derive from Tools' Security screens, outside ss-inventory and usl-inventory).
+- Design edits: design-admin §2 (the AccessReview row), §5 Capabilities and RowRules (as built) and AccessReview (new), §16
+  (the review's row), §17.2 (AccessServices); design-crosscut §1.4 (one clause).
+- Findings (provisional, numbered by the lead):
+  - **F119** The design gives the matrix no read (only `preview#Grants` and `apply#Grants`) and the review no service. Built:
+    `get#Capabilities` and `get#GrantReview` in the framework, beside `get#ScopeRules`.
+  - **F120** The grant revision did not cover a binding's filter sets, so a row rule had no revision. It does now; a preview
+    taken before the change is stale once.
+  - **F121** Three demo bindings are of the registered launcher's type with another row rule: `BOSS_ADMIN_ADMIN` on
+    `BOSS_ADMIN` and `BOSS_INSIGHTS_ADMIN` on `BOSS_INSIGHTS` (ALLOW with `MANTLE_ACTIVE_ORG`, F34) and `BOSS_PROJECT_CLIENT`
+    on `BOSS_PROJECTS` (its client filter). Read as "lacking `MANTLE_USER_ORG`", Bind would have narrowed the administrator to
+    its own organizations (against §4's Nov 7 rows on F65). A binding that carries a filter set the registry does not name
+    for its artifact group is scoped on purpose: not listed as missing, `SCOPE_CONFIGURED` when asked. So no demo row offers
+    Bind; it serves an app gate granted in Tools without its rules.
+  - **F122** `ArtifactAuthzFilter` has no dates and no audit log, and removing one widens what members read: a row rule is
+    only added, with an explicit audit row; removal stays Tools'.
+  - **F123** `ArtifactAuthz` has no dates: the review's date and time apply to grants and memberships, app gates are shown as
+    they are now (the print says so).
+  - **F124** "Sealed and secret values left out" is read as: the review lists no sealed permission (counted per group), no
+    allowed IPs, preference values or filter expressions. The screens still show sealed grants, marked.
+  - **F125** A form-list's export menu (`show-csv-button`) is drawn only with a list header (pagination, `select-columns`, a
+    header dialog or saved finds); the review's list sets `select-columns`.
+  - **F126** A permission is in bundles of several apps (`PRODUCT_CATALOG_VIEW` in Products' and Warehouse's): the matrix has
+    a row per app and capability, and the grant is one row whatever app shows it. A cell is offered when any registered
+    bundle the actor may assign carries it, as `preview#Grants` decides.
+  - **F127** The registry has no "Warehouse reader" bundle; `BOSS_WAREHOUSE` (the launcher with `MANTLE_USER_ORG` and
+    `MANTLE_PRIVATE_CONTACT`, and `PRODUCT_CATALOG_VIEW`) is what the "usable when" grants.
+  - **F128** `get#GrantReview` returns every member of a group, as `get#Group` does; BOSS's `get#AccessReview` names only
+    those in the user's organizations. A direct framework caller with `ADMIN_ACCESS_VIEW` reads them all, as before.
+- Decisions: the matrix is XML (a form-list with eight hidden-when-unused columns), not a `.qvue`, and its changes are a
+  proposal carried in the screen's `changes` parameter (at most 40), previewed per group and applied per group, a refused
+  group named and left proposed (§2's batch rule; within a group P3's all-or-nothing holds); the list twin replaces the matrix
+  below `md` and in the terminal; a row rule is add-only and never completes a binding scoped on purpose; the review is one
+  flat list (permissions, app gates, members) so its print and CSV are the same rows, with members scoped as GroupDetail's;
+  the review is a screen of its own (AccessReview), linked from Capabilities and GroupDetail; no new capability or area.
+- For the lead:
+  - budget shares: framework about 0.25 s (AdminAccessCapabilities); mr-boss about 0.7 s (AdminCapabilities); no budget raised;
+  - merge: mr-moqui `SecurityTypeData.xml` (one member row right after the `AdminAccessServices` block, not at the file's end),
+    `AccessServices.xml` (appended; three descriptions changed), `Access.js` (the scope change, the revision, `lib`),
+    Attack-Surface and Remaining-Work (one paragraph, one clause); mr-boss `Admin.js` `linkPaths` rows after P8's,
+    `Access.xml` subscreens, `GroupDetail.xml` (two header links), `design-admin.md`, `design-crosscut.md` §1.4 (one clause);
+    `BossSetupData.xml`, `BossUsersDemoData.xml` and `MoquiConf.xml` are not touched, so nothing meets Insights P6 there;
+  - the user's call: F124 (should the review list sealed grants for a reviewer who holds them, or keep them out of every
+    print and export); whether the review should name members at all (built: yes, in scope); F122 (a delegated removal of a
+    row rule, refused here);
+  - for P17 (audit and access evidence): the review is a current projection, not kept; a kept, signed-off review would be
+    its record;
+  - the acceptance AdminCapabilitiesUsable to run when asked.
+
+**Review Nov 10 (P9).** A fresh review of both repositories' P9 diffs, access and scope first; fixes committed apart per repository
+("Admin P9 review: …").
+- Checked: the row rule in `preview#Grants` and `apply#Grants` (the set must exist and be named for that artifact group by a
+  registered bundle the actor may assign; only added; only on a binding of the registered type; the group refusals of P3
+  first, so a privileged group by its members only, an unregistered group and a non-delegable bundle refused; the revision
+  over each binding's filter sets, the group row locked before the preview is taken again; the audit row per bound rule; the
+  administration path as P3 counts it, through `ADMIN` membership alone, which a row rule does not touch); that a bound rule
+  only narrows (filter.rs: a find takes every filter set of the one record that authorized it, joined with AND, and a write
+  to `ArtifactAuthzFilter` moves the authorization generation); the seed and demo bindings on the twelve registered artifact
+  groups (39 rows, read from a loaded database: `ADMIN`'s and each app administrator group's are `AUTHZT_ALWAYS`, so
+  `SCOPE_UNBOUND`; `BOSS_ADMIN_ADMIN`, `BOSS_INSIGHTS_ADMIN` and `BOSS_PROJECT_CLIENT` carry a set of their own, so
+  `SCOPE_CONFIGURED`; the rest carry every registered set), and that neither the access administrator, the administrator
+  nor an `ADMIN` member is offered or allowed a Bind on any of them; `get#Capabilities`, `get#ScopeRules` and
+  `get#GrantReview` (`ADMIN_ACCESS_VIEW` in each; nothing written; no `filterMap` or `applyCond`, only whether a condition
+  applies; sealed grants out of the review and counted; no allowed IP or preference value read); BOSS `apply#MatrixChanges`
+  (Admin and `ADMIN_ACCESS_MANAGE`; the tokens by a pattern, at most 40, in `apply` as in the read; each group through
+  `apply#Grants` with authorization on and the caller's own authority, in its own transaction, a refused, failed or unknown
+  group named and left proposed; a client-made `revisions` only ever a stale revision); `get#AccessReview` (members through
+  `get#MemberScope` as GroupDetail, the others counted; no user id, no sealed grant; the print and the CSV the one list:
+  the CSV rendered by hand); the screens (`applyChanges` and `bindScope` each reach a service with its own check; the
+  identity operator is refused the three screens and the reader `apply#MatrixChanges`); `ironstone.admin.*` in the
+  client deny pattern; the second `AdminAccessServices` member row; the specs (one render a screen a mode, the transition in
+  `html` as gate 1's).
+- Fixes:
+  - **R1 (low, scope)** A row rule asked for beside the launcher it belongs to (one request, the group with no binding yet)
+    previewed as bound and was then left to the launcher's own bundle: when that bundle is another one, registering the
+    artifact group without the set or with another type, the rule was not bound though the preview said so. Now the rule is
+    a change of its own, applied after the request's bindings (`apply#Grants` writes row rules last), counted only when it
+    binds, and `SCOPE_UNBOUND` when the binding the request adds is of another type. No seed row has two bundles on one
+    artifact group; the framework spec has the case.
+  - **R2 (low)** `ignore-error` clears a refused call's message, so the three screens' `failure` was never set: more than 8
+    groups, more than 40 changes or more than 60 reviewed groups drew an empty matrix or review with no reason, and a
+    proposal over 40 could not be cleared from the screen. `get#MatrixContext` and `get#AccessReview` answer their bounds
+    as `failure` (the proposal kept), the screens show it, with Clear on Capabilities, and read any other failed call as
+    "not available". The same dead `failure` lines are in gate 1's screens (GroupDetail and others), which show a "not
+    available" state from the missing record: see For the lead.
+- Tests (release binary, `--nobuild`, this worktree's runtime): framework AdminAccessCapabilities (3 features, 0.36 s, with
+  R1's case) and AdminAccessServices 9 of 9; mr-boss AdminCapabilities (4 features, 0.6 s, with R2's bound), AdminGroups,
+  AdminAccess and ProjectsAccess 22 of 22. By hand, not kept: Capabilities with 41 changes and with 9 groups, AccessReview
+  with 61 groups (each its reason), AccessReview as CSV, the three screens as the identity operator (refused). Prettier clean.
+  Not run: `moqui lint --screens` (no Debug binary; the screen edits are three `set` lines and one link), the full suites,
+  the acceptance spec.
+- For the lead:
+  - findings: **F129** `ignore-error="true"` clears the message, so `ec.message.hasError()` after it is always false: the
+    `failure` capture gate 1's screens copy (GroupDetail, Constitution, InstanceSettings and others) is dead code; they fall
+    back to a "not available" state, so nothing is exposed, but a refusal's reason is not shown there. **F130** Ending a
+    registered launcher of a group whose binding is scoped on purpose (P3's rule, now one click in the matrix: End on
+    `BOSS_INSIGHTS_ADMIN`'s Insights launcher, or on `BOSS_ADMIN_ADMIN`'s by a member) deletes the binding with its own filter
+    sets, and the audit row keeps the type only; granting it again gives the registry's sets (`MANTLE_USER_ORG` for
+    `MANTLE_ACTIVE_ORG`). Within the access administrator's delegated authority (the same members could be given the
+    registered bundle), so left as P3 decided; refusing the end as `SCOPE_CONFIGURED`, or recording the sets in the audit
+    row, is the user's call. **F131** A binding of the registered type with no filter set at all reads as "missing"
+    and may be bound by an access administrator (it narrows a non-privileged group to its organizations); a group left
+    unfiltered on purpose in Tools is not told apart from one granted without its rules;
+  - merge: mr-moqui `Access.js` and `AdminAccessCapabilities.spec.js` only; mr-boss `Capabilities.js`,
+    `CapabilityServices.xml` (a `failure` out-parameter on two services), the three P9 screens and the spec;
+  - budget: unchanged shares (framework about 0.36 s, mr-boss about 0.6 s).
 
 ### P10 — Sign-in policy and identity providers
 
@@ -1896,6 +2230,229 @@ ADM-CONNECTIONS, ADM-LIFECYCLE (the notice).
   known one).
 - **Usable when:** an OIDC provider is configured, tested and enabled, maps a remote role to a Projects bundle, and is
   disabled again by a changed issuer until retested; a sign-in from a new browser sends one notice.
+
+**Built Nov 10 (P10).**
+- mr-moqui (Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it):
+  - Rust, `crates/moqui-core/src/service/sso.rs` (the sign-in's account sync, which writes with authorization off, so the security
+    EECAs skip it): an existing account with no provider id is linked only under the flow's rule (`link_allowed`: `AflVerifiedEmail`,
+    the provider's verified email equal to the account's; never the username alone; never an account in a privileged group or in a
+    group granting a sealed permission); a role map or default group never gives such a group (`sso_may_give`, logged and passed
+    over); the sync ends only memberships in the groups the flow's role maps name. `check#Flow` (new, `org.moqui.sso.AuthServices`):
+    the start of a login for a flow enabled or not, nothing kept, for `ADMIN_CONNECTION_MANAGE` or `ADMIN_ACCESS_MANAGE`.
+    `service/sign_in_policy.rs` (new): `ConfigurationServices.get#SignInPolicyValues`, a fixed list of 13 nonsecret conf attributes
+    as the server runs with them. `moqui-host` `test_cmd/fixture.rs`: `moqui test` installs the SSO client as a server does.
+  - `entity/SecurityEntities.xml`: `AuthFlow` gains `accountLinkEnumId` (the `AuthFlowAccountLink` enumerations `AflNever`,
+    `AflVerifiedEmail`), `testedConfigHash`, `testedDate`, `testedByUserId`; the audit log on `AuthFlow.defaultUserGroupId` and
+    `accountLinkEnumId`, the client id and endpoints of `OidcFlow`, `OauthFlow` and `SamlFlow`, and `AuthFlowRoleMap.userGroupId`.
+    `entity/ServerEntities.xml`: `InstanceSetting.confAttribute`. `entity/Security.eecas.xml` (appended): `UserLoginHistoryNewDevice`.
+  - `service/org/moqui/admin/ConfigurationServices.xml` (appended, its bodies in the new `ConfigurationProviders.js`):
+    - `find#IdentityProviders` (the list with type, readiness and callback; with `authFlowId` the provider's configuration, each
+      secret as `secretSet` only, its mappings, its revision and its forms' options);
+    - `store#IdentityProvider` (a new OIDC or OAuth provider, saved disabled, or changes at the revision read: the configuration
+      with `ADMIN_CONNECTION_MANAGE`; the role mappings, the default group, the link rule and enabling with `ADMIN_ACCESS_MANAGE`;
+      a mapped group by the grant proposal's rules for the actor and never privileged or granting a sealed permission; the
+      endpoint-change rule; enabling only with a passing test of the configuration as it is, role mappings that hold and no linked
+      account holding access beyond the actor's; disabling keeps the administration path; `STALE_REVISION`, `PRIVILEGED_GROUP`,
+      `SEALED_PERMISSION`, `UNREGISTERED_BUNDLE`, `NOT_DELEGABLE`, `TEST_REQUIRED`, `HELD_BEYOND`, `ADMINISTRATION_PATH`,
+      `UNSUPPORTED_TYPE`, `UNSUPPORTED_PROVIDER`, `ADVANCED_MAPPING`);
+    - `test#IdentityProvider` (the configuration is complete, the mapped groups still hold, a sign-in can start through
+      `check#Flow`; a pass marked for the configuration's fingerprint, a failure clears it; a test identity's roles previewed).
+    `ConfigurationSettings.js`: a setting naming a `confAttribute` takes its value from `get#SignInPolicyValues`;
+    `get#EffectiveSettings` gives an `ADMIN_ACCESS_VIEW` holder the sign-in groups only.
+  - `AccessServices.xml` (appended) with `AccessSignIn.js` (new): `preview#GroupSignInRules`, the lockout preview (members, members
+    with no confirmed factor, whether the actor's address is admitted, the administration path; counts only). `Access.js`:
+    `find#Groups` rows gain `ipAllowed` and `canChange`; `lib` gains `proposalBundles`, `validIpAllowed`, `find`, `identity`.
+  - `IdentityServices.xml` (appended) with `IdentityNewDevice.js` (new): `notify#NewDeviceSignIn`. `Identity.js`: the
+    administration path takes `disabledFlowIds`, and an inbound flow is no sign-in path.
+  - Data: `AdminConfigurationData.xml` (appended: the `AdminIdentityProviderServices` grant naming the three services; 13
+    `InstanceSetting` rows of the group Sign-in policy); `SecurityTypeData.xml` (a third `AdminAccessServices` member row,
+    `preview#GroupSignInRules`); `MoquiSetupData.xml` (appended: the `AccountSignIn` topic and the `ACCOUNT_SIGN_IN` template);
+    `screen/AccountSignInEmail.xml` (new).
+  - Docs: Attack-Surface (the provider services, the sign-in's bounds, the policy values, the notice); Parity-Diffs (P8c-18,
+    P8c-19); Remaining-Work's `org.moqui.admin` row.
+- BOSS:
+  - Screens: `Admin/Security.xml` (new area, menu 4: SignInPolicy, IdentityProviders, IdentityProviderDetail);
+    `Security/SignInPolicy.xml` (EffectiveSignInPolicy; GroupSignInRules with Change opening the group's rules, the review and
+    Save with its confirmation); `Security/IdentityProviders.xml` (ProviderFind, ProviderList, NewProvider);
+    `Security/IdentityProviderDetail.xml` (record header with one primary by state: Test, then Enable, Disable under More;
+    ProviderConfiguration, a form per type; IdentityMappings with the link rule; RoleMappings with the default group;
+    ProviderCheck). `Settings/InstanceSettings.xml`: a conf attribute shown as a setting's key.
+  - `Admin.js`: the `security` area and the three link paths. No new `ironstone` service, so the client deny pattern is unchanged.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_SECURITY` (denied to the root group; the access, configuration and integration
+    administrators and the administrator) and the `AccountSignIn` topic's link to Commons Account. BossUsersDemoData unchanged.
+- Specs: framework `test/AdminIdentityProviders` (3 features, 0.6 s on the Debug binary: a role mapping to a privileged group, by
+  a member too, to a sealed grant, to an unregistered group and as the default group refused and nothing written, by the
+  integration administrator an error, a registered bundle mapped and its removal audited; a changed endpoint clears the secret
+  and disables, the secret re-entered kept, enabling refused untested, by the integration administrator and while a linked
+  administrator signs in by a provider, a passing test then enabling, the provider in the administration path, no answer holding
+  the secret; the policy's 13 rules read only, for the access administrator the sign-in groups only, and the lockout preview);
+  `test/AdminNewDevice` (1 feature, 0.07 s: through the EECA, none for a failed sign-in or a known client, one for a new client,
+  none again from its network, another network new, a first sign-in none, a client from before the window new, another
+  account's visit refused, the service not callable by a user). BOSS `test/Admin/AdminSecurity` (3 features, 1.2 s on the Debug
+  binary: SignInPolicy's one qvt render with the review of a change; a provider started, configured, mapped, tested and enabled
+  through the transitions, each administrator refused the other's part and the reader the area; IdentityProviders' and
+  IdentityProviderDetail's one qvt render each, the secret in neither). `AdminAccess` changed: the `security` capability for the
+  three administrators and the administrator, and Security in the administrator's and ADMIN's menus. Cargo: `service::sso`
+  (two new tests: linking, and the groups a sign-in gives and ends; the fixture links by verified email) and
+  `service::sign_in_policy`. Acceptance, written and not run: `acceptance/Admin/AdminSecurityUsable` (4 features, the "usable
+  when"; its OIDC test reads a public discovery document, so it needs the network).
+- Tests run (the worktree's Debug binary and runtime): framework AdminIdentityProviders, AdminNewDevice, AdminConfiguration,
+  AdminAccessServices, AdminAccessCapabilities, AdminSessions 20 of 20; mr-boss AdminSecurity, AdminAccess, AdminSettings,
+  AdminRegistries, AdminGroups, AdminCapabilities, AdminUsers, ProjectsAccess 36 of 36; `cargo test -p moqui-core --lib` for
+  `service::sso` and `service::sign_in_policy` 14 of 14; `cargo test -p moqui-host --test it -- sso` 2 of 2; `moqui lint --screens`
+  132 flagged sites, as master. By hand, not kept: SignInPolicy (qvt, tui, html; with a review; as the configuration and the
+  integration administrator), IdentityProviders (tui, html; as the configuration administrator, not available),
+  IdentityProviderDetail (qvt, tui, html; an OIDC and a SAML provider; as the integration administrator; a missing one), an OIDC
+  test against an unreachable issuer and a SAML test (each failed with its reason), the notice's email body, and three real
+  sign-ins as john.doe on a served test database (Firefox, a first sign-in: none; Chrome a minute later: one notice; Chrome
+  again: none). Prettier and rustfmt clean on the changed files. Not run: `./moq test-framework`, `./moq test-apps`, the
+  acceptance suite, the rest of cargo; no browser.
+- Inventories: none (the forms derive from Tools' Security screens and the framework's AuthFlow records, outside ss-inventory
+  and usl-inventory).
+- Design edits: design-admin §1.1 (the provider change in the administration path), §4 Sessions (the notice as built), §6
+  SignInPolicy, IdentityProviders and IdentityProviderDetail (as built), §16 (the notice's row), §17.2 (IdentityServices,
+  AccessServices, ConfigurationServices, the provider records), §19 Q6.
+- Findings (provisional, numbered by the lead):
+  - **F132** The sign-in's account sync (sso.rs, as Java's) writes with authorization off, which the privileged-group and
+    sealed-permission EECAs skip: it linked an existing account by the provider's username alone, gave any group a role map
+    named, and ended every current group no mapped role named at each sign-in, an administrator's `ADMIN` membership included.
+    Done in Rust (above; Parity-Diffs P8c-18, P8c-19), so the rules hold whoever wrote the rows, Tools included.
+  - **F133** `UserAccount.externalUserId` is not scoped to a provider: every enabled provider signs in every linked account
+    whose id it asserts, so whoever configures or runs one provider speaks for all linked accounts. Built: enabling is the access
+    administrator's and refused while a linked account holds access beyond the actor's. A link record per provider is a
+    framework ask.
+  - **F134** The server signs in by OpenID Connect and OAuth 2; a SAML flow answers "not available in this port". SAML rows are
+    listed and their fields kept (passwords write-only), cannot pass a test or be enabled, and NewProvider offers no SAML.
+  - **F135** (F110) The sign-in policy is literal conf attributes: `InstanceSetting.confAttribute` and a Rust read of a fixed
+    list. A general masked projection of conf attributes stays unbuilt.
+  - **F136** The plan's "role maps through `preview#Grants`": a role map gives a membership, so it is checked by the grant
+    proposal's rules (as P4's comment foresaw), and never a privileged or sealed-granting group even for a member or a holder
+    (as invitations, P5).
+  - **F137** A test cannot prove the client secret: no token is asked for without a person signing in. An OAuth provider with
+    its endpoints given starts with no request at all, so its test checks completeness only; an OIDC test reads the discovery
+    document (the request a sign-in makes, to a URL the integration administrator chose: `https` only, an internal host
+    accepted, the answer pass or fail with the host's text).
+  - **F138** `AuthFlowFieldMap.srcFieldName` is evaluated as an expression by the sign-in, as `dstFieldExpression` and a mapping
+    service are. A delegated mapping is a plain claim name (letters, digits, underscores) onto four account fields; a
+    namespaced claim (a URL, a dotted path) and anything computed stay Tools', and such a provider's mappings are read only.
+  - **F139** Login history is one row a minute for a user (login.rs), so a second sign-in within the minute is not checked;
+    a key sign-in writes history too and is checked as any other.
+  - **F140** A notification whose email cannot be sent marks its sender's transaction rollback-only (the mail service's error),
+    though the notification itself is kept. The notice runs in a transaction of its own; on an instance with no sender address
+    each notice logs an error. The framework's (open).
+  - **F141** The framework has no account screen, so its topic has no link; mr-boss sets it to Commons Account, which lists
+    the last ten sessions of thirty days with Sign out, not the one session.
+  - **F142** Removing a role mapping leaves the memberships it gave (the group is the provider's no more); the confirmation
+    says so and an access administrator ends them.
+  - **F143** One artifact group for the Security area: an integration administrator opens SignInPolicy and a configuration
+    administrator IdentityProviders, each told it is not available to them. The reader holds none of it.
+  - **F144** `moqui test` installed no SSO client (only a server did), so a spec could test no provider; the fixture
+    installs it now. F37 (ProjectsAccess on a Debug binary) did not recur: 8 of 8.
+  - **F145** InstanceSettings' ConfigurationSources also lists the 13 sign-in policy rows, since it lists every setting.
+- Decisions: the parts of a provider by permission (configuration the integration administrator's; role mappings, link rule,
+  default group and enabling the access administrator's); a provider is tested, then enabled, as two acts; the link rule defaults
+  to never; an account in a privileged or sealed-granting group is linked by an administrator only; a change of the token
+  signature or the nonce also needs a new test, the secret kept; a secret replaced alone leaves the provider enabled; `http`
+  only for the server's own machine on an instance that is not production; a client is the browser and system with an IPv4 /24
+  or IPv6 /48 network; an account's first sign-in sends no notice; the notice's topic and template are seed-initial rows an
+  installation may change; Security is one area for three administrator groups; the rule change is reviewed on the page
+  (`reviewGroupId`), as P6's lifecycle review.
+- For the lead:
+  - the shared release binary needs a rebuild after the merge: AdminIdentityProviders, AdminSecurity and SignInPolicy need
+    P10's Rust (`check#Flow`, `get#SignInPolicyValues`, the fixture's SSO client), and the new `AuthFlow` and `InstanceSetting`
+    fields a fresh database;
+  - budget shares (Debug binary; a release binary is faster): framework about 0.7 s (AdminIdentityProviders 0.6,
+    AdminNewDevice 0.07); mr-boss about 1.2 s (AdminSecurity); no budget raised;
+  - merge: mr-moqui `SecurityEntities.xml` (fields and audit attributes inside the `AuthFlow` family), `ServerEntities.xml` (one
+    field in `InstanceSetting`), `Security.eecas.xml`, `AdminConfigurationData.xml` and `MoquiSetupData.xml` (appended at their
+    ends), `SecurityTypeData.xml` (one member row after P9's), `ConfigurationServices.xml` (appended; one service before the
+    Localization section; two descriptions), `AccessServices.xml` and `IdentityServices.xml` (appended), `Access.js`
+    (`groupSummary`, `lib`), `Identity.js`, `ConfigurationSettings.js`, the Rust files above, Attack-Surface, Parity-Diffs and
+    Remaining-Work; mr-boss `BossSetupData.xml` appended at its end (Insights appends there too), `Admin.js` (`areas`, `linkPaths`
+    after P9's), `AdminAccess.spec.js` (the capability rows and two menus), `InstanceSettings.xml` (one attribute),
+    `design-admin.md`; P11 appends its connection part after the identity providers' in `ConfigurationServices.xml` and may
+    reuse the endpoint-change shape (a fingerprint of the endpoint fields, the test mark);
+  - the user's call: who enables a provider (built: `ADMIN_ACCESS_MANAGE`, never the integration administrator alone) and
+    the `HELD_BEYOND` rule; the link rule's default (never) and that no username-only rule is offered; F133 (a link per
+    provider); F134 (SAML: a client in the framework, or the type dropped from the design); the notice's network (/24, /48)
+    and no notice on a first sign-in; F140 (the mail failure marking the transaction); F143 (one area, or one per
+    audience);
+  - the acceptance AdminSecurityUsable to run when asked (it needs the network).
+
+**Review Nov 10 (P10).** A fresh review of both repositories' P10 diffs, security first (the Rust and the provider services read
+line by line); fixes committed apart per repository ("Admin P10 review: …"). Rust changed again (`moqui-core` `service/sso.rs`
+and `sso.rs`, `moqui-host` `sso.rs`, `moqui-lib` `http.rs`), and two entity fields are new.
+- Checked and found sound: `sso_may_give` (the effective privileged and sealed lists, grants in date, read uncached) on every
+  group a sign-in gives, whatever wrote the role map or the default group; the sync ending only groups a role map names that it
+  may give, so `ADMIN` and every privileged or sealed-granting membership is never ended; `link_allowed` (the rule, the
+  `email_verified` claim true and the `email` equal to the account's, the provider's name equal to the account's too, never a
+  privileged or sealed-granting account); a new account gets the mapped fields, the provider's id and name, the bounded mapped
+  groups and the bounded default group, nothing else (`externalUserId`, `userId` and `username` set after the mapped fields,
+  so no mapping overrides them); `check#Flow` (its own permission check, nothing kept, no secret in its answer; the client
+  follows no redirect, reads 1 MiB at most and waits 30 seconds); `get#SignInPolicyValues` (13 literal attributes, no hash
+  type, key or seal list; its own permission check); `store#IdentityProvider` (secrets never read back, the endpoint-change
+  rule over every field a secret is sent to, the retest of the signature and nonce, enabling only with `ADMIN_ACCESS_MANAGE`,
+  a passing test of the fingerprint and groups that hold for the enabling actor, the revision over the flow, its type row and
+  both mappings with the flow row locked, disabling and an endpoint change through the administration path); the identity
+  mappings on the one path that writes them (a name of letters, digits and underscores onto four account fields; a provider
+  with an advanced row refused whole); `store#Group` (P3's) behind SignInPolicy with the path check, and the preview's counts
+  only; the new-device notice (the history row is written by a worker after the sign-in, the EECA catches everything, the
+  service runs in its own transaction with no group authorized to call it, a visit of another account is refused, the summary
+  is a fixed vocabulary and never the user agent, the link is the topic's static one); the Security area (one inheritable
+  grant, nine transitions each reaching a service with its own check or, for `reviewRule`, none; the reader and the other
+  groups hold nothing: AdminAccess); the specs (one qvt render a screen, the transitions in `html`, no request leaves the
+  machine; the acceptance one reads a public discovery document).
+- Fixes:
+  - **R1 (high, F133).** A provider's id was the whole link: any enabled provider that asserted an id signed in the account
+    carrying it. That is not only a second provider's operator or configurer taking another provider's accounts (the
+    `HELD_BEYOND` check at enabling bounded privileged accounts linked then, not ones linked or promoted later, and no
+    ordinary account); an id is unique at its provider only, so two providers' users with the same id shared an account with
+    nobody at fault. Fixed in the sign-in: `UserAccount.externalAuthFlowId` (new) names the provider the id is of, set when a
+    sign-in makes or links an account; an account another provider is named on is never found (`linked_account`), and by its
+    name is refused. An account with an id and no provider named (linked by hand, or before this) is taken by the provider that
+    first signs in with it, and with several providers enabled never an account in a privileged or sealed-granting group
+    (`unscoped_link_allowed`: an administrator names the provider). `HELD_BEYOND` now counts the accounts the provider signs in
+    (named on it, or naming none), and the administration path counts an administrator with no password only through the
+    provider it names (or, naming none, the one enabled provider). Parity-Diffs P8c-20.
+  - **R2 (medium).** A provider started through Admin could be pointed at an internal address: the discovery URL and the
+    endpoints are the integration administrator's, the server fetched them from inside the network and a test answered what
+    it found (status, and the JSON parser's text, which quotes the body). Fixed: `AuthFlow.allowPrivateNetwork` (new); a
+    provider started by `store#IdentityProvider` on a production instance is saved `N` and the service never changes it; the
+    sign-in's client then sends no request of that flow to a loopback, private or link-local address, by name (the resolver
+    `moqui_lib::http::PublicOnly`, as the framework's other outbound guards) or written out. A flow without the flag (Tools',
+    or a non-production instance's) is as before, so an existing provider on the instance's own network keeps working. A
+    discovery document that does not parse is reported by the kind of error and its position. The detail screen says so.
+  - **R3 (medium).** The sync linked a closed account, changed its fields and gave it groups before the login refused it.
+    Fixed: an account disabled for good or ended is refused before anything is written.
+  - **R4 (low, F138).** A plain claim name was still evaluated as an expression by the sign-in, so a name of the script
+    context or of the engine (`ec`, `globalThis`) gave its text as the account field. Fixed: a source that is a plain name,
+    with no expression, is the claim of that name and nothing else; only an expression (Tools') is evaluated.
+  - **R5 (low).** The grant cache's key left the secret out (the configuration's `Debug` redacts it), so a replaced secret was
+    not used for up to six hours, which the delegated "replace the secret" made reachable. Fixed: the key carries a hash of it.
+- Tests (the worktree's Debug binary, rebuilt): `cargo test -p moqui-core --lib` for `service::sso`, `service::sign_in_policy`
+  and `sso::tests` 16 of 16 (one new: a provider signs in only its own accounts, an account naming none, a closed account, a
+  plain name); `cargo test -p moqui-host --lib sso` 2 of 2 (one new: nothing sent to an internal address) and `--test it -- sso`
+  2 of 2; framework AdminIdentityProviders (extended in its second feature: an account named on another provider is not this
+  one's, the path, a private-network refusal), AdminNewDevice, AdminAccessServices, AdminSessions, AdminConfiguration,
+  AdminAccessCapabilities 20 of 20; mr-boss AdminSecurity, AdminAccess, AdminUsers, AdminGroups 15 of 15. Clippy clean on the
+  three crates; rustfmt and Prettier clean on the changed files. Not run: the full suites, the acceptance suite, the rest of
+  cargo.
+- For the lead:
+  - merge: `SecurityEntities.xml` gains `UserAccount.externalAuthFlowId` and `AuthFlow.allowPrivateNetwork` (a database made before needs
+    the two columns); `moqui-lib` `http.rs` makes `PublicOnly` public; the shared release binary needs these too;
+  - F133 is closed by R1 rather than left as a framework ask; what is left of it for the user: an account that names no
+    provider is still taken by the first provider that signs in with its id (ordinary accounts with several providers, any
+    account with one), so an administrator who links an account by hand in Tools should set both fields, and Admin has no
+    screen for that yet (UserDetail shows no link);
+  - F137 changes with R2: on a production instance a delegated provider cannot be on the instance's own network until an
+    instance administrator sets `allowPrivateNetwork` in Tools (Admin offers no control for it, by design). The user's call:
+    whether that default is right for a non-production instance too (built: allowed there, as the worker's `http` rule);
+  - still open, not changed: whoever enables a provider vouches for its endpoint over every account it signs in that is not
+    beyond them, their own included (the integration administrator chooses the endpoint, the access administrator enables
+    it: the worker's user's-call item stands); a test passes from the client's cached grant for up to six hours without
+    asking the provider again; `store#IdentityProvider` takes no operation key, so a repeated NewProvider with no id makes
+    two disabled providers (as gate 1's creates); an email address mapped from a claim is not checked as verified (it is
+    refused when another account has it); F134, F140 and F143 as the Built note has them.
 
 ### P11 — Connections and mail relays
 
@@ -2156,6 +2713,10 @@ the owner's design.
 | Nov 7, 2026 | OrganizationDefaults are the setting types registered for OrgInternal (`PartySettingTypeRole`); Admin changes the typed ones and those Mantle validates against the organization's records, and their owners the rest | P7, F104 |
 | Nov 7, 2026 | An organization's Constitution is read and changed in Admin by the organization entity filters, as identity scope: `check#OrganizationConstitutionAccess` reads for an organization in the filtered find on `InternalOrganization` (ADMIN every one with none active, the active one with one; a delegate its organizations and their children) and changes it with `ORG_CONSTITUTION_EDIT` only so; membership only for a call with no organization filter and for members' reading in the Rules pane | Follows the user's Nov 7 decision on visibility (rows above), settling F105 and F52 (P7 review) |
 | Nov 7, 2026 | Organizations, OrganizationDetail and Constitution are one area group (`BOSS_ADM_ORGANIZATIONS`) for the configuration administrator and the administrator, who hold `ORG_CONSTITUTION_EDIT`; members read their organization's Constitution in the Assist drawer's Rules pane, and no read entry is built in Admin | P7, F46 |
+| Nov 10, 2026 | The access and grant review lists no sealed permission in any print or export; each group's sealed grants are counted (the screens still show them, marked) | The user's call (Nov 10), F124; design §16 |
+| Nov 10, 2026 | The access review names only the members who work for the reviewer's organizations and counts the others | The user's call (Nov 10), P9; as GroupDetail (P3) |
+| Nov 10, 2026 | A row rule is add-only for a delegated administrator: `apply#Grants` binds a registered filter set and refuses a removal (`SCOPE_REMOVAL`), which would widen access; removing one stays Tools' | The user's call (Nov 10), F122; design §5 RowRules |
+| Nov 10, 2026 | Ending a launcher binding that was scoped on purpose stays within the access administrator's delegated authority, as P3 decided: the end removes the binding's own filter sets and a later grant gives the registry's | The user's call (Nov 10), F130 |
 
 ## 5. Open questions
 
@@ -2167,7 +2728,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |

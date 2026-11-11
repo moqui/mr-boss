@@ -185,8 +185,13 @@ const demoRecords = {
     "Insights/ReportBuilder/DatasetDetail": { parameters: { datasetId: "boss-service-clocks" }, text: "Admission checks" },
     "Insights/ReportBuilder/DatasetFields": { parameters: { datasetId: "boss-service-clocks" }, text: "clockEnumId" },
     "Insights/ReportBuilder/DatasetView": { parameters: { datasetId: "boss-service-clocks", from: "now-10y" }, text: "Service clocks" },
+    // Insights P7: Scheduled reports (john.doe's copied scheduled find under Mine), a delivery that does not exist, and the
+    // shipped weekly digest
     "Insights/ScheduledReports": { text: "Open tasks by priority" },
+    "Insights/ScheduledReports/Schedules": { text: "Open tasks by priority" },
     "Insights/ScheduledReports/ScheduledReportDetail": { parameters: { screenScheduledId: "BOSS_DEMO_MY_TASKS" }, text: "Open tasks" },
+    "Insights/ScheduledReports/ReportDelivery": { parameters: { occurrenceId: "NONE" }, text: "Delivery not available" },
+    "Insights/ManagementDigest": { text: "Weekly management digest" },
     // Projects P1: the sections show their default placeholder (design-projects.md §1.2), and the first port's time entry list
     // (Time/TimeEntries) john.doe's time
     // Projects P2: Home, the project list (the default of Projects), the NewProject wizard and its steps (the fragment is the

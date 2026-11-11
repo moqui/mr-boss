@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SignInPolicy (design-admin §6 SignInPolicy; style-guide §3.9 Settings; impl-admin P10). EffectiveSignInPolicy explains the
+    password, lockout and session rules the server runs with: each rule, its value, whether it is the shipped default or the
+    deployment's own, and how an operator changes it (the framework's org.moqui.admin.ConfigurationServices.get#EffectiveSettings,
+    the Sign-in policy and Sign-in groups; read only: the rules are deployment configuration, never copied to database rows).
+    GroupSignInRules lists the groups with their factor requirement and allowed addresses (AccessServices.find#Groups); Change
+    opens the group's rules with a review of what a change would do (preview#GroupSignInRules: members with no confirmed
+    factor, whether the administrator's own address is admitted, the administration path) before Save writes it through
+    store#Group, which refuses a change that would leave no administrator who can sign in. Factors stay on UserDetail and Commons Account. The
+    policy shows to a holder of ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW, the groups' rules to ADMIN_ACCESS_VIEW, and a change
+    needs ADMIN_ACCESS_MANAGE; each service checks its own. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sign-in policy" menu-image="sym_o_password" menu-image-type="icon">
+    <parameter name="text"/>
+    <parameter name="rulesOnly"/>
+    <parameter name="reviewGroupId"/>
+    <parameter name="reviewFactor"/>
+    <parameter name="reviewIp"/>
+
+    <!-- the change form opens the review of its change (nothing is written) -->
+    <transition name="reviewRule">
+        <actions>
+            <set field="reviewGroupId" from="userGroupId"/>
+            <set field="reviewFactor" from="requireAuthcFactor === 'Y' ? 'Y' : 'N'"/>
+            <set field="reviewIp" from="String(ipAllowed || '').trim()"/>
+        </actions>
+        <default-response url="."><parameter name="reviewGroupId"/><parameter name="reviewFactor"/><parameter name="reviewIp"/></default-response>
+    </transition>
+    <transition name="storeRule">
+        <actions>
+            <service-call name="org.moqui.admin.AccessServices.store#Group" out-map="stored"
+                    in-map="{userGroupId:userGroupId, expectedRevision:expectedRevision, requireAuthcFactor:(requireAuthcFactor === 'Y' ? 'Y' : 'N'),
+                        ipAllowed:(ipAllowed || ''), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Sign-in rules saved for ' + userGroupId : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="org.moqui.admin.ConfigurationServices.get#EffectiveSettings" out-map="policyOut" transaction="force-new" ignore-error="true"/>
+        <service-call name="org.moqui.admin.AccessServices.find#Groups" out-map="groupsOut" transaction="force-new" ignore-error="true"
+                in-map="{text:(text || null), kind:'supported'}"/>
+        <!-- ignore-error clears a refusal's message: what is missing is not available to this viewer -->
+        <script><![CDATA[
+            const policy = Array.from(policyOut?.settingList || []).filter(row => ['Sign-in policy', 'Sign-in'].includes(row.settingGroup))
+            policyRows = policy.map(row => Object.assign({}, row, {
+                shownValue: row.value === '' || row.value == null ? 'Not set' : row.value,
+                changedText: row.editable ? 'In Instance settings' : 'In the deployment'
+            }))
+            policyAvailable = !!policyOut?.settingList
+            rulesAvailable = !!groupsOut?.groupList
+            canManage = !!groupsOut?.canManage
+            ruleRows = Array.from(groupsOut?.groupList || [])
+                .filter(row => rulesOnly !== 'Y' || row.requireAuthcFactor || row.ipLimited)
+                .map(row => Object.assign({}, row, {
+                    factorText: row.requireAuthcFactor ? 'Required' : 'Not required',
+                    ipText: row.ipAllowed || 'Any address',
+                    requireAuthcFactor: row.requireAuthcFactor ? 'Y' : 'N',
+                    whoText: row.privileged ? 'Privileged: changed by its members' : row.canChange ? '' : 'Changed in Tools'
+                }))
+            findValues = {text: text, rulesOnly: rulesOnly}
+        ]]></script>
+        <!-- Change opens a group with the rules it has (reviewFactor and reviewIp not given yet) -->
+        <if condition="reviewGroupId &amp;&amp; rulesAvailable &amp;&amp; reviewFactor == null">
+            <set field="opened" from="Array.from(groupsOut?.groupList || []).find(row => row.userGroupId === reviewGroupId)"/>
+            <set field="reviewFactor" from="opened?.requireAuthcFactor ? 'Y' : 'N'"/>
+            <set field="reviewIp" from="opened?.ipAllowed || ''"/>
+        </if>
+        <if condition="reviewGroupId &amp;&amp; rulesAvailable">
+            <service-call name="org.moqui.admin.AccessServices.preview#GroupSignInRules" out-map="review" transaction="force-new" ignore-error="true"
+                    in-map="{userGroupId:reviewGroupId, requireAuthcFactor:(reviewFactor === 'Y' ? 'Y' : 'N'), ipAllowed:(reviewIp || '')}"/>
+            <set field="reviewGroup" from="Array.from(groupsOut?.groupList || []).find(row => row.userGroupId === reviewGroupId) || {userGroupId: reviewGroupId, description: reviewGroupId}"/>
+            <set field="changeValues" from="{userGroupId:reviewGroupId, requireAuthcFactor:(reviewFactor === 'Y' ? 'Y' : 'N'), ipAllowed:(reviewIp || '')}"/>
+            <set field="reviewValues" from="{userGroupId:reviewGroupId, expectedRevision:(review?.revision || ''), requireAuthcFactor:(reviewFactor === 'Y' ? 'Y' : 'N'), ipAllowed:(reviewIp || '')}"/>
+            <set field="reviewText" from="[(reviewFactor === 'Y' ? 'A factor is required' : 'No factor is required'), (reviewIp ? 'sign-in only from ' + reviewIp : 'sign-in from any address')].join('; ')"/>
+        </if>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Sign-in policy" type="h5"/>
+                <label text="How people sign in to this instance: the password, lockout and session rules it runs with, and what each group requires of its members."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto">
+                <link url="../IdentityProviders" text="Identity providers" icon="sym_o_passkey" link-type="anchor"/>
+            </container>
+        </container>
+
+        <section name="RuleReview" condition="reviewGroupId &amp;&amp; rulesAvailable">
+            <widgets>
+                <container-box>
+                    <box-header title="Sign-in rules of ${reviewGroup.description}"/>
+                    <box-body>
+                        <section name="RuleChange" condition="canManage &amp;&amp; (!review || review.reasonCode == null || review.reasonCode === 'ADMINISTRATION_PATH' || review.reasonCode === 'IP_INVALID')">
+                            <widgets>
+                                <form-single name="ChangeRule" transition="reviewRule" map="changeValues">
+                                    <field name="userGroupId"><default-field><hidden/></default-field></field>
+                                    <field name="requireAuthcFactor">
+                                        <default-field title="Second factor" tooltip="Members must confirm a second factor to sign in">
+                                            <drop-down><option key="N" text="Not required"/><option key="Y" text="Required"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="ipAllowed">
+                                        <default-field title="Allowed addresses" tooltip="Comma separated addresses members may sign in from, each IPv4 part a number, * or a range like 0-31; empty for any address">
+                                            <text-line size="50"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row-big><field-ref name="requireAuthcFactor"/><field-ref name="ipAllowed"/><field-ref name="submitButton"/></field-row-big>
+                                    </field-layout>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <label type="p" text="Review: ${reviewText.toLowerCase()}."/>
+                        <label type="p" style="text-negative" condition="!review" text="The change could not be reviewed."/>
+                        <label type="p" style="text-negative" condition="review &amp;&amp; !review.allowed" text="${review?.reason}"/>
+                        <label type="p" condition="review?.allowed &amp;&amp; !review.changed" text="The group already has these rules."/>
+                        <label type="p" condition="review?.allowed &amp;&amp; review.changed"
+                                text="${review?.memberCount} current member(s). ${review?.summary}."/>
+                        <label type="p" style="text-warning" condition="review?.allowed &amp;&amp; review.changed &amp;&amp; review.callerAdmitted === false"
+                                text="You would not be admitted from your own address as a member of this group."/>
+                        <label type="p" style="text-caption m-muted" condition="review?.allowed &amp;&amp; review.changed"
+                                text="Administrators who can still sign in after the change: ${review?.pathsAfter} (now ${review?.pathsBefore})."/>
+                        <section name="RuleConfirm" condition="canManage &amp;&amp; review?.allowed &amp;&amp; review.changed">
+                            <widgets>
+                                <form-single name="ConfirmRule" transition="storeRule" map="reviewValues">
+                                    <field name="userGroupId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="requireAuthcFactor"><default-field><hidden/></default-field></field>
+                                    <field name="ipAllowed"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason" tooltip="Kept in the audit log beside the change"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Save sign-in rules"><submit type="primary"
+                                                confirmation="Save these sign-in rules for ${reviewGroup.description}? ${review?.memberCount} member(s) sign in by them from their next sign-in."/></default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <link url="." text="Cancel" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <container-box>
+            <box-header title="Rules this instance runs with"/>
+            <box-body-nopad>
+                <label type="p" style="q-pa-md m-muted" condition="!policyAvailable" text="The sign-in policy is not available to you."/>
+                <form-list name="EffectiveSignInPolicy" list="policyRows" skip-form="true" paginate="false">
+                    <field name="title"><default-field title="Rule"><display/></default-field></field>
+                    <field name="shownValue"><default-field title="Value"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                    <field name="changedText"><default-field title="Changed"><display/></default-field></field>
+                    <field name="description"><default-field title="What it does"><display/></default-field></field>
+                    <field name="operatorNote"><default-field title="For the operator"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="description"/></column>
+                        <column><field-ref name="shownValue"/><field-ref name="sourceText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-px-md q-pb-md m-muted" condition="policyAvailable"
+                        text="These rules are deployment configuration: whoever runs the server sets them in its conf, and they apply to everyone. A group can ask more of its members below."/>
+            </box-body-nopad>
+        </container-box>
+
+        <container-box>
+            <box-header title="What groups require"/>
+            <box-body-nopad>
+                <label type="p" style="q-pa-md m-muted" condition="!rulesAvailable" text="The groups' sign-in rules are for an access administrator."/>
+                <section name="GroupRules" condition="rulesAvailable">
+                    <widgets>
+                        <form-single name="GroupRuleFind" transition="." map="findValues">
+                            <field name="text"><default-field title="Group"><text-line size="30"/></default-field></field>
+                            <field name="rulesOnly">
+                                <default-field title="Show">
+                                    <drop-down allow-empty="true"><option key="Y" text="Groups with a requirement"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row-big><field-ref name="text"/><field-ref name="rulesOnly"/><field-ref name="submitButton"/></field-row-big>
+                            </field-layout>
+                        </form-single>
+                        <form-list name="GroupSignInRules" list="ruleRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Group">
+                                    <link url="../../Access/GroupDetail" text="${description || userGroupId}" link-type="anchor" parameter-map="{userGroupId:userGroupId}"/>
+                                </default-field>
+                            </field>
+                            <field name="appName"><default-field title="App"><display/></default-field></field>
+                            <field name="factorText">
+                                <default-field title="Second factor">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal ${requireAuthcFactor === 'Y' ? 'text-primary' : 'text-grey-7'}">${factorText}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: factorText})}]]></text>
+                                        <text type="html">${factorText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="ipText"><default-field title="Allowed addresses"><display/></default-field></field>
+                            <field name="memberCount"><default-field title="Members" align="right"><display/></default-field></field>
+                            <field name="change">
+                                <conditional-field condition="canManage &amp;&amp; canChange" title="">
+                                    <link url="." text="Change" link-type="anchor" parameter-map="{reviewGroupId:userGroupId}"/>
+                                </conditional-field>
+                                <default-field title=""><display text="${whoText}"/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="ipText"/></column>
+                                <column><field-ref name="factorText"/><field-ref name="change"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

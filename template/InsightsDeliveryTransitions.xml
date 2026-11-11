@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The transitions Insights' delivery screens share (transition-include, one each): the recipient choices of a schedule's
+    audience, the caller's own preview of a report as a file, and the caller's own delivered report. A file is answered as a
+    small page with its download link, as the framework's report preview does; each service checks its own permission. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="recipientChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.find#RecipientChoices" in-map="{term:term, selected:selected}" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="previewFile" method="get" read-only="true">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.preview#Report" out-map="file"
+                    in-map="{definitionId:definitionId, renderMode:renderMode}"/>
+            <script><![CDATA[
+                const encode = value => WebUtilities.encodeHtml(String(value || ''))
+                const body = !file.applied ? '<p>' + encode(file.reason) + '</p>'
+                    : file.empty ? '<p>The report has no data for its period.</p>'
+                    : '<p><a download="' + encode(file.filename || 'report') + '" href="data:' + encode(file.contentType) + ';base64,'
+                        + encode(file.contentBase64) + '">Download the preview</a></p><p>This is your own result, as you may read it now.</p>'
+                ec.web.sendTextResponse('<!doctype html><html><head><meta charset="utf-8"><title>Report preview</title></head><body><h1>Report preview</h1>'
+                    + body + '</body></html>', 'text/html;charset=UTF-8')
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="ownReportFile" method="get" read-only="true">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.get#OwnReport" in-map="{deliveryId:deliveryId}" out-map="file"/>
+            <script><![CDATA[
+                const encode = value => WebUtilities.encodeHtml(String(value || ''))
+                const body = !file.available ? '<p>' + encode(file.reason) + '</p>'
+                    : '<p><a download="' + encode(file.filename || 'report') + '" href="data:' + encode(file.contentType) + ';base64,'
+                        + encode(file.contentBase64) + '">Download ' + encode(file.title || 'the report') + '</a></p><p>Rendered again for you on '
+                        + encode(file.generatedText) + ', with what you may read now. What was sent is not kept.</p>'
+                ec.web.sendTextResponse('<!doctype html><html><head><meta charset="utf-8"><title>Your report</title></head><body><h1>Your report</h1>'
+                    + body + '</body></html>', 'text/html;charset=UTF-8')
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+</screen>

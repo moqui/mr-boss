@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights' Analysis (design-insights §5 Analysis; impl-insights P6, INS-03; Analysis.js): an aggregate over an admitted
+    dataset from typed choices, run through the report engine as the author and saved as a library panel. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="AnalysisChoices" type="interface">
+        <in-parameters>
+            <parameter name="datasetId"/>
+            <parameter name="aggregate"/>
+            <parameter name="measureField"/>
+            <parameter name="groupBy"/>
+            <parameter name="groupBy2"/>
+            <parameter name="timeGrain"/>
+            <parameter name="filterField"/>
+            <parameter name="filterValue"/>
+            <parameter name="from"/>
+            <parameter name="thru"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="AnalysisOptions" allow-remote="false">
+        <description>AnalysisSource's choices for an author (INSIGHTS_AUTHOR_REQUIRED otherwise): the admitted business datasets
+            they read and, for the chosen one, its number fields to measure (each with what it declares: its unit field, a
+            ratio, the dimensions it is not added across), its fields to group and filter by, the aggregates, time grains and
+            the ways to show a result; with ownDashboards, the author's own dashboards to place a saved analysis on. A dataset
+            that is not admitted or not the author's to read is refused (DATASET_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="datasetId"/>
+            <parameter name="ownDashboards" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="datasets" type="List"/>
+            <parameter name="measureFields" type="List"/>
+            <parameter name="groupFields" type="List"/>
+            <parameter name="filterFields" type="List"/>
+            <parameter name="aggregates" type="List"/>
+            <parameter name="grains" type="List"/>
+            <parameter name="visualizations" type="List"/>
+            <parameter name="dashboards" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="analysis" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Analysis.js')"/>
+            <set field="found" from="analysis.execute('options', context)"/>
+            <set field="datasets" from="found.datasets"/>
+            <set field="measureFields" from="found.measureFields"/>
+            <set field="groupFields" from="found.groupFields"/>
+            <set field="filterFields" from="found.filterFields"/>
+            <set field="aggregates" from="found.aggregates"/>
+            <set field="grains" from="found.grains"/>
+            <set field="visualizations" from="found.visualizations"/>
+            <if condition="ownDashboards"><set field="dashboards" from="analysis.execute('ownDashboards', context).dashboards"/></if>
+        </actions>
+    </service>
+    <service verb="get" noun="AnalysisResult" allow-remote="false">
+        <description>The typed choices run through the report engine as the author: the dataset, how a measure is aggregated
+            (count, sum, avg, min, max, cardinality), up to two groups, a time grain and one equality filter, each field one of
+            the dataset's own (FIELD_UNAVAILABLE otherwise). Answers the rows, the engine's count of the records they are
+            computed from (never the number of rows shown) and its notices; a semantic guard's refusal (an amount across
+            currencies until grouped by its currency or filtered to one, UNIT_MIXED; RATIO_AGGREGATE; NONADDITIVE;
+            BOUNDED_RESULT) answers available false with refusedCode and reason, and nothing is computed around it.</description>
+        <implements service="ironstone.insights.AnalysisServices.define#AnalysisChoices"/>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="result" type="Map"><description>available, refusedCode, reason, query, range, columns, rows (label,
+                valuesText), sourceCount, notices</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Analysis.js').execute('result', context)"/>
+            <set field="available" from="result.available"/>
+        </actions>
+    </service>
+    <service verb="store" noun="Analysis" allow-remote="false">
+        <description>SaveAnalysis: the choices saved as a library panel the author owns (the report engine's save#Definition, an
+            ordinary panel definition the definition editor then refines), private or shared with one of the author's own groups
+            (SHARE_GROUP_UNAVAILABLE otherwise), and optionally placed by reference on a dashboard of their own
+            (DASHBOARD_NOT_OWNED otherwise). An analysis the engine's guards refuse is not saved (its code).</description>
+        <implements service="ironstone.insights.AnalysisServices.define#AnalysisChoices"/>
+        <in-parameters>
+            <parameter name="title" required="true"/>
+            <parameter name="userGroupId"/>
+            <parameter name="visualization"/>
+            <parameter name="dashboardId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="dashboardId"/>
+        </out-parameters>
+        <actions>
+            <set field="saved" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Analysis.js').execute('store', context)"/>
+            <set field="definitionId" from="saved.definitionId"/>
+            <set field="dashboardId" from="saved.dashboardId"/>
+        </actions>
+    </service>
+</services>

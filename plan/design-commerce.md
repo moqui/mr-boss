@@ -277,6 +277,8 @@ metric and excludes recurring base orders in its query (impl-insights F-P4-3).
 `COMMERCE_CHANNEL_OPERATE`) are `ironstone.insights.AttentionProvider` rows (`Commerce.*`) opening the orders list and carts with
 the cards' filters; To fulfill and Unpaid count differently from their lists and are not registered.
 
+**Insights annotation (impl-insights P6, Nov 10, 2026; F13, F31).** `store#Promotion` registers `record#BusinessEvent` (PromotionStart) after its commit when a promotion with a start date is created or its dates or description change: a band from its start to its end, named by the promotion, in its store's organization, with no amount. There is no start event; a promotion whose start is moved may leave its earlier marker.
+
 The Reports area is designed here beside Home, because Home's cards and period strip open its
 reports with the same store and period filters; in the menu it sits before Settings.
 

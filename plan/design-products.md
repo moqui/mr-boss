@@ -155,6 +155,8 @@ Insights attention (impl-insights P5, Nov 7, 2026; F29): Home's Active SKUs, Var
 (`CatalogServices.get#CatalogSummary`) are `ironstone.insights.AttentionProvider` rows (`Products.*`) opening Products with the
 cards' lists.
 
+Insights annotation (impl-insights P6, Nov 10, 2026; F13, F31): `publish#ProductPriceList` registers `mantle.party.BusinessEventServices.record#BusinessEvent` (PriceListPublished) to run after its commit: a marker named by the list, in the list's organization, with no price, on dashboards over business data. A list with no organization writes none; a failure is logged and the publication stays.
+
 ## 2. Screens
 
 Paths are the built BOSS routes (impl-products P0–P14); a detail's tab is listed only when it is

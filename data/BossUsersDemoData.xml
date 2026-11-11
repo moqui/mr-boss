@@ -1214,4 +1214,14 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
+    <!-- Insights P7 (impl-insights P7; design-insights §7.1, §13.3 "Owner equivalence"): the mail addresses of the Insights demo
+        users a scheduled report is delivered to: the Retail agents read the same rows as the distributor (owner-equivalent); the
+        Services reader does not and is refused -->
+    <moqui.security.UserAccount userId="BOSS_INS_READER" emailAddress="insights.reader@ziziwork.example"/>
+    <moqui.security.UserAccount userId="BOSS_INS_AUTHOR" emailAddress="insights.author@ziziwork.example"/>
+    <moqui.security.UserAccount userId="BOSS_INS_STEWARD" emailAddress="insights.steward@ziziwork.example"/>
+    <moqui.security.UserAccount userId="BOSS_INS_DISTRIBUTOR" emailAddress="insights.distributor@ziziwork.example"/>
+    <moqui.security.UserAccount userId="BOSS_INS_FLOW" emailAddress="insights.flow@ziziwork.example"/>
+    <moqui.security.UserAccount userId="BOSS_INS_SERVICES" emailAddress="insights.services@ziziwork.example"/>
+    <moqui.security.UserAccount userId="BOSS_INS_FINANCE" emailAddress="insights.finance@ziziwork.example"/>
 </entity-facade-xml>

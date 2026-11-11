@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Security area of IronStone Admin (design-admin §1.2, §6; impl-admin P10): SignInPolicy, the sign-in policy the
+    server runs with and the groups' sign-in rules (the default); IdentityProviders, the sign-in providers, and
+    IdentityProviderDetail, one provider's configuration, mappings and test (contextual). Shared devices join it later. For the
+    access administrator, the configuration administrator, the integration administrator and the administrator
+    (BOSS_ADM_SECURITY): each screen shows a viewer what the framework's services answer them, since those check
+    ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW (the policy), ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE (the groups' rules, the
+    role mappings and enabling a provider) and ADMIN_CONNECTION_VIEW and ADMIN_CONNECTION_MANAGE (a provider's configuration)
+    whatever opens the screen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Security" default-menu-index="4" menu-image="sym_o_shield_lock" menu-image-type="icon">
+    <subscreens default-item="SignInPolicy" always-use-full-path="true">
+        <subscreens-item name="SignInPolicy" location="component://mr-boss/screen/Admin/Security/SignInPolicy.xml" menu-title="Sign-in policy"
+                menu-index="1"/>
+        <subscreens-item name="IdentityProviders" location="component://mr-boss/screen/Admin/Security/IdentityProviders.xml"
+                menu-title="Identity providers" menu-index="2"/>
+        <subscreens-item name="IdentityProviderDetail" location="component://mr-boss/screen/Admin/Security/IdentityProviderDetail.xml"
+                menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="AdminSecurityPanel" type="tab"/>
+    </widgets>
+</screen>
