@@ -6,9 +6,14 @@ checkout settings, integrations, feeds and store reports ([design](plan/design-c
 [impl-commerce](plan/impl-commerce.md), which builds it in one order with its public companion,
 [IronStone Shop](../mr-pass/plan/design-shop.md) in IronStone PASS).
 
-Admin (`screen/Admin/`) has its first release: groups and grants, users and sessions, invitations
-(`AcceptInvitation`, the `i` route), lifecycle and offboarding, organizations and the Constitution, Health and the settings
-index ([design](plan/design-admin.md), [impl-admin](plan/impl-admin.md)). Insights (`screen/Insights/`) is browsable:
+Admin (`screen/Admin/`) is built: users, sessions and invitations (`AcceptInvitation`, the `i` route), lifecycle and
+offboarding, groups, grants, capabilities and row rules, sign-in policy, identity providers and shared devices,
+organizations, the Constitution and instance settings, connections, mail relays, protocols and the mail queue, system
+messages and recovery, jobs and topics, imports, exports and backups, audit and access evidence, Health with its support
+summary, and the settings index ([design](plan/design-admin.md), [impl-admin](plan/impl-admin.md)). Its rules are tested in
+`test/Admin/`; its scenario walks, the access review walk and its screen sweeps are in `acceptance/Admin/`.
+
+Insights (`screen/Insights/`) is browsable:
 dashboards and Explore, admitted datasets, the report catalog and metrics, Home's attention board, analysis and drill, and
 scheduled reports and digests delivered to recipients who read the same data, business alerts told to them the same way,
 and business flow maps an organization copies from the suite's templates

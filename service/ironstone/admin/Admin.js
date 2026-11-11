@@ -343,6 +343,8 @@ const linkPaths = [
     // P17: change and access evidence
     "Audit/AuditChanges",
     "Audit/AccessLog",
+    // P19: the readiness and support summary
+    "Operations/SupportSummary",
     "Agents/Home",
     "System",
     "Developer/Home"

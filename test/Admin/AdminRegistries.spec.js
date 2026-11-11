@@ -281,3 +281,52 @@ feature("Agents and Developer tools show one tab each, and AgentsHome's destinat
         !agents.output.includes('class="disabled"')
     }
 })
+
+// P19: the readiness and support summary (design §16): one projection for the screen, its print and its redacted JSON, each
+// section read with the viewer's own permissions; a secret only set or not; redacted, no one who prepared it and no address
+feature("the support summary holds the readable checks, protocols and settings; its JSON is redacted; a non-reader is refused", {
+    when() {
+        const address = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
+        const redacted = asUser(users.reader, () => invoke(registry + "get#SupportSummary", {redacted: true})).summary
+        const plain = asUser(users.admin, () => invoke(registry + "get#SupportSummary", {})).summary
+        return {
+            redacted,
+            plain,
+            redactedText: JSON.stringify(redacted),
+            address,
+            outsider: asUser(users.privacy, () => refusal(registry + "get#SupportSummary", {})),
+            screen: asUser(users.admin, () => lib.page("Operations/SupportSummary")),
+            download: asUser(users.admin, () => {
+                const got = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Admin.xml")
+                    .render("Operations/SupportSummary/summaryJson", {}, "GET")
+                return {status: got.status, output: String(got.output || "")}
+            })
+        }
+    },
+    then({redacted, plain, redactedText, address, outsider, screen, download}) {
+        redacted.redacted == true
+        redacted.instance.preparedBy == null
+        redacted.instance.version.length > 0
+        redacted.readiness.available == true
+        redacted.readiness.checks.length > 0
+        !redactedText.includes("fixUrl")
+        !redactedText.includes("refreshKey")
+        !address.test(redactedText)
+        plain.redacted == false
+        plain.instance.preparedBy != null
+        plain.settings.available == true
+        plain.settings.settings.length > 0
+        plain.settings.settings.filter(row => row.masked).every(row => row.value == null && row.shownValue.startsWith("Hidden"))
+        plain.protocols.available == true
+        outsider.includes("ADMIN_OVERVIEW_VIEW")
+        screen.status == 200
+        screen.errors.length == 0
+        screen.output.includes("Effective settings")
+        screen.output.includes("Download JSON")
+        download.status == 200
+        JSON.parse(download.output).redacted == true
+        JSON.parse(download.output).instance.preparedBy == null
+    }
+})

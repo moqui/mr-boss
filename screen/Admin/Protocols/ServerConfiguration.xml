@@ -79,6 +79,11 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="The configuration the protocols run with, and the checks that can be run on them. A value is changed in the deployment's configuration, by whoever operates the server."
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
+            <container style="col-auto">
+                <!-- P19: the readiness and support summary (design §16), for a reader of Health -->
+                <link url="${sharedLinks['Operations/SupportSummary']}" text="Support summary" icon="sym_o_summarize" link-type="anchor-button"
+                        condition="ec.user.hasPermission('ADMIN_OVERVIEW_VIEW')"/>
+            </container>
         </container>
         <label type="p" style="text-negative" condition="!available" text="The server configuration is not available to you."/>
         <section name="ConfigurationSection" condition="available">

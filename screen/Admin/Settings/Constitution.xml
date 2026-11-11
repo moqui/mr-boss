@@ -138,10 +138,14 @@ along with this software (see the LICENSE.md file). If not, see
             scopeAvailable = isGlobal || !!scopeRow
             canEdit = isGlobal ? editsGlobal : !!scopeRow && canManage && !!scopeRow.canEdit
         ]]></script>
+        <set field="consFailure" from="null"/>
         <if condition="scopeAvailable">
-            <service-call name="org.moqui.admin.ConstitutionServices.get#Constitution" out-map="cons" transaction="force-new" ignore-error="true"
-                    in-map="{scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope), locale:(locale || null),
-                        includeDocument:(isGlobal &amp;&amp; canEdit)}"/>
+            <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.ConstitutionServices.get#Constitution',
+                    {scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope), locale:(locale || null),
+                        includeDocument:(isGlobal &amp;&amp; canEdit)}, 'The Constitution is not available to you.')"/>
+            <set field="cons" from="called.out"/>
+            <set field="consFailure" from="called.failure"/>
             <if condition="!isGlobal">
                 <service-call name="mantle.party.ConstitutionServices.get#OrganizationConstitution" out-map="orgCons" transaction="force-new"
                         ignore-error="true" in-map="{organizationPartyId:scope}"/>
@@ -154,7 +158,7 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope),
                         locale:(cons?.locale || locale || null)}"/>
         </if>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <set field="failure" from="consFailure || null"/>
         <script><![CDATA[
             ec.message.clearErrors()
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''

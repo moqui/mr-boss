@@ -72,16 +72,16 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="mantle.party.IdentityServices.find#Users" out-map="usersFound" transaction="force-new" ignore-error="true"
-                in-map="{text:(text || null), organizationPartyId:(organizationPartyId || null), pageSize:200}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#Users', {text:(text || null), organizationPartyId:(organizationPartyId || null), pageSize:200}, 'Sessions are not available to you.')"/>
+        <set field="usersFound" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <set field="userIds" from="(usersFound?.userList || []).map(row => row.userId)"/>
         <if condition="userIds.length">
-            <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="found" transaction="force-new" ignore-error="true"
-                    in-map="{userIdList:userIds, activeOnly:(recent != 'Y'), sinceDays:7, limit:200}"/>
-            <set field="failure" from="failure || (ec.message.hasError() ? ec.message.getErrorsString() : null)"/>
-            <script>ec.message.clearErrors()</script>
+            <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.IdentityServices.find#Sessions',
+                    {userIdList:userIds, activeOnly:(recent != 'Y'), sinceDays:7, limit:200}, 'Sessions are not available to you.')"/>
+            <set field="found" from="called.out"/>
+            <set field="failure" from="failure || called.failure"/>
         </if>
         <script><![CDATA[
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''

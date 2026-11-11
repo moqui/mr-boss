@@ -37,11 +37,11 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="mantle.party.IdentityServices.find#LifecycleOperations" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{organizationPartyId:(organizationPartyId || null), kind:(kind || null), statusId:(statusId || null),
-                    fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#LifecycleOperations', {organizationPartyId:(organizationPartyId || null), kind:(kind || null), statusId:(statusId || null),
+                    fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:(pageIndex || 0), pageSize:50}, 'Lifecycle operations are not available to you.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <script><![CDATA[
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
             operations = Array.from(found?.operationList || []).map(row => Object.assign({}, row, {

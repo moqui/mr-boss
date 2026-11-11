@@ -44,10 +44,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <service-call name="org.moqui.admin.AccessServices.find#Groups" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{text:(text || null), appName:(appName || null), kind:(kind || null), userPermissionId:(userPermissionId || null)}"/>
-        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.find#Groups', {text:(text || null), appName:(appName || null), kind:(kind || null), userPermissionId:(userPermissionId || null)}, 'The groups are not available to you.')"/>
+        <set field="found" from="called.out"/>
+        <set field="failure" from="called.failure"/>
         <set field="groups" from="(found?.groupList || []).map(row => Object.assign({}, row, {
                 kindName: row.kind === 'registered' ? 'Registered' : row.kind === 'custom' ? 'Custom' : 'Other',
                 gatesText: row.appGates.join(', '),

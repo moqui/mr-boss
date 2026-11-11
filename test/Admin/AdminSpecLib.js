@@ -1,6 +1,6 @@
 // Helpers the Admin specs share: the demo ids (data/BossUsersDemoData.xml), the demo users by group, a block run as a user with
-// artifact authorization on or off, a call's refusal message, an Admin page render and the shell's menu and providers. Later
-// phases add their ids and users here.
+// artifact authorization on or off, a call's refusal message, an Admin page render, the shell's menu and providers, and the
+// acceptance sweeps' screens and demo records (P19). Later phases add their ids and users here.
 const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
@@ -112,4 +112,60 @@ function shell(user, menuOnly = false) {
     })
 }
 
-;({ids, users, outsiders, asUser, system, refusal, invoke, page, shell})
+// The screen sweeps' screens (P19; acceptance AdminTui and AdminServerStatic): [path under Admin, location] of every screen file
+// under screen/Admin and the shared screens its areas mount (Data/DataImport), but System, which is Tools' screens for ADMIN,
+// swept with Tools.
+function sweepScreens() {
+    const base = "component://mr-boss/screen/"
+    const found = []
+    const files = []
+    ec.resource.getLocationReference(base + "Admin.xml").walkChildTree(files, null)
+    for (const file of files)
+        if (file.path !== "Admin" && /\.xml$/.test(file.location))
+            found.push([file.path.substring("Admin/".length), file.location])
+    for (const area of ec.resource.getLocationReference(base + "Admin").getDirectoryEntries()) {
+        if (!/\.xml$/.test(area.location)) continue
+        const areaName = area.location.substring(area.location.lastIndexOf("/") + 1).replace(/\.xml$/, "")
+        for (const match of String(area.getText()).matchAll(
+            /<subscreens-item name="([A-Za-z0-9]+)" location="(component:\/\/mr-boss\/screen\/Shared\/[A-Za-z0-9]+\.xml)"/g
+        ))
+            if (!found.some(([known]) => known === areaName + "/" + match[1])) found.push([areaName + "/" + match[1], match[2]])
+    }
+    return found
+}
+// The demo records the sweeps open a detail screen on: the fixed demo ids, and the first row of a kind the demo or the setup
+// makes (none: the screen's own "not available" render, which is a render too).
+function sweepParameters() {
+    const first = (entity, field, conditions = {}) =>
+        system(
+            () =>
+                Array.from(ec.entity.find(entity).condition(conditions).selectField(field).orderBy(field).limit(1).list())[0]?.[
+                    field
+                ] || "NONE"
+        )
+    return {
+        "Access/GroupDetail": {userGroupId: ids.delegateGroupId},
+        "Access/AccessReview": {groups: ids.delegateGroupId},
+        "Users/UserDetail": {userId: ids.retailUserId},
+        "Users/LifecycleDetail": {operationId: first("mantle.party.UserLifecycleOperation", "operationId")},
+        "Settings/OrganizationDetail": {organizationPartyId: ids.organizationId},
+        "Integrations/ConnectionDetail": {
+            adapterKey: "paymentGateway",
+            connectionKey: first("mantle.account.method.PaymentGatewayConfig", "paymentGatewayConfigId")
+        },
+        "Integrations/MessageTypeDetail": {
+            systemMessageTypeId: first("moqui.service.message.SystemMessageType", "systemMessageTypeId")
+        },
+        "Integrations/SystemMessageDetail": {systemMessageId: first("moqui.service.message.SystemMessage", "systemMessageId")},
+        "Protocols/MailRelayDetail": {connectionKey: "SYSTEM"},
+        "Security/IdentityProviderDetail": {authFlowId: first("moqui.security.sso.AuthFlow", "authFlowId")},
+        "Operations/JobDetail": {jobName: "backup_EmbeddedDatabase_daily"},
+        "Operations/JobRunDetail": {jobRunId: first("moqui.service.job.ServiceJobRun", "jobRunId")},
+        "Operations/TopicDetail": {topic: "ServiceJobError"},
+        "Data/DataImport": {targetId: "staffInvitations"},
+        "Data/ImportDetail": {targetId: "catalog", operationKey: "NONE"},
+        LogNote: {entityName: "moqui.security.UserAccount", recordId: ids.retailUserId}
+    }
+}
+
+;({ids, users, outsiders, asUser, system, refusal, invoke, page, shell, sweepScreens, sweepParameters})

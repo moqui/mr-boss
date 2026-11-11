@@ -5043,6 +5043,136 @@ review: …"); Mantle and BOSS unchanged.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-boss README's
   Admin line.
 
+**Built Nov 11 (P19).**
+- Checked first: the phase's loose ends against the code as it is now (the Built and Review notes' "For the lead" items of
+  P1–P18). What changed from the plan: the readiness and support summary is a screen of its own under Operations (no
+  owner screen of design §16's two held room for a print and a file); F129's sites were 23 reads in 18 Admin screens, not
+  only gate 1's; the notification-title hazard reached past BOSS into the framework's job error and agent inbox notices
+  (Rust), Voice's alerts and Mantle's approval notices.
+- mr-moqui:
+  - Rust: `moqui-core` `notify/message.rs` (`service_job_error`: the job's name and errors taken into the title from the
+    message by name, `${jobName}` and `${errors}`, so an error that quotes stored or entered text runs nothing) with its
+    test `job_error_publishes_danger_with_job_name` given an error holding an expression; `moqui-llm` `trigger.rs`
+    (`inbox`: the title is put in the message as `inboxTitle` and the template is `${inboxTitle}`, for an approval's
+    model-written summary and an agent or trigger id).
+  - `service/org/moqui/call/Voice.js`: the emergency call, trunk and blocked-source alerts pass their caller, location
+    name, trunk name and source address in the message and a fixed title template (they were expanded once by
+    `ec.resource.expand` and then again as the title). `test/Voice.spec.js` checks the blocked source's title.
+  - `plans/Remaining-Work.md`: the `org.moqui.admin.*` row (P19's titles; the identity provider link rule, below); the
+    security list (mr-marble's `topicSubscriptions`); the tests list (`apps/ScreenTree`).
+- Mantle: `service/mantle/order/PurchaseApprovals.js` (`notify`: a source's own wording, which quotes a supplier's name, is
+  put in the message as `noticeTitle` and the title is `${noticeTitle}`); `test/party/PurchaseAgreements.spec.js` checks
+  the notices' title.
+- BOSS:
+  - `service/ironstone/admin/AdminCalls.js` (new): `read(service, parameters, fallback)` answers `{out, failure}` with a
+    refusal's own words ("CODE: words", or "PERMISSION is required" as the framework's administration services refuse) and
+    otherwise the screen's own text (F129). The 23 reads that captured a failure after `ignore-error="true"` (Home,
+    Groups, GroupDetail and its grant preview, Users, UserDetail and its lifecycle preview, Sessions (two), Invitations,
+    LifecycleOperations, LifecycleDetail, SettingsHome, Organizations, OrganizationDetail, InstanceSettings, Localization,
+    ReferenceData, Constitution, Health, SystemMessages' bulk review) read through it; GroupDetail no longer reads a
+    group its record check refused. The other `ignore-error` calls of Admin's screens keep a "not available" state
+    and capture nothing, as before.
+  - `RegistryServices.get#SupportSummary` (new, `Registry.js` `supportSummary`) and `screen/Admin/Operations/SupportSummary.xml`
+    (new, hidden, menu-include false; linked from Health's header and ServerConfiguration for an `ADMIN_OVERVIEW_VIEW`
+    holder): design §16's readiness and support summary, html-print and redacted JSON (`summaryJson`). Holds the
+    instance's display name, version and package, the readiness checks the viewer may read (state, reason code, message,
+    freshness, checked time; failed providers named), the protocols' states with their last checks, and the effective
+    settings (a secret only set or not); each section read with the viewer's own permissions and marked unavailable with
+    its reason. Never: the environment, host facts, listeners, paths, users, fix links, refresh keys or diagnostics. The
+    JSON is always redacted: who prepared it left out, an email address in any text written `[address]`. `Admin.js`
+    `linkPaths` gains `Operations/SupportSummary`. A `get` verb: the client deny pattern is unchanged.
+  - Acceptance, written and not run (the lead runs the suite): `acceptance/Admin/AdminTui.spec.js` (1 feature: every
+    Admin screen, 66 with the Data area's `Shared/DataImport` mount, in tui as admin.admin with authorization on: a TUI
+    document, no error node; System is Tools' and left out); `acceptance/Admin/AdminServerStatic.spec.js` (1 feature:
+    ServerStaticLib's full check of each, no verdict an error; none is marked server-static); and
+    `acceptance/Admin/AdminReviewWalk.spec.js` (4 features, design §15.3 as §8 sets it: each of the eleven Admin group
+    users (admin.reader to admin.backup and admin.delegate) is refused another organization's identity by URL,
+    UserDetail's `storeAccount`, the palette, three drop-downs, Assist's `admin_find_users` (not exposed to MCP), direct
+    services, a shared identity's account-wide change, another organization's OrganizationDetail and its member's contact
+    book through `run#AdminExport`; is given no secret (a relay password and a provider client secret set by the walk) on
+    eight pages, the summary's print, its JSON and four services; gains no privileged membership or sealed grant through
+    GroupDetail's `addMember`, `store#Membership`, a grant proposal, `invite#User` (the rules a bulk invitation import
+    applies to each row), an SSO role mapping or direct entity writes, and nothing is written; and opens no System
+    screen). `test/Admin/AdminSpecLib.js` gains `sweepScreens` and `sweepParameters` for the sweeps (their output was
+    checked once by a throwaway spec: 66 screens, every detail screen's demo record or `NONE`).
+  - Specs: `AdminGroups` (+1 feature, 0.12 s: a refused read answers its reason, an allowed one its result, a malformed
+    one the screen's own words, and no error is left behind); `AdminRegistries` (+1 feature, 0.34 s: the summary as the
+    reader, redacted, and as the administrator; no fix link, refresh key or address in the redacted one; a secret
+    setting never a value; the privacy administrator refused; SupportSummary's one qvt render and the JSON download).
+  - Records: design-admin §2 (the Impl column of every built row, `xml (built Pn)` with its path where it differs, and the
+    new SupportSummary row), §10 TopicDetail (mr-marble's exposure and the proposed fix), §16 (the summary as built);
+    ss-inventory (the Admin header note: its rows were already filled phase by phase) and usl-inventory (the Admin header
+    note and ten rows: `get#`/`store#PartyContactInfo`, `create#`/`update#PartyUserAccount`, `create#Organization`,
+    `update#PartyDetail`, `ensure#PartyRole`, `get#PartySettingValue`, `store#PartySetting`, `validate#PartySetting`); §7
+    (mr-marble's finding, ScreenTree, the lifecycle notice); the README's Admin paragraph.
+- Tests run (the shared release binary, `--nobuild`, this phase's runtime; Rust in the worktree's Debug build): mr-boss
+  AdminGroups, AdminUsers, AdminSettings, AdminOrganizations, AdminConstitution, AdminRegistries, AdminLifecycle,
+  AdminInvitations, AdminSystemMessages, AdminAccess and ProjectsAccess 46 of 46; mr-mantle PurchaseAgreements 3 of 3; framework
+  Voice 13 of 13; `cargo test -p moqui-core --lib job_error` 3 of 3; `cargo clippy -p moqui-core -p moqui-llm --lib -D
+  warnings` clean; rustfmt and Prettier clean on what changed (Voice.js and Voice.spec.js were not Prettier-clean before
+  and are left so); `moqui lint --screens` no Admin file flagged, 0 parse failures. By hand, not kept: SupportSummary in
+  html-print, tui and html as the administrator. Not run: the acceptance tests written here, the full suites, the rest of
+  cargo, the moqui-host integration test of the agent inbox.
+- Loose ends:
+  - **F129** done (above). A screen whose area the user cannot open still says so by its screen grant first; the reason
+    shows where the area opens and the service refuses (the configuration administrator in Operations, the reader on a
+    list its permission does not cover).
+  - **F-P10's open item** (an organization-scoped `ADMIN_ACCESS_MANAGE` holder administers identity providers, which are
+    instance-wide): checked, recorded, not bounded. An access administrator of Ziziwork Retail (or the delegate) enables a
+    provider an integration administrator of Retail configured; with the link rule `AflVerifiedEmail` that provider then
+    signs in any account of any organization (Services' staff, a PASS customer) whose verified email and name it asserts,
+    privileged and sealed-granting accounts excepted (P10 R1); with `AflNever` it signs in the accounts it made or that
+    name it, and one with an id naming no provider. `HELD_BEYOND` at enabling counts the accounts linked then, not those a
+    later sign-in links. The framework's provider records know no organization, so a bound there is either the link rule
+    `AflVerifiedEmail` (and enabling a provider with it) kept for `ADMIN_IDENTITY_GLOBAL`, which would change P10's
+    usable-when (the Retail access administrator sets it in AdminSecurityUsable), or an organization on the provider that
+    the sign-in's link honors (Rust, a framework ask; in Remaining-Work). The user's call: F-P19-1.
+  - **The notification-title hazard** (Insights P8 R1): every caller searched in mr-moqui (Rust and scripts), Mantle,
+    BOSS, mr-pass and mr-marble. Fixed: the job error notice and the agent inbox (Rust), Voice's three alerts (an
+    emergency location's or trunk's name, a source address; each was expanded twice), Mantle's approval notices with
+    their own wording (a supplier's name). Left as they are, each an administrator's template by design: a DataDocument's
+    `documentTitle` used as a topic's title when no topic exists (`service/tools.rs`, PartyServices' data-feed notice; as
+    Java), a topic's `titleTemplate` (Tools'; Admin never writes it, P14), Chat's localized mention (P8 R1 validates a
+    translation's expressions). Safe: the database job notice (generated id, fixed status), the report alert (P8 R1).
+  - **mr-marble's subscription screen**: not changed (read only); the finding and the proposed fix are in §7,
+    design-admin §10 TopicDetail and Remaining-Work's security list.
+  - **`apps/ScreenTree`**: not one line (it needs a host member for screen definitions); in Remaining-Work's tests list
+    and §7.
+- Findings (provisional, numbered by the lead):
+  - **F-P19-1** (high, the user's call) The identity provider link rule is instance-wide while its enabler may be
+    organization-scoped (above).
+  - **F-P19-2** (medium, fixed) A notification title quoting stored or model-written text ran it as a script: the job
+    error notice (its errors), the agent inbox (an approval's summary, which a model writes), Voice's alerts and Mantle's
+    approval notices with their own wording (a supplier's name).
+  - **F-P19-3** (low, fixed) F129's dead `failure` captures were in 18 Admin screens (23 reads), P8–P16's too, so a
+    refused list read as empty ("No groups yet.") and a refused record as missing.
+  - **F-P19-4** (low, open) design §16's lifecycle completion and exception notice was never built (§7).
+  - **F-P19-5** (low, open) F73 stands as designed: the framework's `org.moqui.admin` identity services
+    (`revoke#AccountAccess`, `revoke#Sessions`) take any account from a holder of their permission and know no
+    organization; they are not remote services, and BOSS's and Mantle's record checks come first on every Admin path.
+    The review walk checks the record check, not a direct framework call.
+- Decisions: the support summary is its own screen under Operations, the screen and print unredacted for the viewer and
+  the JSON always redacted; a screen's refusal shows the service's words only when they are a refusal's (a coded reason or
+  a missing permission), never an exception's text; the review walk's users are the demo's group users as they are (each
+  in `BOSS_ADMIN` and one group, so no other app's launcher), not users made for it.
+- For the lead:
+  - the shared release binary needs a rebuild for the two Rust changes (notification titles); nothing else needs it, and
+    no entity changed;
+  - budget shares: mr-boss about 0.46 s (AdminGroups 0.12, AdminRegistries 0.34); mr-mantle and the framework unchanged
+    (an assertion each);
+  - merge: mr-boss `README.md` (the Admin paragraph is now its own; the Insights paragraph starts on the next line,
+    unchanged: the Insights worker's line may conflict on that boundary), `Admin.js` (`linkPaths`, one line after P17's),
+    `Operations.xml`, `test/Admin/AdminSpecLib.js` (appended), design-admin, the two inventories (an Admin header note
+    after Purchasing's, away from the Insights note), impl-admin §7 and this note; nothing in the shared acceptance files
+    (AppStructure, TuiRender), BossSetupData or the sweep helper ServerStaticLib; mr-moqui `Remaining-Work.md` (the
+    `org.moqui.admin` row's end, one row in the security list, one in the tests list), Voice.js, the two Rust files;
+    Mantle PurchaseApprovals.js;
+  - the Apps row "Admin and Insights" of Remaining-Work still says gate 1 and "Next: Admin P8–P14": it is shared with
+    Insights and left to the lead;
+  - the phase table's P19 row and §6 (F-P19-1 to -5) are the lead's;
+  - the user's call: F-P19-1 (bound the verified-email link rule to `ADMIN_IDENTITY_GLOBAL`, or an organization on the
+    provider in the framework, or accept it as built); whether to build the lifecycle notice (F-P19-4).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-admin.md or
@@ -5298,6 +5428,22 @@ Designed, not in this build:
 - **Design §17.4 and §19:** LDAP and SCIM provisioning, a custom-field editor, workflow automation, DMARC and TLS
   reports, passkeys, event-condition notification rules; the per-group inactivity timeout, a runtime password policy,
   saved export profiles, connection and protocol checks as Monitor synthetic checks.
+- **Found outside Admin's repositories, not changed here (P19):**
+  - mr-marble's MyAccount/User/Notifications (`screen/SimpleScreens/MyAccount/User/Notifications.xml`, its
+    `topicSubscriptions` transition) stores `moqui.security.user.NotificationTopicUser` from the whole request with the
+    caller's own user id, so any signed-in user can post `allNotifications=Y` for any topic, a private one too
+    (`ServiceJobError`, `WebServletError`, `ReportAlert`), and then receives every message of it: other users' private
+    messages and the job error notifications' unmasked errors, parameters and results (F209, F210; Insights P8 R2 closed it
+    for business alerts only, by sending them direct-only). Proposed fix, mr-marble's: the transition passes only the
+    delivery choices it shows (`receiveNotifications`, `emailNotifications` and the like) and never `allNotifications`, and
+    refuses a private topic; with the framework ask (mr-moqui `plans/Remaining-Work.md`) that the recipient resolution honor
+    `allNotifications` on a private topic only for the topic's registered audience. Written into design-admin §10 TopicDetail
+    and Remaining-Work's security list.
+  - The framework's `apps/ScreenTree` (the Site Map) fails a screen render (`sri.getRootScreenDef` is not a function; the P18
+    review): it needs a host member for screen definitions or a rewrite over the menu data. In Remaining-Work's tests list.
+- **The lifecycle completion and exception notice** (design §16): not built. A lifecycle operation's outcome is on
+  LifecycleOperations and LifecycleDetail only; a registered private topic with a link to LifecycleDetail (Mantle sends,
+  BOSS seeds the link, as the `AccountSignIn` topic) is the remaining work.
 
 ## 8. Verification
 

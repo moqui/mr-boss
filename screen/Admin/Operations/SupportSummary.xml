@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SupportSummary (design-admin §16 "Readiness/support summary"; style-guide §3 report; impl-admin P19): what to give whoever
+    supports the instance, from Health and ServerConfiguration. One projection (ironstone.admin.RegistryServices
+    get#SupportSummary, ADMIN_OVERVIEW_VIEW) for the screen, its print (this screen in html-print) and its JSON (summaryJson,
+    always redacted: no one who prepared it, an email address as [address]): the instance's name, version and package; the
+    readiness checks the viewer may read with their state, reason, freshness and checked time; the protocols' states; the
+    effective settings, a secret only set or not. Each section is read with the viewer's own permissions and says so when it
+    is not available to them. No environment, host facts, listeners, paths, users, fix links or diagnostics. For the reader, the
+    operations operator and the administrator (BOSS_ADM_OPERATIONS). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Support summary" default-menu-include="false">
+
+    <transition name="summaryJson" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.RegistryServices.get#SupportSummary" out-map="found" in-map="{redacted:true}"/>
+            <script>ec.web.sendTextResponse(JSON.stringify(found.summary, null, 2), 'application/json',
+                'support-summary-' + ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMdd-HHmm') + '.json')</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <actions>
+        <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
+        <set field="called" from="ec.resource.script('component://mr-boss/service/ironstone/admin/AdminCalls.js').read('ironstone.admin.RegistryServices.get#SupportSummary',
+                {redacted:false}, 'The support summary is not available to you.')"/>
+        <set field="failure" from="called.failure"/>
+        <set field="summary" from="called.out?.summary || null"/>
+        <set field="printing" from="sri.getRenderMode() === 'html-print'"/>
+        <script><![CDATA[
+            const instance = summary?.instance || {}
+            identityText = summary ? [instance.displayName, 'MR Moqui ' + instance.version, instance.packageName].filter(Boolean).join(' · ') : ''
+            preparedText = summary ? 'Prepared ' + instance.preparedText + (instance.preparedBy ? ' by ' + instance.preparedBy : '') : ''
+            readinessSection = summary?.readiness || {available: false, checks: []}
+            counts = readinessSection.counts || {}
+            countsText = readinessSection.available ? ['failed', 'unavailable', 'warning', 'ready'].map(state =>
+                (counts[state] || 0) + ' ' + {failed: 'failed', unavailable: 'unavailable', warning: 'warning', ready: 'ready'}[state]).join(', ') : ''
+            failedText = (readinessSection.failedProviders || []).join(', ')
+            checks = Array.from(readinessSection.checks || [])
+            protocolSection = summary?.protocols || {available: false, protocols: []}
+            protocols = Array.from(protocolSection.protocols || []).map(row => Object.assign({}, row, {
+                checksText: row.checks.map(check => check.title + ': ' + (check.lastCheckPassed == null ? 'not run'
+                    : check.lastCheckPassed ? 'passed' : 'did not pass')).join('; ')}))
+            settingSection = summary?.settings || {available: false, settings: []}
+            settings = Array.from(settingSection.settings || []).map(row => Object.assign({}, row, {restartText: row.restartRequired ? 'After a restart' : ''}))
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Support summary" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none" condition="summary" text="${identityText}"/>
+                <label type="p" style="text-caption m-muted q-mb-none" condition="summary" text="${preparedText}"/>
+            </container>
+            <container style="col-auto">
+                <link url="." text="Print" icon="sym_o_print" target-window="_blank" condition="!!summary &amp;&amp; !printing"
+                        parameter-map="{renderMode:'html-print'}"/>
+                <link url="summaryJson" text="Download JSON" icon="sym_o_download" link-type="anchor-button" condition="!!summary &amp;&amp; !printing"
+                        tooltip="The same summary, with who prepared it left out and email addresses hidden, to give to whoever supports the instance"/>
+                <link url="../Health" text="Health" icon="sym_o_health_and_safety" link-type="anchor" condition="!printing"/>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <section name="Summary" condition="summary">
+            <widgets>
+                <container-box>
+                    <box-header title="Readiness"/>
+                    <box-body-nopad>
+                        <label type="p" style="q-px-md q-pt-md text-negative" condition="!readinessSection.available" text="${readinessSection.reason}"/>
+                        <label type="p" style="q-px-md q-pt-md" condition="readinessSection.available"
+                                text="${countsText}; checked ${readinessSection.checkedText}"/>
+                        <label type="p" style="q-px-md text-warning" condition="failedText" text="Could not be checked: ${failedText}"/>
+                        <form-list name="SummaryChecks" list="checks" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Check"><display/></default-field></field>
+                            <field name="subject"><default-field title="For"><display/></default-field></field>
+                            <field name="ownerApp"><default-field title="Owner"><display/></default-field></field>
+                            <field name="stateName"><default-field title="Result"><display/></default-field></field>
+                            <field name="message"><default-field title="Explanation"><display/></default-field></field>
+                            <field name="freshnessText"><default-field title="Freshness"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="subject"/></column>
+                                <column><field-ref name="stateName"/><field-ref name="message"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="readinessSection.available &amp;&amp; !checks.length"
+                                text="No check is open to you."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Protocols"/>
+                    <box-body-nopad>
+                        <label type="p" style="q-pa-md text-negative" condition="!protocolSection.available" text="${protocolSection.reason}"/>
+                        <form-list name="SummaryProtocols" list="protocols" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Protocol"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                            <field name="checksText"><default-field title="Last checks"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="reason"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Effective settings"/>
+                    <box-body-nopad>
+                        <label type="p" style="q-pa-md text-negative" condition="!settingSection.available" text="${settingSection.reason}"/>
+                        <form-list name="SummarySettings" list="settings" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Setting"><display/></default-field></field>
+                            <field name="settingGroup"><default-field title="Group"><display/></default-field></field>
+                            <field name="shownValue"><default-field title="Value"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                            <field name="restartText"><default-field title="A change applies"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="settingGroup"/></column>
+                                <column><field-ref name="shownValue"/><field-ref name="sourceText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
