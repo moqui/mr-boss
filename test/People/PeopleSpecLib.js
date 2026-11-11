@@ -124,13 +124,16 @@ function hit(path, parameters = {}) {
     }
 }
 // The shell's menu of People and the launcher's apps for the user, as the shell fetches them; menuOnly leaves out the shell data
-// (the launcher and providers).
-function shell(user, menuOnly = false) {
+// (the launcher and providers). path and group give another level of the menu (P3: Employees' group).
+function shell(user, menuOnly = false, path = "Home", group = "People") {
     const root = "component://webroot/screen/webroot.xml"
     return asUser(user, () => {
-        const menu = ec.screen.makeTest().rootScreen(root).render("menuData/apps/People/Home", {}, null)
+        const menu = ec.screen
+            .makeTest()
+            .rootScreen(root)
+            .render("menuData/apps/People/" + path, {}, null)
         const apps = menuOnly ? [] : JSON.parse(ec.screen.makeTest().rootScreen(root).render("shellData", {}, null).output).apps
-        const level = menu.status == 200 ? JSON.parse(menu.output).find(level => level.name === "People") : null
+        const level = menu.status == 200 ? JSON.parse(menu.output).find(level => level.name === group) : null
         return {
             status: menu.status,
             names: level ? level.subscreens.filter(item => item.menuInclude).map(item => item.name) : [],

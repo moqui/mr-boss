@@ -960,6 +960,88 @@ Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
     department directly under an employer in every app's organization scope), and whether department memberships stay open until P6
     or wait for its assignments.
 
+**Review Nov 11 (P3).** A fresh review of `git diff master...ppl/p3` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 OrgStructure and OrgChart, PE-03 and F11–F13, F49, F50, F63, F81, F86, scope and data integrity first; fixes committed
+apart per repository ("People P3 review: …"; mr-mantle f0d07655).
+- Checked and found sound:
+  - Every OrganizationServices read checks a staff read of an employer (`readerScope`) and every change `PEOPLE_HR_VIEW` and
+    `PEOPLE_HR_EDIT` (`editorScope`) before reading with authorization off; a supplied unit, parent, person, manager or node is
+    admitted only through the caller's employers (`visibleParty` by the employer the unit's rollups reach, `requireOrganization`
+    on a node's employer, a person by an employment by an employer in scope), and a missing and an outside record answer alike
+    (`RECORD_UNAVAILABLE`). No `ironstone` pass-through; the screens call Mantle after the root's check.
+  - Dated rows only: a move ends the rollup in effect and starts one, a role or lead change ends the membership and starts one,
+    a manager change ends the line and starts one, each with the reason as the ended row's audit (`thruDate_changeReason`, an
+    audit-logged field) and the new row's comment; nothing is deleted, and `get#Unit`'s parents and memberships and the tree's
+    `asOfDate` read history as of a date. Cycles (a unit under itself or below it, a manager below the person at that employer),
+    a department under a team, a move to another employer, self reporting, a manager or member the employer does not employ
+    then, a later move or line already set and a stale revision are refused; a membership is never an employment.
+  - F63 and F50: a member is from role `Assignee` and a lead from `Manager` (BusinessTime's hours access reads a `Manager` from
+    the lead to the unit, so a lead may change the unit's hours, nothing of a member's); a line runs from the manager to the
+    report. Projects' planner and the readers of `PrtMember` as staff relationships (calendars, contact books, lifecycle,
+    purchasing) look for internal organizations or the team itself, so People's department memberships widen none of them.
+  - People.js and Employees.js: the lines per employment (`linesOf`) replace P2's `managersAt` with P1–P2's scope rules kept: a
+    team reader reaches a report's employments at the line's employers only, the directory's manager column and filter,
+    Employee360's managers and Home's due work read the same lines; PeopleScope and PeopleDirectory pass unchanged.
+  - F49, `get#PartyInternalOrgIds`: no data or spec of any component has a rollup child of an internal organization that is not
+    internal itself (Mantle's ZbaOrganizationDemoData, Warehouse's returns center and every spec's children are `OrgInternal`;
+    the customer account rollups `AccountServices` writes are between accounts), so before P3 the change altered nothing; the shell's organization list,
+    Commerce's owners and the row filters (`filterOrgIds`) keep every internal child. AppOrganizationFilters, OrganizationRowFilter
+    and AdminOrganizations pass. It had no spec of its own (R4 adds one).
+  - Screens: no route fixture; OrgStructure rendered once in qvt (HR) and OrgChart once in qvt (reader), the tree levels as
+    transition answers; actions conditioned on Mantle's `canEdit`; one primary (New unit); End is a danger submit with a
+    confirmation naming the person; dialog ids carry the row's key. Specs well under 15 s. The worker's provisional findings
+    stand as written.
+- Fixes:
+  - **R1 (high, scope).** `change#Manager` ended every line in effect at the employer and started the new one, but a line names no
+    employer: a line between two people both employed by A and B (or from a manager employed by no one) is the line at both, so
+    an HR editor of A alone ended or wrote B's reporting line, outside their scope. It now refuses `LINE_SHARED` when a line ended
+    or started would also be the line at an employer the editor does not read; an editor of both still changes both (the worker's
+    P6 finding). PeopleOrganization: A's HR refused both ways (a new manager employed by A and B, and ending such a line).
+  - **R2 (medium, stale write).** A unit's revision was its name and rollups only, and EditUnit always posts the lead it read, so
+    saving a rename after another editor changed the lead put the old lead back without a refusal. The revision now covers the
+    lead rows. PeopleOrganization: a `store#Unit` at the revision read before a new lead is `REVISION_CHANGED`.
+  - **R3 (low).** `change#Manager` compared the expected revision with the first line in effect in no order, where the tree gives
+    the newest (`linesOf`); with two lines in effect at an employer (a pre-People line beside a new one) the change could be
+    refused forever. The lines in effect are now read newest first.
+  - **R4 (medium, owner contracts; the user's call 1).** P3's demo puts departments directly under Retail and Services, and three
+    readers took every rollup child for an internal organization: Admin's Organizations counted and listed Store Operations and
+    Merchandising as Retail's child organizations; Accounting's and Purchasing's cost-centre choices offered them, and a purchase
+    line accepted one, which the ledger's dimension rule (`AccountingPolicy.js` `dimensions`, `OrgInternal` only) then refuses at
+    posting. Admin's `find#InternalOrganizations` and `get#InternalOrganization`, `PurchaseOrders.costCenterOf` (mr-mantle) and
+    Accounting's `rollupChildren` and Purchasing's `costCenterChoices` (mr-boss) take internal children only. InternalOrganizations:
+    a department under the organization is in neither the operator's `userOrgIds` nor its children; PurchaseRequests: a department
+    refused as a cost centre (`COST_CENTER_INVALID`).
+  - **R5 (low, specs).** PeopleSpecLib's `employeesMenu` was unused: PeopleAccess's menu feature now checks the Employees group
+    (List, OrgStructure, OrgChart) through the shell's menu data.
+- Provisional findings (for the lead to number):
+  - the cycle checks of `store#Unit` and `change#Manager` walk the parents and lines in effect on the change's date; a move or line
+    already set for a later date on the chain above can still close a loop from that later date. Walking every row in effect on
+    or after the date would refuse it;
+  - `store#Unit` and `change#Manager` take a past date inside the row in effect (a retroactive move or line, with its reason in
+    the audit log), where Admin's `store#OrganizationParent` refuses a past date; the phase's "stale dates refused" is read as a
+    date before the row in effect or after a later change. Whether People should refuse a past date is the lead's;
+  - a unit's rename overwrites `Organization.organizationName`, so the tree as of an earlier date shows today's name;
+  - OrgChart's level header reads the manager's own node; for a manager outside the scope (a pre-People line from an agent) that
+    read is a refusal, logged at ERROR with its stack (F87's class);
+  - the `employees` choice limits rows before collapsing a person employed by two employers, so it may offer fewer than its limit.
+- Tests (release binary, `--nobuild`, this runtime): before the fixes PeopleOrganization 4 of 4 (2.3 s). The new checks failed on
+  the unfixed code (`LINE_SHARED`, the stale lead, the department in `userOrgIds` with master's `get#PartyInternalOrgIds`) and pass
+  after. After: Mantle PeopleOrganization, PeopleScope, PeopleDirectory, InternalOrganizations, OrganizationRowFilter,
+  WorkResources, BusinessTime, PurchaseRequests and PurchaseOrders 45 of 45 (mr-mantle 13.0 s feature time; PeopleOrganization 2.5 s,
+  InternalOrganizations 0.5 s, PurchaseRequests 2.6 s); BOSS PeopleOrganization, PeopleAccess, PeopleEmployees,
+  AppOrganizationFilters, AdminOrganizations, AccountingAccess, PurchasingRequests and PurchasingOrders 42 of 42 (mr-boss 14.4 s;
+  PeopleOrganization 0.5 s, PeopleAccess 2.3 s). Prettier clean on the changed JavaScript. No screen changed, so no lint run. Not
+  run: `./moq test-apps`, the acceptance PeopleOrganizationUsable (its changes involve no line kept at two employers).
+- For the lead:
+  - budget share: PeopleOrganization gains two people, two refusals and a stale-lead call (about 0.2 s); InternalOrganizations and
+    PurchaseRequests a department and one call each; PeopleAccess one menu-data render; within §4's estimates;
+  - merge hot spots beside the Built note's: mr-mantle `party/Organizations.js` (find and get of internal organizations),
+    `order/PurchaseOrders.js` (`costCenterOf`), `test/party/InternalOrganizations.spec.js`, `test/order/PurchaseRequests.spec.js`;
+    mr-boss `accounting/Accounting.js` (`rollupChildren`), `purchasing/Orders.js` (`costCenterChoices`), §4's three new rows, P6's
+    and P8's new bullets, design-people's header, §4, Employee360, OrgStructure and OrgChart;
+  - the user's calls are in §4: 1 kept as built and carried to Admin's, Accounting's and Purchasing's readers (R4); 2 written
+    into P6; 3 written into P8.
+
 ### P4 — Job classes, positions and pay grades
 
 Design §5 JobClasses, JobClassDetail (JobProfile; Requirements' levels are P18's), Positions, PositionDetail (terms
@@ -1024,6 +1106,12 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
   `PeopleEmploymentChangeApproval`.
 - **`create#Employment` and `update#Employment`** narrow their overlap check to `PrtEmployee` (F3); every other
   caller keeps its behavior. People calls neither `delete#Employment` nor `create#PersonEmployee` (F5).
+- **Department memberships from the assignment** (§4, the user's call from P3's review): the assignment's department is
+  written as the person's dated `PrtMember` row to that department (from role `Assignee`), by the hire and the employment
+  change in the same transaction, ended when the assignment's department ends; OrgStructure becomes read only for a
+  department's memberships (`store#Membership` refuses a department), a team's staying editable there. P3's open department
+  memberships (the demo's among them) become the assignments' or are ended, not left beside them. Closing a unit with its
+  employees' reassignment is built here.
 - **Screens:** HireEmployee (Identity, EmploymentTerms, ConfirmHire) and EmploymentChange (Change,
   ImpactAndConfirm, the impact list holding what later phases add). Quick create "Hire employee".
 - **Specs:** Mantle `test/humanres/PeopleEmployment` (a contractor hired; an overlapping employment refused; a
@@ -1123,6 +1211,12 @@ stage 1.
   `PEOPLE_SELF_SERVICE`, and Home takes each service once. Commons Home has no card registry, so it gains one People
   card over `get#SelfService` (owner contract, design-drawers-commons §5), linking `Commons/People/SelfService`,
   which stays out of Commons' menu. The notification topic `PeopleTaskAssigned`.
+- **Emergency contacts** (§4, the user's call from P2's F80): each contact is a Person party with its name and phone (a
+  contact's own contact mechanisms), linked to the employee by a dated `PartyRelationship` of a new type Mantle seeds
+  (an emergency contact, from the employee to the contact, its relationship such as spouse or parent in the row); added,
+  changed and ended (never deleted) by the person in SelfService and by HR in Employee360's PersonalInfo through
+  `store#PersonalInfo`'s scope, and private contact (design §1.1): never in the directory, the palette or a team reader's
+  answer.
 - **Screens:** SelfService (MySummary, MyRequests; Clock is P13's), MyTeam (Team, Decisions), Home complete for the
   phases built.
 - **Specs:** BOSS `PeopleSelfService` (the self group opens SelfService under Commons and is refused
@@ -1707,6 +1801,9 @@ the owner's design.
 | Nov 11, 2026 | At most two phase workers run at once, and only as a pair §1 lets run side by side: P9 with P10; in stage 3 two of the tracks P15, P16–P17, P18 and P21 (P19 and P20 after both P16 and P18); P22–P23 beside a stage 3 track. Every other phase runs alone, in §1's order | The user's call. A pair that appends to the same file rebases before merging (§1) |
 | Nov 11, 2026 | Mantle seeds an `EmailWork` contact purpose; the directory and every People projection of a work email (the list, the export, Employee360's Overview, the palette and the record-lookup card) show only `EmailWork`, never `EmailPrimary`; People's demo stores its employees' work emails under `EmailWork` | The user's call on P2's question (built in P2's review, R1). `EmailPrimary` may be a person's own address. No other app's spec or screen reads the demo employees' emails; a purpose drop-down offers "Email - Work" |
 | Nov 11, 2026 | An employment's files and activity stay HR's (an HR reader of its employer, as built in P2): the person does not read the files on their own employment | The user's call on P2's question: left as built (design §4 Employee360) |
+| Nov 11, 2026 | A user's organizations (`PartyServices.get#PartyInternalOrgIds`, so `userOrgIds` and `filterOrgIds`) admit an internal organization's rollup children only when they are internal (`OrgInternal`) themselves: a department or team is never an organization in any app's scope, and People walks its units itself (F49). Admin's Organizations counts and lists only internal child organizations, and Accounting's and Purchasing's cost centres are the internal ones (the ledger's dimension rule) | The user's call on P3's question: kept as built in P3; P3's review carried it to the readers of rollup children that assumed every child internal |
+| Nov 11, 2026 | Department memberships stay open in P3 (`store#Membership` writes a department's members as a team's). P6 makes the employment assignment write the department membership and makes OrgStructure read only for a department's members, a team's staying editable | The user's call on P3's question; P6's text gains it |
+| Nov 11, 2026 | An emergency contact is a Person party per contact, linked from the employee by a dated `PartyRelationship` of a new type; built in P8 (PersonalInfo and SelfService) | The user's call on P2's F80; P8's text gains it |
 
 ## 5. Open questions
 

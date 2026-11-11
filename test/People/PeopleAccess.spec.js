@@ -10,7 +10,7 @@
 // employment content host (its notes and files an HR officer's of its employer, through the shared panels' record check) and
 // the People panels serving no other record. P3: a change of a unit's members and of a reporting line, an HR editor's of its
 // employer (Mantle's own check, as the HR officer of Retail and the directory reader with the same parameters, and Services'
-// unit and employee refused to Retail's HR officer).
+// unit and employee refused to Retail's HR officer), and the Employees menu group.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -119,6 +119,10 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         const keys = (keymap?.keys || []).map(key => key.keys)
         if (JSON.stringify(keys) !== JSON.stringify(ids.keys)) problems.push(`the HR officer's people keys: ${keys}`)
         if ((hr.providers?.quickCreate || []).length) problems.push("the HR officer is offered quick create")
+        // P3: Employees is a menu group of the directory, Organization and Org chart
+        const group = shell(users.hr, true, "Employees/OrgChart", "Employees")
+        if (JSON.stringify(group.names) !== JSON.stringify(ids.employeesMenu))
+            problems.push(`the HR officer's Employees group: ${group.status} ${group.names}`)
         if (!hr.apps.includes("People")) problems.push(`the HR officer's launcher has no People: ${hr.apps}`)
         for (const user of [users.admin, users.system]) {
             const names = shell(user, true).names

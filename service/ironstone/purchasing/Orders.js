@@ -608,15 +608,17 @@ function productChoices(userScope, term, selected) {
     }
     return options
 }
-// The cost centres of the user's organizations: each organization and those that roll up to it (as Accounting's).
+// The cost centres of the user's organizations: each organization and the internal organizations that roll up to it (as
+// Accounting's; a department or team rolling up to it is People's unit, impl-people P3, F49).
 function costCenterChoices(userScope, term, selected) {
     const buyers = buyerIdsOf(userScope)
     const ids = new Set(buyers)
+    const internal = new Set(internalIds())
     for (const row of find("mantle.party.PartyRelationship")
         .condition("toPartyId", "in", buyers.length ? buyers : ["_NA_"])
         .condition("relationshipTypeEnumId", "PrtOrgRollup")
         .list())
-        if (lib.active(row)) ids.add(row.fromPartyId)
+        if (lib.active(row) && internal.has(row.fromPartyId)) ids.add(row.fromPartyId)
     const names = lib.partyNames([...ids])
     const options = [...ids]
         .map(partyId => ({value: partyId, label: names[partyId] || partyId}))
