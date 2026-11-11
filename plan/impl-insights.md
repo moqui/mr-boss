@@ -180,7 +180,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | built and reviewed Nov 10, merged |
 | P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | built and reviewed Nov 10, merged |
 | P11 Wall displays on shared devices | BOSS | Playlists on a registered device | built and reviewed Nov 11, merged |
-| P12 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P12 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 11, merged |
 
 ### P0 — Checks
 
@@ -2932,7 +2932,7 @@ With Admin P19.
   same save (an imported dataset is a new id, never admitted), and Insights denies import to every group (P1); FlowMap
   already had the ordered list (StepList, P9); every Insights demo user is in `BOSS_USERS`, so the Chatter and RecordFiles
   mounts gave them nothing Commons does not, but the root's inheritable grant opened their writes to a user given Insights
-  without Commons (F-P12-1).
+  without Commons (F156).
 - **Acceptance** (written, not run; the lead runs the suite at the end of the build):
   - `acceptance/Insights/InsightsTui.spec.js`: every Insights screen file and the ten record mounts (the tabbed ones by
     their `InsightsRecord` subscreen) render in tui as a model document with no error node, as john.doe with authorization
@@ -2968,7 +2968,7 @@ With Admin P19.
   - **Definitions bundles** (recorded, not built): the export is already every reading group's (the mounted editor's
     `export#Definitions`); import stays Tools' and an instance administrator's. The engine already keeps an imported rule
     inactive and a dataset unadmitted and holds no schedule in a bundle; an author's import waits on `save#Definition`
-    refusing a group the owner is not in (F42), since a bundle names each definition's group (F-P12-4).
+    refusing a group the owner is not in (F42), since a bundle names each definition's group (F159).
 - **The legacy mapping** (design §13.2): `RegistryServices.migrate#LegacySavedFinds` (Registry.js), an instance
   administrator's upgrade step (`ADMIN_REQUIRED` otherwise): every saved find of an Insights list and every schedule of an
   Insights screen by ID, owners, groups and list or path, with its action (moved, kept, invalid); with `apply` the moved ones
@@ -2977,7 +2977,7 @@ With Admin P19.
   list lacks is named). SavedReports shows a find whose list is gone as "Not valid" with no link (`findList`, `invalid`);
   no alias route. The demo has no such find (F28); P7 converted the copied scheduled finds.
 - **Loose ends:**
-  - **Chatter and RecordFiles under the Insights mount** (fixed, F-P12-1): the root's always-actions serve its Chatter and
+  - **Chatter and RecordFiles under the Insights mount** (fixed, F156): the root's always-actions serve its Chatter and
     RecordFiles mounts only to a user whose own grants open Commons (`DrillServices.get#RecordPanelAccess`, Records.js:
     `destinationOpens(grants, "Commons")`), who reaches the same transitions in Commons under the same filters; else
     `RECORD_PANEL_UNAVAILABLE` before any transition runs. ProcessStory's Knowledge pages, the only Insights screen that shows
@@ -2988,7 +2988,7 @@ With Admin P19.
     `get#AnalysisOptions` and `get#AnalysisResult` take it, and SavedReports, Reports, Home, Drill and Analysis pass it and show
     the reason (Home's attention line now says why). Other callers are unchanged (they still get the error). The other
     `ignore-error` sites of Insights read no message (they show a not-available state).
-  - **The organization's recipient cap** (recorded, F-P12-2): BOSS applies it (`Insights.js recipientCap` at every save and
+  - **The organization's recipient cap** (recorded, F157): BOSS applies it (`Insights.js recipientCap` at every save and
     check of a schedule's or rule's audience); the engine's `store#Schedule` and an alert rule's definition, which the reading
     and authoring groups hold directly, hold the instance ceiling only. The engine holding it needs a schedule and a rule to
     carry their organization (framework, with F118); Remaining-Work's report engine row says so.
@@ -3015,16 +3015,16 @@ With Admin P19.
   classes, an organization on a schedule and a rule, authors' bundle import, more than one group or a per-organization wall
   share); the mr-boss README's Insights sentence.
 - **Findings** (provisional):
-  - F-P12-1 (medium, fixed): the Chatter and RecordFiles mounts under the Insights root opened their writes (log a note,
+  - F156 (medium, fixed): the Chatter and RecordFiles mounts under the Insights root opened their writes (log a note,
     message, upload, remove) to a user given Insights without Commons, by the root's inheritable grant (the P6 R1 lesson).
-  - F-P12-2 (open, framework): the organization's recipient cap is BOSS's alone; the engine holds the ceiling.
-  - F-P12-3 (open, F83 and F58 restated by the review walk): an admitted `mantle-sales-items` gives every reader its cost and
+  - F157 (open, framework): the organization's recipient cap is BOSS's alone; the engine holds the ceiling.
+  - F158 (open, F83 and F58 restated by the review walk): an admitted `mantle-sales-items` gives every reader its cost and
     margin fields in Explore, a direct query, an analysis's measure list and a panel's own aggregate; design §13.3's "cost
     fields never reach an unauthorized response" holds in Assist, MCP and drill only. The walk does not assert it. Until
     field classes (Remaining-Work), the alternatives are granting `mantle-sales-items` to cost holders only, or a cost-free
     items dataset for readers: the user's call.
-  - F-P12-4 (open): an author's bundle import waits on F42; the export is every reader's.
-  - F-P12-5 (low): `get#Delivery`'s own delivery, as a recipient reads it, did not carry their name in the export (the
+  - F159 (open): an author's bundle import waits on F42; the export is every reader's.
+  - F160 (low): `get#Delivery`'s own delivery, as a recipient reads it, did not carry their name in the export (the
     engine's row is the recipient's own), so the export names the caller from their account.
 - **For the lead:**
   - Budgets: mr-boss server +0.1 s (InsightsCatalog's feature; the other assertions sit in features already timed).
@@ -3035,7 +3035,7 @@ With Admin P19.
     BossSetupData (no grant changed; the new services' verbs `export`, `migrate` and `get` pass ProjectsAccess).
   - An existing instance: run `ironstone.insights.RegistryServices.migrate#LegacySavedFinds` once as an administrator
     (first without `apply` to read the inventory); nothing else to load.
-  - The user's call: §5's wall-display sharing across organizations; F-P12-3 (costs to readers in Explore until field
+  - The user's call: §5's wall-display sharing across organizations; F158 (costs to readers in Explore until field
     classes); P10's open items stand (readers reading DataReadiness, every reading group holding `INSIGHTS_SCHEDULE`, a lowered
     cap at a schedule's next save).
   - The acceptance suite: InsightsReviewWalk, InsightsTui and InsightsServerStatic are new and unrun; InsightsReviewWalk
@@ -3044,7 +3044,7 @@ With Admin P19.
 **Review Nov 11 (P12).** Fresh review of mr-moqui e81b6c1b and mr-boss fcad146e; fixes in mr-boss ("Insights P12 review: …")
 and this note (branch `ins/p12`).
 - Checked and kept:
-  - **The record panels under Insights (F-P12-1)**, by URL (a throwaway spec, deleted) as insights.reader with their
+  - **The record panels under Insights (F156)**, by URL (a throwaway spec, deleted) as insights.reader with their
     `BOSS_USERS` membership ended: every Chatter transition tried (chatterData, timeline, searchRecords, downloadFile, logNote,
     sendMessage, deleteEntry), ChatterTui, and RecordFiles' upload, download, remove, addFromFiles, the file picker's
     pickerData and RecordFilesTui are refused `RECORD_PANEL_UNAVAILABLE` before the transition runs; with the membership each
@@ -3059,7 +3059,7 @@ and this note (branch `ins/p12`).
     its code, so a caller learns nothing the error did not carry; without the flag each fails as before. Of the eight only
     `find#Reports` is an agent tool (Assist and MCP); with the flag it answers the same code and text, and any other failure
     a fixed sentence. Each screen shows the refusal or a fixed sentence and drops the answer's data (`!refusalCode`).
-  - **`export#DeliveryAudit`**: the owner every recipient's row, a recipient their own (F-P12-5: the name is the caller's own
+  - **`export#DeliveryAudit`**: the owner every recipient's row, a recipient their own (F160: the name is the caller's own
     account's, which they read anyway; the owner's rows carry the names ReportDelivery already shows them); the columns are
     the run's title, date, kind, mode and state and each recipient's name, result, safe reason, attempt and count, no address
     or content; audited through `audit#Export` (kind, format, row count; the engine's audit names no run, as Explore's);
@@ -3084,8 +3084,8 @@ and this note (branch `ins/p12`).
     variables, Home, its layout and the context, drill and a record of another organization, costs through Assist and MCP,
     Assist for another organization, a schedule's audience and an alert rule's, the palette, saved reports, flow maps, the
     alias attack and the wall display. It does not call `store#Schedule` itself (`check#Audience` is the engine's same
-    check) and does not assert F-P12-3.
-  - **F-P12-3, on the current code** (mr-boss master has no Insights change since the branch's base; the engine is master's
+    check) and does not assert F158.
+  - **F158, on the current code** (mr-boss master has no Insights change since the branch's base; the engine is master's
     release binary): with `mantle-sales-items` admitted, insights.reader (no `PRODUCT_COST_VIEW`) read `itemCostTotal`,
     `itemMarginTotal` and each issuance's `acquireCost`, `issuedCostTotal` and margins in `query#Documents`' rows, and a
     `run#Query` sum of `itemCostTotal`; insights.author (no `PRODUCT_COST_VIEW`) was offered the cost and margin fields among
@@ -3109,7 +3109,7 @@ and this note (branch `ins/p12`).
   dependency): 28 of 28, 5.6 s of feature time, release binary. No screen changed, so no lint; no acceptance test, no suite.
 - For the lead:
   - Budgets: unchanged.
-  - The user's call: F-P12-3 confirmed on the current code (above); §5's wall sharing across organizations as the Built note.
+  - The user's call: F158 confirmed on the current code (above); §5's wall sharing across organizations as the Built note.
   - Merge: the README's "They are built in one order, and the rest of each is next" now follows "Insights is built"; worth a
     word when Admin P19's sentence is merged beside it.
 
