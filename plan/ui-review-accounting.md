@@ -15,31 +15,34 @@ and what a confirmed action will change. Substantial layout and navigation refin
 improve an implemented workflow.
 
 This follows [Products](ui-review-products.md) and the
-[document convention](design-doc-guide.md#ui-review-and-refinement-phase). Keep the current inventory, activities,
-coverage, findings, decisions and bounded execution notes here. Research records references, design specifies
-behavior, implementation records construction, and this file records review and refinement.
+[document convention](design-doc-guide.md#ui-review-and-refinement-phase); it is the plan and running record of the
+Accounting review: inventory, activities, coverage, findings, decisions and bounded execution notes.
 
-**Status: planning only, 2026-11-10 America/Chicago.** Source research is complete for this initial plan; all live
-activity and mode coverage starts pending. No application behavior was changed, no review runtime was started and no
-tests were run to write it. Earlier Accounting implementation results and the completed Products review inform the
-plan; they do not establish Accounting review outcomes. This task does not start the review or authorize acceptance
-runs.
+**Status: planning only, 2026-11-10 America/Chicago; checked against source 2026-11-11.** All live activity and
+mode coverage starts pending. No application behavior was changed, no review runtime was started and no tests were
+run to write or check it. Earlier Accounting implementation results and the completed Products review inform the
+plan; they do not establish Accounting review outcomes. This task does not start the review; acceptance runs follow
+§5.
 
 ### Inputs and reference patterns
 
 - [Accounting design](design-accounting.md), [implementation](impl-accounting.md),
   [research](research-accounting.md) and [implementation notes](../docs/AccountingImplementation.md).
-- [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
+- Companion reviews [Warehouse](ui-review-warehouse.md), [Manufacturing](ui-review-manufacturing.md),
+  [Purchasing](ui-review-purchasing.md) and [Customer Service](ui-review-customer-service.md);
+  [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
   [drawers, Commons and Comms review](ui-review-drawers-commons.md),
   [framework UI review guide](../../../../docs/dev/UI-Review.md) and
   [framework review](../../../../plans/UI-Refinement.md): activity/evidence method and established refinements.
 - [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md), and current Manufacturing, Purchasing, Warehouse, Projects, Customer Service,
   Commerce and PASS contracts where they hand records to Accounting.
-- Current `screen/Accounting.xml`, `screen/Accounting/`, mounted `screen/Shared/` sources,
-  `template/Accounting*.xml`, `service/ironstone/accounting/`, `MoquiConf.xml`,
-  `data/BossAccountingSetupData.xml`, `data/BossAccountingUsersDemoData.xml`, `data/BossZAccountingDemoData.xml`,
-  `data/BossSetupData.xml` and the demo loader `service/ironstone/accounting/Demo.js`.
+- Current `screen/Accounting.xml`, `screen/Accounting/`, mounted `screen/Shared/` sources, the ten
+  `template/Accounting*.xml` parts, `service/ironstone/accounting/`, `MoquiConf.xml`,
+  `data/BossAccountingSetupData.xml` (groups, permissions, artifact grants, notification topics),
+  `data/BossAccountingUsersDemoData.xml`, `data/BossZAccountingDemoData.xml`, `data/BossZSetupDemoData.xml`,
+  `data/BossZPortalDemoData.xml`, `data/BossUsersDemoData.xml` (neighbouring apps' finance-group users) and the demo
+  loader `service/ironstone/accounting/Demo.js`.
 - Current Accounting regression/acceptance specs and their client registrations; Mantle's accounting, ledger, tax,
   asset, production-cost, budget and external-access services and rule tests. Current sources take precedence over
   historical route, role, output and “Later” tables.
@@ -78,109 +81,185 @@ not review fixtures.
 
 ## 2. Review method and refinement criteria
 
-### Environment and fixtures
+The generic method is the [UI review guide](../../../../docs/dev/UI-Review.md):
+[preparing an isolated review](../../../../docs/dev/UI-Review.md#prepare-an-isolated-review), activities and coverage,
+[judging the result](../../../../docs/dev/UI-Review.md#judge-the-result) (viewports, themes, keyboard, contrast,
+terminal) and [recording, fixing and verifying](../../../../docs/dev/UI-Review.md#record-fix-and-verify). Products
+shows it executed: its [§2](ui-review-products.md#2-review-method-and-refinement-criteria) and
+[execution setup dispositions](ui-review-products.md#execution-setup-dispositions). This section keeps only what is
+specific to Accounting.
 
-For later execution, follow the review guide and repository building/testing skills. Use an isolated runtime and
-fresh disposable database with individually linked Mantle and BOSS components. The guide's framework-only bootstrap
-leaves `component/` empty and needs explicit app components for this review. Include PASS only for the bounded public
-handoff. Copy mutable configuration; keep database, uploaded bill/evidence files, output artifacts and captured mail
-separate from working data. A different port alone does not isolate a database; cookies are not isolated by port.
-Give independent browser identities separate hostnames. A component symlink still writes into the source component.
+### Environment
 
-One coordinator owns runtime lifecycle and shared files. Record source/binary revisions, loaded components, actual
-runtime/database paths, hostnames, listener ports, fixture setup, clock/zone and evidence directory in the first
-execution batch. Check delegated agents' browser access before assigning live work. Embedded Postgres permissions,
-materialized web assets and terminal availability are prerequisites to establish, not assumed Products results.
-If retaining a runner-created runtime across restarts, follow the guide's whole-runtime relocation procedure.
-Restore temporary grants/preferences/settings and stop review listeners when finished.
+- **Bootstrap.** Link Mantle and BOSS individually into an isolated runtime with copied configuration, a fresh
+  disposable database, captured mail and local outputs; the guide's framework-only bootstrap leaves `component/` empty
+  and is not enough. A linked component is source: uploads, issued files and exports land in the disposable runtime.
+  Fixture specs beyond demo data run as focused acceptance runs (§5). PASS joins only for ACC-30, as a separately
+  configured runtime serving the portal site. Use the release binary and embedded Postgres; the coordinator starts
+  further instances as needed (§7).
+- **Prerequisites seen in executed reviews.** Embedded Postgres may need host (unsandboxed) shared memory, with every
+  runner at one process-visibility level; delegated agents may have no browser tools; an isolated runtime may need
+  webroot assets materialized before the terminal works; an automated tool-approval review may block a posting or
+  send. Choose a free non-default port (another local Moqui may hold the defaults and is not stopped; Products used
+  57820) and a hostname per browser identity. Record which apply in the first batch, and restore temporary grants,
+  preferences and settings and stop review listeners at the end.
+- **Shared runtime and concurrency.** The coordinating agent decides whether the five companion reviews share one
+  runtime and manages the concurrent review agents (user decision, 2026-11-11). In a shared one it owns the lifecycle,
+  no demo record is consumed by two reviews, and Retail-wide changes (PUR-27's purchasing policy rows, CS-21/22's
+  `returnSettlementRequired`, MFG-06's production policy, MFG-17's forward repost flags) stay in their own batch and
+  are restored, or isolated in another organization, before another review's dependent activity. In separate runtimes
+  a review prepares the other side of a handoff as setup without reviewing it. Orderings: "Records, dates and
+  consumption" below.
+- **Fixtures.** Accounting's fixtures are its demo data: `BossAccountingUsersDemoData`, `BossZAccountingDemoData`
+  (`load#AccountingDemo`), `BossZSetupDemoData` (`load#SetupDemo`) and `BossZPortalDemoData` (`load#PortalDemo`).
+  `AccountingClientFixtures`, the client suites' server spec, only checks that theme assets are local. Other
+  components' fixture specs (Manufacturing's, for a cost-close run) are acceptance fixtures and need the user's
+  selection.
+- **Mail and outputs.** Serve with `mail_capture_sends=true`, as both client suites do; the demo `EmailServer`
+  `BOSS_ACCOUNTING_DEMO` is a local sink (127.0.0.1:9) and `BOSS_ACCOUNTING_MAIL` (`accounts@finance.example`) gives
+  send rights to `finance.ar`, `finance.admin` and john.doe only. Issued invoices, statements, receipts/checks and
+  retained revisions need Chromium for PDF (`moqui_chromium_path`); without it those branches are blocked, not failed.
+  Gateway outcomes come from the test gateway (`BOSS_ACCT_GW_TEST`; PASS uses `ZIZI_PORTAL_HOSTED`); bank and return
+  files are synthetic; the demo rate provider `get#EcbRates` is given a local copy of the ECB file (`sourceText`),
+  since without one it fetches the bank's daily file.
+- **Finance extent.** Postings, payment and payment-run execution, gateway capture/refund, sends, tax export, period
+  close/reopen, lock changes and activation all mutate the disposable books. They are allowed, as are temporary
+  setting, grant and policy changes (user decision, 2026-11-11); the coordinator sequences them and restores settings.
 
-Reuse a suitable binary for XML/script work; rebuild for Rust or embedded renderer changes. Verify actual loaded
-assets before diagnosing a stale page. Verify Chromium/PDF availability and inspect actual output bytes. Capture
-mail locally and use synthetic gateway responses and bank files. “Sent”, “executed” or a download filename alone
-does not prove delivery or a correct document. A missing provider/runtime leaves the affected branch unverified.
+### Organizations and identities
 
-The main demo organization is **`BOSS_ACCT_ORG`**, outside the Zizi organization hierarchy. It enables guarded
-posting and finance policies without changing Mantle's legacy demo organizations. **`BOSS_ACCT_NEWCO`** is the
-startup/setup fixture; use another disposable organization for an activation that must be repeatable.
-`ORG_ZIZI_SERVICES` supplies a foreign-scope starting point; cross-app fixtures, especially Manufacturing and PASS,
-may belong to Retail or another organization. Match the actor's scope before interpreting a refusal as a role check.
+- **`BOSS_ACCT_ORG`** (Accounting Demo Company, pseudo ID `ACCTDEMO`) is outside the Ziziwork rollup and alone adopts
+  the posting guard, required dimensions and forward issuance adjustment. Every `finance.*` user is a `PrtAgent` of it
+  only, so a narrow user's organization picker has one entry; a multi-organization picker needs `finance.admin`
+  (filtered by `MANTLE_ACTIVE_ORG`, any internal organization) or a prepared second agent relationship.
+- **`BOSS_ACCT_NEWCO`** (Accounting Demo Startup) is left in setup by `load#SetupDemo` (a setup run with a trial
+  balance and one open invoice, so Home offers "Finish setting up accounting") and has no agent users;
+  `finance.admin` selects it. Activating it consumes it, which is why AccountingSetupWalk creates its own organization;
+  a repeatable ACC-02 does the same.
+- **`ORG_ZIZI_SERVICES`** is AccountingSpecLib's foreign organization. `BOSS_P21_OTHER` exists only after the
+  acceptance AccountingAccessWalk has run; do not rely on it.
+- **`ORG_ZIZI_RETAIL`** owns Manufacturing's runs, the PASS portal demo and most neighbouring fixtures, and no
+  `finance.*` user can act there: ACC-24 and ACC-30 use the prepared Retail finance identities below.
 
-| Fixture role | Existing starting point and purpose |
-| --- | --- |
-| Receivables operator | `finance.ar`: invoice, customer, collections and receivable settlement work |
-| Payables operator | `finance.ap`: bills, holds, matching and payable selection |
-| Match-only operator | `finance.match`: bill reads and `INVOICE_MATCH`, without AP approval/payment authority |
-| Treasury operator | `finance.treasury`: payments, bank operations and execution of approved runs |
-| Composed receipt operator | `finance.paymentar`: AR plus treasury; useful for a receipt workflow, not a narrow-role refusal counterpart |
-| GL operator | `finance.gl`: journal/asset/valuation work and production cost preview |
-| Tax operator | `finance.tax`: tax records and outputs; pair with admin for configuration requiring it |
-| Financial reader | `finance.read`: financial reads without mutation authority or another business launcher |
-| Independent approver | `finance.approve`: approved decisions and close/cost-post capabilities; inspect actual grants for each action |
-| Finance administrator | `finance.admin`: setup and policies; can scope all internal organizations and is unsuitable as an isolation negative |
-| Outsiders and neighboring-app pairs | A no-finance user, Projects billing editor, matching Purchasing user, Manufacturing cost reader/operator and external customer/supplier contact, each with the specific missing grant named |
+| Fixture | Group: permissions; sections (`BossAccountingSetupData`) | Review use and limits |
+| --- | --- | --- |
+| `finance.ar` | AR: `RECEIVABLE_EDIT`/`_VIEW`, `PAYMENT_VIEW`, `CUSTOMER_CREDIT_VIEW`; Receivables, Payments, NewInvoice | Invoices, statements, collections, dunning, recurring, receivable settlement; no Approvals, Banking, Period close, Tax or Settings |
+| `finance.ap` | AP: `PAYABLE_EDIT`/`_VIEW`/`_IMPORT`, `PAYMENT_VIEW`, `INVOICE_HOLD`, `INVOICE_MATCH`, `SUPPLIER_TERMS_EDIT`; Payables, Payments, Approvals, NewBill | Bills, holds, matching, terms, run proposals; no hold release, bill approval or run approval |
+| `finance.match` | MATCH: `INVOICE_MATCH`, `PAYABLE_VIEW`; Payables | Match-only counterpart without AP edit or approval |
+| `finance.treasury` | TREASURY: `PAYMENT_EDIT`/`_VIEW`, `BANK_RECONCILE`, `PAYABLE_VIEW`, `PAYMENT_HOLD_RELEASE`; Payments, Banking, Payables, ReceivablesWorkbench, NewPayment | Payments, gateway, refunds, transfers, banking, stored value, run execution |
+| `finance.paymentar` | AR + TREASURY | Composed receipt workflow; never a narrow refusal counterpart |
+| `finance.gl` | GL: `ACCOUNTING_VIEW`, `ACCOUNTING_GL_POST`, `PRODUCT_COST_VIEW`, `BUDGET_EDIT`; GL, Period close, Fixed assets, Inventory, Budgets, Reports, NewEntry, document reads | Journals, asset book events and depreciation runs, valuation, budget drafts, cost-close preview; cannot post or return a cost close |
+| `finance.tax` | TAX: `TAX_STATEMENT_EDIT`; Tax | Tax statements and exports; which authority/rate writes also need ADMIN (design: tax admin is TAX + ADMIN) is to verify at execution |
+| `finance.read` | READ: `ACCOUNTING_VIEW`, `PRODUCT_COST_VIEW`, `CUSTOMER_CREDIT_VIEW`; Receivables, Payables, Payments, Banking, GL, Fixed assets, Inventory, Budgets, Reports | Read-only counterpart with no other launcher; no Period close, Tax, Settings, Approvals or quick create |
+| `finance.approve` | APPROVE: `ACCOUNTING_VIEW`, `INVOICE_APPROVE`, `INVOICE_HOLD_RELEASE`, `PAYMENT_RUN_APPROVE`, `FISCAL_CLOSE`, `CREDIT_HOLD_RELEASE`, `BUDGET_APPROVE`, `BUDGET_OVERRIDE`, `RETURN_CREDIT_APPROVE`, `PRODUCTION_COST_POST`; Approvals, Period close, documents, GL, Fixed assets, Inventory, Budgets, Reports | Independent approvals, close, credit release, cost-close post/return; no `FISCAL_REOPEN`, GL post or edit permission |
+| `finance.admin` | ADMIN: `ACCOUNTING_ADMIN`, `FISCAL_REOPEN` and every permission above except `PAYMENT_HOLD_RELEASE`; always-access to every section | Setup, Settings and policies, locks, reopen, repair, self-approval; holds both `INVOICE_HOLD` and `INVOICE_HOLD_RELEASE`, so it is the same-user release refusal; never an isolation negative |
 
-Verify actual group permissions and organization relationships in the loaded fixture. Roles compose: one demo
-user does not establish separation of drafting, approval, posting and treasury execution. Self-approval is a policy
-with an audit effect, not permission inferred from a button. Pair each refusal with an otherwise-valid successful
-request by a holder. Do not use ADMIN to stand in for any narrow finance role.
+Neighbouring fixtures (`BossUsersDemoData`; none has the Accounting launcher): `manufacturing.finance` (Retail;
+Manufacturing reader plus READ), `manufacturing.costclose` (Retail; Manufacturing reader plus APPROVE, posts from
+Manufacturing's Cost close tab), `purchasing.buymatch` (Retail; buyer plus MATCH), `customerservice.returnsar`
+(Retail; return authorizer plus AR), `insights.finance` (Retail; Insights plus READ) and `catalog.cost.gl` (Services;
+Products plus GL). `catalog.reader` is AccountingAccess's no-finance outsider. The Projects billing editor
+(`BOSS_PROJECT_MANAGER`: `RECEIVABLE_EDIT` without the view permissions) has only john.doe as a member, so prepare
+one. The PASS contacts `joedist.payer` (Billing, JoeDist) and `ziddleman.billing` (Supplier, ZiddlemanInc) are
+public accounts with no user group. john.doe is ADMIN and drives AccountingScreens and AccountingServerStatic, so
+those results are never least-privilege evidence.
 
-Prepare the minimum records needed by each wave, reusing demo data and existing fixtures after inspecting their
-setup. Useful families include `BOSS_ACCT_INVOICE/BILL/PAYMENT/ENTRY/POSTED`, review/held/due/discount bills,
-`BOSS_ACCT_PO_MATCH` and matching bills, bank accounts/statements, `BOSS_ACCT_CLOSE_PERIOD`, the fixed-asset examples,
-`BOSS_ACCT_BILL_FREIGHT` and `BOSS_ACCT_RETURN`. Their status can change during a walk; preserve a separate baseline
-and identify any scenario that consumes a fixture. Client fixture registrations are not permission to run acceptance.
+Self-approval is an audited `PartyAcctgPreference` setting on AccountingPreferences, off by default and set only by
+finance administration; a decision by the drafter is stamped self-approved. Verify loaded memberships, permissions
+and organizations before interpreting a refusal. Pair each refusal with an otherwise-valid success by a holder and
+name the grant the refused fixture lacks; a validation error is not permission evidence.
 
-Dates and financial basis need deliberate fixtures:
+### Prepared Retail finance identities
 
-- Record execution date and zone. Inspect demo-loader dates rather than assuming an old due date, fiscal year,
-  discount window or “last month” still exercises its intended condition. Prepare current/future/expired policies,
-  overdue/current invoices, open/closed periods, an expiring exception and a boundary in two time zones.
-- Prepare balanced and unbalanced drafts, missing mappings/dimensions, independent approval identities, a locked
-  date, stale previews, operation retries and a second identity changing a source after preview.
-- Use at least two currencies and dated rates, with source/document and base amounts distinguishable. Foreign
-  currency posting exists; settlement, run and transfer support must be checked independently, not inferred from it.
-- Include empty/populated/filtered lists, long and localized names, fractional and large amounts, two rows per
-  repeated dialog, inaccessible/deleted records and masked account/tax identifiers.
-- Use synthetic mixed-validity CSV/BAI2/OFX and bill files, duplicate imports, partial batch outcomes, declined and
-  unknown gateway outcomes, and a run whose inputs change before confirmation. Prepare failures locally; do not
-  exercise external delivery to create them.
+Every review that needs finance authority over a Retail record prepares these Retail `PrtAgent`s (each also in
+`BOSS_USERS`) rather than borrowing a `finance.*` user, and records them in its first batch. The usernames are
+proposals for the five reviews to share; the compositions follow the existing specs.
 
-### Visual and interaction review
+| Identity | Groups | Model | Used in |
+| --- | --- | --- | --- |
+| `retail.finance.approve` | `BOSS_ACCOUNTING`, `BOSS_ACCOUNTING_APPROVE` | AccountingProductionCostClose's `boss_pcc_approve` | ACC-24 post and return from the Accounting queue; PUR-22's hold release and bill approval |
+| `retail.finance.gl` | `BOSS_ACCOUNTING`, `BOSS_ACCOUNTING_GL` | `boss_pcc_gl` | ACC-24 preview without post; a landed charge on a Retail receipt if PUR-22's link is followed |
+| `retail.finance.read` / `retail.finance.admin` | `BOSS_ACCOUNTING` with `_READ` / `_ADMIN` | `boss_pcc_read` / `boss_pcc_admin` | ACC-24 reader and CostingPolicies (`store#AllocationPolicy` is ADMIN-only) |
+| `retail.finance.ap` | `BOSS_ACCOUNTING`, `BOSS_ACCOUNTING_AP` | the Retail AP user PurchasingBillsWalk and PurchasingReturnsWalk create (permission group only) | PUR-22 intake and draft bill, PUR-24 supplier credit, ACC-30 BillUpload intake |
+| `retail.finance.ar` | `BOSS_ACCOUNTING`, `BOSS_ACCOUNTING_AR` | — | ACC-30 pay link (`send#Invoice`, `create#AccessCapability`); the demo mailbox `BOSS_ACCOUNTING_MAIL` is `BOSS_ACCT_ORG`'s and lists only its own senders, so which account mails a Retail invoice is to verify |
+| `retail.manufacturing.gl` | `BOSS_MANUFACTURING`, `BOSS_MANUFACTURING_READ`, `BOSS_ACCOUNTING_GL` | `manufacturing.costclose` with GL in place of APPROVE | MFG-28 preview-only on the Cost close tab |
+| `customerservice.returnsar` + `BOSS_ACCOUNTING_TREASURY` / `BOSS_ACCOUNTING_APPROVE` | temporary grants on the seeded user, restored | CustomerServiceReturnsWalk's temporary-grant pattern | CS-22 refund and receiptless credit |
 
-- Review Material `/qapps` in default light/dark at **1920×1080**, with selected **1280px**, **390px**, keyboard-only
-  and actual **200% browser zoom** cases. Record measured dimensions and available zoom control; Products' excluded
-  or unverified variants do not automatically carry over.
-- Inspect actual embedded TUI launch, theme change, tabs, pickers, row actions, dialogs, confirmations and saved
-  results. JSON rendering and a browser-opened terminal helper are supporting evidence, not terminal interaction.
-  Give Standard `/apps` a brief functional/output/fallback check; visual refinement targets Material.
-- Use the archetype's name/key/status header, one primary action, coherent read-only layout and grouped fields.
-  Keep organization, counterparty, document identity, date basis, amount/currency and debit/credit meaning visible.
-  Distinguish draft, approval, posting, payment, clearing and reconciliation states.
-- Apply the guide's contrast criteria to composited backgrounds: ordinary text **4.5:1**, qualifying large text
-  **3:1**, meaningful controls/states **3:1**. Inspect money, negative balances, chips, disabled fields, focus and
-  validation in both themes; status and reconciliation difference cannot depend on color alone.
-- Follow finds through saved-find create/update/default/reset, supported sorting/views/columns, pagination,
-  selection, detail and Back. Organization or counterparty changes clear stale dependent selections. Export the
-  scope the UI actually offers; do not presume selected-only exports exist.
-- Exercise native typing, blur/change, Enter/Escape, accessible names, tab order and focus return. Reopen dialogs
-  on two different rows after reload to prove record identity. Large/localized numbers must reopen as valid edit
-  values; currency precision, zero, blank, unavailable and restricted values remain distinct.
-- Failed saves retain the draft and identify correction; cancel leaves persisted state unchanged. Preview/review
-  names the operation, organization, source version, date, selected documents and totals. Changing inputs, grants,
-  mappings, rates or locks invalidates stale review. Reload/retry preserves the intended operation identity.
-- Only explicit confirmation resumes the original action. Recheck the target after navigation or a late response;
-  a confirmation for one invoice, statement, run or organization cannot apply to another. Check resumed execution
-  separately from a fresh request.
-- Inspect balanced postings, applications, remaining amounts, evidence and linked reversals after financial actions.
-  Bulk work names each independent failure while successful documents remain usable. A single posting, allocation,
-  paired transfer or document-and-ledger transaction remains atomic.
-- Distinguish no data, no matches, no permission, missing basis and failed loading. A failed Home/report source is
-  unavailable with a named reason; unrelated sources continue. Card counts, drill-through filters and report totals
-  agree without silently adding incompatible currencies.
-- Inspect CSV/XLSX/PDF/HTML/bank-file bytes, page breaks, repeated headers, Unicode, rounding, masked values and scope.
-  A journal summary and an issued invoice are different output contracts. Tax exports and bank files remain local.
-- Inspect Accounting's shell search, quick create, Today, approvals and notification returns in context. It declares
-  no Accounting-specific Assist prompt; generic page context is not a finance-action integration.
+### Records, dates and consumption
+
+`load#AccountingDemo` creates the records once, by fixed ID, for `BOSS_ACCT_ORG`:
+
+- Documents and journals: drafts `BOSS_ACCT_INVOICE`, `BOSS_ACCT_BILL` and `BOSS_ACCT_PAYMENT`; journals
+  `BOSS_ACCT_ENTRY` (draft) and `BOSS_ACCT_POSTED`; finalized `BOSS_ACCT_AR_FINALIZED`; approved time
+  `BOSS_ACCT_APPROVED_TIME` on project `BOSS_ACCT_PROJECT`.
+- Settlement and payments: `BOSS_ACCT_STL_*` (invoices INV100, SPLIT100, INV40, ADJUST50; receipts RECEIPT60/70;
+  credit CREDIT25); `BOSS_ACCT_PAY_*` (DRAFT, VALIDATED, EVIDENCE_DRAFT, DELIVERED, APPLIED, CHECK) and
+  `BOSS_ACCT_REFUND_*`; bank receipts `BOSS_ACCT_BANK_RCPT1`–`3`; bank rule `BOSS_ACCT_RULE_CUSTOMER`.
+- Payables: `BOSS_ACCT_BILL_REVIEW`, `_HELD`, `_DUE`, `_DISCOUNT` (term `Net30Disc2Pct10`), `_DISPUTE`, `_RUN` and
+  `_WORKBENCH`; order `BOSS_ACCT_PO_MATCH` with `BOSS_ACCT_BILL_MATCH` and `_PRICE`; freight `BOSS_ACCT_BILL_FREIGHT`;
+  budget `BOSS_ACCT_BUDGET` with order `BOSS_ACCT_PO_BUDGET` and overrun bill `BOSS_ACCT_BILL_OVER`.
+- Close, assets, tax, collections, returns: `BOSS_ACCT_CLOSE_PERIOD` ("Last month") with its two blockers, draft
+  `BOSS_ACCT_CLOSE_INVOICE` and an unreconciled line on `BOSS_ACCT_CLOSE_BANK`; assets `BOSS_ACCT_FA_FORKLIFT` (in
+  service), `_VAN` (to capitalize) and `_PRINTER` (no cost); authority `BOSS_ACCT_UT_TAX`, taxed invoice
+  `BOSS_ACCT_TAXED`, 1099 vendors `BOSS_ACCT_1099_VENDOR` and `_NOTIN`; `BOSS_ACCT_AR_OVERDUE`, `_DISPUTED`, held
+  order `BOSS_ACCT_SO_HELD`, recurring template `BOSS_ACCT_RENT_TEMPLATE`; return `BOSS_ACCT_RETURN` on
+  `BOSS_ACCT_SO_RETURN`.
+
+Generated IDs come from AccountingSpecLib's lookups (`receivedShipmentId`, `demoRunId`, `statementPreview`), not
+guessed constants. Valuation, production and stale-preview close blockers, a second currency's documents and a
+multi-organization user are not in the demo; prepare them.
+
+Demo dates are relative to the load: documents carry the load day, the overdue receivables are 20 and 10 days past
+due, the discount bill's window starts at load, and "Last month" is the month before the load month in the loading
+user's zone. A runtime kept across days or a month end drifts, so record the load and execution dates. Use the real
+clock in the machine's current zone (America/Chicago on current machines; it will vary), with no DST or second-zone
+checks (user decision, 2026-11-11). Recreate date-sensitive rows relative to execution: current, future and expired
+policies and rates and an expiring lock exception. Closing and month-based work uses back-dated transactions in
+periods that ended before now (`BOSS_ACCT_CLOSE_PERIOD` is last month), never a future date or a moved clock; posting
+and application days follow `EntityLib.bookDay` (impl-accounting F121).
+Foreign-currency posting is built, but the settlement workbenches, payment drafts, payment runs and internal
+transfers stay base-currency only (impl-accounting §7, P20), so their refusals are expected outcomes.
+
+The demo records are one-shot; keep a baseline and give each activity its own record where two need the same state:
+
+- ACC-11's release of `BOSS_ACCT_BILL_HELD` removes the held bill ACC-13 and ACC-14 exclude and the payable-hold check
+  ACC-21 reads; prepare another held bill.
+- ACC-13 uses `BOSS_ACCT_BILL_WORKBENCH`; ACC-14 uses `_DUE`, `_DISCOUNT` and `_RUN`. Do not settle a run's bills in
+  the workbench.
+- ACC-08's batch actions and ACC-16's reconciliation leave `BOSS_ACCT_CLOSE_INVOICE` and the `BOSS_ACCT_CLOSE_BANK`
+  line for ACC-21, which resolves them as its blockers.
+- ACC-21's close of `BOSS_ACCT_CLOSE_PERIOD` refuses later postings dated last month (an ACC-04 reversal, an ACC-22
+  run month), hence the wave order below.
+- ACC-02's activation, ACC-07's send of `BOSS_ACCT_INVOICE`, ACC-22's capitalization of `BOSS_ACCT_FA_VAN` and
+  ACC-28's settlement of `BOSS_ACCT_RETURN` each happen once per database.
+- Across reviews: a cost-close post closes its run, so ACC-24 and MFG-28 each close their own completed Retail run
+  (in a shared runtime ACC-24's is the run whose review MFG-27 requested); ACC-30 and PUR-28 use the same
+  `ziddleman.billing` contact and "Portal demo shelving restock" order, so each issues fresh links.
+
+### Accounting criteria
+
+Apply the guide's criteria and Products' visual and interaction list. In Accounting also check:
+
+- The guide's viewports and keyboard on Material `/qapps` with measured geometry, actual TUI operations and a brief
+  Standard `/apps` functional/output/fallback check, with JSON renders as supporting evidence only.
+- Organization, counterparty, document identity, date basis, amount/currency, debit/credit meaning and payable
+  versus receivable direction stay visible, including on the invoice tabs BillDetail reuses and on BillPrint. Draft,
+  approval, posting, payment, clearing and reconciliation states are distinct without relying on color.
+- Reviews (both SettlementReviews, PaymentDetail/Review, TransferReview, InvoiceBatch, Setup/Activate, close,
+  depreciation, landed cost, cost close) name the operation, organization, source version, date, selected documents
+  and totals; a changed input, grant, mapping, rate or lock makes them stale, and reload or retry keeps the
+  operation key.
+- After a financial action inspect balanced postings, applications, remaining amounts, evidence and linked reversals.
+  Bulk work (invoice batches, runs, legacy matches, depreciation, statement import, reminders) names each independent
+  failure and keeps the successes usable; a single posting, application set, paired transfer or document-and-ledger
+  write stays atomic.
+- No data, no matches, no permission, missing basis and failed loading are distinct: Home names a failed figure
+  Unavailable, its cards agree with their destination lists, and no total silently adds currencies.
+- An issued invoice, statement, receipt/check, payment-run file, tax export, list export and record print are
+  different output contracts: inspect bytes, page breaks, rounding, masked bank and tax identifiers and the scope the
+  UI actually offers. A download is not a bank submission or filing; "sent" is checked against the captured message.
+- Shell: the four quick creates, Today, the Finance records palette, `g j`/`g a` and the three notification topics,
+  in context. Accounting declares no Assist prompt; generic page context is not a finance integration.
 
 ### Waves
 
@@ -189,36 +268,56 @@ Dates and financial basis need deliberate fixtures:
 | 1. Establish the finance workday | ACC-01–06 | Scope, setup, chart/periods, journal, defaults and currency basis |
 | 2. Invoice and collect receipts | ACC-07–10 | Invoice lifecycle, source billing/outputs, settlement and payments |
 | 3. Review and pay suppliers | ACC-11–14 | Bills/holds, matching, payable settlement and payment runs |
-| 4. Reconcile cash | ACC-15–17 | Statement intake, rules, reconciliation, deposits and stored value/transfers |
+| 4. Reconcile cash | ACC-15–17 | Statement intake, rules, reconciliation, deposits, transfers and stored value |
 | 5. Follow up receivables | ACC-18–20 | Collections/credit, dunning and recurring drafts |
-| 6. Close and explain the books | ACC-21–27 | Locks/close, assets, inventory/production costs, tax, budgets and reports |
-| 7. Reconcile handoffs and remaining variants | ACC-28–32 and open continuations | Returns, evidence, PASS, permissions, other mounts and modes |
+| 6. Value the subledgers | ACC-22–26 | Asset books, inventory/landed cost, production cost close, tax and budgets |
+| 7. Close and explain the books | ACC-21, then ACC-27 | Close blockers resolved through earlier activities, locks, reopen; reports and drill |
+| 8. Handoffs and remaining variants | ACC-28–32 | Returns, evidence, PASS, permissions, other mounts and modes |
 
-Establish positive/negative permission pairs from Wave 1. Run evidence/file and boundary inspections throughout,
-not only in Wave 7. Important continuations: defaults/rates → invoice and journal posting; invoices/bills →
-settlement → payments → bank reconciliation; matches/holds → payment eligibility; collections/recurrence → invoices;
-asset/stock/production postings → reports and close blockers; budgets → bill/source commitments; return credits →
-settlement/refund; public payment/upload → the corresponding internal record. Close ACC-21 only after its selected
-blocker-resolution continuations have been observed. Record incomplete branches in the originating ledger row.
+Establish positive/negative pairs from Wave 1 and inspect evidence, files and boundaries throughout. Continuations:
+defaults/rates → invoice and journal posting; invoices/bills → settlement → payments → bank reconciliation;
+matches/holds → payment eligibility; collections/recurrence → invoices; asset/stock/production postings → close
+checks and reports; budgets → bill and source commitments; return credits → settlement/refund; public payment and
+upload → the internal record. ACC-21 resolves the demo's draft-invoice and bank-line blockers through their Fix
+links, and closes only after the prepared valuation and production blockers' resolutions have been observed in ACC-23
+and ACC-24. Record incomplete branches in the originating ledger row.
 
-Each later authorized batch follows observe → prioritize → refine → rerun affected activities → compare evidence
-→ verify → update this record. Start with ACC-01 and a disposable ACC-04/07 path to establish browser/TUI and record
-identity baselines. Delegate bounded activities only after checking tools and identity isolation; serialize shared
-settings, fiscal locks, fixture mutations and runtime lifecycle.
+In the review pass (below), start with ACC-01 and a disposable ACC-04/07 path to establish browser/TUI and
+record-identity baselines; the coordinator delegates activities only after checking tools and identity isolation,
+and serializes shared settings, locks, fixture mutations and runtime lifecycle.
+
+### Review and refinement phases
+
+Execution runs as the guide's [two separate passes](../../../../docs/dev/UI-Review.md#record-fix-and-verify)
+(user decision, 2026-11-11):
+
+1. **Review pass.** Concurrent review agents under one coordinating agent execute every activity in the waves above
+   and record each outcome, its evidence and every finding in §6. They change no source and no design or
+   implementation record, and they correct nothing. A defect that stops a step is recorded; the walk continues from a
+   disposable workaround named in the finding, or the step is marked blocked. The coordinator assigns activities,
+   owns the runtime or runtimes, sequences fixture consumption and temporary setting changes, and restores them (§2).
+   The pass ends when every activity of this review and of its companion reviews has a ledger outcome.
+2. **Refinement pass.** Only after the review pass ends, the coordinator triages the whole findings register together
+   with the companion reviews' registers: merge duplicates and shared causes, assign the owning layer (BOSS, Mantle or
+   framework) and order by severity. Findings are then addressed in bounded batches: correct → rerun the affected
+   activities → verify (§5) → record the retest in the finding. A deferred or accepted finding keeps its reason.
 
 ## 3. Screen and surface inventory
 
 Routes are relative to `/qapps/`. **B** means this component's `screen/`. Append a local name to its directory for
 the route and `.xml` for its source. There are **134 local XML definitions**: `Accounting.xml` and 133 below
-`Accounting/`. There is **no local Accounting QVue or TUI JSON file**; authored inline render sections, shared QVue
-surfaces and helper routes still require mode-specific inspection. Physical child sources do not establish access.
+`Accounting/`. There is **no local Accounting QVue or `.tui.json` file**, but 50 local XML files carry `render-mode`
+sections: 49 with authored qvt/tui twins (76 pairs) and 16 with authored `html-print` text. Four mounted Shared
+sources (InvoiceMatch, EquipmentDetail, ProductionCostClose, Product360) and four templates (AccountingDocuments,
+AccountingParts, AccountingRecords, AccountingInventory) add their own tui text; Chatter and RecordFiles are QVue with
+terminal helpers. Each needs mode-specific inspection. Physical child sources do not establish access.
 
 ### Local routes
 
 | Route prefix / source directory | XML definitions | Activities |
 | --- | --- | --- |
 | root | `Accounting` | ACC-01, 31–32 |
-| `Accounting/` | `Home` | ACC-01, 02, 18, 21, 24 |
+| `Accounting/` | `Home` | ACC-01, 02, 18, 24 |
 | `Accounting/` | `Receivables`, `Payables`, `Payments`, `Banking`, `GeneralLedger`, `PeriodClose`, `FixedAssets`, `Inventory`, `Tax`, `Budgets`, `Reports`, `Settings`, `Records`, `Approvals`, `QuickCreate` | Containers/defaults and their activities below |
 | `Accounting/QuickCreate/` | `NewInvoice`, `NewBill`, `NewPayment`, `NewEntry` | ACC-01, 04, 07, 10–11 |
 | `Accounting/Receivables/` | `Invoices`, `InvoiceDetail`, `InvoicePrint` | ACC-07, 27, 29 |
@@ -237,11 +336,11 @@ surfaces and helper routes still require mode-specific inspection. Physical chil
 | `Accounting/Banking/` | `BankAccounts`, `BankAccountDetail`, `StatementImport`, `BankRules`, `UnmatchedTransactions` | ACC-15–16 |
 | `Accounting/Banking/` | `Reconciliations`, `ReconciliationDetail`, `FinancialAccounts`, `FinancialAccountDetail` | ACC-16–17 |
 | `Accounting/GeneralLedger/` | `ChartOfAccounts`, `AccountDetail`, `JournalEntries`, `JournalEntryDetail`, `TransactionEntries`, `JournalBatches`, `JournalTemplates` | ACC-03–04, 27, 29 |
-| `Accounting/PeriodClose/` | `Periods`, `PeriodCloseDetail`, `PeriodLocks`, `PeriodRuns` | ACC-03, 21–24 |
+| `Accounting/PeriodClose/` | `Periods`, `PeriodCloseDetail`, `PeriodLocks`, `PeriodRuns` | ACC-03, 21–22, 24 |
 | `Accounting/FixedAssets/` | `FixedAssets`, `AssetClasses`, `DepreciationRunDetail` | ACC-22 |
 | `Accounting/Tax/` | `TaxAuthorities`, `TaxRates`, `TaxStatements`, `TaxStatementDetail` | ACC-25 |
 | `Accounting/Budgets/` | `Budgets`, `BudgetDetail`, `BudgetControls` | ACC-26 |
-| `Accounting/Reports/` | `Reports`, `TrialBalance`, `GeneralLedger`, `PartnerLedger`, `BalanceSheet`, `IncomeStatement`, `CashFlow`, `RetainedEarnings`, `FinancialRatios`, `AccountBalance`, `PostedSummary`, `Aging`, `InvoiceReconciliation`, `BudgetVariance`, `SalesAnalysis`, `StockTransactions` | ACC-27; specific consumers in 04, 18, 21, 23, 26 |
+| `Accounting/Reports/` | `Reports`, `TrialBalance`, `GeneralLedger`, `PartnerLedger`, `BalanceSheet`, `IncomeStatement`, `CashFlow`, `RetainedEarnings`, `FinancialRatios`, `AccountBalance`, `PostedSummary`, `Aging`, `InvoiceReconciliation`, `BudgetVariance`, `SalesAnalysis`, `StockTransactions` | ACC-27 owns the catalog, the ten ledger/statement reports and SalesAnalysis; Aging ACC-18, InvoiceReconciliation ACC-21, StockTransactions ACC-23, BudgetVariance ACC-26; TrialBalance also ACC-04, 21 |
 | `Accounting/Settings/` | `Settings`, `AccountingPreferences`, `PostingDefaults`, `PaymentTerms`, `PaymentMethods`, `DocumentSettings` | ACC-05 and their consumers |
 | `Accounting/Settings/` | `Currencies`, `CollectionPolicies`, `MatchPolicies`, `CostingPolicies`, `Setup` | ACC-02, 06, 12, 18–19, 24 |
 | `Accounting/Settings/Setup/` | `Basis`, `OpeningBalances`, `OpenItems`, `Readiness`, `Activate` | ACC-02 |
@@ -254,7 +353,8 @@ surfaces and helper routes still require mode-specific inspection. Physical chil
 | Receivables / Payables / Payments / Banking | Invoices / Bills / Payments / BankAccounts | ACC-07, 10–11, 15 |
 | GeneralLedger / PeriodClose / FixedAssets / Inventory | ChartOfAccounts / Periods / FixedAssets / InventoryValuation | ACC-03–04, 21–24 |
 | Tax / Budgets / Reports / Settings | TaxStatements / Budgets / Reports / Settings | ACC-02, 05–06, 25–27 |
-| Records / Approvals | OrderDetail / Notifications | ACC-11, 14, 18, 28, 31 |
+| Records / Approvals | OrderDetail / Notifications | ACC-11, 14, 18, 26, 28, 31 |
+| QuickCreate | none (each quick create opens its own screen) | ACC-01 |
 | InvoiceDetail / BillDetail / PaymentDetail | Overview | ACC-07, 10–11 |
 | Payables/Supplier360 / Receivables/Customer360 | Bills / Contact | ACC-11, 18, 28–29 |
 | Settings/Setup | Basis | ACC-02 |
@@ -266,14 +366,14 @@ set as Products, Purchasing or Manufacturing even where the parent XML is shared
 | --- | --- | --- |
 | `Chatter`, `Chatter/ChatterTui` | `Shared/Chatter.xml`, its terminal helper | ACC-29, 31–32 |
 | `RecordFiles`, `RecordFiles/RecordFilesTui` | `Shared/RecordFiles.xml`, its terminal helper | ACC-29, 31–32 |
-| `Approvals/Notifications` | `Commons/Notifications.xml` | ACC-11, 14, 18, 31; source document makes the decision |
+| `Approvals/Notifications` | `Commons/Notifications.xml` with topics BillApproval, BillHoldRelease, PaymentRunApproval, BudgetOverride and CreditHoldRelease | ACC-11, 14, 18, 26, 31; the linked source record makes the decision; only AP, APPROVE and ADMIN open it |
 | `Receivables/Customer360` | `Shared/Customer360.xml` and admitted children | ACC-07–09, 18, 28–29 |
 | `Payables/BillDetail/Match` | `Shared/InvoiceMatch.xml` | ACC-12 |
 | `Payables/BillDetail/{Items,Orders,Shipments,Payments,GeneralLedger,Budget,Files,History}` | Matching `Accounting/Receivables/InvoiceDetail/*.xml` | ACC-11–13, 26, 28–29; Shipments labelled Receipts; local Overview/Holds retained; Conversation is not mounted |
 | `FixedAssets/EquipmentDetail` | `Shared/EquipmentDetail.xml` | ACC-22; Accounting asset-book presentation |
 | `Inventory/InventoryValuation` | `Shared/InventoryValuation.xml`, `template/AccountingInventory.xml` | ACC-23 |
-| `Inventory/ProductionCostClose` | `Shared/ProductionCostClose.xml` | ACC-24; also mounted as `Manufacturing/WorkOrders/WorkOrderDetail/CostClose` |
-| `Records/OrderDetail`, `Records/ShipmentDetail`, `Records/ReturnDetail` | Matching `Shared/*.xml`, Accounting context/templates | ACC-08, 11–12, 18, 28, 30 |
+| `Inventory/ProductionCostClose` | `Shared/ProductionCostClose.xml` | ACC-24; also mounted as `Manufacturing/WorkOrders/WorkOrderDetail/ProductionCostClose` (tab "Cost close") |
+| `Records/OrderDetail`, `Records/ShipmentDetail`, `Records/ReturnDetail` | Matching `Shared/*.xml` with `template/AccountingRecords.xml` (Invoice from order, Upload supplier bill, Supplier bill link, Bill accepted receipts, Settle) and AccountingCollections (credit hold) | ACC-08, 11–12, 18, 28, 30 |
 | `Records/Product360` | `Shared/Product360.xml`, `template/AccountingInventory.xml` | ACC-23, 28; financial summary/mappings, not the catalog tabs |
 
 Account for inherited children explicitly. These are ACC-31 context/access probes where excluded, not additional
@@ -289,9 +389,11 @@ Accounting jobs to implement:
 | Customer360/InsightsRecord and Product360/InsightsRecord | Hidden Shared InsightsRecord mount; inspect authorized linked insight and return without assuming an Accounting dashboard exists |
 | Chatter/ChatterTui and RecordFiles/RecordFilesTui | Shared terminal helpers; inspect truthful supported actions and delegation in ACC-29/32 |
 
-Retest shared corrections through a representative second consumer: Purchasing for matching, Manufacturing for cost
-close/equipment, Warehouse for shipment/return/valuation, Customer Service for Customer360, Products for Product360,
-or another authorized Commons record for files/Chatter. Choose the consumer for the behavior actually changed.
+Retest shared corrections through a representative second consumer: Purchasing/Bills for InvoiceMatch, Manufacturing
+WorkOrderDetail for cost close and WorkCenters for EquipmentDetail, Warehouse for shipment/return/valuation
+(`Warehouse/Reports/InventoryValuation`), Customer Service or Commerce for Customer360, Products for Product360, or
+another authorized Commons record for files/Chatter. Choose the consumer for the behavior actually changed. The
+shared `Shared/Supplier360` (Products, Purchasing, Warehouse, Manufacturing, Insights) is not mounted in Accounting.
 
 Hidden review/output routes are first-class supporting surfaces: InvoiceBatch; both SettlementReview routes;
 PaymentDetail/Review; TransferReview; InvoicePrint, BillPrint, StatementPrint and PaymentPrint; quick-create screens;
@@ -302,54 +404,59 @@ Use actual record parameters when preserving context: `recordId` on the generic 
 wrappers; `paymentMethodId` on BankAccountDetail; `statementImportId` plus `paymentMethodId` on StatementImport;
 `bankReconciliationId` on ReconciliationDetail; `finAccountId` on FinancialAccountDetail; `paymentRunId` on
 PaymentRunDetail; `timePeriodId` on PeriodCloseDetail; `periodRunId` on PeriodRuns/DepreciationRunDetail;
-`workEffortId` on ProductionCostClose. Carry `organizationPartyId` where declared. Read each route's current
-parameters before constructing direct checks; shared record routes also accept their native record keys.
+`workEffortId` on ProductionCostClose; `supplierPartyId` on Supplier360; `taxStatementId` on TaxStatementDetail;
+`budgetId` (and `revisionSeqId`) on BudgetDetail; `assetId` on EquipmentDetail; `previewId` (with `draftId` on the
+SettlementReviews and `previewKind` on PaymentDetail/Review) on the review routes. Carry `organizationPartyId` where
+declared. Read each route's current parameters before constructing direct checks; shared record routes also accept
+their native record keys.
 
 ### Custom modes, outputs and embedded surfaces
 
 | Surface | Supporting inspection | Activities |
 | --- | --- | --- |
-| Shared document layouts | `AccountingDocuments.xml`, `AccountingPayments.xml`; header, draft dialog, tabs, statuses, phone columns and selected-record actions | ACC-07–14 |
+| Shared document layouts | `AccountingDocuments.xml`, `AccountingPayments.xml`, `AccountingFinanceDetails.xml` (Customer360 and Supplier360 finance details), `AccountingCollections.xml` (Collections, Customer360 Activities/Credit, OrderDetail's credit hold); header, draft dialog, tabs, statuses, phone columns and selected-record actions | ACC-07–14, 18 |
 | Organization, choices and reports | `AccountingParts.xml`, `AccountingReportParts.xml`, `AccountingReports.xml`; selection labels outside the current page, dependent choices, scope/date/dimension continuity | ACC-01–06, 27, 31 |
 | Settlement review | `AccountingWorkbench.xml` and each side's SettlementReview; draft selection, fingerprint and operation identity through navigation/reload | ACC-09, 13 |
 | Treasury reviews | PaymentDetail/Review and TransferReview; pending gateway outcome, confirmation, unchanged retry and applications | ACC-10, 17 |
 | Wizards and long forms | Setup's five physical steps; staged imports, run details and close/depreciation reviews on their actual routes; do not invent child routes for design step names | ACC-02, 14–16, 21–22 |
 | Issued documents | InvoicePrint/BillPrint, invoice batch output, StatementPrint, PaymentPrint (receipt/detail/check), captured emails and attachments | ACC-07–08, 10–11, 14 |
 | Bank outputs | Run-file generation/download and return import; deposit slip; bank/stored-value screen print where offered | ACC-14, 16–17 |
-| Record/report print | Journal, close, depreciation, reconciliation, stored-value and tax detail print; report `html-print`, CSV/XLSX where offered | ACC-04, 16–17, 21–22, 25, 27 |
+| Record/report print | Authored `html-print` on Invoices, InvoiceDetail, Bills, BillDetail, ExpensePosting, PaymentRuns, PaymentRunDetail, PaymentDetail, Collections, Dunning, RecurringInvoices, BudgetDetail, TaxStatementDetail, Setup OpeningBalances/Readiness and StatementPrint; the generic print of JournalEntryDetail, PeriodCloseDetail, DepreciationRunDetail, ReconciliationDetail and FinancialAccountDetail (to verify at execution); report `html-print`, CSV/XLSX where offered | ACC-02, 04, 07, 10–11, 14, 16–22, 25–27 |
 | Financial custom cells | Inline qvt/tui status, amount, comparison, findings and action sections; inspect authored twins rather than inferring parity from XML | Respective activities, ACC-32 |
 | Chatter/files | Shared QVue and terminal helpers, authorized original/issued bytes, upload/read-only states and history | ACC-29 |
-| Shell | Four quick creates; Finance records palette plus MantleInvoice/Payment/GlAccount/AcctgTrans types; `g j`, `g a`; Accounting Today; CreditHoldRelease, RecurringInvoiceFailed and ProductionCostReview topics | ACC-01, 04, 07, 10–11, 18, 20, 24 |
-| Adjacent entry points | Insights Accounting reports, DraftEntries/PostedEntries/BillsAwaitingApproval/BillsOnHold/CostClose attention; Admin currencies, payment terms and tax settings entries | ACC-05–06, 24–25, 27, 32 |
+| Shell | Four quick creates; Finance records palette plus MantleInvoice/Payment/GlAccount/AcctgTrans types; `g j`, `g a`; Accounting Today (`HomeServices.get#TodayItems`); CreditHoldRelease, RecurringInvoiceFailed and ProductionCostReview topics | ACC-01, 04, 07, 10–11, 18, 20, 24 |
+| Adjacent entry points | Insights Accounting reports and the `Accounting.DraftEntries`/`PostedEntries`/`BillsAwaitingApproval`/`BillsOnHold`/`CostClose` attention providers; Admin settings entries for Settings/Settings, Currencies, PaymentTerms and Tax/TaxAuthorities, and Admin Health's fix link to Settings/Setup | ACC-02, 05–06, 24–25, 27, 32 |
 
 ### Design-to-code reconciliation
 
 | Design or historical item | Current review disposition |
 | --- | --- |
-| ProductionCostClose/CostingPolicies deferred in Accounting design/impl | Built by Manufacturing; include queue, preview/post/return, later adjustment, effective policy and close blockers. Current Mantle data adds production-WIP and cost-close checks |
+| ProductionCostClose/CostingPolicies listed under impl-accounting §7 "Later" | Built by impl-manufacturing P15; include Home's "Production runs awaiting cost close" source, preview/post/return, later adjustment, effective policy and close blockers. Mantle's `ProductionCostingData` registers the `PccProductionWip` and `PccProductionCostClose` close checks that §7's P11 entry still calls later |
 | Shared contexts described as Accounting-only or future | Neighboring apps now consume many of these screens. Inspect the current context and a relevant second consumer; do not restore old assumptions |
-| Supplier360 described as one shared supplier screen | Accounting has its own Supplier360 and tabs. Shared Supplier360's buying/catalog actions are not Accounting features |
+| Supplier360 as one shared screen with per-app tabs (impl-accounting §7, F135) | Not built: Accounting has its own `Payables/Supplier360` (Bills, Terms, FinanceDetails). Shared Supplier360's buying/catalog tabs and its contact invitation are Products/Purchasing features, not Accounting's |
 | “All screens XML” | True for local files; shared Chatter/RecordFiles use QVue and terminal helpers. Inline render variants and shared inherited children remain in scope |
 | Foreign-currency posting described as P20/future in older notes | Posting and rate proposals are built. Do not infer foreign-currency support for settlement, payment runs, transfers, landed cost, exposure or every report |
 | AdvancedPeriodRun, Leases, RevenueRecognition, Intercompany, ElectronicInvoices | Unmounted future work; keep out of completion criteria and menus |
 | Chargeback action / real hosted gateway / bank feeds / filing | Do not manufacture a working action from a design paragraph. Review built gateway/refund/return contracts and synthetic outcomes; external integrations and country packs are separate |
-| Depreciation/run reversal, landed-cost/revaluation reversal, finished-statement reopen and additional statement formats | Historical deferrals require a current service/control check before a variant is scheduled; absence is a capability limit, not permission to implement it |
+| Posted depreciation-run reversal, landed-cost/revaluation reversal, finished-statement reopen, bank-fee creation from a line and statement formats beyond BAI2/OFX/CSV (impl-accounting §7) | Historical deferrals require a current service/control check before a variant is scheduled; absence is a capability limit, not permission to implement it |
 | Older reports, print and setup descriptions | Check actual output controls, conversion basis, known limitations and wizard confirmation. Do not treat “printed record” as a new period snapshot or regulatory form |
-| AccountingImplementation's old spec list and “No route fixtures” | Use current suite registrations and fixtures in §5; historical pass totals do not establish live coverage |
+| AccountingImplementation's spec list (it omits AccountingProductionCostClose, AccountingReporting, AccountingFixedAssetsWalk and AccountingReportsWalk), its “No route fixtures” (AccountingSpecLib's `routeFixtures` feeds the acceptance sweep) and its nine demo users (it omits `finance.paymentar`) | Use current suite registrations and fixtures in §5; historical pass totals do not establish live coverage |
 
 ## 4. End-to-end activities
 
-The §6 ledger records status and evidence. Use visible controls and inspect intermediate states, confirmations,
-persisted outcomes and a second identity where relevant. A render, HTTP 200 or direct service mutation does not
-complete an activity. Browser means Material light/dark; TUI means actual supported terminal actions; Standard means
-the brief functional/output/fallback check in §2. Sample relevant narrow/keyboard/zoom variants, and record the rest
-explicitly. Missing features and unsupported operations remain capability limits, not inferred passes.
+The §6 ledger holds status and evidence. Use visible controls and inspect intermediate states, confirmations,
+persisted results and a second identity where relevant; a render, HTTP 200 or service-only mutation does not complete
+an activity. Browser means Material light/dark; TUI means actual supported terminal operations; Standard means the
+brief functional/output/fallback check. Record unattempted modes and recovery branches in §6. Actors are §2's
+fixtures.
 
 ### ACC-01 — Start a finance workday in the right organization
 
-- **Actor/start:** financial reader and narrow operators, with populated, empty and multi-organization fixtures.
-- **Objective/steps:** open Accounting → select organization → follow permitted Home cards and My finance work →
-  filtered list → record → Back; inspect setup callout, approval tray, Today, finance palette and `g j`/`g a`;
+- **Actor/start:** `finance.read` and each narrow `finance.*` user (one organization each); `finance.admin` or a
+  prepared second agent relationship for the multi-organization picker; populated and empty organizations.
+- **Objective/steps:** open Accounting → select organization → follow permitted Home cards and Your work →
+  filtered list → record → Back; inspect the setup callout and findings, Approvals for its holders, Today, the
+  finance palette and `g j`/`g a`;
   open/cancel/reopen each permitted quick create. Follow a main find through saved filters, paging, columns,
   supported views, reset and actual offered exports.
 - **Expected:** current organization and basis are clear; cards and destination rows agree; read-only navigation
@@ -357,25 +464,29 @@ explicitly. Missing features and unsupported operations remain capability limits
 - **Recovery:** no organization, no matches, inaccessible recent record, missing period, one failed aggregate,
   multi-currency cash exclusions and changed active organization. Unavailable is not zero and unrelated cards load.
 - **Screens/modes:** Home, section defaults, QuickCreate, shell and representative finds; browser/TUI/Standard,
-  narrow/keyboard/zoom samples. Findings about individual records continue in their owning activities.
+  narrow/keyboard samples. Findings about individual records continue in their owning activities.
 
 ### ACC-02 — Establish and activate a new set of books
 
-- **Actor/start:** finance administrator in a disposable unactivated organization; reader as counterpart.
+- **Actor/start:** `finance.admin` in a disposable unactivated organization (activating `BOSS_ACCT_NEWCO` consumes
+  it; its in-setup run is Home's "Finish setting up" sample); `finance.read` as the Settings refusal counterpart.
 - **Objective/steps:** Home/Settings → Setup/Basis → choose chart, base currency, fiscal/costing basis and opening day
   → OpeningBalances add/edit/import → OpenItems validate/import → Readiness follow Fix links → return → Activate
-  review/confirmation → inspect opening entry and activated state. Leave and resume between steps.
+  review → activate → inspect opening entry and activated state. Leave and resume between steps.
 - **Expected:** wizard controls save the intended step; totals and receivable/payable open items tie to the opening
   accounts; the same activation retry returns the recorded outcome once; record links retain the startup scope.
 - **Recovery:** unbalanced/missing mappings, mixed valid/invalid CSV, duplicate import, stale run, navigation with an
-  unsaved field, canceled activation and lost permission. Posted basis changes are refused. Record the existing
-  inventory/WIP/asset opening-tie limitations without inventing extra setup functionality.
+  unsaved field, canceled activation and lost permission. Posted basis changes are refused. Record the impl-accounting
+  §7 P19 limits (inventory/WIP/asset opening ties, no removal of a mistaken open item before activation, no separate
+  finish confirmation) without inventing setup functionality.
 - **Screens/modes:** all five Setup steps, Settings, Home and opening JournalEntryDetail; browser/TUI/Standard,
   keyboard and long-form/narrow samples. File upload delegation must be explicit in terminal.
 
 ### ACC-03 — Maintain a usable chart and fiscal structure
 
-- **Actor/start:** GL operator, finance administrator and reader; global accounts with separate organization assignments.
+- **Actor/start:** `finance.gl` and `finance.admin` (which chart writes need ADMIN is to verify at execution);
+  `finance.read` for chart reads, whose Periods request is refused (READ has no Period close grant); global
+  accounts with separate organization assignments.
 - **Objective/steps:** ChartOfAccounts → AccountDetail → inspect/edit permitted metadata and organization assignment,
   effective dates and required dimensions → follow transactions; Periods → create the fiscal hierarchy → inspect
   parent/child periods and links to close. Test both new and existing global accounts.
@@ -388,7 +499,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-04 — Draft, review, post and correct a journal
 
-- **Actor/start:** GL operator with a balanced draft, unbalanced draft and independent failed batch member; reader.
+- **Actor/start:** `finance.gl` with `BOSS_ACCT_ENTRY`, `BOSS_ACCT_POSTED`, an unbalanced draft and an
+  independent failed batch member; `finance.read`.
 - **Objective/steps:** quick create/list → journal header and lines → preview → confirm posting → inspect posted
   entries, source/evidence and trial balance → permitted description correction with reason → linked reversal in an
   open period. Publish/instantiate a versioned template; review/post a batch and retry its failed member.
@@ -402,11 +514,13 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-05 — Change finance defaults and verify their consumers
 
-- **Actor/start:** finance administrator and narrow operator; separate organization and captured prior settings.
+- **Actor/start:** `finance.admin` (Settings is ADMIN-only), `finance.ap` for Supplier360/Terms
+  (`SUPPLIER_TERMS_EDIT`) and a narrow consumer; a separate organization and captured prior settings.
 - **Objective/steps:** Settings → AccountingPreferences, PostingDefaults, PaymentTerms, PaymentMethods and
   DocumentSettings → change one effective default at a time → reload → create a consuming draft/output → restore.
   Inspect mapping readiness/fix links, clone preview/conflicts where offered, term portions/discounts, numbering,
-  approved layouts, masked methods and allowed gateway bindings.
+  approved layouts, masked methods, allowed gateway bindings, the invoice payment gateway that pay links use and the
+  audited self-approval setting (then one self-approved decision in ACC-11 or ACC-14).
 - **Expected:** labels explain operational effect; checkbox values persist; inherited versus local settings are
   clear; the consumer uses the effective value; issued numbers/documents and posted basis are unchanged. Finance
   sees permitted gateway metadata, not secrets or executable configuration.
@@ -417,10 +531,12 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-06 — Review exchange rates and explain converted postings
 
-- **Actor/start:** finance administrator, GL/AR operator and reader; base and foreign currency with dated rates.
-- **Objective/steps:** Currencies → add/import rates → inspect valid/rejected rows → propose rates using a local
-  provider-file sample → accept/reject selected proposals → create a supported foreign-currency invoice/journal →
-  inspect source amount, stored rate/date and base posting → follow ledger/report drill.
+- **Actor/start:** `finance.admin` (Currencies is under Settings), `finance.gl`/`finance.ar` for a converted
+  journal/invoice, `finance.read`; base and foreign currency with dated rates.
+- **Objective/steps:** Currencies → add/import rates → inspect valid/rejected rows → propose rates from a local copy
+  of the ECB file (`get#EcbRates` with `sourceText`) → accept/reject selected proposals → create a supported
+  foreign-currency invoice/journal → inspect source amount, stored rate/date and base posting → follow ledger/report
+  drill.
 - **Expected:** rate direction, effective date, source and currency precision are explicit; accepted proposals are
   distinct from unaccepted ones; display arithmetic reconciles to stored accounting amounts and original currency.
 - **Recovery:** missing/zero/negative/duplicate rate, mixed-invalid import, stale proposal, canceled acceptance and
@@ -431,8 +547,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-07 — Create, finalize and issue a customer invoice
 
-- **Actor/start:** AR operator and reader; customer, product/service, terms and tax setup with a separate approver
-  where required.
+- **Actor/start:** `finance.ar` (a sender on `BOSS_ACCOUNTING_MAIL`) and `finance.read`; `finance.approve` where
+  invoice approval is required; `BOSS_ACCT_INVOICE` or a disposable draft, customer, terms and tax setup.
 - **Objective/steps:** Invoices or quick create → draft header → add/edit two item rows and supporting references →
   review totals/due date → permitted approval/finalize → inspect ledger → preview/print/download → send to locally
   captured recipient → reopen the invoice and its issued evidence. Create a linked credit as a separate correction.
@@ -446,10 +562,12 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-08 — Bill approved sources and issue a selected batch or statement
 
-- **Actor/start:** authorized AR/AP billing operator with approved project/worker items and source orders; AR sender.
+- **Actor/start:** `finance.ar` with `BOSS_ACCT_APPROVED_TIME` and source orders; a prepared Projects billing
+  editor (`RECEIVABLE_EDIT` without reads) as counterpart. Leave `BOSS_ACCT_CLOSE_INVOICE` out of every batch.
 - **Objective/steps:** BillingQueue → select eligible time/expenses → create invoice/bill → inspect source links and
   billed state; select invoices → InvoiceBatch → review action/recipients → process → inspect each outcome and
-  downloaded CSV/PDF; Statements → customer/as-of/currency options → preview → local send/output.
+  downloaded CSV/PDF; Statements (or Customer360's Customer statement) → customer/as-of/currency options →
+  preview → local send/output.
 - **Expected:** the source is billed once within the operator's access; batch selection and source versions survive
   review; failures name the invoice/recipient without losing independent successes; statement balance and currency
   match its open items. Output scope is the explicit selection, not an inherited page selection.
@@ -461,8 +579,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-09 — Apply a receipt and credit to customer open items
 
-- **Actor/start:** AR operator, with treasury composition only where the chosen action needs it; partial receipt,
-  credit and multiple customer invoices.
+- **Actor/start:** `finance.ar`; `finance.treasury` (granted ReceivablesWorkbench) or `finance.paymentar` only where
+  the chosen action needs payment authority; `BOSS_ACCT_STL_*` receipts, credit and invoices.
 - **Objective/steps:** ReceivablesWorkbench → choose customer/currency/date → select source and target rows → edit
   allocations → SettlementReview → Back to selection → reload/resume the draft → confirm → follow applications,
   remaining amounts and ledger → repeat the same confirmed review without another allocation.
@@ -476,8 +594,9 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-10 — Record a payment and resolve its gateway or refund outcome
 
-- **Actor/start:** treasury operator, AR read-only payment counterpart and independent reviewer as required;
-  disposable manual receipt and synthetic gateway-approved/declined/pending cases.
+- **Actor/start:** `finance.treasury`; `finance.ar` as the read-only payment counterpart (`PAYMENT_VIEW`);
+  `BOSS_ACCT_PAY_*` and `BOSS_ACCT_REFUND_*`, a disposable manual receipt and test-gateway approved/declined/pending
+  cases.
 - **Objective/steps:** Payments/quick create → save draft and evidence → review validation/delivery/state action →
   confirm → inspect applications and ledger. Separately authorize/capture through the test gateway, inspect
   GatewayTransactions, and review a manual or gateway refund with its linked original and result. Inspect receipt,
@@ -492,8 +611,9 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-11 — Intake a supplier bill and resolve its hold and approval
 
-- **Actor/start:** AP operator, match-only reader, separate hold releaser/approver and supplier with approved order
-  and accepted receipt; expense bill fixture.
+- **Actor/start:** `finance.ap`; `finance.match` as reader; `finance.approve` releases holds and approves;
+  `finance.admin` as the same-user release refusal; `BOSS_ACCT_BILL_REVIEW`, a prepared held bill (keep
+  `BOSS_ACCT_BILL_HELD` for ACC-13/14/21), an approved order with accepted receipt and an expense bill.
 - **Objective/steps:** Bills upload/create or order/receipt billing → inspect bill identity, lines, source and file →
   place hold → request release → follow Approvals → independent release → request/decide approval → inspect posting
   and payment eligibility. Review ExpensePosting and Supplier360 bills/terms/finance details as related variants.
@@ -507,7 +627,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-12 — Match a bill to its order and accepted receipts
 
-- **Actor/start:** AP or match-only operator, separate hold releaser, reader; received-basis and price-exception bills.
+- **Actor/start:** `finance.ap` or `finance.match`, `finance.approve` for the hold release, `finance.read`,
+  `finance.admin` for MatchPolicies; `BOSS_ACCT_PO_MATCH` with `BOSS_ACCT_BILL_MATCH` and `_PRICE`.
 - **Objective/steps:** BillDetail/Match → inspect order/receipt candidates → enter quantities → evaluate → apply →
   inspect evidence and exceptions/hold → resolve with the authorized actor → re-evaluate/unapply where offered.
   Inspect effective MatchPolicies and a LegacyMatches preview/apply with ambiguous and unsupported lines.
@@ -517,11 +638,13 @@ explicitly. Missing features and unsupported operations remain capability limits
   ambiguous legacy evidence and revoked match permission. Record any currently unsupported tax/service/return-credit
   rule without expanding it as part of UI review.
 - **Screens/modes:** Shared InvoiceMatch through BillDetail, Holds, LegacyMatches, MatchPolicies and source links;
-  browser/TUI/Standard, keyboard/phone sequential-list behavior and a Purchasing counterpart for shared fixes.
+  browser/TUI/Standard, keyboard/phone sequential-list behavior. The Purchasing/Bills mount on a Retail bill
+  (`purchasing.buymatch`, WH-12's receipt) is PUR-22's and is the second consumer of a shared fix.
 
 ### ACC-13 — Apply supplier advances and credits to open bills
 
-- **Actor/start:** AP/treasury holder for the relevant operation, with supplier advance, credit, due bill and held bill.
+- **Actor/start:** `finance.ap` or `finance.treasury` (both reach PayablesWorkbench), with the supplier advance, a
+  credit, `BOSS_ACCT_BILL_WORKBENCH` and a held bill.
 - **Objective/steps:** Supplier360 → PayablesWorkbench → choose supplier/currency/date → select credits/payments and
   bills → enter allocations → SettlementReview → back/reload → confirm → inspect applications and bill balances.
 - **Expected:** payable direction is retained through the shared workbench; discounts, due schedules and hold reasons
@@ -533,7 +656,9 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-14 — Propose, approve and execute a supplier payment run
 
-- **Actor/start:** AP proposer → independent approver → treasury executor; due, discounted, held and excluded bills.
+- **Actor/start:** `finance.ap` proposes → `finance.approve` approves → `finance.treasury` executes; `finance.admin`
+  approving its own run is the self-approval refusal; `BOSS_ACCT_BILL_DUE`, `_DISCOUNT`, `_RUN`, a held and an
+  excluded bill; banks `BOSS_ACCT_RUN_BANK` and `BOSS_ACCT_SUPPLIER_BANK`.
 - **Objective/steps:** PaymentRuns → new run → inspect included/excluded bills → leave out/put back → refresh selection
   → request approval → Approvals handoff → approve → execute → inspect per-supplier payments → resume an interrupted
   execution using its existing identity → download a synthetic NACHA/Positive Pay file → import a local return file.
@@ -547,7 +672,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-15 — Import bank statements and apply explainable matching rules
 
-- **Actor/start:** treasury operator and financial reader; permitted bank account and synthetic CSV/BAI2/OFX files.
+- **Actor/start:** `finance.treasury` and `finance.read`; `BOSS_ACCT_BANK`, rule `BOSS_ACCT_RULE_CUSTOMER` and
+  synthetic CSV/BAI2/OFX files.
 - **Objective/steps:** BankAccounts → StatementImport → choose account and source → review new/duplicate/rejected
   rows → commit → inspect imported bank lines → repeat source → BankRules create/test/end → UnmatchedTransactions
   apply rules → inspect suggestions and exact/unambiguous automatic matches.
@@ -560,7 +686,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-16 — Reconcile a bank statement to zero difference
 
-- **Actor/start:** treasury operator with imported lines, receipts, an unmatched line and a draft statement session.
+- **Actor/start:** `finance.treasury` with imported lines, `BOSS_ACCT_BANK_RCPT1`–`3`, an unmatched line and a
+  draft statement session; leave the `BOSS_ACCT_CLOSE_BANK` line for ACC-21.
 - **Objective/steps:** Reconciliations → create/open statement → inspect opening/closing balance and date range →
   match, clear, unclear or exclude individual rows with reasons → clear selected → review difference → finish →
   reload completed session and print. From BankAccountDetail prepare an eligible receipt deposit and inspect its slip.
@@ -574,8 +701,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-17 — Transfer cash and maintain a stored-value account
 
-- **Actor/start:** treasury operator and reader; two organization-owned payment methods, fee counterparty and a
-  permitted stored-value account.
+- **Actor/start:** `finance.treasury` and `finance.read`; two organization-owned payment methods, a fee
+  counterparty and a permitted stored-value account.
 - **Objective/steps:** Payments → internal transfer → TransferReview → inspect both legs and fee → cancel/review/
   confirm → reload result and linked payments. FinancialAccounts → FinancialAccountDetail → deposit, withdraw or
   adjust value through the offered controls → inspect resulting movements, balance and print.
@@ -589,7 +716,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-18 — Work an overdue customer and resolve a credit hold
 
-- **Actor/start:** AR collector, independent credit approver and reader; overdue invoices, promise and held order.
+- **Actor/start:** `finance.ar` collects (it cannot open Approvals); `finance.approve` releases the credit hold;
+  `finance.admin` for CollectionPolicies; `finance.read`; `BOSS_ACCT_AR_OVERDUE`, `_DISPUTED` and `BOSS_ACCT_SO_HELD`.
 - **Objective/steps:** Home/Collections → prioritize customer → Customer360/Money and Activities → record contact,
   disputed invoices, next action and promise → reload → follow Today → Credit inspect exposure/policy → request or
   perform permitted hold release → OrderDetail → verify reason and order eligibility; inspect CollectionPolicies.
@@ -604,7 +732,7 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-19 — Review reminders and resolve an uncertain send
 
-- **Actor/start:** AR operator with permitted recipients, disputed/ineligible invoices and captured local mail.
+- **Actor/start:** `finance.ar` with permitted recipients, disputed/ineligible invoices and captured local mail.
 - **Objective/steps:** Dunning → new reminder run → inspect level, invoices, amounts and excluded reasons → review
   recipients → send → inspect per-notice outcome and captured content → reopen same run → resolve a deliberately
   uncertain notice as sent/failed with reason through the offered Settle action.
@@ -618,7 +746,8 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-20 — Generate a recurring invoice without duplicate billing
 
-- **Actor/start:** authorized invoice-schedule operator; invoice template and monitored recurring-order examples.
+- **Actor/start:** `finance.ar` (RecurringInvoices also accepts `PAYABLE_EDIT`); `BOSS_ACCT_RENT_TEMPLATE` and
+  monitored recurring-order examples.
 - **Objective/steps:** RecurringInvoices → create invoice-only schedule → inspect next-period preview → Make draft
   now → inspect source/period and draft invoice → repeat/resume → pause/resume/end a separate disposable schedule;
   inspect recurring orders' last copy and job result without executing an unrelated scheduler.
@@ -627,19 +756,23 @@ explicitly. Missing features and unsupported operations remain capability limits
 - **Recovery:** missing/changed template, invalid cadence, already-generated period, failed period, canceled end and
   no authority. Named failures link to correction and the same schedule can resume where supported.
 - **Screens/modes:** RecurringInvoices, InvoiceDetail, Today/RecurringInvoiceFailed return; browser/TUI/Standard and
-  date-zone boundary samples. Verify current AP entry/access instead of assuming a Payables menu route exists.
+  date-zone boundary samples. AP's entry to recurring bills under Payables is later (impl-accounting §7); record it,
+  do not assume a Payables route.
 
 ### ACC-21 — Resolve close blockers and protect a closed period
 
-- **Actor/start:** GL investigator, independent close approver and finance administrator; ended open period with
-  known draft, reconciliation, valuation and production blockers.
+- **Actor/start:** `finance.gl` investigates and resolves, `finance.approve` closes (`FISCAL_CLOSE`),
+  `finance.admin` sets locks and exceptions and reopens (the only `FISCAL_REOPEN` holder); `BOSS_ACCT_CLOSE_PERIOD`
+  with its draft-invoice and bank-line blockers plus prepared valuation and production blockers.
 - **Objective/steps:** Periods → PeriodCloseDetail → inspect checklist/evidence → follow each selected Fix link →
-  resolve through its owning activity → return/rerun → inspect TrialBalance/InvoiceReconciliation/PeriodRuns →
-  confirm close → reload history/print → inspect authorized reopen. Separately configure a typed soft lock and
-  bounded exception, and demonstrate a hard-lock refusal on a disposable journal.
+  resolve (the draft invoice and bank line here; valuation and production as observed in ACC-23/24) → return/rerun
+  → inspect TrialBalance/InvoiceReconciliation/PeriodRuns → confirm close → reload history/print → inspect
+  authorized reopen. Separately configure a typed soft lock and bounded exception, and demonstrate a hard-lock
+  refusal on a disposable journal.
 - **Expected:** blocker counts and resolving records agree; only authorized links appear; period/date scope survives
   navigation; close/exception/reopen records identify actor/reason. Closed summaries and live open-period amounts are
-  explained. Production WIP and cost-close checks reflect current Mantle registrations.
+  explained. Each registered check reports: AccountingCloseData's eleven, ValuationData's receipt cost basis and
+  valuation tie-out, and ProductionCostingData's production WIP and cost close.
 - **Recovery:** unresolved/new blocker, failed independent check, stale run, expired exception, wrong lock scope,
   canceled close/reopen and post on locked date. A failed close must not falsely mark a period closed.
 - **Screens/modes:** Periods, PeriodCloseDetail, PeriodLocks, PeriodRuns, report and resolving record routes;
@@ -647,8 +780,9 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-22 — Capitalize an asset and post a depreciation run
 
-- **Actor/start:** finance administrator for classes, GL operator for book work and separate approver where required;
-  uncapitalized, in-service, disposed and deliberately incomplete assets.
+- **Actor/start:** `finance.admin` for AssetClasses and cost repair; `finance.gl` for capitalize, adjust, dispose,
+  reverse and depreciation runs (all GL post); `finance.read`; `BOSS_ACCT_FA_FORKLIFT`, `_VAN`, `_PRINTER` and a
+  disposed asset. Run this before ACC-21 closes last month.
 - **Objective/steps:** AssetClasses → effective defaults → FixedAssets → EquipmentDetail → capitalize → inspect book,
   receipts/accounts and events → adjust/dispose or reverse an eligible latest book event on separate fixtures;
   DepreciationRunDetail → month/class/asset selection → preview → inspect per-asset amounts/failures → post → reload
@@ -662,8 +796,9 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-23 — Explain inventory value and allocate a landed charge
 
-- **Actor/start:** GL operator, financial reader and separate finance administrator; receipts with on-hand/issued
-  portions, approved freight bill and an approved product standard for revaluation.
+- **Actor/start:** `finance.gl`, `finance.read` and `finance.admin` (Repair product cost); `BOSS_ACCT_SUPPLY` at
+  `BOSS_ACCT_WH` with on-hand/issued portions and `BOSS_ACCT_BILL_FREIGHT`; an approved standard cost for a
+  `BOSS_ACCT_ORG` product must be prepared (Products' revaluation ran in Services as `catalog.cost.gl`).
 - **Objective/steps:** InventoryValuation → organization/facility/product/day → compare stock, inventory/WIP accounts,
   exceptions and source movements → Product360 financial context → BillDetail/More → LandedCosts select charge and
   receipts → preview allocation basis/on-hand/issued split → confirm → inspect cost/ledger once. Separately preview,
@@ -678,24 +813,29 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-24 — Review production costs and close or return the work order
 
-- **Actor/start:** GL previewer and independent `PRODUCTION_COST_POST` holder in the run's organization; Manufacturing
-  review request, completed run and a previously closed run with a later adjustment.
+- **Actor/start:** the prepared `retail.finance.approve` (posts and returns), `retail.finance.gl` (previews only),
+  `retail.finance.admin` (CostingPolicies) and `retail.finance.read` (§2). A completed Retail run whose review MFG-27
+  requested (in a shared runtime) or one prepared as AccountingProductionCostClose does, and a closed run with a later
+  adjustment; Manufacturing's fixture specs run as focused acceptance runs (§5). MFG-28 owns the Manufacturing Cost
+  close tab and closes a different run.
 - **Objective/steps:** Home/notification/queue → ProductionCostClose → inspect source events, components, overhead,
-  scrap, co-product allocation, variance and proposed ledger → return to production with reason → inspect corrected
-  review → confirm cost close → verify allocations, ledger and closed work order. Inspect a later adjustment and
-  dated CostingPolicies without rewriting the prior applied policy.
+  scrap, co-product allocation, variance and proposed ledger → the poster returns it to production with a note →
+  inspect the corrected review → confirm cost close → verify allocations, ledger and closed work order. Inspect a
+  later adjustment and dated CostingPolicies without rewriting the prior applied policy.
 - **Expected:** operational completion, financial review and cost close are distinct; preview/post roles differ;
   the shown fingerprint binds all cost inputs; post balances and closes once, while an adjustment preserves history.
 - **Recovery:** missing inputs/mappings, stale source/policy, open WIP, wrong organization, canceled post/return,
   retry and GL-only post refusal. Queue/read failures must not appear as “no work”.
-- **Screens/modes:** Inventory/ProductionCostClose, Settings/CostingPolicies, Home, PeriodCloseDetail and
-  Manufacturing/WorkOrders/WorkOrderDetail/CostClose; browser/TUI/Standard. Prepare operational facts as fixtures;
-  this is not another full production execution review.
+- **Screens/modes:** Inventory/ProductionCostClose, Settings/CostingPolicies, Home and PeriodCloseDetail;
+  browser/TUI/Standard. The Manufacturing mount (`Manufacturing/WorkOrders/WorkOrderDetail/ProductionCostClose`) is
+  MFG-28's and the second consumer of a shared fix. Prepare operational facts as fixtures; this is not another
+  production execution review.
 
 ### ACC-25 — Maintain tax inputs and inspect a retained statement
 
-- **Actor/start:** tax operator, finance administrator for configuration and AR counterpart; dated local rates,
-  taxable invoice and suppliers with valid/missing taxpayer information.
+- **Actor/start:** `finance.tax`; `finance.admin` for configuration that needs it; `finance.ar` finalizes the
+  consuming invoice (it has no Tax access); `BOSS_ACCT_UT_TAX`, `BOSS_ACCT_TAXED`, `BOSS_ACCT_1099_VENDOR` (with a
+  TIN) and `_NOTIN` (without).
 - **Objective/steps:** TaxAuthorities/TaxRates → inspect nexus/registration/account → version rate → simulate sale →
   finalize a consuming invoice → TaxStatements → prepare sales-tax or 1099 statement → inspect detail/source lines
   and validation → confirm export → inspect actual local output and retained state.
@@ -710,43 +850,48 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-26 — Revise a budget and explain commitment versus actual
 
-- **Actor/start:** GL budget editor, independent approver, budget override holder and reader; a draft budget, an
-  approved budget to revise and a source transaction that crosses a warning/stop limit.
+- **Actor/start:** `finance.gl` edits (`BUDGET_EDIT`); `finance.approve` approves and overrides (it holds both; to
+  separate the two, prepare a single-grant user); `finance.read`; `BOSS_ACCT_BUDGET`, `BOSS_ACCT_PO_BUDGET`,
+  `BOSS_ACCT_BILL_OVER` and a draft budget.
 - **Objective/steps:** Budgets → BudgetDetail → edit draft account/period amounts and parties → approve budget →
   change approved amounts with a revision reason → inspect the retained revision/PDF → BudgetControls → inspect a
-  permitted source's commitment → warning/stop/override
-  handoff → convert/release through the owning source action → BudgetVariance drill and invoice Budget tab.
+  permitted source's commitment → warning/stop → BudgetOverride notice in Approvals → override → convert/release
+  through the owning source action → BudgetVariance drill and invoice Budget tab.
 - **Expected:** draft budget, approved amounts and retained revisions are distinct; saving approved amounts creates
   their revision directly, without an invented second approval step. Actual, committed and available amounts
   reconcile; override records authority/reason; historical revision output remains stable; source links preserve
   organization and period.
 - **Recovery:** unbalanced/invalid allocation where constrained, stale approval, duplicate commitment, canceled
-  override, unsupported dimension and denied source. Inspect existing Purchasing integration without expanding its
-  workflow or silently choosing an ambiguous overlapping budget.
+  override, unsupported dimension and denied source. Which Purchasing callers of the budget check exist is to verify
+  at execution (impl-accounting §7 P15 lists them as later); inspect what exists without expanding its workflow, and
+  record overlapping budgets (F315) rather than choosing one silently.
 - **Screens/modes:** Budgets, BudgetDetail, BudgetControls, BudgetVariance, invoice/bill Budget tabs and bounded
   Purchasing/Projects handoff; browser/TUI/Standard with row/period editing and retained PDF bytes.
 
 ### ACC-27 — Explain a financial result from report to source
 
-- **Actor/start:** financial reader and narrower document readers; known postings, open/closed periods, zero values,
-  comparison period and incomplete-data fixture.
+- **Actor/start:** `finance.read` and `finance.gl`; `finance.ar` (no Reports grant) as the refusal; known postings,
+  open/closed periods, zero values, comparison period and incomplete-data fixture.
 - **Objective/steps:** Reports catalog → choose organization/date/period/currency/dimensions/comparison → read result
   → drill account/month/party/product/source → inspect record → Back with options intact → export and print. Cover
-  each named report in the inventory with the question it answers: trial balance/GL/partner movement; balance sheet,
-  income/cash/retained earnings/ratios; account series/posted summary; aging/reconciliation; budget variance; sales and
-  stock movements. Reuse earlier activity receipts for their report branches.
+  TrialBalance, GeneralLedger, PartnerLedger, BalanceSheet, IncomeStatement, CashFlow, RetainedEarnings,
+  FinancialRatios, AccountBalance, PostedSummary and SalesAnalysis, each with the question it answers. Aging,
+  InvoiceReconciliation, StockTransactions and BudgetVariance are exercised in ACC-18, 21, 23 and 26; here only
+  their catalog entry is checked.
 - **Expected:** totals tie to controlled fixtures, conversions and as-of basis are named, comparisons use matching
   scope, zero denominators say unavailable, and restricted sources do not leak through drills or bytes. Exported
   rows reflect the advertised full/filtered scope and do not silently stop at a visible page.
 - **Recovery:** empty/no-match result, absent period/rate, failed source, restricted drill, invalid comparison,
   changed organization and unavailable PDF. Incomplete reports name their limitations instead of asserting a full tie.
-- **Screens/modes:** all 16 Reports definitions plus output/drill destinations; browser/TUI/Standard, narrow,
-  keyboard/zoom and multipage output. This is planned manual coverage, not a new regression render sweep.
+- **Screens/modes:** the catalog and the eleven reports above plus output/drill destinations; browser/TUI/Standard,
+  narrow, keyboard and multipage output. This is planned manual coverage, not a new regression render sweep.
 
 ### ACC-28 — Follow operational evidence and settle a return
 
-- **Actor/start:** AR/AP and reader, with separate receiptless-credit authority where needed; owned order, shipment,
-  product, customer and a return partly received/accepted.
+- **Actor/start:** `finance.ar` settles, `finance.approve` approves a receiptless credit (`RETURN_CREDIT_APPROVE`),
+  `finance.read`; `BOSS_ACCT_RETURN` on `BOSS_ACCT_SO_RETURN` (`BOSS_ACCT_ORG` settles returns separately), an
+  owned shipment and product. Settlement in Customer Service's context is CS-22's (`customerservice.returnsar`), a
+  supplier return's credit PUR-24's (`retail.finance.ap`), and Warehouse's read-only settlement view WH-26's.
 - **Objective/steps:** source invoice/bill → OrderDetail/ShipmentDetail → inspect lines, accepted receipts, invoice
   and hold links → return to finance; ReturnDetail → inspect authorized/received/accepted/rejected/eligible quantity
   → preview settlement → confirm received portion → inspect linked credit and refund handoff. Separately inspect
@@ -757,12 +902,14 @@ explicitly. Missing features and unsupported operations remain capability limits
   approval and stale source. Missing return-list entry or manual-response/fee feature is a navigation/capability note,
   not a reason to add a new workflow.
 - **Screens/modes:** Records/OrderDetail/ShipmentDetail/ReturnDetail/Product360, Customer360, invoice/bill tabs;
-  browser/TUI/Standard and bounded Warehouse/Purchasing/Customer Service/Commerce counterpart.
+  browser/TUI/Standard. The Warehouse, Purchasing, Customer Service and Commerce ReturnDetail consumers are second
+  consumers of a shared fix, not part of this activity.
 
 ### ACC-29 — Keep evidence and discussion attached to the right record
 
-- **Actor/start:** permitted document/payment/journal editor, reader and another organization's non-holder;
-  ordinary supporting file plus immutable issued invoice/payment evidence.
+- **Actor/start:** the record's editor (`finance.ar`, `finance.ap`, `finance.treasury` or `finance.gl`),
+  `finance.read` and `catalog.reader` or a Services user without the record; ordinary supporting file
+  (`BOSS_ACCT_AR_SUPPORT`, `BOSS_ACCT_PAY_EVIDENCE`) plus immutable issued invoice/payment evidence.
 - **Objective/steps:** record Files/Conversation/History → upload ordinary evidence → inspect/download its exact bytes
   → add/edit/reply/follow Chatter where offered → return from notification → inspect record history. Compare source
   versions, sent invoice attachments and treasury-only issued checks through their actual download links.
@@ -777,11 +924,16 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-30 — Hand an invoice or purchase order to its external contact
 
-- **Actor/start:** internal AR/AP operator and scoped external customer/supplier contact or single-record token,
-  using local published PASS Billing/Supplier sites, captured mail and test gateway.
-- **Objective/steps:** issue invoice with pay link → authorized external InvoicePay → synthetic payment outcome →
-  return to Accounting invoice/payment; approved purchase OrderDetail → supplier bill link → scoped BillUpload →
-  return to Bills intake, file and source order. Inspect current links, not hard-coded demo tokens.
+- **Actor/start:** the prepared `retail.finance.ar` and `retail.finance.ap` (§2; `send#Invoice` and
+  `create#AccessCapability` check `RECEIVABLE_EDIT`/`PAYABLE_EDIT` in the record's organization, and the published
+  site `ZIZI_PORTAL` on `portal.zizi.localhost` targets `ORG_ZIZI_RETAIL`), or a disposable Billing/Supplier site for
+  `BOSS_ACCT_ORG`; PASS contacts `joedist.payer` (invoice "Portal demo distributor replenishment" to JoeDist) and
+  `ziddleman.billing` (order "Portal demo shelving restock" from ZiddlemanInc), both with generated IDs, not the
+  `ZIZI_PORTAL_INVOICE`/`_PO` that AccountingImplementation names; captured mail and test gateway `ZIZI_PORTAL_HOSTED`.
+- **Objective/steps:** send an issued invoice (`send#Invoice` mails the pay link) → external Billing/InvoicePay →
+  test-gateway outcome → Accounting invoice/payment; Records/OrderDetail of an approved purchase order → Supplier
+  bill link (shown once) → Supplier/BillUpload → Bills intake, file and source order. Use newly issued links; the
+  demo tokens in AccountingImplementation are fixtures, not evidence of issuance.
 - **Expected:** external access needs its own relationship/capability, not a BOSS group; payer/upload may reach only
   the named records; internal balances/intake reflect the same outcome; token/recipient details stay out of evidence
   committed to the repository.
@@ -792,8 +944,9 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-31 — Reconcile permission, organization and context boundaries
 
-- **Actor/start:** each required narrow holder/non-holder pair, foreign organization, same record after grant
-  revocation, composed actor, and administrator with active scope narrowed.
+- **Actor/start:** each narrow `finance.*` holder/non-holder pair, `catalog.reader`, `ORG_ZIZI_SERVICES` records,
+  launcher-less finance holders (`manufacturing.finance`, `purchasing.buymatch`, `insights.finance`), the same record
+  after grant revocation, `finance.paymentar` as the composed actor and `finance.admin` with active scope narrowed.
 - **Objective/steps:** pair successful/otherwise-valid refused reads and writes across direct routes, transition
   calls, choices and selected-value labels, palette/search counts, report drills, Chatter/files, print/export and
   known review/output keys. Probe inherited excluded children and forged `appRoot`; verify a legitimate owning-app
@@ -809,108 +962,119 @@ explicitly. Missing features and unsupported operations remain capability limits
 
 ### ACC-32 — Preserve cross-app continuity and reconcile remaining modes
 
-- **Actor/start:** Accounting-only reader/operator and explicit neighboring-app holder, with scoped records and
-  remaining mode/recovery gaps from earlier activities.
+- **Actor/start:** `finance.read` or a narrow operator and an explicit neighbouring holder (`catalog.cost.gl`,
+  `manufacturing.costclose`, `purchasing.buymatch`, `insights.finance`), with scoped records and the remaining
+  mode/recovery gaps from earlier activities.
 - **Objective/steps:** enter from Insights report/attention or Admin settings → retain organization/filter context →
   complete the permitted finance step → return with one Back; inspect Products standard → valuation, Manufacturing
   cost review → finance, Purchasing match/budget → AP, Projects billing → invoice and Warehouse facts → source ledger
   using the receipts from their owning activities. Revisit changed shared surfaces in a second consumer.
 - **Expected:** links choose the current mount and preserve record context; unavailable adjacent apps explain limits;
-  shell/tray navigation works in terminal; light/dark, phone, keyboard, zoom, Standard and output gaps are explicitly
+  shell/tray navigation works in terminal; light/dark, phone, keyboard, Standard and output gaps are explicitly
   reconciled rather than inherited from a browser or service pass.
 - **Recovery:** cold cross-app navigation, missing launcher despite a valid business permission, deleted/inaccessible
   linked record, stale asynchronous response, failed provider and interrupted confirmation.
 - **Screens/modes:** shared mounts, shell providers, report/settings entries and outstanding variants; actual browser/
   TUI/Standard as applicable. Record unsupported/tool-blocked variants without claiming their outcomes.
 
+Handoffs with the four companion reviews; each side is exercised once, by the activity named, and the other review
+only opens it as far as the handoff:
+
+| Handoff | Counterpart side (review) | Accounting side |
+| --- | --- | --- |
+| Production cost review and close (`ProductionCostReview` notice; Shared ProductionCostClose) | Manufacturing MFG-27 requests (`manufacturing.cost`); MFG-28 previews, posts or returns on the Cost close tab | ACC-24: Inventory/ProductionCostClose queue with the prepared Retail finance identities |
+| Bill match and hold release (Shared InvoiceMatch) | Purchasing PUR-22 on a Retail bill (`purchasing.buymatch`, `retail.finance.ap`/`.approve`), over WH-12's receipt | ACC-11/12 on `BOSS_ACCT_ORG` bills (`finance.*`) |
+| Budget commitment | Purchasing PUR-12 | ACC-26 on `BOSS_ACCT_BUDGET` |
+| Landed charge (Allocate to receipts) | Purchasing PUR-22, link only | ACC-23 |
+| Inventory value (Shared InventoryValuation) | Warehouse WH-32: Warehouse mount, no revaluation or repair | ACC-23: Accounting mount, revaluation and landed cost |
+| Return settlement (`settle#Return`) | Customer Service CS-22 (`customerservice.returnsar`); Warehouse WH-26's read-only view; Purchasing PUR-24's supplier credit | ACC-28 on `BOSS_ACCT_RETURN` |
+| PASS Billing pay link and Supplier BillUpload | Purchasing PUR-28 submits one bill through BillUpload only as PUR-22's intake input | ACC-30 reviews both pages, on fresh links |
+
 ## 5. Existing checks and future verification
 
-This is an available-test map, not a passing-results ledger. Paths are relative to the named component and spec
-names omit `.spec.js`. Read current assertions before selecting a run; historic breadth is not a reason to
-duplicate business rules, renders or journeys.
+This is an available-test map, not a results ledger. Paths are relative to the named component and names omit
+`.spec.js`; read current assertions before relying on a spec name.
 
 | Component / suite | Existing specs | Activities / limits |
 | --- | --- | --- |
-| mr-boss regression `test/Accounting/` | AccountingAccess | ACC-01–06, 28, 30–31; app access, valid positive/negative cases, scope and choice rules; not a live role walk |
-| mr-boss regression `test/Accounting/` | AccountingClientFixtures | Browser theme assets; fixture setup is not review evidence |
-| mr-boss regression `test/Accounting/` | AccountingReceivables, AccountingSettlement | ACC-07–09, 13; documents/batches/statements, retained settlement review and results |
-| mr-boss regression `test/Accounting/` | AccountingPayments, AccountingPaymentGateway, AccountingPaymentRefunds, AccountingPaymentTransfers | ACC-10, 17; draft/lifecycle/review identity, gateway/refund/transfer contracts |
+| mr-boss regression `test/Accounting/` | AccountingAccess | ACC-01–06, 28, 30–31; access, scope, choices, returns and setup cases; not a live role walk |
+| mr-boss regression `test/Accounting/` | AccountingClientFixtures | One feature: theme assets are local; not review evidence |
+| mr-boss regression `test/Accounting/` | AccountingReceivables, AccountingSettlement | ACC-07–09, 13; documents, batches, statements, retained settlement review and results |
+| mr-boss regression `test/Accounting/` | AccountingPayments, AccountingPaymentGateway, AccountingPaymentRefunds, AccountingPaymentTransfers | ACC-10, 17; draft/lifecycle/review identity, gateway, refund and transfer contracts |
 | mr-boss regression `test/Accounting/` | AccountingPaymentFiles, AccountingIssuedFiles, AccountingOutputs | ACC-07–11, 17, 21, 29, 31; immutable issued bytes, scope/counts and authorized print content |
 | mr-boss regression `test/Accounting/` | AccountingPayables, AccountingMatching, AccountingPaymentRuns | ACC-11–14; hold/approval/match, supplier settlement and interrupted execution |
 | mr-boss regression `test/Accounting/` | AccountingBanking, AccountingCollections | ACC-15–20; import/reconciliation/stored value, reminder outcomes, credit and recurring context |
-| mr-boss regression `test/Accounting/` | AccountingPeriodClose, AccountingFixedAssets, AccountingValuation, AccountingProductionCostClose | ACC-21–24; blockers, per-asset outcomes, valuation/landed cost, queue/policy/cost-close roles |
+| mr-boss regression `test/Accounting/` | AccountingPeriodClose, AccountingFixedAssets, AccountingValuation, AccountingProductionCostClose | ACC-21–24; blockers, per-asset outcomes, valuation/landed cost; cost close with spec-local Retail `boss_pcc_*` users |
 | mr-boss regression `test/Accounting/` | AccountingTax, AccountingBudgets, AccountingReporting | ACC-25–27; tax context/output, budget revisions/commitments, report/print/drill and Home |
-| mr-boss regression `test/client/Accounting/` | AccountingReceivablesWalk | Existing single golden path: AR create/finalize/send invoice without a store; reuse it |
-| mr-boss acceptance `acceptance/Accounting/` | AccountingScreens | Existing current-route/mounted-fixture sweep in qvt/tui plus selected output checks; not browser or terminal interaction |
-| mr-boss acceptance `acceptance/Accounting/` | AccountingAccessWalk, AccountingServerStatic | Existing access/isolation/output matrix and static-render contracts; both are acceptance regardless of old command comments |
+| mr-boss regression `test/client/Accounting/` | AccountingReceivablesWalk | The golden path: AR create/finalize/send an invoice; reuse it |
+| mr-boss acceptance `acceptance/Accounting/` | AccountingScreens | The app's sweep: every route with `routeFixtures` in qvt and tui, as john.doe with authz off; not browser or terminal interaction |
+| mr-boss acceptance `acceptance/Accounting/` | AccountingAccessWalk, AccountingServerStatic | Access/isolation walk (creates `BOSS_P21_OTHER`) and server-static qvt; acceptance despite their `./moq test` run comments |
 | mr-boss acceptance `acceptance/client/Accounting/` | AccountingLedgerWalk, AccountingSettingsWalk, AccountingSetupWalk, AccountingCurrencyWalk | ACC-02–06 |
-| mr-boss acceptance `acceptance/client/Accounting/` | AccountingSettlementWalk, AccountingPaymentsWalk, AccountingPaymentGatewayWalk | ACC-09–10; retained review/retry, manual payment and test gateway |
-| mr-boss acceptance `acceptance/client/Accounting/` | AccountingPayablesWalk, AccountingMatchingWalk, AccountingPaymentRunsWalk | ACC-11–14; existing AP → approver → treasury handoffs |
-| mr-boss acceptance `acceptance/client/Accounting/` | AccountingBankingWalk, AccountingCollectionsWalk | ACC-15–19; bank import/reconcile/deposit and contact/reminder/credit release |
+| mr-boss acceptance `acceptance/client/Accounting/` | AccountingSettlementWalk, AccountingPaymentsWalk, AccountingPaymentGatewayWalk | ACC-09–10 |
+| mr-boss acceptance `acceptance/client/Accounting/` | AccountingPayablesWalk, AccountingMatchingWalk, AccountingPaymentRunsWalk | ACC-11–14; AP → approver → treasury handoffs |
+| mr-boss acceptance `acceptance/client/Accounting/` | AccountingBankingWalk, AccountingCollectionsWalk | ACC-15–19 |
 | mr-boss acceptance `acceptance/client/Accounting/` | AccountingCloseWalk, AccountingFixedAssetsWalk, AccountingValuationWalk | ACC-21–23 |
 | mr-boss acceptance `acceptance/client/Accounting/` | AccountingTaxWalk, AccountingBudgetsWalk, AccountingReportsWalk, AccountingReturnsWalk | ACC-25–28 |
-| mr-boss regression `test/Shared/`, `test/Commons/` | Chatter, RecordFiles; QuickCreate, TodayPanel, Notifications | ACC-01, 29, 32; affected shared checks, not a repeat Commons review |
-| mr-boss acceptance root | AppStructure, ServerStatic, TuiRender | Existing broad structure/render checks; reconcile overlap before modifying Accounting's sweep |
-| mr-mantle regression `test/ledger/` | AccountingApplicationRules, AccountingControls, AccountingBookDates, AccountingFiscalPeriodDays, AccountingSetup, AccountingCurrency | ACC-02–06, 21, 31; owning financial rules |
+| mr-boss regression `test/Shared/`, `test/Commons/` | Chatter, RecordFiles; QuickCreate, TodayPanel, Notifications | ACC-01, 29, 32; only for an affected shared surface |
+| mr-boss acceptance root | AppStructure, ServerStatic, TuiRender | Suite-wide structure/render checks; reconcile overlap before changing AccountingScreens |
+| mr-mantle regression `test/ledger/` | AccountingApplicationRules, AccountingControls, AccountingBookDates, AccountingFiscalPeriodDays, AccountingSetup, AccountingCurrency | ACC-02–06, 21, 31 |
 | mr-mantle regression `test/ledger/` | AccountingReceivables, AccountingPaymentCorrections, AccountingReports, AccountingActivities, AccountingProjectCost, FinancialReports | ACC-07–10, 18, 27–28 |
 | mr-mantle regression `test/ledger/` | AccountingPeriodClose, AccountingFixedAssets, AccountingValuation, ProductionCostClose, ReceiptAdjustments, LedgerMaintenance | ACC-21–24 and protected history |
-| mr-mantle regression `test/account/` | AccountingSettlement, AccountingSettlementConcurrency, AccountingPaymentLifecycle, AccountingPaymentGateway, AccountingPaymentRefunds, AccountingInternalTransfers | ACC-09–10, 13, 17 |
+| mr-mantle regression `test/account/` | AccountingSettlement, AccountingSettlementConcurrency, AccountingPaymentLifecycle, AccountingPaymentGateway, AccountingPaymentRefunds, AccountingInternalTransfers, FinancialAccountServices | ACC-09–10, 13, 17 |
 | mr-mantle regression `test/account/` | AccountingPaymentOutput, AccountingPaymentNotifications, AccountingDelivery | ACC-07–10, 14, 29 |
 | mr-mantle regression `test/account/` | AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingPaymentRunControls, AccountingBankReconciliation, AccountingTermDueDays | ACC-05, 11–16 |
-| mr-mantle regression `test/account/` | AccountingCollections, AccountingCredit, AccountingCustomerFinance, AccountingRecurringAging, AccountingPortals | ACC-18–20, 30 |
-| mr-mantle regression `test/other/`, `test/order/`, `test/sales/` | AccountingTax, AccountingBudgets, BudgetServices; AccountingReturns; AccountingStatements | ACC-08, 25–28 |
+| mr-mantle regression `test/account/` | AccountingCollections, AccountingCredit, AccountingCustomerFinance, AccountingRecurringAging, DunningRenewalExclusion, AccountingPortals | ACC-18–20, 30 |
+| mr-mantle regression `test/other/`, `test/order/`, `test/sales/` | AccountingTax, TaxStatementServices, AccountingBudgets, BudgetServices; AccountingReturns; AccountingStatements | ACC-08, 25–28 |
+| mr-pass regression `test/Billing/`, `test/client/` | Portals, PortalFixtures; PortalHttp | ACC-30's PASS side (pay link and BillUpload pages and refusals) |
 | webroot regression `test/client/` | WebrootVue.qvt, WebrootVue.qvt.shell, WebrootVue.qvt.layout, WebrootVue.qvt.records, WebrootVue.qvt.static, WebrootVue.qvt.views, WebrootTerminal, QvtKeys, Keys | Only for affected shared-widget/shell/renderer behavior |
-| webroot acceptance `acceptance/client/` | ThemeLayout | Existing reusable theme/geometry coverage; no implied authorization to run it |
+| webroot acceptance `acceptance/client/` | ThemeLayout | Offline theme/geometry coverage; no implied authorization to run it |
 
-There are **23 Accounting server regression specs**, **one Accounting browser regression golden path**, **three
-Accounting server acceptance specs** and **19 registered Accounting browser acceptance walks**.
-`test/client/suite.js` registers AccountingReceivablesWalk and AccountingClientFixtures with captured mail;
-`acceptance/client/suite.js` registers the other walks and broader setup. Inspect selected dependencies before a run.
-`test/Accounting/AccountingSpecLib.js` is the shared identity/record/route-fixture source; use its receipt/run lookup
-helpers where IDs are generated rather than guessing a constant. Existing fixture functions are not an instruction
-to add route-fixture specs or to run acceptance during setup.
+Counts: 23 server regression specs in `test/Accounting/` (with AccountingSpecLib), one browser golden path
+(registered in `test/client/suite.js` with captured mail), three server acceptance specs and 19 browser walks
+registered in `acceptance/client/suite.js`, whose server also loads Products, Warehouse, Manufacturing and Insights
+fixture specs; inspect a selection's `dependsOn` and fixtures before a run. AccountingSpecLib is the shared
+identity/route-fixture source (`ids`, `asUser`, `routeFixtures`, the tab lists and generated-ID lookups); its fixture
+functions are not an instruction to add route-fixture specs.
 
-These suites do not establish actual TUI keyboard workflows, app-wide narrow/zoom coverage, multipage output quality,
-all failure/recovery branches, the newer cost-close browser journey or the PASS handoff. A tested pending gateway
-result is not a real provider integration. Review current assertions before relying on broad spec names. Read-only
-button absence needs its authorized presence counterpart; a failure must be for the intended permission, not invalid
-input. Existing rule tests and source inspection remain supporting evidence.
-
-No new automation is prescribed by this plan. If an observed finding needs coverage, name the activity and existing
-or new spec before writing it: focused rule/bug checks in regression; additional complete jobs, phone, access,
-isolation and terminal walks in acceptance. Reuse the existing app sweep and golden path; no screenshot baselines.
+None of these establishes actual TUI keyboard workflows, app-wide narrow coverage, multipage output quality,
+every recovery branch, a browser cost-close journey from the Accounting mount or the cross-runtime PASS handoff; a
+tested pending gateway result is not a provider integration. No new automation is prescribed: an observed finding
+names its activity and the existing or new spec first, with focused rule/bug checks in regression and complete
+jobs, phone, access, isolation and terminal walks in acceptance.
 
 ### Verification rules for later refinements
 
-- Read the [testing skill](../../../../.agents/skills/testing/SKILL.md) before writing/running tests. Commands run
-  from the mr-moqui root. Use the affected regression specs on a suitable binary, for example
-  `./moq test mr-boss --spec AccountingSettlement --nobuild`; use the owning Mantle spec when its rule changes.
-  Browser specs run through Moqui, not Node:
-  `./moq test-client mr-boss --serve --spec AccountingReceivablesWalk --nobuild`.
-- Follow the supplied repository instructions: `./moq test-apps` before application-work commits and
-  `./moq test-framework` before framework-work commits. Record any later explicit user-directed review cadence in
-  §7; do not inherit a Products/Projects exception from their execution records. No commit is part of this task.
-- **Acceptance runs require the user's request or an added/changed acceptance test.** If one is added/changed, run
-  that test and its component's acceptance suite once written. An explicitly authorized existing walk could use
-  `./moq accept mr-boss --spec AccountingPaymentRunsWalk`. Plan entries, setup dependencies, shared-code changes and
-  a completion checkpoint do not authorize acceptance. No `accept-all` is part of this plan.
-- Keep business rules in Mantle and app context checks in BOSS. Across regression, render a screen at most once per
-  mode with all checks together; a second mode requires its own custom template. Do not add regression screen sweeps,
-  role×mode matrices, duplicate golden paths or repeated financial-rule tests through app wrappers.
-- Respect BOSS `test/budget`: **264 seconds server / 57 seconds client**, with individual regression specs over
-  **15 seconds** failing. Observe each other component's current budget. Remove duplication or move full scenarios
-  to acceptance; no budget increase is authorized.
-- Lint changed screens with `moqui lint --screens <report-file>`; its argument is an overwritten output report,
-  never a screen path. Compare parse/idiom findings against baseline. This Markdown-only plan needs no screen lint.
-- A shared renderer/widget correction is framework work; follow the building skill and embedded/precompiled asset
-  checks. Do not run framework specs, `cargo test` or `test-all` just because application files changed.
-- Keep evidence in ignored framework `plans/ui-refinement-evidence/boss-accounting/` or a named equivalent outside
-  tracked source. Compare important before/after captures with the same data, geometry and theme; include relevant
-  DOM/console/network results, persisted outcomes and inspected/redacted artifacts. Do not commit credentials,
-  tokens, private financial data, captured messages or screenshots with this plan.
-- Re-exercise changed activities and relevant recovery branches after correction, including a representative second
-  consumer of shared changes. Separate tool limitations, missing prerequisites, reproduced baseline failures and
-  product defects. A silent skip, rendered page or historical result cannot close live coverage.
+These rules govern the refinement pass, and the commit rule applies in both; the review pass corrects nothing and
+commits no source (§2). The suite rules are the [testing skill](../../../../.agents/skills/testing/SKILL.md) and
+[Build-Test](../../../../docs/Build-Test.md#the-two-suites) with [rendering screens in
+tests](../../../../docs/Build-Test.md#rendering-screens-in-tests). Accounting specifics:
+
+- **While working.** From the mr-moqui root on a built binary: `./moq test mr-boss --spec AccountingSettlement
+  --nobuild`, the owning Mantle spec when its rule changes, and the golden path
+  `./moq test-client mr-boss --serve --spec AccountingReceivablesWalk --nobuild`. PDF specs need Chromium; the
+  client suites set `mail_capture_sends`.
+- **Before a commit (user decision, 2026-11-11).** Before each commit, in either pass, run only the local, focused
+  checks for what changed: the specs it touched, the owning Mantle spec, the golden path and lint, as listed here. Run
+  `./moq test-apps` once at the end of the refinement pass, and `./moq test-framework` as well if the pass changed
+  framework code (a shared renderer/widget correction, under the building skill). Never `cargo test`, framework specs
+  or `test-all` for application work. Commits follow the user's execution authorization.
+- **Acceptance (user decision, 2026-11-11).** Along the way, in either pass, run the focused acceptance walks and
+  fixture specs of what is being reviewed or changed; an added or changed acceptance test always runs, then its
+  component's acceptance suite. At the end, after the final `./moq test-apps`, run the full acceptance suites of the
+  application components (`./moq accept mr-mantle mr-boss mr-pass mr-marble`), or `./moq accept-all` if framework
+  code changed. A focused walk runs as
+  `./moq accept mr-boss --spec AccountingPaymentRunsWalk`.
+- **Rendering.** AccountingScreens is the one sweep per mode and stays in acceptance. Across regression a screen
+  renders at most once per mode with all its checks, in a second mode only where it has its own qvt/tui section (the
+  49 local files above). No role × mode matrix, duplicate golden path, Mantle rule retested through a BOSS wrapper
+  or screenshot baseline.
+- **Budgets.** BOSS `test/budget` 264 s server / 57 s client, Mantle 393 s server, PASS 20 s / 9 s; a component
+  over 1.5 times its budget or one regression spec over 15 s fails the run. Cut duplication or move a scenario to
+  acceptance; no budget is raised without the user's agreement.
+- **Lint.** `moqui lint --screens <report-file>` for changed screens (the argument is an overwritten output report,
+  never a screen path), compared with the baseline; Markdown-only edits need none.
+- **Evidence** stays in ignored `plans/ui-refinement-evidence/boss-accounting/` in the framework repository; never
+  commit credentials, issued link tokens, private financial data, captured messages or screenshots.
 
 ## 6. Coverage, findings and running record
 
@@ -918,9 +1082,9 @@ isolation and terminal walks in acceptance. Reuse the existing app sweep and gol
 
 **Pending** means not reviewed; **inspected** means source/render/visual inspection only; **exercised** means steps
 executed with an explicit pass/fail/partial outcome; **blocked** means a missing prerequisite; **deferred** means
-deliberately postponed with reason/follow-up. Exercised does not itself mean passed. Use `exercised / partial` and
-name open continuations for partly executed work. Blocked/deferred coverage remains unresolved. Source research for
-this plan does not advance live activity coverage. Record modes and recovery gaps, not just a test name.
+deliberately postponed with reason and follow-up. Exercised does not by itself mean passed: use `exercised / partial`
+and name the open continuations, recovery and mode gaps. Blocked and deferred coverage remains unresolved. Source
+research and document review do not advance this ledger; record actual modes and results, not only a test name.
 
 | Activity | Status | Outcome / recovery / mode gaps | Evidence / findings |
 | --- | --- | --- | --- |
@@ -947,22 +1111,24 @@ this plan does not advance live activity coverage. Record modes and recovery gap
 | ACC-21 — Locks/close/runs | pending | All live variants unreviewed | — |
 | ACC-22 — Asset books/depreciation | pending | All live variants unreviewed | — |
 | ACC-23 — Valuation/landed cost | pending | All live variants unreviewed | — |
-| ACC-24 — Production cost close | pending | All live variants unreviewed | — |
+| ACC-24 — Production cost close | pending | All live variants unreviewed; needs prepared Retail finance users and a requested Retail run | — |
 | ACC-25 — Tax | pending | All live variants unreviewed | — |
 | ACC-26 — Budgets | pending | All live variants unreviewed | — |
 | ACC-27 — Reports/drill/outputs | pending | All live variants unreviewed | — |
 | ACC-28 — Related records/returns | pending | All live variants unreviewed | — |
 | ACC-29 — Evidence/discussion | pending | All live variants unreviewed | — |
-| ACC-30 — PASS handoff | pending | Requires explicit local site/runtime fixture | — |
+| ACC-30 — PASS handoff | pending | Needs a separately configured PASS runtime and a Retail (or `BOSS_ACCT_ORG`-site) AR/AP operator | — |
 | ACC-31 — Access/isolation | pending | Paired checks throughout; no matrix inferred | — |
 | ACC-32 — Cross-app/mode reconciliation | pending | Depends on earlier activity continuations | — |
 
 ### Findings register
 
-No runtime/UI defects have been established by this planning task. Number later findings **ACC-UI-001** onward.
-Distinguish observed failures, source suspicions and design judgments. P1 blocks work or makes essential information
-unusable; P2 causes substantial friction or misleading presentation; P3 is a localized refinement. Financial data
-or access corruption takes priority regardless of whether the screen looks correct.
+No runtime/UI defect has been established by this planning work. The review pass records findings with Owner /
+correction / retest empty; the refinement pass fills them in. Number later findings **ACC-UI-001** onward with the
+guide's fields and severities ([record, fix and verify](../../../../docs/dev/UI-Review.md#record-fix-and-verify)): P1
+blocks work or makes essential information unusable, P2 causes substantial friction or misleading presentation, P3 is
+a localized refinement. Distinguish observed failures, source suspicions and design judgments. Financial data or
+access corruption takes priority regardless of whether the screen looks correct.
 
 | ID | Severity / status | Actor, activity and step | Route / mode / theme / viewport | Reproduction, observed impact and evidence | Owner / correction / retest |
 | --- | --- | --- | --- | --- | --- |
@@ -972,47 +1138,93 @@ Source concerns to carry into execution, without treating them as observed defec
 
 - Shared context branches and inherited children can differ from the visible tab menu; pair direct route/transition
   probes with actual owning-app positives. Reused invoice tabs and bill outputs need explicit direction checks.
-- Duplicate menu indexes occur in the root and some sections. Inspect actual navigation order before proposing a
+- Duplicate menu indexes: root Approvals and Inventory (9), Payables LegacyMatches and PaymentRuns (4), Settings
+  CostingPolicies and MatchPolicies (8). Tax defaults to TaxStatements (index 3), not its first item, and
+  FixedAssets lists DepreciationRunDetail as a menu item. Inspect actual navigation order before proposing a
   correction; a source index alone is not evidence of a confusing rendered menu.
 - Durable settlement/payment reviews, unknown outcomes, issued evidence and resumed runs require visible recovery
   checks beyond a normal happy path. Outputs, selected-value labels and search counts are part of financial scope.
-- Home mixes several independently loaded sources and deliberately excludes some foreign-currency bank amounts;
-  reports mix live data with stored closed-period summaries. Inspect basis and incompleteness explanations.
-- Historical Manufacturing F121 in `impl-accounting.md` §7 describes legacy receipt repost under a hard lock losing
-  posted history before replacement fails. Reconcile current flags/services with Mantle/Manufacturing ownership
-  before any isolated reproduction; it is neither a newly observed finding nor authorization for historical repair.
-- Old deferrals and implementation prose lag current production-cost/shared-context work. Record further
-  source-to-design differences when encountered; do not silently turn them into feature expansion.
+- Home mixes independently loaded sources and counts receivables, payables and bank balance in the base currency
+  only (`Home.js` filters other-currency bank rows); reports mix live data with stored closed-period summaries.
+  Inspect basis and incompleteness explanations.
+- impl-manufacturing F121, carried in impl-accounting §7 "Later" (not impl-accounting's own F121, a fixed date
+  finding): with `postingGuardEnabled`, the legacy `repost#AssetReceipt` under a hard lock unposts and deletes the
+  posted transaction and its new posting lands unposted in the error journal. Current Mantle
+  `PostingGuard.assertMutable` still returns early for an unpost, so the source suggests it is open. It is an input
+  for ACC-21's hard-lock branch (Mantle owns the fix), not an observed finding or authorization for historical repair.
+- Documentation lags source: impl-accounting §7 still lists ProductionCostClose/CostingPolicies, MyFinanceWork's
+  cost-close entry and the production WIP/cost-close close checks as later, though impl-manufacturing P15 and
+  Mantle's `ProductionCostingData` built them; AccountingImplementation's verification list, "No route fixtures" and
+  demo users are out of date (§3 reconciliation). Record further source-to-design differences when encountered; do
+  not turn them into feature expansion.
 
 ### Bounded batch record
 
 | Batch | Scope | Evidence / verification | Outcome / continuation |
 | --- | --- | --- | --- |
 | Plan — 2026-11-10 | Coordinator plus two read-only research subagents: Products pattern, current Accounting inventory, workflows, fixtures, permissions, tests and historical deferrals | Source/document inspection only; no live runtime, tests, outputs or financial mutations | Initial plan written; all ACC activities pending |
+| Plan check — 2026-11-11 | One read-only pass against screens, data, services, specs and suite registrations | Confirmed 134 local definitions, the route/default tables, 23/1 regression and 3/19 acceptance files and budgets. Corrected the role table to the seeded grants, each activity's actors and fixture IDs, the Manufacturing cost-close route, Approvals topics, the Retail scope of ACC-24/30 and the F121 citation; condensed §2/§5 to Accounting specifics; added fixture consumption and an eighth wave so ACC-21 follows its blocker activities | No runtime, test or application change; all ACC activities pending |
+| Cross-review reconciliation — 2026-11-11 | The five companion reviews reconciled with one another and with source: handoff sides, shared fixtures, prepared identities, the shared-runtime disposition and the method wording | Source and document inspection only | Added the prepared Retail finance identities and the handoff table (ACC-32); ACC-24 and ACC-28 keep only Accounting's side; all ACC activities pending |
 
-For each execution batch append: actor/fixture identities; source and binary revisions; runtime/clock/modes;
-activities and branches attempted; findings and ownership; important before/after evidence; persisted outcomes and
-inspected artifacts; exact checks/results and any skips; design/implementation updates; commits when made; temporary
-state restored; unresolved continuations. Keep notes bounded and refer to evidence files rather than pasting logs.
+For each execution batch append: its pass (review or refinement); actor and fixture identities; source and binary
+revisions; runtime, clock and modes; activities and branches attempted; findings and owning layer; important
+before/after evidence; persisted outcomes and inspected artifacts; exact checks, results and skips;
+design/implementation updates; commits when made; temporary grants, settings and policy rows restored; unresolved
+continuations. Keep notes bounded and refer to evidence files rather than pasting logs or tokens.
 
 ## 7. Decisions
 
-- **Current task:** write this plan only. The user requested research/planning and allowed subagents; two researched
-  bounded sources read-only. No live walkthrough, mutation, acceptance run, implementation or commit was requested.
-- **Pattern:** retain Products' seven-part structure, explicit screen/mount inventory, complete actor/start/steps/
-  expected/recovery/mode activities, pending ledger, findings and bounded records. Products' completed statuses,
-  posting permissions, acceptance selections and execution exceptions do not carry over.
-- **Source of truth:** current mounts/services and grants govern review scope. Include the now-built production
-  cost-close/policy surfaces; reconcile older documents without rewriting them as part of this task.
-- **Financial basis:** record organization, dates, currency and authority in each applicable receipt. Use disposable
-  local data, captured mail, synthetic gateways and local bank/tax files. Review a business operation's full result,
-  including retained reviews, partial outcomes and repeated requests.
-- **Modes and boundaries:** Material is the visual target; actual TUI and brief Standard/output checks remain
-  explicit. PASS is a bounded browser handoff. Other app jobs are included only for the necessary source/return or
-  shared-fix contract, not complete neighboring-app reviews.
-- **Testing and cadence:** reuse existing coverage and follow §5. No acceptance selection, suite run, new test,
-  budget increase or exception to the supplied pre-commit rules is authorized by this plan. Record later user-directed
-  execution scope and cadence here when the review begins.
-- **Completion:** later review completion requires evidence for the selected activities, resolved or explicitly
-  accepted findings and a candid ledger of remaining modes, recovery branches, blockers and deferred work. A source
-  inventory or passing suite does not by itself establish a usable Accounting workflow.
+- **Planning record and method:** planning only, written 2026-11-10, checked against source and reconciled with the
+  four companion reviews on 2026-11-11; no runtime, walkthrough, test, build, application change or commit, and every
+  activity pending. Products' seven-part structure; §2 and §5 keep only Accounting specifics and link the guide and
+  Products for the generic method (user decision, 2026-11-11); earlier reviews' statuses, authorizations and
+  exceptions do not carry over.
+- **Source and handoffs:** current mounts, services and grants govern scope, and older records are reconciled here
+  without being rewritten. Each side of a cross-app handoff is exercised once, by the activity the handoff tables name
+  (ACC-32 here); the other review opens it only as far as the handoff.
+- **Financial basis:** record organization, dates, currency and authority in each receipt. Use disposable local data,
+  captured mail, synthetic gateways and local bank/tax files. Review a business operation's full result, including
+  retained reviews, partial outcomes and repeated requests.
+- **Wave order (2026-11-11 check):** eight waves rather than Products' seven, so ACC-21's close follows the
+  activities that resolve its blockers (22–26) and closes `BOSS_ACCT_CLOSE_PERIOD` only after nothing else posts in
+  it; ACC-27 then explains the closed and open periods. Activity numbers are unchanged.
+- **Report ownership:** ACC-27 owns the catalog, the ledger/statement reports and SalesAnalysis; Aging,
+  InvoiceReconciliation, StockTransactions and BudgetVariance belong to the activities whose data they explain, so
+  ACC-27 stays one bounded batch.
+- **Retail scope:** ACC-24 and ACC-30 use the prepared Retail finance identities (§2), or for ACC-30 a disposable
+  portal site for `BOSS_ACCT_ORG`, because the demo finance users serve `BOSS_ACCT_ORG` only while the requested runs
+  and the portal demo are Retail's.
+- **Modes and completion:** Material is the visual target; actual TUI and brief Standard/output checks stay explicit.
+  PASS is a bounded browser handoff. Completion needs evidence for the selected activities, resolved or accepted
+  findings and a candid ledger of what remains; a source inventory or passing suite is not a usable workflow.
+- **Phases (user decision, 2026-11-11):** a complete review pass with concurrent agents comes first and corrects
+  nothing; all findings are triaged together and addressed in a separate refinement pass (§2).
+
+### Execution setup dispositions
+
+The user decided every setup question on 2026-11-11. Record the actual values (instances, paths, ports, hostnames and
+dates) in the first live batch and whenever an instance is added, as Products did:
+
+- **Bootstrap and instances (decided):** the release binary, embedded Postgres and disposable databases throughout.
+  The coordinator decides which agents share an instance and which get their own, and when (major data staging or a
+  conflicting setup), and starts further instances on the fly on free non-default ports with their own hostnames (user
+  decision, 2026-11-11). Record each instance's runtime and database paths, linked components, loaded demo data and
+  any selected fixture specs; listener ports and hostnames.
+- **Shared runtime (decided):** the coordinating agent decides whether the five reviews share one runtime and
+  manages the concurrent agents, the cross-review order and the restore of Retail-wide changes (§2).
+- **Dates and zones (decided):** the real clock in the machine's current zone, recorded with the load and execution
+  dates, and no DST or second-zone checks; rows recreated relative to execution, and closing and month work back-dated
+  into periods that ended before now (user decision, 2026-11-11).
+- **Tool capability:** measured viewports, terminal keyboard and Chromium/PDF. 200% browser zoom is not checked
+  (user decision, 2026-11-11).
+- **Posting and mutation extent (decided):** postings and temporary setting, grant and policy changes in the
+  disposable runtime are allowed (user decision, 2026-11-11); the coordinator sequences them and restores the changes.
+- **Prepared fixtures (decided):** prepared users and records may be created for testing (user decision, 2026-11-11):
+  the Retail finance identities (§2), a multi-organization user, a held bill, a Projects billing editor, an approved
+  `BOSS_ACCT_ORG` standard cost, valuation/production close blockers and a second currency's documents.
+- **Automation selection (decided):** focused acceptance walks and fixture specs along the way, and the full
+  application acceptance run after the final `./moq test-apps` (§5; user decision, 2026-11-11). The acceptance client
+  suite's server also loads Products, Warehouse, Manufacturing and Insights fixture specs.
+- **Test cadence (decided):** local, focused checks before each commit in either pass, and one `./moq test-apps`
+  (with `./moq test-framework` if framework code changed) at the end of the refinement pass (§5; user decision,
+  2026-11-11).
