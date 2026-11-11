@@ -751,7 +751,7 @@ Mantle is not touched). Rust changed: a Debug binary built in the worktree; the 
   `org.moqui.report.dataset` update who is granted the datasets they name by a pattern (the steward, `insights-.*`, F51) saved
   `insights-…` with `indexName: otel_logs` and `rowFilter: {match_all: {}}` and read every log line: the engine asked a telemetry
   alias only for some row filter, and the alias's artifact was the steward's own. Read from the code here, the same reasoning held
-  two more ways (F-P3F-1, F-P3F-2): a definition without the business signal over a business dataset's document (P3 review R1's
+  two more ways (F143, F144): a definition without the business signal over a business dataset's document (P3 review R1's
   `check_governed` asked for the alias's own update artifact, which the pattern gives the steward, so `insights-raw` over
   `MantleSalesOrderPart` read every organization's rows without the registered policy), and a body of signal `business` naming a
   telemetry index as its `documentType` (the steward passes admission). Neither was run before the fix; both are refused after it.
@@ -801,24 +801,24 @@ Mantle is not touched). Rust changed: a Debug binary built in the worktree; the 
   two new files only. Not run: the full suites, moqui-host's `report_` integration tests, any acceptance test; the attack was
   not run again on a served instance (the specs make the same calls as the same users).
 - **Findings** (provisional, for the lead to number):
-  - F-P3F-1 (high, closed here): the steward's dataset without the signal over a business document read it unfiltered across
+  - F143 (high, closed here): the steward's dataset without the signal over a business document read it unfiltered across
     organizations, R1's check being satisfied by the steward's own pattern.
-  - F-P3F-2 (high, closed here): a body of signal `business` with a telemetry index as its `documentType` reached the index for
+  - F144 (high, closed here): a body of signal `business` with a telemetry index as its `documentType` reached the index for
     the steward through `save#Definition`; `create#BusinessDataset` alone refused a telemetry source.
-  - F-P3F-3 (design, open): a saved telemetry alias now answers by its owner's grant. One whose owner leaves `ADMIN`, or that
+  - F145 (design, open): a saved telemetry alias now answers by its owner's grant. One whose owner leaves `ADMIN`, or that
     is handed to an owner without the index, stops answering its readers (it fails closed, with the reason in the error); a
     disabled owner who still holds the grant still vouches (`as_user` reads grants, not the account's state).
-  - F-P3F-4 (open, the framework's, as F265): a dataset has no field list, so a reader of a telemetry alias reads each
+  - F146 (open, the framework's, as F265): a dataset has no field list, so a reader of a telemetry alias reads each
     matching line whole; a shipped alias is trusted as its component's code, with no registration.
-  - F-P3F-5 (low, open): `business_documents` counts a business dataset's `documentType` only; a business body with none reads
+  - F147 (low, open): `business_documents` counts a business dataset's `documentType` only; a business body with none reads
     the document of its own id, which is then not counted governed (such a dataset is never admissible and its steward's alone).
-  - F-P3F-6 (low, open): the owner's grant is read in a context of its own at each read of a saved telemetry alias by a
+  - F148 (low, open): the owner's grant is read in a context of its own at each read of a saved telemetry alias by a
     non-holder (and for each such dataset in `list#Datasets`), not cached.
 - **For the lead:**
-  - numbering: impl-admin's F277 is this note's subject; F-P3F-1 to F-P3F-6 above; a §4 row if wanted: "an alias needs its
+  - numbering: impl-admin's F277 is this note's subject; F143 to F148 above; a §4 row if wanted: "an alias needs its
     source's own grant, of its saver and its reader or owner; a shipped alias is its component's";
-  - the user's call: whether a disabled owner's alias should stop (F-P3F-3), and whether a shipped telemetry alias should need
-    a registration as a scope policy does (F-P3F-4);
+  - the user's call: whether a disabled owner's alias should stop (F145), and whether a shipped telemetry alias should need
+    a registration as a scope policy does (F146);
   - an existing instance: a saved dataset over a telemetry index whose owner does not hold the index, and a saved dataset
     without the signal over a business document, now answer only an instance administrator; none is shipped or seeded;
   - merge: mr-moqui touches `moqui-report` (`lib.rs` two hunks, `business.rs` `check_governed`, `definitions.rs`
@@ -837,7 +837,7 @@ binary as a steward of the application's kind (dataset save, a name pattern, the
     own service would have chosen the filter. A business body is now past `check_governed` only with a registered scope policy
     bound; without one it is an alias of its document (the document's own update artifact, saved and read).
     `create#BusinessDataset` and `store#BusinessDataset` bind a registered policy, so the steward's flow is unchanged.
-  - R2 (medium, mr-moqui; F-P3F-3 decided, fail closed): a disabled or terminated owner who still held the index still vouched
+  - R2 (medium, mr-moqui; F145 decided, fail closed): a disabled or terminated owner who still held the index still vouched
     for an alias's readers (run: both read). The owner clause now needs the owner's account open
     (`user::user_account_closed`: disabled for good or past the end date, as a session's refresh, a schedule and an alert rule
     stop; a tarpit lock does not close it).
@@ -849,7 +849,7 @@ binary as a steward of the application's kind (dataset save, a name pattern, the
     what a hand-over is for); left behind, it answers a holder only, and the transfer is refused when the new owner cannot
     read it. Read from the code before the fix; after it, run both ways (the steward's alias stays theirs and refused while
     the schedule and its dashboard go to the administrator; a closed holder's alias goes and answers its group again).
-  - R4 (low, mr-moqui; F-P3F-5 closed): `business_documents` counts the document of a business dataset's own id when it names
+  - R4 (low, mr-moqui; F147 closed): `business_documents` counts the document of a business dataset's own id when it names
     none, as the engine reads it. It was not a bypass (such a dataset is never admissible, and its reader needs the document's
     DataDocumentUserGroup row), but the governed set now follows `alias::target`.
   - mr-boss: `InsightsDatasets`' feature also refuses `insights.steward` the business body with no policy over
@@ -883,8 +883,8 @@ binary as a steward of the application's kind (dataset save, a name pattern, the
   InsightsDashboards, InsightsSettings, InsightsAlerts, InsightsDelivery and AdminAudit 31 of 31 (14.5 s). Prettier clean on the two specs; rustfmt on `alias.rs`
   only. Not run: the full suites, moqui-host's `report_` tests, any acceptance test.
 - **For the lead:**
-  - F-P3F-3 is decided as R2 (the user may still want it otherwise: an alias a departed administrator shared now stops for
-    its group until `transfer#DefinitionOwner` or a copy by a holder); F-P3F-5 closed (R4); F-P3F-4 and F-P3F-6 stay open
+  - F145 is decided as R2 (the user may still want it otherwise: an alias a departed administrator shared now stops for
+    its group until `transfer#DefinitionOwner` or a copy by a holder); F147 closed (R4); F146 and F148 stay open
     (R2 adds one account read by key to the uncached owner check: acceptable until a dataset list is slow);
   - behaviour change: a saved business dataset with no registered policy bound (in review, never admissible) is now read and
     saved only by a holder of its document's own update artifact (`ADMIN`), not by a pattern steward; none is shipped;
@@ -2749,7 +2749,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114, P9's F115 to F129 and P10's F130 to F142.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day. F74 is under P5's acceptance note (impl-admin P7); P6's F75 to F87 (Nov 10, 2026) are in its Built and Review notes, as are P7's F88 to F101, P8's F102 to F114, P9's F115 to F129 and P10's F130 to F142; F143 to F148 (Nov 11) are in P3's Follow-up note (dataset aliases, impl-admin F277).
 
 | # | Finding | Resolution |
 | --- | --- | --- |
