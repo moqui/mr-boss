@@ -22,8 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
         manager yet; Walter Pruitt's employment ended in June. Priya Natarajan is employed by both Retail and Services and reports
         to Greta. Services: Amara Diallo leads Kenji Arakawa, Sofia Brandt and Owen Castillo (Services' earlier employees, Joe and
         Bob Developer and Ana Designer, are Mantle's and Projects'). Nadia Kowal is a contractor of Retail (PrtAgent), not an
-        employee. No department is set up (OrgStructure, P3, adds them), so People's setup readiness warns. Hannah is
-        people.manager and Tomas people.employee (data/BossUsersDemoData.xml). -->
+        employee. Hannah is people.manager and Tomas people.employee (data/BossUsersDemoData.xml). P3 adds the organization below. -->
     <mantle.party.Party partyId="BOSS_PPL_GRETA" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_GRETA" firstName="Greta" lastName="Haugen"/>
     <mantle.party.PartyRole partyId="BOSS_PPL_GRETA" roleTypeId="Employee"/>
@@ -232,4 +231,92 @@ along with this software (see the LICENSE.md file). If not, see
             infoString="nadia.kowal@kowalconsulting.example"/>
     <mantle.party.contact.PartyContactMech partyId="BOSS_PPL_NADIA" contactMechId="BOSS_PPL_NADIA_EM" contactMechPurposeId="EmailPrimary"
             fromDate="2025-05-05 09:00:00"/>
+
+    <!-- People P3 (impl-people P3, F11, F12, F63, §5 Q6; design-people §4 OrgStructure and OrgChart): the departments and teams of
+        the two employers, each an Organization with the OrgDepartment or OrgTeam role (never OrgInternal), owned by its employer,
+        under its parent by a dated PrtOrgRollup, its members by dated PrtMember rows (from role Assignee) and its lead by one from
+        role Manager. Retail: Store Operations (lead Hannah; Tomas, Ines and Rafael) with its Sales Floor team (lead Ines; Tomas),
+        and Merchandising (lead Priya; Leon). Services: Service Delivery (lead Amara; Kenji, Sofia and Owen), under which Mantle's
+        two demo teams (Ziziwork Dev Team A and B, data/ZbaOrganizationDemoData.xml) now sit, keeping their members. Mantle's
+        internal demo departments (ORG_ZIZI_HR, ORG_ZIZI_SALES) stay legal organizations (§5 Q6). Priya, employed by Retail and
+        Services, reports to Greta at Retail and to Amara at Services: a reporting line is per employment (F86). -->
+    <mantle.party.PartyRole partyId="BOSS_PPL_INES" roleTypeId="Manager"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_PRIYA" roleTypeId="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PRIYA_MGR2" relationshipTypeEnumId="PrtManager"
+            fromPartyId="BOSS_PPL_AMARA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_PRIYA" toRoleTypeId="Employee"
+            fromDate="2025-02-03 09:00:00"/>
+
+    <mantle.party.Party partyId="BOSS_PPL_D_STORE" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PPL_D_STORE" organizationName="Store Operations"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_D_STORE" roleTypeId="OrgDepartment"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_D_STORE_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_PPL_D_STORE" fromRoleTypeId="OrgDepartment" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal"
+            fromDate="2019-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_T_FLOOR" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PPL_T_FLOOR" organizationName="Sales Floor"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_T_FLOOR" roleTypeId="OrgTeam"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_T_FLOOR_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_PPL_T_FLOOR" fromRoleTypeId="OrgTeam" toPartyId="BOSS_PPL_D_STORE" toRoleTypeId="OrgDepartment"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_D_MERCH" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PPL_D_MERCH" organizationName="Merchandising"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_D_MERCH" roleTypeId="OrgDepartment"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_D_MERCH_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_PPL_D_MERCH" fromRoleTypeId="OrgDepartment" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal"
+            fromDate="2019-01-01 00:00:00"/>
+    <mantle.party.Party partyId="BOSS_PPL_D_DELIVERY" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_PPL_D_DELIVERY" organizationName="Service Delivery"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_D_DELIVERY" roleTypeId="OrgDepartment"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_D_DELIVERY_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="BOSS_PPL_D_DELIVERY" fromRoleTypeId="OrgDepartment" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal"
+            fromDate="2019-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_DEVA_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="ORG_ZIZI_DEVA" fromRoleTypeId="OrgTeam" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2019-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_DEVB_UP" relationshipTypeEnumId="PrtOrgRollup"
+            fromPartyId="ORG_ZIZI_DEVB" fromRoleTypeId="OrgTeam" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2019-01-01 00:00:00"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_TOMAS" roleTypeId="Assignee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_INES" roleTypeId="Assignee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_RAFAEL" roleTypeId="Assignee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_LEON" roleTypeId="Assignee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_KENJI" roleTypeId="Assignee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_SOFIA" roleTypeId="Assignee"/>
+    <mantle.party.PartyRole partyId="BOSS_PPL_OWEN" roleTypeId="Assignee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_HANNAH_STORE" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_HANNAH" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_D_STORE" toRoleTypeId="OrgDepartment"
+            fromDate="2021-03-01 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_TOMAS_STORE" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_TOMAS" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_STORE" toRoleTypeId="OrgDepartment"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_INES_STORE" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_INES" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_STORE" toRoleTypeId="OrgDepartment"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_RAFAEL_STORE" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_RAFAEL" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_STORE" toRoleTypeId="OrgDepartment"
+            fromDate="2026-10-26 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_INES_FLOOR" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_INES" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_T_FLOOR" toRoleTypeId="OrgTeam"
+            fromDate="2022-09-05 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_TOMAS_FLOOR" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_TOMAS" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_T_FLOOR" toRoleTypeId="OrgTeam"
+            fromDate="2023-06-12 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PRIYA_MERCH" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_PRIYA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_D_MERCH" toRoleTypeId="OrgDepartment"
+            fromDate="2020-08-17 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_LEON_MERCH" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_LEON" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_MERCH" toRoleTypeId="OrgDepartment"
+            fromDate="2024-01-15 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_AMARA_DELIVERY" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_AMARA" fromRoleTypeId="Manager" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2020-01-06 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_KENJI_DELIVERY" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_KENJI" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2022-04-11 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_SOFIA_DELIVERY" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_SOFIA" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2023-11-20 09:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_OWEN_DELIVERY" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_PPL_OWEN" fromRoleTypeId="Assignee" toPartyId="BOSS_PPL_D_DELIVERY" toRoleTypeId="OrgDepartment"
+            fromDate="2021-07-19 09:00:00"/>
 </entity-facade-xml>

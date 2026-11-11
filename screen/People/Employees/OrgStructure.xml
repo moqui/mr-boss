@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Organization (design-people §4 OrgStructure; style-guide §3.15 tree list; impl-people P3): the employers a staff
+    reader reads and the departments and teams under them, as of a date, as a tree a level at a time (view-tree, its next levels
+    from unitChildren) or a list (OrganizationTree over mantle.humanres.OrganizationServices.find#Units): each unit's kind, lead,
+    people (an employer's employees, a unit's members) and the date it has belonged to its parent. Internal organizations under
+    an employer (Mantle's demo departments, Warehouse's returns center) are legal organizations, kept by Admin's Organizations.
+    A unit chosen (unitPartyId) shows its facts, its dated parents and its members (get#Unit). An HR editor (PEOPLE_HR_EDIT) adds a
+    department or team (New unit), renames one, moves it under another parent of the same employer from a date, sets its lead
+    (EditUnit, store#Unit) and adds or ends members (TeamMembers, store#Membership); Mantle refuses a cycle, another employer, a
+    stale date and a stale revision, and every row is ended and kept, never deleted. A reader sees the same tree with no action.
+    A tree row fetched as its parent opens shows its text; a unit is opened from a row of the page (or found by name). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Organization" default-menu-index="2" menu-image="sym_o_account_tree" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="term"/>
+    <parameter name="unitPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a level of the tree: the children of a unit on the date, in the user's scope -->
+    <transition name="unitChildren" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.OrganizationServices.find#Units" out-map="children"
+                    in-map="{organizationPartyId:(organizationPartyId || null), asOfDate:(asOfDate || null), parentPartyId:parentPartyId}"/>
+            <script>ec.web.sendJsonResponse(children.units || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a new unit, or a unit's name, parent or lead: Mantle checks the editor, the scope, the dates and the revision read -->
+    <transition name="storeUnit">
+        <actions>
+            <service-call name="mantle.humanres.OrganizationServices.store#Unit" out-map="stored"
+                    in-map="{partyId:(partyId || null), unitKind:(unitKind || null), organizationName:(organizationName || null),
+                        parentPartyId:(parentPartyId || null), headPartyId:(headPartyId || null), fromDate:(fromDate || null),
+                        changeReason:(changeReason || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Unit saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="unitPartyId" from="stored?.partyId || unitPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a member or lead joins, or a membership ends -->
+    <transition name="storeMembership">
+        <actions>
+            <service-call name="mantle.humanres.OrganizationServices.store#Membership"
+                    in-map="{unitPartyId:unitPartyId, partyId:(partyId || null), memberRole:(memberRole || 'member'),
+                        fromDate:(fromDate || null), partyRelationshipId:(partyRelationshipId || null), thruDate:(thruDate || null),
+                        changeReason:(changeReason || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${partyRelationshipId ? 'Membership ended' : 'Member added'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.hrView &amp;&amp; can.hrEdit)"/>
+        <if condition="can.staff">
+            <service-call name="mantle.humanres.OrganizationServices.find#Units" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null), asOfDate:(asOfDate || null),
+                        term:(term || null)}"/>
+            <script>ec.message.clearErrors()</script>
+            <if condition="unitPartyId">
+                <service-call name="mantle.humanres.OrganizationServices.get#Unit" out-map="unitFound" transaction="force-new"
+                        ignore-error="true" in-map="{partyId:unitPartyId, asOfDate:(asOfDate || null)}"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="treeFound" from="!!found?.units"/>
+        <set field="units" from="found?.units || []"/>
+        <set field="unit" from="unitFound?.unit || null"/>
+        <set field="parents" from="unitFound?.parents || []"/>
+        <set field="members" from="unitFound?.members || []"/>
+        <set field="isUnit" from="!!unit &amp;&amp; unit.unitKind !== 'organization'"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null, asOfDate: asOfDate || null, term: term || null}"/>
+        <set field="unitFacts" from="unit ? [unit.kindText + (unit.unitKind === 'organization' ? '' : ' of ' + unit.employerName),
+                unit.parentName ? 'under ' + unit.parentName + (unit.sinceText ? ' since ' + unit.sinceText : '') : 'top level',
+                isUnit ? 'lead ' + (unit.headName || 'none') : null,
+                unit.peopleCount + (unit.unitKind === 'organization' ? ' employees' : ' members')].filter(Boolean).join(' · ') : ''"/>
+        <set field="kindColors" from="{organization: 'grey-8', department: 'primary', team: 'teal'}"/>
+        <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
+        <set field="newUnit" from="{unitKind: 'department', parentPartyId: unit?.partyId || organizationPartyId || null}"/>
+        <set field="editUnit" from="unit ? {partyId: unit.partyId, organizationName: unit.organizationName,
+                parentPartyId: unit.parentPartyId, headPartyId: unit.headPartyId, expectedRevision: unit.revision} : {}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Organization" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewUnitDialog" button-text="New unit" icon="sym_o_add" type="primary" width="640"
+                        title="New department or team" condition="can.staff &amp;&amp; canEdit">
+                    <label type="p" text="A department belongs to an employer or another department; a team to either or to a department. It starts under its parent on the date given."/>
+                    <form-single name="NewUnit" transition="storeUnit" map="newUnit">
+                        <field name="unitKind">
+                            <default-field title="Kind">
+                                <radio><option key="department" text="Department"/><option key="team" text="Team"/></radio>
+                            </default-field>
+                        </field>
+                        <field name="organizationName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="parentPartyId">
+                            <default-field title="Belongs to">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'units', selected:newUnit.parentPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="headPartyId">
+                            <default-field title="Lead" tooltip="An employee of its employer; optional">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'employees'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="Starts" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                        <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create unit"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="unitKind"/><field-ref name="organizationName"/></field-row>
+                            <field-row><field-ref name="parentPartyId"/><field-ref name="headPartyId"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotStaff" condition="!can.staff">
+            <widgets>
+                <label text="The organization shows the employers you read for HR, payroll and People administration, and their departments and teams. Nothing of it is open to you."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Structure" condition="can.staff">
+            <widgets>
+                <label text="Departments and teams under each employer you read, as of a date. Open a unit for its parents and members."
+                        type="p" style="text-caption m-muted"/>
+                <form-single name="FindUnits" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="term"><default-field title="Unit name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="asOfDate"><default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="term"/>
+                            <field-ref name="asOfDate"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <label text="This employer is not available to you." type="p" style="text-negative"
+                        condition="organizationPartyId &amp;&amp; !treeFound"/>
+                <section name="Tree" condition="treeFound">
+                    <widgets>
+                        <container-box>
+                            <box-body-nopad>
+                                <form-list name="OrganizationTree" list="units" views="tree,list" skip-form="true" paginate="false">
+                                    <view-tree parent-field="parentPartyId" key-fields="partyId" child-count-field="childCount"
+                                            children-transition="unitChildren"/>
+                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                    <field name="parentPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="organizationName">
+                                        <default-field title="Unit">
+                                            <link url="." text="${organizationName}" link-type="anchor"
+                                                    parameter-map="{unitPartyId:partyId, organizationPartyId:(organizationPartyId || null), asOfDate:(asOfDate || null)}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Kind">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${kindColors[unitKind] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(kindText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kindText})}]]></text>
+                                                <text type="html">${kindText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="headName"><default-field title="Lead"><display/></default-field></field>
+                                    <field name="peopleCount" align="right"><default-field title="People"><display format="#,##0"/></default-field></field>
+                                    <field name="sinceText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="employerName"><default-field title="Employer"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="organizationName"/><field-ref name="headName"/></column>
+                                        <column><field-ref name="kindText"/><field-ref name="peopleCount"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!units.length &amp;&amp; term" text="No unit matches."/>
+                                <label type="p" style="q-pa-md m-muted" condition="!units.length &amp;&amp; !term"
+                                        text="You read no employer yet."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <label text="This unit is not available to you." type="p" style="text-negative" condition="unitPartyId &amp;&amp; !unit"/>
+                <section name="SelectedUnit" condition="unit">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${unit.organizationName}"/>
+                            <box-toolbar>
+                                <link url="." text="Close" icon="sym_o_close" link-type="anchor-button" btn-type="default"
+                                        parameter-map="{unitPartyId:''}"/>
+                                <container-dialog id="EditUnitDialog" button-text="Edit" icon="sym_o_edit" type="default" width="640"
+                                        title="Edit ${unit.organizationName}" condition="isUnit &amp;&amp; unit.canEdit">
+                                    <label type="p" text="A move goes under another unit of the same employer and a new lead takes over, each from the date given; the rows before are kept."/>
+                                    <form-single name="EditUnit" transition="storeUnit" map="editUnit">
+                                        <field name="partyId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="organizationName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="parentPartyId">
+                                            <default-field title="Belongs to">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'units', selected:editUnit.parentPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="headPartyId">
+                                            <default-field title="Lead">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'employees', choiceOrganizationPartyId:unit.employerPartyId,
+                                                                selected:editUnit.headPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Save">
+                                                <submit confirmation="Save ${unit.organizationName}? A move or a new lead takes effect from the date given."/>
+                                            </default-field>
+                                        </field>
+                                        <field-layout>
+                                            <field-ref name="organizationName"/>
+                                            <field-row><field-ref name="parentPartyId"/><field-ref name="headPartyId"/></field-row>
+                                            <field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${unitFacts}" type="p"/>
+                                <label text="A legal organization: its name and parent are kept in Admin's Organizations." type="p"
+                                        style="text-caption m-muted" condition="!isUnit"/>
+                                <form-list name="UnitParents" list="parents" skip-form="true" paginate="false" condition="parents.length">
+                                    <field name="parentName"><default-field title="Belongs to"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="parentName"/><field-ref name="fromDateText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+
+                        <section name="Members" condition="isUnit">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Members"/>
+                                    <box-toolbar>
+                                        <container-dialog id="AddMemberDialog" button-text="Add member" icon="sym_o_person_add" type="default" width="600"
+                                                title="Add a member to ${unit.organizationName}" condition="unit.canEdit">
+                                            <label type="p" text="A member is an employee of ${unit.employerName}; membership changes no employment. A new lead's predecessor stays on as a member."/>
+                                            <form-single name="AddMember" transition="storeMembership" map="{unitPartyId:unit.partyId, memberRole:'member'}">
+                                                <field name="unitPartyId"><default-field><hidden/></default-field></field>
+                                                <field name="partyId">
+                                                    <default-field title="Person">
+                                                        <drop-down>
+                                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'employees', choiceOrganizationPartyId:unit.employerPartyId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="memberRole">
+                                                    <default-field title="Role">
+                                                        <radio><option key="member" text="Member"/><option key="lead" text="Lead"/></radio>
+                                                    </default-field>
+                                                </field>
+                                                <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Add member"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </box-toolbar>
+                                    <box-body-nopad>
+                                        <form-list name="TeamMembers" list="members" skip-form="true" paginate="false" condition="members.length">
+                                            <field name="personName">
+                                                <default-field title="Person">
+                                                    <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
+                                                            parameter-map="{partyId:partyId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="EndMember_${partyRelationshipId}" button-text="End" icon="sym_o_person_remove" type="default"
+                                                            width="520" title="End ${personName}'s membership"
+                                                            condition="unit.canEdit &amp;&amp; state !== 'ended'">
+                                                        <label type="p" text="${personName} leaves ${unit.organizationName} on the date given; the membership stays on record."/>
+                                                        <form-single name="EndMember" transition="storeMembership"
+                                                                map="{unitPartyId:unit.partyId, partyRelationshipId:partyRelationshipId, expectedRevision:revision}">
+                                                            <field name="unitPartyId"><default-field><hidden/></default-field></field>
+                                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                            <field name="thruDate"><default-field title="Ends on" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                            <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                            <field name="submitButton">
+                                                                <default-field title="End membership">
+                                                                    <submit type="danger" confirmation="End ${personName}'s membership of ${unit.organizationName}?"/>
+                                                                </default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="personName"/><field-ref name="roleText"/></column>
+                                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="q-pa-md m-muted" condition="!members.length"
+                                                text="No one is a member yet. Add members from the employees of ${unit.employerName}."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

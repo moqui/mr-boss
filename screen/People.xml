@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     .get#SharedContext checks the user and resolves their capabilities, employers, units, own employments and links for every
     subscreen, and each Mantle service (mantle.humanres.PeopleServices) checks the scope again. The menu of design §1.2 grows by
     phase: P1 builds Home (every People user's) and Settings (the People administrator's, BOSS_PPL_SETTINGS); P2 Employees (the
-    directory and Employee360, every People user's, each seeing what Mantle's scope admits); each later phase adds its entries,
+    directory and Employee360, every People user's, each seeing what Mantle's scope admits); P3 Organization and Org chart under
+    Employees (OrgStructure and OrgChart, every People user's, changed by HR editors); each later phase adds its entries,
     and the design's later entries stay absent. P2 adds the palette's directory and the Person record-lookup; quick create and
     Today arrive with their records. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
@@ -55,7 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- P1: the people keymap. P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
+    <!-- P1: the people keymap (P3: g o and g c). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
         record-lookup over the directory projection (design §1.4). Quick create and Today (design §1.4) come with their records. -->
     <shell-providers>
         <palette-source group="Employees" label="Employee directory" icon="sym_o_badge"
@@ -64,6 +65,8 @@ along with this software (see the LICENSE.md file). If not, see
         <keymap scope="people">
             <key keys="g p" label="People home" screen="People/Home"/>
             <key keys="g e" label="Employees" screen="People/Employees"/>
+            <key keys="g o" label="Organization" screen="People/Employees/OrgStructure"/>
+            <key keys="g c" label="Org chart" screen="People/Employees/OrgChart"/>
         </keymap>
     </shell-providers>
 

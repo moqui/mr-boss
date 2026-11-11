@@ -120,7 +120,10 @@ const linkPaths = [
     "Settings",
     // P2: the directory and the employee record (design §4)
     "Employees",
-    "Employees/Employee360"
+    "Employees/Employee360",
+    // P3: the organization and the reporting lines (design §4 OrgStructure, OrgChart)
+    "Employees/OrgStructure",
+    "Employees/OrgChart"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -192,7 +195,8 @@ function checkRecord(p) {
 
 // ===== choices =====
 // Each People drop-down: its options for the user, searched in the query ignoring case, with the selected value's label when it
-// is in scope but not on the page. An unknown choice throws. Later phases add sources (positions, job classes, pay groups).
+// is in scope but not on the page. An unknown choice throws. Later phases add sources (positions, job classes, pay groups). P3:
+// employees (one employer's current employees, the managers and members OrgStructure and OrgChart choose).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -277,7 +281,49 @@ const choiceSources = {
             },
             personName
         )
-    }
+    },
+    // P3: one employer's current employees (organizationPartyId), else those of every employer a staff reader sees: the managers
+    // and members OrgStructure and OrgChart choose
+    employees: (userScope, term, selected, p) => employeeOptions(userScope, term, selected, p)
+}
+// The current employees of the employers a staff reader sees, or of the one asked for (refused outside, as none): each person once,
+// by name or id; the selected one when it is one of them.
+function employeeOptions(userScope, term, selected, p) {
+    const employers = p?.organizationPartyId
+        ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+        : employerIds(userScope)
+    if (!employers.length) return []
+    const factory = ec.entity.conditionFactory
+    const base = () =>
+        find("mantle.party.PartyFromAndRelationship")
+            .condition("relationshipTypeEnumId", "PrtEmployee")
+            .condition("toPartyId", "in", employers)
+            .conditionDate("fromDate", "thruDate", null)
+            .selectField(["fromPartyId", "firstName", "lastName"])
+            .orderBy(["^firstName", "^lastName"])
+    let query = base().limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["fromPartyId", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
+                "or"
+            )
+        )
+    const byParty = new Map()
+    for (const row of Array.from(query.list()))
+        if (!byParty.has(row.fromPartyId))
+            byParty.set(row.fromPartyId, {
+                value: row.fromPartyId,
+                label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+            })
+    return withSelected(
+        Array.from(byParty.values()),
+        selected,
+        partyId => base().condition("fromPartyId", partyId).count() > 0,
+        personName
+    )
 }
 function choices(p) {
     const userScope = required()

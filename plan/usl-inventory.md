@@ -497,8 +497,8 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
-**Added** (People P1 and P2, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with the
-screens that call it.
+**Added** (People P1, P2 and P3, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
@@ -511,6 +511,12 @@ screens that call it.
 | PeopleServices | store#PersonalInfo | People/Employees/Employee360 | People/Employees/Employee360; Commons/People/Employee360 (the person's own) (People P2) |
 | PeopleServices | check#EmploymentAccess | People/Employees/Employee360 | Shared/Chatter; Shared/RecordFiles (through get#RecordLinkInfo and RecordFilesServices.get#ContentType, the employment host) (People P2) |
 | PeopleServices | create#EmploymentContent | People/Employees/Employee360 | Shared/RecordFiles under People/Employees/Employee360 (Files and activity) (People P2) |
+| OrganizationServices | find#Units | People/Employees/OrgStructure | People/Employees/OrgStructure (OrganizationTree and its unitChildren level) (People P3) |
+| OrganizationServices | get#Unit | People/Employees/OrgStructure | People/Employees/OrgStructure (the open unit: its facts, UnitParents, TeamMembers) (People P3) |
+| OrganizationServices | store#Unit | People/Employees/OrgStructure | People/Employees/OrgStructure (NewUnit, EditUnit) (People P3) |
+| OrganizationServices | store#Membership | People/Employees/OrgStructure | People/Employees/OrgStructure (AddMember, EndMember) (People P3) |
+| OrganizationServices | get#ReportingTree | People/Employees/OrgChart | People/Employees/OrgChart (ReportingTree and its reportChildren level) (People P3) |
+| OrganizationServices | change#Manager | People/Employees/OrgChart | People/Employees/OrgChart (ChangeManager) (People P3) |
 
 ## Ledger (81 services)
 
@@ -813,11 +819,11 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers; Sales/Accounts/Accounts; Sales/Accounts/ContactDetail | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier) |
 | PartyServices | create#PersonCustomer |  |  |
 | PartyServices | create#PersonEmployee |  |  |
-| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier); Admin/Settings/Organizations (CreateOrganization, through mantle.party.IdentityServices.create#InternalOrganization) (Admin P7) |
+| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier); Admin/Settings/Organizations (CreateOrganization, through mantle.party.IdentityServices.create#InternalOrganization) (Admin P7); People/Employees/OrgStructure (NewUnit, a department or team, through mantle.humanres.OrganizationServices.store#Unit) (People P3) |
 | PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List; Admin/Settings/OrganizationDetail (Profile, through store#InternalOrganization: the name and pseudo id) (Admin P7) |
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
-| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations; Admin/Settings/OrganizationDetail | — (create#Supplier adds the Supplier role through create#Person or create#Organization); — Purchasing: create#Supplier gives the Supplier role (Purchasing P2); — Admin: create#InternalOrganization gives the OrgInternal role through create#Organization (Admin P7) |
+| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations; Admin/Settings/OrganizationDetail | — (create#Supplier adds the Supplier role through create#Person or create#Organization); — Purchasing: create#Supplier gives the Supplier role (Purchasing P2); — Admin: create#InternalOrganization gives the OrgInternal role through create#Organization (Admin P7); People/Employees/OrgStructure and People/Employees/OrgChart (a member's, lead's and manager's role, through mantle.humanres.OrganizationServices.store#Membership and change#Manager) (People P3) |
 | PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying, Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.set#SupplierCategory); — (other apps' contexts on Customer360, §7) |
 | PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying, Purchasing/Suppliers/SupplierList (through set#SupplierCategory); — (other apps' contexts on Customer360, §7) |
 | PartyServices | get#PartyBadgeInfo |  |  |
