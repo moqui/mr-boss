@@ -181,14 +181,21 @@ feature("the steward's own dataset is no way to the log index or past the sales 
         return {
             logs: save("insights-spec-logs", {indexName: "otel_logs", timeField: "timestamp", rowFilter: {match_all: {}}}),
             raw: save("insights-spec-raw", {documentType: "MantleSalesOrderPart", timeField: "_timestamp"}),
+            // nor with the business signal and no registered scope policy, which the steward would read before admission
+            unbound: save("insights-spec-unbound", {
+                documentType: "MantleSalesOrderPart",
+                timeField: "_timestamp",
+                signal: "business"
+            }),
             kept: system(() =>
                 ec.entity.find("moqui.report.Definition").condition("definitionId", "like", "insights-spec-%").count()
             )
         }
     },
-    then({logs, raw, kept}) {
+    then({logs, raw, unbound, kept}) {
         logs.includes("needs its own grant (org.moqui.report.dataset.otel_logs)")
         raw.includes("a business dataset's document")
+        unbound.includes("a business dataset's document")
         kept == 0
     }
 })

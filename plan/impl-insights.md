@@ -826,6 +826,77 @@ Mantle is not touched). Rust changed: a Debug binary built in the worktree; the 
     P18 or a later Insights phase may also edit; mr-boss touches BossSetupData (a comment in P3's block, not an append),
     InsightsDatasets, design-insights §5 and this note. impl-admin.md is not edited (its P17 "For the lead" item is closed by this).
 
+**Review Nov 11 (P3 follow-up, F277).** A fresh review of mr-moqui fbb2d3da and mr-boss 116edd3e, as an attack on the rule; fixes in
+mr-moqui and mr-boss ("Insights follow-up review: …") and this note (branch `ins/fix1`). Each shape below was run on the Debug
+binary as a steward of the application's kind (dataset save, a name pattern, the document's group; a throwaway spec, not kept).
+- **Fixes:**
+  - R1 (high, mr-moqui): the business signal was itself a way past the row filter. The steward saved `{signal: "business",
+    documentType: <a business dataset's document>}` with no `rowFilterService` through `save#Definition` and read every row of
+    the document (run: 3 of 3 fixture rows, across both scope groups): admission lets a steward read before admitting, and
+    `check_governed` passed any body with the signal. With a `rowFilterService` that is not a registered policy the steward's
+    own service would have chosen the filter. A business body is now past `check_governed` only with a registered scope policy
+    bound; without one it is an alias of its document (the document's own update artifact, saved and read).
+    `create#BusinessDataset` and `store#BusinessDataset` bind a registered policy, so the steward's flow is unchanged.
+  - R2 (medium, mr-moqui; F-P3F-3 decided, fail closed): a disabled or terminated owner who still held the index still vouched
+    for an alias's readers (run: both read). The owner clause now needs the owner's account open
+    (`user::user_account_closed`: disabled for good or past the end date, as a session's refresh, a schedule and an alert rule
+    stop; a tarpit lock does not close it).
+  - R3 (medium, mr-moqui): the owner clause could be turned around by a hand-over. `transfer#DefinitionOwner` (Admin's
+    offboarding, `REPORT_OWNER_CHANGE`, or an owner's own schedule) moves every definition a schedule references that the
+    leaving owner owns, a dataset too: a steward's alias of `otel_logs` that had stopped answering (a row older than the rule,
+    a grant since withdrawn) would become an administrator's and answer its group again under the steward's filter. A telemetry
+    alias now goes only while the owner it leaves holds the index (their account may be closed: a departed holder's alias is
+    what a hand-over is for); left behind, it answers a holder only, and the transfer is refused when the new owner cannot
+    read it. Read from the code before the fix; after it, run both ways (the steward's alias stays theirs and refused while
+    the schedule and its dashboard go to the administrator; a closed holder's alias goes and answers its group again).
+  - R4 (low, mr-moqui; F-P3F-5 closed): `business_documents` counts the document of a business dataset's own id when it names
+    none, as the engine reads it. It was not a bypass (such a dataset is never admissible, and its reader needs the document's
+    DataDocumentUserGroup row), but the governed set now follows `alias::target`.
+  - mr-boss: `InsightsDatasets`' feature also refuses `insights.steward` the business body with no policy over
+    `MantleSalesOrderPart`. Monitoring "Dataset aliases" and Attack-Surface say R1 to R3.
+- **Checked, holds** (each run unless marked read):
+  - what a body reads is decided once (`alias::target`) for the save, the read and the search, and the search runs over the
+    resolved documents, never the body's text: `indexName` as a list, `OTEL_LOGS`, `otel_*`, `*`, `otel_logs,otel_spans`, a
+    leading space, `documentType` as a list, `OTEL_LOGS`, a lower-cased document id, another dataset's id or an alias's id as
+    the document: each saves and reads nothing ("viewer may not read dataset"); `monitor_annotations` as a document,
+    `otel_errors`, `browser_replays`, both `indexName` and `documentType`, the business index in another case
+    (`documents_in_index` folds case), an unfed business document: refused at save; `index:otel_logs`, `index:<business
+    index>`, the document and `otel_logs` by their own ids, another's dataset and `admin-access-log`: refused by their own
+    artifacts; a business body with no document: saved, reads nothing;
+  - saves: a non-owner's save over a holder's alias ("only the owner"), a copy of it, a restore of a version older than the
+    rule, an import: refused; a git pull is the same `save` as the sync's user (read); a row written past the save is refused
+    by `query#Documents`, `run#Query` and `get#Dataset`, and left out of `list#Datasets`;
+  - reads (read): every reader calls `dataset`/`resolve_dataset` (rows, aggregations, drill, exports, schedules' scope and
+    render as the owner, alert evaluation as the owner, annotation sources, `find#BusinessDatasets`); the incident, regression
+    and replay services read fixed indexes under their own permissions; `get#AccessLog` reads the constant `admin-access-log`
+    with authorization off (AdminAudit passes); no Insights service turns authorization off;
+  - the shipped clause is the id of a file in a component's `report/` (`is_shipped`), read before any saved row, and no save
+    takes a shipped id: a row's `component` or `readOnly` column is not read for it (a stored row marked read-only and
+    `framework` over `otel_logs` is refused to a non-holder as any other);
+  - the owner is the row's `ownerId` column, which only the owner's own save, `transfer#DefinitionOwner` (R3) and
+    `transfer#AlertRuleOwner` (silences and mute timings only, by type) set; an unknown or empty owner holds nothing;
+  - no `unwrap` or panic on a database path; the refusals name only the index or document the caller named.
+- **Tests** (Debug, rebuilt after the fixes, `--nobuild`): `cargo test -p moqui-report` 94 of 94, `cargo clippy -p moqui-report
+  --all-targets -D warnings` clean; framework BusinessDatasets (its alias feature now also the business body with no policy,
+  saved and stored, and a closed holder's alias), ReportDrill, ReportAudience, BusinessAlerts, ReportAnnotations 24 of 24
+  (4.1 s); tools ReportMounts 2 of 2; mr-mantle SalesReports and BusinessEvents 5 of 5; mr-boss InsightsDatasets, InsightsAccess,
+  InsightsDashboards, InsightsSettings, InsightsAlerts, InsightsDelivery and AdminAudit 31 of 31 (14.5 s). Prettier clean on the two specs; rustfmt on `alias.rs`
+  only. Not run: the full suites, moqui-host's `report_` tests, any acceptance test.
+- **For the lead:**
+  - F-P3F-3 is decided as R2 (the user may still want it otherwise: an alias a departed administrator shared now stops for
+    its group until `transfer#DefinitionOwner` or a copy by a holder); F-P3F-5 closed (R4); F-P3F-4 and F-P3F-6 stay open
+    (R2 adds one account read by key to the uncached owner check: acceptable until a dataset list is slow);
+  - behaviour change: a saved business dataset with no registered policy bound (in review, never admissible) is now read and
+    saved only by a holder of its document's own update artifact (`ADMIN`), not by a pattern steward; none is shipped;
+  - R3's refusal reads "the new owner may not read this report or one of its sources" when a left-behind alias is not shared
+    with the new owner: correct, but the offboarding screen could name the dataset;
+  - open, the steward's by design: a steward picks any registered policy and its field for a registered feed's document, so
+    `MantleOrganization` over a field other than the owning organization scopes rows by that field; the registered policies
+    refuse expressions, and design §17 item 6 (field and use classes) is where a per-document policy would go;
+  - merge: mr-moqui touches `alias.rs`, `business.rs` (`check_admitted`, `check_governed`), `definitions.rs`
+    (`business_documents`), `delivery.rs` (one hunk in `transfer_definition_owner`), Monitoring.md, Attack-Surface and
+    BusinessDatasets.spec.js; mr-boss InsightsDatasets.spec.js and this note.
+
 ### P4 — Report catalog and metrics
 
 Design §6.1, Reports and SavedReports, §6.2 for the built owners, §4 MeasureMeaning and PanelDetail's measure and
