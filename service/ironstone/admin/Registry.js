@@ -296,6 +296,32 @@ const adapters = {
                   )
         ]
     },
+    // the framework's protocol readiness (impl-admin P12): a check for each protocol that is turned on and failing or running
+    // without its trust; one that is off or not in the build is no problem, and is ProtocolsHome's to explain
+    "org.moqui.admin.ConfigurationServices.get#ProtocolReadiness": provider => {
+        const protocols = Array.from(ownerCall(provider.serviceName, {}).protocolList || [])
+        const found = protocols
+            .filter(protocol => ["failing", "untrusted"].includes(protocol.state))
+            .map(protocol =>
+                check(
+                    "admin.protocols." + protocol.protocolKey,
+                    protocol.title,
+                    protocol.state === "failing" ? "failed" : "warning",
+                    protocol.state === "failing" ? "PROTOCOL_FAILING" : "PROTOCOL_UNTRUSTED",
+                    protocol.reason || protocol.stateText
+                )
+            )
+        const running = protocols.filter(protocol => protocol.state === "ready").length
+        return found.length
+            ? found
+            : [
+                  ready(
+                      "admin.protocols",
+                      provider.title,
+                      running + (running === 1 ? " protocol is" : " protocols are") + " running"
+                  )
+              ]
+    },
     // Mantle's organization Constitution: whether its own document is valid; its fix is Admin › Settings › Constitution in that
     // organization's scope (P7), shown when the viewer opens it. Mantle reads it for an organization the call's organization filters
     // find (impl-admin §4, F52 and F-P7-3 settled), so under an Admin screen's grant every organization the viewer administers

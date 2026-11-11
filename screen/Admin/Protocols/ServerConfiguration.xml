@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ServerConfiguration (design-admin §9 ServerConfiguration; style-guide §3 settings; impl-admin P12): the configuration the
+    server's protocols run with, read only, and the checks that may be run on them. EffectiveProtocolSettings is the
+    registered settings of the Protocols groups from org.moqui.admin.ConfigurationServices.get#EffectiveSettings: each with its
+    value, where it comes from (the deployment's configuration or the default), that a change waits for a restart and how an
+    operator makes it; a secret, a key and a key file are not registered, and one marked so is shown only as set or not.
+    ProtocolChecks is each protocol's checks from get#ProtocolReadiness with their last results, run through test#Protocol: the
+    configuration (nothing is sent), the listener (one connection from this server to the address it binds) and the public
+    address (the name clients are given is looked up and connected to from this server), which leaves the server and so asks
+    for a confirmation that says what it does. The target is always the configuration's own: none is entered here. No
+    setting is changed here, no file path is edited and nothing is restarted: the deployment's configuration stays the
+    operator's. Narrowed to one protocol by protocolKey. Reading needs ADMIN_CONNECTION_VIEW, ADMIN_SETTINGS_VIEW or
+    ADMIN_OPERATION_VIEW and a check ADMIN_CONNECTION_MANAGE, checked by the services. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Server configuration" menu-image="sym_o_dns" menu-image-type="icon">
+    <parameter name="protocolKey"/>
+
+    <transition name="runCheck">
+        <actions>
+            <service-call name="org.moqui.admin.ConfigurationServices.test#Protocol" out-map="tested"
+                    in-map="{protocolKey:checkProtocolKey, checkKey:checkKey, confirmed:(confirmed === 'Y')}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(tested.applied === false ? tested.reason : (tested.passed ? 'Passed: ' : 'Did not pass: ') + tested.resultText,
+                    tested.applied !== false &amp;&amp; tested.passed ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="org.moqui.admin.ConfigurationServices.get#ProtocolReadiness" out-map="found" transaction="force-new" ignore-error="true"/>
+        <!-- ignore-error clears a refusal's message -->
+        <set field="available" from="!!found?.protocolList"/>
+        <service-call name="org.moqui.admin.ConfigurationServices.get#EffectiveSettings" out-map="effective" transaction="force-new" ignore-error="true"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const colors = {ready: 'positive', failing: 'negative', untrusted: 'warning', notStarted: 'info', disabled: 'grey-7', absent: 'grey-6'}
+            const all = Array.from(found?.protocolList || [])
+            const chosen = all.find(row => row.protocolKey === protocolKey) || null
+            protocolOptions = all.filter(row => row.settingGroup || row.checkList.length).map(row => ({value: row.protocolKey, label: row.title}))
+            chosenTitle = chosen ? chosen.title : ''
+            chosenState = chosen ? Object.assign({}, chosen, {stateColor: colors[chosen.state] || 'grey-7'}) : null
+            const shownValue = row => row.masked ? (row.valueSet ? 'Hidden (set)' : 'Hidden (not set)') : (row.value === '' || row.value == null ? 'Not set' : row.value)
+            settings = Array.from(effective?.settingList || [])
+                .filter(row => String(row.settingGroup || '').startsWith('Protocols: ') && (!chosen || row.settingGroup === chosen.settingGroup))
+                .map(row => Object.assign({}, row, {
+                    groupText: row.settingGroup.charAt(11).toUpperCase() + row.settingGroup.slice(12),
+                    shownValue: shownValue(row),
+                    restartText: row.restartRequired ? 'After a restart' : ''}))
+            const states = Object.fromEntries(all.map(row => [row.protocolKey, row]))
+            checks = Array.from(found?.checkList || []).filter(row => !chosen || row.protocolKey === chosen.protocolKey).map(row => Object.assign({}, row, {
+                resultColor: row.lastCheckPassed == null ? 'grey-7' : row.lastCheckPassed ? 'positive' : 'negative',
+                resultState: row.lastCheckPassed == null ? 'Not run' : row.lastCheckPassed ? 'Passed' : 'Did not pass',
+                resultText: [row.lastResultText, row.lastCheckDate ? ec.l10n.format(Date.parse(row.lastCheckDate), 'yyyy-MM-dd HH:mm') : ''].filter(Boolean).join(' · '),
+                protocolStateText: states[row.protocolKey]?.stateText || '',
+                dialogKey: (row.protocolKey + '_' + row.checkKey).replace(/\W/g, '_')}))
+            canTest = !!found?.canTest
+            findValues = {protocolKey: protocolKey}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Server configuration" type="h5"/>
+                <label text="The configuration the protocols run with, and the checks that can be run on them. A value is changed in the deployment's configuration, by whoever operates the server."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="!available" text="The server configuration is not available to you."/>
+        <section name="ConfigurationSection" condition="available">
+            <widgets>
+                <form-single name="ProtocolFind" transition="." map="findValues">
+                    <field name="protocolKey">
+                        <default-field title="Protocol">
+                            <drop-down allow-empty="true"><list-options list="protocolOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout><field-row-big><field-ref name="protocolKey"/><field-ref name="submitButton"/></field-row-big></field-layout>
+                </form-single>
+                <section name="ChosenProtocol" condition="chosenState">
+                    <widgets>
+                        <label type="p" text="${chosenState.title}: ${chosenState.stateText}${chosenState.reason ? ' · ' + chosenState.reason : ''}${chosenState.listener ? ' · listening on ' + chosenState.listener : ''}"/>
+                        <label type="p" style="text-warning" condition="chosenState.trustState === 'mismatch'"
+                                text="Reception is not trusted: ${chosenState.trustProblems.join('; ')}"/>
+                        <label type="p" style="m-muted" condition="chosenState.trustState &amp;&amp; chosenState.trustState !== 'mismatch'" text="${chosenState.trustText}"/>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Checks"/>
+                    <box-body-nopad>
+                        <form-list name="ProtocolChecks" list="checks" skip-form="true" paginate="false">
+                            <field name="protocolTitle"><default-field title="Protocol"><display text="${protocolTitle} (${protocolStateText})"/></default-field></field>
+                            <field name="title"><default-field title="Check"><display/></default-field></field>
+                            <field name="expected"><default-field title="Expected"><display/></default-field></field>
+                            <field name="resultState">
+                                <default-field title="Last result">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${resultColor}">${resultState}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: resultState})}]]></text>
+                                        <text type="html">${resultState}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="resultText"><default-field title="Finding and time"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="runCheck" text="Run" icon="sym_o_play_arrow" link-type="hidden-form-link" condition="canTest &amp;&amp; !external"
+                                            parameter-map="{checkProtocolKey:protocolKey, checkKey:checkKey, protocolKey:(ec.web.parameters.protocolKey || '')}"/>
+                                    <container-dialog id="RunCheck_${dialogKey}" button-text="Run" icon="sym_o_travel_explore" width="560"
+                                            title="Check the public address of ${protocolTitle}" condition="canTest &amp;&amp; external">
+                                        <label type="p" text="This looks up the name the configuration gives clients and makes one connection to its port from this server, closed at once. Something leaves the server: the lookup and the connection are seen by whoever runs those names and addresses. Nothing is sent over the connection."/>
+                                        <form-single name="RunPublicCheck" transition="runCheck"
+                                                map="{checkProtocolKey:protocolKey, checkKey:checkKey, confirmed:'Y', protocolKey:(ec.web.parameters.protocolKey || '')}">
+                                            <field name="checkProtocolKey"><default-field><hidden/></default-field></field>
+                                            <field name="checkKey"><default-field><hidden/></default-field></field>
+                                            <field name="confirmed"><default-field><hidden/></default-field></field>
+                                            <field name="protocolKey"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title="Look it up and connect"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="protocolTitle"/><field-ref name="title"/></column>
+                                <column><field-ref name="resultState"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!checks.length" text="This protocol has no check."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Effective settings"/>
+                    <box-body-nopad>
+                        <form-list name="EffectiveProtocolSettings" list="settings" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Setting"><display/></default-field></field>
+                            <field name="groupText"><default-field title="Protocol"><display/></default-field></field>
+                            <field name="shownValue"><default-field title="Value"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                            <field name="restartText"><default-field title="A change applies"><display/></default-field></field>
+                            <field name="description"><default-field title="What it does"><display/></default-field></field>
+                            <field name="operatorNote"><default-field title="How it is changed"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="groupText"/></column>
+                                <column><field-ref name="shownValue"/><field-ref name="sourceText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!settings.length" text="This protocol has no setting of its own: it runs on the web address."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

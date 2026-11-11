@@ -12,18 +12,26 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Mail and protocols area of IronStone Admin (design-admin §1.2, §9; impl-admin P11): MailRelays, the outgoing mail
-    servers no mail account owns (the default until ProtocolsHome is built, P12), and MailRelayDetail, one relay's
-    configuration, test and uses (contextual). The protocols' readiness, the server configuration and the mail queue join it
-    later (P12). For the integration administrator and the administrator (BOSS_ADM_PROTOCOLS): the framework's services
-    check ADMIN_CONNECTION_VIEW and ADMIN_CONNECTION_MANAGE whatever opens the screens. -->
+<!-- The Mail and protocols area of IronStone Admin (design-admin §1.2, §9; impl-admin P11, P12): Home (ProtocolsHome, the
+    default), what each protocol of the server is doing with links to its owner; MailRelays, the outgoing mail servers no mail
+    account owns, and MailRelayDetail, one relay's configuration, test and uses (contextual); MailQueue, the send outcomes of
+    the instance's mail; ServerConfiguration, the configuration the protocols run with and their checks. For the integration
+    administrator and the administrator (BOSS_ADM_PROTOCOLS, the whole area) and, for Home, MailQueue and ServerConfiguration
+    only, the operations operator (BOSS_ADM_PROTOCOLS_OPS). The grants open navigation: the framework's services check
+    ADMIN_CONNECTION_VIEW and ADMIN_CONNECTION_MANAGE (relays, protocol checks), ADMIN_OPERATION_VIEW and
+    ADMIN_OPERATION_MANAGE (the mail queue) whatever opens the screens. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Mail and protocols" default-menu-index="7" menu-image="sym_o_mail" menu-image-type="icon">
-    <subscreens default-item="MailRelays" always-use-full-path="true">
+    <subscreens default-item="Home" always-use-full-path="true">
+        <subscreens-item name="Home" location="component://mr-boss/screen/Admin/Protocols/Home.xml" menu-title="Protocols" menu-index="1"/>
         <subscreens-item name="MailRelays" location="component://mr-boss/screen/Admin/Protocols/MailRelays.xml" menu-title="Mail relays"
                 menu-index="2"/>
         <subscreens-item name="MailRelayDetail" location="component://mr-boss/screen/Admin/Protocols/MailRelayDetail.xml"
                 menu-include="false"/>
+        <subscreens-item name="MailQueue" location="component://mr-boss/screen/Admin/Protocols/MailQueue.xml" menu-title="Mail queue"
+                menu-index="3"/>
+        <subscreens-item name="ServerConfiguration" location="component://mr-boss/screen/Admin/Protocols/ServerConfiguration.xml"
+                menu-title="Server configuration" menu-index="4"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminProtocolsPanel" type="tab"/>

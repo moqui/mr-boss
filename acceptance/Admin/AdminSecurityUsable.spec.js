@@ -111,7 +111,7 @@ feature(
                 description: "Company sign-in",
                 clientTypeEnumId: "OctOther",
                 clientId: "accept-security-client",
-                secret,
+                secretPassword: secret,
                 discoveryUri: issuer,
                 reason: "Acceptance: the company's identity provider"
             })
@@ -200,7 +200,7 @@ feature("a changed issuer clears the secret and disables the provider until it i
         out.untested = provider().enabled
         post(users.integrations, "storeConfiguration", {
             expectedRevision: provider()?.revision,
-            secret,
+            secretPassword: secret,
             reason: "Acceptance: the new issuer's secret"
         })
         post(users.integrations, "testProvider", {})

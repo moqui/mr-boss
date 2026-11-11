@@ -208,7 +208,8 @@ feature("a settings entry shows only to those its destination opens to, and its 
                 "admin.localization",
                 "admin.referenceData",
                 "admin.connections",
-                "admin.mailRelays"
+                "admin.mailRelays",
+                "admin.protocols"
             ])
         )
             problems.push(`the instance group: ${instance}`)

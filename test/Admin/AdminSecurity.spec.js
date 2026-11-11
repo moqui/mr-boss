@@ -88,7 +88,7 @@ feature("a provider is started and configured by the integration administrator, 
             description: "Spec sign-in",
             clientTypeEnumId: "OctOauth20",
             clientId: "spec-security-client",
-            secret,
+            secretPassword: secret,
             authorizeUrl: "https://idp.example.com/authorize",
             tokenUrl: "https://idp.example.com/token"
         })

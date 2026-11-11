@@ -29,10 +29,12 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition name="storeConfiguration">
         <actions>
+            <!-- the secret comes as secretPassword: a name the framework takes for a credential, so a refused save keeps it
+                out of the session's saved parameters and of request details (impl-admin P11 R4, P12) -->
             <service-call name="org.moqui.admin.ConfigurationServices.store#IdentityProvider" out-map="stored"
                     in-map="{authFlowId:authFlowId, expectedRevision:expectedRevision, description:(description ?? null),
                         sequenceNum:(sequenceNum ?? null), clientTypeEnumId:(clientTypeEnumId ?? null), clientId:(clientId ?? null),
-                        secret:(secret || null), discoveryUri:(discoveryUri ?? null), realm:(realm ?? null), baseUri:(baseUri ?? null),
+                        secret:(secretPassword || null), discoveryUri:(discoveryUri ?? null), realm:(realm ?? null), baseUri:(baseUri ?? null),
                         preferredJwsAlgorithmEnumId:(preferredJwsAlgorithmEnumId ?? null), useNonce:(useNonce ?? null),
                         appleTeamId:(appleTeamId ?? null), appleKeyId:(appleKeyId ?? null), authorizeUrl:(authorizeUrl ?? null),
                         tokenUrl:(tokenUrl ?? null), userInfoUrl:(userInfoUrl ?? null), scope:(scope ?? null),
@@ -149,7 +151,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="secretText" from="configuration.secretSet ? 'A secret is stored. Leave empty to keep it.' : 'No secret is stored.'"/>
             <set field="configurationValues" from="Object.assign({}, configuration, {authFlowId: authFlowId, expectedRevision: provider.revision,
                     description: provider.description, sequenceNum: provider.sequenceNum, useNonce: configuration.useNonce ? 'Y' : 'N',
-                    forceAuth: configuration.forceAuth ? 'Y' : 'N', passive: configuration.passive ? 'Y' : 'N', secret: '',
+                    forceAuth: configuration.forceAuth ? 'Y' : 'N', passive: configuration.passive ? 'Y' : 'N', secretPassword: '',
                     keystorePassword: '', privateKeyPassword: ''})"/>
             <set field="accessValues" from="{authFlowId: authFlowId, expectedRevision: provider.revision, accountLinkEnumId: provider.accountLinkEnumId,
                     defaultUserGroupId: provider.defaultUserGroupId}"/>
@@ -273,7 +275,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="clientId"><default-field title="Client ID"><text-line size="50"/></default-field></field>
-                                    <field name="secret"><default-field title="Client secret" tooltip="${secretText} For Apple, the private key."><password size="50"/></default-field></field>
+                                    <field name="secretPassword"><default-field title="Client secret" tooltip="${secretText} For Apple, the private key."><password size="50"/></default-field></field>
                                     <field name="discoveryUri"><default-field title="Discovery URL" tooltip="The issuer's .well-known/openid-configuration; empty for Google, Apple and Azure AD, which have their own"><text-line size="70"/></default-field></field>
                                     <field name="baseUri"><default-field title="Keycloak base URL"><text-line size="50"/></default-field></field>
                                     <field name="realm"><default-field title="Keycloak realm"><text-line size="30"/></default-field></field>
@@ -292,7 +294,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-layout>
                                         <field-row><field-ref name="description"/><field-ref name="sequenceNum"/></field-row>
                                         <field-row><field-ref name="clientTypeEnumId"/><field-ref name="clientId"/></field-row>
-                                        <field-ref name="secret"/>
+                                        <field-ref name="secretPassword"/>
                                         <field-ref name="discoveryUri"/>
                                         <field-row><field-ref name="baseUri"/><field-ref name="realm"/></field-row>
                                         <field-row><field-ref name="preferredJwsAlgorithmEnumId"/><field-ref name="useNonce"/></field-row>
@@ -316,7 +318,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="clientId"><default-field title="Client ID"><text-line size="50"/></default-field></field>
-                                    <field name="secret"><default-field title="Client secret" tooltip="${secretText}"><password size="50"/></default-field></field>
+                                    <field name="secretPassword"><default-field title="Client secret" tooltip="${secretText}"><password size="50"/></default-field></field>
                                     <field name="authorizeUrl"><default-field title="Authorization endpoint" tooltip="Empty takes the named provider's own"><text-line size="70"/></default-field></field>
                                     <field name="tokenUrl"><default-field title="Token endpoint"><text-line size="70"/></default-field></field>
                                     <field name="userInfoUrl"><default-field title="User info endpoint"><text-line size="70"/></default-field></field>
@@ -326,7 +328,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-layout>
                                         <field-row><field-ref name="description"/><field-ref name="sequenceNum"/></field-row>
                                         <field-row><field-ref name="clientTypeEnumId"/><field-ref name="clientId"/></field-row>
-                                        <field-ref name="secret"/>
+                                        <field-ref name="secretPassword"/>
                                         <field-ref name="authorizeUrl"/>
                                         <field-ref name="tokenUrl"/>
                                         <field-ref name="userInfoUrl"/>

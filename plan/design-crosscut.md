@@ -536,6 +536,11 @@ Contracts:
   SystemMessage retry jobs. It aligns with Comms C1's delivery rows, so SMS and bridges join later.
   Domain facts link to it: Marketing CampaignSend and CampaignRecipient, Shop notices and cart
   recovery, event notices, Sales reminders and storeless confirmations.
+  The ledger is a registered owner of mail send outcomes in the framework (impl-admin P12:
+  `moqui.server.MailOutcomeOwner`, `mantle.party.MessageServices.find#MailOutcomeOwners` and
+  `recover#OwnedMailOutcome`): Admin's MailQueue shows the stored message of each attempt with its
+  delivery, offers no retry beside the ledger's own, and reconciles an uncertain one through
+  `resolve#Delivery` with `MESSAGE_DELIVERY_REVIEW`.
 - **CX-DEVICE (L5).** A shared device signs in with a revocable device credential limited to one route
   group, a new framework need (Admin ADM-DEVICES, which People PE-22 references) that gates People
   ClockingKiosk. Each action identifies its person by a badge `scan-input` and a PIN, on a

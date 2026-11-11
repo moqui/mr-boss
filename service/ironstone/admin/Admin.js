@@ -74,7 +74,9 @@ const areas = {
     // administrators and the administrator (BOSS_ADM_SECURITY)
     security: "Security",
     // P11: Integrations (Connections, ConnectionDetail) and Mail and protocols (MailRelays, MailRelayDetail) for the
-    // integration administrator and the administrator (BOSS_ADM_INTEGRATIONS, BOSS_ADM_PROTOCOLS)
+    // integration administrator and the administrator (BOSS_ADM_INTEGRATIONS, BOSS_ADM_PROTOCOLS); P12 opens Mail and
+    // protocols to the operations operator too, for ProtocolsHome, MailQueue and ServerConfiguration alone
+    // (BOSS_ADM_PROTOCOLS_OPS: the area's screen without its other subscreens)
     integrations: "Integrations",
     protocols: "Protocols",
     organizations: "Settings/Organizations",
@@ -303,6 +305,10 @@ const linkPaths = [
     "Integrations/ConnectionDetail",
     "Protocols/MailRelays",
     "Protocols/MailRelayDetail",
+    // P12: protocols, the mail queue and the server configuration
+    "Protocols/Home",
+    "Protocols/MailQueue",
+    "Protocols/ServerConfiguration",
     "Agents/Home",
     "System",
     "Developer/Home"

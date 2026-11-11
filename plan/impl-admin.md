@@ -2769,6 +2769,233 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
 - **Usable when** (design §15.3 "Protocol readiness"): ProtocolsHome on the demo shows SMTP reception disabled, DAV
   ready and RTC absent apart; a failed mail send shows in MailQueue with its owner link and no body.
 
+**Built Nov 10 (P12).**
+- Checked first (the code over the plan): no script could read what a listener did at startup or a literal conf attribute
+  (F-P12-1); `EmailMessage` kept no send outcome, so "known failure" and "uncertain" could not be told apart from the
+  record (F-P12-2); most mail is sent by services with no ledger while Mantle's delivery ledger keeps and retries its own
+  attempts (F-P12-3); P0's "Comms' settings and readiness" was answered by F44 in P2 and still holds (F-P12-10).
+- mr-moqui (Rust changed: a Debug binary built in the worktree; the shared release binary does not carry it):
+  - Rust. `moqui-core` `service/protocol_admin.rs` (new, std only): `get#ProtocolFacts` (the build's package and features,
+    the startup report's entries for a fixed list of listeners and integrations with their state on, off, failed, skipped
+    or notBuilt and its detail, whether the process opened its listeners, and a fixed list of nonsecret attributes of
+    `smtp-server`, `ssh-server` and `git-server`) and `probe#ProtocolTarget` (one TCP connection, closed at once, to a
+    target named by key whose host and port are the conf's own properties: five listeners' bound addresses and four public
+    names; a public one only with `confirmed`); each checks its own permission and takes no address from the request.
+    `moqui-mail` `implementation.rs` `record_send_failure`: a delivery that fails keeps its `deliveryOutcome` as the stored
+    message's `sendOutcome`, with the error as `sendError` for a message that is not a mail account's, in a transaction of
+    its own; the Sent status clears it (P8c-24).
+  - `entity/BasicEntities.xml`: `EmailMessage.sendOutcome`. `entity/ServerEntities.xml` (appended):
+    `moqui.server.MailOutcomeOwner` (the registry of owners of send outcomes) and `OperationResult` (an operation key's first
+    answer); `ConnectionCheck` also keeps a protocol check's last result (adapter key `protocol`).
+  - `service/org/moqui/admin/ConfigurationServices.xml` (appended, bodies in the new `ConfigurationProtocols.js`):
+    `get#ProtocolReadiness` (fourteen protocols, each a row of one table: its build feature, its startup entry and how the
+    conf turns it on; state absent, disabled, failing, untrusted, notStarted or ready, with the reason, the listener, the
+    settings group, the owner key and its checks with their last results; SMTP reception's trust) and `test#Protocol`
+    (configuration, listener, public address; the last only confirmed; NOT_BUILT and NOT_ENABLED send nothing), and the two
+    Rust services' definitions. `ConfigurationSettings.js`: `get#EffectiveSettings` answers the groups named "Protocols: ..."
+    to a holder of `ADMIN_CONNECTION_VIEW` or `ADMIN_OPERATION_VIEW` alone, as P10's sign-in groups to the access
+    administrator (one table of group readers).
+  - `service/org/moqui/admin/OperationServices.xml` (new family, organized as ConfigurationServices: a module a part beside
+    `OperationLib.js`, which takes `ConfigurationLib.js`'s helpers and adds the operation permissions, the required reason,
+    the operation key with `once`, a registered service called apart, and paging): the mail part, `OperationMail.js`:
+    `find#MailOutcomes`, `retry#MailOutcome`, `reconcile#MailOutcome`, the internal `claim#MailOutcomeRetry`, and the owner
+    contract's interfaces `find#MailOutcomeOwners` and `recover#OwnedMailOutcome`. P13 and P14 append their sections and
+    modules.
+  - `mail/EmailClientServices.xml`: `record#SendResult` takes and keeps `deliveryOutcome`; a send claimed again or a
+    message taken back to Drafts clears it.
+  - Data: `AdminConfigurationData.xml` (appended: the `AdminProtocolServices` and `AdminOperationServices` grants, each naming
+    its services, and thirty-three read-only settings of five Protocols groups).
+  - Docs: Attack-Surface (the protocols and mail queue paragraph), Parity-Diffs (P8c-24), Remaining-Work's `org.moqui.admin`
+    row.
+- mr-mantle (not in the plan's repositories: a worktree on `adm/p12` was added for F-P12-3):
+  - `service/mantle/party/MessageServices.xml`, `MessageDeliveries.js`: `find#MailOutcomeOwners` and
+    `recover#OwnedMailOutcome`, the ledger as a registered owner (it claims the stored message of each attempt, offers no
+    retry since it tries a waiting delivery itself, and reconciles the last attempt of an uncertain delivery through
+    `resolve#Delivery` with `MESSAGE_DELIVERY_REVIEW`); a failed attempt now keeps its `emailMessageId`, as a sent and an
+    uncertain one did. `data/ShopFulfillmentSetupData.xml` (appended): the `MailOutcomeOwner` row.
+- BOSS:
+  - Screens: `Admin/Protocols.xml` (Home the default; MailRelays, MailQueue, ServerConfiguration; MailRelayDetail
+    contextual). `Protocols/Home.xml` (ProtocolsHome: four number cards, ProtocolReadiness with each protocol's state chip,
+    reason, listener and owner link, links to MailQueue, Comms' mail accounts and text blocks and, when it opens, Voice;
+    TransportHealth from `get#Readiness`). `Protocols/ServerConfiguration.xml` (ProtocolFind; ProtocolChecks with Run, and
+    for a public address a dialog that says what leaves the server; EffectiveProtocolSettings). `Protocols/MailQueue.xml`
+    (MailQueueFind; MailQueueList with Send again behind a confirmation naming the message and its recipient count, and
+    Settle or Close in a dialog with the reason). No new `ironstone` service, so the client deny pattern is unchanged.
+  - `Registry.js`: the adapter of the protocols as a readiness provider. `Admin.js`: three link paths.
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_PROTOCOLS_OPS` (the operations operator on the area's screen itself, not
+    inherited, and on Home, MailQueue and ServerConfiguration), the readiness provider `admin.protocols` (Transport) and the
+    settings index entry `admin.protocols`. BossUsersDemoData unchanged.
+  - P11 review's R4 in P10's code: `Security/IdentityProviderDetail.xml` posts the client secret as `secretPassword` (both
+    forms and the transition's mapping to the service's `secret`), a name the session's saved parameters and request
+    details leave out; AdminSecurity and the acceptance AdminSecurityUsable post it so.
+- Specs: framework `test/AdminProtocols` (3 features, 0.05 s on the Debug binary: off, absent, failed, skipped, ready and
+  not started read apart from given facts and through the service; the trust cases, a mismatch never ready or trusted,
+  internet mail never trusted; an unconfirmed public check refused in the script and in the Rust service, an off protocol
+  sent nothing, one result kept with its runner, the viewer and a user without the permission) and
+  `test/AdminMailOutcomes` (3 features, 0.2 s: the list with counts, owner and no subject, body or address, the states'
+  filters, the relays' keeper reading the instance's mail only; a retry sending the same message once for its key, a
+  server not reached leaving it retryable, an uncertain or account message never sent, the reconciliation with its audit
+  rows, a close; an owner that cannot be asked holding everything). Mantle `test/party/DeliveryLedger` (one feature added,
+  0.05 s: the ledger's message claimed, no retry here, an uncertain one reconciled through the ledger). BOSS
+  `test/Admin/AdminMailQueue` (2 features, 1.0 s: MailQueue's, ProtocolsHome's and ServerConfiguration's one qvt render
+  each; the transitions as the operator, the integration administrator and the reader; the operator refused MailRelays).
+  `AdminAccess` changed: the operator's `protocols` capability. `AdminRegistries` changed: the Instance group's new entry.
+  Cargo: `moqui-core` `service::protocol_admin::tests` (2), `moqui-mail`
+  `a_failed_delivery_keeps_its_outcome_on_the_message`; `rust_services_tests`' list of registered services gains P12's two
+  and the two P10 left out (F-P12-12). Acceptance, written and not run: `acceptance/Admin/AdminProtocolsUsable` (2 features,
+  the "usable when"; mail captured, no network).
+- Tests run (the worktree's Debug binary and runtime): framework AdminProtocols, AdminMailOutcomes, AdminConfiguration,
+  AdminConnectionServices, AdminIdentityProviders 16 of 16; basic-comms BasicCommsComposeRef, BasicCommsSync 21 of 21 (the
+  mail client's send result); mr-mantle DeliveryLedger, GatewayConnections 6 of 6; mr-boss AdminMailQueue, AdminAccess,
+  AdminRegistries, AdminSecurity, AdminSettings, AdminRelays 22 of 22; ProjectsAccess 8 of 9, its deny-pattern feature
+  failing on master too for `ironstone.insights` services (F-P12-13); `cargo test -p moqui-mail` 151 passed, `-p moqui-core`
+  `service::protocol_admin` and `rust_services`; clippy clean on `moqui-core` and `moqui-mail`; rustfmt clean on the new file;
+  `moqui lint --screens` 132 flagged sites, as master. By hand, not kept: the three screens and Health's Transport group in
+  qvt, tui and html as the administrator. Prettier clean on the new and changed JavaScript. Not run: `./moq test-framework`,
+  `./moq test-apps`, the acceptance suite, the rest of cargo; no browser and no running server, so the states of a server
+  that opened its listeners are proven from given facts and the Rust unit tests, and no probe connected to anything (a
+  refusal and an unconfigured target only).
+- Inventories: none of ss-inventory's or usl-inventory's rows is P12's (design §15.2: the protocol screens have no Marble or
+  Mantle baseline form).
+- Design edits: design-admin §9 ProtocolsHome, MailQueue and ServerConfiguration (as built), §14 (Operational recovery: the
+  mail owner registry and the operation results), §14.2 (Admin's row), §17.2 (OperationServices); design-crosscut CX-DELIVERY
+  (the ledger as a registered owner: the owner's design, as the registration calls for).
+- Findings (provisional, numbered by the lead):
+  - **F-P12-1** What each listener did at startup lived only in the server's log (`moqui_core::startup`), and the conf's
+    literal attributes are no property. Built: `get#ProtocolFacts`, a fixed list, as P10's `get#SignInPolicyValues`.
+  - **F-P12-2** `deliveryOutcome` was an answer of the send and nowhere on the message; a template's failed message stayed
+    Ready with no error at all. Built: `EmailMessage.sendOutcome` and the error (P8c-24). A Ready message with no outcome (an
+    older failure, a send that stopped) is read as uncertain.
+  - **F-P12-3** A retry here beside Mantle's ledger would send a notice twice (the ledger tries a waiting delivery again
+    itself), and the ledger's failed attempts did not name their stored message. Built: the owner registry, the ledger as
+    its first owner, and the attempt's `emailMessageId`. Other senders with attempts of their own (the report engine's
+    deliveries, which keep no stored message; a later Marketing send) register the same way.
+  - **F-P12-4** "RTC absent" (the plan's usable-when): the demo's package builds call media, so it reads off, not absent;
+    absent on every package are local speech to text and office documents (WOPI), and call media on a Lite build. The
+    acceptance checks call media by the build.
+  - **F-P12-5** "DAV ready" holds on a running server: a command-line run (every spec) opens no listeners, so a protocol
+    that is turned on reads "Configured" there. The acceptance takes either by `serverStarted`.
+  - **F-P12-6** MailQueueFind's direction and owner-reference filters are not built: only outgoing mail has a stored
+    outcome, and an owner's reference is its own record's. Nor is a view of subjects or addresses "independently
+    authorized": the service returns none.
+  - **F-P12-7** `EmailMessage` carries no organization, so the queue is not scoped by organization: an operations operator
+    sees the transport outcomes (ids, counts, servers, struck-out errors) of every organization's mail on the instance.
+  - **F-P12-8** Design §2 gives MailQueue to "O, I scoped". Built: the operator reads all of it; the integration
+    administrator, with `ADMIN_CONNECTION_VIEW` alone, the instance's own mail (what goes through the relays she keeps),
+    never a mail account's, and no action.
+  - **F-P12-9** The area was the integration administrator's whole (P11). The operator opens three of its screens by a
+    second group granted narrowly (the pitfall of an inherited grant), which the spec holds: MailRelays is refused him.
+  - **F-P12-10** P0's Comms check: as F44. Comms' Settings are personal; ProtocolsHome links its MailAccounts and
+    TextBlocks; there is no shared templates screen and no mail-account readiness projection, so a shared mailbox's sync
+    state is not in ProtocolsHome (Comms' later work, §7).
+  - **F-P12-11** The checks are a TCP connection and the configuration: no certificate expiry, DNS record, SSH host key
+    fingerprint, UDP (call media, TURN, SIP) or WebRTC test (§7 with the Monitor checks; Remaining-Work).
+  - **F-P12-12** `moqui-core`'s `registry_keys_are_the_function_paths` failed on master: P10's `get_sign_in_policy_values`
+    and `sso::check_flow` were not in its list. Added with P12's.
+  - **F-P12-13** ProjectsAccess's "every IronStone write service is in the client's deny pattern" fails on master for
+    `ironstone.insights.AlertServices` and `DeliveryServices` (the Insights track's; not touched here).
+  - **F-P12-14** The thirty-three protocol settings are instance settings like the others, so InstanceSettings'
+    "Where each value comes from" lists them too for the configuration administrator.
+  - **F-P12-15** A mail account's failed message can only be sent again or taken back by its sender; for an account whose
+    owner has left, that is the lifecycle's owner change of a shared account (P6), and nothing for a personal one.
+  - **F-P12-16** `retry#MailOutcome` holds the request for the SMTP session (up to the mail service's two minutes); a bulk
+    retry is not built.
+- Decisions: a protocol is a row of one table in the framework, and its state is read from the startup report and the
+  build, a probe only on request; a trust mismatch is its own state, never ready; a check's target is the conf's own; the
+  outcome of a failed send is kept on the message; a message belongs to its sender (a mail account, a registered owner,
+  else the mail service) and only its owner's path sends it again; retryable, refused (permanent) and bounced messages may
+  be sent again, an uncertain one never until someone settles it; Settle marks Sent by a person's word with the reason in
+  the audit log, and a closed message is Cancelled; an owner that cannot be asked holds every message of the instance;
+  an operation key keeps only an applied result; the queue reads the last fourteen days unless dates are given;
+  protocol check results reuse `ConnectionCheck`.
+- For the lead:
+  - the shared release binary needs a rebuild after the merge (the Rust above), and a database made before needs the new
+    column `EmailMessage.sendOutcome` and the tables of `MailOutcomeOwner` and `OperationResult`;
+  - mr-mantle has a branch `adm/p12` to merge too (its worktree is `adm-p12/mr-mantle`, the runtime's `component/mr-mantle`
+    repointed to it);
+  - budget shares (Debug binary): framework about 0.3 s (AdminProtocols, AdminMailOutcomes); mr-mantle about 0.05 s; mr-boss
+    about 1.0 s (AdminMailQueue); no budget raised;
+  - merge: mr-moqui `ServerEntities.xml` and `AdminConfigurationData.xml` appended at their ends,
+    `ConfigurationServices.xml` appended, `ConfigurationSettings.js` (the group readers), `BasicEntities.xml` (one field),
+    `EmailClientServices.xml` (five small hunks), `service/mod.rs`, `rust_services.rs` and `rust_services_tests.rs` (a line
+    or four each), `moqui-mail` `implementation.rs` and its tests, Attack-Surface, Parity-Diffs, Remaining-Work (the
+    `org.moqui.admin` row only), the rest new files; mr-mantle `ShopFulfillmentSetupData.xml` appended, `MessageServices.xml`
+    appended, `MessageDeliveries.js`, `DeliveryLedger.spec.js` appended; mr-boss `BossSetupData.xml` appended at its end
+    (Insights appends there too), `Admin.js` (`areas`' comment, `linkPaths` after P11's), `Registry.js` (one adapter),
+    `Protocols.xml`, `Admin.xml` (its comment), `AdminAccess.spec.js`, `AdminRegistries.spec.js` (one expectation),
+    `design-admin.md`, `design-crosscut.md` (CX-DELIVERY, five lines: the ledger's owner design, as the registration calls
+    for); P13 appends to `OperationServices.xml`, `OperationLib.js`'s users and the `AdminOperationServices` grant's pattern;
+  - the user's call: F-P12-8 (whether the integration administrator reads the queue at all, and whether an operator should
+    see a mail account's outcomes, which today show an id, a count and a struck-out error); whether a refused (permanent)
+    and a bounced message may be sent again here (built: yes) or only a retryable one; Settle's "sent" marking the message
+    Sent by a person's word (built, audited) or keeping a separate reconciled state; F-P12-7 (no organization scope on the
+    queue); F-P12-14 (the protocol settings also listed in InstanceSettings);
+  - to confirm a failure was not this phase's, ProjectsAccess was run once from the main checkout with its own runtime
+    (`--nobuild`, the shared binary): F-P12-13; nothing was built or changed there;
+  - the acceptance AdminProtocolsUsable to run when asked, and ProtocolsHome to look at once on a running server (F-P12-5).
+
+**Review Nov 10 (P12).**
+- Checked (the code paths, not the Built note): `moqui-mail`'s two send paths (only a failed delivery writes `sendOutcome` and
+  `sendError`, in a transaction of its own; a client message's result stays `record#SendResult`'s; statuses, the answers and
+  `deliveryOutcome` as before, so the ledger, the report engine's read, P11's retryable outcomes, PASS and invitations are
+  untouched); `retry#MailOutcome` (the claim locks the row at the revision read and marks it uncertain before anything is
+  sent, so a second request, a stopped server and a send that fails before the session all leave it held or uncertain,
+  never sent twice; an uncertain or outcome-less message only through `reconcile#MailOutcome`; an operation key keeps an
+  applied result only, for one user and target); `reconcile#MailOutcome` (ADMIN_OPERATION_MANAGE, a required reason, sent
+  and notSent only from uncertain, the audit rows through `statusId`'s audit log and `auditRow`); every caller of
+  `send#EmailTemplate` and `send#EmailMessage` for a sender that tries again on its own (below); `find#MailOutcomes`' answer
+  (no subject, body, header or address; the relays' keeper forced to the instance's mail); `get#ProtocolFacts` and
+  `probe#ProtocolTarget` (fixed lists, the target's host and port only from the conf's properties, one connection, a kind
+  of failure and no text of the other side; no request value reaches an address); the group readers of
+  `get#EffectiveSettings` (the filter is on the registered group before any narrowing; the 33 settings are ports, addresses,
+  names, switches and one certificate file path); the SMTP trust logic against `moqui-host`'s `smtp.rs`;
+  `rust_services_tests`' list (passes; P10's two and P12's two are the registered paths); the three screens and
+  `BOSS_ADM_PROTOCOLS_OPS` (the area's screen not inherited, each transition to a framework service with its own check,
+  MailRelays refused the operator in the spec); IdentityProviderDetail's `secretPassword` (both forms, the map and the
+  transition); Mantle's ledger change (the attempt's `emailMessageId` only added; `resolve#Delivery`'s permission checked
+  by the recover service); the specs (one render per screen, mail captured).
+- Fixes:
+  - **R1 (high: a notice sent twice).** Two senders that try a failed mail again on their own left a stored message the
+    queue offered "Send again" for, as the mail service's own: the forum's delivery worker (`ForumDelivery`, retry with
+    backoff) and the report engine's alert mail (tried again at the next evaluation). The forum now registers as an owner
+    (`forumDeliveries`, `mantle.forum.DeliveryWorkerServices.find#MailOutcomeOwners`: every stored message of a site's
+    `ForumMailSettings` template is the forum's, no retry and no reconciliation here); alert mail keeps no stored message
+    (`createEmailMessage` false in `moqui-report` `alert.rs`, as a scheduled report's mail). The other callers were read:
+    none tries a refused or unreached send again by itself (they read a Ready message as handed off), but for
+    `send#CustomerPastDueEmail` if its job, shipped paused, is turned on.
+  - **R2 (medium).** Sign-in mail (PASSWORD_RESET, SINGLE_USE_CODE, ADDED_EMAIL_AUTHC_FACTOR, EMAIL_AUTHC_FACTOR_SENT,
+    ACCOUNT_SIGN_IN and the `pass_verification_template`) holds a reset password, a code or a link of its moment: it is
+    not sent again from the queue (SIGN_IN_MAIL), only closed.
+  - **R3 (medium, disclosure).** A mail account's message answered its error text (struck out), which can name an
+    attachment or quote a server's words about the message: an account's row now answers no error, only its id, count
+    and state.
+  - **R4 (medium).** SMTP trust: two halves of every address (`0.0.0.0/1 128.0.0.0/1`) read as trusted; a range wider than
+    /8 is now a mismatch. A listener bound to this machine behind the PROXY protocol with no allowed address on it read as
+    trusted though the server refuses the proxy's own address: the exemption is removed. A bracketed IPv6 entry, which the
+    server takes, read as a bad entry.
+  - **R5 (low).** A message sent by a retry kept the claim's text as its `sendError`: the release clears it.
+- Tests (the worktree's Debug binary, rebuilt for `alert.rs`): framework AdminProtocols, AdminMailOutcomes 6 of 6 (0.3 s;
+  the trust cases and the sign-in and account rows added); mr-mantle DeliveryLedger 4 of 4 (a forum notice added to P12's
+  feature); mr-boss AdminMailQueue, AdminAccess, AdminRegistries 14 of 14; `cargo test -p moqui-report alert` 11 passed,
+  `-p moqui-core rust_services` passed. Not run: the suites, the acceptance tests, `lint --screens` (no screen changed).
+- For the lead:
+  - `crates/moqui-report/src/alert.rs` is Insights P8's file (three lines added in `send_contact`'s email parameters); the
+    release binary needs the rebuild the Built note already asks for;
+  - open, not fixed: a sender registered later that tries again on its own must register as an owner or keep no stored
+    message (the past-due invoice job if it is ever turned on; a Marketing send); a Ready message with no outcome
+    (`send#EmailTemplate` stopped before the delivery: no server, no SMTP host, no recipient in an allowed domain, which is
+    every template mail on an instance with no SMTP host) reads "May have been sent" and waits for a person, where
+    "Not sent" would be truer (it needs the mail service to keep an outcome for those returns); an earlier attempt's
+    message of a ledger delivery stays in "Needs attention" for the fourteen days with no way to close it; a reconciliation
+    whose owner applied and whose message then changed leaves the message uncertain with the owner refusing a repeat
+    (no double send); if the ledger's attempt transaction fails after a failed send, its message is unowned while the
+    delivery is still due; BasicComms' MessageDetail `resend` (ADMIN, before this phase) sends any stored message again
+    with none of these checks;
+  - the user's calls of the Built note stand; R2 and R3 are defaults built here that belong with them (whether an operator
+    sees an account message's error; whether sign-in mail may ever be sent again);
+  - `AdminMailOutcomes` and `DeliveryLedger` look up `mail.nowhere.invalid` once each with capture off (a resolver
+    question, no connection).
+
 ### P13 — System messages and recovery
 
 Design §8 MessageTypes, MessageTypeDetail, SystemMessages and SystemMessageDetail, §14 operational recovery;
