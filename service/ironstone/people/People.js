@@ -120,7 +120,17 @@ const linkPaths = [
     "Settings",
     // P2: the directory and the employee record (design §4)
     "Employees",
-    "Employees/Employee360"
+    "Employees/Employee360",
+    // P3: the organization and the reporting lines (design §4 OrgStructure, OrgChart)
+    "Employees/OrgStructure",
+    "Employees/OrgChart",
+    // P4: positions, job classes and pay grades (design §5)
+    "Staffing",
+    "Staffing/Positions",
+    "Staffing/PositionDetail",
+    "Staffing/JobClasses",
+    "Staffing/JobClassDetail",
+    "Staffing/PayGrades"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -192,7 +202,9 @@ function checkRecord(p) {
 
 // ===== choices =====
 // Each People drop-down: its options for the user, searched in the query ignoring case, with the selected value's label when it
-// is in scope but not on the page. An unknown choice throws. Later phases add sources (positions, job classes, pay groups).
+// is in scope but not on the page. An unknown choice throws. Later phases add sources (positions, pay groups). P3: employees (one
+// employer's current employees, the managers and members OrgStructure and OrgChart choose). P4: departments (one employer's), job
+// classes and pay grades (names only: a grade's amounts are payroll's, PayrollSetupServices.find#PayGrades).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -277,7 +289,136 @@ const choiceSources = {
             },
             personName
         )
+    },
+    // P3: one employer's current employees (organizationPartyId), else those of every employer a staff reader sees: the managers
+    // and members OrgStructure and OrgChart choose
+    employees: (userScope, term, selected, p) => employeeOptions(userScope, term, selected, p),
+    // P4: the departments of one employer (organizationPartyId; none without one), a position's department
+    departments: (userScope, term, selected, p) => {
+        if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
+        const under = Array.from(
+            call("mantle.humanres.PeopleServices.get#Scope", {organizationPartyId: p.organizationPartyId}).unitPartyIds || []
+        )
+        const departments = under.length
+            ? Array.from(
+                  find("mantle.party.PartyRole")
+                      .condition("partyId", "in", under)
+                      .condition("roleTypeId", "OrgDepartment")
+                      .selectField("partyId")
+                      .list()
+              ).map(row => row.partyId)
+            : []
+        return withSelected(
+            organizationOptions(departments, term, choiceLimit),
+            selected,
+            partyId => departments.includes(partyId),
+            organizationName
+        )
+    },
+    // P4: the current job classes by title (a staff reader's), and the pay grades by name, never an amount
+    jobClasses: (userScope, term, selected) => {
+        if (!userScope.capabilities.staff) return []
+        const factory = ec.entity.conditionFactory
+        const current = () =>
+            find("mantle.humanres.position.EmplPositionClass").condition(
+                factory.makeCondition(
+                    factory.makeCondition("thruDate", "is-null", null),
+                    "or",
+                    factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                )
+            )
+        let query = current().orderBy("^title").limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["emplPositionClassId", "title"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({
+            value: row.emplPositionClassId,
+            label: row.title || row.emplPositionClassId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => current().condition("emplPositionClassId", id).count() > 0,
+            id => one("mantle.humanres.position.EmplPositionClass", {emplPositionClassId: id})?.title || id
+        )
+    },
+    // the grades of PayrollSetupServices' read scope: the shared ones and those owned by an employer the user reads; with
+    // organizationPartyId (a position's employer, in scope), the ones its positions take, its own and the shared ones
+    payGrades: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.staff) return []
+        const factory = ec.entity.conditionFactory
+        const owners = p?.organizationPartyId
+            ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+            : employerIds(userScope)
+        const readable = () =>
+            find("mantle.humanres.rate.PayGrade").condition(
+                factory.makeCondition(
+                    [factory.makeCondition("organizationPartyId", "is-null", null)].concat(
+                        owners.length ? [factory.makeCondition("organizationPartyId", "in", owners)] : []
+                    ),
+                    "or"
+                )
+            )
+        let query = readable().selectField(["payGradeId", "description"]).orderBy("^description")
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["payGradeId", "description"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        const options = Array.from(query.limit(choiceLimit).list()).map(row => ({
+            value: row.payGradeId,
+            label: row.description || row.payGradeId
+        }))
+        const gradeName = id => one("mantle.humanres.rate.PayGrade", {payGradeId: id})?.description || id
+        return withSelected(options, selected, id => readable().condition("payGradeId", id).count() > 0, gradeName)
     }
+}
+// The current employees of the employers a staff reader sees, or of the one asked for (refused outside, as none): each person once,
+// by name or id; the selected one when it is one of them.
+function employeeOptions(userScope, term, selected, p) {
+    const employers = p?.organizationPartyId
+        ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+        : employerIds(userScope)
+    if (!employers.length) return []
+    const factory = ec.entity.conditionFactory
+    const base = () =>
+        find("mantle.party.PartyFromAndRelationship")
+            .condition("relationshipTypeEnumId", "PrtEmployee")
+            .condition("toPartyId", "in", employers)
+            .conditionDate("fromDate", "thruDate", null)
+            .selectField(["fromPartyId", "firstName", "lastName"])
+            .orderBy(["^firstName", "^lastName"])
+    let query = base().limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["fromPartyId", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
+                "or"
+            )
+        )
+    const byParty = new Map()
+    for (const row of Array.from(query.list()))
+        if (!byParty.has(row.fromPartyId))
+            byParty.set(row.fromPartyId, {
+                value: row.fromPartyId,
+                label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+            })
+    return withSelected(
+        Array.from(byParty.values()),
+        selected,
+        partyId => base().condition("fromPartyId", partyId).count() > 0,
+        personName
+    )
 }
 function choices(p) {
     const userScope = required()

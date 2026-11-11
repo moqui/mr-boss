@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Job classes (design-people §5 JobClasses; style-guide §3.2 List; impl-people P4): the job profiles every employer's
+    positions are of, from mantle.humanres.PositionServices.find#JobClasses: each class's title, a summary of its description,
+    the skills it requires, the positions of it the reader reads and its state; ended classes when asked. Every staff reader reads
+    them; an HR editor (PEOPLE_HR_EDIT) starts one (New job class, the one primary), which opens JobClassDetail. A used class is
+    ended there, never deleted. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Job classes" default-menu-index="2" menu-image="sym_o_work_history" menu-image-type="icon">
+    <parameter name="term"/>
+    <parameter name="includeEnded"/>
+    <parameter name="pageIndex"/>
+    <!-- a new job class: Mantle checks the editor and the title -->
+    <transition name="storeJobClass">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.store#JobClass" out-map="stored"
+                    in-map="{title:(title || null), description:(description || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Job class created</message></if>
+        </actions>
+        <default-response url="../JobClassDetail"><parameter name="emplPositionClassId" from="stored?.emplPositionClassId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.hrView &amp;&amp; can.hrEdit)"/>
+        <service-call name="mantle.humanres.PositionServices.find#JobClasses" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), includeEnded:(includeEnded == 'Y'), pageIndex:(pageIndex || 0), pageSize:(pageSize || null),
+                    pageNoLimit:(pageNoLimit || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="classesFound" from="!!found?.jobClasses"/>
+        <set field="jobClasses" from="found?.jobClasses || []"/>
+        <set field="jobClassesCount" from="found?.jobClassesCount || 0"/>
+        <set field="jobClassesPageIndex" from="found?.jobClassesPageIndex || 0"/>
+        <set field="jobClassesPageSize" from="found?.jobClassesPageSize || 20"/>
+        <set field="jobClassesPageMaxIndex" from="found?.jobClassesPageMaxIndex || 0"/>
+        <set field="jobClassesPageRangeLow" from="found?.jobClassesPageRangeLow || 0"/>
+        <set field="jobClassesPageRangeHigh" from="found?.jobClassesPageRangeHigh || 0"/>
+        <set field="positionsShown" from="jobClasses.some(row =&gt; row.positionCount != null)"/>
+        <set field="findValues" from="{term: term || null, includeEnded: includeEnded || null}"/>
+        <set field="stateColors" from="{current: 'positive', ended: 'grey-8'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Job classes" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewJobClassDialog" button-text="New job class" icon="sym_o_add" type="primary" width="640"
+                        title="New job class" condition="canEdit">
+                    <label type="p" text="A job class describes work every employer's positions may be of. Add its skills and work types on the next page."/>
+                    <form-single name="NewJobClass" transition="storeJobClass">
+                        <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
+                        <field name="description"><default-field title="Description"><text-area rows="5" cols="60"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create job class"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!classesFound">
+            <widgets>
+                <label text="Job classes are open to People staff who read an employer. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ClassRows" condition="classesFound">
+            <widgets>
+                <label text="The job profiles positions are of, shared by every employer." type="p" style="text-caption m-muted"/>
+                <form-single name="FindJobClasses" transition="." map="findValues">
+                    <field name="term"><default-field title="Title"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="includeEnded"><default-field title="Ended classes"><check><option key="Y" text="Include"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="term"/>
+                            <field-ref name="includeEnded"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="JobClassList" list="jobClasses" skip-form="true" paginate="true" condition="jobClasses.length">
+                            <field name="title">
+                                <default-field title="Job class">
+                                    <link url="${sharedLinks['Staffing/JobClassDetail']}" text="${title}" link-type="anchor"
+                                            parameter-map="{emplPositionClassId:emplPositionClassId}"/>
+                                </default-field>
+                            </field>
+                            <field name="summary"><default-field title="Description"><display/></default-field></field>
+                            <field name="skillCount" align="right"><default-field title="Skills"><display format="#,##0"/></default-field></field>
+                            <field name="positionCount" align="right" hide="!positionsShown">
+                                <default-field title="Positions"><display format="#,##0"/></default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="summary"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="skillCount"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!jobClasses.length &amp;&amp; term" text="No job class matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!jobClasses.length &amp;&amp; !term"
+                                text="No job class is defined yet.${canEdit ? ' Start one with New job class.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

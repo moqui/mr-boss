@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Positions & recruiting (design-people §5, §1.2; impl-people P4): the seats, the job classes they are of and the pay
+    grades. The menu group of design §1.2: Positions (the default subscreen, Staffing/Positions), Job classes and Pay grades;
+    PositionDetail and JobClassDetail are opened from a row. Openings, Applicants and Interviews join with P16. Every People user
+    opens them: what each sees is what Mantle's services admit (positions to HR, recruiting, payroll and configuration readers of
+    the employer and to a manager for the departments they lead; job classes and grade names to every staff reader; a grade's
+    amounts to payroll alone, mantle.humanres.PayrollSetupServices), and HR editors change positions and classes, payroll grades. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Positions &amp; recruiting" default-menu-index="6" menu-image="sym_o_work" menu-image-type="icon">
+    <subscreens default-item="Positions">
+        <!-- Positions (menu index 1), JobClasses (2) and PayGrades (3) are files under Staffing/, with PositionDetail and
+            JobClassDetail out of the menu -->
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

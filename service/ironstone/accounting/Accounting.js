@@ -243,15 +243,18 @@ function unassignedAccounts(parameters) {
     const query = policy.find("mantle.ledger.account.GlAccount").orderBy("accountCode")
     return assigned.length ? query.condition("glAccountId", "not-in", assigned) : query
 }
+// The cost centres of the organization: the internal organizations that roll up to it, as the ledger's dimension rule
+// (AccountingPolicy.js dimensions) admits; a department or team rolling up to it is People's unit (impl-people P3, F49).
 function rollupChildren(parameters) {
     const organizationPartyId = policy.organization(parameters).organizationPartyId
     const ids = policy
         .rows("mantle.party.PartyRelationship", {toPartyId: organizationPartyId, relationshipTypeEnumId: "PrtOrgRollup"})
         .filter(row => policy.active(row))
         .map(row => row.fromPartyId)
+    const internal = ids.filter(partyId => policy.one("mantle.party.PartyRole", {partyId, roleTypeId: "OrgInternal"}))
     return policy
         .find("mantle.party.Organization")
-        .condition("partyId", "in", ids.length ? ids : ["_DENIED_"])
+        .condition("partyId", "in", internal.length ? internal : ["_DENIED_"])
         .orderBy("organizationName")
 }
 function counterparties() {

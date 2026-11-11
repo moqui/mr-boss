@@ -18,9 +18,28 @@ const ids = {
     // P2: the employments of Tomas (Retail) and Kenji (Services), the employment content hosts
     employmentId: "BOSS_PPL_TOMAS_EMP",
     otherEmploymentId: "BOSS_PPL_KENJI_EMP",
-    // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's
-    staffMenu: ["Home", "Employees"],
-    adminMenu: ["Home", "Employees", "Settings"]
+    // P3: Retail's Store Operations department with its Sales Floor team (lead Ines; Tomas), Services' Service Delivery
+    // department; Priya reports to Greta at Retail and to Amara at Services
+    departmentId: "BOSS_PPL_D_STORE",
+    teamId: "BOSS_PPL_T_FLOOR",
+    otherDepartmentId: "BOSS_PPL_D_DELIVERY",
+    // P4: Retail's sales associate seats in Store Operations (Tomas holds the first, the third is vacant), Services' technician
+    // seat (Kenji's), the sales associate class and the Associate grade (Retail's)
+    positionId: "BOSS_PPL_P_ASSOC1",
+    vacantPositionId: "BOSS_PPL_P_ASSOC3",
+    merchPositionId: "BOSS_PPL_P_MERCH",
+    otherPositionId: "BOSS_PPL_P_TECH1",
+    jobClassId: "BOSS_PPL_JC_ASSOC",
+    payGradeId: "BOSS_PPL_PG_ASSOC",
+    // the Lead grade, shared by Retail and Services (Associate and Manager are Retail's)
+    sharedPayGradeId: "BOSS_PPL_PG_LEAD",
+    // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
+    // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades
+    staffMenu: ["Home", "Employees", "Staffing"],
+    adminMenu: ["Home", "Employees", "Staffing", "Settings"],
+    employeesMenu: ["List", "OrgStructure", "OrgChart"],
+    staffingMenu: ["Positions", "JobClasses", "PayGrades"],
+    keys: ["g p", "g e", "g o", "g c", "g s"]
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client
@@ -116,13 +135,16 @@ function hit(path, parameters = {}) {
     }
 }
 // The shell's menu of People and the launcher's apps for the user, as the shell fetches them; menuOnly leaves out the shell data
-// (the launcher and providers).
-function shell(user, menuOnly = false) {
+// (the launcher and providers). path and group give another level of the menu (P3: Employees' group).
+function shell(user, menuOnly = false, path = "Home", group = "People") {
     const root = "component://webroot/screen/webroot.xml"
     return asUser(user, () => {
-        const menu = ec.screen.makeTest().rootScreen(root).render("menuData/apps/People/Home", {}, null)
+        const menu = ec.screen
+            .makeTest()
+            .rootScreen(root)
+            .render("menuData/apps/People/" + path, {}, null)
         const apps = menuOnly ? [] : JSON.parse(ec.screen.makeTest().rootScreen(root).render("shellData", {}, null).output).apps
-        const level = menu.status == 200 ? JSON.parse(menu.output).find(level => level.name === "People") : null
+        const level = menu.status == 200 ? JSON.parse(menu.output).find(level => level.name === group) : null
         return {
             status: menu.status,
             names: level ? level.subscreens.filter(item => item.menuInclude).map(item => item.name) : [],

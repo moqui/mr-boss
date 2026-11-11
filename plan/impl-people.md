@@ -306,8 +306,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F71) |
 | P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | built and reviewed Nov 11, merged |
 | P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | built and reviewed Nov 11, merged |
-| P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | — |
-| P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | — |
+| P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | built and reviewed Nov 11, merged |
+| P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | built and reviewed Nov 11, merged |
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | — |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | — |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | — |
@@ -848,6 +848,200 @@ Design §4 OrgStructure and OrgChart; PE-03 (units, teams, reporting).
   the department from a date and sees both parents by as-of date; changes a manager from next month; `people.reader`
   walks the chart one level at a time in the browser and the terminal and edits nothing.
 
+**Built Nov 11 (P3).** mr-mantle f1339a6a, mr-boss (branch `ppl/p3`).
+- Checked first (the code over the plan): F11 and F12 (`OrgDepartment` exists; Mantle's demo departments ORG_ZIZI_HR and ORG_ZIZI_SALES
+  are `OrgInternal` under ORG_ZIZI_CORP; its two `OrgTeam` teams have no rollup at all, so no employer's tree held them), F13 and F63
+  (Mantle's demo members are from role `Assignee`; BusinessTime reads a `Manager` from role; Customer Service's service teams are
+  `OrgTeam` parties with `PrtServiceTeam` memberships, roles `Agent` and `Manager`, written by `SupportCaseServices.save#ServiceTeam`, with
+  no rollup), F49 (`get#PartyInternalOrgIds` adds an internal organization's direct `PrtOrgRollup` children of any role to `userOrgIds`, so
+  a department directly under an employer would join every app's organization scope: the shell's organization list, Accounting's
+  organization options, Commerce's owners), F50 (the line runs from the manager to the report; Projects' demo line from John Doe, an
+  agent and no employee, to Ana), F81 and F86 (a manager was any live `PrtManager`, and team reach every employment of a report), §5 Q6.
+  Also: a `view-tree` row fetched as its parent opens is drawn from its fields' text, with no link or dialog (WebrootVue.qvt.js
+  `m-list-tree` `cellText`; only the page's rows have their template); `container-dialog`'s `type` defaults to primary; `container-box`
+  takes no condition.
+- Mantle:
+  - reporting lines per employment (People.js `linesOf`, `managersByEmployment`, `employersOfParties`): a line's employers are those of the
+    report that employ the manager too, a manager employed by no one being a line at each of the report's employers (as P2's
+    `managersAt`). `get#Scope`'s reports are the caller's lines (and their employers, `reportLines`), so a team reader sees a report's
+    employments at those employers only (F86); `get#Home`'s due work and the `people.managers` readiness count an employment with no
+    line at its employer, so a person managed at one employer is due at the other. Employees.js reads the managers of each employment
+    from the lines (`managersAt` replaced), its manager filter keeps the line's employers, and a team reader's directory rows are the
+    report's employments at the line's employers;
+  - `mantle.humanres.OrganizationServices` over a new module `Organization.js`: `find#Units` (the tree a level at a time as of a date:
+    the top, the children of a parent, or units found by name ignoring case; each row's kind, parent and since when, employer, lead,
+    people, children shown, `canEdit` and revision), `get#Unit` (one unit: its row, its dated parents with reasons, its dated
+    memberships), `store#Unit` (a department or team under a parent from a date, owned by its employer; a rename, a move from a date
+    ending the rollup in effect, a new lead; refusals `KIND_INVALID`, `NAME_REQUIRED`, `PARENT_REQUIRED`, `RECORD_UNAVAILABLE`,
+    `NOT_A_UNIT` for an internal organization, `PARENT_KIND` for a department under a team, `EMPLOYER_CHANGE`, `PARENT_CYCLE`,
+    `DATE_STALE`, `PARENT_SCHEDULED`, `REVISION_CHANGED`), `store#Membership` (a member from role `Assignee` or the lead from `Manager`
+    from a date, an employee of the unit's employer then; a role change ends the other row; a new lead's predecessor stays a member;
+    an end at the row's revision; `NOT_EMPLOYED`, `ALREADY_MEMBER`, `MEMBERSHIP_SCHEDULED`, `MEMBERSHIP_ENDED`, `DATE_STALE`),
+    `get#ReportingTree` (a node per current employment under its line's manager at that employer; the top the employments with no
+    manager there, `noManager`; a manager's reports, a node's (`parentNodeId`), a person's own nodes or a name search; the directory's
+    public work identity and the report count; an HR editor's `lineRevision`; paged) and `change#Manager` (the line at an employer
+    ends on a date and the new one starts, or none; `SELF_REPORTING`, `REPORTING_CYCLE` up the lines at that employer,
+    `MANAGER_NOT_EMPLOYED`, `MANAGER_UNCHANGED`, `MANAGER_SCHEDULED`, `NOT_EMPLOYED`, `ORGANIZATION_REQUIRED`, `REVISION_CHANGED`).
+    Reads need a staff read of an employer, changes `PEOPLE_HR_VIEW` and `PEOPLE_HR_EDIT`; a change reason is the ended row's audit
+    (`thruDate_changeReason`) and the new row's comment; nothing is deleted;
+  - `PartyServices.get#PartyInternalOrgIds` takes an internal organization's direct children only when they are internal too (F49): a
+    department or team is never one of a user's organizations. No row of the existing data is another kind of child.
+- BOSS:
+  - Screens: `People/Employees` is a menu group (Employees, the list, now in the menu at index 1; Organization; Org chart), the keys `g o`
+    and `g c`. `Employees/OrgStructure`: New unit (the one primary), FindUnits (employer, unit name, as of), OrganizationTree
+    (`views="tree,list"`, `view-tree` with `children-transition="unitChildren"`; kind chips with tui texts), and the unit opened by
+    `unitPartyId`: its facts and dated parents, Edit (EditUnit, with a confirmation), TeamMembers with Add member and End (a danger
+    submit with a confirmation naming the person). `Employees/OrgChart`: FindChart, the level (Up to the manager, Top), ReportingTree
+    (`views="tree,list"`, `reportChildren`, paged by the service; "No manager" chip with its tui text; the reports count opens the next
+    level), and Change manager per row for an HR editor (back to the new manager's level after the change).
+  - `ironstone.people`: the `employees` choice (one employer's current employees, `choiceOrganizationPartyId` through PeopleParts'
+    `choices`), `sharedLinks` for the two screens. No new access rule in BOSS: both screens are Employees', open to every People user,
+    and Mantle checks every read and change.
+  - Demo (`BossPeopleDemoData.xml`, appended): Retail's Store Operations (lead Hannah; Tomas, Ines, Rafael) with its Sales Floor team
+    (lead Ines; Tomas) and Merchandising (lead Priya; Leon); Services' Service Delivery (lead Amara; Kenji, Sofia, Owen), with Mantle's
+    two demo teams rolled up under it and keeping their members; Priya reports to Amara at Services as well as to Greta at Retail.
+    People's setup readiness now has each employer's departments ready.
+- Specs: Mantle `test/humanres/PeopleOrganization` (4 features, 2.3 s feature time: the units, a cycle, a department under a team,
+  another employer, a stale date and revision, a reader and an internal organization refused, a move dated with both parents read by
+  as-of date and a later move refused; a team's members and lead, the predecessor a member, no employment changed, a person of another
+  employer refused, an end at a stale revision refused; a manager change from next month with the line before ended, self, cyclic and
+  outside managers, a stale line and the unchanged manager refused, the people with no manager at the top; the line per employment for
+  the team reader's scope and directory, the other employer's Home due work, tree, manager column and manager filter). BOSS
+  `test/People/PeopleOrganization` (3 features, 0.5 s: OrgStructure's one qvt render as HR with Store Operations open; the tree's next
+  level and another employer's refused; OrgChart's one qvt render as the reader, no Change manager, and a level per employment).
+  `PeopleAccess` gains one feature (0.3 s: a unit's members and a reporting line, HR of Retail answered for what it asks with the
+  parameters the reader is refused with `PERMISSION_DENIED`, Services' unit and employee refused to Retail's HR) and its keys and
+  readiness expectations follow the demo (`ids.keys`; departments ready). Acceptance, written and not run:
+  `acceptance/People/PeopleOrganizationUsable` (3 features: HR adds a department and a team through `storeUnit`, moves the department
+  from next month and sees both parents by date; HR changes Rafael's manager from next month through `changeManager`; the reader walks
+  the chart top, Greta, Hannah in qvt and tui with no change offered, and a forged change and unit refused).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleOrganization,
+  InternalOrganizations, OrganizationRowFilter, HumanResServices, PayrollServices, WorkResources, BusinessTime, WorkTimeEntries,
+  StaffIdentity, UserLifecycle, PartyServices, SharedDevices, RecordLinks, RecordVisibility, ContactBooks, CalendarChanges,
+  SupportAssignment, UniversalSearch and MantleSearch, 165 of 165 (mr-mantle 21.2 s feature time); BOSS PeopleAccess (9 of 9),
+  PeopleEmployees, PeopleOrganization, ProjectsAccess, Resources, TimeEntries, AppOrganizationFilters, AdminOrganizations,
+  CustomerServiceCases, InsightsAccess, InsightsRecords and Contacts (with a dependency), 112 of 112 (mr-boss 22.4 s); the People
+  specs again after the last screen change, 16 of 16. A one-off tui and html render of both screens (not kept) found the Top and Close
+  links carrying the level, fixed. `moqui lint --screens`: 135 flagged sites, as on master, none in the People screens; no TUI-text
+  finding in them. Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: ss-inventory's EditParty EditOrganizationForm and PartyRelated's four relationship forms name OrgStructure and OrgChart;
+  usl-inventory's People Added table gains the six OrganizationServices, and PartyServices `create#Organization` and `ensure#PartyRole`
+  name OrgStructure and OrgChart.
+- Design edits: design-people (header; §1.2 the keys and the Employees group; §4 departments never a user's organization; §4
+  Employees' manager column; OrgStructure and OrgChart as built).
+- Findings, numbered by the lead F89 to F94 in order:
+  - `get#PartyInternalOrgIds` admitted every direct rollup child into `userOrgIds` and so `filterOrgIds` (F49), which would have put
+    People's departments into every app's organization scope; P3 admits internal children only. A Mantle change outside `humanres`,
+    with no effect on the existing data, for the reviewer's eye;
+  - a `view-tree` row fetched as its parent opens has its fields' text and no link, dialog or Enter target: OrgStructure and OrgChart
+    open a unit or a level from the page's rows and links instead. A framework note: the page's row template for a fetched row would
+    make a tree's links and row actions work at every level;
+  - a reporting line names no employer, so P3 reads its employers from the employments. Left for P6: two people both employed by the
+    same two employers share one line at both (a change at one changes the other); P6's assignment should carry the manager per
+    employment, and `linesOf` read it;
+  - memberships are open to departments as well as teams here; once P6's assignments carry an employee's department, a department's
+    member rows are the assignment's (one projection) and `store#Membership` should take only a department's lead, or the assignment
+    write the row. Closing a unit with its employees' reassignment waits on P6 too;
+  - Customer Service's service teams are `OrgTeam` parties written by its own `save#ServiceTeam` with `PrtServiceTeam` memberships and
+    no rollup, where design §4 has teams written only by People: they are not in OrgStructure, and Projects' planner lists every
+    `OrgTeam` party (its first 200) as a team, Customer Service's among them. An owner question for Customer Service and Projects;
+  - `container-dialog`'s `type` defaults to primary, so a screen's every untyped dialog button is a primary one; People's secondary
+    dialogs say `type="default"`. Many built screens have several primary dialogs.
+- For the lead:
+  - the budget: mr-mantle's share PeopleOrganization about 2.3 s; mr-boss's PeopleOrganization about 0.5 s and PeopleAccess's new feature
+    0.3 s, within §4's estimates (no client spec);
+  - merge hot spots: mr-mantle `People.js` (the lines, `scopeOf`, `partyAccess`, `withoutManager`, `home`, the exports), `Employees.js`
+    (the managers and the manager filter, its exports), `party/PartyServices.xml` (`get#PartyInternalOrgIds`); mr-boss
+    `service/ironstone/people/People.js` (`linkPaths`, `choiceSources`), `ContextServices.xml` (`get#Choices`), `template/PeopleParts.xml`,
+    `screen/People.xml` (the keymap), `screen/People/Employees.xml` and `Employees/List.xml` (the menu), `data/BossPeopleDemoData.xml`
+    (appended), `test/People/PeopleSpecLib.js` (ids, keys) and `PeopleAccess.spec.js` (keys, readiness, the appended feature),
+    design-people's header, §1.2 and §4, and the inventories' People rows;
+  - the user's call: whether `get#PartyInternalOrgIds` should admit internal children only (built so here; the alternative leaves every
+    department directly under an employer in every app's organization scope), and whether department memberships stay open until P6
+    or wait for its assignments.
+
+**Review Nov 11 (P3).** A fresh review of `git diff master...ppl/p3` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 OrgStructure and OrgChart, PE-03 and F11–F13, F49, F50, F63, F81, F86, scope and data integrity first; fixes committed
+apart per repository ("People P3 review: …"; mr-mantle f0d07655).
+- Checked and found sound:
+  - Every OrganizationServices read checks a staff read of an employer (`readerScope`) and every change `PEOPLE_HR_VIEW` and
+    `PEOPLE_HR_EDIT` (`editorScope`) before reading with authorization off; a supplied unit, parent, person, manager or node is
+    admitted only through the caller's employers (`visibleParty` by the employer the unit's rollups reach, `requireOrganization`
+    on a node's employer, a person by an employment by an employer in scope), and a missing and an outside record answer alike
+    (`RECORD_UNAVAILABLE`). No `ironstone` pass-through; the screens call Mantle after the root's check.
+  - Dated rows only: a move ends the rollup in effect and starts one, a role or lead change ends the membership and starts one,
+    a manager change ends the line and starts one, each with the reason as the ended row's audit (`thruDate_changeReason`, an
+    audit-logged field) and the new row's comment; nothing is deleted, and `get#Unit`'s parents and memberships and the tree's
+    `asOfDate` read history as of a date. Cycles (a unit under itself or below it, a manager below the person at that employer),
+    a department under a team, a move to another employer, self reporting, a manager or member the employer does not employ
+    then, a later move or line already set and a stale revision are refused; a membership is never an employment.
+  - F63 and F50: a member is from role `Assignee` and a lead from `Manager` (BusinessTime's hours access reads a `Manager` from
+    the lead to the unit, so a lead may change the unit's hours, nothing of a member's); a line runs from the manager to the
+    report. Projects' planner and the readers of `PrtMember` as staff relationships (calendars, contact books, lifecycle,
+    purchasing) look for internal organizations or the team itself, so People's department memberships widen none of them.
+  - People.js and Employees.js: the lines per employment (`linesOf`) replace P2's `managersAt` with P1–P2's scope rules kept: a
+    team reader reaches a report's employments at the line's employers only, the directory's manager column and filter,
+    Employee360's managers and Home's due work read the same lines; PeopleScope and PeopleDirectory pass unchanged.
+  - F49, `get#PartyInternalOrgIds`: no data or spec of any component has a rollup child of an internal organization that is not
+    internal itself (Mantle's ZbaOrganizationDemoData, Warehouse's returns center and every spec's children are `OrgInternal`;
+    the customer account rollups `AccountServices` writes are between accounts), so before P3 the change altered nothing; the shell's organization list,
+    Commerce's owners and the row filters (`filterOrgIds`) keep every internal child. AppOrganizationFilters, OrganizationRowFilter
+    and AdminOrganizations pass. It had no spec of its own (R4 adds one).
+  - Screens: no route fixture; OrgStructure rendered once in qvt (HR) and OrgChart once in qvt (reader), the tree levels as
+    transition answers; actions conditioned on Mantle's `canEdit`; one primary (New unit); End is a danger submit with a
+    confirmation naming the person; dialog ids carry the row's key. Specs well under 15 s. The worker's provisional findings
+    stand as written.
+- Fixes:
+  - **R1 (high, scope).** `change#Manager` ended every line in effect at the employer and started the new one, but a line names no
+    employer: a line between two people both employed by A and B (or from a manager employed by no one) is the line at both, so
+    an HR editor of A alone ended or wrote B's reporting line, outside their scope. It now refuses `LINE_SHARED` when a line ended
+    or started would also be the line at an employer the editor does not read; an editor of both still changes both (the worker's
+    P6 finding). PeopleOrganization: A's HR refused both ways (a new manager employed by A and B, and ending such a line).
+  - **R2 (medium, stale write).** A unit's revision was its name and rollups only, and EditUnit always posts the lead it read, so
+    saving a rename after another editor changed the lead put the old lead back without a refusal. The revision now covers the
+    lead rows. PeopleOrganization: a `store#Unit` at the revision read before a new lead is `REVISION_CHANGED`.
+  - **R3 (low).** `change#Manager` compared the expected revision with the first line in effect in no order, where the tree gives
+    the newest (`linesOf`); with two lines in effect at an employer (a pre-People line beside a new one) the change could be
+    refused forever. The lines in effect are now read newest first.
+  - **R4 (medium, owner contracts; the user's call 1).** P3's demo puts departments directly under Retail and Services, and three
+    readers took every rollup child for an internal organization: Admin's Organizations counted and listed Store Operations and
+    Merchandising as Retail's child organizations; Accounting's and Purchasing's cost-centre choices offered them, and a purchase
+    line accepted one, which the ledger's dimension rule (`AccountingPolicy.js` `dimensions`, `OrgInternal` only) then refuses at
+    posting. Admin's `find#InternalOrganizations` and `get#InternalOrganization`, `PurchaseOrders.costCenterOf` (mr-mantle) and
+    Accounting's `rollupChildren` and Purchasing's `costCenterChoices` (mr-boss) take internal children only. InternalOrganizations:
+    a department under the organization is in neither the operator's `userOrgIds` nor its children; PurchaseRequests: a department
+    refused as a cost centre (`COST_CENTER_INVALID`).
+  - **R5 (low, specs).** PeopleSpecLib's `employeesMenu` was unused: PeopleAccess's menu feature now checks the Employees group
+    (List, OrgStructure, OrgChart) through the shell's menu data.
+- Findings, numbered by the lead F95 to F99 in order:
+  - the cycle checks of `store#Unit` and `change#Manager` walk the parents and lines in effect on the change's date; a move or line
+    already set for a later date on the chain above can still close a loop from that later date. Walking every row in effect on
+    or after the date would refuse it;
+  - `store#Unit` and `change#Manager` take a past date inside the row in effect (a retroactive move or line, with its reason in
+    the audit log), where Admin's `store#OrganizationParent` refuses a past date; the phase's "stale dates refused" is read as a
+    date before the row in effect or after a later change. Whether People should refuse a past date is the lead's;
+  - a unit's rename overwrites `Organization.organizationName`, so the tree as of an earlier date shows today's name;
+  - OrgChart's level header reads the manager's own node; for a manager outside the scope (a pre-People line from an agent) that
+    read is a refusal, logged at ERROR with its stack (F87's class);
+  - the `employees` choice limits rows before collapsing a person employed by two employers, so it may offer fewer than its limit.
+- Tests (release binary, `--nobuild`, this runtime): before the fixes PeopleOrganization 4 of 4 (2.3 s). The new checks failed on
+  the unfixed code (`LINE_SHARED`, the stale lead, the department in `userOrgIds` with master's `get#PartyInternalOrgIds`) and pass
+  after. After: Mantle PeopleOrganization, PeopleScope, PeopleDirectory, InternalOrganizations, OrganizationRowFilter,
+  WorkResources, BusinessTime, PurchaseRequests and PurchaseOrders 45 of 45 (mr-mantle 13.0 s feature time; PeopleOrganization 2.5 s,
+  InternalOrganizations 0.5 s, PurchaseRequests 2.6 s); BOSS PeopleOrganization, PeopleAccess, PeopleEmployees,
+  AppOrganizationFilters, AdminOrganizations, AccountingAccess, PurchasingRequests and PurchasingOrders 42 of 42 (mr-boss 14.4 s;
+  PeopleOrganization 0.5 s, PeopleAccess 2.3 s). Prettier clean on the changed JavaScript. No screen changed, so no lint run. Not
+  run: `./moq test-apps`, the acceptance PeopleOrganizationUsable (its changes involve no line kept at two employers).
+- For the lead:
+  - budget share: PeopleOrganization gains two people, two refusals and a stale-lead call (about 0.2 s); InternalOrganizations and
+    PurchaseRequests a department and one call each; PeopleAccess one menu-data render; within §4's estimates;
+  - merge hot spots beside the Built note's: mr-mantle `party/Organizations.js` (find and get of internal organizations),
+    `order/PurchaseOrders.js` (`costCenterOf`), `test/party/InternalOrganizations.spec.js`, `test/order/PurchaseRequests.spec.js`;
+    mr-boss `accounting/Accounting.js` (`rollupChildren`), `purchasing/Orders.js` (`costCenterChoices`), §4's three new rows, P6's
+    and P8's new bullets, design-people's header, §4, Employee360, OrgStructure and OrgChart;
+  - the user's calls are in §4: 1 kept as built and carried to Admin's, Accounting's and Purchasing's readers (R4); 2 written
+    into P6; 3 written into P8.
+
 ### P4 — Job classes, positions and pay grades
 
 Design §5 JobClasses, JobClassDetail (JobProfile; Requirements' levels are P18's), Positions, PositionDetail (terms
@@ -870,6 +1064,193 @@ P3's units.
 - **Usable when** (`acceptance/People/PeoplePositionsUsable`): `people.hr` defines a job class, plans two seats in
   a department and sees them vacant; `people.payroll` sets a grade band; `people.hr` sees the grade's name and no
   amounts.
+
+**Built Nov 11 (P4).** mr-mantle 2b1f361a, mr-boss (branch `ppl/p4`).
+- Checked first (the code over the plan): F4 (PayGradeSalary's `amount`, `minAmount`, `maxAmount`, `currencyUomId` and `timePeriodTypeId`;
+  PayGrade has a description and no organization), F10 (EmplPosition has the employer, class, grade, status, dates, hours and flags, and
+  no department; its `minimumHourlyWage` is a pay value), F35 (PositionServices' one service). Also: EmplPositionClass has no dates, so a
+  class could not be ended; a seat's occupancy has two records in the code, `EmplPositionParty` (the design's dated holders, read by
+  Manufacturing's shop floor and Projects' resources) and `Employment.emplPositionId` (which `create#Employment` takes and TimeServices,
+  Commons' contacts and P2's directory read); no demo data writes either; the Payroll `TimePeriodType`s are the pay frequencies; a declared
+  service parameter not passed reaches a script service as null, not undefined.
+- Mantle (`entity/HumanResourcesEntities.xml`: `EmplPosition.departmentPartyId`, audited, and `EmplPositionClass.thruDate`):
+  - `mantle.humanres.PositionServices`, extended beside its one service, over a new module `Positions.js`: `find#JobClasses` (title search
+    ignoring case, current unless asked, paged; skills, the positions of the class the reader reads), `get#JobClass` (skills, work types),
+    `store#JobClass` (title, description, work types replaced as a set, an end; `TITLE_REQUIRED`, `WORK_TYPE_INVALID`, `CLASS_ENDED`,
+    `REVISION_CHANGED`) and `store#JobRequirement` (a skill added or removed; `SKILL_INVALID`, `ALREADY_REQUIRED`), classes shared by every
+    employer, read by any staff reader and changed by an HR editor; `find#Positions` (as of a date: employer, department, class, grade,
+    status, vacancy and name filters, the state and vacancy of each seat, the holder, the vacant count, paged with an export),
+    `get#Position` (the seat and every dated holding with the person's employment then), `store#Position` (a new seat, planned, of an
+    employer in scope, `ORGANIZATION_DENIED`; a current class, `CLASS_REQUIRED`, `CLASS_ENDED`; a department, `NOT_A_DEPARTMENT`, whose
+    rollups in effect from the later of the seat's start and today reach the employer, `DEPARTMENT_OUTSIDE`; dates, `DATES_INVALID`; hours,
+    `HOURS_INVALID`; new terms at the revision read, `EMPLOYER_CHANGE`, `OCCUPIED_AFTER_END`, `OCCUPIED_BEFORE_START`; the department,
+    class and grade audited with the change reason) and `store#PositionHolder` (a dated `EmplPositionParty` row in role `Employee`, the
+    occupancy P6's hire and change write, or its end: `POSITION_NOT_IN_EFFECT`, `POSITION_INACTIVE`, `NOT_EMPLOYED`, `POSITION_OCCUPIED`, one
+    holder at a time). A seat's holders are its occupancy rows and an employment that names it for a person with no such row; vacancy is
+    computed from them at a date (filled or vacant while planned or active). Positions are read by an HR, recruiting, payroll or People
+    configuration reader of the employer and by a manager (`PEOPLE_TEAM_VIEW`) for the units they lead (a current `Manager` membership, P3)
+    and those under them (People.js `unitsUnder`, exported); a directory reader reads none. No pay value is in any answer: a grade is its
+    name;
+  - `mantle.humanres.PayrollSetupServices` over a new module `PayrollSetup.js`: `find#PayGrades` (names and comments for any staff reader;
+    for `PAYROLL_VIEW` the band in effect, its count, the revision and, for a grade asked for, every band; `amountsShown`) and
+    `store#PayGrade` (`PAYROLL_VIEW` and `PAYROLL_EDIT`: a grade, a rename, and a band from a date that ends the band in effect, changing no
+    salary; `CURRENCY_REQUIRED`, `CURRENCY_INVALID`, `FREQUENCY_REQUIRED`, `FREQUENCY_INVALID` (a Payroll period only), `AMOUNT_REQUIRED`,
+    `AMOUNT_INVALID`, `CURRENCY_PRECISION`, `BAND_ORDER`, `BAND_SCHEDULED`, `REVISION_CHANGED`);
+  - `Employees.js` `titlesOf`: the job title is the class of the seat the person holds at that employer on the date (an occupancy row), else
+    of the seat the employment names, so the directory, Employee360 and the palette show it.
+- BOSS:
+  - Screens: `People/Staffing` (menu "Positions & recruiting", index 6, every People user's; the key `g s`) with `Staffing/Positions` (the
+    default: FindPositions, PositionList as `views="list,board"`, the board by status with no move, state and vacancy chips with tui texts,
+    the CSV; New position, the one primary, an HR editor's, opening the seat), `Staffing/PositionDetail` (record header with state and
+    vacancy; Terms; Holders read only; Edit terms, the primary, and End position under More, a danger dialog with a confirmation),
+    `Staffing/JobClasses` (FindJobClasses, JobClassList; New job class), `Staffing/JobClassDetail` (header; Job profile; Requirements with Add
+    skill and Remove; Edit profile, the primary; End job class under More) and `Staffing/PayGrades` (Grades with the band's columns hidden
+    unless the service answered amounts; New pay grade, the payroll editor's primary, and New band per grade; a grade opened shows its
+    bands to payroll). Each reads its Mantle service in `actions` and shows "Not available" or "not open to you" on a refusal.
+  - `ironstone.people`: the choices `departments` (one employer's, `choiceOrganizationPartyId`, through `get#Scope`'s units), `jobClasses`
+    (current) and `payGrades` (names only); `sharedLinks` for the six routes. No new access rule in BOSS: the screens are every People
+    user's and Mantle checks every read and change; no amount enters the shared context, a choice or the palette.
+  - Demo (`BossPeopleDemoData.xml`, appended): four skills; the classes Store manager, Sales associate, Merchandiser and Service technician;
+    the grades Associate, Lead and Manager with a monthly USD band each; Retail's store manager seat (Hannah), three sales associate seats
+    (Tomas, Rafael, one vacant) and a planned seasonal one in Store Operations and the merchandiser seat (Leon); Services' two technician
+    seats (Kenji, one vacant).
+- Specs: Mantle `test/humanres/PeoplePositions` (4 features, 2.5 s feature time, 0.6 s each: a class's work types and skills, its refusals,
+  a partial change keeping the description, an ended class listed only when asked and refused for a new seat; two planned seats vacant in
+  a department, another employer's department, a team, another employer, a reader, dates, hours and no class refused, a manager reading
+  their department's seats only and another employer's HR refused; vacancy before and after a holder's start, a second holder and a person
+  not employed refused, the directory's job title from the seat held, an end before the holder's last day refused and allowed after the
+  holding ends, a stale revision and another employer refused; a grade's band, its order, currency, frequency and amounts refused, a raise
+  from next month ending the band before, a band already set refused, the salary on the grade unchanged, and HR answered the name with no
+  band, amount, currency or frequency, on the grade and on the position). BOSS `test/People/PeoplePositions` (3 features, 0.5 s:
+  PositionDetail's one qvt render as HR, a filled seat with its grade's name and no amount; the choices `departments`, `jobClasses` and
+  `payGrades`, each with a selected value off the page; PayGrades' one html render as HR, the names and nothing of the bands).
+  `PeopleAccess` gains one feature (0.5 s: a position's and a job class's change, HR of Retail answered for what it asks with the parameters
+  the reader is refused with, Services' position refused to Retail's HR, a manager reading Store Operations' seat and not Merchandising's,
+  a grade's change payroll's and refused to HR, payroll's answer with the band and HR's without) and its menu feature checks the Staffing
+  group (PeopleSpecLib `staffingMenu`, the menus and keys). Acceptance, written and not run: `acceptance/People/PeoplePositionsUsable`
+  (3 features: HR defines a class with a skill and plans two seats in Merchandising through the transitions and sees them vacant in the list,
+  the seat in tui and the class; payroll sets a grade's band and a raise from next month through PayGrades and reads both, a band out of
+  order refused; HR puts the grade on a seat and sees its name and no amount on PayGrades, the grade opened, PositionDetail, the service's
+  answer and the choice, and a forged grade refused).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeoplePositions, PeopleScope, PeopleDirectory, PeopleOrganization,
+  HumanResServices, PayrollServices, PayrollAdjustments, WorkTimeEntries, ProductionShopFloor and WorkResources, 66 features, 65 passing on
+  the first run (PeoplePositions searched a title the BOSS demo also has; made spec-unique) and PeoplePositions 4 of 4 after (mr-mantle 14.5 s
+  feature time); BOSS PeopleAccess (10 of 10), PeopleEmployees, PeopleOrganization, PeoplePositions, Resources, ManufacturingShopFloor,
+  Contacts, InsightsRecords, AppOrganizationFilters and ProjectsAccess (with a dependency), 100 of 100 (mr-boss 19.2 s). A one-off qvt, tui
+  and html render of the five screens for HR, the reader, the manager and payroll and a post to each of their transitions (not kept) found
+  nothing to fix. `moqui lint --screens`: 135 flagged sites, as on master, none in the People screens; no TUI-text finding in them. Prettier
+  clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table gains the six PositionServices and two PayrollSetupServices with their screens
+  (`store#PositionHolder` has none until P6). ss-inventory has no HumanRes position or grade form (its two HumanRes rows are the rates, P10).
+- Design edits: design-people (header; §1.2 the Staffing group and `g s`; §5 the holders, vacancy, readers and the grades' lane, and
+  JobClasses, JobClassDetail, Positions, PositionDetail and PayGrades as built).
+- Findings, numbered by the lead F100 to F105 in order:
+  - a seat's occupancy has two records in the code: the design's dated `EmplPositionParty` rows (Manufacturing's shop floor and Projects'
+    resources read them) and `Employment.emplPositionId` (`create#Employment` takes it; TimeServices' rate lookup, Commons' contact card and
+    P2's directory read it). P4 reads both, the occupancy row winning, and writes only the row (`store#PositionHolder`); P6's hire and change
+    should write the row and decide whether `Employment.emplPositionId` follows it (TimeServices reads a worker's class from it);
+  - pay grades and job classes have no organization in Mantle, so both are shared by every employer: a payroll operator of Retail reads and
+    changes the bands of a grade Services' seats name. A grade per employer needs `PayGrade.organizationPartyId` (a Mantle entity change);
+  - design §1.1 says payroll configuration needs `PAYROLL_EDIT` and `PEOPLE_CONFIGURE`; the plan's `store#PayGrade`, built as written, asks
+    `PAYROLL_VIEW` and `PAYROLL_EDIT` (the usable-when's `people.payroll` holds no `PEOPLE_CONFIGURE`);
+  - a new seat is planned and nothing in P4 activates one (the demo's seats are seeded active): P5's `decide#PositionApproval` is the first
+    writer of `EmpsActive`; a seat is filled only by `store#PositionHolder`, which no screen calls until P6;
+  - a declared service parameter not passed arrives in a script service as null, so People's partial updates take null as "unchanged" and
+    an empty text as "clear"; a form cannot clear a Timestamp (an empty date posts null), so an ended seat or class is not reopened;
+  - not built: a seat's budget reference (`EmplPosition.budgetId`), a class's classifications (`EmplPositionClassPtyClsTp`) and
+    responsibilities (`EmplClassResponsibility`, `EmplPositionResponsibility`), and Positions' cost estimate (compensation, P23);
+    `EmplPosition.minimumHourlyWage`, a pay value, is neither read nor written by People.
+- For the lead:
+  - the budget: mr-mantle's share PeoplePositions about 2.5 s; mr-boss's PeoplePositions about 0.5 s and PeopleAccess's new feature 0.5 s,
+    within §4's estimates (no client spec);
+  - merge hot spots: mr-mantle `entity/HumanResourcesEntities.xml` (EmplPosition, EmplPositionClass), `PositionServices.xml` (appended),
+    `Employees.js` (`titlesOf`), `People.js` (the exports); mr-boss `service/ironstone/people/People.js` (`linkPaths`, `choiceSources`),
+    `ContextServices.xml` (`get#Choices`' description), `template/PeopleParts.xml`, `screen/People.xml` (the keymap and comment),
+    `data/BossPeopleDemoData.xml` (appended), `test/People/PeopleSpecLib.js` (ids, menus, keys), `PeopleAccess.spec.js` (header, menu
+    feature, the appended feature), `plan/usl-inventory.md` (the People Added table), design-people's header, §1.2 and §5;
+  - the user's call: whether pay grades (and job classes) stay shared by every employer or a grade gets an employer (the second finding),
+    and whether a grade's band also needs `PEOPLE_CONFIGURE` (the third).
+
+**Review Nov 11 (P4).** A fresh review of `git diff master...ppl/p4` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §5 JobClasses, JobClassDetail, Positions, PositionDetail and PayGrades, PE-03, PE-08, F4 and F10, access, scope and pay's
+lane first; fixes committed apart per repository ("People P4 review: …"; mr-mantle 8b889cc1).
+- Checked and found sound:
+  - Positions.js: every read goes through `positionReader` (an HR, recruiting, payroll or configuration reader of the employers in
+    scope, and a manager for the units they lead now, a current `Manager` membership, and those under them); a position outside the
+    reach and a missing one answer alike (`RECORD_UNAVAILABLE`), an employer filter outside the scope is `ORGANIZATION_DENIED`, a
+    directory reader reads none. `store#Position` and `store#PositionHolder` ask `PEOPLE_HR_VIEW` and `PEOPLE_HR_EDIT` and an
+    employer in scope, never a supplied record's employer: the department is an `OrgDepartment` whose rollups in effect reach the
+    position's own employer (`NOT_A_DEPARTMENT` for a team, `DEPARTMENT_OUTSIDE` for another employer's), the employer never
+    changes (`EMPLOYER_CHANGE`), an end before a holder's last day and a start after a holder's first are refused, and the
+    department, class and grade are audited with the reason.
+  - Vacancy is computed from the holders at the date (occupancy rows and an employment naming the seat), filled or vacant only
+    while planned or active; a single seat refuses an overlapping holder (half-open periods), and a holding needs the employer's
+    employment at its start. Dated rows: holdings, bands and classes are ended, never deleted; a new band ends the one in effect
+    and rewrites no `EmploymentSalary` (spec). A class's work types and skills are configuration sets without dates until P18.
+    Revisions: a position's stamp, a class's stamps with its work types and skills, a grade's with its bands.
+  - Pay's lane: no position, choice, shell context or palette answer has an amount (a grade is its name; `minimumHourlyWage` is
+    neither read out nor written); `find#PayGrades` adds the band, currency and frequency only for `PAYROLL_VIEW` (the spec checks
+    the JSON); Positions' CSV is the rows' fields; PayGrades has no export; the shared context adds only the six links.
+  - The directory's job title (`titlesOf`): the class of the seat the person holds at that employment's employer on the date,
+    else the seat the employment names; P2's scope rules are untouched and PeopleDirectory, PeopleEmployees and PeopleScope pass
+    unchanged.
+  - Existing callers: the two entity fields are additive; HumanResServices, PayrollServices, PayrollAdjustments,
+    ProductionShopFloor, WorkResources and WorkTimeEntries pass unchanged. Screens: PositionDetail rendered once (qvt) and
+    PayGrades once (html) in the regression suite, no route fixture, specs under 15 s.
+- Fixes:
+  - **R1 (high, scope; the user's call 1).** Pay grades had no owner, so a payroll editor of Retail read and changed the bands of
+    a grade Services' seats name, and any HR editor put any grade on a seat. `PayGrade.organizationPartyId` (Mantle entity field):
+    `find#PayGrades` answers the shared grades and those of an employer in scope (with `organizationPartyId`, the ones that
+    employer's seats take), each with its owner and a per-grade `canEdit`; `store#PayGrade` creates a grade of an employer in
+    scope (`ORGANIZATION_DENIED` outside) or, with no owner, a shared one only for a payroll editor holding
+    `PEOPLE_ALL_ORGANIZATIONS`, refuses another employer's grade as a missing one, a shared grade's change without
+    `PEOPLE_ALL_ORGANIZATIONS` (`PERMISSION_DENIED`) and an owner change (`OWNER_CHANGE`); `store#Position` takes only the
+    employer's own grades and the shared ones. BOSS: the `payGrades` choice follows the same scope and the seat's employer
+    (PositionDetail passes it, Positions' New position depends on the employer field); PayGrades shows each grade's employer or
+    "Shared", New pay grade gains the employer, and New band shows only on the grades the user changes; the demo's Associate
+    and Manager are Retail's, Lead shared. Specs: Mantle PeoplePositions' new feature (Retail's payroll refused a shared grade,
+    new and a band; Services' payroll refused Retail's grade's band as missing and refused creating one for Retail; the
+    administrator's band on the shared grade; each user's list; Services' seat refused Retail's grade and given the shared one);
+    PeopleAccess (Retail's payroll refused the shared Lead, the People administrator answered with the same parameters);
+    PeoplePositions (a Services seat's grade choice is Lead alone). The acceptance PeoplePositionsUsable creates its grade as
+    Retail's (changed, not run).
+  - **R2 (medium, data integrity).** Ending a holding (`store#PositionHolder` with `holderFromDate`) took any end after its
+    start: a holding ended in the future could be moved past the next holder's start (two holders at once) or past the seat's
+    end. A later end is now capped at the seat's end and refused `POSITION_OCCUPIED` when it reaches another holder's period.
+    PeoplePositions: a later holder, then the first holding's end moved into it refused.
+  - **R3 (low, confidentiality).** `NOT_EMPLOYED` named the supplied party, so an HR editor learned the name of any party id.
+    The refusal no longer names the person. PeoplePositions: the refusal does not carry the name.
+  - **R4 (low).** A person whose employment names the seat (`Employment.emplPositionId`) was refused their own occupancy row,
+    `POSITION_OCCUPIED` naming themselves; their employment's holding is no longer another holder. No spec: nothing writes
+    `Employment.emplPositionId` until P6.
+  - The user's call 2: design-people §1.1 now says a pay grade is changed with `PAYROLL_VIEW` and `PAYROLL_EDIT` alone and
+    `PEOPLE_CONFIGURE` is for P22's components, structures and groups; the worker's holder-records finding is a note in P6.
+- Findings, numbered by the lead F106 to F109 in order:
+  - a manager (`PEOPLE_TEAM_VIEW` alone) reads their department's seats and each seat's class title, but `find#JobClasses` and
+    `get#JobClass` admit staff readers only, so PositionDetail's link to the class is "not open" to them;
+  - the job title of an ended employment in Employee360's history and OrgChart's members as of an earlier date read the seat
+    held now (`titlesOf` is called with now there), falling back to `Employment.emplPositionId`;
+  - PositionDetail's Edit terms posts the start as a date alone, so a seat planned with no date (now, with a time) moves its
+    start to that midnight on its first save of terms, unasked;
+  - a holding may run past its holder's employment (the employment is checked at its start only); P6's separation should end
+    it (written into P6's note).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeoplePositions 5 of 5 (3.4 s feature time; with
+  Positions.js and PayrollSetup.js as built the vacancy and owned-grade features fail on the new checks, and pass after), then PeoplePositions,
+  PeopleScope, PeopleDirectory, PeopleOrganization, HumanResServices, PayrollServices, PayrollAdjustments, ProductionShopFloor,
+  WorkResources and WorkTimeEntries 67 of 67 (mr-mantle 15.4 s); BOSS PeoplePositions, PeopleAccess, PeopleEmployees,
+  PeopleOrganization, Resources, ManufacturingShopFloor, Contacts, InsightsRecords and AppOrganizationFilters (with a dependency)
+  91 of 91 (mr-boss 14.1 s; PeopleAccess and PeoplePositions 3.7 s together). A one-off html and qvt render of PayGrades for
+  payroll, the People administrator and HR (not kept): New band on Retail's two grades for payroll, on all three for the
+  administrator, none for HR, no errors. `moqui lint --screens`: 135 flagged sites as before, none in the People screens.
+  Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- For the lead:
+  - budget share: Mantle PeoplePositions gains a feature (about 0.8 s, 3.4 s in all); BOSS PeopleAccess two calls and
+    PeoplePositions one choice (under 0.1 s); within §4's estimates;
+  - merge hot spots beside the Built note's: mr-mantle `entity/HumanResourcesEntities.xml` (PayGrade), `PayrollSetup.js` and
+    `PayrollSetupServices.xml`, `Positions.js` (`checkGrade`, `storePositionHolder`); mr-boss `People.js` (`payGrades`),
+    `Staffing/PayGrades.xml`, `PositionDetail.xml`, `Positions.xml`, `BossPeopleDemoData.xml` (the grades),
+    `PeopleSpecLib.js` (`sharedPayGradeId`), design-people's header, §1.1 and §5, §4's two new rows and P6's new bullet;
+  - the user's calls are in §4: 1 built (R1); 2 kept as built and written into design §1.1; the holder-records finding is in P6.
 
 ### P5 — Approval rules and Approvals
 
@@ -912,6 +1293,20 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
   `PeopleEmploymentChangeApproval`.
 - **`create#Employment` and `update#Employment`** narrow their overlap check to `PrtEmployee` (F3); every other
   caller keeps its behavior. People calls neither `delete#Employment` nor `create#PersonEmployee` (F5).
+- **The two holder records** (P4's finding, noted in P4's review for P6 to settle): a seat's occupancy has two records in
+  the code, the design's dated `EmplPositionParty` rows (P4's `store#PositionHolder`; Manufacturing's shop floor and Projects'
+  resources read them) and `Employment.emplPositionId` (`create#Employment` takes it; TimeServices' rate lookup reads a
+  worker's class from it, as do Commons' contact card and the fallback of the directory's job title). P4 reads both, the
+  occupancy row winning, and writes only the row. P6's hire and change write the occupancy row with the assignment's
+  primary position and decide whether `Employment.emplPositionId` follows it (kept equal to the primary seat, or left for
+  the legacy readers alone), and end a holding with the separation that ends its employment (P4 checks the employment only
+  at a holding's start).
+- **Department memberships from the assignment** (§4, the user's call from P3's review): the assignment's department is
+  written as the person's dated `PrtMember` row to that department (from role `Assignee`), by the hire and the employment
+  change in the same transaction, ended when the assignment's department ends; OrgStructure becomes read only for a
+  department's memberships (`store#Membership` refuses a department), a team's staying editable there. P3's open department
+  memberships (the demo's among them) become the assignments' or are ended, not left beside them. Closing a unit with its
+  employees' reassignment is built here.
 - **Screens:** HireEmployee (Identity, EmploymentTerms, ConfirmHire) and EmploymentChange (Change,
   ImpactAndConfirm, the impact list holding what later phases add). Quick create "Hire employee".
 - **Specs:** Mantle `test/humanres/PeopleEmployment` (a contractor hired; an overlapping employment refused; a
@@ -1011,6 +1406,12 @@ stage 1.
   `PEOPLE_SELF_SERVICE`, and Home takes each service once. Commons Home has no card registry, so it gains one People
   card over `get#SelfService` (owner contract, design-drawers-commons §5), linking `Commons/People/SelfService`,
   which stays out of Commons' menu. The notification topic `PeopleTaskAssigned`.
+- **Emergency contacts** (§4, the user's call from P2's F80): each contact is a Person party with its name and phone (a
+  contact's own contact mechanisms), linked to the employee by a dated `PartyRelationship` of a new type Mantle seeds
+  (an emergency contact, from the employee to the contact, its relationship such as spouse or parent in the row); added,
+  changed and ended (never deleted) by the person in SelfService and by HR in Employee360's PersonalInfo through
+  `store#PersonalInfo`'s scope, and private contact (design §1.1): never in the directory, the palette or a team reader's
+  answer.
 - **Screens:** SelfService (MySummary, MyRequests; Clock is P13's), MyTeam (Team, Decisions), Home complete for the
   phases built.
 - **Specs:** BOSS `PeopleSelfService` (the self group opens SelfService under Commons and is refused
@@ -1595,6 +1996,11 @@ the owner's design.
 | Nov 11, 2026 | At most two phase workers run at once, and only as a pair §1 lets run side by side: P9 with P10; in stage 3 two of the tracks P15, P16–P17, P18 and P21 (P19 and P20 after both P16 and P18); P22–P23 beside a stage 3 track. Every other phase runs alone, in §1's order | The user's call. A pair that appends to the same file rebases before merging (§1) |
 | Nov 11, 2026 | Mantle seeds an `EmailWork` contact purpose; the directory and every People projection of a work email (the list, the export, Employee360's Overview, the palette and the record-lookup card) show only `EmailWork`, never `EmailPrimary`; People's demo stores its employees' work emails under `EmailWork` | The user's call on P2's question (built in P2's review, R1). `EmailPrimary` may be a person's own address. No other app's spec or screen reads the demo employees' emails; a purpose drop-down offers "Email - Work" |
 | Nov 11, 2026 | An employment's files and activity stay HR's (an HR reader of its employer, as built in P2): the person does not read the files on their own employment | The user's call on P2's question: left as built (design §4 Employee360) |
+| Nov 11, 2026 | A user's organizations (`PartyServices.get#PartyInternalOrgIds`, so `userOrgIds` and `filterOrgIds`) admit an internal organization's rollup children only when they are internal (`OrgInternal`) themselves: a department or team is never an organization in any app's scope, and People walks its units itself (F49). Admin's Organizations counts and lists only internal child organizations, and Accounting's and Purchasing's cost centres are the internal ones (the ledger's dimension rule) | The user's call on P3's question: kept as built in P3; P3's review carried it to the readers of rollup children that assumed every child internal |
+| Nov 11, 2026 | Department memberships stay open in P3 (`store#Membership` writes a department's members as a team's). P6 makes the employment assignment write the department membership and makes OrgStructure read only for a department's members, a team's staying editable | The user's call on P3's question; P6's text gains it |
+| Nov 11, 2026 | An emergency contact is a Person party per contact, linked from the employee by a dated `PartyRelationship` of a new type; built in P8 (PersonalInfo and SelfService) | The user's call on P2's F80; P8's text gains it |
+| Nov 11, 2026 | A pay grade has an optional owner, `PayGrade.organizationPartyId` (a Mantle entity field): a grade owned by an employer is read by that employer's staff readers and changed only by a payroll editor of that employer, and is a missing grade to every other employer; a shared grade (no owner) is read by every staff reader and changed only by a holder of `PEOPLE_ALL_ORGANIZATIONS` (ADMIN holds it); a band's amounts stay `PAYROLL_VIEW`'s. A position takes its employer's grades and the shared ones. Job classes stay shared by every employer, changed by HR editors. People's demo grades get owners where they are one employer's (Associate and Manager Retail's; Lead shared) | The user's call on P4's question (built in P4's review, R1; design §5, §5 PayGrades) |
+| Nov 11, 2026 | Changing a pay grade or its bands needs `PAYROLL_VIEW` and `PAYROLL_EDIT` only, as built in P4; `PEOPLE_CONFIGURE` stays for P22's pay components, structures and groups | The user's call on P4's question; design §1.1 says so |
 
 ## 5. Open questions
 
@@ -1613,7 +2019,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |

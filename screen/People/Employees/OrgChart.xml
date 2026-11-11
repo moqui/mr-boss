@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Org chart (design-people §4 OrgChart; style-guide §3.15 tree list; impl-people P3): the reporting lines of the
+    employers a staff reader reads, as of a date, a level at a time (ReportingTree over
+    mantle.humanres.OrganizationServices.get#ReportingTree, a tree whose next levels come from reportChildren, or a list). The
+    top is each employer's people with no manager there: the heads of its lines and anyone not yet given a manager, listed rather
+    than lost. A person's reports open the next level (managerPartyId, with "Up" to their own manager), in the browser and the
+    terminal alike; a person opens Employee360. A line is per employment: a person employed by two employers is a node at each,
+    under the manager of that employer. Each node is the directory's public work identity. An HR editor (PEOPLE_HR_EDIT) changes a
+    person's manager from a date (ChangeManager, change#Manager, which refuses self and cyclic reporting, a manager the employer
+    does not employ and a stale line); a reader sees the same chart with no action. A tree row fetched as its parent opens shows
+    its text; its own reports and actions are on the level opened by its link. A graphic chart is later (design §4). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Org chart" default-menu-index="3" menu-image="sym_o_lan" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="managerPartyId"/>
+    <parameter name="term"/>
+    <parameter name="asOfDate"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a level of the tree: the reports of a node (organizationPartyId/partyId) on the date -->
+    <transition name="reportChildren" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.OrganizationServices.get#ReportingTree" out-map="children"
+                    in-map="{asOfDate:(asOfDate || null), parentNodeId:parentNodeId, pageNoLimit:'true'}"/>
+            <script>ec.web.sendJsonResponse(children.nodes || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a dated reporting change: Mantle checks the editor, the scope, the employments, cycles and the line read -->
+    <transition name="changeManager">
+        <actions>
+            <service-call name="mantle.humanres.OrganizationServices.change#Manager"
+                    in-map="{partyId:partyId, organizationPartyId:(lineOrganizationPartyId || null),
+                        managerPartyId:(newManagerPartyId || null), fromDate:(fromDate || null), changeReason:(changeReason || null),
+                        expectedRevision:(expectedRevision || '')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Manager changed</message></if>
+        </actions>
+        <!-- back to the level the person is now on: the new manager's reports, or the employer's top without one -->
+        <default-response url=".">
+            <parameter name="organizationPartyId" from="lineOrganizationPartyId"/>
+            <parameter name="managerPartyId" from="newManagerPartyId || null"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <if condition="can.staff">
+            <service-call name="mantle.humanres.OrganizationServices.get#ReportingTree" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null), managerPartyId:(managerPartyId || null),
+                        term:(term || null), asOfDate:(asOfDate || null), pageIndex:(pageIndex || 0), pageSize:(pageSize || null),
+                        pageNoLimit:(pageNoLimit || null)}"/>
+            <script>ec.message.clearErrors()</script>
+            <!-- the person whose reports are shown, and their own manager there for the way up -->
+            <if condition="managerPartyId &amp;&amp; found?.nodes">
+                <service-call name="mantle.humanres.OrganizationServices.get#ReportingTree" out-map="focusFound" transaction="force-new"
+                        ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null), partyId:managerPartyId,
+                            asOfDate:(asOfDate || null)}"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="chartFound" from="!!found?.nodes"/>
+        <set field="canEdit" from="!!found?.canEdit"/>
+        <set field="nodes" from="found?.nodes || []"/>
+        <set field="nodesCount" from="found?.nodesCount || 0"/>
+        <set field="nodesPageIndex" from="found?.nodesPageIndex || 0"/>
+        <set field="nodesPageSize" from="found?.nodesPageSize || 20"/>
+        <set field="nodesPageMaxIndex" from="found?.nodesPageMaxIndex || 0"/>
+        <set field="nodesPageRangeLow" from="found?.nodesPageRangeLow || 0"/>
+        <set field="nodesPageRangeHigh" from="found?.nodesPageRangeHigh || 0"/>
+        <set field="focus" from="focusFound?.nodes?.[0] || null"/>
+        <set field="focusText" from="focus ? 'Reports of ' + focus.personName + ' at ' + focus.organizationName : (managerPartyId ? 'Reports' : '')"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null, term: term || null, asOfDate: asOfDate || null}"/>
+    </actions>
+    <widgets>
+        <label text="Org chart" type="h5"/>
+        <section name="NotStaff" condition="!can.staff">
+            <widgets>
+                <label text="The org chart shows the reporting lines of the employers you read for HR, payroll and People administration. Your own team is in the directory, by manager."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Chart" condition="can.staff">
+            <widgets>
+                <form-single name="FindChart" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="term"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="asOfDate"><default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="term"/>
+                            <field-ref name="asOfDate"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <label text="This employer is not available to you." type="p" style="text-negative"
+                        condition="organizationPartyId &amp;&amp; !chartFound"/>
+                <section name="Level" condition="chartFound">
+                    <widgets>
+                        <container style="row items-center q-gutter-sm">
+                            <label text="${focusText}" type="p" style="text-subtitle1 q-my-none" condition="managerPartyId"/>
+                            <link url="." text="Up to ${focus.managerName}" link-type="anchor-button" btn-type="default" icon="sym_o_arrow_upward"
+                                    condition="focus?.managerPartyId"
+                                    parameter-map="{managerPartyId:focus.managerPartyId, organizationPartyId:focus.organizationPartyId, asOfDate:(asOfDate || null)}"/>
+                            <link url="." text="Top" link-type="anchor-button" btn-type="default" icon="sym_o_vertical_align_top"
+                                    condition="managerPartyId || term" parameter-map="{managerPartyId:'', term:'', asOfDate:(asOfDate || null)}"/>
+                        </container>
+                        <label text="The top of each employer's lines: its heads and anyone without a manager there. Open a person's reports to go down a level."
+                                type="p" style="text-caption m-muted" condition="!managerPartyId &amp;&amp; !term"/>
+                        <container-box>
+                            <box-body-nopad>
+                                <form-list name="ReportingTree" list="nodes" views="tree,list" skip-form="true" paginate="true">
+                                    <view-tree parent-field="parentNodeId" key-fields="nodeId" child-count-field="reportCount"
+                                            children-transition="reportChildren"/>
+                                    <field name="nodeId"><default-field><hidden/></default-field></field>
+                                    <field name="parentNodeId"><default-field><hidden/></default-field></field>
+                                    <field name="personName">
+                                        <default-field title="Person">
+                                            <link url="${sharedLinks['Employees/Employee360']}" link-type="anchor"
+                                                    text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
+                                                    parameter-map="{partyId:partyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="managerName">
+                                        <default-field title="Manager">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[${noManager ? '<q-chip dense square class="q-ma-none m-tonal text-warning">No manager</q-chip>'
+                                                    : WebUtilities.encodeHtml(managerName)}]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: noManager ? "No manager" : managerName})}]]></text>
+                                                <text type="html">${noManager ? 'No manager' : managerName}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="reportCount" align="right">
+                                        <default-field title="Reports">
+                                            <link url="." text="${reportCount}" link-type="anchor" condition="reportCount"
+                                                    parameter-map="{managerPartyId:partyId, organizationPartyId:organizationPartyId, asOfDate:(asOfDate || null)}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="workEmail"><default-field title="Work email"><display/></default-field></field>
+                                    <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="ChangeManager_${organizationPartyId}_${partyId}" button-text="Change manager"
+                                                    icon="sym_o_swap_horiz" type="default" width="560" title="Change ${personName}'s manager at ${organizationName}"
+                                                    condition="canEdit">
+                                                <label type="p" text="The line to ${managerName || 'no manager'} ends on the date given and the new one starts then; the line before is kept. Leave the manager empty to end the line."/>
+                                                <form-single name="ChangeManager" transition="changeManager"
+                                                        map="{partyId:partyId, lineOrganizationPartyId:organizationPartyId, newManagerPartyId:managerPartyId,
+                                                            expectedRevision:lineRevision}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="lineOrganizationPartyId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="newManagerPartyId">
+                                                        <default-field title="New manager">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:organizationPartyId,
+                                                                            selected:managerPartyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                    <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Change manager">
+                                                            <submit confirmation="Change ${personName}'s manager at ${organizationName} from the date given?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="jobTitle"/></column>
+                                        <column><field-ref name="managerName"/><field-ref name="reportCount"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!nodes.length &amp;&amp; term" text="No one matches."/>
+                                <label type="p" style="q-pa-md m-muted" condition="!nodes.length &amp;&amp; !term"
+                                        text="No one reports here on that date."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
