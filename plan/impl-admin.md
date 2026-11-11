@@ -271,7 +271,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | built and reviewed Nov 10, merged |
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | built and reviewed Nov 10, merged |
 | P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | built and reviewed Nov 10, merged |
-| P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | — |
+| P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | built and reviewed Nov 10, merged |
 | P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | — |
 | P13 System messages and recovery | mr-moqui, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | — |
 | P14 Jobs and topics | mr-moqui, BOSS | Jobs, JobDetail, JobRuns, JobRunDetail, Topics, TopicDetail | — |
@@ -2584,49 +2584,49 @@ Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail;
   connection adapter row), §17.2 (ConfigurationServices; `store#PaymentGatewayOrganization` is Mantle's); design-accounting
   (Shared settings access) and design-commerce (Payment choices): who writes the binding.
 - Findings (provisional, numbered by the lead):
-  - **F-P11-1** No native connection record had a disabled state or a test mark (only `EmailOAuthProvider.disabled`), and
+  - **F146** No native connection record had a disabled state or a test mark (only `EmailOAuthProvider.disabled`), and
     nothing a sender obeys could be kept beside them. Built: `disabled` and `allowPrivateNetwork` on the three native records,
     enforced where each is sent through (Rust and `send#ProducedSystemMessage`; Mantle's three gateways for their connection);
     the mark in `ConnectionCheck`. A remote's own send service is stopped by `send#ProducedSystemMessage` when `disabled`, and
     reads `allowPrivateNetwork` only where this phase changed it (`send#SystemMessageRest`, Authorize.Net, PayTrace, Shippo).
-  - **F-P11-2** `/rest/sm/{type}/{remote}` takes a message of any type from whoever satisfies the remote's own
+  - **F147** `/rest/sm/{type}/{remote}` takes a message of any type from whoever satisfies the remote's own
     `messageAuthEnumId` (`SmatNone`: anyone), so an administrator who could choose how a remote receives, or set the secret it
     verifies by, could send the instance messages of any type. Built: that field is never changed here; a remote or gateway
     started here receives from a signed-in, authorized user only (`SmatLogin`), so a gateway started in Admin takes no
     provider webhooks until an instance administrator sets their verification; the shared secret of a remote that verifies
     received messages by it is not entered here (`SECRET_NOT_DELEGATED`). A framework ask: bind a remote's inbound to its
     message type, then delegate the webhook key.
-  - **F-P11-3** The backup mirror's remote (`EmbeddedDbBackup`) is a `SystemMessageRemote` whose address is an SFTP target:
+  - **F148** The backup mirror's remote (`EmbeddedDbBackup`) is a `SystemMessageRemote` whose address is an SFTP target:
     repointed, the database archives go elsewhere, which `ADMIN_BACKUP_DOWNLOAD` is sealed to prevent. Built: a remote with a
     send service of its own, of a message type with a file path or a send service, or not posting over `https`, is read only
     here.
-  - **F-P11-4** `send#SystemMessageRest` expands a remote's `sendUrl` as a template, so a stored `${}` is an expression run at
+  - **F149** `send#SystemMessageRest` expands a remote's `sendUrl` as a template, so a stored `${}` is an expression run at
     each send. The address may hold the three names the sender gives and no other.
-  - **F-P11-5** `send#SystemMessageRest` read only `messageAuthEnumId` and `sharedSecret`: `sendAuthEnumId` and
+  - **F150** `send#SystemMessageRest` read only `messageAuthEnumId` and `sharedSecret`: `sendAuthEnumId` and
     `sendSharedSecret`, whose descriptions say they are the send's, were not read. They are now read first (P8c-23), which is
     what lets the send's sign-in be chosen without touching how the remote receives.
-  - **F-P11-6** "MailRelays lists SYSTEM only" (the plan's spec line): by the design's definition (no mail account owns it)
+  - **F151** "MailRelays lists SYSTEM only" (the plan's spec line): by the design's definition (no mail account owns it)
     the demo lists SYSTEM, the framework's `MOQUI_LOCAL` and the servers the apps' demo templates send through; a mailbox an
     instance polls without an account would be listed too. The specs check SYSTEM in and an account's server out.
-  - **F-P11-7** The entity audit log's `update` mode writes no row for a value set where there was none (an end date, a first
+  - **F152** The entity audit log's `update` mode writes no row for a value set where there was none (an end date, a first
     address). The services write those rows themselves (the engine for every audit-logged field; the binding's dates).
-  - **F-P11-8** A remote's or gateway's test proves the address, not the credentials (as P10's F137): one request with none.
+  - **F153** A remote's or gateway's test proves the address, not the credentials (as P10's F137): one request with none.
     A relay's test does sign in. A provider's own authenticated check (Authorize.Net's) is the gateways' later work.
-  - **F-P11-9** The demo's payment gateways are local test gateways with no connection, and `BOSS_COM_HOSTED` is already
+  - **F154** The demo's payment gateways are local test gateways with no connection, and `BOSS_COM_HOSTED` is already
     permitted for ORG_ZIZI_SERVICES; the gateway with an address is Mantle's `AuthorizeNetDemo`, which the acceptance uses.
-  - **F-P11-10** The organizations of a payment gateway are read and permitted under the organization filters of the
+  - **F155** The organizations of a payment gateway are read and permitted under the organization filters of the
     authorization the call runs under (the Admin screens' grants): outside a screen a delegated administrator is answered
     none (an instance administrator every one), as Mantle's identity scope.
-  - **F-P11-11** The design's NewRelay "permitted organization" and NewConnection "organization" are not built: only
+  - **F156** The design's NewRelay "permitted organization" and NewConnection "organization" are not built: only
     `PaymentGatewayOrganization` exists (design §8.1), and a relay has no purpose record.
-  - **F-P11-12** The shipping gateway's carriers, methods, box types and options (`ShippingGatewayOption` rows) are not in its
+  - **F157** The shipping gateway's carriers, methods, box types and options (`ShippingGatewayOption` rows) are not in its
     form: Warehouse's Carriers owns the bindings, and the option rows stay Tools'.
-  - **F-P11-13** Consumers links a gateway or a remote to its own detail; links into the owners' apps (PaymentMethods, a
+  - **F158** Consumers links a gateway or a remote to its own detail; links into the owners' apps (PaymentMethods, a
     store's checkout, Warehouse's printers) are not built, and records of organizations the administrator does not
     administer are counted or left out.
-  - **F-P11-14** The HTTP fixtures answer before the transport's internal-address guard, so the framework spec turns them off
+  - **F159** The HTTP fixtures answer before the transport's internal-address guard, so the framework spec turns them off
     for the one call that shows the guard.
-  - **F-P11-15** `store#Connection` takes no operation key: a repeated New connection with an id is refused (`KEY_IN_USE`), a
+  - **F160** `store#Connection` takes no operation key: a repeated New connection with an id is refused (`KEY_IN_USE`), a
     printer started with no id twice is two printers (as P10's providers).
 - Decisions: the state a sender obeys is on the native record, the test mark beside it; one engine with a definition a kind,
   a component's kind one adapter service with an operation; a passing test enables a connection the endpoint rule (or its
@@ -2649,12 +2649,12 @@ Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail;
     `design-admin.md`, `design-accounting.md` and `design-commerce.md` (one sentence each, the other apps' designs, as the
     phase's binding calls for), `ss-inventory.md`; P12 adds ProtocolsHome as the Protocols area's default and P13 MessageTypes
     and SystemMessages to Integrations;
-  - the user's call: F-P11-2 (bind a remote's inbound to its type in the framework, then delegate webhook keys and let a
+  - the user's call: F147 (bind a remote's inbound to its type in the framework, then delegate webhook keys and let a
     gateway started in Admin take its provider's webhooks); whether a passing test alone should enable a repointed connection
     (built: yes, by the integration administrator who repointed it, so a printer, relay or remote sends what it carries to an
     address of that administrator's choosing once their own test passes; P10 held enabling apart) or a second person;
-    whether a production gateway's address is its provider's hosts only (built) or any public `https` address; F-P11-6
-    (whether the apps' sending servers and `MOQUI_LOCAL` belong in MailRelays); F-P11-11 (an organization or purpose record
+    whether a production gateway's address is its provider's hosts only (built) or any public `https` address; F151
+    (whether the apps' sending servers and `MOQUI_LOCAL` belong in MailRelays); F156 (an organization or purpose record
     for relays and other kinds: later, if a deployment needs one);
   - by mistake `./moq run lint --screens --debug --nobuild` (the options after the command) started a release build in this
     worktree: it was stopped at once and its `target/release` removed; the options go before `lint`;
@@ -2715,7 +2715,7 @@ changed again (`moqui-mail` `implementation.rs` only: the Debug binary of the wo
     secrets and disabled the connection on any save, and a stored value today's validation refuses (an `http` address
     from Tools on a production instance) refused every save. Fixed: a value given as it was read is no change.
   - **R3 (medium).** `disabled` and `allowPrivateNetwork` are audit-logged for updates, which write no row for a first
-    value (F-P11-7), and the engine wrote its own rows for declared fields only: an administrator's Disable of a connection
+    value (F152), and the engine wrote its own rows for declared fields only: an administrator's Disable of a connection
     never disabled before, the endpoint rule's disabling and the first `allowPrivateNetwork` N left no audit row and lost
     the reason. Fixed: the engine writes those rows.
   - **R4 (medium).** The secret of NativeConnection was posted as `fieldValue_N`: a refused save keeps the request's
@@ -3004,7 +3004,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
