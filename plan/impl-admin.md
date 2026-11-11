@@ -5173,6 +5173,60 @@ review: …"); Mantle and BOSS unchanged.
   - the user's call: F-P19-1 (bound the verified-email link rule to `ADMIN_IDENTITY_GLOBAL`, or an organization on the
     provider in the framework, or accept it as built); whether to build the lifecycle notice (F-P19-4).
 
+**Review Nov 11 (P19).**
+- Checked: `git diff master...adm/p19` in mr-moqui, mr-mantle and mr-boss against the phase's text, §2, §4, design §1.1,
+  §15.3 and §16.
+  - Notification titles (F-P19-2): sound. The job error notice takes `${jobName}` and `${errors}` from its message (the
+    job's own message map is extended after them, under its own keys); the agent inbox puts the title in the message as
+    `inboxTitle`; Voice's three alerts carry their names in the message and expand once; Mantle's approval notice sends
+    `${noticeTitle}`. Searched again (`.title(`, `NotificationMessage::new`, `makeNotificationMessage`, `send#Notification`,
+    `titleTemplate`, `documentTitle`) across mr-moqui (Rust and scripts), Mantle, BOSS, mr-pass and mr-marble: no other
+    caller passes stored or written text as a title. The rest set no title (the topic's `titleTemplate` over the message) or
+    a fixed one (the database job notice: a generated id and a fixed status; the report alert, P8 R1). The administrator
+    templates are as described: a DataDocument's `documentTitle` (`service/tools.rs`, PartyServices' feed notice) and a
+    topic's `titleTemplate` are written only through seed data and Tools' entity screens (`ADMIN`); no Admin, Insights or
+    Mantle service writes either; Chat's mention title is `ec.l10n.localize` of a fixed template whose translation an
+    administrator stores, validated by P8 R1.
+  - F129 and `AdminCalls.read`: the 23 reads in 18 screens answer `out` null on any failure, so no screen renders a record
+    after a refused read; before, every `failure` was null (cleared) and a refused check let the next read run (GroupDetail).
+    Constitution's `failure` is now its `get#Constitution` read's only (the other reads were cleared before too). The fallback
+    texts quote only the screen's own parameter, and every label shows it once (no second expansion). qvt, html and tui render
+    the same label. One defect (R1).
+  - SupportSummary: `ADMIN_OVERVIEW_VIEW` (the reader and the administrator; the operations operator opens the screen and is
+    shown the refusal, as on Health); each section read with the viewer's permissions through `AdminCalls.read`; a masked
+    setting only set or not; bounded (the registered settings, the protocol list, the readiness checks). One defect (R2).
+  - The acceptance specs (read, not run): the sweeps render each `screen/Admin` file and Data's `Shared/DataImport` once per
+    mode as admin.admin (tui with authorization on, as Commerce's) and check errors, not content; System is left out (Tools'
+    file, ADMIN's). AdminReviewWalk's calls use the services' real parameter names (`get#Choices`' choices, `search#Records`,
+    `store#Membership`, `check#GrantProposal`, `invite#User`'s `bundleGroupIdList`, `store#IdentityProvider` with the revision
+    from `find#IdentityProviders`' `provider`), so its refusals are not vacuous, and each write feature also counts the rows
+    written since it started.
+  - F-P19-1 checked against P10's code (framework `ConfigurationProviders.js` `storeIdentityProvider`, `linkedBeyond`;
+    `moqui-core` `service/sso.rs` `link_allowed`, `linked_account`, `unscoped_link_allowed`): the worker's description holds.
+    Two facts for the user's decision: (a) the link rule is an access part (`ADMIN_ACCESS_MANAGE` alone): changing it on a
+    provider already enabled needs no new test and no `HELD_BEYOND` count, so an organization's access administrator can turn
+    `AflVerifiedEmail` on for a provider an instance administrator enabled; (b) an account carrying an id with no provider
+    named is taken by the first provider that signs in with that id under either rule, and while that provider is the only
+    one enabled even a privileged or sealed-granting account (`unscoped_link_allowed`); `HELD_BEYOND` counts such accounts at
+    enabling. Not changed.
+  - Mantle's approval notice and its assertion, the Rust test (an error holding `${...}` shows as it is): sound.
+  - Records: design §2's Impl column, §16, the inventories' notes and Remaining-Work's rows match the code; the README's Admin
+    paragraph is short.
+- Fixes:
+  - **R1** (medium) `AdminCalls.reasonOf` took any `UPPER: text` in an error as a refusal's reason, so an exception's text
+    with such a prefix (a database's `ERROR: ...`, the framework's `URL: ...` or `JSON: ...` errors) reached the screen whole.
+    A code now needs an underscore or is one of the seven single-word codes the services use, and a reason longer than 300
+    characters is not shown (the screen's own words instead). AdminGroups' F129 feature checks both.
+  - **R2** (low) the redacted JSON, meant for someone outside, held the addresses the listeners bind
+    (`protocol.*.host`, `listenHost`, `mediaHost`), the gateway addresses admitted (`smtp.allowedAddresses`) and the SMTP
+    certificate's path, against "no listeners, paths". Redacted, each is `[internal] (set)` or not set (`internal` true, value
+    null); the screen and print keep them for the viewer, who reads them in InstanceSettings anyway. AdminRegistries checks
+    it as the administrator; design §16 says so.
+- Tests: mr-boss AdminGroups and AdminRegistries 9 of 9 on the shared release binary with this runtime (`--nobuild`). Not
+  run: the acceptance specs (the lead's), the Rust (unchanged by the review).
+- For the lead: budget share unchanged in substance (AdminRegistries' feature 0.44 s); F-P19-1's two facts above go with the
+  user's call; nothing else open from the review.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-admin.md or

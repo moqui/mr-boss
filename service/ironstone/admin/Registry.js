@@ -917,6 +917,12 @@ function settings(p) {
 // host's facts, listeners, paths, users, fix links, refresh keys or a check's diagnostics. Redacted (the JSON) also leaves out
 // who prepared it and writes an email address in any text as [address], so the file can be given to someone outside.
 const addressPattern = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
+// The settings that name the server's inside (review): the addresses a listener binds, the gateway addresses it admits and
+// a certificate file's path. The screen and print show them to a viewer who reads them in InstanceSettings anyway; the
+// redacted JSON, for someone outside, says only whether each is set. The public names (publicHost, publicAddress, domain,
+// the public URLs) stay, as they are given to every browser and client.
+const internalSetting = key =>
+    /^protocol\.[a-z]+\.(host|listenHost|mediaHost|allowedAddresses)$/.test(String(key || "")) || /File$/.test(String(key || ""))
 function supportSummary(p) {
     if (!ec.user.hasPermission("ADMIN_OVERVIEW_VIEW")) denied("PERMISSION_DENIED", "ADMIN_OVERVIEW_VIEW is required")
     const redacted = p.redacted === true || p.redacted === "true" || p.redacted === "Y"
@@ -1018,12 +1024,19 @@ function supportSummary(p) {
     const settingSection = settingsFound.out
         ? {
               available: true,
-              settings: Array.from(settingsFound.out.settingList || []).map(row => ({
+              settings: Array.from(settingsFound.out.settingList || []).map(row => {
+                  const hidden = redacted && internalSetting(row.settingKey) && !row.masked
+                  const set = !(row.value === "" || row.value == null)
+                  return {
                   settingKey: row.settingKey,
                   title: row.title,
                   settingGroup: row.settingGroup,
-                  value: row.masked ? null : clean(row.value),
-                  shownValue: row.masked
+                  value: row.masked || hidden ? null : clean(row.value),
+                  shownValue: hidden
+                      ? set
+                          ? "[internal] (set)"
+                          : "Not set"
+                      : row.masked
                       ? row.valueSet
                           ? "Hidden (set)"
                           : "Hidden (not set)"
@@ -1031,11 +1044,13 @@ function supportSummary(p) {
                         ? "Not set"
                         : clean(row.value),
                   masked: !!row.masked,
-                  valueSet: !!row.valueSet,
+                  internal: hidden,
+                  valueSet: hidden ? set : !!row.valueSet,
                   source: row.source,
                   sourceText: row.sourceText,
                   restartRequired: !!row.restartRequired
-              }))
+                  }
+              })
           }
         : {available: false, reason: settingsFound.failure, settings: []}
     return {

@@ -5,12 +5,20 @@
 // the Admin, Mantle and framework services refuse, or "PERMISSION is required", as the framework's administration services
 // refuse a missing permission), otherwise the screen's fallback text, so nothing but a refusal's reason is ever shown; null
 // when the call succeeded.
+// A refusal's code has an underscore (RECORD_UNAVAILABLE) or is one of the few single-word codes the services use; an
+// exception's own prefix (a database's "ERROR: ", "SQL: ", "URL: ", "JSON: ") is never taken as one, and a reason longer than a
+// refusal's sentence is not a refusal (review: an exception's text could otherwise reach the screen).
+const singleWordCodes = new Set(["FORBIDDEN", "FAILED", "INCOMPLETE", "PURGED", "SELF", "SETTLED", "UNPACKAGED"])
+const refusalLength = 300
 function reasonOf(text) {
     const value = String(text || "")
-    const coded = /\b[A-Z][A-Z0-9_]{2,}: ([^\n|]+)/.exec(value)
-    if (coded) return coded[1].trim()
+    for (const coded of value.matchAll(/\b([A-Z][A-Z0-9_]{2,}): ([^\n|]+)/g)) {
+        if (!coded[1].includes("_") && !singleWordCodes.has(coded[1])) continue
+        const reason = coded[2].trim()
+        return reason.length <= refusalLength ? reason : null
+    }
     const permission = /\b([A-Z][A-Z0-9_]{2,}(?: or [A-Z][A-Z0-9_]{2,})* is required[^\n|]*)/.exec(value)
-    return permission ? permission[1].trim() : null
+    return permission && permission[1].trim().length <= refusalLength ? permission[1].trim() : null
 }
 
 function read(name, parameters, fallback) {

@@ -289,9 +289,11 @@ feature("the support summary holds the readable checks, protocols and settings; 
         const address = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
         const redacted = asUser(users.reader, () => invoke(registry + "get#SupportSummary", {redacted: true})).summary
         const plain = asUser(users.admin, () => invoke(registry + "get#SupportSummary", {})).summary
+        const adminRedacted = asUser(users.admin, () => invoke(registry + "get#SupportSummary", {redacted: true})).summary
         return {
             redacted,
             plain,
+            adminRedacted,
             redactedText: JSON.stringify(redacted),
             address,
             outsider: asUser(users.privacy, () => refusal(registry + "get#SupportSummary", {})),
@@ -305,7 +307,7 @@ feature("the support summary holds the readable checks, protocols and settings; 
             })
         }
     },
-    then({redacted, plain, redactedText, address, outsider, screen, download}) {
+    then({redacted, plain, adminRedacted, redactedText, address, outsider, screen, download}) {
         redacted.redacted == true
         redacted.instance.preparedBy == null
         redacted.instance.version.length > 0
@@ -314,6 +316,12 @@ feature("the support summary holds the readable checks, protocols and settings; 
         !redactedText.includes("fixUrl")
         !redactedText.includes("refreshKey")
         !address.test(redactedText)
+        // review: a listener's bind address, the gateway addresses and a certificate path are not in the redacted JSON
+        adminRedacted.settings.settings.filter(row => /\.(host|listenHost|mediaHost|allowedAddresses)$|File$/.test(row.settingKey))
+            .length > 0
+        adminRedacted.settings.settings.filter(row => /\.(host|listenHost|mediaHost|allowedAddresses)$|File$/.test(row.settingKey))
+            .every(row => row.internal && row.value == null)
+        plain.settings.settings.every(row => !row.internal)
         plain.redacted == false
         plain.instance.preparedBy != null
         plain.settings.available == true

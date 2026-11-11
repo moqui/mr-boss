@@ -113,10 +113,19 @@ feature("a screen's refused read is shown as its reason, and any other failure a
             refused: asUser(users.identity, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
             allowed: asUser(users.access, () => calls.read(access + "find#Groups", {}, "The groups are not available to you.")),
             broken: asUser(users.access, () => calls.read(access + "get#Group", {}, "Group is not available.")),
+            // an exception's text with a prefix like a code is never shown as a reason (review)
+            exceptions: [
+                "error returned from database: ERROR: relation \"user_account\" does not exist",
+                "URL: http://10.0.0.5:8080/internal refused",
+                "RECORD_UNAVAILABLE: " + "x".repeat(400)
+            ].map(text => calls.reasonOf(text)),
+            coded: calls.reasonOf("Error: RECORD_UNAVAILABLE: Group G is not available"),
             errorsAfter: ec.message.hasError()
         }
     },
-    then({refused, allowed, broken, errorsAfter}) {
+    then({refused, allowed, broken, exceptions, coded, errorsAfter}) {
+        exceptions.every(reason => reason == null)
+        coded == "Group G is not available"
         refused.out == null
         refused.failure.includes("ADMIN_ACCESS_VIEW")
         !refused.failure.includes("PERMISSION_DENIED")
