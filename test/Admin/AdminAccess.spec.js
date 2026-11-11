@@ -248,7 +248,7 @@ const capabilityNames = [
     // P7: Settings' Organizations, OrganizationDetail and Constitution (BOSS_ADM_ORGANIZATIONS)
     "organizations",
     "operations",
-    // P15: Data's Imports, DataImport and ImportDetail (BOSS_ADM_DATA)
+    // P15: Data's Imports, DataImport and ImportDetail (BOSS_ADM_DATA); P16: its Exports, DataExport and Backups
     "data",
     "agents",
     "developer",
@@ -272,7 +272,8 @@ const capabilityUsers = [
     {user: users.data, granted: ["transferView", "transferRun", "data"]},
     {user: users.audit, granted: ["auditView"]},
     {user: users.privacy, granted: []},
-    {user: users.backup, granted: ["backupView", "backupRun"]},
+    // P16: Data's Backups alone, the backup operator's too (BOSS_ADM_DATA_BACKUPS)
+    {user: users.backup, granted: ["backupView", "backupRun", "data"]},
     {user: users.admin, granted: adminHeld},
     {user: users.delegate, granted: ["accessView", "accessManage", "access"]},
     {user: users.system, granted: capabilityNames}

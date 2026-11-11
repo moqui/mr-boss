@@ -798,6 +798,9 @@ fields are the full field lists.
   It does not mount Shared/DataImport, since its options step (book, groups, personal or directory)
   is its own. Registered (impl-admin P15) as the target `commonsContacts` with its place and no runs:
   the import keeps a draft per user and no run record yet (impl-admin F13).
+  The book's vCard export is registered too (impl-admin P16) as the export target `contactBookVCard`
+  (`mantle.party.ContactImportServices.export#ContactBookTransfer` over `export#Contacts`): Admin's DataExport
+  exports a book its user may view, by the book's own permission, with the field groups chosen.
 
 ### Duplicates
 

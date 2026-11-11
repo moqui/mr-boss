@@ -4916,4 +4916,43 @@ along with this software (see the LICENSE.md file). If not, see
             description="Tasks and other work items of a project from a CSV file, in Projects' own wizard"
             effectsNote="Each row becomes a work item of the chosen project; no run is kept yet."
             ownerApp="Projects" targetVersion="1" ownerRoute="projectsWorkItemImport" sequenceNum="51"/>
+
+    <!-- Admin P16 (impl-admin P16; design-admin §2, §11): Exports, DataExport and Backups in the Data area. The data
+        operator and the administrator open them with the rest of the area (BOSS_ADM_DATA above). The backup operator
+        opens only Backups in it: the area's screen itself, not inherited (so the imports and the exports stay refused),
+        and Backups, inheritable for its own transition, which reaches the framework's org.moqui.admin.BackupServices:
+        they check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN themselves (the data operator, who holds neither, opens the
+        screen and is told it is not available), take no path, mode or destination, and offer no download. ALWAYS, to
+        beat the area's deny of the root group, with the root's filter sets. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_DATA_BACKUPS" description="Admin backups">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Data.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Data/Backups.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_DATA_BACKUPS_BACKUP" userGroupId="BOSS_ADMIN_BACKUP"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The exports their owners make in their own place (impl-admin F43, P16): listed as export targets with that place
+        and nothing dispatched, as the owner wizards of the imports are. Dataset rows and report outputs are Insights'
+        (design-admin §11 DataExport: no second surface); Accounting's tax statement data and a billing batch's invoices
+        are exported on the record they are of, by Accounting's own permissions (an exported statement is kept as it
+        is); Projects' work items from their list. The exports dispatched here are their owners' seed rows: Commons'
+        contact books (mr-mantle data/PartyContactExportData.xml) and the framework's message translations. -->
+    <moqui.server.TransferTarget targetId="insightsDatasetRows" direction="export" targetMode="wizard" title="Dataset rows"
+            description="The rows of a business dataset you may read, as CSV, from the dataset's own view in Insights"
+            ownerApp="Insights" targetVersion="1" ownerRoute="insightsDatasets" sequenceNum="60"/>
+    <moqui.server.TransferTarget targetId="insightsReports" direction="export" targetMode="wizard" title="Reports"
+            description="A report's output, and its scheduled deliveries to its recipients, from the report in Insights"
+            ownerApp="Insights" targetVersion="1" ownerRoute="insightsReports" sequenceNum="61"/>
+    <moqui.server.TransferTarget targetId="accountingTaxStatements" direction="export" targetMode="wizard" title="Tax statement data"
+            description="A tax statement's data as CSV, from the statement in Accounting; an exported statement is kept as it is"
+            ownerApp="Accounting" targetVersion="1" ownerRoute="accountingTaxStatements" sequenceNum="62"/>
+    <moqui.server.TransferTarget targetId="accountingInvoiceBatch" direction="export" targetMode="wizard" title="Invoices of a billing batch"
+            description="The invoices of a billing batch as CSV, from the batch in Accounting"
+            ownerApp="Accounting" targetVersion="1" ownerRoute="accountingInvoiceBatch" sequenceNum="63"/>
+    <moqui.server.TransferTarget targetId="projectsWorkItemList" direction="export" targetMode="wizard" title="Work items"
+            description="The work items of a list as CSV, from the list in Projects"
+            ownerApp="Projects" targetVersion="1" ownerRoute="projectsWorkItems" sequenceNum="64"/>
 </entity-facade-xml>
