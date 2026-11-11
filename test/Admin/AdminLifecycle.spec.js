@@ -89,9 +89,10 @@ feature("the operator confirms a disable: access revoked at once, the shared dri
         confirmed.errors.length == 0 && operationId != null
         const account = one("moqui.security.UserAccount", {userId: leaverId})
         account.disabled == "Y" && account.disabledDateTime == null
+        // the drive waits for a new owner; Insights' participant paused the report schedules the leaver owns (none here)
         steps()
             .map(step => step.stepKind + ":" + step.statusId)
-            .join() == "revokeAccess:UlstDone,disableAccount:UlstDone,transfer:UlstWaiting"
+            .join() == "revokeAccess:UlstDone,disableAccount:UlstDone,transfer:UlstWaiting,pause:UlstDone"
         steps()[2].resourceId == driveId
     }
 })

@@ -4299,4 +4299,112 @@ along with this software (see the LICENSE.md file). If not, see
         notify#NewDeviceSignIn; design-admin §4 Sessions): its link opens Commons Account, where the account's owner signs that
         session out ("Where you are signed in"; design-drawers-commons Account). Only the link is set here. -->
     <moqui.security.user.NotificationTopic topic="AccountSignIn" linkTemplate="/qapps/Commons/Settings/Account"/>
+    <!-- Insights P7 (impl-insights P7; design-insights §7.1, §7.3, §1.1; INS-06, INS-11): scheduled delivery and digests.
+        The copied ScheduledReports (BOSS_INS_LEGACY, impl-insights F20) is replaced by Insights' own list, every Insights user's to
+        open (Received is every reader's): the group's last pattern row is reloaded as a plain name, which no screen location
+        equals, so it denies nothing (as F65's rows), on a fresh load and an existing instance alike. No screen grant is added:
+        the root's ALLOW opens Scheduled reports and Management digest, each transition reaches an ironstone.insights
+        DeliveryServices operation that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself, and the report engine's
+        operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. -->
+    <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ScheduledReports\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
+    </artifactGroups>
+    <!-- Personal scheduling is every reading group's (design §1.1: INSIGHTS_SCHEDULE added to the reader's grants); the
+        administrator, who reads no business data, schedules nothing. Distribution stays the distributor's. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_READ" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_AUTHOR" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_SCHEDULE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_READ" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_AUTHOR" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <!-- Scheduling for oneself, the five reading groups': the engine's store#Schedule (which sets the mode and checks every
+        recipient; a recipient other than the owner also needs the group delivery artifact below), the owner's list, pause,
+        Send now, retry and reconciliation. P1's BOSS_INS_REPORT_SCHEDULE keeps the distributor's create#Schedule (owner mode),
+        which no Insights screen calls; a schedule it makes over a business dataset is held to the same recipient check at
+        each run (mr-moqui crates/moqui-report/src/delivery.rs). -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_OWN" description="Insights: scheduling reports for oneself">
+        <artifacts artifactName="org.moqui.report.ReportServices.store#Schedule" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.list#Schedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pause#Schedule" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.send#Report" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.retry#ReportRecipients" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.reconcile#ReportRecipient" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_OWN_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Reading deliveries: one's own occurrences and received deliveries, and one's own report rendered again as oneself; the
+        engine answers a recipient their own delivery alone. The administrator reads a delivery to them as anyone does. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DELIVERY" description="Insights: reading report deliveries">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ReportOccurrences" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#ReportOccurrence" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#RecipientReport" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DELIVERY_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Group delivery, the distributor's: the audience check, and the engine's own artifact for delivering to anyone but
+        oneself (org.moqui.report.delivery.group, checked by its own rows whatever screen asks). A recipient is still sent the
+        result only when their scope fingerprint equals the owner's. The distributor also saves a digest (store#Digest validates
+        it: a report definition of kind digest over dashboards they read), so the engine's save is theirs; the editors stay
+        the author's (BOSS_INS_AUTHORING). -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DISTRIBUTE" description="Insights: delivering reports to groups">
+        <artifacts artifactName="org.moqui.report.ReportServices.check#ReportAudience" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.save#Definition" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DISTRIBUTE_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_GROUP_DELIVERY" description="Insights: the engine's group delivery artifact">
+        <artifacts artifactName="org.moqui.report.delivery.group" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_GROUP_DELIVERY_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The message of a delivered report or digest: the body links to Insights' Dashboard, not Tools' -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="BOSS_INSIGHTS_REPORT" description="Insights report or digest" emailServerId="SYSTEM"
+            emailTypeEnumId="EMT_SCREEN_RENDER" bodyScreenLocation="component://mr-boss/template/InsightsReportEmail.xml"
+            webappName="webroot" fromAddress="" fromName="" subject="${title}" sendPartial="Y"/>
+    <!-- Admin's lifecycle (impl-admin P6; design-admin §14 Lifecycle participant, design-insights §7.1 Ownership): Insights'
+        report schedules, through the report engine's own services (the owned-resource contract). Offboarding pauses what the
+        user owns and hands each schedule, with the definitions it needs that they own, to a new owner, who must be able to
+        schedule, read its sources and, for a group schedule, deliver to a group; the schedule stays paused until that owner
+        resumes it, which checks every recipient against the new owner's scope. The services check REPORT_OWNER_CHANGE for
+        another user's schedules; the identity operator and the administrator hold it and the three operations (ALWAYS, past
+        BOSS_INS_REPORT_ENGINE's deny for one who is also in Insights). The caller gains no report data. -->
+    <ironstone.admin.LifecycleParticipant participantKey="insights.schedules" version="1" ownerApp="Insights" title="Report schedules"
+            description="The scheduled reports and digests the user owns, paused when access ends and handed to a new owner who passes the same recipient check."
+            resourceKind="schedule" lookupService="org.moqui.report.ReportServices.find#OwnedSchedules"
+            transferService="org.moqui.report.ReportServices.transfer#DefinitionOwner" resourceParameter="screenScheduledId"
+            pauseService="org.moqui.report.ReportServices.pause#OwnedSchedules" requiredPermission="REPORT_OWNER_CHANGE" sequenceNum="60"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="REPORT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="REPORT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="REPORT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="REPORT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <artifactGroups artifactGroupId="BOSS_INS_LIFECYCLE" description="Insights: the lifecycle participant's report schedule operations">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#OwnedSchedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pause#OwnedSchedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.transfer#DefinitionOwner" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_LIFECYCLE_IDENTITY" userGroupId="BOSS_ADMIN_IDENTITY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_LIFECYCLE_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
 </entity-facade-xml>

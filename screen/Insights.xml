@@ -22,9 +22,10 @@ along with this software (see the LICENSE.md file). If not, see
     alerts, Business flows and Settings come with the phases that build their entries; P3 the business datasets under Report builder
     (Datasets, DatasetDetail, DatasetFields, DatasetView); P4 Reports (the report catalog) and Saved reports.
     P6 adds Report builder › Analysis (the author's), the hidden Drill (each panel's menu, reportLinks.drill) and the hidden
-    Records mounts of the shared record screens, read only (design §10). Until P7 replaces it,
-    the copied ScheduledReports screen stays open only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies
-    it to the root user group). -->
+    Records mounts of the shared record screens, read only (design §10). P7 adds Delivery and alerts: Scheduled reports (the
+    list, with the hidden ScheduledReportDetail and ReportDelivery) and Management digest, every Insights user's to open, each
+    transition reaching a service that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself; they replace the last copied
+    screen (impl-insights F20). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 

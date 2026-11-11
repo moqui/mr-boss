@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This software is in the public domain under CC0 1.0 Universal plus a 
+This software is in the public domain under CC0 1.0 Universal plus a
 Grant of Patent License.
 
 To the extent possible under law, the author(s) have dedicated all
@@ -12,83 +12,254 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
+<!-- Insights › Scheduled reports › a schedule (design-insights §7 ScheduledReportDetail; impl-insights P7, INS-06, INS-11), for
+    its owner (ironstone.insights.DeliveryServices get#Schedule; another's or none is "not available"). EditScreenScheduled: the
+    timing, format, active interval, subject and skipping an empty report. ReportAudience: the people and groups it goes to
+    beside each recipient's result from the engine's check (may receive it, or the reason in words; never the other person's
+    grants); a save with a recipient whose access differs is refused with the reason, and the server sets the mode: personal
+    with no other recipient, a group otherwise. OwnPreview: the report's panels as the caller reads them now, and the file.
+    ScheduleRuns: each run's safe counters, opening ReportDelivery. The primary action is Resume while paused, else Send now; a
+    screen schedule the caller set up for themselves (the copied scheduled finds) changes its timing, format and subject here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Scheduled report" default-menu-include="false" standalone="true">
+        default-menu-title="Scheduled report" default-menu-include="false">
 
     <parameter name="screenScheduledId" required="true"/>
 
-    <transition name="updateScreenScheduled">
-        <parameter name="screenScheduledId"/>
+    <transition-include name="recipientChoices" location="component://mr-boss/template/InsightsDeliveryTransitions.xml"/>
+    <transition-include name="previewFile" location="component://mr-boss/template/InsightsDeliveryTransitions.xml"/>
+    <transition name="storeSchedule" method="post">
         <actions>
-            <entity-find-one entity-name="moqui.screen.ScreenScheduled" value-field="screenScheduled"/>
-            <if condition="screenScheduled == null"><return error="true" message="Scheduled Find not found with ID ${screenScheduledId}"/></if>
-            <if condition="screenScheduled.userId != ec.user.userId">
-                <return error="true" message="Scheduled Find with ID ${screenScheduledId} belongs to a different user"/></if>
-            <if condition="cronSelected"><set field="cronExpression" from="cronSelected"/></if>
-            <script>
-                if (cronExpression) {
-                    try { ec.service.nextCronExecution(String(cronExpression)) } catch (e) {
-                        ec.message.addError(`Invalid Cron expression '${cronExpression}': ${e.message}`)
-                        return
-                    }
-                }
-            </script>
-            <service-call name="update#moqui.screen.ScreenScheduled" in-map="context" out-map="context"/>
+            <service-call name="ironstone.insights.DeliveryServices.store#Schedule" out-map="stored"
+                    in-map="{screenScheduledId:screenScheduledId, cronSelected:cronSelected, cronExpression:cronExpression,
+                        renderMode:renderMode, noResultsAbort:noResultsAbort, fromDate:fromDate, thruDate:thruDate,
+                        emailSubject:emailSubject, timingGiven:'Y', expectedRevision:expectedRevision}"/>
+            <script>ec.message.addMessage(stored.applied ? 'Schedule saved' : stored.reason, stored.applied ? 'success' : 'danger')</script>
         </actions>
-        <default-response url=".."/>
+        <default-response url="."/>
+    </transition>
+    <transition name="storeAudience" method="post">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.store#Schedule" out-map="stored"
+                    in-map="{screenScheduledId:screenScheduledId, recipientsGiven:'Y', recipientUserIds:recipientUserIds,
+                        recipientGroupIds:recipientGroupIds, expectedRevision:expectedRevision}"/>
+            <script>ec.message.addMessage(stored.applied ? (stored.deliveryMode === 'group' ? 'Recipients saved: ' + stored.recipientCount
+                + ' checked' : 'The schedule now goes to you alone') : stored.reason, stored.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="pauseSchedule" method="post">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.pause#Schedules" out-map="pausedOut"
+                    in-map="{screenScheduledIds:screenScheduledId, paused:paused}"/>
+            <script>for (const result of pausedOut.results) ec.message.addMessage(result.applied ? (pausedOut.paused ? 'Schedule paused'
+                : 'Schedule resumed') : result.reason, result.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="sendNow" method="post">
+        <actions>
+            <service-call name="ironstone.insights.DeliveryServices.send#Schedule" in-map="{screenScheduledId:screenScheduledId}" out-map="sent"/>
+            <script>ec.message.addMessage(!sent.applied ? sent.reason : sent.skipped ? 'Nothing was sent: ' + (sent.skippedReason || 'not due')
+                : 'Sent: each recipient has their own message', sent.applied &amp;&amp; !sent.skipped ? 'success' : 'warning')</script>
+        </actions>
+        <default-response url="."/>
     </transition>
 
     <actions>
-        <entity-find-one entity-name="moqui.screen.ScreenScheduled" value-field="screenScheduled"/>
-        <set field="cronDescription" from="screenScheduled?.cronExpression ? ec.service.getCronDescription(screenScheduled.cronExpression, ec.user.getLocale(), true) : null"/>
+        <!-- another's schedule, or none, reads as not available, without failing the page -->
+        <service-call name="ironstone.insights.DeliveryServices.get#Schedule" in-map="{screenScheduledId:screenScheduledId}" out-map="found"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!found?.schedule"/>
+        <set field="schedule" from="found?.schedule || {}"/>
+        <set field="options" from="found?.options || {formats:[], cronPresets:[], groups:[]}"/>
+        <set field="audience" from="found?.audience || []"/>
+        <set field="recipients" from="found?.recipients || []"/>
+        <set field="runs" from="found?.runs || []"/>
+        <set field="previewSections" from="found?.sections || []"/>
+        <set field="canDistribute" from="!!found?.canDistribute &amp;&amp; !schedule.legacy"/>
+        <set field="cronOptions" from="(schedule.cronExpression &amp;&amp; !options.cronPresets.some(row =&gt; row.value === schedule.cronExpression)
+                ? [{value:schedule.cronExpression, label:'As now: ' + schedule.cronText}] : []).concat(options.cronPresets)"/>
+        <set field="editValues" from="Object.assign({}, schedule, {cronSelected:schedule.cronExpression})"/>
+        <set field="skipOptions" from="[{value:'Y', label:'Yes'}, {value:'N', label:'No'}]"/>
     </actions>
     <widgets>
-        <label text="To disable set a Thru Date in the past or clear the Schedule and Cron Expression" type="p"/>
+        <section name="ScheduleUnavailable" condition="!recordFound"><widgets>
+            <label text="Schedule not available" type="h5"/>
+            <label type="p" text="This schedule does not exist or is not yours."/>
+            <link url="../Schedules" text="Back to scheduled reports" link-type="anchor"/>
+        </widgets></section>
+        <section name="ScheduleRecord" condition="recordFound"><widgets>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <label text="${schedule.title}" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="${schedule.definitionTitle} · ${schedule.cronText} · ${schedule.formatText} · ${schedule.modeText}, to ${schedule.audienceText}"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${schedule.stateColor}">${
+                                WebUtilities.encodeHtml(schedule.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: schedule.stateText})}]]></text>
+                            <text type="html">${schedule.stateText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label type="p" style="q-mb-none" text="${schedule.lastText}"/>
+                        <label type="p" style="q-mb-none text-warning" text="${schedule.groupNote}" condition="schedule.groupNote"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <link url="pauseSchedule" link-type="hidden-form" text="Resume" btn-type="primary" icon="sym_o_play_arrow" condition="schedule.paused"
+                                confirmation="Resume ${schedule.title}? Its recipients (${schedule.audienceText}) are checked again first."
+                                parameter-map="{screenScheduledId:screenScheduledId, paused:'false'}"/>
+                        <link url="sendNow" link-type="hidden-form" text="Send now" btn-type="primary" icon="sym_o_send"
+                                condition="!schedule.paused &amp;&amp; !schedule.legacy"
+                                confirmation="Send ${schedule.title} now to ${schedule.audienceText}? This is a new run, not a repeat of an earlier one."
+                                parameter-map="{screenScheduledId:screenScheduledId}"/>
+                        <link url="pauseSchedule" link-type="hidden-form" text="Pause" icon="sym_o_pause" condition="!schedule.paused"
+                                confirmation="Pause ${schedule.title}? It sends nothing until resumed."
+                                parameter-map="{screenScheduledId:screenScheduledId, paused:'true'}"/>
+                        <link url="../Schedules" text="All schedules" link-type="anchor"/>
+                    </container>
+                </container>
+            </container>
 
-        <form-single name="EditScreenScheduled" transition="updateScreenScheduled" map="screenScheduled">
-            <field name="screenScheduledId"><default-field><hidden/></default-field></field>
+            <container style="row q-col-gutter-md">
+                <container style="col-12 col-md-6">
+                    <container-box>
+                        <box-header title="Timing and output"/>
+                        <box-body>
+                            <form-single name="EditScreenScheduled" transition="storeSchedule" map="editValues">
+                                <field name="screenScheduledId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="cronSelected"><default-field title="When">
+                                    <drop-down><list-options list="cronOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field></field>
+                                <field name="renderMode"><default-field title="Format">
+                                    <drop-down><list-options list="options.formats" key="${value}" text="${label}"/></drop-down>
+                                </default-field></field>
+                                <field name="noResultsAbort"><default-field title="Skip when empty" tooltip="Send nothing when the report has no data">
+                                    <radio><list-options list="skipOptions" key="${value}" text="${label}"/></radio>
+                                </default-field></field>
+                                <field name="fromDate"><default-field title="From"><date-time/></default-field></field>
+                                <field name="thruDate"><default-field title="Through"><date-time/></default-field></field>
+                                <field name="emailSubject"><default-field title="Subject" tooltip="Leave it empty to use the report's name"><text-line size="50"/></default-field></field>
+                                <field name="save"><default-field><submit text="Save"/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="cronSelected"/><field-ref name="renderMode"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="noResultsAbort"/>
+                                    <field-ref name="emailSubject"/>
+                                    <field-ref name="save"/>
+                                </field-layout>
+                            </form-single>
+                        </box-body>
+                    </container-box>
+                </container>
+                <container style="col-12 col-md-6">
+                    <section name="AudienceBox" condition="!schedule.legacy"><widgets>
+                        <container-box>
+                            <box-header title="Recipients"/>
+                            <box-toolbar>
+                                <container-dialog id="EditAudience" button-text="Change recipients" condition="canDistribute">
+                                    <label type="p" style="m-muted" text="Each person, and every member of each group, is checked when you save: the report goes only to those who may read exactly what you read. Leave both empty to send it to you alone."/>
+                                    <form-single name="ReportAudience" transition="storeAudience" map="schedule">
+                                        <field name="screenScheduledId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="recipientUserIds"><default-field title="People" tooltip="Insights readers">
+                                            <drop-down allow-multiple="true" allow-empty="true">
+                                                <dynamic-options transition="recipientChoices" server-search="true" min-length="0"/>
+                                            </drop-down>
+                                        </default-field></field>
+                                        <field name="recipientGroupIds"><default-field title="Groups" tooltip="A group you belong to">
+                                            <drop-down allow-multiple="true" allow-empty="true"><list-options list="options.groups" key="${value}" text="${label}"/></drop-down>
+                                        </default-field></field>
+                                        <field name="save"><default-field><submit text="Save recipients"
+                                                confirmation="Save these recipients of ${schedule.title}? Deliveries not yet sent under the earlier recipients are cancelled."/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" text="${schedule.group ? 'Sent to each of these separately, one message each.' : 'Sent to you alone.'}"/>
+                                <label type="p" style="m-muted" text="${found.audienceNote}" condition="found.audienceNote"/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="AudienceMembers" list="recipients" skip-form="true" paginate="false" condition="recipients.length">
+                                    <field name="name"><default-field title="Recipient"><display/></default-field></field>
+                                    <field name="kind"><default-field title="Kind"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="AudienceResults" list="audience" skip-form="true" paginate="false" condition="audience.length">
+                                    <field name="recipientName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="viaText"><default-field title="How"><display/></default-field></field>
+                                    <field name="resultText"><default-field title="Result">
+                                        <render-mode>
+                                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${resultColor}">${
+                                                WebUtilities.encodeHtml(resultText)}</q-chip>]]></text>
+                                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: resultText})}]]></text>
+                                            <text type="html">${resultText}</text>
+                                        </render-mode>
+                                    </default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="recipientName"/></column>
+                                        <column><field-ref name="resultText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets></section>
+                </container>
+            </container>
 
-            <field name="screenPath"><default-field title="Screen"><display/></default-field></field>
-            <field name="formListFindId"><default-field title="Saved Find">
-                <display-entity entity-name="moqui.screen.form.FormListFind"/></default-field></field>
-
-            <field name="renderMode"><default-field><drop-down>
-                <option key="xlsx" text="XLSX"/><option key="csv" text="CSV"/><option key="xsl-fo" text="PDF"/>
-            </drop-down></default-field></field>
-            <field name="noResultsAbort"><default-field title="No Results Skip"><radio no-current-selected-key="N">
-                <option key="N" text="No"/><option key="Y" text="Yes"/>
-            </radio></default-field></field>
-
-            <field name="cronDescription"><default-field title="Schedule Description"><display/></default-field></field>
-            <field name="cronSelected" from="cronExpression"><default-field title="Schedule"><drop-down allow-empty="true">
-                <option key="${cronExpression}" text="Current: ${cronDescription}"/><!-- NOTE: first in list so that if matches another option will be overridden -->
-                <option key="0 0 6 ? * *" text="Daily at 6 AM"/>
-                <option key="0 0 6 ? * MON-FRI" text="Daily Monday to Friday at 6 AM"/>
-                <option key="0 0 6 ? * MON" text="Weekly on Monday at 6 AM"/>
-                <option key="0 0 6 1 * ?" text="Monthly on the 1st at 6 AM"/>
-            </drop-down></default-field></field>
-            <field name="cronExpression"><default-field tooltip="Ignored if Schedule selected, clear to set manually here">
-                <text-line size="20"/></default-field></field>
-
-            <field name="fromDate"><default-field><date-time/></default-field></field>
-            <field name="thruDate"><default-field><date-time/></default-field></field>
-
-            <!-- not really good for end-user facing: <field name="saveToLocation"><default-field><text-line size="60"/></default-field></field> -->
-
-            <field name="emailTemplateId"><default-field title="Email Template">
-                <drop-down><!-- NOTE: could allow-empty for when saveToLocation is used, but for this form required -->
-                    <entity-options key="${emailTemplateId}" text="${description}">
-                        <entity-find entity-name="moqui.basic.email.EmailTemplate">
-                            <econdition field-name="emailTypeEnumId" value="EMT_SCREEN_RENDER"/>
-                            <order-by field-name="description"/>
-                        </entity-find>
-                    </entity-options>
-                </drop-down>
-            </default-field></field>
-
-            <field name="emailSubject"><default-field><text-line size="60"/></default-field></field>
-
-            <field name="submitButton"><default-field><submit text="Update"/></default-field></field>
-        </form-single>
+            <section name="OwnPreviewBox" condition="!schedule.legacy"><widgets>
+                <container-box>
+                    <box-header title="Your preview"/>
+                    <box-toolbar>
+                        <link url="previewFile" text="Download as ${schedule.formatText}" link-type="anchor" target-window="_blank"
+                                parameter-map="{definitionId:schedule.definitionId, renderMode:schedule.renderMode}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" style="m-muted" text="This is the report as you read it now. Every recipient is checked to read the same before each delivery."/>
+                        <label type="p" style="text-warning" text="You no longer read this report, so it cannot be delivered." condition="!previewSections.length"/>
+                        <section-iterate name="OwnPreviewSections" list="previewSections" entry="previewSection"><widgets>
+                            <label text="${previewSection.title}" type="h6" condition="previewSections.length &gt; 1"/>
+                            <section-iterate name="OwnPreview" list="previewSection.panels" entry="previewPanel"><widgets>
+                                <report-embed definition-id="${previewPanel.definitionId}" panel-id="${previewPanel.panelId}"
+                                        from="${previewPanel.from}" thru="${previewPanel.thru}"/>
+                            </widgets></section-iterate>
+                        </widgets></section-iterate>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Runs"/>
+                    <box-body>
+                        <label type="p" style="m-muted" text="Not yet run." condition="!runs.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="ScheduleRuns" list="runs" skip-form="true" paginate="false" condition="runs.length">
+                            <field name="dateText"><default-field title="Run">
+                                <link url="../ReportDelivery" text="${dateText}" link-type="anchor" parameter-map="{occurrenceId:occurrenceId}"/>
+                            </default-field></field>
+                            <field name="kindText"><default-field title="How"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field></field>
+                            <field name="countsText"><default-field title="Recipients"><display text="${countsText}${reasonText ? ' · ' + reasonText : ''}"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="dateText"/><field-ref name="countsText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+        </widgets></section>
     </widgets>
 </screen>

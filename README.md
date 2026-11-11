@@ -9,7 +9,8 @@ checkout settings, integrations, feeds and store reports ([design](plan/design-c
 Admin (`screen/Admin/`) has its first release: groups and grants, users and sessions, invitations
 (`AcceptInvitation`, the `i` route), lifecycle and offboarding, organizations and the Constitution, Health and the settings
 index ([design](plan/design-admin.md), [impl-admin](plan/impl-admin.md)). Insights (`screen/Insights/`) is browsable:
-dashboards and Explore, admitted datasets, the report catalog and metrics, and Home's attention board
+dashboards and Explore, admitted datasets, the report catalog and metrics, Home's attention board, analysis and drill, and
+scheduled reports and digests delivered to recipients who read the same data
 ([design](plan/design-insights.md), [impl-insights](plan/impl-insights.md)). They are built in one order, and the
 rest of each is next.
 

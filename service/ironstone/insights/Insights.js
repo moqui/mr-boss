@@ -33,13 +33,11 @@ const capabilityPermissions = {
     settingsView: "INSIGHTS_SETTINGS_VIEW",
     settingsEdit: "INSIGHTS_SETTINGS_EDIT"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml): the copied ScheduledReports (BOSS_INS_LEGACY)
-// stays the Insights administrator's and ADMIN's until P7 replaces it (impl-insights F20); P4 replaced the copied Reports with the
-// report catalog and SavedReports, every Insights user's; P2 replaced the copied Dashboards and Dashboard with the framework mounts, P3 the copied report
-// builder with the dataset screens: Datasets and DatasetView the author's and steward's (BOSS_INS_DATASET_SCREENS), DatasetDetail
-// and DatasetFields the steward's (BOSS_INS_DATASET_STEWARDSHIP).
+// The menu areas whose authorization is a capability (data/BossSetupData.xml): P3's dataset screens, Datasets and DatasetView
+// the author's and steward's (BOSS_INS_DATASET_SCREENS), DatasetDetail and DatasetFields the steward's
+// (BOSS_INS_DATASET_STEWARDSHIP). The copied screens of impl-insights F20 are all replaced (P2 Dashboards, P3 the report
+// builder, P4 Reports, P7 ScheduledReports, every Insights user's), so no legacy area is left.
 const areas = {
-    legacy: "ScheduledReports",
     datasets: "ReportBuilder/Datasets",
     stewardship: "ReportBuilder/DatasetDetail",
     // P6: Analysis, the author's and the steward's (BOSS_INS_ANALYSIS)
@@ -173,7 +171,12 @@ const linkPaths = [
     "Records/ShipmentDetail",
     "Records/FacilityDetail",
     "Records/EquipmentDetail",
-    "Records/InvoiceDetail"
+    "Records/InvoiceDetail",
+    // P7: scheduled delivery and the management digest (design §7)
+    "ScheduledReports/Schedules",
+    "ScheduledReports/ScheduledReportDetail",
+    "ScheduledReports/ReportDelivery",
+    "ManagementDigest"
 ]
 // The record screens with tabs: under Insights their one subscreen is InsightsRecord (Shared/InsightsRecord.xml), which the
 // links name, since a screen's default tab is chosen before the app's context is known.

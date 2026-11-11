@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The body of a report or digest Insights delivers (the BOSS_INSIGHTS_REPORT email template; impl-insights P7): the title, a
+    link to the dashboard in Insights (the report engine's link names Tools' Dashboards, which no Insights user opens), and the
+    picture when the format has one. It says whose result it is: the recipient was checked to read the same. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="title" default-value="Report"/>
+    <parameter name="reportLink"/>
+    <parameter name="reportImageCid"/>
+    <actions><script><![CDATA[
+        reportLink = reportLink ? String(reportLink).replace('/apps/dashboards/Dashboard', '/qapps/Insights/Dashboard') : ''
+        if (reportLink.startsWith('/') && typeof webHostName !== 'undefined' && webHostName)
+            reportLink = 'https://' + String(webHostName).replace(/^https?:\/\//, '').replace(/\/$/, '') + reportLink
+    ]]></script></actions>
+    <widgets><render-mode>
+        <text type="html,html-print"><![CDATA[
+<html><body><h2>${html(title)}</h2>
+<#if reportLink><p><a href="${html(reportLink)}">Open it in Insights</a></p></#if>
+<#if reportImageCid><img src="cid:${html(reportImageCid)}" alt="${html(title)}" style="max-width:100%;height:auto"/></#if>
+<p>The report is attached. It was sent to you alone, as you may read it; opening it in Insights shows your own current result.</p></body></html>
+        ]]></text>
+        <text type="text"><![CDATA[${title}
+${reportLink || ''}
+The report is attached. It was sent to you alone, as you may read it.
+        ]]></text>
+    </render-mode></widgets>
+</screen>
