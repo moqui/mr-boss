@@ -4451,4 +4451,36 @@ along with this software (see the LICENSE.md file). If not, see
             description="The outgoing mail servers the instance sends its own mail through"
             settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/MailRelays"
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
+
+    <!-- Admin P12 (design-admin §9 ProtocolsHome, MailQueue and ServerConfiguration; impl-admin P12): Mail and protocols for the
+        operations operator too, narrowly: the area's screen itself (not inherited, so MailRelays and MailRelayDetail stay the
+        integration administrator's) and the three screens the operator reads, each inheritable for its own transitions, which
+        reach framework services that check their own permission (the mail queue ADMIN_OPERATION_VIEW and
+        ADMIN_OPERATION_MANAGE; a protocol check ADMIN_CONNECTION_MANAGE, which the operator does not hold). ALWAYS, to beat
+        the area's deny of the root group, with the root's filter sets. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_PROTOCOLS_OPS" description="Admin protocols, mail queue and server configuration">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Protocols.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Protocols/Home.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Protocols/MailQueue.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Protocols/ServerConfiguration.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_PROTOCOLS_OPS_OPERATIONS" userGroupId="BOSS_ADMIN_OPERATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The protocols in Health (design §14 readiness): the framework's protocol readiness, read as the viewer, a check for
+        each protocol that is turned on and failing or running without its trust -->
+    <ironstone.admin.ReadinessProvider providerKey="admin.protocols" version="1" ownerApp="Admin" title="Protocols"
+            healthGroupEnumId="AdmHgTransport" scopeEnumId="AdmScInstance"
+            serviceName="org.moqui.admin.ConfigurationServices.get#ProtocolReadiness"
+            requiredPermission="ADMIN_CONNECTION_VIEW" fixPath="Admin/Protocols/Home" sequenceNum="35"/>
+    <!-- Admin's settings index entry of P12 (design §14.2), shown to a user its screen opens to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.protocols" version="1" ownerApp="Admin" title="Mail and protocols"
+            description="What the server speaks besides the web (mail reception, SSH and Git, chat, calls and phones), the configuration each runs with and the checks of it"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" screenPath="Admin/Protocols/Home"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Whoever operates the server" sequenceNum="113"/>
 </entity-facade-xml>
