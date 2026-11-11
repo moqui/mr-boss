@@ -304,7 +304,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F71) |
-| P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | — |
+| P1 Foundation | Mantle, BOSS | the People root and menu, Home (frame), Settings (frame) | built and reviewed Nov 11, merged |
 | P2 Employees and Employee360 | Mantle, BOSS | Employees, Employee360, Chatter, RecordFiles; Insights' and Admin's links | — |
 | P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | — |
 | P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | — |
@@ -499,7 +499,7 @@ permissions, scope), PE-18 (the root).
   are P4, P10 and P23's).
 - Design edits: design-people §1.1 (the root user group, the Settings area, the employers and units of a staff reader), §1.2
   (the `people` keymap), §3 Home (Summary's counts and DueWork from `get#Home`).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F72 to F75 in order:
   - the client deny pattern has thirteen rows, not twelve (F26): Admin P6's transfer row at the end of BossSetupData names the
     packages too; `people` is in it, and Maintenance's split should count it (226 characters with `people`);
   - a comparison condition (`>`, `<=`) on a timestamp field is not converted from a number of milliseconds, which reaches
@@ -576,7 +576,7 @@ repository ("People P1 review: …"; mr-mantle 07c5e38b).
     manager now read the people's ids distinct in the query (Practices-App-Dev §4 Queries). The readiness counted an
     organization's employees outside the per-check `try`; an organization that fails there is logged by name and the others
     go on.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F76 to F78 in order:
   - a date-only as-of (Home's "As of") is the start of that day, so an employment beginning that day (the demo's rows start
     at 09:00) is neither current nor a join on it; `conditionDate` reads every as-of so. Whether People takes a date-only
     as-of as the end of its day is for P2's directory, which takes the same parameter;
@@ -1417,7 +1417,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
