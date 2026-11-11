@@ -3043,24 +3043,24 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   suites, the acceptance tests, a tui or browser render.
 - Design edits: design-admin §9 MailQueue (as built), design-crosscut CX-DELIVERY (one clause).
 - Findings (provisional):
-  - **F-P12F-1** Mantle's ledger marks its own delivery `MdsSent` on a person's word (`resolve#Delivery` with
+  - **F177** Mantle's ledger marks its own delivery `MdsSent` on a person's word (`resolve#Delivery` with
     `MESSAGE_DELIVERY_REVIEW`, from before this build), and the queue's Settle of a ledger message reaches it. Left as it is:
     the owner's record is the owner's. The stored message is no longer marked Sent with it. The user's call whether the
     ledger gets a settled state of its own.
-  - **F-P12F-2** Close (`abandon`) still writes `ES_CANCELLED` by a person, with the reason in the status audit row. It is
+  - **F178** Close (`abandon`) still writes `ES_CANCELLED` by a person, with the reason in the status audit row. It is
     not a sent state, so it is left.
-  - **F-P12F-3** A settlement holds for the send it was made for, and only the queue's claim clears it. A send of a settled
+  - **F179** A settlement holds for the send it was made for, and only the queue's claim clears it. A send of a settled
     message from outside the queue (BasicComms MessageDetail `resend`, ADMIN, the Review's open item) leaves it on the row:
     a result of Sent, refused or not sent reads as that, but if that send is lost part way the message still reads
     settled. To close it the mail service clears the settlement when it begins a send (Rust), or that resend goes through
     `retry#MailOutcome`.
-  - **F-P12F-4** A message reported not delivered leaves Needs attention like one reported delivered (the decision's
+  - **F180** A message reported not delivered leaves Needs attention like one reported delivered (the decision's
     words) and waits in the Settled list with Send again; it is not offered Close, and sign-in mail settled so has no
     action left.
-  - **F-P12F-5** Many readers take `ES_READY` for "queued" or "went" (`Collections`, `CaseFeedback`, `PurchaseOrderDocuments`,
+  - **F181** Many readers take `ES_READY` for "queued" or "went" (`Collections`, `CaseFeedback`, `PurchaseOrderDocuments`,
     `Sourcing`, `SupplierPortal`, BOSS `Receivables` "Queued for delivery"): a failed, an uncertain and a settled message all
     read so there, as before P12. Not changed.
-  - **F-P12F-6** The resolution values are renamed (`sent`, `notSent` to `delivered`, `notDelivered`); the old ones are
+  - **F182** The resolution values are renamed (`sent`, `notSent` to `delivered`, `notDelivered`); the old ones are
     refused as malformed. The only callers were the screen and the specs.
 - Decisions: the settlement is fields on the message row, not a record of its own (the filters stay conditions of one
   find; the audit log is the history); one settlement for a send, and a later send that is uncertain again may be settled
@@ -3073,7 +3073,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     `reconcile#MailOutcome`'s out-parameters, one description line of `claim#MailOutcomeRetry`); the file's head comment and
     the two interface services at its end are untouched, and so is `OperationLib.js`;
   - mr-mantle has a commit (the spec's expectation only);
-  - the user's calls: F-P12F-1, F-P12F-3 (whether to close it in Rust), F-P12F-4;
+  - the user's calls: F177, F179 (whether to close it in Rust), F180;
   - budget shares unchanged (no feature added).
 
 **Review Nov 10 (P12 follow-up).**
@@ -3098,7 +3098,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
   `AdminMailQueue` and `AdminAccess` 9 of 9, on the shared release binary. R1 has no case of its own (the state it
   guards cannot be reached through a service).
 - For the lead (open):
-  - F-P12F-3 stands and is the one way round the rule: a send of a settled message from outside the queue (BasicComms
+  - F179 stands and is the one way round the rule: a send of a settled message from outside the queue (BasicComms
     `resend`, ADMIN only) that is lost part way leaves the old settlement on the row, and one reported not delivered is
     then offered Send again without a new decision. That resend already sends an uncertain message with no decision
     (P12's open item); closing both is the mail service clearing the settlement when a send begins (Rust), or the
@@ -3107,7 +3107,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     the message in between (`STALE_REVISION`) leaves the owner resolved and no settlement recorded, the row then in
     Needs attention with "Its owner reconciles it". As P12 built it; only a send's late result can cause it, and that
     result is then the state.
-  - F-P12F-1 and F-P12F-4 are the user's calls, as the worker says.
+  - F177 and F180 are the user's calls, as the worker says.
 
 ### P13 — System messages and recovery
 
@@ -3348,7 +3348,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes.
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note, P7's F103 to F109 and P8's F110 to F118 (Nov 10) in theirs. P9's F119 to F131 (Nov 10, 2026) are in its Built and Review notes. P10's F132 to F145 (Nov 10, 2026) are in its Built and Review notes. P11's F146 to F160 (Nov 10, 2026) are in its Built and Review notes. P12's F161 to F176 (Nov 10, 2026) are in its Built and Review notes. F177 to F182 are in P12's Follow-up note.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
