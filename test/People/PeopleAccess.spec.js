@@ -13,7 +13,8 @@
 // unit and employee refused to Retail's HR officer), and the Employees menu group. P4: a position's and a job class's changes, an
 // HR editor's of the employer (the directory reader refused with the same parameters, Services' position refused to Retail's HR),
 // a manager reading the seats of the department they lead and not another's, a pay grade's amounts and changes payroll's (the HR
-// officer answered the grade's name alone and refused its change), and the Staffing menu group.
+// officer answered the grade's name alone and refused its change; a shared grade changed by the People administrator and not by
+// Retail's payroll), and the Staffing menu group.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -440,6 +441,8 @@ feature(
             const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
             const position = {organizationPartyId: ids.organizationId, emplPositionClassId: ""}
             const otherPosition = {organizationPartyId: ids.otherOrganizationId, emplPositionClassId: ids.jobClassId}
+            const ownedGrade = {gradeName: " ", organizationPartyId: ids.organizationId}
+            const sharedGrade = {payGradeId: ids.sharedPayGradeId, gradeName: " "}
             const grades = user =>
                 asUser(user, () =>
                     system(() => invoke("mantle.humanres.PayrollSetupServices.find#PayGrades", {payGradeId: ids.payGradeId}))
@@ -460,8 +463,12 @@ feature(
                     ),
                     hrClass: code(as(users.hr, "PositionServices.store#JobClass", {title: " "})),
                     readerClass: code(as(users.reader, "PositionServices.store#JobClass", {title: " "})),
-                    payrollGrade: code(as(users.payroll, "PayrollSetupServices.store#PayGrade", {gradeName: " "})),
-                    hrGrade: code(as(users.hr, "PayrollSetupServices.store#PayGrade", {gradeName: " "}))
+                    payrollGrade: code(as(users.payroll, "PayrollSetupServices.store#PayGrade", ownedGrade)),
+                    hrGrade: code(as(users.hr, "PayrollSetupServices.store#PayGrade", ownedGrade)),
+                    // the shared grade (Lead): Retail's payroll refused, the People administrator (PEOPLE_ALL_ORGANIZATIONS)
+                    // answered for the revision it does not name
+                    payrollShared: code(as(users.payroll, "PayrollSetupServices.store#PayGrade", sharedGrade)),
+                    adminShared: code(as(users.admin, "PayrollSetupServices.store#PayGrade", sharedGrade))
                 },
                 payroll: [payroll.amountsShown, String(payroll.payGrades[0].band?.amount)],
                 hr: [hr.amountsShown, hr.payGrades[0].gradeName, Object.hasOwn(hr.payGrades[0], "band"), hr.bands.length]
@@ -481,7 +488,9 @@ feature(
                     hrClass: "TITLE_REQUIRED",
                     readerClass: "PERMISSION_DENIED",
                     payrollGrade: "NAME_REQUIRED",
-                    hrGrade: "PERMISSION_DENIED"
+                    hrGrade: "PERMISSION_DENIED",
+                    payrollShared: "PERMISSION_DENIED",
+                    adminShared: "REVISION_CHANGED"
                 }
             payroll == [true, "3000"]
             hr == [false, "Associate", false, 0]

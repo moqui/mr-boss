@@ -1,7 +1,7 @@
 // People P4's "usable when" (impl-people P4; design-people §5), as an acceptance walk with artifact authorization on: people.hr
 // defines a job class through JobClasses and gives it a skill through JobClassDetail, plans two seats of it in Merchandising
 // through Positions and sees them vacant (the list's vacancy filter and each seat's record); people.payroll sets a grade band
-// through PayGrades (a new grade with its band, then a raise from next month that ends it) and reads the amounts; people.hr puts the
+// through PayGrades (a new grade of Retail with its band, then a raise from next month that ends it) and reads the amounts; people.hr puts the
 // grade on a seat through PositionDetail and sees the grade's name and no amounts, on PayGrades, PositionDetail and the choices,
 // and a forged band is refused. The rules themselves are Mantle's PeoplePositions and mr-boss's PeoplePositions and PeopleAccess.
 // Run: ./moq accept mr-boss --spec PeoplePositionsUsable
@@ -105,7 +105,7 @@ feature("people.payroll sets a grade band and a raise from next month, and reads
             amount: "3700",
             maxAmount: "4300"
         }
-        const created = store(Object.assign({gradeName: "Visual"}, band))
+        const created = store(Object.assign({gradeName: "Visual", organizationPartyId: ids.organizationId}, band))
         if (created.errors) problems.push(`the grade: ${created.errors}`)
         const grade = read(users.payroll, G + "find#PayGrades", {term: "Visual"}).payGrades[0]
         state.gradeId = grade?.payGradeId
@@ -124,7 +124,9 @@ feature("people.payroll sets a grade band and a raise from next month, and reads
         for (const text of ["Visual", "Bands of Visual", "3,700", "3,900"])
             if (!shown.output.includes(text)) problems.push(`payroll's PayGrades does not show ${text}`)
         // a band out of order is refused
-        const backwards = store(Object.assign({gradeName: "Backwards"}, band, {minAmount: "5000"}))
+        const backwards = store(
+            Object.assign({gradeName: "Backwards", organizationPartyId: ids.organizationId}, band, {minAmount: "5000"})
+        )
         if (!backwards.errors.includes("BAND_ORDER")) problems.push(`a band out of order: ${backwards.errors || "accepted"}`)
         return {problems}
     },
@@ -177,6 +179,7 @@ feature("people.hr puts the grade on a seat and sees the grade's name and no amo
             "apps/People/Staffing/PayGrades/storePayGrade",
             {
                 gradeName: "Forged",
+                organizationPartyId: ids.organizationId,
                 currencyUomId: "USD",
                 timePeriodTypeId: "PayrollMonth",
                 minAmount: "1",

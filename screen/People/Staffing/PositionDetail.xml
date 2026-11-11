@@ -140,7 +140,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         <default-field title="Pay grade">
                                             <drop-down allow-empty="true">
                                                 <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                        parameter-map="{choice:'payGrades', selected:editValues.payGradeId}"/>
+                                                        parameter-map="{choice:'payGrades', choiceOrganizationPartyId:position.organizationPartyId,
+                                                            selected:editValues.payGradeId}"/>
                                             </drop-down>
                                         </default-field>
                                     </field>

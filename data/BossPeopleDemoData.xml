@@ -322,7 +322,9 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- People P4 (impl-people P4, F4, F10; design-people §5): the job classes, pay grades and positions. Job classes (shared by
         both employers) with their work types and skills: Store manager, Sales associate, Merchandiser and Service technician. Pay
-        grades with a monthly USD band each (minimum, reference, maximum): Associate, Lead and Manager. Retail's positions in Store
+        grades with a monthly USD band each (minimum, reference, maximum): Associate and Manager, Retail's own (only its seats take
+        them), and Lead, shared by both employers (Retail's merchandiser and Services' technicians), which only a holder of
+        PEOPLE_ALL_ORGANIZATIONS changes (people.admin). Retail's positions in Store
         Operations: the store manager seat (Active, Manager grade, Hannah since she joined), three sales associate seats (Active,
         Associate grade: Tomas's, Rafael's, and one vacant to backfill) and a fourth planned for next season; in Merchandising the
         merchandiser seat Leon holds. Services' positions in Service Delivery: two technician seats (Active, Lead grade), Kenji's and
@@ -349,13 +351,15 @@ along with this software (see the LICENSE.md file). If not, see
             description="Installs and services equipment at customers' sites."/>
     <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_TECH" workTypeEnumId="WktpSupport"/>
     <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_TECH" skillTypeEnumId="BOSS_PPL_SK_FIELD"/>
-    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_ASSOC" description="Associate" comments="Shop floor and office staff"/>
+    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_ASSOC" description="Associate" comments="Shop floor and office staff"
+            organizationPartyId="ORG_ZIZI_RETAIL"/>
     <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
             timePeriodTypeId="PayrollMonth" minAmount="2600" amount="3000" maxAmount="3500"/>
     <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_LEAD" description="Lead" comments="Skilled and lead roles"/>
     <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_LEAD" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
             timePeriodTypeId="PayrollMonth" minAmount="3600" amount="4200" maxAmount="4900"/>
-    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_MGR" description="Manager" comments="Store and department managers"/>
+    <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_MGR" description="Manager" comments="Store and department managers"
+            organizationPartyId="ORG_ZIZI_RETAIL"/>
     <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_MGR" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
             timePeriodTypeId="PayrollMonth" minAmount="5000" amount="6000" maxAmount="7200"/>
     <mantle.humanres.position.EmplPosition emplPositionId="BOSS_PPL_P_STOREMGR" organizationPartyId="ORG_ZIZI_RETAIL"

@@ -348,10 +348,24 @@ const choiceSources = {
             id => one("mantle.humanres.position.EmplPositionClass", {emplPositionClassId: id})?.title || id
         )
     },
-    payGrades: (userScope, term, selected) => {
+    // the grades of PayrollSetupServices' read scope: the shared ones and those owned by an employer the user reads; with
+    // organizationPartyId (a position's employer, in scope), the ones its positions take, its own and the shared ones
+    payGrades: (userScope, term, selected, p) => {
         if (!userScope.capabilities.staff) return []
         const factory = ec.entity.conditionFactory
-        let query = find("mantle.humanres.rate.PayGrade").selectField(["payGradeId", "description"]).orderBy("^description")
+        const owners = p?.organizationPartyId
+            ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+            : employerIds(userScope)
+        const readable = () =>
+            find("mantle.humanres.rate.PayGrade").condition(
+                factory.makeCondition(
+                    [factory.makeCondition("organizationPartyId", "is-null", null)].concat(
+                        owners.length ? [factory.makeCondition("organizationPartyId", "in", owners)] : []
+                    ),
+                    "or"
+                )
+            )
+        let query = readable().selectField(["payGradeId", "description"]).orderBy("^description")
         if (term)
             query = query.condition(
                 factory.makeCondition(
@@ -364,7 +378,7 @@ const choiceSources = {
             label: row.description || row.payGradeId
         }))
         const gradeName = id => one("mantle.humanres.rate.PayGrade", {payGradeId: id})?.description || id
-        return withSelected(options, selected, id => !!one("mantle.humanres.rate.PayGrade", {payGradeId: id}), gradeName)
+        return withSelected(options, selected, id => readable().condition("payGradeId", id).count() > 0, gradeName)
     }
 }
 // The current employees of the employers a staff reader sees, or of the one asked for (refused outside, as none): each person once,

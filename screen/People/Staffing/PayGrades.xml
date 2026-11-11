@@ -16,21 +16,25 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.humanres.PayrollSetupServices.find#PayGrades. Pay never leaves its lane: a holder of PAYROLL_VIEW sees each grade's band
     in effect (currency, frequency, minimum, reference and maximum, dates) and, for a grade opened (payGradeId), every dated band;
     any other staff reader (an HR officer among them) is answered the grade's names and nothing else by the service, so no amount
-    reaches this screen, the shell's context or a choice. A payroll editor (PAYROLL_VIEW and PAYROLL_EDIT) adds a grade (New pay
-    grade, the one primary) and sets a new band from a date (New band), which ends the band before it and changes no salary. -->
+    reaches this screen, the shell's context or a choice. A grade is an employer's (read by its readers, changed by its payroll
+    editors) or shared by every employer (changed only with PEOPLE_ALL_ORGANIZATIONS); the service answers only the grades the
+    user reads, each with whether the user may change it. A payroll editor (PAYROLL_VIEW and PAYROLL_EDIT) adds a grade of an
+    employer (New pay grade, the one primary; shared with no employer, for a holder of PEOPLE_ALL_ORGANIZATIONS) and sets a new
+    band from a date (New band, on a grade they change), which ends the band before it and changes no salary. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay grades" default-menu-index="3" menu-image="sym_o_stairs" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="payGradeId"/>
     <parameter name="asOfDate"/>
     <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
     <!-- a new grade, or a grade's new band: Mantle checks the payroll editor, the band's order, currency and frequency and the
         revision read -->
     <transition name="storePayGrade">
         <actions>
             <service-call name="mantle.humanres.PayrollSetupServices.store#PayGrade" out-map="stored"
                     in-map="{payGradeId:(payGradeId || null), expectedRevision:(expectedRevision || null), gradeName:(gradeName || null),
-                        comments:(comments || null), fromDate:(fromDate || null), currencyUomId:(currencyUomId || null),
+                        comments:(comments || null), organizationPartyId:(organizationPartyId || null), fromDate:(fromDate || null), currencyUomId:(currencyUomId || null),
                         timePeriodTypeId:(timePeriodTypeId || null), minAmount:(minAmount || null), amount:(amount || null),
                         maxAmount:(maxAmount || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${payGradeId ? 'Band set' : 'Pay grade created'}</message></if>
@@ -54,7 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
             canEdit = !!(can.payrollView && can.payrollEdit)
             // a grade's band in effect, flat for the list's columns (only in a payroll reader's answer)
             gradeRows = Array.from(found?.payGrades || []).map(row => Object.assign({payGradeId: row.payGradeId, gradeName: row.gradeName,
-                comments: row.comments, revision: row.revision || null}, row.band ? {currencyUomId: row.band.currencyUomId,
+                comments: row.comments, ownerText: row.organizationName || 'Shared', rowCanEdit: !!row.canEdit,
+                revision: row.revision || null}, row.band ? {currencyUomId: row.band.currencyUomId,
                 timePeriodTypeId: row.band.timePeriodTypeId,
                 frequencyText: row.band.frequencyText, minAmount: row.band.minAmount, amount: row.band.amount, maxAmount: row.band.maxAmount,
                 bandFromText: row.band.fromDateText, bandThruText: row.band.thruDateText, bandState: row.band.state,
@@ -83,6 +88,13 @@ along with this software (see the LICENSE.md file). If not, see
                     <form-single name="NewPayGrade" transition="storePayGrade">
                         <field name="gradeName"><default-field title="Name"><text-line size="30"/></default-field></field>
                         <field name="comments"><default-field title="Comments"><text-line size="50"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer" tooltip="Empty: shared by every employer, which only a People administrator changes">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
                         <field name="currencyUomId">
                             <default-field title="Currency">
                                 <drop-down allow-empty="true">
@@ -113,7 +125,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
                         <field name="submitButton"><default-field title="Create pay grade"><submit/></default-field></field>
                         <field-layout>
-                            <field-row><field-ref name="gradeName"/><field-ref name="comments"/></field-row>
+                            <field-row><field-ref name="gradeName"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-ref name="comments"/>
                             <field-row><field-ref name="currencyUomId"/><field-ref name="timePeriodTypeId"/></field-row>
                             <field-row><field-ref name="minAmount"/><field-ref name="amount"/></field-row>
                             <field-row><field-ref name="maxAmount"/><field-ref name="fromDate"/></field-row>
@@ -157,6 +170,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </conditional-field>
                                 <default-field title="Pay grade"><display/></default-field>
                             </field>
+                            <field name="ownerText"><default-field title="Employer"><display/></default-field></field>
                             <field name="comments"><default-field title="Comments"><display/></default-field></field>
                             <field name="frequencyText" hide="!amountsShown"><default-field title="Frequency"><display/></default-field></field>
                             <field name="minAmount" align="right" hide="!amountsShown">
@@ -170,7 +184,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="bandFromText" hide="!amountsShown"><default-field title="From"><display/></default-field></field>
                             <field name="actions" hide="!canEdit">
-                                <default-field title="">
+                                <conditional-field condition="rowCanEdit" title="">
                                     <container-dialog id="NewBand_${payGradeId}" button-text="New band" icon="sym_o_add" type="default" width="640"
                                             title="New band of ${gradeName}">
                                         <label type="p" text="The band starts on the date given and ends the band before it; no employee's salary changes."/>
@@ -218,7 +232,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field-layout>
                                         </form-single>
                                     </container-dialog>
-                                </default-field>
+                                </conditional-field>
                             </field>
                             <columns type="mobile">
                                 <column><field-ref name="gradeName"/><field-ref name="frequencyText"/></column>

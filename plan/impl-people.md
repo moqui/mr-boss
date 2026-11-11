@@ -1171,6 +1171,87 @@ P3's units.
   - the user's call: whether pay grades (and job classes) stay shared by every employer or a grade gets an employer (the second finding),
     and whether a grade's band also needs `PEOPLE_CONFIGURE` (the third).
 
+**Review Nov 11 (P4).** A fresh review of `git diff master...ppl/p4` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §5 JobClasses, JobClassDetail, Positions, PositionDetail and PayGrades, PE-03, PE-08, F4 and F10, access, scope and pay's
+lane first; fixes committed apart per repository ("People P4 review: …"; mr-mantle 8b889cc1).
+- Checked and found sound:
+  - Positions.js: every read goes through `positionReader` (an HR, recruiting, payroll or configuration reader of the employers in
+    scope, and a manager for the units they lead now, a current `Manager` membership, and those under them); a position outside the
+    reach and a missing one answer alike (`RECORD_UNAVAILABLE`), an employer filter outside the scope is `ORGANIZATION_DENIED`, a
+    directory reader reads none. `store#Position` and `store#PositionHolder` ask `PEOPLE_HR_VIEW` and `PEOPLE_HR_EDIT` and an
+    employer in scope, never a supplied record's employer: the department is an `OrgDepartment` whose rollups in effect reach the
+    position's own employer (`NOT_A_DEPARTMENT` for a team, `DEPARTMENT_OUTSIDE` for another employer's), the employer never
+    changes (`EMPLOYER_CHANGE`), an end before a holder's last day and a start after a holder's first are refused, and the
+    department, class and grade are audited with the reason.
+  - Vacancy is computed from the holders at the date (occupancy rows and an employment naming the seat), filled or vacant only
+    while planned or active; a single seat refuses an overlapping holder (half-open periods), and a holding needs the employer's
+    employment at its start. Dated rows: holdings, bands and classes are ended, never deleted; a new band ends the one in effect
+    and rewrites no `EmploymentSalary` (spec). A class's work types and skills are configuration sets without dates until P18.
+    Revisions: a position's stamp, a class's stamps with its work types and skills, a grade's with its bands.
+  - Pay's lane: no position, choice, shell context or palette answer has an amount (a grade is its name; `minimumHourlyWage` is
+    neither read out nor written); `find#PayGrades` adds the band, currency and frequency only for `PAYROLL_VIEW` (the spec checks
+    the JSON); Positions' CSV is the rows' fields; PayGrades has no export; the shared context adds only the six links.
+  - The directory's job title (`titlesOf`): the class of the seat the person holds at that employment's employer on the date,
+    else the seat the employment names; P2's scope rules are untouched and PeopleDirectory, PeopleEmployees and PeopleScope pass
+    unchanged.
+  - Existing callers: the two entity fields are additive; HumanResServices, PayrollServices, PayrollAdjustments,
+    ProductionShopFloor, WorkResources and WorkTimeEntries pass unchanged. Screens: PositionDetail rendered once (qvt) and
+    PayGrades once (html) in the regression suite, no route fixture, specs under 15 s.
+- Fixes:
+  - **R1 (high, scope; the user's call 1).** Pay grades had no owner, so a payroll editor of Retail read and changed the bands of
+    a grade Services' seats name, and any HR editor put any grade on a seat. `PayGrade.organizationPartyId` (Mantle entity field):
+    `find#PayGrades` answers the shared grades and those of an employer in scope (with `organizationPartyId`, the ones that
+    employer's seats take), each with its owner and a per-grade `canEdit`; `store#PayGrade` creates a grade of an employer in
+    scope (`ORGANIZATION_DENIED` outside) or, with no owner, a shared one only for a payroll editor holding
+    `PEOPLE_ALL_ORGANIZATIONS`, refuses another employer's grade as a missing one, a shared grade's change without
+    `PEOPLE_ALL_ORGANIZATIONS` (`PERMISSION_DENIED`) and an owner change (`OWNER_CHANGE`); `store#Position` takes only the
+    employer's own grades and the shared ones. BOSS: the `payGrades` choice follows the same scope and the seat's employer
+    (PositionDetail passes it, Positions' New position depends on the employer field); PayGrades shows each grade's employer or
+    "Shared", New pay grade gains the employer, and New band shows only on the grades the user changes; the demo's Associate
+    and Manager are Retail's, Lead shared. Specs: Mantle PeoplePositions' new feature (Retail's payroll refused a shared grade,
+    new and a band; Services' payroll refused Retail's grade's band as missing and refused creating one for Retail; the
+    administrator's band on the shared grade; each user's list; Services' seat refused Retail's grade and given the shared one);
+    PeopleAccess (Retail's payroll refused the shared Lead, the People administrator answered with the same parameters);
+    PeoplePositions (a Services seat's grade choice is Lead alone). The acceptance PeoplePositionsUsable creates its grade as
+    Retail's (changed, not run).
+  - **R2 (medium, data integrity).** Ending a holding (`store#PositionHolder` with `holderFromDate`) took any end after its
+    start: a holding ended in the future could be moved past the next holder's start (two holders at once) or past the seat's
+    end. A later end is now capped at the seat's end and refused `POSITION_OCCUPIED` when it reaches another holder's period.
+    PeoplePositions: a later holder, then the first holding's end moved into it refused.
+  - **R3 (low, confidentiality).** `NOT_EMPLOYED` named the supplied party, so an HR editor learned the name of any party id.
+    The refusal no longer names the person. PeoplePositions: the refusal does not carry the name.
+  - **R4 (low).** A person whose employment names the seat (`Employment.emplPositionId`) was refused their own occupancy row,
+    `POSITION_OCCUPIED` naming themselves; their employment's holding is no longer another holder. No spec: nothing writes
+    `Employment.emplPositionId` until P6.
+  - The user's call 2: design-people §1.1 now says a pay grade is changed with `PAYROLL_VIEW` and `PAYROLL_EDIT` alone and
+    `PEOPLE_CONFIGURE` is for P22's components, structures and groups; the worker's holder-records finding is a note in P6.
+- Provisional findings (for the lead to number):
+  - a manager (`PEOPLE_TEAM_VIEW` alone) reads their department's seats and each seat's class title, but `find#JobClasses` and
+    `get#JobClass` admit staff readers only, so PositionDetail's link to the class is "not open" to them;
+  - the job title of an ended employment in Employee360's history and OrgChart's members as of an earlier date read the seat
+    held now (`titlesOf` is called with now there), falling back to `Employment.emplPositionId`;
+  - PositionDetail's Edit terms posts the start as a date alone, so a seat planned with no date (now, with a time) moves its
+    start to that midnight on its first save of terms, unasked;
+  - a holding may run past its holder's employment (the employment is checked at its start only); P6's separation should end
+    it (written into P6's note).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeoplePositions 5 of 5 (3.4 s feature time; with
+  Positions.js and PayrollSetup.js as built the vacancy and owned-grade features fail on the new checks, and pass after), then PeoplePositions,
+  PeopleScope, PeopleDirectory, PeopleOrganization, HumanResServices, PayrollServices, PayrollAdjustments, ProductionShopFloor,
+  WorkResources and WorkTimeEntries 67 of 67 (mr-mantle 15.4 s); BOSS PeoplePositions, PeopleAccess, PeopleEmployees,
+  PeopleOrganization, Resources, ManufacturingShopFloor, Contacts, InsightsRecords and AppOrganizationFilters (with a dependency)
+  91 of 91 (mr-boss 14.1 s; PeopleAccess and PeoplePositions 3.7 s together). A one-off html and qvt render of PayGrades for
+  payroll, the People administrator and HR (not kept): New band on Retail's two grades for payroll, on all three for the
+  administrator, none for HR, no errors. `moqui lint --screens`: 135 flagged sites as before, none in the People screens.
+  Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- For the lead:
+  - budget share: Mantle PeoplePositions gains a feature (about 0.8 s, 3.4 s in all); BOSS PeopleAccess two calls and
+    PeoplePositions one choice (under 0.1 s); within §4's estimates;
+  - merge hot spots beside the Built note's: mr-mantle `entity/HumanResourcesEntities.xml` (PayGrade), `PayrollSetup.js` and
+    `PayrollSetupServices.xml`, `Positions.js` (`checkGrade`, `storePositionHolder`); mr-boss `People.js` (`payGrades`),
+    `Staffing/PayGrades.xml`, `PositionDetail.xml`, `Positions.xml`, `BossPeopleDemoData.xml` (the grades),
+    `PeopleSpecLib.js` (`sharedPayGradeId`), design-people's header, §1.1 and §5, §4's two new rows and P6's new bullet;
+  - the user's calls are in §4: 1 built (R1); 2 kept as built and written into design §1.1; the holder-records finding is in P6.
+
 ### P5 — Approval rules and Approvals
 
 Design §12 ApprovalPolicies, Lookups, §13 Approvals, §5 PositionDetail's Requisition; PE-15, PE-18 (topics), PE-03
@@ -1212,6 +1293,14 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
   `PeopleEmploymentChangeApproval`.
 - **`create#Employment` and `update#Employment`** narrow their overlap check to `PrtEmployee` (F3); every other
   caller keeps its behavior. People calls neither `delete#Employment` nor `create#PersonEmployee` (F5).
+- **The two holder records** (P4's finding, noted in P4's review for P6 to settle): a seat's occupancy has two records in
+  the code, the design's dated `EmplPositionParty` rows (P4's `store#PositionHolder`; Manufacturing's shop floor and Projects'
+  resources read them) and `Employment.emplPositionId` (`create#Employment` takes it; TimeServices' rate lookup reads a
+  worker's class from it, as do Commons' contact card and the fallback of the directory's job title). P4 reads both, the
+  occupancy row winning, and writes only the row. P6's hire and change write the occupancy row with the assignment's
+  primary position and decide whether `Employment.emplPositionId` follows it (kept equal to the primary seat, or left for
+  the legacy readers alone), and end a holding with the separation that ends its employment (P4 checks the employment only
+  at a holding's start).
 - **Department memberships from the assignment** (§4, the user's call from P3's review): the assignment's department is
   written as the person's dated `PrtMember` row to that department (from role `Assignee`), by the hire and the employment
   change in the same transaction, ended when the assignment's department ends; OrgStructure becomes read only for a
@@ -1910,6 +1999,8 @@ the owner's design.
 | Nov 11, 2026 | A user's organizations (`PartyServices.get#PartyInternalOrgIds`, so `userOrgIds` and `filterOrgIds`) admit an internal organization's rollup children only when they are internal (`OrgInternal`) themselves: a department or team is never an organization in any app's scope, and People walks its units itself (F49). Admin's Organizations counts and lists only internal child organizations, and Accounting's and Purchasing's cost centres are the internal ones (the ledger's dimension rule) | The user's call on P3's question: kept as built in P3; P3's review carried it to the readers of rollup children that assumed every child internal |
 | Nov 11, 2026 | Department memberships stay open in P3 (`store#Membership` writes a department's members as a team's). P6 makes the employment assignment write the department membership and makes OrgStructure read only for a department's members, a team's staying editable | The user's call on P3's question; P6's text gains it |
 | Nov 11, 2026 | An emergency contact is a Person party per contact, linked from the employee by a dated `PartyRelationship` of a new type; built in P8 (PersonalInfo and SelfService) | The user's call on P2's F80; P8's text gains it |
+| Nov 11, 2026 | A pay grade has an optional owner, `PayGrade.organizationPartyId` (a Mantle entity field): a grade owned by an employer is read by that employer's staff readers and changed only by a payroll editor of that employer, and is a missing grade to every other employer; a shared grade (no owner) is read by every staff reader and changed only by a holder of `PEOPLE_ALL_ORGANIZATIONS` (ADMIN holds it); a band's amounts stay `PAYROLL_VIEW`'s. A position takes its employer's grades and the shared ones. Job classes stay shared by every employer, changed by HR editors. People's demo grades get owners where they are one employer's (Associate and Manager Retail's; Lead shared) | The user's call on P4's question (built in P4's review, R1; design §5, §5 PayGrades) |
+| Nov 11, 2026 | Changing a pay grade or its bands needs `PAYROLL_VIEW` and `PAYROLL_EDIT` only, as built in P4; `PEOPLE_CONFIGURE` stays for P22's pay components, structures and groups | The user's call on P4's question; design §1.1 says so |
 
 ## 5. Open questions
 

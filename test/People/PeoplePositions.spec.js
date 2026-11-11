@@ -1,6 +1,7 @@
 // People's positions, job classes and pay grades (impl-people P4; design-people §5): PositionDetail's one qvt render, as an HR
 // officer with a filled seat open (its header, terms with the grade's name, holder and the HR editor's actions, and no amount);
-// the choices P4 adds (an employer's departments, the current job classes, the pay grades by name), each with a selected value
+// the choices P4 adds (an employer's departments, the current job classes, the pay grades by name, an employer's own and the
+// shared ones), each with a selected value
 // that is not on the page; PayGrades' one html render as the HR officer (the grades' names, no band, amount or currency). Mantle's
 // rules (departments, vacancy, holders, bands, the amounts' lane) are Mantle's PeoplePositions; the access cases are PeopleAccess's.
 // The usable-when walk is the acceptance PeoplePositionsUsable.
@@ -57,15 +58,18 @@ feature("the choices give an employer's departments, the current job classes and
             otherDepartments: labels(users.hr, {choice: "departments", organizationPartyId: ids.otherOrganizationId}),
             noEmployer: labels(users.hr, {choice: "departments"}),
             jobClasses: labels(users.hr, {choice: "jobClasses", term: "sales", selected: "BOSS_PPL_JC_TECH"}),
-            payGrades: labels(users.hr, {choice: "payGrades", term: "assoc", selected: "BOSS_PPL_PG_MGR"})
+            payGrades: labels(users.hr, {choice: "payGrades", term: "assoc", selected: "BOSS_PPL_PG_MGR"}),
+            // a Services seat's grades: Retail's own are not offered, the shared Lead is
+            otherPayGrades: labels(users.hr, {choice: "payGrades", organizationPartyId: ids.otherOrganizationId})
         }
     },
-    then({departments, otherDepartments, noEmployer, jobClasses, payGrades}) {
+    then({departments, otherDepartments, noEmployer, jobClasses, payGrades, otherPayGrades}) {
         departments == ["Store Operations", "Merchandising"]
         otherDepartments == []
         noEmployer == []
         jobClasses == ["Sales associate", "Service technician"]
         payGrades == ["Associate", "Manager"]
+        otherPayGrades == ["Lead"]
     }
 })
 

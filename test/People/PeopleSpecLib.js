@@ -24,13 +24,15 @@ const ids = {
     teamId: "BOSS_PPL_T_FLOOR",
     otherDepartmentId: "BOSS_PPL_D_DELIVERY",
     // P4: Retail's sales associate seats in Store Operations (Tomas holds the first, the third is vacant), Services' technician
-    // seat (Kenji's), the sales associate class and the Associate grade
+    // seat (Kenji's), the sales associate class and the Associate grade (Retail's)
     positionId: "BOSS_PPL_P_ASSOC1",
     vacantPositionId: "BOSS_PPL_P_ASSOC3",
     merchPositionId: "BOSS_PPL_P_MERCH",
     otherPositionId: "BOSS_PPL_P_TECH1",
     jobClassId: "BOSS_PPL_JC_ASSOC",
     payGradeId: "BOSS_PPL_PG_ASSOC",
+    // the Lead grade, shared by Retail and Services (Associate and Manager are Retail's)
+    sharedPayGradeId: "BOSS_PPL_PG_LEAD",
     // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
     // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades
     staffMenu: ["Home", "Employees", "Staffing"],
