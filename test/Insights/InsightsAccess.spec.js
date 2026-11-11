@@ -100,7 +100,7 @@ feature("the Insights menu and keys follow the groups; the launcher shows Insigh
             problems.push(`the reader's menu: ${reader.status} ${reader.names}`)
         const keymap = (reader.providers?.keymaps || []).find(keymap => keymap.scope === "insights")
         const keys = (keymap?.keys || []).map(key => key.keys)
-        if (JSON.stringify(keys) !== JSON.stringify(["g s"])) problems.push(`the reader's insights keys: ${keys}`)
+        if (JSON.stringify(keys) !== JSON.stringify(["g s", "g m"])) problems.push(`the reader's insights keys: ${keys}`)
         if ((reader.providers?.quickCreate || []).length) problems.push("the reader is offered quick create")
         if (!reader.apps.includes("Insights")) problems.push(`the reader's launcher has no Insights: ${reader.apps}`)
         const business = ["Products", "Accounting", "Commerce", "Warehouse", "Projects", "Purchasing", "CustomerService", "Admin"]
@@ -234,6 +234,15 @@ feature(
             expect(
                 "the distributor lists another user's alert rules",
                 asUser(users.distributor, () => refusal(reports + "find#OwnedAlertRules", {userId: "BOSS_INS_READER"})),
+                "is not authorized"
+            )
+            // flow maps (P9): the flow editor saves their own maps through the engine (InsightsFlowMaps), and holds no other
+            // authoring operation of it
+            expect(
+                "the flow editor copies a dashboard through the engine",
+                asUser(users.flow, () =>
+                    refusal(reports + "copy#Definition", {definitionId: "insights-suite", newDefinitionId: dashboardId + "-flow"})
+                ),
                 "is not authorized"
             )
             // a telemetry dataset and git sync: no Insights group, the steward neither

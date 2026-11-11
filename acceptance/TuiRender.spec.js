@@ -76,6 +76,9 @@ const demoParameters = {
     "Insights/ScheduledReports/ScheduledReportDetail": { screenScheduledId: "BOSS_DEMO_MY_TASKS" },
     "Insights/ScheduledReports/ReportDelivery": { occurrenceId: "NONE" },
     "Insights/Alerts/AlertDetail": { definitionId: "boss-service-sla-breach" },
+    "Insights/Flows/FlowMap": { definitionId: "insights-flowmap-supplier", stepId: "order" },
+    "Insights/Flows/FlowMapEditor": { definitionId: "insights-flowmap-internal" },
+    "Insights/Flows/ProcessStory": { definitionId: "insights-flowmap-customer", stepId: "order" },
     "Chatter": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
     "RecordFiles": { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST" },
 }

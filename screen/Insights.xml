@@ -27,7 +27,10 @@ along with this software (see the LICENSE.md file). If not, see
     transition reaching a service that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself; they replace the last copied
     screen (impl-insights F20). P8 adds Business alerts (the list, with the hidden AlertDetail), every Insights user's to open
     for the alerts they receive, each transition reaching a service that checks INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE itself;
-    a panel's New alert rule opens AlertDetail (reportLinks.alertRule), never Tools' AlertRule. -->
+    a panel's New alert rule opens AlertDetail (reportLinks.alertRule), never Tools' AlertRule. P9 adds Business flows: Flow map
+    and Maps, with the hidden FlowMapEditor and ProcessStory, every Insights user's to open, each transition reaching
+    ironstone.insights.FlowMapServices, which checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT, the map's organization and its owner
+    itself; ProcessStory serves Commons Knowledge only to a user whose own grants open it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 
@@ -51,14 +54,15 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- the palette's dashboards and saved reports (P4, design §1.2); flow maps, quick create (Dashboard, Analysis, Schedule by
-        capability), the Assist prompts and response action arrive with their records and screens (P7, P9, P10) -->
+    <!-- the palette's dashboards, saved reports and flow maps (P4, P9, design §1.2); quick create (Dashboard, Analysis, Schedule
+        by capability), the Assist prompts and response action arrive with their screens (P10) -->
     <shell-providers>
-        <palette-source group="Insights" label="Dashboards and saved reports" icon="sym_o_insights"
+        <palette-source group="Insights" label="Dashboards, saved reports and flow maps" icon="sym_o_insights"
                 service="ironstone.insights.ContextServices.search#Records" sequence="62"/>
         <!-- g s: g i is Comms' global Inbox key, which a scope key would shadow under Insights -->
         <keymap scope="insights">
             <key keys="g s" label="Insights home" screen="Insights/Home"/>
+            <key keys="g m" label="Flow map" screen="Insights/Flows/FlowMap"/>
         </keymap>
     </shell-providers>
 

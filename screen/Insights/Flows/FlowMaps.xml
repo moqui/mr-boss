@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Business flows › Maps (design-insights §9 FlowMaps; impl-insights P9): MapFind (the organization, suite
+    templates or organization maps, and text) over MapList, the flow maps the viewer reads
+    (ironstone.insights.FlowMapServices.find#Maps: the suite templates, and the maps of the organizations they see that are
+    theirs or shared with their groups), each with its organization, what it was copied from and its version. A flow editor
+    copies a map for one of their organizations (CopyMap; copy#Map records the source and its version), edits and retires
+    their own; anyone makes a map the one Business flows opens for them. A template is never changed. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Maps" default-menu-index="2">
+
+    <parameter name="organizationPartyId"/>
+    <parameter name="kind"/>
+    <parameter name="text"/>
+
+    <transition name="copyMap" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.copy#Map" out-map="copied"
+                    in-map="{sourceDefinitionId:sourceDefinitionId, sourceVersion:sourceVersion, organizationPartyId:copyOrganizationPartyId,
+                        title:copyTitle, userGroupId:(copyUserGroupId || null)}"/>
+            <script>ec.message.addMessage(copied.applied ? 'Copied: rename its steps and link your procedures' : copied.reason,
+                copied.applied ? 'success' : 'danger')</script>
+            <set field="definitionId" from="copied.definitionId"/>
+        </actions>
+        <conditional-response url="../FlowMapEditor" condition="copied?.applied"><parameter name="definitionId"/></conditional-response>
+        <default-response url="."/>
+    </transition>
+    <transition name="setDefault" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.store#DefaultMap" in-map="{definitionId:defaultDefinitionId}" out-map="stored"/>
+            <script>ec.message.addMessage(stored.applied ? 'Business flows now opens on that map for you' : stored.reason,
+                stored.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="deleteMap" method="post">
+        <actions>
+            <service-call name="ironstone.insights.FlowMapServices.delete#Map" out-map="deleted"
+                    in-map="{definitionId:deleteDefinitionId, expectedVersion:expectedVersion}"/>
+            <script>ec.message.addMessage(deleted.applied ? 'Map removed' : deleted.reason, deleted.applied ? 'success' : 'danger')</script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+        <!-- a member of the root group alone reads nothing in Insights: told so, as on Home; an organization that is not the
+            viewer's finds nothing -->
+        <if condition="insights.capabilities.view">
+            <service-call name="ironstone.insights.FlowMapServices.find#Maps" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:(organizationPartyId || null), kind:(kind || null), text:(text || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="mapRows" from="found?.maps || []"/>
+        <set field="scopeOptions" from="found?.organizations || insights.organizations || []"/>
+        <set field="groupOptions" from="found?.groups || []"/>
+        <set field="kindOptions" from="found?.kindOptions || []"/>
+        <set field="findValues" from="{organizationPartyId:organizationPartyId, kind:kind, text:text}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Flow maps" type="h5"/></container>
+        </container>
+        <label type="p" style="m-muted" text="A flow map explains a business flow step by step and links each step to its work. The suite's maps are templates${found?.canCopy ? '; copy one for your organization to make it yours' : ''}."/>
+        <label text="Flow maps are shown to Insights readers." type="p" style="m-muted" condition="!insights.capabilities.view"/>
+
+        <form-single name="MapFind" transition="." map="findValues">
+            <field name="organizationPartyId"><default-field title="Organization">
+                <drop-down allow-empty="true"><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+            </default-field></field>
+            <field name="kind"><default-field title="Show">
+                <drop-down allow-empty="true"><list-options list="kindOptions" key="${value}" text="${label}"/></drop-down>
+            </default-field></field>
+            <field name="text"><default-field title="Name"><text-line size="25"/></default-field></field>
+            <field name="apply"><default-field><submit text="Find"/></default-field></field>
+            <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="kind"/><field-ref name="text"/>
+                <field-ref name="apply"/></field-row-big></field-layout>
+        </form-single>
+
+        <label text="No flow map matches." type="p" style="m-muted" condition="insights.capabilities.view &amp;&amp; !mapRows.length"/>
+        <form-list name="MapList" list="mapRows" skip-form="true" paginate="false" condition="mapRows.length">
+            <field name="title"><default-field title="Map">
+                <link url="../FlowMap" text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
+                <label text="Your default" type="span" style="text-caption m-muted q-ml-sm" condition="isDefault"/>
+            </default-field></field>
+            <field name="kindText"><default-field title="Kind">
+                <render-mode>
+                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${template ? 'grey-8' : 'primary'}">${
+                        WebUtilities.encodeHtml(kindText)}</q-chip>]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kindText})}]]></text>
+                    <text type="html">${kindText}</text>
+                </render-mode>
+            </default-field></field>
+            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+            <field name="version"><default-field title="Version" align="right"><display/></default-field></field>
+            <field name="sharing"><default-field title="Shared with"><display text="${ownerText} · ${sharing}"/></default-field></field>
+            <field name="actions"><default-field title="">
+                <link url="../FlowMapEditor" text="Edit" link-type="anchor" condition="canEdit" parameter-map="{definitionId:definitionId}"/>
+                <container-dialog id="CopyMap_${definitionId}" button-text="Copy" title="Copy ${title} for an organization" condition="canCopy">
+                    <label type="p" style="m-muted" text="Your copy is yours to change. It records what it was copied from; a later change of this map leaves your copy as it is."/>
+                    <form-single name="CopyMapForm" transition="copyMap">
+                        <field name="sourceDefinitionId"><default-field><hidden default-value="${definitionId}"/></default-field></field>
+                        <field name="sourceVersion"><default-field><hidden default-value="${version}"/></default-field></field>
+                        <field name="copyTitle"><default-field title="Name"><text-line size="50" default-value="${title}"/></default-field></field>
+                        <field name="copyOrganizationPartyId"><default-field title="Organization">
+                            <drop-down><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="copyUserGroupId"><default-field title="Share with" tooltip="One of your groups; its members who see the organization read the map. Empty keeps it private.">
+                            <drop-down allow-empty="true"><list-options list="groupOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="copy"><default-field><submit text="Copy map"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <link url="setDefault" link-type="hidden-form" text="Open by default" condition="!isDefault"
+                        parameter-map="{defaultDefinitionId:definitionId}"/>
+                <link url="deleteMap" link-type="hidden-form" text="Remove" btn-type="danger" condition="canEdit"
+                        confirmation="Remove ${title} of ${organizationName} with its versions? This cannot be undone."
+                        parameter-map="{deleteDefinitionId:definitionId, expectedVersion:version}"/>
+            </default-field></field>
+            <columns type="mobile">
+                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                <column><field-ref name="kindText"/><field-ref name="actions"/></column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

@@ -1,0 +1,219 @@
+{
+  "id": "insights-flowmap-internal",
+  "type": "report",
+  "title": "Internal flow",
+  "body": {
+    "kind": "flowmap",
+    "folder": "Insights",
+    "description": "What the organization does for itself: the catalog, production, stock, projects, the books and its people. Copy it for your organization to rename steps and link your own procedures.",
+    "templateVersion": 1,
+    "lanes": [
+      {
+        "laneId": "catalog",
+        "title": "Products",
+        "description": "The catalog and its prices.",
+        "sequenceNum": 1
+      },
+      {
+        "laneId": "production",
+        "title": "Manufacturing",
+        "description": "Planning and making.",
+        "sequenceNum": 2
+      },
+      {
+        "laneId": "stock",
+        "title": "Warehouse",
+        "description": "Stock, moves and counts.",
+        "sequenceNum": 3
+      },
+      {
+        "laneId": "projects",
+        "title": "Projects",
+        "description": "Projects, work and time.",
+        "sequenceNum": 4
+      },
+      {
+        "laneId": "finance",
+        "title": "Accounting",
+        "description": "The ledger and its periods.",
+        "sequenceNum": 5
+      },
+      {
+        "laneId": "people",
+        "title": "People",
+        "description": "Employees and their time.",
+        "sequenceNum": 6
+      },
+      {
+        "laneId": "upkeep",
+        "title": "Maintenance",
+        "description": "Equipment and its upkeep.",
+        "sequenceNum": 7
+      }
+    ],
+    "steps": [
+      {
+        "stepId": "products",
+        "laneId": "catalog",
+        "title": "Define products",
+        "sequenceNum": 1,
+        "description": "Products are described once, with their variants, units and identifiers, for every app that sells, buys, makes or stores them.",
+        "targetRegistrationId": "Products.Products",
+        "targetParameters": {
+          "list": "activeSkus"
+        },
+        "countProviderKey": "Products.ActiveSkus",
+        "catalogEntryId": "Products.CatalogChecks"
+      },
+      {
+        "stepId": "prices",
+        "laneId": "catalog",
+        "title": "Set prices",
+        "sequenceNum": 2,
+        "description": "Price lists are drafted, reviewed and published by effective date.",
+        "targetRegistrationId": "Products.PriceLists",
+        "next": [
+          "plan"
+        ]
+      },
+      {
+        "stepId": "plan",
+        "laneId": "production",
+        "title": "Plan production",
+        "sequenceNum": 1,
+        "description": "Demand and stock decide what to make and when; the schedule loads the work centers.",
+        "targetRegistrationId": "Manufacturing.Schedule",
+        "catalogEntryId": "Manufacturing.Planning"
+      },
+      {
+        "stepId": "make",
+        "laneId": "production",
+        "title": "Make",
+        "sequenceNum": 2,
+        "description": "Work orders are released, run on the floor and completed into stock.",
+        "targetRegistrationId": "Manufacturing.WorkOrders",
+        "countProviderKey": "Manufacturing.OpenOrders",
+        "catalogEntryId": "Manufacturing.WorkOrderStatus"
+      },
+      {
+        "stepId": "late-work",
+        "laneId": "production",
+        "title": "Catch up late work",
+        "sequenceNum": 3,
+        "description": "Work orders past their estimated completion need a new date or more capacity.",
+        "targetRegistrationId": "Manufacturing.WorkOrders",
+        "targetParameters": {
+          "late": "Y"
+        },
+        "countProviderKey": "Manufacturing.Late",
+        "next": [
+          "keep-stock"
+        ]
+      },
+      {
+        "stepId": "keep-stock",
+        "laneId": "stock",
+        "title": "Keep stock",
+        "sequenceNum": 1,
+        "description": "Stock on hand by product, lot and location. On hand is a snapshot and is never added across dates.",
+        "targetRegistrationId": "Warehouse.Inventory",
+        "countMetricId": "Warehouse.OnHand"
+      },
+      {
+        "stepId": "move-stock",
+        "laneId": "stock",
+        "title": "Move stock",
+        "sequenceNum": 2,
+        "description": "Transfers move stock between facilities and locations.",
+        "targetRegistrationId": "Warehouse.Transfers"
+      },
+      {
+        "stepId": "count-stock",
+        "laneId": "stock",
+        "title": "Count stock",
+        "sequenceNum": 3,
+        "description": "Counts compare the floor with the records; variances are reviewed before they adjust stock.",
+        "targetRegistrationId": "Warehouse.Counts",
+        "catalogEntryId": "Warehouse.CountVariance",
+        "next": [
+          "books"
+        ]
+      },
+      {
+        "stepId": "run-projects",
+        "laneId": "projects",
+        "title": "Run projects",
+        "sequenceNum": 1,
+        "description": "Projects are planned, staffed and followed by their health and milestones.",
+        "targetRegistrationId": "Projects.Projects",
+        "catalogEntryId": "Projects.Portfolio"
+      },
+      {
+        "stepId": "do-work",
+        "laneId": "projects",
+        "title": "Do the work",
+        "sequenceNum": 2,
+        "description": "Work items move through their workflow; requests come in through intake.",
+        "targetRegistrationId": "Projects.WorkItems"
+      },
+      {
+        "stepId": "approve-time",
+        "laneId": "projects",
+        "title": "Record and approve time",
+        "sequenceNum": 3,
+        "description": "Time is recorded against work and approved before it is billed or costed.",
+        "targetRegistrationId": "Projects.Timesheets",
+        "targetParameters": {
+          "list": "toApprove"
+        },
+        "countProviderKey": "Projects.ApproveTime",
+        "countMetricId": "Projects.Utilization",
+        "next": [
+          "books"
+        ]
+      },
+      {
+        "stepId": "books",
+        "laneId": "finance",
+        "title": "Keep the books",
+        "sequenceNum": 1,
+        "description": "What the apps do posts to the ledger; entries drafted by hand wait to be posted.",
+        "targetRegistrationId": "Accounting.JournalEntries",
+        "targetParameters": {
+          "isPosted": "N"
+        },
+        "countProviderKey": "Accounting.DraftEntries"
+      },
+      {
+        "stepId": "close",
+        "laneId": "finance",
+        "title": "Close the period",
+        "sequenceNum": 2,
+        "description": "Each period is reconciled, locked and closed.",
+        "targetRegistrationId": "Accounting.Periods"
+      },
+      {
+        "stepId": "statements",
+        "laneId": "finance",
+        "title": "Report",
+        "sequenceNum": 3,
+        "description": "The statements are read from posted entries only.",
+        "catalogEntryId": "Accounting.IncomeStatement"
+      },
+      {
+        "stepId": "people",
+        "laneId": "people",
+        "title": "Hire and schedule people",
+        "sequenceNum": 1,
+        "description": "Employees, their time off and their pay. The People app is not part of this installation yet, so this step is information only."
+      },
+      {
+        "stepId": "maintain",
+        "laneId": "upkeep",
+        "title": "Keep equipment running",
+        "sequenceNum": 1,
+        "description": "Preventive and corrective work on equipment. The Maintenance app is not part of this installation yet, so this step is information only."
+      }
+    ]
+  }
+}
