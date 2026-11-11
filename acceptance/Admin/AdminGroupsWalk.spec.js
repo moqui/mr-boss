@@ -57,7 +57,8 @@ feature(
     "an access administrator adds a Purchasing member from a date and ends it later, and is refused the backup group with its reason",
     {
         when() {
-            const tomorrow = new Date(Number(String(ec.user.nowTimestamp)) + 86400000).toISOString()
+            const startedAt = Number(String(ec.user.nowTimestamp))
+            const tomorrow = new Date(startedAt + 86400000).toISOString()
             const walk = asUser(users.access, () => {
                 const added = lib.page(
                     "Access/GroupDetail/addMember",
@@ -84,7 +85,8 @@ feature(
                 const backupPage = lib.page("Access/GroupDetail", {userGroupId: ids.backupGroupId}, "html")
                 return {added, page, ended, backup, backupPage}
             })
-            return Object.assign(walk, {rows: members()})
+            // this walk's rows: an earlier spec's ended membership of the same user is kept (AdminAuditUsable ends its own)
+            return Object.assign(walk, {rows: members().filter(row => Number(String(row.fromDate)) >= startedAt)})
         },
         then({added, page, ended, backupPage, rows}) {
             added.errors.length == 0
