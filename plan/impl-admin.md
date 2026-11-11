@@ -2379,6 +2379,81 @@ ADM-CONNECTIONS, ADM-LIFECYCLE (the notice).
     audience);
   - the acceptance AdminSecurityUsable to run when asked (it needs the network).
 
+**Review Nov 10 (P10).** A fresh review of both repositories' P10 diffs, security first (the Rust and the provider services read
+line by line); fixes committed apart per repository ("Admin P10 review: …"). Rust changed again (`moqui-core` `service/sso.rs`
+and `sso.rs`, `moqui-host` `sso.rs`, `moqui-lib` `http.rs`), and two entity fields are new.
+- Checked and found sound: `sso_may_give` (the effective privileged and sealed lists, grants in date, read uncached) on every
+  group a sign-in gives, whatever wrote the role map or the default group; the sync ending only groups a role map names that it
+  may give, so `ADMIN` and every privileged or sealed-granting membership is never ended; `link_allowed` (the rule, the
+  `email_verified` claim true and the `email` equal to the account's, the provider's name equal to the account's too, never a
+  privileged or sealed-granting account); a new account gets the mapped fields, the provider's id and name, the bounded mapped
+  groups and the bounded default group, nothing else (`externalUserId`, `userId` and `username` set after the mapped fields,
+  so no mapping overrides them); `check#Flow` (its own permission check, nothing kept, no secret in its answer; the client
+  follows no redirect, reads 1 MiB at most and waits 30 seconds); `get#SignInPolicyValues` (13 literal attributes, no hash
+  type, key or seal list; its own permission check); `store#IdentityProvider` (secrets never read back, the endpoint-change
+  rule over every field a secret is sent to, the retest of the signature and nonce, enabling only with `ADMIN_ACCESS_MANAGE`,
+  a passing test of the fingerprint and groups that hold for the enabling actor, the revision over the flow, its type row and
+  both mappings with the flow row locked, disabling and an endpoint change through the administration path); the identity
+  mappings on the one path that writes them (a name of letters, digits and underscores onto four account fields; a provider
+  with an advanced row refused whole); `store#Group` (P3's) behind SignInPolicy with the path check, and the preview's counts
+  only; the new-device notice (the history row is written by a worker after the sign-in, the EECA catches everything, the
+  service runs in its own transaction with no group authorized to call it, a visit of another account is refused, the summary
+  is a fixed vocabulary and never the user agent, the link is the topic's static one); the Security area (one inheritable
+  grant, nine transitions each reaching a service with its own check or, for `reviewRule`, none; the reader and the other
+  groups hold nothing: AdminAccess); the specs (one qvt render a screen, the transitions in `html`, no request leaves the
+  machine; the acceptance one reads a public discovery document).
+- Fixes:
+  - **R1 (high, F-P10-2).** A provider's id was the whole link: any enabled provider that asserted an id signed in the account
+    carrying it. That is not only a second provider's operator or configurer taking another provider's accounts (the
+    `HELD_BEYOND` check at enabling bounded privileged accounts linked then, not ones linked or promoted later, and no
+    ordinary account); an id is unique at its provider only, so two providers' users with the same id shared an account with
+    nobody at fault. Fixed in the sign-in: `UserAccount.externalAuthFlowId` (new) names the provider the id is of, set when a
+    sign-in makes or links an account; an account another provider is named on is never found (`linked_account`), and by its
+    name is refused. An account with an id and no provider named (linked by hand, or before this) is taken by the provider that
+    first signs in with it, and with several providers enabled never an account in a privileged or sealed-granting group
+    (`unscoped_link_allowed`: an administrator names the provider). `HELD_BEYOND` now counts the accounts the provider signs in
+    (named on it, or naming none), and the administration path counts an administrator with no password only through the
+    provider it names (or, naming none, the one enabled provider). Parity-Diffs P8c-20.
+  - **R2 (medium).** A provider started through Admin could be pointed at an internal address: the discovery URL and the
+    endpoints are the integration administrator's, the server fetched them from inside the network and a test answered what
+    it found (status, and the JSON parser's text, which quotes the body). Fixed: `AuthFlow.allowPrivateNetwork` (new); a
+    provider started by `store#IdentityProvider` on a production instance is saved `N` and the service never changes it; the
+    sign-in's client then sends no request of that flow to a loopback, private or link-local address, by name (the resolver
+    `moqui_lib::http::PublicOnly`, as the framework's other outbound guards) or written out. A flow without the flag (Tools',
+    or a non-production instance's) is as before, so an existing provider on the instance's own network keeps working. A
+    discovery document that does not parse is reported by the kind of error and its position. The detail screen says so.
+  - **R3 (medium).** The sync linked a closed account, changed its fields and gave it groups before the login refused it.
+    Fixed: an account disabled for good or ended is refused before anything is written.
+  - **R4 (low, F-P10-7).** A plain claim name was still evaluated as an expression by the sign-in, so a name of the script
+    context or of the engine (`ec`, `globalThis`) gave its text as the account field. Fixed: a source that is a plain name,
+    with no expression, is the claim of that name and nothing else; only an expression (Tools') is evaluated.
+  - **R5 (low).** The grant cache's key left the secret out (the configuration's `Debug` redacts it), so a replaced secret was
+    not used for up to six hours, which the delegated "replace the secret" made reachable. Fixed: the key carries a hash of it.
+- Tests (the worktree's Debug binary, rebuilt): `cargo test -p moqui-core --lib` for `service::sso`, `service::sign_in_policy`
+  and `sso::tests` 16 of 16 (one new: a provider signs in only its own accounts, an account naming none, a closed account, a
+  plain name); `cargo test -p moqui-host --lib sso` 2 of 2 (one new: nothing sent to an internal address) and `--test it -- sso`
+  2 of 2; framework AdminIdentityProviders (extended in its second feature: an account named on another provider is not this
+  one's, the path, a private-network refusal), AdminNewDevice, AdminAccessServices, AdminSessions, AdminConfiguration,
+  AdminAccessCapabilities 20 of 20; mr-boss AdminSecurity, AdminAccess, AdminUsers, AdminGroups 15 of 15. Clippy clean on the
+  three crates; rustfmt and Prettier clean on the changed files. Not run: the full suites, the acceptance suite, the rest of
+  cargo.
+- For the lead:
+  - merge: `SecurityEntities.xml` gains `UserAccount.externalAuthFlowId` and `AuthFlow.allowPrivateNetwork` (a database made before needs
+    the two columns); `moqui-lib` `http.rs` makes `PublicOnly` public; the shared release binary needs these too;
+  - F-P10-2 is closed by R1 rather than left as a framework ask; what is left of it for the user: an account that names no
+    provider is still taken by the first provider that signs in with its id (ordinary accounts with several providers, any
+    account with one), so an administrator who links an account by hand in Tools should set both fields, and Admin has no
+    screen for that yet (UserDetail shows no link);
+  - F-P10-6 changes with R2: on a production instance a delegated provider cannot be on the instance's own network until an
+    instance administrator sets `allowPrivateNetwork` in Tools (Admin offers no control for it, by design). The user's call:
+    whether that default is right for a non-production instance too (built: allowed there, as the worker's `http` rule);
+  - still open, not changed: whoever enables a provider vouches for its endpoint over every account it signs in that is not
+    beyond them, their own included (the integration administrator chooses the endpoint, the access administrator enables
+    it: the worker's user's-call item stands); a test passes from the client's cached grant for up to six hours without
+    asking the provider again; `store#IdentityProvider` takes no operation key, so a repeated NewProvider with no id makes
+    two disabled providers (as gate 1's creates); an email address mapped from a claim is not checked as verified (it is
+    refused when another account has it); F-P10-3, F-P10-9 and F-P10-12 as the Built note has them.
+
 ### P11 — Connections and mail relays
 
 Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail; ADM-CONNECTIONS.

@@ -242,6 +242,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="kind === 'AftSaml'"
                             text="SAML sign-in is not available in this build: the provider is kept and cannot be enabled."/>
                     <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="editable &amp;&amp; provider.problem" text="${provider.problem}."/>
+                    <label type="p" style="text-caption m-muted q-mt-sm q-mb-none" condition="editable &amp;&amp; provider.privateNetwork === false"
+                            text="The server reaches this provider on the public network only. An instance administrator allows a provider on the instance's own network."/>
                 </container>
 
                 <container-box>
