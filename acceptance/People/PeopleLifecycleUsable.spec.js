@@ -267,7 +267,8 @@ feature(
                 )
                 .concat(["Abe,Usable" + run + "," + email("abe") + ",2026-11-16"])
                 .join("\n")
-            const post = (path, parameters) => asUser(users.hr, () => page("Settings/EmployeeImport/" + path, parameters, "html"))
+            const post = (path, parameters) =>
+                asUser(users.hr, () => page("Employees/EmployeeImport/Index/" + path, parameters, "html"))
             out.staged = opened(post("stage", {organizationPartyId: ids.organizationId, sourceText: csv}))
             const key = rows("moqui.server.TransferBatch", {targetId: "employees", userId: "BOSS_PPL_HR"}).sort((a, b) =>
                 String(b.transferId).localeCompare(String(a.transferId))

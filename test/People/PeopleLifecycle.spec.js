@@ -219,8 +219,9 @@ feature(
                 }
             })
             out.readerBatches = rows("moqui.server.TransferBatch", {targetId: "employees", userId: "BOSS_PPL_READER"}).length
-            // through the wizard's transitions under People/Settings/EmployeeImport
-            const post = (path, parameters) => asUser(users.hr, () => page("Settings/EmployeeImport/" + path, parameters, "html"))
+            // through the wizard's transitions under People/Employees/EmployeeImport
+            const post = (path, parameters) =>
+                asUser(users.hr, () => page("Employees/EmployeeImport/Index/" + path, parameters, "html"))
             out.staged = post("stage", {organizationPartyId: ids.organizationId, sourceText: good})
             const key = rows("moqui.server.TransferBatch", {targetId: "employees", userId: "BOSS_PPL_HR"}).sort((a, b) =>
                 String(b.transferId).localeCompare(String(a.transferId))
@@ -279,7 +280,7 @@ feature(
     "ChecklistTemplates shows the HR officer Retail's checklists and the steps of one; EquipmentDetail under People Ines's laptop with End assignment; WorkItemDetail under People a checklist task with its People box",
     {
         when() {
-            const checklists = asUser(users.hr, () => page("Settings/ChecklistTemplates", {workEffortId: ids.onboardingId}))
+            const checklists = asUser(users.hr, () => page("Employees/ChecklistTemplates", {workEffortId: ids.onboardingId}))
             const equipment = asUser(users.hr, () => page("Employees/EquipmentDetail", {assetId: ids.laptopAssetId}))
             // a task of a checklist an HR hire started (the first feature's), opened by the HR officer who does it
             const task = system(

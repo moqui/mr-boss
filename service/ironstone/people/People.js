@@ -139,9 +139,10 @@ const linkPaths = [
     // P6: the hire and employment change wizards (design §4)
     "Employees/HireEmployee",
     "Employees/EmploymentChange",
-    // P7: the checklist templates, the employees import (HR's, under Settings), a checklist task and a piece of equipment
-    "Settings/ChecklistTemplates",
-    "Settings/EmployeeImport",
+    // P7: the checklist templates, the employees import (HR's, under Employees: the user's call, Nov 11), a checklist task and a
+    // piece of equipment
+    "Employees/ChecklistTemplates",
+    "Employees/EmployeeImport",
     "Tasks/WorkItemDetail",
     "Employees/EquipmentDetail"
 ]

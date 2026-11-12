@@ -2002,6 +2002,129 @@ EquipmentDetail, Employee360's AssignedEquipment; PE-02, PE-19 (the `employees` 
     sent without an identity operator (built: it waits for one); who a return task is assigned to (built: the HR officer who asked);
     whether a scheduled separation is withdrawable (built: no).
 
+**Review Nov 11 (P7).** A fresh review of `git diff master...ppl/p7` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §4 (checklists, equipment, provisioning), §12 ChecklistTemplates and EmployeeImport, §13, design-admin §4.1, design-maintenance
+§4.1 and F14, F15, F16, F22, F45, F52, F54, F60, F131, F134, with the managed-work guard's callers, protected tasks, the custody rule,
+the access requests and the import first; the user's four calls of Nov 11 (§4) built here; fixes committed apart per repository
+("People P7 review: …"; mr-mantle 929d6b62).
+- Checked and found sound:
+  - The managed-work guard (`check#ManagedWork` in `update#Task`, `set#TaskDates`, `set#TaskStatus`, `move#Task`, `set#TaskRecurrence`,
+    `delete#WorkEffort` and the WorkEffortParty writers) reads the work and its process policies with authorization off and refuses
+    only a policy that guards execution (none is seeded: People's is N) or a root with a MaintenanceWorkOrder (not yet defined), so
+    ordinary work answers as before. Callers searched (Commons, Projects, Customer Service, Manufacturing, Purchasing, Git, production
+    services, the EECAs): the Work, Projects, Customer Service, Manufacturing, Commons and Purchasing task specs listed below pass.
+  - `instantiate#WorkProcess`: the two-pass copy, the key answering the first root (read back from the `WeatBasedOn` links), one tree
+    in the caller's transaction; `start#Checklists` runs each template in its own transaction after the hire's or change's commit, so a
+    failing step rolls back its tree and leaves the hire (WorkProcess's second and fourth features).
+  - The custody EECA completes only the open return tasks whose `WorkEffortAssetAssign` and holder `WorkEffortParty` name that asset,
+    holder and role; Warehouse's `replace#AssetPartyAssignment` is unchanged and completes them (WorkProcess's last feature).
+  - Provisioning and access end: one operation per key (a key of another request `KEY_IN_USE`), steps run only for an identity
+    operator of the employer and otherwise wait, a failure noted on the change in its own transaction and never undoing the hire, an
+    access end for one employer skipping the memberships while another employs the person (UserProvisioning). BOSS's proposal adds
+    only bundles the caller may give, by Admin's delegation rule.
+  - The `employees` target: `PEOPLE_IMPORT` and `PEOPLE_HR_EDIT` to import, `PEOPLE_HR_VIEW` to view, no `ADMIN_*`; password, group,
+    permission, user id and pay columns refused; each row validated by `preview#Hire` and applied by `hire#Employee` as the importer
+    with their own permission, employer and person checks (a row naming another employer refused).
+  - `withdraw#EmploymentChange` (an HR editor of the employer, the revision, a reason; a change in effect or followed by a later one
+    refused) and the separation's superseding of the scheduled changes it overtakes (recorded on them, listed by its preview).
+- Fixes:
+  - **R1 (high, confidentiality).** Checklist executions and equipment return tasks were owned by the employer
+    (`ownerPartyId`), and `get#RecordLinkInfo`'s work effort rule shows work owned by one of the user's organizations to everyone of
+    it: any colleague at the employer read "Offboarding: …" and "Return … from …" by id in Commons, on the leaver's contact page and
+    in search. Checklist templates, executions and return work now have no owner (`clearOwners` after the copy, for templates written
+    with one as the demo's are); the employer stays on `ChecklistTemplate` and `EmploymentChecklist`. Spec: PeopleChecklists' equipment
+    feature (a reader of the employer does not reach the task).
+  - **R2 (high, confidentiality, F22).** A protected task was reached outside CalDAV: the return task's holder (the leaver, a
+    `WorkEffortParty` in the holding's role) listed it in Commons' Tasks, Today, `get#MyTasks` and search and opened it, and
+    `get#ChecklistTask` gave them People's read-only box. Mantle's `Checklists.js hiddenTaskIds`: a protected task is reached only by
+    a current Assignee who is not the person it is about (unless its step is the employee's to see); applied in `get#RecordLinkInfo`
+    (before the staff rule), `search#Universal`, Commons `find#TaskRows`, `get#UserTodayItems` and `get#ChecklistTask`;
+    `get#MyTasks` (other instances' tools) and `TaskServices.get#FullCalendarData` leave every protected task out, as CalDAV does.
+    Spec: PeopleChecklists (the manager assigned reaches it; the holder and a reader neither by the record rule, nor in `get#MyTasks`,
+    nor in People's box); it fails on the code as built.
+  - **R3 (medium, data).** A withdrawn transfer's seat holding (ended on its own start) still counted in `Positions.holdersOf`, so the
+    seat read as held by the person for good (`POSITION_OCCUPIED` on the next hire into it). `holdersOf` leaves such a row out. Spec:
+    PeopleScheduledChanges' last feature hires into the seat feature one's withdrawn transfer named; it fails on the code as built.
+  - **R4 (medium, failure tolerance).** `complete#ReturnTasks`, run by the custody EECA inside the custody change's transaction, called
+    `set#TaskStatus` there: a task that could not be completed marked the custody change's transaction for rollback, and its catch
+    cleared the caller's messages. Each task is now completed in its own transaction and error frame (`probe`), a failure logged by
+    task. No spec (no failing task can be made through the services).
+  - **R5 (medium, access).** Mantle's `request#Provisioning`, callable by any user, accepted any registered bundle, so a direct caller
+    could propose a bundle BOSS's entry would refuse for an operator to give on retry. It now applies Admin's delegation rule itself
+    (the delegable permission held; never ADMIN or a privileged group): `GRANT_NOT_YOURS`. Spec: UserProvisioning's first feature.
+  - **R6 (low, managed work).** `create#Task` added a step under work whose policy guards execution. It now asks
+    `check#ManagedWork` of the parent and root it names. Spec: WorkProcess's managed-work feature.
+  - **R7 (the user's call 1).** ChecklistTemplates and EmployeeImport moved under Employees (`People/Employees/ChecklistTemplates`, and
+    `People/Employees/EmployeeImport` wrapping Shared/DataImport as Products' ProductImport does, so the grant sits on People's own
+    screen), opened to the HR officers by `BOSS_PPL_HR_AREA` (ALWAYS for `BOSS_PEOPLE_HR`, DENY for the root group); P7's Settings grant
+    to HR removed; menus, `linkPaths`, the import mount (`downloadBase`, `selfLink`) and owner route `peopleEmployeeImport`,
+    PeopleAccess (HR's Employees group with the two, the reader's without; HR refused Settings again) and the PeopleLifecycle and
+    acceptance paths follow.
+  - **R8 (the user's call 2).** Mantle seeds `IdentityOperatorRequest` (PartyLifecycleData.xml, with the lifecycle services) and
+    `request#Provisioning` and `request#AccessEnd` notify, when a step waits for an operator, the users holding
+    `ADMIN_IDENTITY_MANAGE` through a group (not ADMIN's every permission), usable, whose organizations include the employer, never the
+    requester or the person; title "An account to set up (or Access to end): person (employer)"; BossSetupData links it to
+    LifecycleDetail. A failure is logged and never the request's. Spec: UserProvisioning (the operator told once, the HR officer not).
+  - **R9 (the user's call 3).** A return task is assigned to the leaver's manager at that employment, from the assignment in effect the
+    instant before the separation's date (else the line), falling back to the HR officer who asked; an offboarding step of the Manager
+    role likewise (it was left unassigned). Specs: WorkProcess's last feature, PeopleScheduledChanges' last feature.
+  - **R10 (the user's call 4).** A separation set for a later date is withdrawable (`withdraw#EmploymentChange`, `withdrawSeparation`):
+    the employment's end goes back to `EmploymentChange.priorThruDate` (new, recorded when a separation is applied), the termination
+    reason clears, the assignment, department membership, seat and line it ended continue, so do unit memberships ended on its date,
+    each report's manager change it made (`causedByChangeId`, new; not withdrawable alone) is withdrawn and a line it ended goes on;
+    `Lifecycle.js withdrawAccessEnd` makes its access end `UlopWithdrawn` (waiting steps skipped, memberships and relationships ended
+    at the date continued, never a privileged group's) and `cancelChecklists` cancels its checklist and return tasks. Employee360's
+    Withdraw shows for it. Spec: PeopleScheduledChanges' last feature.
+- Provisional findings (for the lead to number):
+  - `instantiate#WorkProcess` reads its key without a lock: two first runs of one key at once could each make a tree; a key reused for
+    another template answers the first template's root;
+  - a custody change rolled back after its EECA leaves the return task completed (R4's own transaction); the manager assigned a
+    return task cannot end the holding (`return#Equipment` is HR's): HR, Warehouse or the manager's own completion closes it;
+  - a withdrawn separation leaves withdrawn the scheduled changes it withdrew when applied (made again if wanted), and a unit
+    membership starting after its date, ended on its own start, stays so; its access end's undo writes memberships with authorization
+    off (only rows ended exactly at the date, no privileged group);
+  - operators are told only when one holds `ADMIN_IDENTITY_MANAGE` through a group and works for the employer; with none, the
+    operation waits in LifecycleOperations' Needs attention as before;
+  - an offboarding step of the Employee role with staff visibility is assigned to the leaver, who then does not reach it (R2's rule);
+    ChecklistTemplates offers that combination;
+  - `get#RecordLinkInfo`'s protected rule comes before the staff rule: an ADMIN user reaches a protected task through People's screens
+    only;
+  - the worker's other findings stand (no participant steps on an access end, the import takes ids and creates no account, the exit
+    interview a link kind until P16, the guard's one or two reads per generic task write, the job's first run marking earlier changes);
+    their "HR opens Settings", "nothing notifies the operators", "a return task is the HR officer's" and "a scheduled separation is not
+    withdrawable" are the user's calls R7 to R10.
+- Tests (release binary, `--nobuild`, this worktree's runtime), as built first for the guard's callers: Mantle CalendarChanges,
+  CommonsToday, WorkPlanToCashBasicFlow, WorkProjectHub, SupportCases, PurchaseRequests, ProductionOrders, WorkGit, WorkGitReview,
+  WorkProjectItems, WorkProjectServices, WorkMyTasks, CalendarServices, Dav and WorkProcess with their dependencies 197 of 197
+  (25.8 s); BOSS Projects, WorkItems, WorkItemDetail, ProjectDetail, Tasks, TodayPanel, QuickCreate, Requests, Calendar,
+  CustomerServiceCases, CustomerServiceAssignment, ManufacturingWorkOrders, ManufacturingShopFloor and Chatter with theirs 164 of 164
+  (17.6 s). After the fixes: Mantle WorkProcess, UserProvisioning, PeopleChecklists, PeopleScheduledChanges, PeopleEmployment,
+  PeoplePositions, PeopleOrganization, PeopleApprovals, PeopleScope, PeopleDirectory, HumanResServices, UserLifecycle, StaffIdentity,
+  StaffInvitation, RecordVisibility, RecordLinks, Dav, CalendarServices, CommonsToday, WorkMyTasks, WorkProjectItems,
+  WorkProjectServices, WorkProjectHub, WorkPlanToCashBasicFlow, SupportCases, PurchaseRequests, ProductionOrders, UniversalSearch and
+  ContactBooks with their dependencies 302 of 302 (mr-mantle 50.6 s; WorkProcess 5 features 1.16 s, UserProvisioning 2 0.35 s,
+  PeopleChecklists 3 1.74 s, PeopleScheduledChanges 5 1.73 s); BOSS PeopleAccess, PeopleLifecycle, PeopleEmployees, PeopleHire, PeopleOrganization,
+  PeoplePositions, PeopleApprovals, Tasks, TodayPanel, Contacts, AdminImports, AdminLifecycle, AdminUsers, WorkItemDetail, WorkItems,
+  Projects, ProjectsAccess, QuickCreate, CustomerServiceCases, ManufacturingWorkOrders, WarehouseFacilities, WarehouseInventory,
+  Notifications and ProductsImport with their dependencies 233 of 233 (mr-boss 32.5 s; PeopleLifecycle 3 features 1.13 s,
+  PeopleAccess's P7 feature 0.46 s). `moqui lint --screens` (release binary): 135 flagged
+  sites as before, none in the People screens. Prettier clean on the changed JavaScript. Not run: `./moq test-apps`, the acceptance
+  suite (PeopleLifecycleUsable's two paths changed only; AGENTS.md asks a changed acceptance test to be run, the brief not to: for the
+  lead).
+- For the lead:
+  - budget share: mr-mantle about 5.0 s (WorkProcess 1.2, UserProvisioning 0.35, PeopleChecklists 1.75, PeopleScheduledChanges 1.75;
+    about 0.9 s over the Built note's, the separation withdrawal feature and the reach checks); mr-boss unchanged from the Built note (PeopleLifecycle 1.13 s, PeopleAccess's feature 0.46 s);
+  - merge hot spots beside the Built note's: mr-mantle `Checklists.js` (owners, roleParties, completeReturnTasks, hiddenTaskIds,
+    cancelChecklists, getChecklistTask), `Employment.js` (withdrawableKinds, withdrawSeparation, applyChange's priorThruDate, separate's
+    causedByChangeId, changeRow), `Lifecycle.js` (delegation check, notifyOperators, withdrawAccessEnd, statusNames),
+    `Positions.js holdersOf`, `CommunicationServices.xml` (the work effort visibility dispatch), `UniversalSearchServices.xml`,
+    `TaskServices.xml` (`create#Task`, `get#MyTasks`, `get#FullCalendarData`), `WorkEffortServices.xml` (`get#UserTodayItems`),
+    `HumanResourcesEntities.xml` (EmploymentChange's two fields), `PartyLifecycleData.xml`; mr-boss `BossSetupData.xml`
+    (`BOSS_PPL_HR_AREA`, the topic's link), `People/Employees/` (ChecklistTemplates moved, EmployeeImport new), `People/Settings.xml`,
+    `People/Employees.xml`, `commons/TaskServices.xml find#TaskRows`, `People.js`, `DataImport.js`, `PeopleSpecLib.js`,
+    `PeopleAccess.spec.js`, design-people, design-admin §4.1, usl-inventory, design-crosscut;
+  - the user's calls are in §4 (four rows), all built here (R7 to R10).
+
 ### P8 — Self-service, MyTeam and Home
 
 Design §3 Home, MyTeam, SelfService, §1.2 (the Commons mount), §1.4 (Today, quick create, palette); PE-18. Ends
@@ -2622,6 +2745,10 @@ the owner's design.
 | Nov 11, 2026 | `Employment.emplPositionId` holds the seat in effect: a change in effect now sets it at once, and one dated later only on its date, through a daily ServiceJob (`apply_EmploymentDueAssignments`, `PeopleServices.apply#DueAssignments`: each employment in its own transaction, a failure logged and the rest going on, a rerun changing nothing). The occupancy rows stay the dated truth | The user's call on P6's question (built in P6's review, R2; design-people §4). TimeServices' rate lookup and the contact card no longer read a seat before its date |
 | Nov 11, 2026 | The hire and change wizards keep their unfinished drafts in a draft record (style-guide §3.10), not the session: `mantle.humanres.employment.EmploymentDraft`, a dated row owned by its HR user, resumed when the wizard is opened again, discarded when the hire or change is made or given up, and read only by its owner | The user's call on P6's question (built in P6's review, R3; design-people HireEmployee and EmploymentChange) |
 | Nov 11, 2026 | The hire's person search finds by name only the people with a relationship to the HR officer's employers (employees, contractors, contacts, applicants and the like); anyone else is found only by an exact email, to avoid making a duplicate. Answers stay names and public identity, and a person chosen by id is refused as missing unless related or matched by the email given | The user's call on P6's question (built in P6's review, R1; design-people HireEmployee). Narrows F59's search: a person another employer employs is found by their email |
+| Nov 11, 2026 | HR's own editors move out of Settings: ChecklistTemplates and EmployeeImport are under Employees (HR's area, `People/Employees/ChecklistTemplates` and `People/Employees/EmployeeImport`, with their grant `BOSS_PPL_HR_AREA`), and People Settings stays the People administrator's: HR does not open it | The user's call on P7's question (built in P7's review, R7; design-people §12 ChecklistTemplates and EmployeeImport). The menus, link keys, the import's owner route and mount, PeopleAccess and the acceptance test's paths follow |
+| Nov 11, 2026 | A hire's provisioning still waits for an identity operator (Admin's rule stands), and the request notifies the employer's identity operators through a notification topic, `IdentityOperatorRequest`, seeded in Mantle with the service that owns it (`IdentityServices.request#Provisioning`; `request#AccessEnd` the same), its title naming only the person and employer an operator sees on the operation, so they act from the tray or LifecycleOperations | The user's call on P7's question (built in P7's review, R8; design-admin §4.1). BossSetupData links it to LifecycleDetail |
+| Nov 11, 2026 | An equipment return task is assigned to the leaver's manager at that employment (from the assignment the separation ends), falling back to the HR officer who asked for the separation | The user's call on P7's question (built in P7's review, R9; design-people §4). An offboarding step of the Manager role is assigned the same way |
+| Nov 11, 2026 | A scheduled (later-dated) separation is withdrawable by HR like the other scheduled changes: no access end and no return tasks follow, and its checklist tasks are cancelled | The user's call on P7's question (built in P7's review, R10, with a spec; design-people §4, design-admin §4.1) |
 
 ## 5. Open questions
 

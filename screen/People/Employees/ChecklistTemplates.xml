@@ -12,16 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- People › Settings › Checklists (design-people §12 ChecklistTemplates; style-guide §3.9 Settings; impl-people P7): an employer's
+<!-- People › Employees › Checklists (design-people §12 ChecklistTemplates; style-guide §3.9 Settings; impl-people P7, moved out of
+    Settings by the user's call of Nov 11, HR's area): an employer's
     onboarding, transfer and offboarding checklist templates (Templates, over mantle.humanres.PeopleServices.find#Checklists) and the
     steps of the one opened (ChecklistTasks: who does each, its due offset, required or not, what it links to, who sees it and
     whether it is protected; store#ChecklistStep over mantle.work.ProcessServices.store#ProcessStep). New checklist (the one
     primary), a template's Rename and End, Add step, a step's Edit and End: nothing is deleted, and an ended template or step starts
     in no new checklist while the checklists started stay. A hire, an applied transfer and an applied separation start the
     employer's templates of their kind after they commit. HR's: an HR reader reads them, an HR editor changes them (Mantle checks
-    PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer on every call); BOSS_PPL_SETTINGS opens the Settings area to HR. -->
+    PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer on every call); BOSS_PPL_HR_AREA opens it to HR (and to the People
+    administrator and ADMIN through their ALWAYS on the root). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Checklists" default-menu-index="4">
+        default-menu-title="Checklists" default-menu-index="5">
     <parameter name="organizationPartyId"/>
     <parameter name="workEffortId"/>
     <parameter name="includeEnded"/>

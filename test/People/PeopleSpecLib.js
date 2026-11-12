@@ -38,10 +38,10 @@ const ids = {
     // Approvals (every People user's own), and Settings' tabs the approval rules and lookups
     staffMenu: ["Home", "Approvals", "Employees", "Staffing"],
     adminMenu: ["Home", "Approvals", "Employees", "Staffing", "Settings"],
-    // P7: the HR officer opens Settings too, for the checklists and the employee import
-    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Settings"],
-    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "ChecklistTemplates", "EmployeeImport"],
+    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
+    // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings
+    hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "ChecklistTemplates", "EmployeeImport"],
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
     keys: ["g p", "g e", "g o", "g c", "g s", "g a"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate

@@ -25,7 +25,7 @@ const ownerRoutes = {
     accountingOpenItems: "Accounting/Settings/Setup/OpenItems",
     commonsContactImport: "Commons/Contacts/Import",
     projectsWorkItemImport: "Projects/WorkItems/Import",
-    peopleEmployeeImport: "People/Settings/EmployeeImport"
+    peopleEmployeeImport: "People/Employees/EmployeeImport"
 }
 function ownerUrl(ownerRoute, parameters = {}) {
     if (!Object.hasOwn(ownerRoutes, text(ownerRoute))) return ""
@@ -65,8 +65,8 @@ function mount(p) {
             appRoot,
             targetId: "employees",
             canRun: !!caps.import && !!caps.hrEdit,
-            downloadBase: "/apps/People/Settings/EmployeeImport",
-            selfLink: people.sharedLinks["Settings/EmployeeImport"],
+            downloadBase: "/apps/People/Employees/EmployeeImport/Index",
+            selfLink: people.sharedLinks["Employees/EmployeeImport"],
             listLink: null,
             detailLink: null,
             activeOrganizationPartyId: people.activeOrganizationPartyId || people.organizationPartyIds?.[0] || null

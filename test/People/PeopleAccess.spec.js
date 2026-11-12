@@ -19,8 +19,8 @@
 // position refused to Retail's HR), a decision asked of an approver (the directory reader refused), and Settings' tabs. P6: the
 // hire and employment change wizards and their quick create the HR officer's (the directory reader refused the screen and not
 // offered it), a hire and an employment change an HR editor's of the employer (the directory reader refused with the same
-// parameters, Services' employer and employment refused to Retail's HR). P7: Settings opened to the HR officer (its checklists and
-// employee import; the setup checks stay the administrator's), a checklist template and a person's equipment HR's of the employer (the
+// parameters, Services' employer and employment refused to Retail's HR). P7: the HR officer's Checklists and Employee import in
+// Employees, HR's area (the user's call, Nov 11; Settings stays the People administrator's), a checklist template and a person's equipment HR's of the employer (the
 // directory reader refused with the same parameters, Services' template and holder refused to Retail's HR), the employee import's
 // mount HR's.
 // Run: ./moq test mr-boss --spec PeopleAccess
@@ -125,7 +125,7 @@ feature("the People menu and keys follow the groups; the launcher shows People t
     when() {
         const problems = []
         const hr = shell(users.hr)
-        if (hr.status != 200 || JSON.stringify(hr.names) !== JSON.stringify(ids.hrMenu))
+        if (hr.status != 200 || JSON.stringify(hr.names) !== JSON.stringify(ids.staffMenu))
             problems.push(`the HR officer's menu: ${hr.status} ${hr.names}`)
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
@@ -135,10 +135,13 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         if (quick(hr) !== "peopleHireEmployee") problems.push(`the HR officer's quick create: ${quick(hr)}`)
         const reader = shell(users.reader)
         if (quick(reader)) problems.push(`the reader's quick create: ${quick(reader)}`)
-        // P3: Employees is a menu group of the directory, Organization and Org chart
+        // P3: Employees is a menu group of the directory, Organization and Org chart; P7: and, for HR, Checklists and Employee import
         const group = shell(users.hr, true, "Employees/OrgChart", "Employees")
-        if (JSON.stringify(group.names) !== JSON.stringify(ids.employeesMenu))
+        if (JSON.stringify(group.names) !== JSON.stringify(ids.hrEmployeesMenu))
             problems.push(`the HR officer's Employees group: ${group.status} ${group.names}`)
+        const readerGroup = shell(users.reader, true, "Employees/OrgChart", "Employees")
+        if (JSON.stringify(readerGroup.names) !== JSON.stringify(ids.employeesMenu))
+            problems.push(`the reader's Employees group: ${readerGroup.status} ${readerGroup.names}`)
         // P4: Positions & recruiting is a menu group of the positions, job classes and pay grades
         const staffing = shell(users.hr, true, "Staffing/Positions", "Staffing")
         if (JSON.stringify(staffing.names) !== JSON.stringify(ids.staffingMenu))
@@ -192,7 +195,7 @@ const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     {user: users.manager, granted: ["team", "requestApprove"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
-    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "settings", "employment"]},
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
@@ -305,11 +308,11 @@ feature(
         when() {
             const hrHome = asUser(users.hr, () => page("Home"))
             const settings = asUser(users.admin, () => page("Settings", {}, "html"))
-            // P7: the HR officer opens Settings for the checklists and the employee import; the setup checks stay the administrator's
+            // P7 (the user's call, Nov 11): Settings stays the People administrator's; HR's editors are under Employees
             return {
                 hrHome,
                 settings,
-                hrSettings: asUser(users.hr, () => page("Settings", {}, "html")),
+                hrSettings: screenRefusal(users.hr, "Settings"),
                 readerSettings: screenRefusal(users.reader, "Settings")
             }
         },
@@ -326,9 +329,7 @@ feature(
             // P3's demo departments: each employer's department check is ready
             !settings.output.includes("No department is set up")
             settings.output.includes("Ziziwork Services")
-            hrSettings.errors.length == 0
-            hrSettings.output.includes("People settings")
-            !hrSettings.output.includes("Setup readiness")
+            unauthorized(hrSettings)
             unauthorized(readerSettings)
         }
     }
@@ -642,10 +643,10 @@ feature(
             const step = {templateWorkEffortId: ids.onboardingId, workEffortId: ids.onboardingId + "_3", dueOffsetDays: 3}
             return {
                 screens: {
-                    hr: screenRefusal(users.hr, "Settings/ChecklistTemplates"),
-                    reader: screenRefusal(users.reader, "Settings/ChecklistTemplates") ? "refused" : "opened",
-                    hrImport: screenRefusal(users.hr, "Settings/EmployeeImport"),
-                    readerImport: screenRefusal(users.reader, "Settings/EmployeeImport") ? "refused" : "opened"
+                    hr: screenRefusal(users.hr, "Employees/ChecklistTemplates"),
+                    reader: screenRefusal(users.reader, "Employees/ChecklistTemplates") ? "refused" : "opened",
+                    hrImport: screenRefusal(users.hr, "Employees/EmployeeImport"),
+                    readerImport: screenRefusal(users.reader, "Employees/EmployeeImport") ? "refused" : "opened"
                 },
                 codes: {
                     hrStep: code(as(users.hr, "store#ChecklistStep", step)),

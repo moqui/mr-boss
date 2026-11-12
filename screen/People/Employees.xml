@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     in the directory, HR the HR columns and regions and the changes to units, memberships and reporting lines). P6: HireEmployee and
     EmploymentChange (wizards under Employees/, HR's by their grant BOSS_PPL_EMPLOYMENT), out of the menu, opened from the directory,
     the quick create and Employee360. P7: EquipmentDetail (the shared equipment detail, Shared/EquipmentDetail.xml, with People's
-    context: custody and the return at a separation), out of the menu, opened from Employee360's equipment and a return task. -->
+    context: custody and the return at a separation), out of the menu, opened from Employee360's equipment and a return task;
+    Checklists (ChecklistTemplates) and Employee import (EmployeeImport, the shared import wizard for the `employees` target), files
+    under Employees/, HR's by their grant BOSS_PPL_HR_AREA (moved out of Settings by the user's call of Nov 11). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employees" default-menu-index="4" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="List">
