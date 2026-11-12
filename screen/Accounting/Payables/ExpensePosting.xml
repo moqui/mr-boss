@@ -15,7 +15,15 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Expense posting (style-guide §3.2 List; design-accounting §5 ExpensePosting): the bills of employees and contractors
     (a person's bills: expense claims, worker time and payroll) awaiting finance, each approved for payment with its posting
     day (approve#Payable) or put on hold (hold#Invoice) in its row; the approved ones on their own tab. People and
-    Projects keep the capture and time approval. -->
+    Projects keep the capture and time approval. People P15 (owner contract, design-accounting §5 "People integration"): an
+    employee's expense claim is listed once its business approval is done in People, on the accounts payable route
+    (mantle.account.InvoiceServices.find#Payables' expenses queue), and approve#Payable refuses one before it or reserved for
+    payroll; Accounting mounts no claim screen, the claim opens in People. An approved advance is a bill
+    from the employee listed here like any other (the user's call, impl-people §4, Nov 12, 2026): approved for payment here, paid
+    by a payment run. The Employee advances tab lists the organization's approved advances (mantle.humanres.ExpenseServices
+    find#Advances with finance), each with its bill and what was delivered, applied and is outstanding, and Apply applies a paid
+    advance to the employee's claim approved for payment (apply#Advance: a credit on the employee advances account), which needs
+    PAYMENT_EDIT in the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Expense posting"
@@ -24,6 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="text"/>
     <parameter name="statusId"/>
     <parameter name="pageIndex"/>
+    <!-- People P15: advances (the Employee advances tab) -->
+    <parameter name="view"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition name="approveExpense">
@@ -34,6 +44,15 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <transition name="applyAdvance">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.apply#Advance" out-map="applied"
+                    in-map="{employeeAdvanceId:employeeAdvanceId, invoiceId:invoiceId, amount:(amount || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Advance ${employeeAdvanceId} applied to claim ${invoiceId}</message></if>
+        </actions>
+        <default-response url="."><parameter name="view" value="advances"/></default-response>
+        <error-response url="."><parameter name="view" value="advances"/></error-response>
+    </transition>
     <transition name="holdExpense">
         <actions>
             <service-call name="mantle.account.InvoiceServices.hold#Invoice" in-map="context"/>
@@ -43,7 +62,14 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
-        <if condition="organizationPartyId">
+        <if condition="organizationPartyId &amp;&amp; view == 'advances'">
+            <service-call name="mantle.humanres.ExpenseServices.find#Advances" out-map="advancesFound" transaction="force-new"
+                    ignore-error="true" in-map="{finance:true, organizationPartyId:organizationPartyId, pageSize:100}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="advances" from="Array.from(advancesFound?.advances || [])"/>
+            <set field="canPay" from="ec.user.hasPermission('PAYMENT_EDIT')"/>
+        </if>
+        <if condition="organizationPartyId &amp;&amp; view != 'advances'">
             <service-call name="ironstone.accounting.PayableScreenServices.find#Bills"
                     in-map="{organizationPartyId:organizationPartyId, queue:'expenses', text:text,
                         statusId:(statusId || null), pageIndex:pageIndex}"
@@ -62,164 +88,175 @@ along with this software (see the LICENSE.md file). If not, see
                             text="Awaiting finance"
                             link-type="anchor-button"
                             btn-type="default"
-                            style="${statusId != 'InvoiceApproved' ? 'm-tonal text-primary' : ''}"
-                            parameter-map="{organizationPartyId:organizationPartyId}"/>
+                            style="${statusId != 'InvoiceApproved' &amp;&amp; view != 'advances' ? 'm-tonal text-primary' : ''}"
+                            parameter-map="{organizationPartyId:organizationPartyId, view:''}"/>
                     <link url="."
                             text="Approved for payment"
                             link-type="anchor-button"
                             btn-type="default"
-                            style="${statusId == 'InvoiceApproved' ? 'm-tonal text-primary' : ''}"
-                            parameter-map="{organizationPartyId:organizationPartyId, statusId:'InvoiceApproved'}"/>
+                            style="${statusId == 'InvoiceApproved' &amp;&amp; view != 'advances' ? 'm-tonal text-primary' : ''}"
+                            parameter-map="{organizationPartyId:organizationPartyId, statusId:'InvoiceApproved', view:''}"/>
+                    <link url="."
+                            text="Employee advances"
+                            link-type="anchor-button"
+                            btn-type="default"
+                            style="${view == 'advances' ? 'm-tonal text-primary' : ''}"
+                            parameter-map="{organizationPartyId:organizationPartyId, view:'advances', statusId:''}"/>
                 </container>
-                <container-box>
-                    <box-header title="${statusId == 'InvoiceApproved' ? 'Approved for payment' : 'Awaiting finance'}"/>
-                    <box-body-nopad>
-                        <form-list name="ExpenseQueue" list="records" skip-form="true" paginate="true">
-                            <field name="invoiceId">
-                                <header-field title="Bill"/>
-                                <default-field>
-                                    <link url="${sharedLinks['Payables/BillDetail']}"
-                                            text="${description || invoiceId}"
-                                            parameter-map="routeParameters"/>
-                                </default-field>
-                            </field>
-                            <field name="supplierName">
-                                <header-field title="Employee or contractor"/>
-                                <default-field>
-                                    <display/>
-                                </default-field>
-                            </field>
-                            <field name="invoiceTypeEnumId">
-                                <header-field title="Kind"/>
-                                <default-field>
-                                    <display-entity entity-name="moqui.basic.Enumeration"/>
-                                </default-field>
-                            </field>
-                            <field name="invoiceDate">
-                                <header-field title="Date"/>
-                                <default-field>
-                                    <display text="${invoiceDateText || ''}"/>
-                                </default-field>
-                            </field>
-                            <field name="invoiceTotal" align="right">
-                                <header-field title="Total"/>
-                                <default-field>
-                                    <display currency-unit-field="currencyUomId"/>
-                                </default-field>
-                            </field>
-                            <field name="statusDescription">
-                                <header-field title="Status"/>
-                                <default-field>
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
-                                            statusColor}">${WebUtilities.encodeHtml(statusDescription
-                                            + (isHeld ? ' · On hold' : ''))}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text",
-                                            text: statusDescription + (isHeld ? " · On hold" : "")})}]]></text>
-                                        <text type="html">${statusDescription}</text>
-                                        <text type="html-print">${statusDescription}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="actions">
-                                <header-field title=""/>
-                                <default-field>
-                                    <container-dialog id="ApproveExpense_${invoiceId}"
-                                            button-text="Approve"
-                                            title="Approve ${description || invoiceId} for payment"
-                                            width="560"
-                                            condition="billCapabilities.approve &amp;&amp; !isHeld
-                                                &amp;&amp; ['InvoiceIncoming', 'InvoiceReceived'].includes(statusId)">
-                                        <form-single name="ApproveExpenseForm_${invoiceId}" transition="approveExpense">
-                                            <field name="organizationPartyId" from="organizationPartyId">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="invoiceId" from="invoiceId">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="lastUpdatedStamp" from="lastUpdatedStamp">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="accountingDate" from="invoiceDateValue || todayText">
-                                                <default-field title="Posting date">
-                                                    <date-time type="date"/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Approve for payment"
-                                                            confirmation="Approve ${invoiceId} for ${invoiceTotal}?"/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <container-dialog id="HoldExpense_${invoiceId}"
-                                            button-text="Hold"
-                                            title="Hold ${description || invoiceId}"
-                                            width="560"
-                                            type="default"
-                                            condition="billCapabilities.holdPlace &amp;&amp; !isHeld
-                                                &amp;&amp; statusId != 'InvoicePmtSent'">
-                                        <form-single name="HoldExpenseForm_${invoiceId}" transition="holdExpense">
-                                            <field name="organizationPartyId" from="organizationPartyId">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="invoiceId" from="invoiceId">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="holdReasonEnumId">
-                                                <default-field title="Reason">
-                                                    <drop-down>
-                                                        <dynamic-options transition="choices"
-                                                                server-search="true"
-                                                                min-length="0"
-                                                                parameter-map="{choice:'holdReasons',
-                                                                    organizationPartyId:organizationPartyId}"/>
-                                                    </drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="holdComment">
-                                                <default-field title="Note">
-                                                    <text-area rows="2"/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Place hold" confirmation="Place a hold on ${invoiceId}?"/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column>
-                                    <field-ref name="invoiceId"/>
-                                    <field-ref name="supplierName"/>
-                                </column>
-                                <column>
-                                    <field-ref name="invoiceTotal"/>
-                                    <field-ref name="statusDescription"/>
-                                    <field-ref name="actions"/>
-                                </column>
-                            </columns>
-                        </form-list>
-                        <label text="No employee or contractor bill is waiting. Bills of approved time come from Billing queue."
-                                type="p"
-                                style="q-pa-md m-muted"
-                                condition="!records.length"/>
-                    </box-body-nopad>
-                </container-box>
+                <section-include name="EmployeeAdvances" location="component://mr-boss/template/AccountingAdvances.xml"/>
+                <section name="ExpenseQueueShown" condition="view != 'advances'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${statusId == 'InvoiceApproved' ? 'Approved for payment' : 'Awaiting finance'}"/>
+                            <box-body-nopad>
+                                <form-list name="ExpenseQueue" list="records" skip-form="true" paginate="true">
+                                    <field name="invoiceId">
+                                        <header-field title="Bill"/>
+                                        <default-field>
+                                            <link url="${sharedLinks['Payables/BillDetail']}"
+                                                    text="${description || invoiceId}"
+                                                    parameter-map="routeParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="supplierName">
+                                        <header-field title="Employee or contractor"/>
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceTypeEnumId">
+                                        <header-field title="Kind"/>
+                                        <default-field>
+                                            <display-entity entity-name="moqui.basic.Enumeration"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceDate">
+                                        <header-field title="Date"/>
+                                        <default-field>
+                                            <display text="${invoiceDateText || ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="invoiceTotal" align="right">
+                                        <header-field title="Total"/>
+                                        <default-field>
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusDescription">
+                                        <header-field title="Status"/>
+                                        <default-field>
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    statusColor}">${WebUtilities.encodeHtml(statusDescription
+                                                    + (isHeld ? ' · On hold' : ''))}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text",
+                                                    text: statusDescription + (isHeld ? " · On hold" : "")})}]]></text>
+                                                <text type="html">${statusDescription}</text>
+                                                <text type="html-print">${statusDescription}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <header-field title=""/>
+                                        <default-field>
+                                            <container-dialog id="ApproveExpense_${invoiceId}"
+                                                    button-text="Approve"
+                                                    title="Approve ${description || invoiceId} for payment"
+                                                    width="560"
+                                                    condition="billCapabilities.approve &amp;&amp; !isHeld
+                                                        &amp;&amp; ['InvoiceIncoming', 'InvoiceReceived'].includes(statusId)">
+                                                <form-single name="ApproveExpenseForm_${invoiceId}" transition="approveExpense">
+                                                    <field name="organizationPartyId" from="organizationPartyId">
+                                                        <default-field title="">
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="invoiceId" from="invoiceId">
+                                                        <default-field title="">
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="lastUpdatedStamp" from="lastUpdatedStamp">
+                                                        <default-field title="">
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="accountingDate" from="invoiceDateValue || todayText">
+                                                        <default-field title="Posting date">
+                                                            <date-time type="date"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Approve for payment"
+                                                                    confirmation="Approve ${invoiceId} for ${invoiceTotal}?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="HoldExpense_${invoiceId}"
+                                                    button-text="Hold"
+                                                    title="Hold ${description || invoiceId}"
+                                                    width="560"
+                                                    type="default"
+                                                    condition="billCapabilities.holdPlace &amp;&amp; !isHeld
+                                                        &amp;&amp; statusId != 'InvoicePmtSent'">
+                                                <form-single name="HoldExpenseForm_${invoiceId}" transition="holdExpense">
+                                                    <field name="organizationPartyId" from="organizationPartyId">
+                                                        <default-field title="">
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="invoiceId" from="invoiceId">
+                                                        <default-field title="">
+                                                            <hidden/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="holdReasonEnumId">
+                                                        <default-field title="Reason">
+                                                            <drop-down>
+                                                                <dynamic-options transition="choices"
+                                                                        server-search="true"
+                                                                        min-length="0"
+                                                                        parameter-map="{choice:'holdReasons',
+                                                                            organizationPartyId:organizationPartyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="holdComment">
+                                                        <default-field title="Note">
+                                                            <text-area rows="2"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title="">
+                                                            <submit text="Place hold" confirmation="Place a hold on ${invoiceId}?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="invoiceId"/>
+                                            <field-ref name="supplierName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="invoiceTotal"/>
+                                            <field-ref name="statusDescription"/>
+                                            <field-ref name="actions"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                                <label text="No employee or contractor bill is waiting. Bills of approved time come from Billing queue."
+                                        type="p"
+                                        style="q-pa-md m-muted"
+                                        condition="!records.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

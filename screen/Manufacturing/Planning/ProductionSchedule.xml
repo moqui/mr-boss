@@ -21,7 +21,11 @@ along with this software (see the LICENSE.md file). If not, see
     override requests here (ProductionScheduleOverride's link). Each change first checks the operation through
     ironstone.manufacturing.AccessServices.check#Record, with the schedule capability for a commit and supervise for a decision;
     Mantle checks its permissions again. The terminal: ProductionScheduleTui beside this file (the resource and date table, the
-    Move form and the same commands); the plan snapshot print and CSV: ScheduleSnapshot. -->
+    Move form and the same commands); the plan snapshot print and CSV: ScheduleSnapshot. Since impl-people P14 (F68) the component's
+    resource mode is any mount's: the schedule transition answers the work centers and operations in the timeline's generic
+    contract (laneList's laneId and shadeList, barList, noticeList, conflicts by barId, and the resource block naming the wording,
+    the plant filter, Snapshot and its transitions; Timeline.qvue's header) beside its own fields, and moveOperation takes the
+    timeline's laneId and remove (unschedule) too. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Production schedule" default-menu-index="2" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
 
@@ -53,29 +57,79 @@ along with this software (see the LICENSE.md file). If not, see
             const caps = context.capabilities || {}
             const plants = Array.from(ec.service.sync().name('ironstone.manufacturing.AccessServices.get#Choices').parameters({choice: 'plants'}).call()?.options || [])
             ec.message.clearErrors()
+            // the timeline's resource contract (Timeline.qvue's header, impl-people P14): the work centers as lanes, the operations as
+            // bars, the override requests as notices, beside the answer's own fields
+            const t = (text) => ec.l10n.localize(text)
+            const operations = Array.from(out.operationList || [])
+            const unscheduled = Array.from(out.unscheduledList || [])
+            const lanes = Array.from(out.laneList || [])
+            for (const lane of lanes) {
+                const count = operations.filter((op) => op.facilityId === lane.facilityId).length
+                Object.assign(lane, {laneId: lane.facilityId, laneName: lane.facilityName,
+                    caption: [lane.parallelSlots + ' ' + (lane.parallelSlots === 1 ? t('slot') : t('slots')), lane.calendarConfigured ? '' : t('no work calendar'),
+                        count + ' ' + t('operations')].filter(Boolean).join(' · '),
+                    shadeList: Array.from(lane.closedList || []).map((row) => ({kind: 'closed', fromText: row.fromText, thruText: row.thruText}))
+                        .concat(Array.from(lane.holidayList || []).map((row) => ({kind: 'holiday', fromText: row.fromText, thruText: row.thruText, name: row.name})))
+                        .concat(Array.from(lane.offlineList || []).map((row) => ({kind: 'offline', fromText: row.fromText, thruText: row.thruText,
+                            name: row.kindText + ': ' + row.reasonText + ' · ' + row.fromText + (row.open ? '' : ' – ' + row.thruText)})))})
+            }
+            const barOf = (op) => Object.assign(op, {barId: op.workEffortId, laneId: op.facilityId, title: op.operationName,
+                label: op.operationName + ' · ' + op.runName, subtitle: op.runName + (op.productName ? ' · ' + op.productName + ' ' + op.quantityText : ''),
+                nowNote: op.hours ? op.hours + ' ' + t('standard hours') : '', caption: op.runName + (op.hours ? ' · ' + op.hours + ' ' + t('hours') : ''),
+                ariaLabel: op.operationName + ', ' + op.runName + ', ' + op.startText + ' to ' + op.endText,
+                tip: op.operationName + ' · ' + op.runName + (op.productName ? ' · ' + op.productName + ' ' + op.quantityText : '') + ' · ' + op.startText + ' – ' + op.endText
+                    + (op.hours ? ' · ' + op.hours + ' h' : '') + ' · ' + op.statusText + (op.lockedReason ? ' · ' + op.lockedReason : '') + (op.conflictText ? ' · ' + op.conflictText : ''),
+                color: op.locked ? 'blue-grey' : (Array.from(op.conflicts || []).length ? 'warning' : (op.statusId === 'WeOnHold' ? 'orange' : 'primary')),
+                moveParameters: {operationWorkEffortId: op.workEffortId, expectedRevision: String(op.expectedRevision ?? ''),
+                    expectedRunRevision: String(op.expectedRunRevision ?? '')}})
+            operations.forEach(barOf)
+            unscheduled.forEach(barOf)
+            const named = Object.fromEntries(operations.concat(unscheduled).map((op) => [op.workEffortId, op.operationName]))
+            const conflicts = Array.from(out.conflictList || []).map((row) => Object.assign({}, row, {barId: row.workEffortId, title: row.operationName || named[row.workEffortId] || row.workEffortId}))
+            const notices = Array.from(out.requestList || []).map((row) => ({noticeId: row.scheduleChangeId, waiting: row.statusId === 'SchRequested',
+                canDecide: !!row.canDecide, decideParameters: {scheduleChangeId: row.scheduleChangeId}, caption: row.conflictText,
+                title: row.operationName + ' ' + t('to') + ' ' + row.toFacilityName + ' ' + row.toStartText + ' – ' + row.toEndText,
+                text: row.operationName + ' ' + t('to') + ' ' + row.toFacilityName + ' ' + row.toStartText + ' – ' + row.toEndText + ' · ' + row.statusText
+                    + ' · ' + t('asked by') + ' ' + row.requestedByName + (row.reason ? ': ' + row.reason : '')}))
+            const snapshotUrl = web + '/Planning/ScheduleSnapshot?renderMode=html-print&lastStandalone=true&plantId=' + encodeURIComponent(plant || '')
+                + '&fromDay=' + encodeURIComponent(fromDay || '') + '&days=' + span
+            const resource = {title: t('Production schedule'), laneTitle: t('Work center'), laneLabel: t('Work center'),
+                emptyText: t('No work center at this plant. A resource administrator adds one in Work centers.'),
+                notAvailableText: t('The plant is not one of yours.'), truncatedText: t('The first 300 operations are drawn; choose fewer days to see the others.'),
+                unscheduledTitle: t('Not scheduled'), scheduleLabel: t('Schedule'), moveTitle: t('Move operation'), applyLabel: t('Apply'),
+                removeLabel: t('Unschedule'), removeConfirm: t('Take {title} off the schedule?'), endTooltip: 'Empty: its hours over the work hours',
+                endComputedText: t('end from its hours'), overrideLabel: t('Override the conflicts (a supervisor exception; it changes no capacity)'),
+                requestNote: t('A supervisor may override the conflicts: ask with a reason.'), approveLabel: t('Approve override'), refuseLabel: t('Refuse'),
+                approveTitle: t('Approve the override'), refuseTitle: t('Refuse the override'), hint: t('Drag a bar to preview a move; the Move dialog applies it.'),
+                legendList: [{kind: 'closed', label: t('Not working')}, {kind: 'holiday', label: t('Holiday')}, {kind: 'offline', label: t('Offline')},
+                    {kind: 'conflict', label: t('Conflict')}, {kind: 'locked', label: t('Started: actual work pins it')}],
+                filter: plants.length ? {name: 'plantId', label: t('Plant'), value: plant, options: plants} : null, days: span,
+                printUrl: snapshotUrl, printLabel: t('Snapshot'), moveTransition: 'moveOperation', decideTransition: 'decideOverride'}
             ec.web.sendJsonResponse({schedule: Object.assign({}, out, {canSchedule: !!out.canSchedule && !!caps.schedule,
-                canOverride: !!out.canOverride && !!caps.supervise}), plantId: plant, plantOptions: plants, days: span,
-                snapshotUrl: web + '/Planning/ScheduleSnapshot?renderMode=html-print&lastStandalone=true&plantId=' + encodeURIComponent(plant || '')
-                    + '&fromDay=' + encodeURIComponent(fromDay || '') + '&days=' + span})
+                canOverride: !!out.canOverride && !!caps.supervise, barList: operations, unscheduledList: unscheduled, conflictList: conflicts,
+                noticeList: notices}), resource, plantId: plant, plantOptions: plants, days: span, snapshotUrl})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
     <!-- the Move dialog: a preview (nothing written), then a commit, an unschedule, an override request or a decision -->
     <transition name="moveOperation">
         <actions><script><![CDATA[
-            const action = ['preview', 'apply', 'unschedule', 'request'].includes(moveAction) ? moveAction : 'preview'
+            // the timeline's remove is unschedule here; its lane is the work center (targetFacilityId, as the terminal's form names it)
+            const action = moveAction === 'remove' ? 'unschedule' : (['preview', 'apply', 'unschedule', 'request'].includes(moveAction) ? moveAction : 'preview')
+            const targetCenter = ec.context.get('targetFacilityId') || ec.context.get('laneId') || null
             ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record').requireNewTransaction(true).parameters({recordType: 'operation',
                 recordId: operationWorkEffortId || '', capability: action === 'preview' ? null : 'schedule'}).call()
             let out = {}
             if (!ec.message.hasError()) out = ec.service.sync().name('mantle.work.ProductionPlanningServices.schedule#ProductionOperation').requireNewTransaction(true).parameters({
-                action, workEffortId: operationWorkEffortId || '', facilityId: targetFacilityId || null, startDate: startText || null,
+                action, workEffortId: operationWorkEffortId || '', facilityId: targetCenter, startDate: startText || null,
                 endDate: endText || null, reason: reason || null, override: override === 'Y' || override === 'true',
                 expectedRevision: expectedRevision ?? null, expectedRunRevision: expectedRunRevision ?? null,
                 operationKey: action === 'preview' ? null : (operationKey || null)}).call() || {}
             if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
                 ec.web.sendJsonResponse({failed: true, messageInfos: [{type: 'danger', message}]}); return }
             const result = out.result || {}
-            ec.web.sendJsonResponse(action === 'preview' ? {preview: result}
+            ec.web.sendJsonResponse(action === 'preview' ? {preview: Object.assign({}, result, {laneName: result.facilityName,
+                    moveParameters: {expectedRevision: String(result.expectedRevision ?? ''), expectedRunRevision: String(result.expectedRunRevision ?? '')}})}
                 : {result, messageInfos: [{type: result.resultCode === 'REQUESTED' ? 'info' : 'success', message: result.message}]})
         ]]></script></actions>
         <default-response type="none"/>

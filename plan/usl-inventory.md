@@ -125,7 +125,7 @@ services are not rows. **Implemented in** is unchanged.
 | InvoiceServices | create#EntireOrderPartInvoice | Accounting/Records/OrderDetail | Accounting/Records/OrderDetail (through create#InvoiceFromSource) |
 | InvoiceServices | create#SalesShipmentInvoices | Accounting/Records/ShipmentDetail | Accounting/Records/ShipmentDetail (through mantle.account.InvoiceServices.create#InvoiceFromSource and create#PurchaseShipmentInvoices) |
 | InvoiceServices | create#PurchaseShipmentInvoices |  | Accounting/Records/ShipmentDetail; Accounting/Records/OrderDetail (through create#InvoiceFromSource, acceptedOnly) |
-| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue; People/Expenses/ExpenseClaims | — (not built; Accounting/Receivables/BillingQueue bills approved time only) |
+| InvoiceServices | create#ProjectExpenseInvoice | Accounting/Receivables/BillingQueue; People/Expenses/ExpenseClaims | People/Expenses/ExpenseClaims (NewClaim, its expenseClaim write: employer authorization, self scope and the ExpenseClaim record, F21; People P15); Accounting/Receivables/BillingQueue bills approved time only |
 | InvoiceServices | create#ProjectInvoiceItems | Projects/Time/MyTime; Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | Projects/Billing/Unbilled/CreateInvoice |
 | InvoiceServices | create#WorkerInvoiceItems | Projects/Billing/Unbilled; Accounting/Receivables/BillingQueue | — (replaced by mantle.account.InvoiceServices.create#InvoiceFromApprovedTime on Accounting/Receivables/BillingQueue) |
 | InvoiceServices | create#TimeEntryInvoiceItems | Accounting/Receivables/BillingQueue | Accounting/Receivables/BillingQueue (through mantle.account.InvoiceServices.create#InvoiceFromApprovedTime) |
@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P13, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P18, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -520,7 +520,7 @@ the screens that call it.
 | PositionServices | find#JobClasses | People/Staffing/JobClasses | People/Staffing/JobClasses (FindJobClasses, JobClassList) (People P4) |
 | PositionServices | get#JobClass | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (the header, Job profile, Requirements) (People P4) |
 | PositionServices | store#JobClass | People/Staffing/JobClasses; People/Staffing/JobClassDetail | People/Staffing/JobClasses (NewJobClass); People/Staffing/JobClassDetail (EditJobClass, End job class) (People P4) |
-| PositionServices | store#JobRequirement | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (AddSkill, Remove) (People P4) |
+| PositionServices | store#JobRequirement | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (AddSkill, Remove; P18: a requirement's level, certificate, required or desired, ChangeRequirement, Remove ending it) (People P4, P18) |
 | PositionServices | find#Positions | People/Staffing/Positions | People/Staffing/Positions (FindPositions, PositionList as list and board) (People P4) |
 | PositionServices | get#Position | People/Staffing/PositionDetail | People/Staffing/PositionDetail (the header, Terms, Holders; P5: Approval, the latest activation request) (People P4, P5) |
 | PositionServices | store#Position | People/Staffing/Positions; People/Staffing/PositionDetail | People/Staffing/Positions (NewPosition); People/Staffing/PositionDetail (EditPosition, EndPosition) (People P4) |
@@ -604,6 +604,53 @@ the screens that call it.
 | AttendanceServices | approve#Correction, refuse#Correction | People/Approvals | People/Approvals (the PeopleAttendanceApproval topic's approve and refuse, through Commons' Notifications) (People P13) |
 | AttendanceServices | preview#Import, import#Records, get#Import | People/Time/TimeImport | People/Time/TimeImport (FileAndMapping, ImportResults) (People P13) |
 | AttendanceServices | find#ImportRuns | — (Admin's Imports) | the time-and-attendance transfer target's findService (TransferTarget timeAndAttendance), Admin's Imports opening People/Time/TimeImport (People P13) |
+| ScheduleServices | get#Roster | People/Time/ShiftRoster | People/Time/ShiftRoster (Roster: the shared timeline's lanes and bars, through its schedule transition), ShiftRosterTui and ShiftRosterPrint (template/PeopleRoster.xml, a person and day table) (People P14) |
+| ScheduleServices | store#Shift | People/Time/ShiftRoster | People/Time/ShiftRoster (AssignShift: the timeline's dialog, preview, Save shift and Remove shift, through moveShift); ShiftRosterTui (Shift, its preview box, Save shift, Remove shift) (People P14) |
+| ScheduleServices | publish#Shifts | People/Time/ShiftRoster | People/Time/ShiftRoster and ShiftRosterTui (Publish; the PeopleShiftChange notice) (People P14) |
+| ScheduleServices | get#MyShifts | Shared/PeopleSelfService (MySummary's next shift) | Shared/PeopleSelfService (My shifts) (People P14) |
+| ScheduleServices | get#TeamShifts | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui (the published shifts beside the absences) (People P14) |
+| ScheduleServices | get#ShiftProjection | — (CalDAV, CX-SYNC) | the My shifts projected collection (CalendarProjection PeopleMyShifts) (People P14) |
+| ExpenseServices | find#Claims, get#Claim | People/Expenses/ExpenseClaims, ExpenseClaimDetail | People/Expenses/ExpenseClaims (Claims: mine, to decide, all I see); People/Expenses/ExpenseClaimDetail (the claim, its expenses, FinanceAndSettlement, the approval); ExpenseClaimPrint (the PDF); People/Payroll/InvoiceDetail (People's branch of the shared InvoiceDetail, for a payroll reader) (People P15) |
+| ExpenseServices | store#Claim, store#ClaimItem, read#Receipt | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (ClaimHeader; ClaimItems: Add expense with its receipt, Edit, Remove; Read receipt over AiTaskServices.run#Extract, reviewed before save) (People P15) |
+| ExpenseServices | submit#Claim, decide#Claim | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (SubmitOrDecide: Submit, Approve, Return, Refuse, Withdraw, Cancel claim) (People P15) |
+| ExpenseServices | approve#Claim, refuse#Claim, approve#Advance, refuse#Advance | People/Approvals | People/Approvals (the PeopleExpenseApproval and PeopleAdvanceApproval topics' approve and refuse, through Commons' Notifications) (People P15) |
+| ExpenseServices | get#ClaimReceipt, get#ClaimEvidence | People/Expenses/ExpenseClaimDetail | People/Expenses/ExpenseClaimDetail (a receipt opened; the evidence bundle, ironstone.people Expenses.js) (People P15) |
+| ExpenseServices | get#ClaimOptions, get#ClaimOffer | People/Expenses | People/Expenses/ExpenseClaims and EmployeeAdvances (the employer, project and expense type choices); Commons' quick create New claim, its condition-service (People P15) |
+| ExpenseServices | find#Advances, request#Advance, decide#Advance | People/Expenses/EmployeeAdvances | People/Expenses/EmployeeAdvances (Advances, RequestAdvance, AdvanceDecision); Accounting/Payables/ExpensePosting (Employee advances, find#Advances with finance) (People P15) |
+| ExpenseServices | apply#Advance | Accounting/Payables/ExpensePosting | Accounting/Payables/ExpensePosting (Employee advances: Apply, a credit on the employee advances account; template/AccountingAdvances.xml; an approved advance's bill is approved in the expenses queue and paid by a payment run, P15's review) (People P15, owner contract) |
+| ExpenseServices | reserve#ClaimSettlement | — (P27's pay runs) | finance's approve#Payable reserves accounts payable itself (InvoiceWorkflow.js); the payroll route's caller is P27 (People P15) |
+| ExpenseServices | create#ClaimLineFromEmail | — (mail rules) | the EmailRuleAction createExpenseLine (ErActCreateExpenseLine), run by org.moqui.mail.EmailClientServices.run#EmailRules (People P15, F65) |
+| ExpenseServices | create#ClaimLineFromChat | — (chat message actions) | "Add to my claim" in the BasicComms chat (ironstone.comms.ChatServices.create#FromChat kind claimLine; screen-extend Chat.xml) (People P15) |
+| RecruitingServices | find#Openings | People/Staffing/Openings | People/Staffing/Openings (FindOpenings, OpeningList as a list or a board by state); the palette's openings and the choice openings (People P16) |
+| RecruitingServices | store#Opening | People/Staffing/Openings | People/Staffing/Openings (New opening, Edit, Open, Close) (People P16) |
+| RecruitingServices | find#Applications | People/Staffing/ApplicantPipeline | People/Staffing/ApplicantPipeline (FindApplications, ApplicationList as the board by stage and its list); the palette's applications (People P16) |
+| RecruitingServices | create#Application | People/Staffing/ApplicantPipeline | People/Staffing/ApplicantPipeline (Add application, with the resume through create#ApplicationContent) (People P16) |
+| RecruitingServices | get#Application | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (the header, Application, Files, Interviews, the scorecards); the EmploymentApplication record-lookup (People P16) |
+| RecruitingServices | store#Application | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Edit application) (People P16) |
+| RecruitingServices | change#ApplicationStage | People/Staffing/ApplicantPipeline; People/Staffing/ApplicantDetail | People/Staffing/ApplicantPipeline (a card dragged, moveStage; Move to stage on the selected rows, moveSelected); People/Staffing/ApplicantDetail (Move to stage) (People P16) |
+| RecruitingServices | schedule#Interview | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Schedule interview: the private event, its call link, the iMIP invitation and the panel's scorecards) (People P16) |
+| RecruitingServices | submit#Scorecard | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Your scorecard: the form of the interview scorecard purpose, Submit scorecard) (People P16) |
+| RecruitingServices | find#Interviews | People/Staffing/InterviewsCalendar | People/Staffing/InterviewsCalendar (Commons' Calendar.qvue in its resource mode; an attended interview opening Commons' EventDetail mounted there) and InterviewsCalendarTui (People P16) |
+| RecruitingServices | get#InterviewProjection | — (CalDAV, CX-SYNC) | the My interviews projected collection (CalendarProjection PeopleMyInterviews) (People P16) |
+| RecruitingServices | check#ApplicationAccess, create#ApplicationContent | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Files: the application's record-files host, get#RecordLinkInfo and RecordFiles) (People P16) |
+| RecruitingServices | create#ApplicationFromEmail | — (Comms mail rules) | the createApplication mail rule action (EmailRuleAction ErActCreateApplication), an opening's plus tag (People P16) |
+| RecruitingServices | share#ApplicationContent, get#ApplicationFile | People/Staffing/ApplicantDetail; People/MyInterview | People/Staffing/ApplicantDetail (Shared with the panel: Choose what the panel reads, sharePanelFiles; applicationFile); Shared/PeopleMyInterview (sharedFile) (People P16 review) |
+| RecruitingServices | find#MyInterviews, get#MyInterview | People/SelfService; People/MyInterview | Shared/PeopleSelfService (My interviews, Scorecards to submit) and Shared/PeopleMyInterview (the interview, the shared materials, Your scorecard over submit#Scorecard), at People/ and Commons/People/ (People P16 review, the user's call of Nov 12, 2026) |
+| RecruitingServices | create#ApplicationFromChat | — (chat message actions) | "Create application" in the BasicComms chat (ironstone.comms.ChatServices.create#FromChat kind application; screen-extend Chat.xml) (People P16 review) |
+| PeopleServices | submit#ExitInterview | People/Tasks/WorkItemDetail | Shared/WorkItemDetail's People box (template/PeopleWorkItem.xml: Exit interview, submitExitInterview; get#ChecklistTask's exitInterview) (People P16 review) |
+| party/FormDefinitionServices | find#Forms, create#Form | People/Settings/Forms | People/Settings/Forms (Shared/SurveyForms with People's registration: the forms list, New form) (People P16) |
+| party/FormDefinitionServices | get#Form, rename#Form, save#FormField, save#FormCondition, end#FormPart, publish#Form | People/Settings/FormDetail | People/Settings/FormDetail (Shared/SurveyFormDetail with People's registration: FormFields, FieldOptions, the rules, Publish, Rename, the preview) (People P16) |
+| party/FormPublicationServices | open#Publication | — | no screen: a form's publication by an access kind its purpose's registration admits (People's purposes admit none; Marketing's publication screens build on it, impl-marketing P12) (People P16) |
+| DevelopmentServices | get#SkillsMatrix | People/Development/SkillsMatrix | People/Development/SkillsMatrix (the .qvue matrix, through its matrix transition) and SkillsMatrixTui (the person and skill rows) (People P18) |
+| DevelopmentServices | store#Skill | People/Development/SkillsMatrix (EvaluateSkill) | People/Development/SkillsMatrix (a cell's evaluation, through evaluateSkill) and SkillsMatrixTui (Evaluate a skill) (People P18) |
+| DevelopmentServices | find#Qualifications | People/Development/Qualifications | People/Development/Qualifications (FindQualifications, QualificationList, the Files box's record); Today's my qualification expiring (ironstone.people.ContextServices.get#TodayItems) (People P18) |
+| DevelopmentServices | store#Qualification | People/Development/Qualifications (Qualification) | People/Development/Qualifications (AddQualification, a row's Change and Renew) (People P18) |
+| DevelopmentServices | verify#Qualification | People/Development/Qualifications (Qualification's verifier decision) | People/Development/Qualifications (a row's Verify, Reject and Revoke) (People P18) |
+| DevelopmentServices | check#Qualifications | Maintenance/WorkOrders (technician assignment); Projects' StaffAllocation | — (the staffing answer: no People screen calls it; Maintenance's technician assignment and Projects' StaffAllocation adopt it, impl-people §7) (People P18) |
+| DevelopmentServices | get#PersonDevelopment | Shared/Employee360 (SkillsAndReviews) | Shared/Employee360 under People (Skills and reviews) (People P18) |
+| DevelopmentServices | store#ResumeLine | Shared/Employee360 (SkillsAndReviews) | Shared/Employee360 under People (Add resume line, Remove) (People P18) |
+| DevelopmentServices | check#QualificationAccess, create#QualificationContent | People/RecordFiles (the qualification host, PE-01) | People/Development/Qualifications (Files: RecordFiles of PartyQualification, through get#RecordLinkInfo and RecordFiles' get#ContentType) (People P18) |
+| DevelopmentServices | send#ExpiryReminders | — (the daily job send_QualificationExpiryReminders) | the QualificationExpiring notice, opening People/Development/Qualifications (People P18) |
 
 ## Ledger (81 services)
 
@@ -1132,6 +1179,16 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | mantle.ledger.SetupServices | store#PostingDefault, get#PostingDefaults (mapping kind maintenance: MaintenanceCostPolicy) | Accounting/Settings/PostingDefaults (Maintenance expense) |
 | ironstone.maintenance.MaterialServices | get#MaterialSource, get#MaterialAction | Maintenance/WorkOrders/MaterialIssueReceipt |
 
+### Added in the Maintenance build: Assist, Comms, sync and outputs (P19)
+
+| Service | Verbs | Implemented in |
+| --- | --- | --- |
+| mantle.work.MaintenanceServices | get#MaintenanceProblemSource; report#MaintenanceProblem (the message it is reported from) | Commons/ReportProblem (prefilled from a chat message, a voicemail or a mail; mounted as Comms/Chat/ReportProblem, Comms/Calls/Voicemail/ReportProblem and Comms/Inbox/MessageDetail/ReportProblem) |
+| mantle.work.MaintenanceServices | get#MaintenanceWorkProjection, get#MaintenanceDueProjection | CalDAV (projected-MaintenanceMyWork, projected-MaintenanceTeamDue; CalendarDavServices' projected kind) |
+| mantle.work.MaintenanceServices | get#MaintenanceCalendarFile | Maintenance/WorkOrders/WorkOrderDetail (Add to calendar (.ics)); Maintenance/Preventive/Plans/PlanDetail (Add next due to calendar (.ics)) |
+| mantle.work.MaintenanceServices | add#MaintenanceVideoCall | Maintenance/WorkOrders/WorkOrderDetail (Add video call) |
+| ironstone.maintenance.StackServices | lookup#Records, get#CallContext | the Maintenance root's record-lookup and call-context providers (Comms' record cards, the ring bar and the call) |
+
 ### Added in the Products build
 
 | Service XML | Service | Designed in | Implemented in |
@@ -1325,7 +1382,6 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | --- | --- | --- | --- |
 | EventServices | get#FullCalendarData | Commons/Home; Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Home; Comms/Calls; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Home; Comms/Home; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (bookings and unavailableList, through ScheduleServices.get#ResourceBookings with includeUnavailable, impl-maintenance P16) |
 | EventServices | create#Event | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Inbox; Comms/Chat; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar; Marketing/Events; Marketing/Events/EventDetail; Marketing/QuickCreate | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/QuickCreate; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (Book, through ScheduleServices.book#ResourceSlot, impl-maintenance P16) |
-| EventServices | get#NextBusinessDay | People/Time/LeaveRequests |  |
 | EventServices | get#NextBusinessDay | People/Time/LeaveRequests | Maintenance/Preventive/Plans/PlanDetail and Plans (a plan's planned day after a weekend or holiday, over the organization's WepHoliday events and the plan's People holiday calendar, through MaintenancePlanServices.get#MaintenanceDue; impl-maintenance P13) |
 | EventServices | get#FutureBusinessDay | Projects/WorkItems/Timeline; People/Time/LeaveRequests |  |
 | GitServices | add#ProjectRepository | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Code; Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings | Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings; Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Code |
@@ -1450,18 +1506,18 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CalendarServices | find#OwnedCalendars | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.calendars participant) (Admin P6) |
 | CalendarServices | transfer#CalendarOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
 | EventServices | check#EventAccess | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
-| EventServices | get#EventIcsMaps | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Preventive/DueMaintenance | Commons/Calendar/EventDetail |
+| EventServices | get#EventIcsMaps | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Preventive/DueMaintenance | Commons/Calendar/EventDetail; Maintenance/WorkOrders/WorkOrderDetail (Add to calendar (.ics), through MaintenanceServices.get#MaintenanceCalendarFile, impl-maintenance P19) |
 | EventServices | store#EventRecurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | update#EventOccurrence | Marketing/Calendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | cancel#EventOccurrence | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | respond#EventInvitation | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Comms/Inbox/Mail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | get#InvitationDigest |  | Commons/Calendar/EventDetail |
-| EventServices | send#EventInvitations | Marketing/Events/EventDetail; People/Staffing/ApplicantDetail; People/Staffing/InterviewsCalendar; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | send#EventInvitations | Marketing/Events/EventDetail; People/Staffing/ApplicantDetail; People/Staffing/InterviewsCalendar; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar ; Maintenance/WorkOrders/WorkOrderDetail (Add video call, through MaintenanceServices.add#MaintenanceVideoCall, impl-maintenance P19) |
 | EventServices | remove#EventAttendee |  | Commons/Calendar/EventDetail |
 | EventServices | get#FreeBusy | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/EventDetail; — Maintenance/Scheduling/ResourceCalendar reads get#FullCalendarData's unavailableList and get#ResourceAvailability instead (impl-maintenance P16) |
 | EventServices | book#Resource | Maintenance/Scheduling/ResourceCalendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (Book, through ScheduleServices.book#ResourceSlot, impl-maintenance P16) |
 | EventServices | cancel#ResourceBooking | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Maintenance/Scheduling/ResourceCalendar (Cancel booking, through ScheduleServices.cancel#MyBooking, impl-maintenance P16) |
-| EventServices | store#WorkEffortReminders | People/Time/LeaveRequestDetail; People/Development/TrainingDetail; People/Development/Qualifications | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | store#WorkEffortReminders | People/Time/LeaveRequestDetail; People/Development/TrainingDetail; People/Development/Qualifications | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar; — not People/Development/Qualifications: a qualification's expiry is reminded by its own topic, QualificationExpiring (DevelopmentServices.send#ExpiryReminders), a qualification being no work effort (People P18) |
 | WorkEffortServices | link#WorkEffortRecord | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Panel/Today; Commons/QuickCreate; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/QuickCreate; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | WorkEffortServices | unlink#WorkEffortRecord | Projects/WorkItems/WorkItemDetail | Commons/Calendar/EventDetail |
 | WorkEffortServices | get#UserTodayItems |  | Commons/Home; Commons/Panel/Today; — a production run and its operations left out (Manufacturing P10, F41); Manufacturing's today-source ironstone.manufacturing.HomeServices.get#TodayItems lists the due operations |
@@ -1530,7 +1586,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ResourceServices | cancel#Allocation |  | Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
 | ResourceServices | create#Allocation |  | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/TeamPlanner |
 | ResourceServices | find#Allocations |  | Projects/Home; Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/PersonDetail/Allocations; Projects/Resources/TeamPlanner |
-| ResourceServices | find#StaffingCandidates | People/Development/SkillsMatrix; Maintenance/WorkOrders | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
+| ResourceServices | find#StaffingCandidates | People/Development/SkillsMatrix; Maintenance/WorkOrders | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner; People/Development/SkillsMatrix and SkillsMatrixTui (Find available, through ironstone.people.ContextServices.find#AvailablePeople, bounded by partyIdList) (People P18) |
 | ResourceServices | get#AllocationAccess |  | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
 | ResourceServices | get#TeamPlan |  | Projects/Resources/PersonDetail/Capacity; Projects/Resources/PersonDetail/Overview; Projects/Resources/TeamPlanner |
 | ResourceServices | reject#Allocation |  | Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
@@ -1579,7 +1635,7 @@ Existing capacity service mapped by the People design (Oct 31, 2026); source ver
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders | People/Time/WorkingScheduleDetail (Capacity preview, through ScheduleServices.get#CapacityPreview); Projects/Resources/PersonDetail and TeamPlanner and the timesheets' expected hours (get#TeamPlan, TimesheetServices.get#WeekDays), a People working schedule read first (People P9, F23) |
+| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders | People/Time/WorkingScheduleDetail (Capacity preview, through ScheduleServices.get#CapacityPreview); Projects/Resources/PersonDetail and TeamPlanner and the timesheets' expected hours (get#TeamPlan, TimesheetServices.get#WeekDays), a People working schedule read first (People P9, F23), a published shift's hours in place of it on its day (People P14) |
 
 ## General (2 services)
 
@@ -2075,7 +2131,7 @@ send job and the PASS Support app's Feedback page (operations getCaseFeedbackInv
 | --- | --- | --- | --- |
 | request/CaseFeedbackServices | create#FeedbackForm | CustomerService/Settings/FeedbackForms | CustomerService/Settings/FeedbackForms (NewFeedbackForm, Shared/SurveyForms) |
 | request/CaseFeedbackServices | publish#FeedbackForm | CustomerService/Settings/FeedbackFormDetail | CustomerService/Settings/FeedbackFormDetail (Publish) |
-| request/CaseFeedbackServices | save#FeedbackFormField, save#FeedbackFormCondition, end#FeedbackFormPart, rename#FeedbackForm, get#FeedbackForm |  | CustomerService/Settings/FeedbackFormDetail (FormFields, FieldOptions, the rules, Rename; Shared/SurveyFormDetail) |
+| request/CaseFeedbackServices | save#FeedbackFormField, save#FeedbackFormCondition, end#FeedbackFormPart, rename#FeedbackForm, get#FeedbackForm |  | CustomerService/Settings/FeedbackFormDetail (FormFields, FieldOptions, the rules, Rename; Shared/SurveyFormDetail), over mantle.party.FormDefinitions since People P16 (Customer Service's survey registration) |
 | request/CaseFeedbackServices | save#InvitationPolicy | CustomerService/Settings/ServiceDefaults | CustomerService/Settings/ServiceDefaults (FeedbackDeliveryPolicy, Stop asking) |
 | request/CaseFeedbackServices | queue#Invitation, create#Invitation |  | the SupportCaseFeedbackInvitation rule (entity/FormPublication.eecas.xml), after a case's resolution |
 | request/CaseFeedbackServices | send#Invitations, send#Invitation |  | the send_CaseFeedbackInvitations ServiceJob (CS-JOBS) |

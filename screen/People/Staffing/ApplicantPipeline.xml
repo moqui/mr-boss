@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Applicants (design-people §5 ApplicantPipeline; style-guide §3.6 Board; impl-people P16): a recruiter's applications
+    (mantle.humanres.RecruitingServices.find#Applications, PEOPLE_RECRUIT_VIEW of the employer), of one opening or every one, as
+    a board by stage (the XML view-board; the list its twin): each card the applicant, the opening, the applied date, the next
+    interview and a possible duplicate, opening ApplicantDetail. A recruiter who changes them (PEOPLE_RECRUIT_EDIT) drags a card
+    (moveStage) or moves the selected rows (Move to stage, with a reason) through the same guarded change
+    (change#ApplicationStage): Interview needs a scheduled interview, Offer an offer, Hired is never a move; each refused
+    application is named. Add application (the one primary) records one for an open opening: the person chosen or named, the
+    source and referral, the contact permission and a resume. Panel members read their interviews' applications from
+    ApplicantDetail and the interviews calendar, never this list. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Applicants" default-menu-index="5" menu-image="sym_o_view_kanban" menu-image-type="icon">
+    <parameter name="jobOpeningId"/>
+    <parameter name="statusId"/>
+    <parameter name="term"/>
+    <parameter name="includeClosed"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a card dragged to a stage: the same guarded change as the bulk move -->
+    <transition name="moveStage">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.change#ApplicationStage" out-map="moved"
+                    in-map="{employmentApplicationId:employmentApplicationId, statusId:statusId, revision:(revision || null)}"/>
+            <if condition="moved.failures?.length">
+                <return error="true" message="${moved.failures[0].message}"/>
+            </if>
+            <message type="success">Moved to ${moved.stageText}</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- the selected applications moved together, each on its own; the refused ones named -->
+    <transition name="moveSelected">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.change#ApplicationStage" out-map="moved"
+                    in-map="{employmentApplicationIds:(Array.isArray(employmentApplicationIds) ? employmentApplicationIds
+                        : String(employmentApplicationIds || '').split(',').filter(Boolean)), statusId:targetStatusId, reason:(reason || null)}"/>
+            <if condition="moved.changedIds?.length"><message type="success">Moved ${moved.changedIds.length} to ${moved.stageText}</message></if>
+            <script>for (const failure of Array.from(moved.failures || [])) ec.message.addMessage(failure.applicantName + ': ' + failure.message, 'warning')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a new application and its resume: Mantle checks the recruiter, the opening, the person and the referral -->
+    <transition name="addApplication">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.create#Application" out-map="made"
+                    in-map="{jobOpeningId:jobOpeningId, applicantPartyId:(applicantPartyId || null), firstName:(firstName || null),
+                        lastName:(lastName || null), emailAddress:(emailAddress || null), referredByEnumId:(referredByEnumId || null),
+                        referredByPartyId:(referredByPartyId || null), contactAllowed:(contactAllowed == 'Y' ? 'Y' : 'N'),
+                        comments:(comments || null)}"/>
+            <if condition="contentFile != null &amp;&amp; contentFile.size &gt; 0">
+                <service-call name="mantle.humanres.RecruitingServices.create#ApplicationContent"
+                        in-map="{employmentApplicationId:made.employmentApplicationId, contentTypeEnumId:'EactResume', contentFile:contentFile}"/>
+            </if>
+            <message type="success">${made.duplicateOfApplicationId ? 'Application recorded; the person has another open application, flagged for review' : 'Application recorded'}</message>
+        </actions>
+        <default-response url="../ApplicantDetail"><parameter name="employmentApplicationId" from="made.employmentApplicationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.recruitView &amp;&amp; can.recruitEdit)"/>
+        <service-call name="mantle.humanres.RecruitingServices.find#Applications" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{jobOpeningId:(jobOpeningId || null), statusId:(statusId || null), term:(term || null),
+                    includeClosed:(includeClosed == 'Y'), pageIndex:(pageIndex || 0), pageSize:(pageSize || null), pageNoLimit:(pageNoLimit || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="applicationsFound" from="!!found?.applications"/>
+        <set field="applications" from="found?.applications || []"/>
+        <set field="applicationsCount" from="found?.applicationsCount || 0"/>
+        <set field="applicationsPageIndex" from="found?.applicationsPageIndex || 0"/>
+        <set field="applicationsPageSize" from="found?.applicationsPageSize || 20"/>
+        <set field="applicationsPageMaxIndex" from="found?.applicationsPageMaxIndex || 0"/>
+        <set field="applicationsPageRangeLow" from="found?.applicationsPageRangeLow || 0"/>
+        <set field="applicationsPageRangeHigh" from="found?.applicationsPageRangeHigh || 0"/>
+        <set field="stageCounts" from="(found?.stages || []).map((stage) =&gt; stage.stageText + ' ' + stage.count).join(' · ')"/>
+        <set field="filtered" from="!!(jobOpeningId || statusId || term || includeClosed == 'Y')"/>
+        <set field="findValues" from="{jobOpeningId: jobOpeningId || null, statusId: statusId || null, term: term || null,
+                includeClosed: includeClosed || null}"/>
+        <set field="newApplication" from="{jobOpeningId: jobOpeningId || null, contactAllowed: 'N'}"/>
+        <set field="stageOptions" from="[{value: 'EaReceived', label: 'Received'}, {value: 'EaScreening', label: 'Screening'},
+                {value: 'EaInterview', label: 'Interview'}, {value: 'EaOffer', label: 'Offer'}, {value: 'EaRefused', label: 'Refused'},
+                {value: 'EaWithdrawn', label: 'Withdrawn'}]"/>
+        <set field="detailLink" from="sharedLinks['Staffing/ApplicantDetail']"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Applicants" type="h5"/>
+                <label text="${stageCounts}" type="p" style="text-caption m-muted q-mb-none" condition="stageCounts"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="AddApplicationDialog" button-text="Add application" icon="sym_o_person_add" type="primary" width="720"
+                        title="Record an application" condition="canEdit">
+                    <label type="p" text="Choose a person who already works for or applied to the employer, or name a new applicant; an address someone already has finds them, so no one is made twice."/>
+                    <form-single name="AddApplication" transition="addApplication" map="newApplication">
+                        <field name="jobOpeningId">
+                            <default-field title="Opening">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'openings', selected:newApplication.jobOpeningId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="applicantPartyId">
+                            <default-field title="Person" tooltip="Optional: an employee, contact or earlier applicant of the employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="1" parameter-map="{choice:'applicants'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="firstName"><default-field title="First name"><text-line size="20"/></default-field></field>
+                        <field name="lastName"><default-field title="Last name"><text-line size="20"/></default-field></field>
+                        <field name="emailAddress"><default-field title="Email"><text-line size="30" input-type="email"/></default-field></field>
+                        <field name="referredByEnumId">
+                            <default-field title="Source">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'applicationSources'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="referredByPartyId">
+                            <default-field title="Referred by" tooltip="An employee who referred them">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employees'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="contentFile"><default-field title="Resume"><file/></default-field></field>
+                        <field name="contactAllowed"><default-field title=" "><check><option key="Y" text="May be contacted about other openings"/></check></default-field></field>
+                        <field name="comments"><default-field title="Notes"><text-area rows="2" cols="60"/></default-field></field>
+                        <field name="submitButton"><default-field title="Record application"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="jobOpeningId"/><field-ref name="applicantPartyId"/></field-row>
+                            <field-row><field-ref name="firstName"/><field-ref name="lastName"/></field-row>
+                            <field-row><field-ref name="emailAddress"/><field-ref name="contentFile"/></field-row>
+                            <field-row><field-ref name="referredByEnumId"/><field-ref name="referredByPartyId"/></field-row>
+                            <field-ref name="contactAllowed"/>
+                            <field-ref name="comments"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!applicationsFound">
+            <widgets>
+                <label text="Applications are open to the recruiters of an employer. An interviewer opens the applications of their interviews from Interviews."
+                        type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ApplicationRows" condition="applicationsFound">
+            <widgets>
+                <form-single name="FindApplications" transition="." map="findValues">
+                    <field name="jobOpeningId">
+                        <default-field title="Opening">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'openings', selected:findValues.jobOpeningId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="term"><default-field title="Applicant"><text-find size="18" hide-options="true"/></default-field></field>
+                    <field name="statusId">
+                        <default-field title="Stage">
+                            <drop-down allow-empty="true"><list-options list="stageOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeClosed"><default-field title="Closed applications"><check><option key="Y" text="Include"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="jobOpeningId"/>
+                            <field-ref name="term"/>
+                            <field-ref name="statusId"/>
+                            <field-ref name="includeClosed"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ApplicationList" list="applications" skip-form="true" paginate="true" select-columns="true"
+                                views="board,list" show-csv-button="true">
+                            <row-selection id-field="employmentApplicationId" parameter="employmentApplicationIds" list-mode="true" condition="canEdit">
+                                <action>
+                                    <dialog button-text="Move to stage" button-icon="sym_o_move_item" title="Move the selected applications"/>
+                                    <form-single name="MoveSelected" transition="moveSelected">
+                                        <field name="targetStatusId">
+                                            <default-field title="Stage">
+                                                <drop-down><list-options list="stageOptions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Move"><submit confirmation="Move the selected applications?"/></default-field></field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                            <field name="revision"><default-field><hidden/></default-field></field>
+                            <field name="statusId"><default-field><hidden/></default-field></field>
+                            <field name="applicantName">
+                                <default-field title="Applicant">
+                                    <link url="${detailLink}" text="${applicantName}" link-type="anchor"
+                                            parameter-map="{employmentApplicationId:employmentApplicationId}"/>
+                                </default-field>
+                            </field>
+                            <field name="openingTitle"><default-field title="Opening"><display/></default-field></field>
+                            <field name="applicationDateText"><default-field title="Applied"><display/></default-field></field>
+                            <field name="nextInterviewText"><default-field title="Next interview"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="stageText">
+                                <default-field title="Stage">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColor}">${
+                                            WebUtilities.encodeHtml(stageText)}</q-chip>${possibleDuplicate ? ' <q-chip dense square class="q-ma-none m-tonal text-warning">' +
+                                            WebUtilities.encodeHtml(ec.l10n.localize('Possible duplicate')) + '</q-chip>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (possibleDuplicate ? " · possible duplicate" : "")})}]]></text>
+                                        <text type="html">${stageText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="applicantName"/><field-ref name="openingTitle"/></column>
+                                <column><field-ref name="stageText"/><field-ref name="nextInterviewText"/></column>
+                            </columns>
+                            <view-board group-field="statusId" status-type-id="EmploymentApplication" card-title-field="applicantName"
+                                    card-fields="openingTitle,applicationDateText,nextInterviewText" key-fields="employmentApplicationId,revision"
+                                    column-order="EaReceived,EaScreening,EaInterview,EaOffer" transition="moveStage" move-condition="canEdit"/>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!applications.length &amp;&amp; filtered" text="No application matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!applications.length &amp;&amp; !filtered"
+                                text="No application yet.${canEdit ? ' Record one with Add application, or let an opening take them by mail.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

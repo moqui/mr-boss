@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Expenses (design-people §1.2, §9; impl-people P15): expense claims (ExpenseClaims, the default, with ExpenseClaimDetail
+    and its print out of the menu) and employee advances (EmployeeAdvances). Every People user's through the root, and a self-service
+    employee's without the launcher by the area's own grant (BOSS_PPL_EXPENSES, as Time & leave's), to claim their own expenses and
+    ask their own advances: what each user reads, changes and decides is Mantle's ExpenseServices' check (the claimant, their
+    manager, an approver of the step waiting, HR and payroll of the employer). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Expenses" default-menu-index="11" menu-image="sym_o_receipt_long" menu-image-type="icon">
+    <subscreens default-item="ExpenseClaims"/>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

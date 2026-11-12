@@ -34,8 +34,12 @@ along with this software (see the LICENSE.md file). If not, see
     change set for a later date (withdraw#EmploymentChange, HR's) and Request access again when a hire's or separation's access
     request failed (ironstone.admin.LifecycleServices, keyed by the change). P8: the emergency contacts beside Personal information
     (template/PeopleEmergencyContacts.xml: the person and HR read them; the person and an HR editor add, change and end them,
-    wherever they may change the personal information: People's mount, and Commons' for their own record). Compensation (P23), TimeAndLeave (P12) and
-    SkillsAndReviews (P18, P20) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
+    wherever they may change the personal information: People's mount, and Commons' for their own record). P18, under People: Skills and reviews
+    (mantle.humanres.DevelopmentServices.get#PersonDevelopment: the person's skills with their level and whether self-declared or
+    evaluated, their qualifications as the reader may see them with their expiry, and their resume lines for the person, HR and
+    development; a manager reads the skills and the verified qualifications' validity), with Add resume line for the person and an
+    HR or development editor (store#ResumeLine) and links to Qualifications and the skills matrix; reviews join with P20.
+    Compensation (P23) and TimeAndLeave (P12) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
     <parameter name="partyId"/>
@@ -74,6 +78,18 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PeopleServices.withdraw#EmploymentChange" out-map="withdrawn"
                     in-map="{employmentChangeId:employmentChangeId, reason:reason}"/>
             <if condition="!ec.message.hasError()"><message type="success">${withdrawn.whole ? 'Withdrawn' : 'The return was withdrawn'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <!-- P18: a resume line added, changed or removed (Mantle checks the person or an HR or development editor of their employer) -->
+    <transition name="storeResumeLine">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.store#ResumeLine"
+                    in-map="{partyResumeId:(partyResumeId || null), partyId:partyId, resumeLineTypeEnumId:(resumeLineTypeEnumId || null),
+                        organizationName:(organizationName ?? null), title:(title ?? null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        description:(description ?? null), remove:(remove == 'true')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'true' ? 'Resume line removed' : 'Resume saved'}</message></if>
         </actions>
         <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
@@ -122,6 +138,12 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="equipmentDetailLink" from="sharedLinks?.[appRoot == 'Maintenance' ? 'Equipment/EquipmentDetail' : 'Employees/EquipmentDetail']"/>
+        <!-- P18: skills, qualifications and resume (People's mount): Mantle answers each reader their part, or nothing -->
+        <if condition="recordFound &amp;&amp; employee?.showsDevelopment">
+            <service-call name="mantle.humanres.DevelopmentServices.get#PersonDevelopment" out-map="developmentFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyId:partyId, checkOnly:true}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <if condition="recordFound &amp;&amp; employee?.showsChanges">
             <service-call name="mantle.humanres.PeopleServices.find#EmploymentChanges" out-map="changesFound" transaction="force-new"
                     ignore-error="true" in-map="{partyId:partyId, includeDone:true}"/>
@@ -152,6 +174,14 @@ along with this software (see the LICENSE.md file). If not, see
             changeColors = {EchRequested: 'warning', EchApplied: 'positive', EchRefused: 'negative', EchSuperseded: 'grey-8', EchWithdrawn: 'grey-8'}
             // P7: the equipment the person holds (People's mount, the person and HR)
             equipmentRows = Array.from(equipmentFound?.equipmentList || [])
+            // P18: skills, qualifications and resume lines
+            development = developmentFound?.visible ? developmentFound : null
+            skillRows = Array.from(development?.skills || [])
+            qualificationRows = Array.from(development?.qualifications || [])
+            resumeRows = Array.from(development?.resumeLines || [])
+            resumeTypeOptions = [{key: 'RltExperience', text: 'Experience'}, {key: 'RltEducation', text: 'Education'}, {key: 'RltOther', text: 'Other'}]
+            qualificationsUrl = sharedLinks?.['Development/Qualifications'] || null
+            skillsMatrixUrl = sharedLinks?.['Development/SkillsMatrix'] || null
             canChangeEmployment = !!employee?.canChangeEmployment && !!record.partyRelationshipId && opened?.state != 'ended'
             changeEmploymentId = record.partyRelationshipId || null
             identificationRows = Array.from(personal.identifications || [])
@@ -386,6 +416,89 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                                 <label text="No equipment is held." type="p" style="m-muted q-pa-md" condition="!equipmentRows.length"/>
                             </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- P18: Skills and reviews (design §4 Employee360 SkillsAndReviews): skills with level and source, qualifications with
+                    their expiry, resume lines; reviews join with P20 -->
+                <section name="SkillsAndReviews" condition="development">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Skills and reviews"/>
+                            <box-toolbar>
+                                <link url="${qualificationsUrl}" url-type="plain" text="Qualifications" link-type="anchor" condition="qualificationsUrl"
+                                        parameter-map="{show: record.partyId == people?.partyId ? 'mine' : 'all', term: overview.personName}"/>
+                                <link url="${skillsMatrixUrl}" url-type="plain" text="Skills matrix" link-type="anchor"
+                                        condition="skillsMatrixUrl &amp;&amp; development.showsSkills &amp;&amp; record.partyId != people?.partyId"
+                                        parameter-map="{term: overview.personName}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <form-list name="SkillRows" list="skillRows" skip-form="true" paginate="false" condition="skillRows.length">
+                                    <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                                    <field name="levelText"><default-field title="Level"><display/></default-field></field>
+                                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                                    <field name="evaluatedDateText"><default-field title="When"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="skillName"/></column>
+                                        <column><field-ref name="levelText"/><field-ref name="sourceText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No skill is recorded." type="p" style="m-muted" condition="development.showsSkills &amp;&amp; !skillRows.length"/>
+                                <form-list name="QualificationRows" list="qualificationRows" skip-form="true" paginate="false" condition="qualificationRows.length">
+                                    <field name="typeText"><default-field title="Qualification"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
+                                    <field name="verificationText"><default-field title="State"><display text="${verificationText}${validityText ? ' · ' + validityText : ''}"/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="typeText"/></column>
+                                        <column><field-ref name="verificationText"/><field-ref name="thruDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No qualification is recorded." type="p" style="m-muted" condition="!qualificationRows.length"/>
+                                <section name="ResumeLines" condition="development.showsResume">
+                                    <widgets>
+                                        <container style="row items-center q-gutter-sm">
+                                            <label text="Resume" type="h6" style="q-mb-none"/>
+                                            <container-dialog id="AddResumeLineDialog" button-text="Add resume line" icon="sym_o_add" type="default"
+                                                    width="620" title="Add a resume line for ${overview.personName}" condition="development.canEditResume">
+                                                <form-single name="AddResumeLine" transition="storeResumeLine"
+                                                        map="{partyId:partyId, partyRelationshipId:(record.partyRelationshipId || null), resumeLineTypeEnumId:'RltExperience'}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="resumeLineTypeEnumId">
+                                                        <default-field title="Kind"><drop-down><list-options list="resumeTypeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                                    </field>
+                                                    <field name="organizationName"><default-field title="Organization"><text-line size="40"/></default-field></field>
+                                                    <field name="title"><default-field title="Role or course"><text-line size="40"/></default-field></field>
+                                                    <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                                    <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                                    <field name="description"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </container>
+                                        <form-list name="ResumeRows" list="resumeRows" skip-form="true" paginate="false" condition="resumeRows.length">
+                                            <field name="periodText"><default-field title="When"><display/></default-field></field>
+                                            <field name="title"><default-field title="Role"><display/></default-field></field>
+                                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <link url="storeResumeLine" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
+                                                            condition="development.canEditResume" confirmation="Remove this resume line?"
+                                                            parameter-map="{partyId:partyId, partyRelationshipId:(record.partyRelationshipId || null),
+                                                                partyResumeId:partyResumeId, remove:'true'}"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                                                <column><field-ref name="periodText"/><field-ref name="actions"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label text="No resume line yet." type="p" style="m-muted" condition="!resumeRows.length"/>
+                                    </widgets>
+                                </section>
+                            </box-body>
                         </container-box>
                     </widgets>
                 </section>

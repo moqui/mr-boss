@@ -28,9 +28,17 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="${caseMadeUrl}" url-type="plain"/>
         <error-response url="."/>
     </transition>
+    <!-- Maintenance P19 (the user's call of Nov 12): Report a problem prefilled from a received mail (Commons' ReportProblem mounted
+        here, for a holder of MAINTENANCE_REQUEST; Mantle reads the mail as the user may and files it on the request) -->
+    <subscreens>
+        <subscreens-item name="ReportProblem" location="component://mr-boss/screen/Commons/ReportProblem.xml" menu-include="false"/>
+    </subscreens>
     <widgets-extend name="LinkRecordDialog" where="after">
         <link url="createCase" text="Create a case" icon="sym_o_support_agent" parameter-map="{emailMessageId:detail.emailMessageId}"
                 condition="detail?.kind == 'email' &amp;&amp; detail?.emailMessageId &amp;&amp; ec.user.hasPermission('SUPPORT_CASE_EDIT')"
                 confirmation="Make a case of this message for the customer who sent it?"/>
+        <dynamic-dialog id="ReportProblemDialog" button-text="Report a problem" transition="ReportProblem" width="640"
+                parameter-map="{emailMessageId:detail.emailMessageId}"
+                condition="detail?.kind == 'email' &amp;&amp; detail?.emailMessageId &amp;&amp; ec.user.hasPermission('MAINTENANCE_REQUEST')"/>
     </widgets-extend>
 </screen-extend>

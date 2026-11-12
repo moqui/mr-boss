@@ -16,7 +16,10 @@
 // technician reads it, not another or Retail; a waiver is a supervisor's), P10's purchases of a work order (its planner reads
 // them, a resource administrator and Retail's planner do not; a technician asks for nothing, a planner links no order line the
 // work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
-// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P18's equipment
+// accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P19's stack providers
+// (a work order's record card and a caller's work for its organization's planner, not a resource administrator, Retail's planner or
+// a requester without the root; Comms' Report a problem on a chat message for a user who may report, not another app's user; the
+// message read under Comms' room check with the user's own filters, a record room of Retail's forklift refused: review R1), P18's equipment
 // import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
 // plan refused; the compliance a reader's, not a technician's or Retail's), P17's work status and report catalogue (a reader's,
@@ -1171,6 +1174,84 @@ feature(
     }
 )
 
+feature(
+    "the stack providers answer a work order's card and a caller's work to its planner, not a resource administrator, Retail or a requester; Comms offers Report a problem to a reporter only",
+    {
+        when() {
+            const S = "ironstone.maintenance.StackServices."
+            const card = user =>
+                asUser(user, () => {
+                    try {
+                        const out = invoke(S + "lookup#Records", {
+                            operation: "card",
+                            recordEntityName: "mantle.work.effort.WorkEffort",
+                            recordId: ids.inProgressOrderId
+                        })
+                        if (ec.message.hasError()) return "refused " + ec.message.getErrorsString()
+                        return out.card ? "card" : "none"
+                    } catch (error) {
+                        return "refused " + error.message
+                    }
+                })
+            // the requester's spec-local work number: a colleague, whose call names the work order of the request they filed (R4)
+            system(() =>
+                call("mantle.party.ContactServices.create#TelecomNumber", {
+                    partyId: "BOSS_MNT_REQUESTER",
+                    countryCode: "1",
+                    areaCode: "801",
+                    contactNumber: "777-0194",
+                    contactMechPurposeId: "PhoneWork"
+                })
+            )
+            const callWork = user =>
+                asUser(user, () => {
+                    try {
+                        const out = invoke(S + "get#CallContext", {number: "+18017770194"})
+                        if (ec.message.hasError()) return "refused " + ec.message.getErrorsString()
+                        return Array.from(out.recordList || []).some(row => row.url.includes(ids.inProgressOrderId))
+                            ? "work"
+                            : "none"
+                    } catch (error) {
+                        return "refused " + error.message
+                    }
+                })
+            // Comms' Chat message actions (the screen-extend's ext-action, shown by Report a problem's grant)
+            const chatActions = user =>
+                asUser(user, () => {
+                    const result = ec.screen
+                        .makeTest()
+                        .rootScreen("component://webroot/screen/webroot.xml")
+                        .render("extItems/apps/Comms/Chat", {}, null)
+                    ec.message.clearErrors()
+                    if (result.status != 200) return []
+                    return Array.from(JSON.parse(String(result.output)).actions || []).map(action => action.name)
+                })
+            return {
+                holderCard: card(users.planner),
+                resourcesCard: card(users.resources),
+                otherCard: card(users.retailPlanner),
+                requesterCard: card(users.requester),
+                holderCall: callWork(users.planner),
+                otherCall: callWork(users.retailPlanner),
+                requesterCall: callWork(users.requester),
+                requesterActions: chatActions(users.requester),
+                otherAppActions: chatActions(users.otherApp)
+            }
+        },
+        then(out) {
+            out.holderCard == "card"
+            out.resourcesCard == "none"
+            out.otherCard == "none"
+            refused(out.requesterCard)
+            out.holderCall == "work"
+            out.otherCall == "none"
+            refused(out.requesterCall)
+            out.requesterActions.includes("maintenance.reportProblem")
+            !out.otherAppActions.includes("maintenance.reportProblem")
+        }
+    }
+)
+
 // P18: the equipment import is run by a holder of MAINTENANCE_IMPORT with the resource edit permission (the resource administrator),
 // read by a reader of equipment, and its organizations are the importer's own; the setup readiness is the Maintenance
 // administrator's
@@ -1223,6 +1304,71 @@ feature(
             !out.retailScopes.includes(ids.organizationId)
             out.adminReadiness == ""
             out.resourcesReadiness.includes("PERMISSION_DENIED")
+        }
+    }
+)
+
+feature(
+    "Report a problem from a chat message reads it under Comms' room check with the user's own filters: a room of Retail's record is refused, a public room's message filed",
+    {
+        when() {
+            // a record room of Retail's forklift (read by those who may see the forklift) and a public room, made by the system
+            const made = system(() => {
+                const room = (fields, body) => {
+                    const chatRoomId = call("org.moqui.chat.ChatServices.create#Room", fields).chatRoomId
+                    const eventSeq = call("org.moqui.chat.ChatServices.send#Message", {chatRoomId, body}).eventSeq
+                    return {chatRoomId, eventSeq}
+                }
+                return {
+                    retail: room(
+                        {
+                            roomTypeEnumId: "CrtRecord",
+                            visibilityEnumId: "CrvRecord",
+                            recordEntityName: "mantle.product.asset.Asset",
+                            recordId: ids.otherAssetId,
+                            roomName: "Spec forklift room"
+                        },
+                        "<p>Forklift mast chain is frayed</p>"
+                    ),
+                    open: room(
+                        {roomTypeEnumId: "CrtPublic", visibilityEnumId: "CrvUsers", roomName: "Spec maintenance chat"},
+                        "<p>Compressor belt squeals at start</p>"
+                    )
+                }
+            })
+            // the requester's Report a problem from each (ReportProblem's transition, as the Comms action's dialog posts it)
+            const report = (source, summary) =>
+                asUser(users.requester, () =>
+                    page(
+                        "ReportProblem/reportProblem",
+                        {
+                            targetKey: "asset:" + ids.compressorId,
+                            summary,
+                            priority: "5",
+                            operationKey: "spec-mnt-chat-" + source.chatRoomId,
+                            sourceChatRoomId: source.chatRoomId,
+                            sourceEventSeq: String(source.eventSeq)
+                        },
+                        "json",
+                        "Commons"
+                    )
+                )
+            const retail = report(made.retail, "Spec forklift chain")
+            const open = report(made.open, "Spec compressor belt")
+            const filed = summary =>
+                system(() => {
+                    const request = ec.entity.find("mantle.request.Request").condition("requestName", summary).one()
+                    return request
+                        ? ec.entity.find("mantle.request.RequestCommEvent").condition("requestId", request.requestId).count()
+                        : -1
+                })
+            return {retail, open, retailFiled: filed("Spec forklift chain"), openFiled: filed("Spec compressor belt")}
+        },
+        then({retail, open, retailFiled, openFiled}) {
+            !retail.output.includes("Problem reported as request")
+            retailFiled == -1
+            open.output.includes("Problem reported as request")
+            openFiled == 1
         }
     }
 )

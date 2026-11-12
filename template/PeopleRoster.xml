@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The shift roster as a person and day table (impl-people P14; design-people §6 ShiftRoster's TUI person/date table, §15 the
+    roster print): ShiftRosterTui and ShiftRosterPrint include RosterWeeks with roster in the context
+    (mantle.humanres.ScheduleServices.get#Roster's answer). A week a table: one row a person's employment, a column a day, each cell
+    the day's shifts (a draft said so), approved leave (a morning or an afternoon said so, never its type or reason) and a holiday;
+    the person's rostered hours. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="RosterWeeks">
+            <actions>
+                <script><![CDATA[
+                    const theRoster = ec.context.get('roster') || {}
+                    const lanes = Array.from(theRoster.lanes || [])
+                    const shifts = Array.from(theRoster.shifts || [])
+                    const dayCount = Number(theRoster.days || 7)
+                    const addDay = (day, count) => {
+                        const [y, m, d] = String(day).split('-').map(Number)
+                        return new Date(Date.UTC(y, m - 1, d + count)).toISOString().substring(0, 10)
+                    }
+                    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                    const titleOf = (day) => ec.l10n.localize(weekdays[new Date(day + 'T12:00:00Z').getUTCDay()]) + ' ' + day.substring(5)
+                    const cellOf = (lane, day) => {
+                        const parts = shifts.filter((row) => row.partyRelationshipId === lane.partyRelationshipId && String(row.startText).substring(0, 10) === day)
+                            .map((row) => String(row.startText).substring(11, 16) + '–' + String(row.endText).substring(11, 16)
+                                + (row.statusEnumId === 'ShsDraft' ? ' (' + ec.l10n.localize('draft') + ')' : '') + (row.facilityName ? ' ' + row.facilityName : ''))
+                        for (const row of Array.from(lane.leaveList || []).filter((item) => item.day === day))
+                            parts.push(ec.l10n.localize('Leave') + (row.partText === 'Whole day' ? '' : ' (' + ec.l10n.localize(row.partText.toLowerCase()) + ')'))
+                        for (const row of Array.from(lane.holidayList || []).filter((item) => item.day === day)) parts.push(row.name)
+                        return parts.join('; ')
+                    }
+                    rosterWeeks = []
+                    for (let start = 0; theRoster.fromDay && start < dayCount; start += 7) {
+                        const days = [0, 1, 2, 3, 4, 5, 6].map((i) => addDay(theRoster.fromDay, start + i))
+                        rosterWeeks.push({title: days[0] + ' – ' + days[6], dayTitles: days.map(titleOf),
+                            rows: lanes.map((lane) => Object.assign({personName: lane.personName, organizationName: lane.organizationName,
+                                hoursText: lane.hours ? lane.hours + ' h' : ''}, Object.fromEntries(days.map((day, i) => ['d' + i, cellOf(lane, day)]))))})
+                    }
+                ]]></script>
+            </actions>
+            <widgets>
+                <section-iterate name="RosterWeek" list="rosterWeeks" entry="week">
+                    <widgets>
+                        <label text="Week of ${week.title}" type="h6"/>
+                        <form-list name="RosterWeekTable" list="week.rows" skip-form="true" paginate="false">
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="d0"><default-field title="${week.dayTitles[0]}"><display/></default-field></field>
+                            <field name="d1"><default-field title="${week.dayTitles[1]}"><display/></default-field></field>
+                            <field name="d2"><default-field title="${week.dayTitles[2]}"><display/></default-field></field>
+                            <field name="d3"><default-field title="${week.dayTitles[3]}"><display/></default-field></field>
+                            <field name="d4"><default-field title="${week.dayTitles[4]}"><display/></default-field></field>
+                            <field name="d5"><default-field title="${week.dayTitles[5]}"><display/></default-field></field>
+                            <field name="d6"><default-field title="${week.dayTitles[6]}"><display/></default-field></field>
+                            <field name="hoursText" align="right"><default-field title="Hours"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="hoursText"/></column>
+                                <column><field-ref name="d0"/><field-ref name="d1"/><field-ref name="d2"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section-iterate>
+                <label text="No one to roster in these days." type="p" style="m-muted" condition="!(roster?.lanes || []).length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

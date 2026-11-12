@@ -55,6 +55,10 @@ feature(
             // P7: the equipment the person holds (Tomas holds none)
             rendered.output.includes("Assigned equipment")
             rendered.output.includes("No equipment is held.")
+            // P18: Skills and reviews: his skills (point of sale self-declared), his resume (none yet) and HR's Add resume line
+            rendered.output.includes("Skills and reviews")
+            rendered.output.includes("Self-declared")
+            rendered.output.includes("No resume line yet.") && rendered.output.includes("Add resume line")
         }
     }
 )

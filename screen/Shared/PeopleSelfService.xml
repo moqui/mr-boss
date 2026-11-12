@@ -30,7 +30,14 @@ along with this software (see the LICENSE.md file). If not, see
     requests, when the time area opens to them). P13: the Clock (template/PeopleClock.xml: the user's own employments with clocking
     on, mantle.humanres.AttendanceServices get#MyClock and record#Punch, which take no party; the worker is the session's), shown only
     where an employment has clocking on, and then the page's primary action in place of Open my employee record (design §3
-    SelfService); My attendance links People's Attendance. Payslips (P26) and claims (P15) join with their phases. -->
+    SelfService); My attendance links People's Attendance. P14: My shifts, the user's own published shifts of the next two weeks
+    (mantle.humanres.ScheduleServices.get#MyShifts, which takes no party), shown when they have any, linking the team calendar.
+    P15: My expenses and My advances link People's Expense claims and Advances (the expenses area's own grant). P16 review (the
+    user's call of Nov 12, 2026): My interviews, the interviews the user is on the panel of (mantle.humanres.RecruitingServices
+    find#MyInterviews, which takes no party), shown when they have any, each opening MyInterview beside this screen, where they read
+    the applicant's name, the opening and what the recruiter shared with the panel and answer their scorecard; the scorecards to
+    submit counted in the summary. P18: My qualifications links People's Qualifications (their own, when the Skills and training
+    area opens to them), where they submit a certificate or document for verification. Payslips (P26) join with their phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -96,6 +103,20 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="clocking" from="!!myClock?.clocking"/>
+        <!-- P14: the user's own published shifts of the next two weeks (get#MyShifts takes no party) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.ScheduleServices.get#MyShifts" out-map="myShifts" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="shiftRows" from="Array.from(myShifts?.shifts || [])"/>
+        <set field="shiftEmployers" from="new Set(shiftRows.map(row => row.organizationPartyId)).size"/>
+        <!-- P16 review: the interviews the user is on the panel of (find#MyInterviews takes no party) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.RecruitingServices.find#MyInterviews" out-map="myInterviews" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="interviewRows" from="Array.from(myInterviews?.interviews || [])"/>
+        <set field="scorecardsText" from="String(myInterviews?.toAnswerCount || 0)"/>
     </actions>
 
     <widgets>
@@ -134,6 +155,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P13 -->
                             <link url="${links.attendanceUrl}" url-type="plain" text="My attendance" link-type="anchor-button"
                                     icon="sym_o_fact_check" condition="links?.attendanceUrl"/>
+                            <!-- P15: their expense claims and advances (People's expenses area) -->
+                            <link url="${links.expenseClaimsUrl}" url-type="plain" text="My expenses" link-type="anchor-button"
+                                    icon="sym_o_receipt_long" condition="links?.expenseClaimsUrl"/>
+                            <link url="${links.advancesUrl}" url-type="plain" text="My advances" link-type="anchor-button"
+                                    icon="sym_o_payments" condition="links?.advancesUrl"/>
+                            <!-- P18 -->
+                            <link url="${links.qualificationsUrl}" url-type="plain" text="My qualifications" link-type="anchor-button"
+                                    icon="sym_o_workspace_premium" condition="links?.qualificationsUrl"/>
                         </container>
                     </container>
                 </container>
@@ -149,6 +178,9 @@ along with this software (see the LICENSE.md file). If not, see
                     <number-card title="Weeks to submit" value="${weeksText}" icon="sym_o_schedule_send" size="sm" link="${weekLink}"
                             condition="weekLink"/>
                     <number-card title="Weeks to submit" value="${weeksText}" icon="sym_o_schedule_send" size="sm" condition="!weekLink &amp;&amp; weekRows.length"/>
+                    <!-- P16 review: the interview scorecards the user has to submit -->
+                    <number-card title="Scorecards to submit" value="${scorecardsText}" icon="sym_o_rate_review" size="sm"
+                            condition="interviewRows.length"/>
                 </dashboard>
                 <container-box>
                     <box-header title="My employment"/>
@@ -178,6 +210,34 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="You have no current employment." type="p" style="m-muted q-pa-md" condition="!employmentRows.length"/>
                     </box-body-nopad>
                 </container-box>
+
+                <!-- P16 review: My interviews, those the user is on the panel of, each opening their interview and scorecard -->
+                <section name="MyInterviewsSection" condition="interviewRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My interviews"/>
+                            <box-body-nopad>
+                                <form-list name="MyInterviews" list="interviewRows" skip-form="true" paginate="false">
+                                    <field name="whenText">
+                                        <default-field title="When">
+                                            <link url="../MyInterview" text="${whenText}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="applicantName"><default-field title="Applicant"><display/></default-field></field>
+                                    <field name="openingTitle"><default-field title="Opening"><display/></default-field></field>
+                                    <field name="scorecardText">
+                                        <conditional-field condition="toAnswer" title="Scorecard"><label text="${scorecardText}" style="text-warning text-no-wrap"/></conditional-field>
+                                        <default-field title="Scorecard"><label text="${scorecardText}" style="text-no-wrap"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="whenText"/><field-ref name="applicantName"/></column>
+                                        <column><field-ref name="scorecardText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <!-- My tasks: the open People tasks assigned to the user, each opened as a task in Commons -->
                 <container-box>
@@ -296,6 +356,31 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="No leave asked for yet." type="p" style="m-muted q-pa-md" condition="!leaveRequestRows.length"/>
                     </box-body-nopad>
                 </container-box>
+
+                <!-- P14: My shifts, the user's published shifts of the next two weeks, shown when they have any -->
+                <section name="MyShiftsSection" condition="shiftRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My shifts"/>
+                            <box-toolbar>
+                                <link url="${links.teamCalendarUrl}" url-type="plain" text="Team calendar" link-type="anchor"
+                                        condition="links?.teamCalendarUrl"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="MyShifts" list="shiftRows" skip-form="true" paginate="false">
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                    <field name="hoursText" align="right"><default-field title="Hours"><display/></default-field></field>
+                                    <field name="organizationName" hide="shiftEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="whenText"/><field-ref name="facilityName"/></column>
+                                        <column><field-ref name="hoursText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <section-include name="EmergencyContacts" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
             </widgets>

@@ -528,5 +528,17 @@ along with this software (see the LICENSE.md file). If not, see
         reports export their own form-list's CSV (the screen's projection, the columns chosen), nothing dispatched -->
     <moqui.server.TransferTarget targetId="maintenanceReports" direction="export" targetMode="wizard" title="Maintenance reports"
             description="A Maintenance report's rows as CSV, from Reports in Maintenance (work status, PM compliance)"
-            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceReports" sequenceNum="67"/>
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceReports" sequenceNum="68"/>
+    <!-- impl-maintenance P19 (F53, F117): the list exports Maintenance makes in its own lists (CSV with the current filters and the
+        columns shown, no hidden column), listed in Admin's Exports as wizard export targets with their owner route (a mountRoutes key
+        in service/ironstone/admin/Admin.js), nothing dispatched, as Projects' work item list is. -->
+    <moqui.server.TransferTarget targetId="maintenanceWorkOrderList" direction="export" targetMode="wizard" title="Maintenance work orders"
+            description="The work orders of a list as CSV, from Work orders in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceWorkOrders" sequenceNum="65"/>
+    <moqui.server.TransferTarget targetId="maintenanceBookingList" direction="export" targetMode="wizard" title="Booking requests"
+            description="The booking requests of a list as CSV, from Booking requests in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceBookingRequests" sequenceNum="66"/>
+    <moqui.server.TransferTarget targetId="maintenanceDueList" direction="export" targetMode="wizard" title="Due maintenance"
+            description="The preventive maintenance due of a list as CSV, from Due maintenance in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceDue" sequenceNum="67"/>
 </entity-facade-xml>

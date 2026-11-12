@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Qualifications (design-people §10 Qualifications; style-guide §3.2 List; impl-people P18): the qualifications the user
+    reads (mantle.humanres.DevelopmentServices.find#Qualifications): their own (Mine), and every person their scope reaches (All I
+    see: an employer's employees for a development, HR or other staff reader, a manager's reports), each at the user's level (the
+    person and HR every field, an identity document's or work permit's number theirs alone; development every other field; a manager
+    and other staff readers only verified ones' validity); by state (waiting, valid, expiring within thirty days, expired, needing
+    attention), type and name. Add qualification is the primary (store#Qualification: the person's own, or an HR or development
+    editor's for someone; it waits for verification); a row has Verify, Reject and Revoke for a verifier who is not the person (an HR
+    editor, or a development editor for a type that is not restricted; verify#Qualification at the revision read, a rejection or
+    revocation with its reason), Change for one waiting or rejected, Renew for the person's verified one, and Files: the
+    qualification's content host (PartyQualification, PE-01), the person's and HR's alone, shown below the list. The number is opted
+    out of AI wherever it shows (ai-opt-out, PE-21). Every People user's and a self-service employee's (the area's own grant,
+    BOSS_PPL_DEVELOPMENT). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Qualifications" default-menu-index="2" menu-image="sym_o_workspace_premium" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="state"/>
+    <parameter name="qualificationTypeEnumId"/>
+    <parameter name="term"/>
+    <parameter name="pageIndex"/>
+    <!-- the qualification whose files are shown -->
+    <parameter name="partyQualificationId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- submitted, or changed and submitted again: Mantle checks who may, the type, the expiry and the revision read -->
+    <transition name="storeQualification">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.store#Qualification" out-map="stored"
+                    in-map="{partyQualificationId:(partyQualificationId || null), partyId:(partyId || null),
+                        qualificationTypeEnumId:(qualificationTypeEnumId || null), title:(title ?? null), issuerName:(issuerName ?? null),
+                        referenceNumber:(referenceNumber ?? null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        renewsQualificationId:(renewsQualificationId || null), comments:(comments ?? null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Qualification submitted: it waits for verification</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyQualificationId" from="stored?.partyQualificationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- verified, rejected or revoked by a verifier who is not the person, at the revision read -->
+    <transition name="verifyQualification">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.verify#Qualification" out-map="decided"
+                    in-map="{partyQualificationId:partyQualificationId, decision:(decision || 'verify'), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${decision == 'reject' ? 'Qualification rejected' : decision == 'revoke' ? 'Qualification revoked' : 'Qualification verified'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="readsOthers" from="!!(caps.staff || caps.team)"/>
+        <set field="editor" from="!!((caps.hrView &amp;&amp; caps.hrEdit) || (caps.developView &amp;&amp; caps.developEdit))"/>
+        <set field="showing" from="readsOthers &amp;&amp; show != 'mine' ? 'all' : 'mine'"/>
+        <set field="stateShown" from="['waiting', 'valid', 'expiring', 'expired', 'attention'].includes(state) ? state : 'all'"/>
+        <service-call name="mantle.humanres.DevelopmentServices.find#Qualifications" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{mine:(showing == 'mine'), qualificationTypeEnumId:(qualificationTypeEnumId || null), show:stateShown,
+                    term:(term || null), pageIndex:(pageIndex || 0)}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="partyQualificationId">
+            <service-call name="mantle.humanres.DevelopmentServices.find#Qualifications" out-map="selectedFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyQualificationId:partyQualificationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            qualifications = Array.from(found?.qualifications || [])
+            qualificationsCount = found?.qualificationsCount || 0
+            qualificationsPageIndex = found?.qualificationsPageIndex || 0
+            qualificationsPageSize = found?.qualificationsPageSize || 20
+            qualificationsPageMaxIndex = found?.qualificationsPageMaxIndex || 0
+            qualificationsPageRangeLow = found?.qualificationsPageRangeLow || 0
+            qualificationsPageRangeHigh = found?.qualificationsPageRangeHigh || 0
+            canSubmitOwn = !!found?.canSubmit
+            canAdd = canSubmitOwn || editor
+            selected = Array.from(selectedFound?.qualifications || [])[0] || null
+            verificationColors = {QlVerPending: 'warning', QlVerVerified: 'positive', QlVerRejected: 'negative', QlVerRevoked: 'grey-8'}
+            validityColors = {valid: 'positive', expiring: 'warning', expired: 'negative', notYet: 'grey-8'}
+            // the qualification types not ended (People's lookups, Enumeration.thruDate), and all of them for the filter
+            const typeRows = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'QualificationType')
+                .orderBy(['sequenceNum', 'description']).disableAuthz().list())
+            const nowMillis = ec.user.timestampMillis(ec.user.nowTimestamp)
+            typeOptions = typeRows.filter(row => row.thruDate == null || ec.user.timestampMillis(row.thruDate) > nowMillis)
+                .map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            allTypeOptions = typeRows.map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            findValues = {show: showing, state: stateShown, qualificationTypeEnumId: qualificationTypeEnumId || null, term: term || null}
+            employee360Url = sharedLinks?.['Employees/Employee360'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Qualifications" type="h5"/>
+                <label text="Certificates, licences, degrees and documents, verified and kept valid." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="AddQualificationDialog" button-text="Add qualification" icon="sym_o_add" type="primary" width="760"
+                        title="Add a qualification" condition="canAdd">
+                    <label type="p" style="text-caption m-muted"
+                            text="It waits for verification by HR or a development administrator. Attach the certificate or document after saving, under Files."/>
+                    <form-single name="AddQualification" transition="storeQualification">
+                        <field name="partyId">
+                            <conditional-field condition="editor" title="Person" tooltip="Empty: yourself">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'people'}"/>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field><hidden/></default-field>
+                        </field>
+                        <field name="qualificationTypeEnumId">
+                            <default-field title="Kind">
+                                <drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="title"><default-field title="Name" tooltip="The degree, certificate or document"><text-line size="40"/></default-field></field>
+                        <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
+                        <field name="referenceNumber" ai-opt-out="true">
+                            <default-field title="Number" tooltip="An identity document's or work permit's number is read only by you and HR">
+                                <text-line size="30"/></default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
+                        <field name="thruDate">
+                            <default-field title="Expires" tooltip="Required for an identity document or work permit"><date-time type="date"/></default-field>
+                        </field>
+                        <field name="comments"><default-field title="Comments"><text-area rows="2"/></default-field></field>
+                        <field name="submitButton"><default-field title="Submit"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="partyId"/><field-ref name="qualificationTypeEnumId"/></field-row>
+                            <field-row><field-ref name="title"/><field-ref name="issuerName"/></field-row>
+                            <field-row><field-ref name="referenceNumber"/><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-ref name="comments"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+
+        <form-single name="FindQualifications" transition="." map="findValues">
+            <field name="show" hide="!readsOthers">
+                <default-field title="Show">
+                    <radio>
+                        <option key="mine" text="Mine"/>
+                        <option key="all" text="All I see"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="State">
+                    <drop-down>
+                        <option key="all" text="Any"/>
+                        <option key="waiting" text="Waiting for verification"/>
+                        <option key="valid" text="Valid"/>
+                        <option key="expiring" text="Expiring within 30 days"/>
+                        <option key="expired" text="Expired"/>
+                        <option key="attention" text="Expiring or expired, not renewed"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="qualificationTypeEnumId">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true"><list-options list="allTypeOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="term" hide="!readsOthers"><default-field title="Person"><text-find size="20" hide-options="true"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="state"/>
+                    <field-ref name="qualificationTypeEnumId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+
+        <container-box>
+            <box-body-nopad>
+                <form-list name="QualificationList" list="qualifications" skip-form="true" paginate="true" condition="qualifications.length">
+                    <field name="personName">
+                        <conditional-field condition="employee360Url" title="Person">
+                            <link url="${employee360Url}" url-type="plain" text="${personName}" link-type="anchor" parameter-map="{partyId:partyId}"/>
+                        </conditional-field>
+                        <default-field title="Person"><display/></default-field>
+                    </field>
+                    <field name="typeText"><default-field title="Kind"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
+                    <field name="issuerName"><default-field title="Issued by"><display/></default-field></field>
+                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="Issued"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
+                    <field name="verificationText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${verificationColors[verificationStatusId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(verificationText)}</q-chip>${validity ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-' +
+                                    (validityColors[validity] || 'grey-8') + '">' + WebUtilities.encodeHtml(validityText) + '</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: verificationText + (validity ? " · " + validityText : "")})}]]></text>
+                                <text type="html">${verificationText}${validity ? ' · ' + validityText : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="verifyQualification" link-type="hidden-form-link" text="Verify" icon="sym_o_verified" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerPending'"
+                                    confirmation="Verify ${personName}'s ${typeText.toLowerCase()}?"
+                                    parameter-map="{partyQualificationId:partyQualificationId, decision:'verify', expectedRevision:revision}"/>
+                            <container-dialog id="Reject_${partyQualificationId}" button-text="Reject" icon="sym_o_block" type="default" width="520"
+                                    title="Reject ${personName}'s ${typeText.toLowerCase()}" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerPending'">
+                                <form-single name="RejectQualification" transition="verifyQualification"
+                                        map="{partyQualificationId:partyQualificationId, decision:'reject', expectedRevision:revision}">
+                                    <field name="partyQualificationId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Reject"><submit type="danger"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="Revoke_${partyQualificationId}" button-text="Revoke" icon="sym_o_cancel" type="default" width="520"
+                                    title="Revoke ${personName}'s ${typeText.toLowerCase()}" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerVerified'">
+                                <label type="p" text="A revoked qualification meets no requirement; the record and its files are kept."/>
+                                <form-single name="RevokeQualification" transition="verifyQualification"
+                                        map="{partyQualificationId:partyQualificationId, decision:'revoke', expectedRevision:revision}">
+                                    <field name="partyQualificationId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Revoke"><submit type="danger" confirmation="Revoke ${personName}'s ${typeText.toLowerCase()}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="Change_${partyQualificationId}" button-text="Change" icon="sym_o_edit" type="default" width="720"
+                                    title="Change ${typeText.toLowerCase()}" condition="canChange">
+                                <form-single name="ChangeQualification" transition="storeQualification"
+                                        map="{partyQualificationId:partyQualificationId, expectedRevision:revision, qualificationTypeEnumId:qualificationTypeEnumId,
+                                            title:title, issuerName:issuerName, referenceNumber:referenceNumber, fromDate:fromDateText, thruDate:thruDateText,
+                                            comments:comments}">
+                                    <field name="partyQualificationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="qualificationTypeEnumId">
+                                        <default-field title="Kind"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                    </field>
+                                    <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
+                                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
+                                    <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
+                                    <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
+                                    <field name="comments"><default-field title="Comments"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Submit again"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="Renew_${partyQualificationId}" button-text="Renew" icon="sym_o_autorenew" type="default" width="720"
+                                    title="Renew ${typeText.toLowerCase()}" condition="canReadFiles &amp;&amp; verificationStatusId == 'QlVerVerified' &amp;&amp; partyId == people?.partyId">
+                                <label type="p" text="The renewal is a new qualification that waits for verification; this one and its files are kept."/>
+                                <form-single name="RenewQualification" transition="storeQualification"
+                                        map="{renewsQualificationId:partyQualificationId, qualificationTypeEnumId:qualificationTypeEnumId, title:title,
+                                            issuerName:issuerName}">
+                                    <field name="renewsQualificationId"><default-field><hidden/></default-field></field>
+                                    <field name="qualificationTypeEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
+                                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
+                                    <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
+                                    <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Submit renewal"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="." text="Files" icon="sym_o_attach_file" link-type="anchor" condition="canReadFiles"
+                                    parameter-map="{partyQualificationId:partyQualificationId, show:showing, state:stateShown}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="personName"/><field-ref name="typeText"/><field-ref name="thruDateText"/></column>
+                        <column><field-ref name="verificationText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!qualifications.length &amp;&amp; showing == 'mine'"
+                        text="You have no qualification here yet.${canSubmitOwn ? ' Add qualification submits a certificate, licence or document for verification.' : ''}"/>
+                <label type="p" style="q-pa-md m-muted" condition="!qualifications.length &amp;&amp; showing != 'mine'"
+                        text="No qualification matches."/>
+            </box-body-nopad>
+        </container-box>
+
+        <!-- the files of the qualification chosen (its own content host, PE-01): the person's and HR's alone -->
+        <section name="QualificationFiles" condition="selected?.canReadFiles">
+            <widgets>
+                <container-box>
+                    <box-header title="Files of ${selected.personName}'s ${selected.typeText.toLowerCase()}"/>
+                    <box-toolbar><link url="." text="Close" icon="sym_o_close" link-type="anchor" parameter-map="{partyQualificationId:''}"/></box-toolbar>
+                    <box-body>
+                        <label text="Seen only by the person and HR of an employer of theirs." type="p" style="text-caption m-muted"/>
+                        <record-files id="QualificationFiles" record-entity="mantle.humanres.ability.PartyQualification"
+                                record-id="${selected.partyQualificationId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
