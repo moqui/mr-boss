@@ -309,7 +309,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Organization and reporting | Mantle, BOSS | OrgStructure, OrgChart | built and reviewed Nov 11, merged |
 | P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | built and reviewed Nov 11, merged |
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | built and reviewed Nov 11, merged |
-| P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | — |
+| P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | built and reviewed Nov 11, merged |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | — |
 | P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | — |
 | P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | — |
@@ -1658,7 +1658,7 @@ Design §4 (the employment model), HireEmployee, EmploymentChange; PE-02.
 - Design edits: design-people (header; §1.4 the quick create; §4 the employment model as built; Employees, Employee360, HireEmployee,
   EmploymentChange, OrgStructure and OrgChart as built; §12 the topic's handlers; §13 Approvals' topics); design-drawers-commons §4 (the
   `PeopleEmploymentChangeApproval` row: its approve and refuse handlers).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F121 to F130 in order:
   - only a transfer and a separation wait for approval (design §12's topic: transfer, pay change, separation); a manager change, a leave
     of absence and a return are HR's at once, as P3's chart change was. The pay change waits for P23;
   - `Employment.emplPositionId` follows the newest primary seat when a change is applied, also a change dated later, so TimeServices'
@@ -1759,7 +1759,7 @@ committed apart per repository ("People P6 review: …"; mr-mantle 20797e1b).
   - The client walk: 8.8 to 9.1 s as built, now 7.26 s (two runs, 7.26 and 7.26 s) with its golden path whole (the directory search,
     the hire's three steps, Employee360, the transfer's two steps): the employer is the default (R5), a drop-down's choice no longer
     waits for its menu to close (the next action waits for its element), shorter search terms.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F131 to F136 in order:
   - a change applied with a later date (an approved transfer, a leave's return date) refuses every change dated before it,
     a separation included (`ASSIGNMENT_SCHEDULED`), and an applied future assignment cannot be withdrawn: a person who resigns before
     an approved transfer's date cannot be separated until after it, and a return from leave cannot come early;
@@ -2498,7 +2498,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
