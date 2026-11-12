@@ -3080,6 +3080,88 @@ built.
     planned work with the default team's technicians (built: no one assigned is unknown, so such work waits for a supervisor or the
     planner's approval after assigning).
 
+**Review Nov 11 (P11).** mr-mantle 860c4559, mr-boss 99e0e21f and this note's commit (branch `mnt/p11`; master not merged, as the
+lead asked: P18 and P14 merge first). Reviewed `git diff master...mnt/p11` of mr-mantle (10cc61af) and mr-boss (74682534, 23ee1289)
+against the phase's text, §2, §4, design §3 WorkCosts, "Charging a project", §8 MaintenanceCostReport and §9, design-projects
+ProjectMoney, design-accounting's labor costing rates and AC-24, AGENTS.md and Practices-App-Dev.
+- Checked and found sound:
+  - Restricted values: `get#MaintenanceCosts` is the only answer with an amount, and it checks MAINTENANCE_COST_VIEW with a work read
+    in Mantle (no group name, no appRoot), the one work order through `requireWork`, the report through `scopedQuery`, an organization
+    given through `requireOrganization`. The Costs tab, the report, its CSV and its print all read it; the screens are `BOSS_MNT_COSTS`
+    (denied to the root group, ALWAYS for the cost reader, carried by the cost reader's bundle), so they are in no other menu; the
+    shell context gains only the report's link path. No Home counter, palette source, notification, Assist answer, Insights dataset or
+    shell context gains a value. Labor is priced at `get#CostingRate` (class, work type, the work's organization), never
+    `vendorHourRate` or a person's rate; the rate text is the class's. `get#MaintenancePolicy` hides the cost threshold from anyone but a
+    settings editor or cost reader; the Approve refusal names no amount (the spec checks it), and `withinThresholds` compares the cost
+    only after the hours pass.
+  - `get#ApprovedStandardCost` and the planner: the estimate reads `Costs.js` `effective` (the same row `approved` answers, after
+    `CostPolicy.scope`), and the planner gets only a yes or no from it (approved on create or by the planner, else APPROVAL_REQUIRED);
+    nothing widens a product-cost answer the planner sees. The cost reader does see the estimate's parts at the approved standard cost
+    on the Costs tab without PRODUCT_COST_VIEW: design §3 WorkCosts lists the estimated cost, and the reader sees the issued cost of the
+    same parts anyway (a finding below, for the record).
+  - The arithmetic: each TimeEntry, issuance, return and order line is one source (time on the root and on a step are separate rows,
+    never a rolled-up `actualWorkTime`); totals are kept per currency, unpriced rows have none; an outside line counts its bills (of
+    invoices not cancelled) and only what was accepted beyond the billed quantity, at the order price, and what is ordered beyond both is
+    pending, outside the total; returns name their issuance and are negative at the returned asset's cost; unapproved hours (a timesheet
+    not `TmshApproved`, or none) and approved hours with no rate are summed apart. The estimate takes the steps' hours when any step has
+    one (as `treeHours`, F150), the highest rate of a node's assignees (any unpriced one makes it unknown), the root's assignees for a
+    step with none; another currency, another unit, a missing approved cost, no one assigned or no rate are unknown, and unknown is over.
+  - The planner's view of the threshold: the outcome (approved or held) is the only signal; a planner who varies assignees or planned
+    quantities learns only whether an unseen estimate is under an unseen threshold, as any threshold gate tells. No amount, rate or
+    comparison of two technicians' rates is answered.
+  - Projects (owner contract): `get#ProjectMoneySummary` adds two lists in a try that logs and leaves them out; the other fields and
+    boxes are unchanged; the Money tab's box shows only when there is a repair. Projects' specs pass unchanged. The accepted call holds:
+    a money reader sees each work order's total by currency and its hours not priced, with no source, rate, part price or person
+    (made strict in the Mantle answer by R3).
+  - Labor and the ledger: nothing posts maintenance labor, and neither the phase nor §4 asks it (P11's labor is a read at the costing
+    rate; AC-24 routes parts; Accounting's `post#WorkEffortCost` follows the project tree). The design's "Charging a project" says so.
+  - Settings: `store#MaintenanceCostThreshold` checks MAINTENANCE_SETTINGS_EDIT and the organization in Mantle, ends the row in effect
+    and copies its other fields; `store#MaintenancePolicy` keeps the threshold. The screen's transition checks the record first.
+  - Tests: one qvt render each of the Costs tab, the report and Projects' Money (Money had only a refusal render before); no sweep; the
+    acceptance walk written and not run.
+- Fixes:
+  - R1 (Moderate, security): the report's CSV quoted a leading `=`, `+` or `@` only; a name or description starting with `-`, a tab or
+    a return was exported as a formula. It now quotes those too, unless the cell is a plain number (a return's negative amount stays
+    a number), as Commerce's, Purchasing's and Customer Service's exports do. Spec: MaintenanceCosts' CSV with the belt renamed
+    `-2+3 belt` (fails without the fix).
+  - R2 (Minor, access; P4's finding): `BOSS_MNT_REQUESTS` was carried by no bundle, so a group given the planner or supervisor bundle in
+    Admin lacked Requests. Two CapabilityBundleArtifact rows (BossSetupMaintenanceData.xml). Spec: MaintenanceAccess' registry feature
+    now checks that every ALWAYS grant of a Maintenance bundle's group (but the administrator's, whose root grant opens all) is carried
+    by its bundle (fails without the rows, naming both).
+  - R3 (Minor, restricted values): `projectCosts` answered each work order's parts, labor and outside service apart to Projects' money
+    readers (a work order's labor alone being one technician's hours at their class's rate), though the box showed only totals. It now
+    answers each currency's total alone, per work order and overall; the box lists two currencies with a comma, not a plus. design-
+    maintenance's "Charging a project" and design-projects' ProjectMoney as-built say so. Spec: MaintenanceCosts' Projects feature
+    (no labor or parts in the summary).
+  - R4 (Minor, tests): the highest of several technicians' rates and an estimate against a threshold in another currency were not
+    tested. Mantle MaintenanceCosts' third feature: the second technician given a 60 USD class, both on 2 h and two bearings, estimated
+    160 (labor 120) and approved by the planner under 500 USD; against 500 EUR the estimate is unknown ("is in USD") and the planner is
+    refused.
+- Findings (unnumbered):
+  - The cost reader sees the estimate's parts at the products' approved standard cost without PRODUCT_COST_VIEW (design §3 WorkCosts
+    shows the estimated cost; with one planned part it is the part's standard cost). If standard costs should stay Products' readers',
+    the estimate could show parts only to a holder of a product-cost read.
+  - The report reads each order line's bills and acceptances, and `projectCosts` each issuance's node, a query apiece (the worker's
+    finding); fine at the demo's size.
+  - The pending outside service is dated by the order's entry date, so a period filter can drop an open line ordered before it.
+  - Settings' cost threshold currency is a text line (Mantle checks it is a currency); P18's `policyFields` rework can make it a choice.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceCosts 3 of 3 (0.28 s, 0.22 s, 1.47 s); with
+  MaintenanceWorkOrders, WorkProjectMilestones, MaintenanceMaterials, MaintenancePurchases, LaborCostingRate: 30 of 30 (6 specs).
+  mr-boss MaintenanceCosts 3 of 3 (0.08 s, 0.19 s, 0.22 s) and MaintenanceAccess 20 of 20 (the cost case 0.38 s, the registry 0.09
+  s); with MaintenanceWorkOrders, MaintenanceRequests, ProjectsAccess, ClientBilling, NewProject, Billing, Projects, TimeEntries: 73 of
+  73 (10 specs, 21.6 s feature time). R1's and R2's checks fail with the fixes reverted (21 of 23). `./moq run --debug --nobuild lint
+  --screens`: 136 flagged, as before, none in the changed screens; both symlinked binaries unchanged. Prettier clean on the changed
+  specs' new lines and MaintenanceCosts.js. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle +0.3 s over the Built note (MaintenanceCosts' third feature); mr-boss unchanged within noise.
+  - Merge hot spots (with P18 and P14): `MaintenanceWork.js` (policyOf's and defaultPolicy's two fields, storePolicy's kept threshold,
+    getPolicy's hiding, makeOrder's and refusalOf's `withinThresholds`), `Settings/WorkPolicy.xml` (the Cost threshold box and its
+    transition become a `policyFields` row and P18's field group), BossSetupMaintenanceData.xml (R2's two rows before "Report a
+    problem"; P11's group appended), MaintenanceAccess.spec.js (R2's lines in the registry feature).
+  - The user's calls: none open from the review. The lead's two accepted calls stand (Projects' readers see totals only, now in the
+    answer too; ad hoc work with hours is held until someone is assigned). For a decision if wanted: whether the cost reader's estimate
+    may show parts at the standard cost without a product-cost read (built: yes, as WorkCosts designs).
+
 ### P12 — Customer repair
 
 Design §3 (the customer repair context, the consent recheck), §12 (the intervention report), crosscut §4.6
