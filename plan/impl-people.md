@@ -327,7 +327,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | built and reviewed Nov 11, merged |
 | P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | built and reviewed Nov 11, merged |
 | P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | — |
-| P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | — |
+| P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | built and reviewed Nov 11, merged |
 | P19 Training | Mantle, BOSS | Training, TrainingDetail | — |
 | P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | — |
 | P21 Grievances | Mantle, BOSS | Grievances, RequestDetail | — |
@@ -4595,7 +4595,7 @@ Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels)
 - Design edits: design-people (header; §1.2 Skills & training; §1.4 Today and the topic; §4 Employee360's Skills and reviews; §5
   JobClassDetail; §10, SkillsMatrix and Qualifications as built; §13 RecordFiles); design-projects (header; §15 StaffAllocation's owner
   contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F288 to F297 in order:
   - `EmplPositionClassSkill` keeps its key (class and skill), so a removed requirement is ended in place and a skill required again
     reopens the same row from the new date: the earlier period's dates are not kept; a requirement's dated history needs `fromDate`
     in the key (an entity change);
@@ -4707,7 +4707,7 @@ PeopleSkills, PeopleAccess, PeopleRecruiting, PeopleExpenses (32 of 32) passed a
     later date read at its date).
   - R4 (medium): a qualification's number reached the model tools (Assist's screen reads of Qualifications for HR):
     `PartyQualification.referenceNumber` and Qualifications' number fields are `ai-opt-out` (PE-21).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F298 to F304 in order:
   - `BOSS_PPL_FILES_SELF` grants Shared/RecordFiles.xml by location, so a self-service employee opens the panel under every app
     root that mounts it (Admin, Projects, Sales and the rest; each root's always-actions run, Accounting's refuses), showing what
     Commons' panel shows them; a grant for People's mount alone needs the record-files element to name the mounting app, or a
@@ -5107,7 +5107,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
