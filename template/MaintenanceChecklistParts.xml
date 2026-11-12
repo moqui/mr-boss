@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of WorkOrderDetail's Procedure tab (design-maintenance §3 ProcedureSteps, StepResponse, ExecutionAmendment, §12;
+    impl-maintenance P7). Each transition checks the work order through check#Record (workEffortId, the page's root), then calls
+    Mantle's mantle.work.ProcessServices, which checks the permission, the scope and the assignment again; a step is named by
+    stepWorkEffortId:
+    - startStep: the step in progress (record#ProcessStep action start);
+    - respondStep: StepResponse (record#ProcessStep): the outcome or reading, the notes, evidence files and a voice note uploaded
+      with it, a correction of a check; a voice note is then transcribed in a transaction of its own (transcribe#CheckVoiceNote);
+      a response that leaves the step open says why; the transcript only when the organization's work policy turns
+      transcription on;
+    - skipStep: an optional step skipped with the reason;
+    - waiveStep: a supervisor's waiver with the reason (waive#ProcessStep);
+    - previewAmendment, amendExecution: ExecutionAmendment, its preview (the page shows what it invalidates) and its confirmation
+      (amend#ProcessExecution): a step's requirement or what it waits for, a step added, or a step not yet started removed;
+    - printChecklist: the completed checklist and exception record as a PDF (get#ProcessChecklist: the one stored at close, else
+      made now).
+    - StepResponseForm: the response form of one step (step; formPrefix names it), with the fields its response kind takes. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="startStep">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.record#ProcessStep" in-map="{workEffortId:stepWorkEffortId, action:'start'}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Step started</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="respondStep">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.record#ProcessStep" out-map="recorded"
+                    in-map="{workEffortId:stepWorkEffortId, action:'respond', outcome:outcome, measurementValue:measurementValue,
+                        measurementUomId:measurementUomId, observedDate:observedDate, comments:comments, contentFile:contentFile,
+                        voiceFile:voiceFile, supersededCheckId:supersededCheckId, correctionReason:correctionReason,
+                        operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    if (recorded.accepted) ec.message.addMessage(recorded.repeated ? 'The response was recorded already' : 'Step done', 'success')
+                    else ec.message.addMessage('Recorded; the step stays open: ' + Array.from(recorded.findingList || []).join('; '), 'warning')
+                }
+            ]]></script>
+            <!-- the voice note's transcript, in a transaction of its own: one that cannot be made leaves the audio as the note -->
+            <if condition="!ec.message.hasError() &amp;&amp; recorded?.voiceContentId">
+                <service-call name="mantle.work.ProcessServices.transcribe#CheckVoiceNote" out-map="transcribed" transaction="force-new"
+                        ignore-error="true" in-map="{workEffortCheckId:recorded.workEffortCheckId}"/>
+                <script>ec.message.clearErrors(); if (!transcribed?.transcribed) ec.message.addMessage(transcribed?.reasonCode == 'TRANSCRIPTION_OFF'
+                        ? 'The voice note is kept; this organization does not transcribe voice notes' : 'The voice note is kept; it was not transcribed', 'info')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="skipStep">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.record#ProcessStep" in-map="{workEffortId:stepWorkEffortId, action:'skip', comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Step skipped</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="waiveStep">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.waive#ProcessStep"
+                    in-map="{workEffortId:stepWorkEffortId, reason:reason, workEffortCheckId:(workEffortCheckId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Step waived</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- the preview is read by the page (Procedure.xml's actions) from these parameters; nothing is written -->
+    <transition name="previewAmendment" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+            <parameter name="amendAction"/>
+            <parameter name="amendStepId"/>
+            <parameter name="amendStepName"/>
+            <parameter name="amendParentId"/>
+            <parameter name="amendResponseKindEnumId"/>
+            <parameter name="amendIsRequired"/>
+            <parameter name="amendEvidenceRequired"/>
+            <parameter name="amendCommentRequired"/>
+            <parameter name="amendWaiverAllowed"/>
+            <parameter name="amendMinimumValue"/>
+            <parameter name="amendMaximumValue"/>
+            <parameter name="amendDependsOnIds"/>
+        </default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="amendExecution">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <set field="changeRow" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').amendmentChange(context)"/>
+            <service-call name="mantle.work.ProcessServices.amend#ProcessExecution" out-map="amended"
+                    in-map="{rootWorkEffortId:workEffortId, changeList:[changeRow], reason:reason, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${amended.repeated ? 'The amendment was made already' : 'Execution amended' + (amended.invalidatedList?.length ? '; reopened: ' + amended.invalidatedList.map(row =&gt; row.name).join(', ') : '')}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="printChecklist" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.ProcessServices.get#ProcessChecklist" out-map="checklist" in-map="{workEffortId:workEffortId}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <script><![CDATA[
+                if (checklist.contentLocation) ec.web.sendResourceResponse(checklist.contentLocation, true, checklist.fileName)
+                else ec.web.sendBytesResponse(checklist.pdfBytes, 'application/pdf', true, checklist.fileName)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <widgets>
+        <section name="StepResponseForm">
+            <actions>
+                <set field="responseValues" from="{workEffortId:workEffortId, stepWorkEffortId:step.workEffortId,
+                        measurementUomId:step.measurementUomId, operationKey:ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + step.workEffortId,
+                        supersededCheckId:(correcting ? step.current?.workEffortCheckId : null)}"/>
+                <set field="readingHint" from="step.responseKindEnumId == 'WsrReading' ? (step.minimumValue != null || step.maximumValue != null
+                        ? 'Expected ' + (step.minimumValue ?? '') + '–' + (step.maximumValue ?? '') + ' ' + step.measurementUomText : step.measurementUomText) : ''"/>
+                <set field="needsText" from="[step.evidenceRequired ? 'a file' : null, step.commentRequired ? 'a comment' : null].filter(Boolean).join(' and ')"/>
+            </actions>
+            <widgets>
+                <label text="${step.instructionText}" type="p" style="text-body2" condition="step.instructionText"/>
+                <label text="This step needs ${needsText}." type="p" style="text-caption m-muted" condition="needsText"/>
+                <form-single name="StepResponse_${formPrefix}_${step.workEffortId}" transition="respondStep" map="responseValues">
+                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                    <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                    <field name="supersededCheckId"><default-field><hidden/></default-field></field>
+                    <field name="outcome" hide="step.responseKindEnumId != 'WsrPassFail'">
+                        <default-field title="Result">
+                            <radio><option key="pass" text="Pass"/><option key="fail" text="Fail"/></radio>
+                        </default-field>
+                    </field>
+                    <field name="measurementValue" hide="step.responseKindEnumId != 'WsrReading'">
+                        <default-field title="Reading" tooltip="${readingHint}"><text-line size="10" input-type="number"/></default-field>
+                    </field>
+                    <field name="measurementUomId" hide="step.responseKindEnumId != 'WsrReading'">
+                        <default-field title="Unit">
+                            <drop-down allow-empty="false"><list-options list="step.unitOptions" key="${key}" text="${text}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="comments"><default-field title="Notes"><text-area rows="2"/></default-field></field>
+                    <field name="contentFile">
+                        <default-field title="Photo or file" tooltip="Stored with the work order's files as this step's evidence">
+                            <file accept="image/*,video/*,application/pdf"/></default-field>
+                    </field>
+                    <field name="voiceFile">
+                        <default-field title="Voice note" tooltip="A recording from the phone; its transcript is added to the notes">
+                            <file accept="audio/*"/></default-field>
+                    </field>
+                    <field name="observedDate"><default-field title="Observed" tooltip="Now when empty"><date-time/></default-field></field>
+                    <field name="correctionReason" hide="!correcting">
+                        <default-field title="Why it is corrected"><text-line size="50"/></default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="${correcting ? 'Record correction' : 'Record'}"><submit type="primary"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

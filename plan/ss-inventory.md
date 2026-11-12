@@ -43,6 +43,7 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**Maintenance P7 (Nov 12, 2026):** no baseline form maps to the execution checklist (WorkOrderDetail's Procedure tab, StepResponse and ExecutionAmendment are new, design-maintenance §3, §4.3); their Implemented in is in usl-inventory's ProcessServices rows. WorkOrderDetail's Files keep a check's evidence (Mantle's evidence policy); Maintenance mounts WorkItemDetail for a work order's follow-up tasks.
 **Maintenance P9 (Nov 12, 2026):** the baseline's run consumption forms (RunProducts, RunConsumed) map to WorkOrderDetail's Parts tab and Maintenance/WorkOrders/MaterialIssueReceipt (Shared, Maintenance's context); the services are in usl-inventory's MaintenanceExecutionServices rows. Accounting's PostingDefaults gains the Maintenance expense mapping kind (MaintenanceCostPolicy, AC-24).
 **Maintenance P13 (Nov 12, 2026):** the baseline's ProductMaintenanceList is Plans and EquipmentDetail's plans pane: a plan of a piece of equipment follows its model's maintenance default (ProductMaintenance), whose values it takes where it names none, without enrolling every piece of equipment of the model; AddPlannedMaintenance stays P14's DueMaintenance (generation).
 

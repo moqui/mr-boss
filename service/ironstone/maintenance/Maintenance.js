@@ -152,6 +152,8 @@ const linkPaths = [
     // P6: Procedures and the procedure record (design §4)
     "Procedures/Find",
     "Procedures/ProcedureDetail",
+    // P7: a work order's follow-up task, Commons' work item with the Maintenance context
+    "WorkOrders/WorkItemDetail",
     // P9: a work order's parts issued and returned, and a part's stock (design §3 mount rows)
     "WorkOrders/MaterialIssueReceipt",
     "WorkOrders/InventoryAvailability",
