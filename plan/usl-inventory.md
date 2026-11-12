@@ -621,6 +621,22 @@ the screens that call it.
 | ExpenseServices | reserve#ClaimSettlement | — (P27's pay runs) | finance's approve#Payable reserves accounts payable itself (InvoiceWorkflow.js); the payroll route's caller is P27 (People P15) |
 | ExpenseServices | create#ClaimLineFromEmail | — (mail rules) | the EmailRuleAction createExpenseLine (ErActCreateExpenseLine), run by org.moqui.mail.EmailClientServices.run#EmailRules (People P15, F65) |
 | ExpenseServices | create#ClaimLineFromChat | — (chat message actions) | "Add to my claim" in the BasicComms chat (ironstone.comms.ChatServices.create#FromChat kind claimLine; screen-extend Chat.xml) (People P15) |
+| RecruitingServices | find#Openings | People/Staffing/Openings | People/Staffing/Openings (FindOpenings, OpeningList as a list or a board by state); the palette's openings and the choice openings (People P16) |
+| RecruitingServices | store#Opening | People/Staffing/Openings | People/Staffing/Openings (New opening, Edit, Open, Close) (People P16) |
+| RecruitingServices | find#Applications | People/Staffing/ApplicantPipeline | People/Staffing/ApplicantPipeline (FindApplications, ApplicationList as the board by stage and its list); the palette's applications (People P16) |
+| RecruitingServices | create#Application | People/Staffing/ApplicantPipeline | People/Staffing/ApplicantPipeline (Add application, with the resume through create#ApplicationContent) (People P16) |
+| RecruitingServices | get#Application | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (the header, Application, Files, Interviews, the scorecards); the EmploymentApplication record-lookup (People P16) |
+| RecruitingServices | store#Application | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Edit application) (People P16) |
+| RecruitingServices | change#ApplicationStage | People/Staffing/ApplicantPipeline; People/Staffing/ApplicantDetail | People/Staffing/ApplicantPipeline (a card dragged, moveStage; Move to stage on the selected rows, moveSelected); People/Staffing/ApplicantDetail (Move to stage) (People P16) |
+| RecruitingServices | schedule#Interview | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Schedule interview: the private event, its call link, the iMIP invitation and the panel's scorecards) (People P16) |
+| RecruitingServices | submit#Scorecard | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Your scorecard: the form of the interview scorecard purpose, Submit scorecard) (People P16) |
+| RecruitingServices | find#Interviews | People/Staffing/InterviewsCalendar | People/Staffing/InterviewsCalendar (Commons' Calendar.qvue in its resource mode; an attended interview opening Commons' EventDetail mounted there) and InterviewsCalendarTui (People P16) |
+| RecruitingServices | get#InterviewProjection | — (CalDAV, CX-SYNC) | the My interviews projected collection (CalendarProjection PeopleMyInterviews) (People P16) |
+| RecruitingServices | check#ApplicationAccess, create#ApplicationContent | People/Staffing/ApplicantDetail | People/Staffing/ApplicantDetail (Files: the application's record-files host, get#RecordLinkInfo and RecordFiles) (People P16) |
+| RecruitingServices | create#ApplicationFromEmail | — (Comms mail rules) | the createApplication mail rule action (EmailRuleAction ErActCreateApplication), an opening's plus tag (People P16) |
+| party/FormDefinitionServices | find#Forms, create#Form | People/Settings/Forms | People/Settings/Forms (Shared/SurveyForms with People's registration: the forms list, New form) (People P16) |
+| party/FormDefinitionServices | get#Form, rename#Form, save#FormField, save#FormCondition, end#FormPart, publish#Form | People/Settings/FormDetail | People/Settings/FormDetail (Shared/SurveyFormDetail with People's registration: FormFields, FieldOptions, the rules, Publish, Rename, the preview) (People P16) |
+| party/FormPublicationServices | open#Publication | — | no screen: a form's publication by an access kind its purpose's registration admits (People's purposes admit none; Marketing's publication screens build on it, impl-marketing P12) (People P16) |
 
 ## Ledger (81 services)
 
@@ -2081,7 +2097,7 @@ send job and the PASS Support app's Feedback page (operations getCaseFeedbackInv
 | --- | --- | --- | --- |
 | request/CaseFeedbackServices | create#FeedbackForm | CustomerService/Settings/FeedbackForms | CustomerService/Settings/FeedbackForms (NewFeedbackForm, Shared/SurveyForms) |
 | request/CaseFeedbackServices | publish#FeedbackForm | CustomerService/Settings/FeedbackFormDetail | CustomerService/Settings/FeedbackFormDetail (Publish) |
-| request/CaseFeedbackServices | save#FeedbackFormField, save#FeedbackFormCondition, end#FeedbackFormPart, rename#FeedbackForm, get#FeedbackForm |  | CustomerService/Settings/FeedbackFormDetail (FormFields, FieldOptions, the rules, Rename; Shared/SurveyFormDetail) |
+| request/CaseFeedbackServices | save#FeedbackFormField, save#FeedbackFormCondition, end#FeedbackFormPart, rename#FeedbackForm, get#FeedbackForm |  | CustomerService/Settings/FeedbackFormDetail (FormFields, FieldOptions, the rules, Rename; Shared/SurveyFormDetail), over mantle.party.FormDefinitions since People P16 (Customer Service's survey registration) |
 | request/CaseFeedbackServices | save#InvitationPolicy | CustomerService/Settings/ServiceDefaults | CustomerService/Settings/ServiceDefaults (FeedbackDeliveryPolicy, Stop asking) |
 | request/CaseFeedbackServices | queue#Invitation, create#Invitation |  | the SupportCaseFeedbackInvitation rule (entity/FormPublication.eecas.xml), after a case's resolution |
 | request/CaseFeedbackServices | send#Invitations, send#Invitation |  | the send_CaseFeedbackInvitations ServiceJob (CS-JOBS) |

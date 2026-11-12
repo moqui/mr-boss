@@ -565,8 +565,13 @@ module.exports = {
         dark() { return this.$q.dark.isActive; },
         locale() { return String((moqui.config && moqui.config.locale) || 'en-US').replace('_', '-'); },
         pathList() { return this.$root.currentPathList || []; },
-        // the screen that serves this component: Calendar (Commons, a project's Plan) or Manufacturing's ResourceCalendar
-        calIndex() { const index = this.pathList.indexOf('Calendar'); return index >= 0 ? index : this.pathList.indexOf('ResourceCalendar'); },
+        // the screen that serves this component: Calendar (Commons, a project's Plan), Manufacturing's ResourceCalendar, or another
+        // app's mount named for its calendar (People's TeamCalendar and InterviewsCalendar, impl-people P16)
+        calIndex() {
+            const index = this.pathList.indexOf('Calendar');
+            if (index >= 0) return index;
+            return this.pathList.findIndex((name) => name === 'ResourceCalendar' || /^[A-Z][A-Za-z]*Calendar$/.test(name));
+        },
         // a subscreen (EventDetail, Schedules) in the path: it shows in place of the calendar
         subActive() { return this.calIndex >= 0 && this.pathList.length > this.calIndex + 1; },
         screenPath() { return this.$root.basePath + '/' + (this.calIndex >= 0 ? this.pathList.slice(0, this.calIndex + 1) : ['Commons', 'Calendar']).join('/'); },

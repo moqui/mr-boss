@@ -218,7 +218,15 @@ const linkPaths = [
     "Expenses/ExpenseClaims",
     "Expenses/ExpenseClaimDetail",
     "Expenses/EmployeeAdvances",
-    "Payroll/InvoiceDetail"
+    "Payroll/InvoiceDetail",
+    // P16: openings, applicants, an application, the interviews calendar (recruiters' and interviewers') and the People
+    // administrator's forms (the survey builder with People's registration)
+    "Staffing/Openings",
+    "Staffing/ApplicantPipeline",
+    "Staffing/ApplicantDetail",
+    "Staffing/InterviewsCalendar",
+    "Settings/Forms",
+    "Settings/FormDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -856,6 +864,123 @@ function employeeOptions(userScope, term, selected, p, relationshipTypes = ["Prt
         personName
     )
 }
+// ===== P16: recruiting's choices (design §5) =====
+// one employer's approved active seats (EmpsActive, in effect), the seats an opening fills
+choiceSources.approvedSeats = (userScope, term, selected, p) => {
+    if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
+    const factory = ec.entity.conditionFactory
+    const base = () =>
+        find("mantle.humanres.position.EmplPosition")
+            .condition("organizationPartyId", p.organizationPartyId)
+            .condition("statusId", "EmpsActive")
+            .condition(
+                factory.makeCondition(
+                    factory.makeCondition("thruDate", "is-null", null),
+                    "or",
+                    factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                )
+            )
+    let query = base().orderBy("^description").limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["emplPositionId", "description"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const options = Array.from(query.list()).map(row => ({
+        value: row.emplPositionId,
+        label: row.description || row.emplPositionId
+    }))
+    return withSelected(
+        options,
+        selected,
+        id => base().condition("emplPositionId", id).count() > 0,
+        id => one("mantle.humanres.position.EmplPosition", {emplPositionId: id})?.description || id
+    )
+}
+// one employer's published interview scorecards (mantle.party.FormDefinitionServices.find#Forms checks the reader)
+choiceSources.scorecardForms = (userScope, term, selected, p) => {
+    if (!p?.organizationPartyId) return []
+    let found
+    try {
+        found = lib.probe("mantle.party.FormDefinitionServices.find#Forms", {
+            purposeEnumIds: ["DbfpInterviewScorecard"],
+            organizationPartyId: p.organizationPartyId
+        })
+    } catch (error) {
+        return []
+    }
+    const wanted = String(term || "").toLowerCase()
+    return Array.from(found.forms || [])
+        .filter(form => form.published && (!wanted || form.description.toLowerCase().includes(wanted)))
+        .map(form => ({value: form.formId, label: form.description}))
+}
+// the openings a recruiter reads (find#Openings), the open ones first, a closed one said so
+choiceSources.openings = (userScope, term, selected) => {
+    let found
+    try {
+        found = lib.probe("mantle.humanres.RecruitingServices.find#Openings", {
+            term: term || null,
+            includeClosed: true,
+            pageSize: 100
+        })
+    } catch (error) {
+        return []
+    }
+    const rows = Array.from(found.openings || []).sort((a, b) => Number(!a.takesApplications) - Number(!b.takesApplications))
+    const options = rows
+        .slice(0, choiceLimit)
+        .map(row => ({
+            value: row.jobOpeningId,
+            label: row.title + (row.takesApplications ? "" : " (" + row.stateText.toLowerCase() + ")")
+        }))
+    if (selected && !options.some(option => option.value === selected)) {
+        const chosen = rows.find(row => row.jobOpeningId === selected)
+        if (chosen) options.push({value: chosen.jobOpeningId, label: chosen.title})
+    }
+    return options
+}
+// the people an application may be recorded for by id: the current employees and agents of the employers a recruiter reads
+// and their earlier applicants (create#Application checks again), by name
+choiceSources.applicants = (userScope, term, selected, p) => {
+    const employers = employerIds(userScope)
+    if (!userScope.capabilities.recruitView || !employers.length) return []
+    const options = employeeOptions(userScope, term, selected, p, ["PrtEmployee", "PrtAgent"])
+    const applicantIds = Array.from(
+        find("mantle.humanres.employment.EmploymentApplication")
+            .condition("organizationPartyId", "in", employers)
+            .selectField("applyingPartyId")
+            .distinct(true)
+            .limit(500)
+            .list()
+    ).map(row => row.applyingPartyId)
+    if (applicantIds.length) {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.Person")
+            .condition("partyId", "in", applicantIds)
+            .orderBy(["^firstName", "^lastName"])
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["firstName", "lastName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        for (const row of Array.from(query.list()))
+            if (!options.some(option => option.value === row.partyId))
+                options.push({
+                    value: row.partyId,
+                    label: [row.firstName, row.lastName].filter(Boolean).join(" ") + " (applicant)"
+                })
+    }
+    return options.slice(0, choiceLimit)
+}
+// the sources of an application (EmploymentApplicationReferredBy)
+choiceSources.applicationSources = (userScope, term, selected) =>
+    vocabularyOptions("EmploymentApplicationReferredBy", term, selected)
+
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown People choice " + p.choice)
@@ -930,6 +1055,51 @@ const searchFinds = [
         }
     }
 ]
+// P16: a recruiter's openings (by title) and applications (by the applicant's name), each opening its People screen
+searchFinds.push(
+    {
+        kind: "opening",
+        rows: (userScope, text, limit) => {
+            let found
+            try {
+                found = lib.probe("mantle.humanres.RecruitingServices.find#Openings", {term: text, pageSize: limit})
+            } catch (error) {
+                if (codeOf(error) === "PERMISSION_DENIED") return []
+                throw error
+            }
+            return Array.from(found.openings || []).map(row => ({
+                title: row.title,
+                subtitle: ["Opening", row.organizationName, row.stateText].join(" · "),
+                icon: "sym_o_campaign",
+                recordEntity: "mantle.humanres.recruitment.JobOpening",
+                recordId: row.jobOpeningId,
+                url: "/qapps/People/Staffing/ApplicantPipeline?jobOpeningId=" + encodeURIComponent(row.jobOpeningId)
+            }))
+        }
+    },
+    {
+        kind: "application",
+        rows: (userScope, text, limit) => {
+            let found
+            try {
+                found = lib.probe("mantle.humanres.RecruitingServices.find#Applications", {term: text, pageSize: limit})
+            } catch (error) {
+                if (codeOf(error) === "PERMISSION_DENIED") return []
+                throw error
+            }
+            return Array.from(found.applications || []).map(row => ({
+                title: row.applicantName,
+                subtitle: ["Applicant", row.openingTitle, row.stageText].join(" · "),
+                icon: "sym_o_person_search",
+                recordEntity: APPLICATION,
+                recordId: row.employmentApplicationId,
+                url: applicationPath + "?employmentApplicationId=" + encodeURIComponent(row.employmentApplicationId)
+            }))
+        }
+    }
+)
+const APPLICATION = "mantle.humanres.employment.EmploymentApplication"
+const applicationPath = "/qapps/People/Staffing/ApplicantDetail"
 // P12: a leave request's record (the palette, the record-lookup, a notice and Today open it)
 const LEAVE_REQUEST = "mantle.humanres.leave.LeaveRequest"
 const leaveRequestPath = "/qapps/People/Time/LeaveRequestDetail"
@@ -1096,6 +1266,24 @@ function leaveCard(leaveRequestId) {
         lines: [request.chargedText]
     }
 }
+// P16: an application the user reads (get#Application admits a recruiter of its employer and its interviewers), as the
+// record-lookup shows it: the applicant, the opening and the stage; never a scorecard. Null when it is not theirs to read.
+function applicationCard(employmentApplicationId) {
+    let found
+    try {
+        found = lib.probe("mantle.humanres.RecruitingServices.get#Application", {employmentApplicationId})
+    } catch (error) {
+        return null
+    }
+    const application = found?.application
+    if (!application) return null
+    return {
+        title: "Application of " + application.applicantName,
+        status: application.stageText,
+        url: applicationPath + "?employmentApplicationId=" + encodeURIComponent(employmentApplicationId),
+        lines: [application.openingTitle].filter(Boolean)
+    }
+}
 function lookup(p) {
     const empty = {recordList: [], card: null, optionList: []}
     if (!ec.user.userId) return empty
@@ -1127,6 +1315,22 @@ function lookup(p) {
                     })
                 continue
             }
+            // P16: an application the user reads
+            if (wanted.recordEntityName === APPLICATION || wanted.recordEntityName === "EmploymentApplication") {
+                const card = applicationCard(wanted.recordId)
+                if (card)
+                    recordList.push({
+                        recordEntityName: wanted.recordEntityName,
+                        recordId: wanted.recordId,
+                        entity: APPLICATION,
+                        visible: true,
+                        title: card.title,
+                        typeLabel: "Application",
+                        url: card.url,
+                        icon: "sym_o_person_search"
+                    })
+                continue
+            }
             if (wanted.recordEntityName !== PARTY && wanted.recordEntityName !== "Party") continue
             // a person People does not admit is left to the other providers (the hook keeps the first answer per record)
             const card = personCard(wanted.recordId)
@@ -1151,6 +1355,21 @@ function lookup(p) {
                 ? Object.assign(empty, {
                       card: {
                           entityName: LEAVE_REQUEST,
+                          id: p.recordId,
+                          title: card.title,
+                          status: card.status,
+                          url: card.url,
+                          lines: card.lines
+                      }
+                  })
+                : empty
+        }
+        if (p.recordEntityName === APPLICATION && p.recordId) {
+            const card = applicationCard(p.recordId)
+            return card
+                ? Object.assign(empty, {
+                      card: {
+                          entityName: APPLICATION,
                           id: p.recordId,
                           title: card.title,
                           status: card.status,

@@ -66,7 +66,10 @@ along with this software (see the LICENSE.md file). If not, see
                     'ReturnContentType'],
                 // People's employment content host (impl-people P2, F66): HR's files of an employment, never on the Party
                 'mantle.humanres.employment.Employment': ['mantle.humanres.PeopleServices.create#EmploymentContent', 'employmentContentId',
-                    'EmploymentContentType']}
+                    'EmploymentContentType'],
+                // People's application content host (impl-people P16): a recruiter's files of an application (its resume)
+                'mantle.humanres.employment.EmploymentApplication': ['mantle.humanres.RecruitingServices.create#ApplicationContent',
+                    'applicationContentId', 'EmploymentApplicationContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
@@ -115,6 +118,13 @@ along with this software (see the LICENSE.md file). If not, see
             if (info.recordEntityName === 'mantle.humanres.employment.Employment') {
                 const access = ec.service.sync().name('mantle.humanres.PeopleServices.check#EmploymentAccess')
                     .parameters({partyRelationshipId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
+            }
+            // P16: an application's files: a recruiter of its employer adds them, its interviewers read them
+            // (mantle.humanres.RecruitingServices.check#ApplicationAccess)
+            if (info.recordEntityName === 'mantle.humanres.employment.EmploymentApplication') {
+                const access = ec.service.sync().name('mantle.humanres.RecruitingServices.check#ApplicationAccess')
+                    .parameters({employmentApplicationId:info.recordId}).disableAuthz().call()
                 contentType.catalogCanChange = !!access?.canEdit
             }
             if (info.recordEntityName === 'mantle.party.Party') {

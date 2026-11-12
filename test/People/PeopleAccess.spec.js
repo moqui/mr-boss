@@ -47,6 +47,9 @@
 // Services'; Payroll's InvoiceDetail (an expense claim's invoice) refused to HR. PEOPLE_EXPENSE_MANAGE (the user's call of Nov 12,
 // 2026): HR reads the claim and claims for the employee with it; a spec-local HR account without it, and the payroll operator, are
 // refused the same claim with the same parameters.
+// P16: an opening's applications a recruiter's of its employer (the HR officer refused with the same parameters, Services' opening
+// refused to Retail's recruiter), an application read by an interviewer of its panel alone (the HR officer refused it), and People's
+// Forms the People administrator's (the HR officer refused the screen).
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1221,6 +1224,67 @@ feature(
                     hrRetail: "accepted",
                     hrOnlyRetail: "PERMISSION_DENIED",
                     hrServices: "PERMISSION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P16: an opening's applications are its recruiter's; an application is read by its interviewers; Forms the administrator's",
+    {
+        when() {
+            const R = "mantle.humanres.RecruitingServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            // Retail's opening (the recruiter's) and Services' (the system administrator's), each with an application
+            const retail = asUser(users.recruiter, () =>
+                system(() => {
+                    const opening = invoke(R + "store#Opening", {
+                        organizationPartyId: ids.organizationId,
+                        title: "Access spec opening",
+                        emplPositionIds: ids.openingSeatId,
+                        action: "open"
+                    })
+                    const made = invoke(R + "create#Application", {
+                        jobOpeningId: opening.jobOpeningId,
+                        firstName: "Access",
+                        lastName: "Applicant"
+                    })
+                    return {jobOpeningId: opening.jobOpeningId, employmentApplicationId: made.employmentApplicationId}
+                })
+            )
+            const services = system(() => {
+                const opening = invoke(R + "store#Opening", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    title: "Access spec technician",
+                    emplPositionIds: ids.otherOpeningSeatId,
+                    action: "open"
+                })
+                return {jobOpeningId: opening.jobOpeningId}
+            })
+            const find = {jobOpeningId: retail.jobOpeningId}
+            // Mantle's own checks, as the user (the services are reached through People's screens)
+            const as = (user, service, parameters) => asUser(user, () => system(() => code(refusal(service, parameters))))
+            const codes = {
+                recruiter: as(users.recruiter, R + "find#Applications", find),
+                hr: as(users.hr, R + "find#Applications", find),
+                otherEmployer: as(users.recruiter, R + "find#Applications", {jobOpeningId: services.jobOpeningId}),
+                hrApplication: as(users.hr, R + "get#Application", {employmentApplicationId: retail.employmentApplicationId})
+            }
+            const forms = screenRefusal(users.admin, "Settings/Forms")
+            if (forms) problems.push(`the administrator's Forms: ${forms}`)
+            const hrForms = screenRefusal(users.hr, "Settings/Forms")
+            if (!unauthorized(hrForms)) problems.push(`the HR officer opens Forms: ${hrForms || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    recruiter: "accepted",
+                    hr: "PERMISSION_DENIED",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    hrApplication: "RECORD_UNAVAILABLE"
                 }
             problems.join("\n") == ""
         }

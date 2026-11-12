@@ -13,9 +13,11 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- SurveyFormDetail, the survey builder's form editor (crosscut §2, §8; Commons' builder, built by impl-customer-service P13
-    with the Customer Service context only): mounted by Customer Service as Settings/FeedbackFormDetail (design
-    FeedbackFormDetail), any other app root seeing "not available". For a feedback form of one of the user's settings
-    organizations (mantle.request.CaseFeedbackServices.get#FeedbackForm with its drafts):
+    for Customer Service; impl-people P16, F51, made it any app's): the services, capability, routes and words are the mounting
+    app's registration's (service/ironstone/shared/SurveyApps.js), an app with no registration seeing "not available". Customer
+    Service mounts it as Settings/FeedbackFormDetail (design FeedbackFormDetail: mantle.request.CaseFeedbackServices), People as
+    Settings/FormDetail (design-people §13 Forms: mantle.party.FormDefinitionServices). For a form of one of the user's
+    organizations for the app's purposes (the registration's list service names them; its get service with the drafts):
     - FeedbackFormHeader: its name, purpose, version and state, Publish from a date (publish#FeedbackForm, refused while it has
       a problem: no rating, a choice with no option, an expression, a cycle) and Rename;
     - FormAccess: who may change it (SUPPORT_POLICY_EDIT in its organization) and read its answers (service management), from
@@ -25,15 +27,30 @@ along with this software (see the LICENSE.md file). If not, see
       later date is a successor question; an answered question is ended, never deleted;
     - FieldOptions: each choice's options with the value that is the rating's score, End an option;
     - the rules (show or require one question by another's answer; save#FeedbackFormCondition);
-    - FormPreview: the form as the customer's page asks it, drafts included (db-form-include-drafts), in qvt and tui.
-    Every save checks SUPPORT_POLICY_EDIT in Mantle; its dialogs show only to a user who may save. -->
+    - FormPreview: the form as the customer's page (or People's assigned respondent) asks it, drafts included
+      (db-form-include-drafts), in qvt and tui.
+    Every save checks the purpose's permission in Mantle (SUPPORT_POLICY_EDIT for case feedback, PEOPLE_CONFIGURE for People's
+    purposes); its dialogs show only to a user who may save. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Survey form" default-menu-include="false">
     <parameter name="formId"/>
+    <!-- the mounting app's registration: the services each change calls (a request to a transition reads it too) -->
+    <always-actions>
+        <set field="survey" from="ec.resource.script('component://mr-boss/service/ironstone/shared/SurveyApps.js').context(appRoot)"/>
+    </always-actions>
     <transition name="conditionValues" read-only="true">
         <actions>
-            <service-call name="ironstone.customerservice.TemplateServices.get#ConditionValues" out-map="found"
-                    in-map="{appRoot:appRoot, formId:formId, sourceFieldName:sourceFieldName}"/>
+            <if condition="!survey"><return error="true" message="The survey forms are not available here"/></if>
+            <if condition="survey.services.conditionValues">
+                <service-call name="${survey.services.conditionValues}" out-map="found"
+                        in-map="{appRoot:appRoot, formId:formId, sourceFieldName:sourceFieldName}"/>
+                <else>
+                    <!-- the options of the source question, from the form as its editor reads it -->
+                    <service-call name="${survey.services.get}" out-map="formOut" in-map="{formId:formId, includeDrafts:true}"/>
+                    <set field="found" from="{options: (Array.from(formOut.form?.editFields || []).find((row) =&gt; row.fieldName == sourceFieldName)?.options || [])
+                            .map((option) =&gt; ({value: option.keyValue, label: option.text}))}"/>
+                </else>
+            </if>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>
@@ -44,7 +61,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="publishForm">
         <actions>
-            <service-call name="mantle.request.CaseFeedbackServices.publish#FeedbackForm" out-map="published"
+            <service-call name="${survey.services.publish}" out-map="published"
                     in-map="{formId:formId, fromDate:(fromDate || null)}"/>
             <message type="success">Published ${published.publishedFieldNames?.length || 0} new question(s) and the form's other changes</message>
         </actions>
@@ -53,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="renameForm">
         <actions>
-            <service-call name="mantle.request.CaseFeedbackServices.rename#FeedbackForm"
+            <service-call name="${survey.services.rename}"
                     in-map="{formId:formId, description:description, comments:(comments ?? '')}"/>
             <message type="success">Saved the form</message>
         </actions>
@@ -62,7 +79,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="saveField">
         <actions>
-            <service-call name="mantle.request.CaseFeedbackServices.save#FeedbackFormField" out-map="savedField"
+            <service-call name="${survey.services.saveField}" out-map="savedField"
                     in-map="{formId:formId, fieldName:(fieldName || null), title:title, tooltip:(tooltip || null),
                         fieldTypeEnumId:fieldTypeEnumId, isRequired:(isRequired || 'N'), layoutSequenceNum:(layoutSequenceNum || null),
                         optionText:(optionText || null), fromDate:(fromDate || null)}"/>
@@ -73,7 +90,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="endPart">
         <actions>
-            <service-call name="mantle.request.CaseFeedbackServices.end#FeedbackFormPart"
+            <service-call name="${survey.services.endPart}"
                     in-map="{formId:formId, part:part, fieldName:(fieldName || null), sequenceNum:(sequenceNum || null),
                         dependencySeqId:(dependencySeqId || null), thruDate:(thruDate || null)}"/>
             <message type="success">Ended; earlier answers keep it</message>
@@ -83,7 +100,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="saveCondition">
         <actions>
-            <service-call name="mantle.request.CaseFeedbackServices.save#FeedbackFormCondition"
+            <service-call name="${survey.services.saveCondition}"
                     in-map="{formId:formId, dependencySeqId:(dependencySeqId || null), sourceFieldName:sourceFieldName,
                         operator:operator, value:(value || null), targetFieldName:targetFieldName, effect:effect}"/>
             <message type="success">Saved the rule</message>
@@ -92,24 +109,26 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
-        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
-        <!-- the form of one of the user's settings organizations, with its drafts (Mantle refuses another organization's) -->
-        <if condition="inCustomerService">
-            <service-call name="ironstone.customerservice.FeedbackServices.find#FeedbackForms" out-map="found"
-                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot}"/>
+        <!-- the form of one of the user's organizations for the app's purposes, with its drafts (Mantle refuses another
+            organization's) -->
+        <if condition="survey">
+            <service-call name="${survey.services.list}" out-map="found"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, purposeEnumIds:survey.purposes}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="formOwnerId" from="formId ? ec.entity.find('moqui.screen.form.DbForm').condition('formId', formId).disableAuthz()
                 .one()?.ownerPartyId : null"/>
-        <set field="ownForm" from="!!formOwnerId &amp;&amp; (found?.organizations || []).some((org) =&gt; org.value == formOwnerId)"/>
+        <set field="ownForm" from="!!survey &amp;&amp; !!formOwnerId &amp;&amp; (found?.organizations || []).some((org) =&gt; org.value == formOwnerId)"/>
         <if condition="ownForm">
-            <service-call name="mantle.request.CaseFeedbackServices.get#FeedbackForm" out-map="formOut" transaction="force-new"
+            <service-call name="${survey.services.get}" out-map="formOut" transaction="force-new"
                     ignore-error="true" in-map="{formId:formId, includeDrafts:true}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="form" from="formOut?.form || null"/>
         <set field="editing" from="!!form"/>
-        <set field="can" from="customerService?.capabilities || {}"/>
+        <set field="can" from="{policyEdit: !!survey?.canEdit &amp;&amp; form?.canEdit !== false}"/>
+        <set field="rating" from="!!survey?.rating"/>
+        <set field="words" from="survey?.words || {}"/>
         <set field="formFields" from="editing ? form.editFields || [] : []"/>
         <set field="formRules" from="editing ? form.conditions || [] : []"/>
         <set field="formProblems" from="editing ? form.problems || [] : []"/>
@@ -122,14 +141,13 @@ along with this software (see the LICENSE.md file). If not, see
                 .concat(editing &amp;&amp; can.policyEdit &amp;&amp; formFields.length &gt; 1 ? [{formId: formId, dependencySeqId: '',
                     effect: 'show', operator: 'not-empty', sourceFieldName: '', targetFieldName: '', value: '',
                     conditionText: 'New rule', stateText: '', saveLabel: 'Add'}] : [])"/>
-        <set field="accessRows" from="editing ? [
-                {who: 'Service administrators of its organization', what: 'Change and publish the form', how: 'Support policy edit (SUPPORT_POLICY_EDIT)'},
-                {who: 'Service managers', what: 'Read the answers and their comments, follow up low scores', how: 'Support case manage (SUPPORT_CASE_MANAGE)'},
-                {who: 'The follow-up team', what: 'Read the answers of the follow-ups it is given; comments only when the customer agreed to be contacted', how: 'Its team membership'},
-                {who: 'The customer', what: 'Answer once, from the invitation link', how: 'The invitation link (Support app, Feedback)'}] : []"/>
+        <set field="accessRows" from="editing ? survey.accessRows : []"/>
+        <set field="headerCaption" from="editing ? (rating ? ['Case feedback', form.rating ? 'rating ' + form.rating.low + '–' + form.rating.high : 'no rating yet',
+                form.publishedFromText ? 'published ' + form.publishedFromText : '', form.policies?.length ? 'sent for resolved cases' : '']
+                : [form.purposeText, form.publishedFromText ? 'published ' + form.publishedFromText : '']).filter(Boolean).join(' · ') : ''"/>
         <set field="newField" from="{formId: formId, fieldTypeEnumId: 'DBFFT_radio', isRequired: 'N'}"/>
         <set field="previewFormId" from="editing ? formId : ''"/>
-        <set field="formsLink" from="sharedLinks?.['Settings/FeedbackForms']"/>
+        <set field="formsLink" from="survey ? sharedLinks?.[survey.links.forms] : null"/>
     </actions>
     <widgets>
         <section name="SurveyFormUnavailable" condition="!editing">
@@ -137,23 +155,21 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Not available"/>
                     <box-body>
-                        <label type="p" text="Form ${formId} is not available: it does not exist or is not one of your organization's feedback forms."/>
-                        <link url="${formsLink}" text="Back to feedback forms" link-type="anchor" condition="formsLink"/>
+                        <label type="p" text="Form ${formId} is not available: ${words.unavailable || 'it does not exist or is not one of your organization\'s forms.'}"/>
+                        <link url="${formsLink}" text="${words.backLink}" link-type="anchor" condition="formsLink"/>
                     </box-body>
                 </container-box>
             </widgets>
         </section>
         <section name="SurveyFormEdit" condition="editing">
             <widgets>
-                <context record-entity="moqui.screen.form.DbForm" record-id="${formId}" title="Feedback form ${form.description}"/>
+                <context record-entity="moqui.screen.form.DbForm" record-id="${formId}" title="${words.formLabel} ${form.description}"/>
                 <!-- FeedbackFormHeader -->
                 <container style="m-record-header">
                     <container style="m-record-title">
-                        <label text="Feedback form" type="span" style="text-caption m-muted"/>
+                        <label text="${words.formLabel}" type="span" style="text-caption m-muted"/>
                         <label text="${form.description}" type="h5"/>
-                        <label text="${['Case feedback', form.rating ? 'rating ' + form.rating.low + '–' + form.rating.high : 'no rating yet',
-                                form.publishedFromText ? 'published ' + form.publishedFromText : '', form.policies?.length ? 'sent for resolved cases' : '']
-                                .filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                        <label text="${headerCaption}" type="div" style="text-caption m-muted"/>
                     </container>
                     <container style="m-record-status">
                         <render-mode>
@@ -191,7 +207,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </button-menu>
                     </container>
                 </container>
-                <link url="${formsLink}" text="All feedback forms" link-type="anchor" condition="formsLink"/>
+                <link url="${formsLink}" text="${words.formsLink}" link-type="anchor" condition="formsLink"/>
                 <section name="FormProblems" condition="formProblems.length">
                     <widgets>
                         <container-box type="warning">
@@ -219,7 +235,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="fieldTypeEnumId">
                                     <default-field title="Kind">
                                         <drop-down>
-                                            <option key="DBFFT_radio" text="Choice buttons (a rating)"/>
+                                            <option key="DBFFT_radio" text="${rating ? 'Choice buttons (a rating)' : 'Choice buttons'}"/>
                                             <option key="DBFFT_drop-down" text="Choice list"/>
                                             <option key="DBFFT_check" text="Checkboxes"/>
                                             <option key="DBFFT_text-area" text="Long text"/>
@@ -237,7 +253,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <default-field title="Order" tooltip="Lower comes first; empty: last"><text-line size="4" input-type="number"/></default-field>
                                 </field>
                                 <field name="optionText">
-                                    <default-field title="Options" tooltip="For a choice: one a line, as value | label. A rating's values are its scores (1 | 1 - Poor)">
+                                    <default-field title="Options" tooltip="${rating ? 'For a choice: one a line, as value | label. A rating\'s values are its scores (1 | 1 - Poor)' : 'For a choice: one a line, as value | label (1 | No hire)'}">
                                         <text-area rows="5" cols="40"/>
                                     </default-field>
                                 </field>
@@ -296,19 +312,18 @@ along with this software (see the LICENSE.md file). If not, see
                                 <column><field-ref name="actions"/></column>
                             </columns>
                         </form-list>
-                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!formFields.length"
-                                text="No question yet. Add the rating first: a choice whose values are its scores."/>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!formFields.length" text="${words.firstQuestion}"/>
                     </box-body-nopad>
                 </container-box>
                 <!-- FieldOptions -->
                 <container-box>
-                    <box-header title="Options and scores"/>
+                    <box-header title="${rating ? 'Options and scores' : 'Options'}"/>
                     <box-body-nopad>
                         <form-list name="FieldOptions" list="optionRows" skip-form="true" paginate="false">
                             <field name="fieldTitle"><default-field title="Question"><display/></default-field></field>
                             <field name="keyValue"><default-field title="Value"><display/></default-field></field>
                             <field name="text"><default-field title="Label"><display/></default-field></field>
-                            <field name="scoreText"><default-field title="Score" tooltip="The rating's value is the score"><display/></default-field></field>
+                            <field name="scoreText" hide="!rating"><default-field title="Score" tooltip="The rating's value is the score"><display/></default-field></field>
                             <field name="stateText"><default-field title="State"><display/></default-field></field>
                             <field name="endLink">
                                 <conditional-field title="" condition="can.policyEdit">
@@ -387,15 +402,14 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-body-nopad>
                 </container-box>
                 <container-row>
-                    <!-- FormPreview: the form as the customer's Feedback page asks it, drafts included -->
+                    <!-- FormPreview: the form as the customer's Feedback page (or People's respondent) asks it, drafts included -->
                     <row-col lg="7">
                         <container-box>
-                            <box-header title="Preview: what the customer answers"/>
+                            <box-header title="${words.previewTitle}"/>
                             <box-body>
                                 <form-single name="FeedbackFormPreview" transition="previewForm" dynamic="true" db-form-include-drafts="editing"
                                         extends="${previewFormId ? 'DbForm#' + previewFormId : 'FeedbackFormPreviewNone'}" map="{}"/>
-                                <label type="p" style="text-caption m-muted"
-                                        text="The customer's page (the Support app's Feedback) asks the published questions with these rules, and the server checks the answer again."/>
+                                <label type="p" style="text-caption m-muted" text="${words.previewCaption}"/>
                             </box-body>
                         </container-box>
                     </row-col>

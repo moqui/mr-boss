@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Applicant (design-people §5 ApplicantDetail; style-guide §3.4 360; impl-people P16): one application, from
+    mantle.humanres.RecruitingServices.get#Application, as a recruiter of its employer reads it (everything) or as a member of
+    one of its interview panels (the applicant's name, the opening, the stage, the files and their own interviews and
+    scorecards; never another reviewer's scorecard nor another opening's candidates). The record header (the applicant, the
+    opening and employer, the stage and a possible duplicate) with its one primary by stage: Schedule interview (a recruiter's,
+    before an offer: schedule#Interview, a private event with the panel, a video call link when asked and the iMIP invitation to
+    the candidate; the panel each assigned the scorecard) and under More Move to stage (change#ApplicationStage with a reason:
+    Interview needs an interview, Offer an offer, never Hired) and Edit application (store#Application). The boxes: Application
+    (the source, referral, contact permission and notes, a recruiter's), Files (the application's private files: its content host,
+    the resume an application by mail brought, a recruiter adds more), Interviews (each opening its event under Interviews) and
+    the scorecards, opted out of AI (ai-opt-out, PE-21): a panel member's own to answer once (Submit scorecard,
+    submit#Scorecard) and answered, a recruiter's every one. An application outside the reader's reach shows "Not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Applicant" default-menu-include="false">
+    <parameter name="employmentApplicationId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="storeApplication">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.store#Application"
+                    in-map="{employmentApplicationId:employmentApplicationId, jobOpeningId:(jobOpeningId || null),
+                        referredByEnumId:(referredByEnumId ?? null), referredByPartyId:(referredByPartyId ?? null),
+                        contactAllowed:(contactAllowed == 'Y' ? 'Y' : 'N'), comments:(comments ?? null), revision:(revision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Application saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <transition name="moveStage">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.change#ApplicationStage" out-map="moved"
+                    in-map="{employmentApplicationId:employmentApplicationId, statusId:targetStatusId, reason:(reason || null),
+                        revision:(revision || null)}"/>
+            <if condition="moved.failures?.length"><return error="true" message="${moved.failures[0].message}"/></if>
+            <message type="success">Moved to ${moved.stageText}</message>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- a private interview: the event, its call link and invitations and the panel's scorecards (Mantle checks the recruiter, the
+        panel, the scorecard and the stage) -->
+    <transition name="scheduleInterview">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.schedule#Interview" out-map="scheduled"
+                    in-map="{employmentApplicationId:employmentApplicationId, startDate:(startDate || null),
+                        durationMinutes:(durationMinutes || null),
+                        panelPartyIds:(Array.isArray(panelPartyIds) ? panelPartyIds.join(',') : (panelPartyIds || null)),
+                        formId:(formId || null), videoCall:(videoCall == 'Y'), location:(location || null),
+                        inviteCandidate:(inviteCandidate == 'Y'), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${scheduled.invitationsSent ? 'Interview scheduled; the panel and the candidate are invited' : 'Interview scheduled; the invitations were not sent: send them from the interview'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- the panel member's own scorecard, once: the form's answers are the request's values, checked again in Mantle -->
+    <transition name="submitScorecard">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.submit#Scorecard"
+                    in-map="{invitationId:invitationId, values:Object.assign({}, ec.web.parameters)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Scorecard submitted</message></if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.RecruitingServices.get#Application" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{employmentApplicationId:(employmentApplicationId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="app" from="found?.application || null"/>
+        <set field="recordFound" from="!!app"/>
+        <script><![CDATA[
+            recruiter = app?.access === 'recruiter'
+            canEdit = !!app?.canEdit
+            canSchedule = !!app?.canSchedule
+            canMove = canEdit && !!(app?.nextStages || []).length
+            captionText = app ? [app.openingTitle, app.openingOrganizationName, app.applicationDateText ? 'applied ' + app.applicationDateText : '']
+                .filter(Boolean).join(' · ') : ''
+            factRows = app && recruiter ? [['Email', app.emailAddress], ['Source', app.sourceText], ['Referred by', app.referredByName],
+                ['May be contacted', app.contactAllowed ? 'Yes, about other openings' : 'Only about this opening'], ['Notes', app.comments],
+                ['Owner', app.ownerName]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+            interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, whenText: interview.whenText,
+                panelText: interview.panelText, location: interview.location, stateText: interview.cancelled ? 'Cancelled' : '',
+                scorecardText: interview.scorecards.length ? interview.scorecards.filter(card => card.answered).length + ' of ' + interview.scorecards.length + ' submitted' : ''})) : []
+            scorecardRows = app ? app.interviews.flatMap(interview => interview.scorecards.map(card => Object.assign({}, card,
+                {interviewText: interview.whenText}))).filter(card => card.answered) : []
+            pendingCard = app ? (app.myScorecards || []).find(card => !card.answered) || null : null
+            scorecardFormName = pendingCard ? 'DbForm#' + pendingCard.formId : 'ScorecardNone'
+            moveValue = app ? {employmentApplicationId: app.employmentApplicationId, revision: app.revision,
+                targetStatusId: app.nextStages.length ? app.nextStages[0].value : null} : {}
+            editValue = app ? {employmentApplicationId: app.employmentApplicationId, revision: app.revision, jobOpeningId: app.jobOpeningId,
+                referredByEnumId: app.referredByEnumId, referredByPartyId: app.referredByPartyId, contactAllowed: app.contactAllowed ? 'Y' : 'N',
+                comments: app.comments} : {}
+            interviewValue = app ? {employmentApplicationId: app.employmentApplicationId, durationMinutes: '60', videoCall: 'Y',
+                inviteCandidate: app.emailAddress ? 'Y' : 'N', formId: app.scorecardFormId || null, organizationPartyId: app.organizationPartyId} : {}
+            eventLink = sharedLinks['Staffing/InterviewsCalendar'] + '/EventDetail'
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="ApplicationMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This application is not available to you."/>
+                        <link url="${sharedLinks['Staffing/InterviewsCalendar']}" text="Back to interviews" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ApplicationRecord" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.humanres.employment.EmploymentApplication" record-id="${app.employmentApplicationId}"
+                        title="Application of ${app.applicantName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Applicant" type="span" style="text-caption m-muted"/>
+                            <label text="${app.applicantName}" type="h5"/>
+                            <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none" condition="captionText"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${app.stageColor}">${
+                                    WebUtilities.encodeHtml(app.stageText)}</q-chip>${app.possibleDuplicate ? ' <q-chip dense square class="q-ma-none m-tonal text-warning">' +
+                                    WebUtilities.encodeHtml(ec.l10n.localize('Possible duplicate')) + '</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: app.stageText + (app.possibleDuplicate ? " · possible duplicate" : "")})}]]></text>
+                                <text type="html">${app.stageText}</text>
+                            </render-mode>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-actions">
+                            <container-dialog id="ScheduleInterviewDialog" button-text="Schedule interview" icon="sym_o_event" type="primary"
+                                    width="720" title="Schedule an interview with ${app.applicantName}" condition="canSchedule">
+                                <form-single name="ScheduleInterview" transition="scheduleInterview" map="interviewValue">
+                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                    <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
+                                    <field name="durationMinutes">
+                                        <default-field title="Minutes"><text-line size="5" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="panelPartyIds">
+                                        <default-field title="Panel" tooltip="Employees of the employer with an account: each answers their own scorecard">
+                                            <drop-down allow-multiple="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:interviewValue.organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="formId">
+                                        <default-field title="Scorecard">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'scorecardForms', choiceOrganizationPartyId:interviewValue.organizationPartyId,
+                                                            selected:interviewValue.formId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="videoCall"><default-field title=" "><check><option key="Y" text="Add a video call"/></check></default-field></field>
+                                    <field name="location"><default-field title="Where" tooltip="Without a video call"><text-line size="40"/></default-field></field>
+                                    <field name="inviteCandidate">
+                                        <default-field title=" "><check><option key="Y" text="Invite the candidate by email (.ics)"/></check></default-field>
+                                    </field>
+                                    <field name="note"><default-field title="Note to the attendees"><text-area rows="2" cols="60"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Schedule"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="startDate"/><field-ref name="durationMinutes"/></field-row>
+                                        <field-row><field-ref name="panelPartyIds"/><field-ref name="formId"/></field-row>
+                                        <field-row><field-ref name="videoCall"/><field-ref name="location"/></field-row>
+                                        <field-ref name="inviteCandidate"/>
+                                        <field-ref name="note"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit">
+                                <container-dialog id="MoveStageDialog" button-text="Move to stage" icon="sym_o_move_item" width="520"
+                                        title="Move the application of ${app.applicantName}" condition="canMove">
+                                    <form-single name="MoveStage" transition="moveStage" map="moveValue">
+                                        <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                        <field name="revision"><default-field><hidden/></default-field></field>
+                                        <field name="targetStatusId">
+                                            <default-field title="Stage">
+                                                <drop-down><list-options list="app.nextStages" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Move"><submit confirmation="Move the application of ${app.applicantName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EditApplicationDialog" button-text="Edit application" icon="sym_o_edit" width="620"
+                                        title="Edit the application of ${app.applicantName}">
+                                    <form-single name="EditApplication" transition="storeApplication" map="editValue">
+                                        <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                        <field name="revision"><default-field><hidden/></default-field></field>
+                                        <field name="jobOpeningId">
+                                            <default-field title="Opening">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'openings', selected:editValue.jobOpeningId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="referredByEnumId">
+                                            <default-field title="Source">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'applicationSources', selected:editValue.referredByEnumId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="referredByPartyId">
+                                            <default-field title="Referred by">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'employees', selected:editValue.referredByPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="contactAllowed">
+                                            <default-field title=" "><check><option key="Y" text="May be contacted about other openings"/></check></default-field>
+                                        </field>
+                                        <field name="comments"><default-field title="Notes"><text-area rows="3" cols="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <link url="${sharedLinks['Staffing/ApplicantPipeline']}" text="All applicants of ${app.openingTitle}" link-type="anchor"
+                        parameter-map="{jobOpeningId:app.jobOpeningId}" condition="recruiter"/>
+                <container-row>
+                    <row-col lg="6">
+                        <section name="ApplicationFacts" condition="factRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Application"/>
+                                    <box-body-nopad>
+                                        <form-list name="Facts" list="factRows" skip-form="true" skip-header="true" paginate="false">
+                                            <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="value"/></column></columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <label text="The application's private files: its resume and what the applicant sent, read by its recruiters and its interviewers."
+                                        type="p" style="text-caption m-muted"/>
+                                <record-files id="ApplicationFiles" record-entity="mantle.humanres.employment.EmploymentApplication"
+                                        record-id="${app.employmentApplicationId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="6">
+                        <container-box>
+                            <box-header title="Interviews"/>
+                            <box-body-nopad>
+                                <form-list name="Interviews" list="interviewRows" skip-form="true" paginate="false">
+                                    <field name="whenText">
+                                        <default-field title="When">
+                                            <link url="${eventLink}" text="${whenText}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId}"/>
+                                            <label text="${stateText}" type="div" style="text-caption text-negative" condition="stateText"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="panelText"><default-field title="Panel"><display/></default-field></field>
+                                    <field name="location"><default-field title="Where"><display/></default-field></field>
+                                    <field name="scorecardText"><default-field title="Scorecards"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="whenText"/><field-ref name="panelText"/></column>
+                                        <column><field-ref name="scorecardText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!interviewRows.length"
+                                        text="No interview yet.${canSchedule ? ' Schedule one: the panel each get the scorecard.' : ''}"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <!-- the panel member's scorecard to answer, once (not shared with AI) -->
+                        <section name="YourScorecard" condition="pendingCard" ai-opt-out="true">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Your scorecard for the interview of ${pendingCard.interviewText}"/>
+                                    <box-body>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="Only you and the opening's recruiters read your scorecard; the rest of the panel does not. You submit it once."/>
+                                        <form-single name="ScorecardAnswer" transition="submitScorecard" dynamic="true"
+                                                extends="${scorecardFormName}" map="{invitationId:pendingCard.invitationId, employmentApplicationId:app.employmentApplicationId}">
+                                            <field name="invitationId"><default-field><hidden/></default-field></field>
+                                            <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Submit scorecard"><submit confirmation="Submit your scorecard? It is not changed after."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <!-- the answered scorecards the user reads: a recruiter's every one, a panel member's own (not shared with AI) -->
+                        <section name="Scorecards" condition="scorecardRows.length" ai-opt-out="true">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="${recruiter ? 'Scorecards' : 'Your scorecard'}"/>
+                                    <box-body-nopad>
+                                        <form-list name="ScorecardList" list="scorecardRows" skip-form="true" paginate="false">
+                                            <field name="reviewerName"><default-field title="Reviewer"><display/></default-field></field>
+                                            <field name="interviewText"><default-field title="Interview"><display/></default-field></field>
+                                            <field name="summaryText" ai-opt-out="true"><default-field title="Answers"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="Submitted"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="reviewerName"/><field-ref name="stateText"/></column>
+                                                <column><field-ref name="summaryText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+        <section name="ScorecardNoneHolder" condition="false">
+            <widgets><form-single name="ScorecardNone"/></widgets>
+        </section>
+    </widgets>
+</screen>

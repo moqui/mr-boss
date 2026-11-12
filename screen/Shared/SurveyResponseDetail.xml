@@ -13,8 +13,9 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- SurveyResponseDetail, one answer of the survey builder (crosscut §2, §8; Commons' builder, built by impl-customer-service
-    P13 with the Customer Service context only): mounted by Customer Service as Reports/ResponseDetail (design ResponseDetail:
-    ResponseDetails and FeedbackFollowUp); any other app root sees "not available". An invited response of the user's
+    P13; impl-people P16, F51: the read service and routes are the mounting app's registration's,
+    service/ironstone/shared/SurveyApps.js): mounted by Customer Service as Reports/ResponseDetail (design ResponseDetail:
+    ResponseDetails and FeedbackFollowUp); an app whose registration names no response service, or none, sees "not available". An invited response of the user's
     organizations (ironstone.customerservice.FeedbackServices.get#CaseResponse): its answers with the form as of the response,
     the case and its resolution episode, the dates, the score and the customer's consent; the text answers for service
     management, and for the follow-up team only when the customer agreed to be contacted. The follow-up of a low score is
@@ -23,11 +24,15 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Survey response" default-menu-include="false">
     <parameter name="formResponseId"/>
+    <always-actions>
+        <set field="survey" from="ec.resource.script('component://mr-boss/service/ironstone/shared/SurveyApps.js').context(appRoot)"/>
+    </always-actions>
     <transition name="recordFollowUp">
         <actions>
-            <service-call name="ironstone.customerservice.FeedbackServices.get#CaseResponse" out-map="checked"
+            <if condition="!survey?.services?.response"><return error="true" message="This response is not available here"/></if>
+            <service-call name="${survey.services.response}" out-map="checked"
                     in-map="{appRoot:appRoot, formResponseId:formResponseId}"/>
-            <service-call name="mantle.request.CaseFeedbackServices.record#FeedbackFollowUp"
+            <service-call name="${survey.services.followUp}"
                     in-map="{followUpId:checked.followUp?.followUpId, assigneePartyId:(assigneePartyId || null), dueDate:(dueDate || null),
                         actionEnumId:(actionEnumId || null), note:(note || null), statusEnumId:(statusEnumId || null)}"/>
             <message type="success">Saved the follow-up</message>
@@ -36,9 +41,8 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="formResponseId"/></error-response>
     </transition>
     <actions>
-        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
-        <if condition="inCustomerService">
-            <service-call name="ironstone.customerservice.FeedbackServices.get#CaseResponse" out-map="found"
+        <if condition="survey?.services?.response">
+            <service-call name="${survey.services.response}" out-map="found"
                     transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, formResponseId:formResponseId}"/>
             <script>ec.message.clearErrors()</script>
         </if>
@@ -58,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
                 {label: 'Contact', value: response.consentText}] : []"/>
         <set field="followUpValue" from="followUp ? {formResponseId: formResponseId, assigneePartyId: followUp.assigneePartyId,
                 actionEnumId: followUp.actionEnumId, statusEnumId: followUp.statusEnumId, note: ''} : null"/>
-        <set field="resultsLink" from="sharedLinks?.['Reports/SatisfactionResults']"/>
+        <set field="resultsLink" from="survey?.links?.responses ? sharedLinks?.[survey.links.responses] : null"/>
     </actions>
     <widgets>
         <section name="ResponseUnavailable" condition="!response">

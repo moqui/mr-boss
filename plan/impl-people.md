@@ -4186,6 +4186,146 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
   application by mail with its resume, schedules a video interview, and two panel members score it without seeing
   each other's scorecards or another opening's candidates.
 
+**Built Nov 12 (P16).** mr-mantle, mr-boss (branch `ppl/p16`).
+- Checked first (the code over the plan): F9 and F11 (EmploymentApplication's position, status, referral fields and approver, its
+  status type with no item; no Applicant role); F51 and F62 against the four shared screens (each branching on
+  `appRoot == 'CustomerService'` for its services, links, words and access rows) and CaseTemplates.js (the builder: `formAt`,
+  `checkValues`, `problemsOf`, `keepValid`, `saveField`, `saveCondition`, `endPart`, admitting two purposes and checking
+  `SUPPORT_POLICY_EDIT`), CaseFeedback.js (its rating, customer audience and permission), the FormPublication model and the
+  FormInvitation link kind in ExternalAccess.js; F65 (`run#EmailRules`' five parameters, authorization off; `createRequest`'s plus
+  tag and its account-or-owner rule); P4's positions (`EmpsActive` the approved state, vacancy computed), P6's person search rule
+  (a person chosen by id only when related), P12's projected kind (`CalendarProjection`, `define#ProjectionOwner`) and AI opt-out,
+  `CallServices.create#CallLink` (its token only in the answer, the path `/call/<token>`), `EventServices.create#Event`,
+  `check#EventAccess` (an attendee or the owner) and `send#EventInvitations`; Commons' Calendar.qvue (its transitions found by a
+  path segment `Calendar` or `ResourceCalendar` only); the feedback send job's queries (FinScheduled due and FinSent with a reminder
+  due, so an assigned invitation with neither is never picked up).
+- Mantle:
+  - the survey builder for a second app (F51, F62): `mantle.party.FormPurpose` (`FormPublicationEntities.xml`), a purpose's
+    registration: its edit and view permissions, its organization scope service (empty: the user's own internal organizations), its
+    publication access kinds and the word its messages use; seeded for case templates and case feedback (Customer Service's) and
+    People's four purposes; `mantle.party.FormDefinitions` (`FormDefinitions.js`, the builder moved out of CaseTemplates.js:
+    `formOf` by registration, `formAt`, `checkValues`, `answersOf`, `problemsOf`, `editRows`, `saveFieldOf`, `saveConditionOf`,
+    `endPartOf`, `publishOf`, `makeForm`, `publishedFormFor`, `recordAnswer`) and `FormDefinitionServices` (`find#Forms`,
+    `create#Form`, `get#Form`, `rename#Form`, `save#FormField`, `save#FormCondition`, `end#FormPart`, `publish#Form`, each checking
+    the purpose's permission and organization: `PURPOSE_UNAVAILABLE`, `PERMISSION_DENIED`, `RECORD_UNAVAILABLE`, `FORM_INVALID`);
+    CaseTemplates.js keeps the case's (its queues and types, a case's values) and calls the builder with the case defaults, and
+    CaseFeedback.js's form services call it with the purpose, rating, customer audience and `SUPPORT_POLICY_EDIT`, their names
+    and codes unchanged; FormPublication.js: a publication only of an access kind the purpose admits (`publicationFor` checks it,
+    `FormPublicationServices.open#Publication` refuses `PUBLICATION_NOT_OFFERED`), and ExternalAccess.js's FormInvitation kind
+    makes no link for a purpose that admits no invited recipients;
+  - `entity/PeopleRecruitingEntities.xml`: `JobOpening` (employer, title, description, recruiting owner, state Draft, Open, Closed,
+    internal only, dates, mail plus tag and account, default scorecard), `JobOpeningPosition`, EmploymentApplication extended (its
+    opening, employer, contact permission, the message it came from, a possible duplicate, notes), `EmploymentApplicationContent`
+    (the application's content host) and `ApplicationInterview` (the event, the application, the scorecard form, the call link);
+  - `data/PeopleRecruitingSetupData.xml`: the Applicant role, the stages and their flow, the Email and Careers page sources,
+    People's four form purposes and their registrations (PEOPLE_CONFIGURE edits; PEOPLE_RECRUIT_VIEW, PEOPLE_DEVELOP_VIEW and
+    PEOPLE_HR_VIEW read; scope `PeopleServices.get#Scope`; no publication access), the `createApplication` mail rule action and the
+    My interviews projection;
+  - `mantle.humanres.RecruitingServices` over `Recruiting.js`: `find#Openings`, `store#Opening` (approved active seats of the
+    employer only: `POSITION_NOT_APPROVED`, `POSITION_UNAVAILABLE`, `POSITION_REQUIRED`; `OWNER_INVALID`, `TAG_INVALID`, `TAG_TAKEN`,
+    `DATES_INVALID`, `REVISION_CHANGED`; open, close, reopen), `find#Applications` (with the board's stages), `create#Application`
+    (an open opening, `OPENING_CLOSED`; a person chosen only when related to the employer, else by exact email, else new with the
+    Applicant role; a possible duplicate flagged), `get#Application` (a recruiter's whole record, a panel member's own interviews
+    and scorecard), `store#Application`, `change#ApplicationStage` (each in its own transaction, failures named: `HIRED_BY_OFFER`,
+    `INTERVIEW_REQUIRED`, `OFFER_REQUIRED`, `STAGE_INVALID`, `SAME_STAGE`, `APPLICATION_CLOSED`), `schedule#Interview` (a private
+    WetEvent with the panel and the candidate as attendees, a lobby call link in its location, each panel member a FormInvitation
+    of the scorecard with no link, the application moved to Interview, `send#EventInvitations` after, a failure to send named and
+    the interview kept: `PANEL_INVALID`, `SCORECARD_REQUIRED`, `CANDIDATE_NO_EMAIL`, `DATE_PAST`, `DURATION_INVALID`),
+    `submit#Scorecard` (the caller's own assignment once: `ALREADY_ANSWERED`, `FORM_VALUES_INVALID`), `find#Interviews`,
+    `get#InterviewProjection`, `check#ApplicationAccess`, `create#ApplicationContent` and `create#ApplicationFromEmail` (once per
+    message; the opening by the rule's value or a plus tag; the opening's intake account or its recruiting owner's rule with
+    PEOPLE_RECRUIT_EDIT; the sender the applicant, the attachments its files, the first its resume); `get#RecordLinkInfo`'s
+    content map and visibility admit the application host by `check#ApplicationAccess`.
+- BOSS:
+  - the survey builder's registration (`service/ironstone/shared/SurveyApps.js`): Customer Service's row (its services, words and
+    access rows as built) and People's; Shared/SurveyForms, SurveyFormDetail, SurveyResponses and SurveyResponseDetail read it in
+    place of the Customer Service branch (services by `${}` names, the edit capability of the app's context, the routes as its
+    sharedLinks keys, the words); a registration with no responses service (People's) shows "not available" there;
+  - `People/Settings/Forms` and `FormDetail` (the People administrator's tab, the shared screens with People's registration);
+  - `People/Staffing/Openings` (menu 4, `g n`), `ApplicantPipeline` (menu 5 "Applicants": the board by stage with `moveStage`,
+    Move to stage on the selected rows, Add application with a resume), `ApplicantDetail` (header, Schedule interview, Move to
+    stage, Edit application, Application, Files (`record-files` on the application host), Interviews, Your scorecard over the
+    DbForm, Scorecards; the scorecard sections `ai-opt-out`) and `InterviewsCalendar` (menu 6, `g v`: Commons' Calendar.qvue in
+    resource mode over `find#Interviews`, Commons' EventDetail mounted as its subscreen; InterviewsCalendarTui);
+  - People.js: link paths, the choices `approvedSeats`, `scorecardForms`, `openings`, `applicants` and `applicationSources`, the
+    palette's openings and applications, the EmploymentApplication record-lookup; People.xml: the panels admit the application
+    host, the keys, the assist-prompt "Draft a job description" on JobClassDetail and Openings; `skill/people-job-description.md`;
+    RecordFilesServices.xml: the application host (`create#ApplicationContent`, a recruiter changes); Commons' Calendar.qvue
+    (owner contract with Commons): its serving screen is also a path segment ending in `Calendar` (TeamCalendar, InterviewsCalendar).
+- Specs: Mantle `test/humanres/Recruiting` (4 features, stepwise, 1.9 s: 0.52, 0.41, 0.77, 0.24: an opening on a planned seat and on
+  another employer's refused, a reader refused, a draft taking no application, a tag taken, another employer's recruiter refused;
+  a duplicate flagged, a bulk move naming the closed one, Hired and Interview refused, a reader refused, the Applicant role and no
+  account; a video interview with two panel members, private, its call link, each answering once, another's scorecard refused, a
+  missing required answer refused, each reading their own only, the recruiter both, another candidate refused, the projection and
+  the calendar; mail intake once, refused for a rule not the owner's, with its resume) and `test/party/FormDefinitions` (2
+  features, 0.9 s: a scorecard built and published by PEOPLE_CONFIGURE, an empty one refused, refused to a SUPPORT_POLICY_EDIT
+  holder and another employer, a case feedback form refused to the People holder, an unregistered purpose refused, a reader
+  reading and not editing; a People form refused a public and an invited publication and a link, a case feedback form an invited
+  publication only; each user's find#Forms). BOSS `test/People/PeopleRecruiting` (2 features, 0.8 s: People's Forms from the
+  service with no feedback form and its one qvt render; the applicant board's one qvt render). PeopleAccess gains one feature (0.46
+  s: the applications of Retail's opening read by its recruiter, the HR officer refused with the same parameters, Services' opening
+  refused to Retail's recruiter, an application refused to the HR officer; Forms the administrator's, the HR officer refused) and
+  its menus and keys (`settingsMenu` Forms, `staffingMenu` Openings, Applicants, Interviews, `g n`, `g v`). Acceptance, written and
+  not run: `acceptance/People/PeopleRecruitingUsable` (3 features: people.admin builds and publishes a scorecard through Forms'
+  transitions while Customer Service's FeedbackForms shows its feedback form and not the scorecard; the recruiter opens Retail's
+  vacant seat with a tag and the scorecard, an application arrives by mail with its resume and shows on the board; a video
+  interview with Hannah and Ines (a spec-local account), each submitting through ApplicantDetail, Ines reading only hers, the
+  recruiter both, another candidate not available to Ines).
+- Tests run (release binary, `--nobuild`, this phase's runtime): Mantle Recruiting, FormDefinitions, CaseFeedback, SupportTemplates,
+  SupportWarranty, SupportPortal, SupportCases, PeoplePositions, Dav and PeopleScope 57 of 57 (mr-mantle 25.6 s of features); BOSS
+  PeopleRecruiting, PeopleAccess, PeoplePositions, PeopleLeave, PeopleEmployees, CustomerServiceFeedback, CustomerServiceReports,
+  CustomerServiceTemplates, CustomerServiceAccess, RecordFiles and Chatter 98 of 98 (mr-boss 26.4 s). One-off checks, not kept:
+  FormDetail (qvt, tui), Openings (qvt, tui), ApplicantPipeline (tui), ApplicantDetail (a recruiter's and a panel member's, with
+  Your scorecard), InterviewsCalendar (tui) and InterviewsCalendarTui rendered with no error; a scheduled interview's invitations
+  sent. `moqui lint --screens`: 136 flagged sites, none in the screens P16 touched, no TUI worklist entry for them. Prettier clean on
+  the new and changed JavaScript (ExternalAccess.js was not clean on master and is left so). Not run: `./moq test-apps`, the client
+  specs (Calendar.qvue's change is its serving-screen lookup alone), the acceptance suite.
+- Inventories: usl-inventory's People rows (RecruitingServices' thirteen, FormDefinitionServices', open#Publication) and
+  CaseFeedbackServices' builder row; ss-inventory's P16 note (no baseline form is mapped).
+- Design edits: design-people (header; §5 Openings, ApplicantPipeline, ApplicantDetail as built; §13 InterviewsCalendar and Forms
+  as built); design-crosscut's SurveyForms row.
+- Findings (provisional, numbered by the lead):
+  - People's TeamCalendar (P12) called Commons' Calendar transitions: Calendar.qvue found its serving screen only by a `Calendar` or
+    `ResourceCalendar` path segment, so under `People/Time/TeamCalendar` it read the user's Commons calendar; P16's change (a
+    segment ending in `Calendar`) fixes both mounts; the client walks were not run;
+  - an interview panel member is an employee of the employer with an account, but answering needs People (ApplicantDetail under
+    People's root): a self-service employee (BOSS_PEOPLE_SELF alone) can be put on a panel and cannot open their scorecard; the
+    acceptance gives Ines a People account. Whether interviewers answer from SelfService (or Commons) is for the user's call;
+  - not built: the "Create application" `create-from` (a chat message names no opening and its sender is usually a user; mail
+    intake is the plus tag's rule action), the checklist step's exit-interview link to a form of that purpose (an exit interview
+    needs its own assigned respondent and record service, as the scorecard has; the purpose and its registration exist), and
+    openings joining People's lifecycle participant (an owner who leaves keeps their openings);
+  - People's four purposes are all edited with PEOPLE_CONFIGURE (Forms is under the administrator's Settings); P19 and P20 may name
+    PEOPLE_DEVELOP_EDIT for the review and training assessment in their registrations;
+  - the scorecard text is opted out of AI on ApplicantDetail's sections and answer field; the framework's FormResponseAnswer rows
+    are every form's, so no entity field is opted out;
+  - the Offer stage is unreachable until P17 (`OFFER_REQUIRED`); Hired never by a move;
+  - the call link's token is in the interview's location, so every attendee (the panel and the candidate) holds it; the link is a
+    lobby link, a guest waiting until someone in the call admits them, valid until a day after the interview (at most 90 days);
+  - mail intake by account: any rule on the opening's intake account files into it, as createRequest's projects do; by owner, only
+    the opening's recruiting owner's rule with PEOPLE_RECRUIT_EDIT;
+  - a possible duplicate is the same person (one exact email address) with another open application at the employer; two
+    addresses of one person are two applicants;
+  - an opening's description is a text area, not the rich text with inline text actions of design §5;
+  - People.js adds P16's choices and palette finds by assignments to its tables at the module's top level (the tables stay the
+    extension point; the module is then evaluated on each load).
+- For the lead:
+  - budget share: mr-mantle about 2.8 s (Recruiting 1.9 s, FormDefinitions 0.9 s); mr-boss about 1.3 s (PeopleRecruiting 0.8 s,
+    PeopleAccess's feature 0.5 s);
+  - merge hot spots (P15 runs beside): mr-boss `service/ironstone/people/People.js` (linkPaths' end, the P16 choices block before
+    `choices`, the palette push after `searchFinds`, `applicationCard` and the lookup branches), `screen/People.xml` (the header, the
+    panel allowlist, the keys, the assist-prompts after P14's topic), `test/People/PeopleSpecLib.js` (`settingsMenu`, `staffingMenu`,
+    `keys`, the P16 ids), `PeopleAccess.spec.js` (the header, the appended feature), `screen/People/Settings.xml`,
+    `screen/People/Staffing.xml`, `screen/Commons/Calendar.qvue` (`calIndex`), `service/ironstone/shared/RecordFilesServices.xml`,
+    the four `screen/Shared/Survey*.xml`, the inventories, design-people (header, §5, §13), this file; mr-mantle
+    `service/mantle/party/CommunicationServices.xml` (`get#RecordLinkInfo`'s map, visibility and description),
+    `request/CaseTemplates.js` and `CaseFeedback.js` (the builder moved), `party/FormPublication.js`, `FormPublicationServices.xml`,
+    `ExternalAccess.js`, `entity/FormPublicationEntities.xml`. BossSetupData.xml and MantleSetupData.xml are not touched;
+  - acceptance to run with the full suites: PeopleRecruitingUsable (new), CustomerServiceFeedbackWalk and
+    CustomerServiceTemplatesWalk (the survey builder and the case template builder changed under them), PeopleLeaveUsable (the team
+    calendar's component);
+  - for the user's call: whether an interviewer without People answers their scorecard from SelfService (the second finding).
+
 ### P17 — Offers and hire from an offer
 
 Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
