@@ -2,7 +2,8 @@
 
 Oct 21, 2026 — draft; the inventories' **Designed in** columns filled from it (§13); the review's answers to the
 open questions folded in (§16, §17); as built through P11 (Oct 22); Nov 1, 2026 — review rows folded in;
-consistency pass
+consistency pass; Nov 11, 2026 — impl-people P9 (owner contract): capacity reads a person's People working schedule first (§15
+PersonDetail)
 
 **IronStone Projects** is the app for project managers and services staff (initial-design's app table). This file
 adds three audiences to that row: the software teams who deliver the work (developers, testers, release
@@ -1939,6 +1940,10 @@ now owns the full HR record, registered in [crosscut §3.4](design-crosscut.md#3
 PersonDetail uses its authorized public work/qualification projection and links to Employee360 where allowed;
 resource/manager access never grants private compensation, review notes or grievance data. People schedules and
 approved leave extend the existing capacity API (PE-06), retaining the current fallback for other resources. As built
+(impl-people P9, an owner contract): `get#PartyCapacity` reads a person's People working schedule first for the days it plans
+(source `schedule`; the overview says "Their working schedule (People)"), by the interval's actual instants on the day it starts in
+the schedule's zone, with the schedule's holiday calendar beside the organization's holidays; a person with no schedule keeps the
+WetAvailable and policy capacity. As built
 (impl-people P2, an owner contract): the header's "Employee record" link from
 `ironstone.people.ContextServices.get#Employee360Link`, People's mount for a viewer whose People scope admits the person as
 staff or team, Commons' for the person themselves, else none; Projects mounts no Employee360 and has no row of its context.

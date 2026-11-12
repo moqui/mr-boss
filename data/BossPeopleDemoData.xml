@@ -490,4 +490,30 @@ along with this software (see the LICENSE.md file). If not, see
             ownerPartyId="ORG_ZIZI_RETAIL"/>
     <mantle.product.asset.AssetPartyAssignment assetId="BOSS_PPL_LAPTOP_INES" partyId="BOSS_PPL_INES" roleTypeId="Custodian"
             fromDate="2022-09-05 09:00:00"/>
+
+    <!-- impl-people P9 (design-people §6, §7): Retail's store week in Chicago, Monday to Saturday with a short Saturday, and Retail's
+        holiday calendar with two holidays of its own. Nobody follows the schedule in the demo, so every demo person keeps the
+        capacity Projects' and Manufacturing's demo and specs read (F23); HR assigns it from WorkingScheduleDetail. No seeded
+        holiday calendar is assigned (F31). -->
+    <mantle.work.effort.WorkEffortCategory workEffortCategoryId="BOSS_PPL_HOL_RETAIL" categoryTypeEnumId="WcatHoliday"
+            description="Retail holidays" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_HOL_STOCKTAKE" workEffortTypeEnumId="WetEvent" purposeEnumId="WepHoliday"
+            workEffortName="Stocktake closure" allDayStart="2027-01-04"/>
+    <mantle.work.effort.WorkEffortCategoryAppl workEffortId="BOSS_PPL_HOL_STOCKTAKE" workEffortCategoryId="BOSS_PPL_HOL_RETAIL"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_HOL_FOUNDERS" workEffortTypeEnumId="WetEvent" purposeEnumId="WepHoliday"
+            workEffortName="Founders' day" allDayStart="2027-06-14"/>
+    <mantle.work.effort.WorkEffortCategoryAppl workEffortId="BOSS_PPL_HOL_FOUNDERS" workEffortCategoryId="BOSS_PPL_HOL_RETAIL"/>
+    <mantle.humanres.schedule.WorkingSchedule workingScheduleId="BOSS_PPL_WS_STORE" scheduleName="Store week" organizationPartyId="ORG_ZIZI_RETAIL"
+            timeZone="America/Chicago" holidayCategoryId="BOSS_PPL_HOL_RETAIL" fromDate="2026-01-01 00:00:00"
+            description="The store floor's week, Monday to Saturday"/>
+    <mantle.humanres.schedule.WorkingScheduleLine workingScheduleLineId="BOSS_PPL_WS_STORE_1" workingScheduleId="BOSS_PPL_WS_STORE" isoDay="1"
+            startTime="09:00" endTime="17:30" breakMinutes="30" fromDate="2026-01-01 00:00:00"/>
+    <mantle.humanres.schedule.WorkingScheduleLine workingScheduleLineId="BOSS_PPL_WS_STORE_2" workingScheduleId="BOSS_PPL_WS_STORE" isoDay="2"
+            startTime="09:00" endTime="17:30" breakMinutes="30" fromDate="2026-01-01 00:00:00"/>
+    <mantle.humanres.schedule.WorkingScheduleLine workingScheduleLineId="BOSS_PPL_WS_STORE_3" workingScheduleId="BOSS_PPL_WS_STORE" isoDay="3"
+            startTime="09:00" endTime="17:30" breakMinutes="30" fromDate="2026-01-01 00:00:00"/>
+    <mantle.humanres.schedule.WorkingScheduleLine workingScheduleLineId="BOSS_PPL_WS_STORE_4" workingScheduleId="BOSS_PPL_WS_STORE" isoDay="4"
+            startTime="09:00" endTime="17:30" breakMinutes="30" fromDate="2026-01-01 00:00:00"/>
+    <mantle.humanres.schedule.WorkingScheduleLine workingScheduleLineId="BOSS_PPL_WS_STORE_6" workingScheduleId="BOSS_PPL_WS_STORE" isoDay="6"
+            startTime="10:00" endTime="14:00" breakMinutes="0" fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>

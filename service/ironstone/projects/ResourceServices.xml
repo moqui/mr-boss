@@ -508,7 +508,9 @@ const access = ec.service.sync().name('mantle.work.ResourceServices.get#Allocati
                     withOptions: false}).call()?.plan || {}
                 const person = Array.from(plan.personList || [])[0]
                 if (!person) return
-                overview.sourceText = person.source === 'available' ? L('Their working hours (calendar settings)') : L('The timesheet policy\'s working week')
+                // impl-people P9 (owner contract, design-projects §15): a People working schedule plans the person's days first
+                overview.sourceText = person.source === 'schedule' ? L('Their working schedule (People)')
+                        : person.source === 'available' ? L('Their working hours (calendar settings)') : L('The timesheet policy\'s working week')
                 const n = (value) => ec.l10n.format(value, '#,##0.#')
                 const fmt = (day) => ec.l10n.format(ec.l10n.parseTimestamp(day + ' 12:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'), 'MMM d')
                 overview.weekList = Array.from(person.weekList || []).map((week) => Object.assign({}, week, {weekText: fmt(week.weekStart),
