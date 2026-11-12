@@ -1,5 +1,6 @@
 # IronStone BOSS — People design
 
+Nov 12, 2026 — impl-people P22 as built: pay components, structures and groups (§8 PayComponents, PayComponentDetail, PayStructures, PayStructureDetail, PayGroups; §8.1; §8.4; §1.2): an employer's `PayrollComponent` (a code its formulas name, one of four kinds) with dated `PayrollComponentTerm`s (a fixed amount or a formula of the framework's decimal evaluator, PE-09, over declared inputs and other components' codes, its currency or a statistical value's unit, an optional rounding stage, payslip visibility and the account mapping on the term) verified by named `PayrollComponentExample`s and published with a reason, then only ended; `PayrollStructure`s in one currency with dated `PayrollStructureComponent` lines and a gross-to-net preview; `PayrollGroup`s with their periods (Mantle's `TimePeriod` and a pay date); the `PayrollLocalization` registration with the synthetic demonstration alone. All under Settings, the People administrator's; read with PAYROLL_VIEW, changed with PAYROLL_EDIT and PEOPLE_CONFIGURE.
 Nov 12, 2026 — impl-people P20 as built: reviews and goals (§11 ReviewCycles, Reviews, ReviewDetail, Goals; §15 the review release; §12 the PeopleReviewStep topic; §1.2, §1.4): a dated review template of an employer (the self assessment, the reviewer's assessment, feedback the reviewer may ask for, the review form of each step, approval before release and whether feedback is shared), a cycle of an employer or a unit started into one review per person (the reviewer the manager of the live line; a person with none named and left out), each step answered once on its review form (People's `DbfpReview` purpose, now also a development editor's to build) and locked, the reviewer's private notes their author's alone (never released, exported, in Chatter, a notice or search), finalizing after a `PakReview` approval when the template asks, the release stored once as its page and PDF, the person's acknowledgment; goals are WorkEfforts of the new `WetGoal` type and `WepGoal` purpose with their measure (`PersonGoal`), in no task list; review steps join People's lifecycle participant and follow the separation's re-route. Review topics' titles name no person.
 Nov 12, 2026 — impl-people P21 as built: grievances (§4 Grievances; §13 RequestDetail; §8.3's register; §1.4): a confidential case is a `Request` of the type `RqtHrCase`, an Enumeration of its own type (`RequestConfidentialType`, not a `RequestType`, so no other app offers or accepts it), whose row says nothing ("Confidential case", no description, project, store, facility, category, customer or organization party); what the employee wrote is on `PeopleCase` (subject, details, day, how to contact them, the outcome), opted out of AI. Its people are the employee who filed it (Reporter) and its handlers (Assignee, holding PEOPLE_CASE_HANDLE), the employer's designated intake handlers (the PartySetting `PeopleCaseIntake`) at filing; nobody else reads it, the manager, HR and ADMIN included, through any path (§4 Grievances "As built").
 Nov 12, 2026 — impl-people P19 review: a session's event is changed on TrainingDetail alone (Commons' `check#EventAccess` leaves a training session's event uneditable and `add#CalendarEvent` refuses it); a place is approved before its session starts; the person is told the decision (`PeopleTrainingDecision`); a trainer reads their session while they work for its employer; Assessment forms under Skills & training, the learning administrator's (`PEOPLE_DEVELOP_EDIT` edits the training assessment purpose); SelfService's My training; the key `g i`; the user's two calls (§10: the course is the authority for a trainer's passing grant; the person reads only the outcome and score of their own assessment).
@@ -97,7 +98,7 @@ Menu entries name the landing screens; detail routes are in §2 and reached from
   administrator and ADMIN), with `ReviewDetail` and `ReviewRelease` out of the menu; the key `g f`; SelfService's My reviews and My
   goals.
 - Reports — `Reports`.
-- Settings — `Settings`; Payroll components — `PayComponents`; Pay structures — `PayStructures`; Pay groups — `PayGroups`; Leave policies — `LeavePolicies`; Allocations — `LeaveAllocations`; Holidays — `HolidayCalendars`; Approval rules — `ApprovalPolicies`; Checklists — `ChecklistTemplates`; Forms — `Forms`; Lookups — `Lookups`.
+- Settings — `Settings`; Payroll components — `PayComponents`; Pay structures — `PayStructures`; Pay groups — `PayGroups`; Leave policies — `LeavePolicies`; Allocations — `LeaveAllocations`; Holidays — `HolidayCalendars`; Approval rules — `ApprovalPolicies`; Checklists — `ChecklistTemplates`; Forms — `Forms`; Lookups — `Lookups`. As built (impl-people P22): Pay components, Pay structures and Pay groups are Settings tabs 5 to 7 (after Forms), the People administrator's, who holds PAYROLL_VIEW, PAYROLL_EDIT and PEOPLE_CONFIGURE (Settings stays denied to the root user group); PayComponentDetail and PayStructureDetail are out of the menu.
 
 `Commons/Home` remains the personal landing, showing authorized People shortcuts and summaries. `Commons/People/SelfService` mounts the same `Shared/PeopleSelfService.xml` as `People/SelfService`. It links to owner routes for requests, time and payslips; it is not another HR dataset or a separate employee app. Account/password preferences stay in Commons. The kiosk is a separately authorized route, not a publicly reachable employee directory.
 
@@ -1143,6 +1144,8 @@ Migration is an explicit preview → map → reconcile → approve → import pr
 
 **Source:** research §9; Frappe salary_component source
 
+**As built (impl-people P22; PayComponents).** `find#Components` answers a payroll reader (PAYROLL_VIEW) of the employers in scope: each component's code, name, kind, employer and the term in effect (else the next, else the draft) with its calculation, currency or unit, start and state; ended ones only when the state filter asks. A component is one employer's (there is no shared component, as there are shared pay grades); its code is a formula name (letters, digits and underscores, not a word the grammar keeps) unique in the employer. New component (PAYROLL_EDIT and PEOPLE_CONFIGURE) takes the code, name, kind and employer and opens the component; its calculation is set there.
+
 **Needs:** PE-08; PE-12.
 
 ### PayComponentDetail
@@ -1163,6 +1166,8 @@ Migration is an explicit preview → map → reconcile → approve → import pr
 
 **Source:** research §9
 
+**As built (impl-people P22; PayComponentDetail).** The term opened (the draft, else the one in effect) as rows of facts: basis, the formula or amount, the declared inputs, the components it reads (every name the formula reads that is not a declared input is another component's code, a dependency), currency (required for money; a statistical value's currency or unit), the rounding stage (places and a direction, or none: precision kept), payslip visibility, the account mapping on the term (an earning's expense account, a deduction's liability account, a contribution's both, a statistical value's none; each one of the employer's), dates and who published it. The constrained formula editor is the Edit calculation form: the formula is checked on the server by the framework's evaluator (`org.moqui.impl.ExpressionServices`, PE-09), whose grammar the dialog states, and refused with its message and character position; no script runs. Examples are named rows of `name = value` inputs and an expected amount, computed by `preview#Component` beside it (passing, giving another amount, or refused, such as a missing input: nothing is assumed, not even a divisor); Try values computes typed values. Publish takes a date and a reason (the audit row's; the publisher is recorded and there is no separate approver) and is refused unless every example gives its amount, the components it reads are published then and without a cycle, the mapping its kind needs is set, and no published term starts on or after the date; the term in effect then ends on it, never in the past. A published term is not changed: Start a draft copies it from a later date. End component ends it once no structure uses it after that date.
+
 **Needs:** PE-08; PE-09; PE-12; PE-15.
 
 ### PayStructures
@@ -1181,6 +1186,8 @@ Migration is an explicit preview → map → reconcile → approve → import pr
 
 
 **Source:** research §9
+
+**As built (impl-people P22; PayStructures).** `find#Structures`, a payroll reader's: each structure's employer, currency, pay basis, the count of its components today, its dates and state. New structure needs the currency (never assumed) and a pay basis. Copy is on the structure (a new structure of the same employer with the source's current lines as drafts). No assignment count yet: assignments are P23's.
 
 **Needs:** PE-08.
 
@@ -1201,6 +1208,8 @@ Migration is an explicit preview → map → reconcile → approve → import pr
 
 
 **Source:** research §9
+
+**As built (impl-people P22; PayStructureDetail).** Composition lists the lines in payslip order (a line's order, dates, the structure's values of the component's declared inputs as `name = value`, the term it calculates with, its state) with the calculation order its dependencies decide beside it and the findings that block one (a dependency the structure lacks, a cycle, no terms). Eligibility on a line is not built (assignment is P23's). Add component makes a draft line (one draft line of a component at a time); a draft line is changed or removed, a published one only ended. Preview gross to net (`preview#Structure`) computes the lines on a date with their draft lines and the components' draft terms, so a structure is seen before it is published: each component in dependency order, rounded by its own stage, with its explanation or what blocks it; totals (gross, deductions, the localization's employee items, net, net payable rounded to the currency, employer contributions, the localization's employer items, employer cost; a statistical value enters none); a pay group gives its periods a year as the input `periodsPerYear` and its localization; nothing is written. Publish takes a date and a reason and is refused for a line whose component has no published term on its start, a money component in another currency, two lines of one component at once, a missing dependency or a cycle; the first publish starts the structure, and no employee is reassigned.
 
 **Needs:** PE-08; PE-09; PE-15.
 
@@ -1241,6 +1250,8 @@ Migration is an explicit preview → map → reconcile → approve → import pr
 
 
 **Source:** research §9, §15
+
+**As built (impl-people P22; PayGroups).** Groups list each group's employer, currency, frequency, pay date, localization and readiness, which is preview only in this build with its reason (`NO_LOCALIZATION`; `PREVIEW_ONLY` for the demonstration localization; `COVERAGE_MISSING` and `PROJECTION_PENDING` for a registered one, of which there is none): the readiness is on the group (`find#Groups`), not in People's setup readiness provider. GroupTerms: the currency, the frequency (a Payroll month, semi-month, bi-week or week) and the first period's start, the periods a year (the annual divisor), the pay date (days after a period's last day), the proration (calendar days, working days or hours), where hours come from (timesheets, attendance or the working schedule), an optional workweek time zone and the localization binding; each required but the last two, each change audited with its reason, and the currency, frequency and first period fixed once periods exist; live finalization is refused (`LIVE_NOT_AVAILABLE`). The approval rule is the runs' (P25). Periods: `prepare#Periods` makes the next periods once (Mantle's `TimePeriod` of the employer and frequency, shared with its other groups of that frequency, and the group's pay date); Preview the next periods computes them without writing; a period's processing state is Open until runs exist. The registered localizations are seed data (`PayrollLocalization`, the demonstration alone), never named in a form.
 
 **Needs:** PE-08; PE-10; PE-12.
 

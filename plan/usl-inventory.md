@@ -498,7 +498,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P21, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P22, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -685,6 +685,21 @@ the screens that call it.
 | ReviewServices | get#ReviewRelease | People/Performance/ReviewDetail (the review release, design §15) | People/Performance/ReviewRelease (html-print, the stored page); People/Performance/ReviewDetail (releasePdf, the stored PDF) (People P20) |
 | ReviewServices | check#ReviewAccess, create#ReviewContent | People/RecordFiles; People/Chatter (the review host, PE-01) | People/Performance/ReviewDetail (Files: RecordFiles of PerformanceReview, through get#RecordLinkInfo and RecordFiles' get#ContentType) (People P20) |
 | ReviewServices | find#Goals, store#Goal | People/Performance/Goals (Goals, Goal) | People/Performance/Goals (FindGoals, GoalList, Add goal, a row's Update progress, Change, Close, Cancel goal; a review's goals from ReviewDetail) (People P20) |
+| PayrollSetupServices | find#Components | People/Settings/PayComponents; People/Settings/PayComponentDetail | People/Settings/PayComponents (FindComponents, Components); People/Settings/PayComponentDetail (the header, the term opened, All terms) (People P22) |
+| PayrollSetupServices | store#Component | People/Settings/PayComponents (NewComponent); People/Settings/PayComponentDetail (ComponentTerms) | People/Settings/PayComponents (New component); People/Settings/PayComponentDetail (Edit calculation, the constrained formula editor; Start a draft; Edit name; End component) (People P22) |
+| PayrollSetupServices | store#ComponentExample | People/Settings/PayComponentDetail (Examples) | People/Settings/PayComponentDetail (Add example, a row's Edit and Remove) (People P22) |
+| PayrollSetupServices | preview#Component | People/Settings/PayComponentDetail (Examples) | People/Settings/PayComponentDetail (Examples with their checks; Try values) (People P22) |
+| PayrollSetupServices | publish#Component | People/Settings/PayComponentDetail (PublishComponent) | People/Settings/PayComponentDetail (Publish) (People P22) |
+| PayrollSetupServices | find#Structures | People/Settings/PayStructures; People/Settings/PayStructureDetail | People/Settings/PayStructures (FindStructures, Structures); People/Settings/PayStructureDetail (the header, Composition, the calculation order and findings) (People P22) |
+| PayrollSetupServices | store#Structure | People/Settings/PayStructures (NewStructure); People/Settings/PayStructureDetail | People/Settings/PayStructures (New structure); People/Settings/PayStructureDetail (Edit, Copy, End structure) (People P22) |
+| PayrollSetupServices | store#StructureComponent | People/Settings/PayStructureDetail (Composition) | People/Settings/PayStructureDetail (Add component, a draft line's Edit and Remove, a published line's End) (People P22) |
+| PayrollSetupServices | preview#Structure | People/Settings/PayStructureDetail (PreviewStructure) | People/Settings/PayStructureDetail (Preview gross to net) (People P22) |
+| PayrollSetupServices | publish#Structure | People/Settings/PayStructureDetail (PublishStructure) | People/Settings/PayStructureDetail (Publish) (People P22) |
+| PayrollSetupServices | find#Groups | People/Settings/PayGroups (Groups) | People/Settings/PayGroups (Groups with their readiness; a group opened: GroupTerms, Periods) (People P22) |
+| PayrollSetupServices | store#Group | People/Settings/PayGroups (GroupTerms) | People/Settings/PayGroups (New pay group, Edit policy, End group) (People P22) |
+| PayrollSetupServices | prepare#Periods | People/Settings/PayGroups (Periods) | People/Settings/PayGroups (Prepare periods; Preview the next periods) (People P22) |
+| PayrollLocalizationServices | calculate#Localization (interface), calculate#Demonstration | People/Settings/PayStructureDetail (PreviewStructure's rule coverage) | People/Settings/PayStructureDetail (Preview gross to net, through preview#Structure and the localization's registered service) (People P22) |
+| PayrollLocalizationServices | find#Localizations | People/Settings/PayGroups | — (the screens' localization choice reads the registrations; P29's settings may list them) (People P22) |
 
 ## Ledger (81 services)
 

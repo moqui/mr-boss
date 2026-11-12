@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Settings › Pay components (design-people §8 PayComponents; style-guide §3.2 List; impl-people P22): the earning,
+    deduction, employer contribution and statistical definitions of the employers the user reads, from
+    mantle.humanres.PayrollSetupServices.find#Components (a payroll reader's: PAYROLL_VIEW), each with the term in effect (its basis,
+    calculation, unit and dates) and its state; ended ones when asked. Under Settings, the People administrator's area, so the
+    screen is a payroll configuration holder's; New component (the one primary) needs PAYROLL_EDIT and PEOPLE_CONFIGURE as well,
+    which Mantle checks, and opens the new component's detail, where its terms, examples and publishing are. A used component is
+    ended, never deleted. No pay amount reaches the shell's context, a choice or the palette. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay components" default-menu-index="5">
+    <parameter name="term"/>
+    <parameter name="componentKindEnumId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new component of an employer: Mantle checks the configuration holder, the code and the employer -->
+    <transition name="storeComponent">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#Component" out-map="stored"
+                    in-map="{organizationPartyId:(organizationPartyId || null), componentCode:(componentCode || null),
+                        componentName:(componentName || null), componentKindEnumId:(componentKindEnumId || null),
+                        description:(description || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Pay component created</message></if>
+        </actions>
+        <default-response url="../PayComponentDetail"><parameter name="payrollComponentId" from="stored?.payrollComponentId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollSetupServices.find#Components" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), componentKindEnumId:(componentKindEnumId || null), state:(state || null),
+                    pageIndex:(pageIndex || 0), pageSize:(pageSize || null)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            componentsFound = !!found?.components
+            canEdit = !!found?.canEdit
+            componentRows = Array.from(found?.components || [])
+            componentsCount = found?.componentsCount || 0
+            componentsPageIndex = found?.componentsPageIndex || 0
+            componentsPageSize = found?.componentsPageSize || 20
+            componentsPageMaxIndex = found?.componentsPageMaxIndex || 0
+            componentsPageRangeLow = found?.componentsPageRangeLow || 0
+            componentsPageRangeHigh = found?.componentsPageRangeHigh || 0
+            findValues = {term: term || null, componentKindEnumId: componentKindEnumId || null, state: state || null}
+            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', new: 'orange-9', ended: 'grey-8'}
+            filtered = !!(term || componentKindEnumId || state)
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Pay components" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewComponentDialog" button-text="New component" icon="sym_o_add" type="primary" width="720"
+                        title="New pay component" condition="canEdit">
+                    <label type="p" text="A component's code is the name its formula and other components' formulas use for its result. Its calculation, examples and accounts are set on the component, then published."/>
+                    <form-single name="NewComponent" transition="storeComponent">
+                        <field name="componentCode">
+                            <default-field title="Code" tooltip="Letters, digits and underscores, starting with a letter: SALARY, OVERTIME_PAY">
+                                <text-line size="20"/></default-field>
+                        </field>
+                        <field name="componentName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="componentKindEnumId">
+                            <default-field title="Kind">
+                                <drop-down allow-empty="true">
+                                    <option key="PckEarning" text="Earning"/>
+                                    <option key="PckDeduction" text="Deduction"/>
+                                    <option key="PckContribution" text="Employer contribution"/>
+                                    <option key="PckStatistical" text="Statistical (enters no total)"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description"><default-field title="Description"><text-area rows="3" cols="60"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create component"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="componentCode"/><field-ref name="componentName"/></field-row>
+                            <field-row><field-ref name="componentKindEnumId"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-ref name="description"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!componentsFound">
+            <widgets>
+                <label text="Pay components are open to payroll. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="ComponentRows" condition="componentsFound">
+            <widgets>
+                <label text="The earnings, deductions, employer contributions and statistical values pay structures are composed of, each with the terms in effect."
+                        type="p" style="text-caption m-muted"/>
+                <form-single name="FindComponents" transition="." map="findValues">
+                    <field name="term"><default-field title="Code or name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="componentKindEnumId">
+                        <default-field title="Kind">
+                            <drop-down allow-empty="true">
+                                <option key="PckEarning" text="Earning"/>
+                                <option key="PckDeduction" text="Deduction"/>
+                                <option key="PckContribution" text="Employer contribution"/>
+                                <option key="PckStatistical" text="Statistical"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="state">
+                        <default-field title="State" tooltip="Empty: every component in use">
+                            <drop-down allow-empty="true">
+                                <option key="current" text="In effect"/>
+                                <option key="future" text="From a later date"/>
+                                <option key="draft" text="Draft"/>
+                                <option key="ended" text="Ended"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="term"/>
+                            <field-ref name="componentKindEnumId"/>
+                            <field-ref name="state"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Components" list="componentRows" skip-form="true" paginate="true" condition="componentRows.length">
+                            <field name="componentCode">
+                                <default-field title="Code">
+                                    <link url="../PayComponentDetail" text="${componentCode}" link-type="anchor"
+                                            parameter-map="{payrollComponentId:payrollComponentId}"/>
+                                </default-field>
+                            </field>
+                            <field name="componentName"><default-field title="Name"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="calculationText"><default-field title="Calculation"><display/></default-field></field>
+                            <field name="unitText"><default-field title="Currency or unit"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText + (hasDraft && state !== 'draft' ? ' · draft' : ''))}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (hasDraft && state !== 'draft' ? ' · draft' : '')})}]]></text>
+                                        <text type="html">${stateText}${hasDraft &amp;&amp; state != 'draft' ? ' · draft' : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="componentCode"/><field-ref name="componentName"/></column>
+                                <column><field-ref name="kindText"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!componentRows.length &amp;&amp; filtered" text="No pay component matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!componentRows.length &amp;&amp; !filtered"
+                                text="No pay component is defined yet.${canEdit ? ' Start one with New component.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

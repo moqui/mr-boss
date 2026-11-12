@@ -50,6 +50,9 @@
 // refused to Retail's review administrator); Review cycles the review administrator's (the HR officer and the employee refused the
 // screen), Reviews the employee's by the area's own grant and their self-service link to it (the Performance group per user is
 // PeopleAccess's menu feature).
+// P22: a pay component stored by the People administrator (PAYROLL_EDIT and PEOPLE_CONFIGURE) and refused to the payroll operator
+// with the same parameters, Services' component missing to Retail's payroll, and the pay configuration screens under Settings
+// refused to the payroll operator and the HR officer (Settings' tabs are PeopleAccess's menu feature).
 // Run: ./moq test mr-boss --spec PeopleAccessLater
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit} = lib
@@ -969,6 +972,78 @@ feature(
         },
         then({codes, problems}) {
             codes == {developStores: "accepted", hrStores: "PERMISSION_DENIED", otherEmployer: "ORGANIZATION_DENIED"}
+            problems.join("\n") == ""
+        }
+    }
+)
+
+// P22: payroll configuration needs PAYROLL_EDIT and PEOPLE_CONFIGURE (design §1.1): the People administrator, who holds both, stores a
+// pay component of Retail and the payroll operator (PAYROLL_VIEW and PAYROLL_EDIT, no PEOPLE_CONFIGURE) is refused it with the same
+// parameters; the payroll operator reads Retail's component and is refused Services' as missing; the pay configuration screens,
+// under Settings, open to the administrator and are refused to the payroll operator and the HR officer.
+feature(
+    "payroll configuration: a pay component stored by the People administrator and refused to the payroll operator with the same parameters; Services' component missing to Retail's payroll; the screens the administrator's",
+    {
+        when() {
+            const P = "mantle.humanres.PayrollSetupServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            const component = (organizationPartyId, componentCode) => ({
+                organizationPartyId,
+                componentCode,
+                componentName: "Access spec " + componentCode,
+                componentKindEnumId: "PckEarning",
+                basisEnumId: "PcbAmount",
+                amount: "10.00",
+                currencyUomId: "USD"
+            })
+            const stored = componentCode =>
+                system(() =>
+                    ec.entity
+                        .find("mantle.humanres.payroll.PayrollComponent")
+                        .condition({organizationPartyId: ids.organizationId, componentCode})
+                        .one()
+                )
+            const codes = {
+                admin: code(
+                    asUser(users.admin, () =>
+                        system(() => refusal(P + "store#Component", component(ids.organizationId, "ACCESS_A")))
+                    )
+                ),
+                payroll: code(
+                    asUser(users.payroll, () =>
+                        system(() => refusal(P + "store#Component", component(ids.organizationId, "ACCESS_B")))
+                    )
+                )
+            }
+            if (stored("ACCESS_B")) problems.push("the payroll operator's component was stored")
+            const services = asUser(users.admin, () =>
+                system(() => invoke(P + "store#Component", component(ids.otherOrganizationId, "ACCESS_S")))
+            ).payrollComponentId
+            const retail = stored("ACCESS_A")?.payrollComponentId
+            codes.payrollReadsRetail = code(
+                asUser(users.payroll, () => system(() => refusal(P + "find#Components", {payrollComponentId: retail})))
+            )
+            codes.payrollReadsServices = code(
+                asUser(users.payroll, () => system(() => refusal(P + "find#Components", {payrollComponentId: services})))
+            )
+            const opened = screenRefusal(users.admin, "Settings/PayComponents")
+            if (opened) problems.push(`the administrator's PayComponents: ${opened}`)
+            for (const user of [users.payroll, users.hr])
+                for (const path of ["Settings/PayComponents", "Settings/PayStructures", "Settings/PayGroups"]) {
+                    const refusedScreen = screenRefusal(user, path)
+                    if (!unauthorized(refusedScreen)) problems.push(`${user} opens ${path}: ${refusedScreen || "opened"}`)
+                }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    admin: "accepted",
+                    payroll: "PERMISSION_DENIED",
+                    payrollReadsRetail: "accepted",
+                    payrollReadsServices: "RECORD_UNAVAILABLE"
+                }
             problems.join("\n") == ""
         }
     }

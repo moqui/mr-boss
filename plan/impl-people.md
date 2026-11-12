@@ -6152,6 +6152,125 @@ PayGroups; PE-08, PE-09 (the evaluator), PE-12 (the registration).
   component with examples, composes a structure, previews gross to net, publishes, and sets up a monthly group
   whose readiness says it is preview only.
 
+**Built Nov 12 (P22).** mr-moqui 29312a4e, mr-mantle 42c8c626, mr-boss (this commit), branch `ppl/p22`.
+- Checked first (the code over the plan): F24 (no decimal evaluator: Remaining-Work's ask), F32 (the legacy payroll services and
+  `PayrollAdjustment` rows, not read), P4's `PayrollSetupServices` and `PayrollSetup.js` (grades only), People.js `capabilities`
+  (`configure`, `payrollView`, `payrollEdit`; PAYROLL_VIEW a staff read), the Payroll `TimePeriodType`s and `create#TimePeriod`
+  (unique per employer, type and start; semi-month arithmetic its own), Settings (BOSS_PPL_SETTINGS denies the root user group; the
+  People administrator, who holds PAYROLL_VIEW, PAYROLL_EDIT and PEOPLE_CONFIGURE, opens it by the root's ALWAYS), and BOSS's groups:
+  no group but the People administrator holds both PAYROLL_EDIT and PEOPLE_CONFIGURE (the usable-when's `people.payroll` holds no
+  PEOPLE_CONFIGURE).
+- Framework PE-09 (mr-moqui): `org.moqui.impl.ExpressionServices` `validate#DecimalExpression` and `evaluate#DecimalExpression`
+  (`type="rust"`, crates/moqui-core/src/service/expressions.rs over `moqui_lib::decimal_expr`, a tokenizer and recursive-descent
+  parser to a typed tree): numbers, names, `+ - * /`, unary minus, the comparisons, `and`, `or`, `not`, parentheses and the functions
+  `if`, `min`, `max`, `abs`, `round`, `floor`, `ceil`; amounts and conditions typed; exact decimal (`/` at full precision, nothing
+  rounded but by the functions; `if`, `and` and `or` short-circuit); at most 2000 characters and 32 levels; no context, entity,
+  service or I/O by construction. A refusal is answered (`valid` false, a code, a message, a position; `missingNames`), never a
+  service error. Granted to ALL_USERS, not inheritable (SecurityTypeData). JS-Framework-Services documents it, Attack-Surface notes
+  a formula is not script, Remaining-Work's row reads built.
+- Mantle (`entity/PeoplePayrollEntities.xml`, package `mantle.humanres.payroll`): `PayrollComponent` (an employer's; a code a formula
+  names, unique in the employer, not a word the grammar keeps; four kinds), `PayrollComponentTerm` (its own id; draft or published;
+  a fixed amount or a formula, declared inputs, the dependencies computed when stored, currency or a statistical value's unit, an
+  optional rounding stage, payslip visibility, the expense and liability accounts; audited status and end), `PayrollComponentExample`
+  (a name, `name = value` inputs kept as JSON text, the amount expected), `PayrollStructure` and `PayrollStructureComponent`,
+  `PayrollGroup` and `PayrollGroupPeriod`, `PayrollLocalization` (seeded with `PlzDemonstration` alone); the enumerations and the
+  `PayrollTerm` status flow seeded beside them.
+  - `PayrollSetupServices` over a new module `PayrollConfiguration.js` (P4's `PayrollSetup.js` keeps the grades):
+    `find#Components`, `store#Component`, `store#ComponentExample` (an addition to the plan's list: the examples are records of
+    their own), `preview#Component`, `publish#Component`, `find#Structures`, `store#Structure`, `store#StructureComponent`,
+    `preview#Structure`, `publish#Structure`, `find#Groups`, `store#Group`, `prepare#Periods`. Read with PAYROLL_VIEW for the
+    employers in scope; changed with PAYROLL_VIEW, PAYROLL_EDIT and PEOPLE_CONFIGURE; another employer's record a missing one;
+    every write at the revision read. Publishing a term needs a reason, examples all giving their amounts, its dependencies
+    published on the date and without a cycle (the cycle named), its kind's mapping, and no published term from that date on
+    (`TERMS_OVERLAP`); the term in effect ends there, never in the past (`EFFECTIVE_DATE_PAST`). A new draft copies the latest
+    published term without its dates. `preview#Structure` computes the lines with their drafts in Kahn's dependency order (ties in
+    payslip order), each rounded by its own stage, blocking a component in or reading a cycle, reading a code the structure lacks, in
+    another currency or missing an input, then the localization's items, the totals by kind (a statistical value in none), the
+    net rounded to the currency with the difference, and `NEGATIVE_NET`; with a group, its periods a year as the input
+    `periodsPerYear`. `store#Group` requires every policy but the zone and the localization, refuses `liveEnabled`
+    (`LIVE_NOT_AVAILABLE`) and fixes the currency, frequency and first period once periods exist; `prepare#Periods` (1 to 24, a
+    preview for a reader) computes the dates in the frequency's own terms and makes each period through `create#TimePeriod`, so an
+    employer's groups of one frequency and start share them, with the group's pay date.
+  - `PayrollLocalizationServices` (new, `PayrollLocalization.js`): the `calculate#Localization` interface (pay facts, bases and
+    profile in; itemized employee and employer amounts and findings out; side-effect free), `calculate#Demonstration` (a flat 2%
+    employee and 1% employer levy on earnings, rounded to the currency, with the finding `DEMONSTRATION_ONLY`) and
+    `find#Localizations`. A group's readiness (`find#Groups`) is preview only with its reason: `NO_LOCALIZATION`, `PREVIEW_ONLY`
+    (the demonstration), `COVERAGE_MISSING` or `PROJECTION_PENDING`; `liveAllowed` is never true.
+- BOSS:
+  - Screens under Settings (the People administrator's area; tabs 5 to 7 after Forms): `Settings/PayComponents` (find, the list with
+    each term in effect and its state, New component, the one primary), `Settings/PayComponentDetail` (record header; the term's
+    facts; the constrained formula editor, Edit calculation, its grammar stated and the formula checked by the server; Examples
+    with each check and Add example, Edit, Remove; Try values; All terms; Publish the primary while there is a draft, Start a draft,
+    Edit name, End component under More), `Settings/PayStructures` (list, New structure), `Settings/PayStructureDetail` (record
+    header; Composition with the calculation order and findings, Add component, a draft line's Edit and Remove, a published line's
+    End; Preview gross to net with sample values, a date, a pay group and a localization; Publish, Edit, Copy, End structure) and
+    `Settings/PayGroups` (Groups with their readiness chips, New pay group; a group opened: its policy, Edit policy, End group,
+    Periods, Prepare periods, Preview the next periods).
+  - `ironstone.people` People.js: the five routes in `sharedLinks`; the choices `payComponents`, `payGroups` and `glAccounts` (a
+    payroll reader's, of one employer in scope) and `payrollLocalizations`; never an amount. No amount enters the shell context,
+    the palette, a notification or Chatter; no shipped dataset has one (no demo data added).
+- Specs: framework `DecimalExpression` (4 features, 0.2 s); Mantle `test/humanres/PayConfiguration` (5 features, 6.1 s Debug
+  feature time: the term's refusals, script and statements in a formula refused, examples, mapping, the operator and HR refused;
+  missing and cyclic dependencies, of a component and of a structure; overlapping published terms; gross to net with a
+  statistical value in no total and the demonstration levy; a group's currency, divisor and pay date never assumed, preview only,
+  its periods prepared once and shared); BOSS `test/People/PeoplePayConfiguration` (3 features, 1.7 s Debug: PayComponentDetail's
+  one html render as the People administrator with a draft open, PayStructureDetail's one html render with a preview, the four
+  choices each with a selected value off the page); `PeopleAccess` gains a feature (0.5 s release: the People administrator stores
+  a component of Retail and the payroll operator is refused with the same parameters; Retail's payroll reads Retail's component
+  and is refused Services' as missing; the three list screens refused to the payroll operator and HR) and Settings' tabs in its menu
+  feature (PeopleSpecLib `settingsMenu`). Acceptance, written and not run: `acceptance/People/PeoplePayConfigurationUsable` (3
+  features, through the Settings screens' transitions: a salary, an hourly and a deduction component with examples, published;
+  the payroll operator refused publishing; a structure composed, previewed with the demonstration localization and published; a
+  monthly group whose readiness is preview only, its periods prepared; the payroll operator refused the screens). The walk is
+  the People administrator's: BOSS has no other holder of PAYROLL_EDIT and PEOPLE_CONFIGURE (below).
+- Tests run: mr-moqui's Debug build (`CARGO_BUILD_JOBS=4`), `cargo test -p moqui-lib` 170 of 170, `cargo test -p moqui-core --lib
+  rust_services` 2 of 2, clippy on both crates with warnings denied, framework DecimalExpression 4 of 4; with that Debug binary
+  (`--debug --nobuild`, this phase's runtime): Mantle PayConfiguration, PeoplePositions, HumanResServices, PayrollServices,
+  PayrollAdjustments and PeopleScope 42 of 42 (mr-mantle 15.0 s), BOSS PeoplePayConfiguration and PeopleAccess 30 of 30; with the
+  shared release binary (no ExpressionServices; PeopleAccess's case reads no formula): BOSS PeopleAccess and PeoplePositions 30 of 30
+  (mr-boss 14.0 s). A one-off qvt, tui and html render of the five screens as the People administrator and a post to each of
+  their transitions, the payroll operator refused publishing (not kept), found nothing to fix. `moqui lint --screens` (Debug): 136
+  flagged sites as on master, none in the new screens, no TUI-text finding in them. Prettier clean on the new and changed
+  JavaScript (a hunk of another phase's in People.js that Prettier rewrote was put back). Not run: `cargo lint` on the whole
+  workspace, test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's People Added table gains the thirteen PayrollSetupServices and the PayrollLocalizationServices with
+  their screens; ss-inventory notes no baseline form maps to the five screens.
+- Design edits: design-people (header; §1.2 Settings' tabs; §8 PayComponents, PayComponentDetail, PayStructures,
+  PayStructureDetail and PayGroups as built).
+- Findings (provisional, numbered by the lead):
+  - BOSS has no payroll configuration holder but the People administrator: payroll configuration needs PAYROLL_EDIT and
+    PEOPLE_CONFIGURE (design §1.1), and only BOSS_PEOPLE_ADMIN (with ADMIN) holds both, so the usable-when's "`people.payroll` with
+    `PEOPLE_CONFIGURE`" has no group; the walk is people.admin's. A payroll configuration group (or PEOPLE_CONFIGURE granted to
+    the payroll operator, which would open the rest of Settings' configuration to them too) is the user's call;
+  - PublishComponent's approver (design §8 PayComponentDetail) is not built: the publisher and the reason are recorded, and there
+    is no payroll configuration kind in §12's approval policies; one person can draft and publish;
+  - a pay component is one employer's (no shared component, unlike P4's shared grades): a group of employers sharing a payroll
+    configuration copies it per employer;
+  - not built here: a structure line's eligibility and the structures' assignment count (P23's assignments), a group's approval
+    rule (P25's runs), a period's processing state beyond Open (P25), a payroll check in People's setup readiness provider (the
+    readiness is per group in `find#Groups`; P29's settings may add one), validation of a workweek time zone beyond its length;
+  - a term with no rounding stage keeps the evaluator's full precision (a division to 28 digits); only the net payable is rounded to
+    the currency in a preview, so P25's calculation needs the currency rounding of each component's result or of the totals
+    decided;
+  - a pay group gives a structure's preview its periods a year as the input named `periodsPerYear`: a naming contract between the
+    group and the formulas that P23 and P25 should keep or make explicit (a declared group input);
+  - the Debug data load (every spec run here) logs a stack overflow in `ironstone.customerservice.DemoServices.load#DemoOrder` (not P22's; not
+    checked on master).
+- For the lead:
+  - budget share: mr-mantle PayConfiguration about 6.1 s Debug (perhaps 3 s release, not measurable on the shared release binary,
+    which has no ExpressionServices); mr-boss PeoplePayConfiguration about 1.7 s Debug and PeopleAccess's feature 0.5 s release;
+    mr-moqui server DecimalExpression 0.2 s;
+  - merge hot spots (P20 runs beside this): mr-boss `service/ironstone/people/People.js` (the end of `linkPaths`, a block of
+    choices before `function choices`), `ContextServices.xml` (`get#Choices`' description), `test/People/PeopleSpecLib.js`
+    (`settingsMenu`), `PeopleAccess.spec.js` (a header line, the appended feature), `screen/People/Settings.xml` (its comment),
+    `plan/usl-inventory.md` (the People Added table's end and its heading line), `plan/ss-inventory.md`, design-people (header,
+    §1.2, §8), this note; mr-mantle `PayrollSetupServices.xml` (appended); mr-moqui `service/rust_services.rs` (the registry list),
+    `SecurityTypeData.xml`, JS-Framework-Services, Attack-Surface, Remaining-Work;
+  - the apps need the framework merge: Mantle's payroll configuration calls `ExpressionServices`, which the release binary before
+    mr-moqui 29312a4e does not have (every formula store and preview would fail);
+  - for the user's call: a payroll configuration holder other than the People administrator (the first finding), and whether
+    publishing a component or structure needs an approver (the second).
+
 ### P23 — Pay assignments and compensation
 
 Design §8 PayAssignments, Employee360's Compensation; PE-08, PE-12 (profiles).

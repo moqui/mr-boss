@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Settings › Pay structures (design-people §8 PayStructures; style-guide §3.2 List; impl-people P22): the reusable pay
+    calculations of the employers the user reads, from mantle.humanres.PayrollSetupServices.find#Structures (a payroll reader's),
+    each with its employer, currency, pay basis, the count of its components, its dates and state; ended ones when asked. Under
+    Settings, the People administrator's area; New structure (the one primary: a name, an employer, a currency, never assumed, and a
+    pay basis) needs PAYROLL_EDIT and PEOPLE_CONFIGURE, which Mantle checks, and opens the structure, where it is composed, previewed
+    and published. Copying is on the structure. No amount is listed. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay structures" default-menu-index="6">
+    <parameter name="term"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new structure of an employer: Mantle checks the configuration holder, the employer and the currency -->
+    <transition name="storeStructure">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#Structure" out-map="stored"
+                    in-map="{organizationPartyId:(organizationPartyId || null), structureName:(structureName || null),
+                        currencyUomId:(currencyUomId || null), payBasisEnumId:(payBasisEnumId || null), description:(description || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Pay structure created</message></if>
+        </actions>
+        <default-response url="../PayStructureDetail"><parameter name="payrollStructureId" from="stored?.payrollStructureId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollSetupServices.find#Structures" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), state:(state || null), pageIndex:(pageIndex || 0), pageSize:(pageSize || null)}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            structuresFound = !!found?.structures
+            canEdit = !!found?.canEdit
+            structureRows = Array.from(found?.structures || [])
+            structuresCount = found?.structuresCount || 0
+            structuresPageIndex = found?.structuresPageIndex || 0
+            structuresPageSize = found?.structuresPageSize || 20
+            structuresPageMaxIndex = found?.structuresPageMaxIndex || 0
+            structuresPageRangeLow = found?.structuresPageRangeLow || 0
+            structuresPageRangeHigh = found?.structuresPageRangeHigh || 0
+            findValues = {term: term || null, state: state || null}
+            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', ended: 'grey-8'}
+            filtered = !!(term || state)
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Pay structures" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewStructureDialog" button-text="New structure" icon="sym_o_add" type="primary" width="720"
+                        title="New pay structure" condition="canEdit">
+                    <label type="p" text="A structure is composed of the employer's components in one currency, previewed gross to net and published before employees are assigned to it."/>
+                    <form-single name="NewStructure" transition="storeStructure">
+                        <field name="structureName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="currencyUomId">
+                            <default-field title="Currency">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="payBasisEnumId">
+                            <default-field title="Pay basis">
+                                <drop-down allow-empty="true">
+                                    <option key="PpbSalaried" text="Salaried"/>
+                                    <option key="PpbHourly" text="Hourly"/>
+                                    <option key="PpbMixed" text="Salaried and hourly"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description"><default-field title="Description"><text-area rows="2" cols="60"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create structure"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="structureName"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-row><field-ref name="currencyUomId"/><field-ref name="payBasisEnumId"/></field-row>
+                            <field-ref name="description"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!structuresFound">
+            <widgets>
+                <label text="Pay structures are open to payroll. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="StructureRows" condition="structuresFound">
+            <widgets>
+                <label text="Reusable pay calculations, each a set of components in one currency." type="p" style="text-caption m-muted"/>
+                <form-single name="FindStructures" transition="." map="findValues">
+                    <field name="term"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="state">
+                        <default-field title="State" tooltip="Empty: every structure in use">
+                            <drop-down allow-empty="true">
+                                <option key="current" text="Published"/>
+                                <option key="future" text="From a later date"/>
+                                <option key="draft" text="Draft"/>
+                                <option key="ended" text="Ended"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="term"/><field-ref name="state"/><field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Structures" list="structureRows" skip-form="true" paginate="true" condition="structureRows.length">
+                            <field name="structureName">
+                                <default-field title="Structure">
+                                    <link url="../PayStructureDetail" text="${structureName}" link-type="anchor"
+                                            parameter-map="{payrollStructureId:payrollStructureId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="payBasisText"><default-field title="Pay basis"><display/></default-field></field>
+                            <field name="componentCount" align="right"><default-field title="Components"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="structureName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="currencyUomId"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!structureRows.length &amp;&amp; filtered" text="No pay structure matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!structureRows.length &amp;&amp; !filtered"
+                                text="No pay structure is defined yet.${canEdit ? ' Start one with New structure.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

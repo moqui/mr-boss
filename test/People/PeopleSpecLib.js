@@ -96,8 +96,8 @@ const ids = {
         "Attendance",
         "ShiftRoster"
     ],
-    // P16: Forms, the survey builder with People's registration
-    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms"],
+    // P16: Forms, the survey builder with People's registration; P22: payroll configuration's components, structures and groups
+    settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms", "PayComponents", "PayStructures", "PayGroups"],
     // P21: Grievances, every People user's
     employeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings

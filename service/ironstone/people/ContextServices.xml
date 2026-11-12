@@ -108,7 +108,9 @@ along with this software (see the LICENSE.md file). If not, see
             People's leave types; an HR reader's policies not closed, of organizationPartyId when given); skillTypes, skillLevels
             and qualificationTypes (P18: People's lookups, ended values left out; a level by its number); trainers (P19: the employees
             and agents of a development reader's employers) and trainingForms (P19: the published training assessment forms of
-            organizationPartyId, else of every employer the user reads). Refuses a user without
+            organizationPartyId, else of every employer the user reads); payComponents, payGroups and glAccounts (P22: a payroll
+            reader's, of organizationPartyId: its pay components in use by code and name, its pay groups, its accounts by code and
+            name; never an amount) and payrollLocalizations (P22: the registered localizations). Refuses a user without
             People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
