@@ -1549,7 +1549,10 @@ Designed, not in this build:
   external payroll processing is gated on it as native finalization is; AC-24, the maintenance expense routing with
   MaintenanceCostPolicy and its PostingMappings rows, is built in impl-maintenance P9; CostingPolicies'
   LaborCostingRates form is built in impl-people P10, with the one labor costing purpose `RaprCost`, to which
-  Manufacturing's `RaprProductionCost` rows move.
+  Manufacturing's `RaprProductionCost` rows move. AC-24 was built by impl-maintenance P9 (Nov 12, 2026): MaintenanceCostPolicy
+  as Posting defaults' Maintenance expense kind, and AssetAutoPostServices routing an issuance to managed maintenance work, and
+  its return, to the mapped expense with the facility, cost centre and project; Accounting's and Manufacturing's ledger specs
+  pass unchanged.
 
 ## 8. Verification
 

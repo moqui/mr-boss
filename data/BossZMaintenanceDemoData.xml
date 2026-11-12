@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance demo's links to People's and Purchasing's demo records (impl-maintenance P2), in a file that loads after
     theirs (BossMaintenanceDemoData.xml loads before them): the custodians of Services' compressor and multimeter, Kenji and Sofia,
     Services' technicians in People's demo, and the supplier warranty's warrantor of the compressor and the air handler; P3's team
-    and work orders; P6's procedures. -->
+    and work orders; P6's procedures; P13's preventive plans. -->
 <entity-facade-xml type="demo">
     <mantle.product.asset.AssetPartyAssignment assetId="BOSS_MNT_COMPRESSOR" partyId="BOSS_PPL_KENJI" roleTypeId="Custodian"
             fromDate="2026-01-05 08:00:00"/>
@@ -255,6 +255,58 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.effort.WorkEffortApproval workEffortApprovalId="BOSS_MNT_PROC_OLD_A1" workEffortId="BOSS_MNT_PROC_OLD" statusId="WeaApproved"
             requestedByUserId="BOSS_MNT_AUTHOR" requestedDate="2026-01-04 08:00:00" decidedByUserId="BOSS_MNT_APPROVER" decidedDate="2026-01-05 08:00:00"/>
     <mantle.product.maintenance.ProductMaintenance productMaintenanceId="BOSS_MNT_COMP_SERVICE" templateWorkEffortId="BOSS_MNT_PROC_COMP"/>
+    <!-- P7: a follow-up task of the air handler's work order (an ordinary Commons task, maint.tech's, linked to the root by Caused By),
+        which Maintenance's WorkItemDetail shows with its work order. The checklist itself is worked on work made of the AC-200
+        service (the specs and walks make their own, so the procedure's demo usage stays as P6 left it). -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_TASK_AHU_GASKET" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" statusId="WeInPlanning"
+            ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" priority="4" workEffortName="Order a spare coil header gasket"
+            description="Keep one on the shelf after the AHU-2 leak" estimatedCompletionDate="2026-11-20 17:00:00"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_TASK_AHU_GASKET" partyId="BOSS_MNT_TECH" roleTypeId="Assignee"
+            fromDate="2026-11-11 11:00:00" statusId="WeptAssigned"/>
+    <mantle.work.effort.WorkEffortAssoc workEffortId="BOSS_MNT_TASK_AHU_GASKET" toWorkEffortId="BOSS_MNT_WO_AHU" workEffortAssocTypeEnumId="WeatCausedBy"
+            fromDate="2026-11-11 11:00:00"/>
+
+    <!-- P9 (design-maintenance §3 PlannedParts and PartsUsed, AC-24): maint.tech issues stock (Warehouse's BOSS_WAREHOUSE_ISSUE grants
+        STOCK_ISSUE; an assignment grants none) and maint.tech2 does not; spare parts in Services' stock warehouse; the air handler's
+        leak with three coil gaskets planned, two issued and one returned (the rows as the services write them; demo rows post nothing),
+        the compressor's oil service with its suggested filter planned; and Services' maintenance expense (Repairs and maintenance,
+        equipment) for every facility and kind -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <mantle.product.Product productId="BOSS_MNT_PART_GASKET" productName="AHU-2 coil gasket" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" ownerPartyId="ORG_ZIZI_SERVICES" amountUomId="OTH_ea"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_FILTER" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_FILTER" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="6"
+            availableToPromiseTotal="6" acquireCost="18.40" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_BELT" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_BELT" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="4"
+            availableToPromiseTotal="4" acquireCost="42.00" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_GASKET" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_GASKET" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="4"
+            availableToPromiseTotal="4" acquireCost="9.75" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_FILTER" assetId="BOSS_MNT_STOCK_FILTER" productId="BOSS_MNT_PART_FILTER"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="6" availableToPromiseDiff="6"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_BELT" assetId="BOSS_MNT_STOCK_BELT" productId="BOSS_MNT_PART_BELT"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="4" availableToPromiseDiff="4"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="5" availableToPromiseDiff="5"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_WO_AHU" productId="BOSS_MNT_PART_GASKET" fromDate="2026-11-11 08:30:00"
+            typeEnumId="WeptConsume" estimatedQuantity="3" quantityUomId="OTH_ea" requiredDate="2026-11-11 12:00:00" sourceFacilityId="BOSS_PRD_WH"/>
+    <mantle.product.issuance.AssetIssuance assetIssuanceId="BOSS_MNT_ISS_AHU" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            workEffortId="BOSS_MNT_WO_AHU" assetMaintenanceId="BOSS_MNT_AM_AHU" issuedByUserId="BOSS_MNT_TECH" issuedDate="2026-11-11 10:00:00"
+            quantity="2" enteredQuantity="2" appliedConversionFactor="1"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET_ISS" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-11-11 10:00:00" quantityOnHandDiff="-2" availableToPromiseDiff="-2" workEffortId="BOSS_MNT_WO_AHU"
+            assetIssuanceId="BOSS_MNT_ISS_AHU"/>
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_MNT_RCT_AHU" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            workEffortId="BOSS_MNT_WO_AHU" sourceAssetIssuanceId="BOSS_MNT_ISS_AHU" receivedByUserId="BOSS_MNT_TECH" receivedDate="2026-11-11 15:00:00"
+            quantityAccepted="1" enteredQuantity="1" appliedConversionFactor="1" itemDescription="One gasket left over"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET_RET" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-11-11 15:00:00" quantityOnHandDiff="1" availableToPromiseDiff="1" workEffortId="BOSS_MNT_WO_AHU"
+            assetReceiptId="BOSS_MNT_RCT_AHU"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_WO_COMP_OIL" productId="BOSS_MNT_PART_FILTER" fromDate="2026-11-10 09:00:00"
+            typeEnumId="WeptConsume" estimatedQuantity="1" requiredDate="2026-11-17 08:00:00" sourceFacilityId="BOSS_PRD_WH"/>
+    <mantle.ledger.config.MaintenanceCostPolicy maintenanceCostPolicyId="BOSS_MNT_COST_SVC" organizationPartyId="ORG_ZIZI_SERVICES"
+            glAccountId="613200000" fromDate="2026-01-01 00:00:00"/>
 
     <!-- P15 (impl-maintenance; design §7.1, Resources, ResourcePolicyDetail, Blackouts): Room 101 is managed, approved by the resource
         approver (maint.booking) and booked for at most two hours, up to 90 days ahead; Room 103, bookable with no policy, is booked
@@ -284,4 +336,35 @@ along with this software (see the LICENSE.md file). If not, see
             estimatedStartDate="2026-11-18 14:00:00" estimatedCompletionDate="2026-11-18 15:00:00" timeUomId="TF_hr"/>
     <mantle.work.effort.WorkEffortFacility workEffortId="BOSS_MNT_EV_HANDOVER" facilityId="BOSS_MNT_ROOM_101" statusId="WefRequested"
             comments="Six of us, and the screen for the dashboards"/>
+
+    <!-- P13 (design-maintenance §5): three preventive plans of Services, drafts the planner activates: Room 201's monthly
+        inspection from November 30 (a month's end; planned on business days, the time zone inherited from the campus); the
+        compressor's oil service every 250 run hours, following the AC-200 model's 500-hour default with this compressor's override
+        (baseline 1200 hours on September 1, so its readings put the next threshold at 1450); and the compressor's contactor check
+        every 500 starts, whose start counter (a second counting meter of the model) was last read in August, so its due is
+        unknown until it is read again. Each names a procedure that applies to its target. -->
+    <mantle.product.maintenance.ProductMeter productMeterId="BOSS_MNT_COMP_STARTS" productId="BOSS_MNT_COMP_MODEL"
+            productMeterTypeId="PdMtrUseCount" meterName="Starts" isCumulative="Y"/>
+    <mantle.product.maintenance.AssetMeter assetId="BOSS_MNT_COMPRESSOR" readingDate="2026-08-15 08:00:00" productMeterTypeId="PdMtrUseCount"
+            productMeterId="BOSS_MNT_COMP_STARTS" meterValue="4380" readingReasonEnumId="AmrReading"/>
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_ROOM201" scheduleName="Room 201 monthly inspection"
+            organizationPartyId="ORG_ZIZI_SERVICES" facilityId="BOSS_MNT_ROOM_201" statusId="MschDraft" revision="1"
+            createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-11-02 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_ROOM201" fromDate="2026-11-02 09:00:00"
+            triggerEnumId="MstCalendar" cadenceEnumId="MscFixed" intervalQuantity="1" intervalUomId="TF_mon" firstDueLocal="2026-11-30 09:00"
+            businessDaysOnly="Y" leadDays="7" templateWorkEffortId="BOSS_MNT_PROC_ROOM" maintenanceTypeEnumId="MntTpInspection"
+            teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_COMP" scheduleName="Compressor C-1 oil service every 250 hours"
+            organizationPartyId="ORG_ZIZI_SERVICES" assetId="BOSS_MNT_COMPRESSOR" productMaintenanceId="BOSS_MNT_COMP_SERVICE"
+            statusId="MschDraft" revision="1" createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-11-02 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_COMP" fromDate="2026-11-02 09:00:00"
+            triggerEnumId="MstMeter" intervalQuantity="250" baselineValue="1200" baselineDate="2026-09-01 08:00:00" leadDays="3"
+            teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_STARTS" scheduleName="Compressor C-1 contactor check every 500 starts"
+            organizationPartyId="ORG_ZIZI_SERVICES" assetId="BOSS_MNT_COMPRESSOR" statusId="MschDraft" revision="1"
+            createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-11-02 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_STARTS" fromDate="2026-11-02 09:00:00"
+            triggerEnumId="MstMeter" productMeterId="BOSS_MNT_COMP_STARTS" intervalQuantity="500" baselineValue="4200"
+            baselineDate="2026-08-01 08:00:00" maxReadingAgeDays="30" templateWorkEffortId="BOSS_MNT_PROC_COMP"
+            maintenanceTypeEnumId="MntTpPreventive" teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
 </entity-facade-xml>

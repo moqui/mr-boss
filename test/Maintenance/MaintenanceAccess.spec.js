@@ -9,8 +9,11 @@
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
 // Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
 // panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P6's procedure record (a reader of its
-// organization's procedures; an author's change), P15's booking policy and blackout (the resource administrator's, the planner
-// refused, Retail's facility refused; a booking approver reads the policy of the room they approve only),
+// organization's procedures; an author's change), P9's part issue (the assigned technician with the stock grant; another
+// technician without it and another owner's stock refused), P13's preventive plan (a maintenance reader of its organization; a
+// planner's create), P15's booking policy and blackout (the resource administrator's, the planner refused, Retail's facility
+// refused; a booking approver reads the policy of the room they approve only), P7's checklist (its
+// technician reads it, not another or Retail; a waiver is a supervisor's),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -854,6 +857,84 @@ feature(
         }
     }
 )
+feature(
+    "issuing a part is the assigned technician's with the stock grant: one without it is refused, and another owner's stock is",
+    {
+        when() {
+            const issue = "mantle.work.MaintenanceExecutionServices.issue#MaintenanceMaterial"
+            const write = (user, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(issue, parameters)
+                })
+            const part = {workEffortId: ids.inProgressOrderId, productId: ids.gasketId, quantity: 1}
+            return {
+                tech: write(users.tech, Object.assign({operationKey: "access-p9-1", assetId: ids.gasketStockId}, part)),
+                tech2: write(users.tech2, Object.assign({operationKey: "access-p9-2", assetId: ids.gasketStockId}, part)),
+                planner: write(users.planner, Object.assign({operationKey: "access-p9-3", assetId: ids.gasketStockId}, part)),
+                otherOwner: write(users.tech, {
+                    operationKey: "access-p9-4",
+                    workEffortId: ids.inProgressOrderId,
+                    assetId: ids.otherOwnerStockId,
+                    quantity: 1
+                })
+            }
+        },
+        then({tech, tech2, planner, otherOwner}) {
+            tech == ""
+            tech2.includes("PERMISSION_DENIED")
+            planner.includes("PERMISSION_DENIED")
+            otherOwner.includes("OWNER_MISMATCH")
+        }
+    }
+)
+
+// P13: a preventive plan is read by a maintenance reader of its organization (MAINTENANCE_VIEW), not a resource administrator, a
+// technician or Retail; a plan is made by a planner or supervisor (Mantle's store#MaintenanceSchedule), not a reader, and not by
+// Retail's planner for Services' equipment (the same parameters)
+feature(
+    "a preventive plan is read by a maintenance reader of its organization, not a resource administrator, a technician or Retail; it is made by a planner only (P13)",
+    {
+        when() {
+            const check = user =>
+                asUser(user, () =>
+                    refusal(checkRecord, {appRoot: "Maintenance", recordType: "plan", recordId: ids.compressorPlanId})
+                )
+            const make = (user, operationKey) =>
+                asUser(user, () =>
+                    system(() =>
+                        refusal("mantle.work.MaintenancePlanServices.store#MaintenanceSchedule", {
+                            operationKey,
+                            assetId: ids.vanId,
+                            scheduleName: "Van spec plan",
+                            intervalQuantity: 6,
+                            intervalUomId: "TF_mon",
+                            firstDueLocal: "2027-01-15 08:00"
+                        })
+                    )
+                )
+            return {
+                reader: check(users.reader),
+                planner: check(users.planner),
+                resources: check(users.resources),
+                tech: check(users.tech),
+                retail: check(users.retailPlanner),
+                plannerMakes: make(users.planner, "mnt-access-plan-1"),
+                readerMakes: make(users.reader, "mnt-access-plan-2"),
+                retailMakes: make(users.retailPlanner, "mnt-access-plan-3")
+            }
+        },
+        then(out) {
+            out.reader == "" && out.planner == ""
+            out.resources.includes("RECORD_UNAVAILABLE")
+            out.tech.includes("RECORD_UNAVAILABLE")
+            out.retail.includes("RECORD_UNAVAILABLE")
+            out.plannerMakes == ""
+            out.readerMakes.includes("PERMISSION_DENIED")
+            out.retailMakes.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
 
 feature(
     "a booking policy and a blackout are the resource administrator's: the planner is refused, and Retail's facility is refused to both",
@@ -930,3 +1011,29 @@ feature(
         }
     }
 )
+
+// P7: a work order's checklist is read by its readers (Mantle's get#ProcessExecution: the technician it is assigned to, not another
+// technician, and not Retail's planner), and a waiver is a supervisor's (waive#ProcessStep: the technician refused before anything
+// else; the supervisor passes the permission and is refused only for naming the work order, not a step)
+feature("a work order's checklist is read by its technician, not another or Retail's planner; a waiver is a supervisor's", {
+    when() {
+        const call = (user, service, parameters) =>
+            asUser(user, () => {
+                ec.artifactExecution.disableAuthz()
+                return refusal(service, parameters)
+            })
+        const read = user => call(user, "mantle.work.ProcessServices.get#ProcessExecution", {workEffortId: ids.inProgressOrderId})
+        const waive = user =>
+            call(user, "mantle.work.ProcessServices.waive#ProcessStep", {workEffortId: ids.inProgressOrderId, reason: "Spec"})
+        const problems = []
+        if (read(users.tech) !== "") problems.push("the technician cannot read: " + read(users.tech))
+        if (!read(users.tech2).includes("NOT_ASSIGNED")) problems.push("another technician reads: " + read(users.tech2))
+        if (!read(users.retailPlanner).includes("RECORD_UNAVAILABLE")) problems.push("Retail reads: " + read(users.retailPlanner))
+        if (!waive(users.tech).includes("PERMISSION_DENIED")) problems.push("the technician waives: " + waive(users.tech))
+        if (!waive(users.supervisor).includes("STEP_REQUIRED")) problems.push("the supervisor: " + waive(users.supervisor))
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

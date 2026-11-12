@@ -97,6 +97,10 @@ along with this software (see the LICENSE.md file). If not, see
             new work; ProcedureDetail opens read only for a technician assigned to work made of the procedure (Mantle's read) -->
         <subscreens-item name="Procedures" location="component://mr-boss/screen/Maintenance/Procedures.xml" menu-index="4"
                 menu-include="ec.user.hasPermission('WORK_PROCESS_VIEW') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')"/>
+        <!-- P13: Preventive (design §5): the plans, for a reader of maintenance work (MAINTENANCE_VIEW) or a planner or supervisor;
+            Mantle's MaintenancePlanServices check again (a write needs MAINTENANCE_PLAN or _SUPERVISE) -->
+        <subscreens-item name="Preventive" location="component://mr-boss/screen/Maintenance/Preventive.xml" menu-index="5"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')"/>
         <!-- P2: Equipment and Facilities (design §6), for a user who reads them -->
         <subscreens-item name="Equipment" location="component://mr-boss/screen/Maintenance/Equipment.xml" menu-index="6"
                 menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
@@ -109,7 +113,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- P1: the maintenance keymap and the palette source (design §1.2; its records join with their screens: equipment and
         facilities P2, work orders P3, procedures P6). P2: g e and g f open Equipment and Facilities; P3: g w Work orders; P6: g p
-        Procedures. Quick create
+        Procedures; P13: g l Preventive plans. Quick create
         (New work order P3, Report a problem P4), Today (P3) and the notification topics (MaintenanceWork P3, MaintenanceDue,
         WorkProcessApproval, ResourceBooking) arrive with their records. -->
     <shell-providers>
@@ -134,6 +138,7 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g w" label="Work orders" screen="Maintenance/WorkOrders"/>
             <key keys="g r" label="Maintenance requests" screen="Maintenance/Requests"/>
             <key keys="g p" label="Procedures" screen="Maintenance/Procedures"/>
+            <key keys="g l" label="Preventive plans" screen="Maintenance/Preventive"/>
             <key keys="g e" label="Equipment" screen="Maintenance/Equipment"/>
             <key keys="g f" label="Facilities" screen="Maintenance/Facilities"/>
         </keymap>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkItemDetail's Maintenance context and a work order's follow-up tasks (impl-maintenance P7; WorkItems.js; crosscut §3.12): an
+    owner contract with Commons, on Manufacturing's pattern (DowntimeServices.get#WorkItemContext). The task stays Commons': its
+    actions are Commons' task rule; a work order's root or step is no task here. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="WorkItemContext" allow-remote="false" read-only="true">
+        <description>WorkItemDetail's Maintenance context: a follow-up task of one or more work orders the user reads (a current
+            Caused By or Relates To link from the task to the work order's root; available), with those work orders and their
+            links. A work order's root or a process step is not available and links to its WorkOrderDetail (processWork, url when
+            the user reads it), with no Complete: its status moves by its response, waiver or the lifecycle. A user who reads no
+            maintenance work is refused (MAINTENANCE_UNAVAILABLE).</description>
+        <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="processWork" type="Boolean"/>
+            <parameter name="url"/>
+            <parameter name="orderRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkItems.js').execute('workItemContext', context)"/>
+            <set field="available" from="!!found.available"/>
+            <set field="processWork" from="!!found.processWork"/>
+            <set field="url" from="found.url || null"/>
+            <set field="orderRows" from="found.orderRows || []"/>
+        </actions>
+    </service>
+    <service verb="find" noun="FollowUpTasks" allow-remote="false" read-only="true">
+        <description>A work order's follow-up tasks (the ordinary tasks linked to its root), for a reader of the work order.</description>
+        <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
+        <out-parameters><parameter name="taskList" type="List"/></out-parameters>
+        <actions>
+            <set field="taskList" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkItems.js').execute('followUpTasks', context).taskList"/>
+        </actions>
+    </service>
+</services>

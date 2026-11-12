@@ -565,7 +565,7 @@ the screens that call it.
 | PeopleServices | store#EmergencyContact | People/Employees/Employee360; People/SelfService | People/Employees/Employee360 and Commons/People/Employee360 (Personal information's emergency contacts); Shared/PeopleSelfService (Emergency contacts) (template/PeopleEmergencyContacts.xml) (People P8) |
 | PeopleServices | notify#PeopleTaskAssigned | (TaskServices.notify#TaskAssigned for People's lifecycle work) | none: the PeopleTaskAssigned notice, opening the task in Commons (People P8) |
 | ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7); Maintenance/Procedures/ProcedureDetail/Steps (Add step, Edit, Waits for, Remove: store#ProcessStep's checked path); Maintenance/WorkOrders/NewWorkOrder (instantiate#WorkProcess' checked path, through create#MaintenanceWorkOrder) (Maintenance P6) |
-| ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7); also add#TaskTime, add#TaskDependency, remove#TaskDependency and clone#WorkEffort (Maintenance P6, F110) |
+| ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7); also add#TaskTime, add#TaskDependency, remove#TaskDependency and clone#WorkEffort (Maintenance P6, F110); WorkEffortServices.add#WorkEffortProduct, TimeServices.store#TimeEntry (a new entry, or one moved onto managed work) and create#TimeEntryClockIn, through which Maintenance's own time entry points pass (WorkProcesses.js asManagedOwner) (Maintenance P7, F159) |
 | IdentityServices | request#Provisioning, request#AccessEnd | People/Employees/HireEmployee; People/Employees/Employee360 | People's tx-commit rules (mr-boss service/PeopleLifecycle.secas.xml) and Employee360's Request access again, through ironstone.admin.LifecycleServices; Admin/Users/LifecycleDetail retries their waiting steps (People P7) |
 | ScheduleServices | find#Schedules | People/Time/WorkingSchedules | People/Time/WorkingSchedules (Schedules) (People P9) |
 | ScheduleServices | get#Schedule | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (the header, Week, Assignments) (People P9) |
@@ -609,9 +609,9 @@ the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AssetAutoPostServices | post#AssetReceipt |  |  |
+| AssetAutoPostServices | post#AssetReceipt |  | Maintenance/WorkOrders/MaterialIssueReceipt (Return unused: a return of an issuance to a maintenance work order is credited to its expense and dimensions, not WIP, and a receipt to the work that names no issuance yet to the policy's expense, inventory and supplies alike, AC-24, Maintenance P9 and its review) |
 | AssetAutoPostServices | repost#AssetReceipt |  | Manufacturing/WorkOrders/Disassembly (a dated delta with forwardReceiptRepostEnabled, ReceiptAdjustments.js, Manufacturing P9) |
-| AssetAutoPostServices | post#AssetIssuance |  |  |
+| AssetAutoPostServices | post#AssetIssuance |  | Maintenance/WorkOrders/MaterialIssueReceipt (Issue: to a maintenance work order or step, the MaintenanceCostPolicy expense with the facility, cost centre and project, not WIP; none mapped: the error journal, MAINTENANCE_COST_UNMAPPED; supplies the same, in place of the fixed-asset debit, the user's call of Nov 12; AC-24, Maintenance P9 and its review) |
 | AssetAutoPostServices | revert#AssetIssuanceOnCancel |  |  |
 | AssetAutoPostServices | repost#AssetIssuance |  |  |
 | AssetAutoPostServices | calculate#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.calculate#DepreciationRun) |
@@ -1041,13 +1041,13 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | checkReserve#ProductAssets |  |  |
 | AssetServices | issue#AssetReservation |  |  |
 | AssetServices | issue#Asset |  | Warehouse/Transfers/TransferShipmentDetail (through issue#TransferStock, P15) |
-| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16; beyond the line up to the ProductionPolicy scrap allowance, Manufacturing P4) |
+| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16; beyond the line up to the ProductionPolicy scrap allowance, Manufacturing P4); Maintenance/WorkOrders/MaterialIssueReceipt (Issue, through mantle.work.MaintenanceExecutionServices.issue#MaintenanceMaterial with issuanceFields: a new issuance with the cost centre and project, Maintenance P9) |
 | AssetServices | issue#AnyAssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | — Warehouse/Inventory/MaterialIssueReceipt (MaterialActionForm: pack#ShipmentAssembly for a kit, issue#ProductionMaterial for a run); — not used by Manufacturing: Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt issues through mantle.work.ProductionServices.issue#ProductionMaterial (issue#AssetToWorkEffort, Manufacturing P5b) |
 | AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment | Warehouse/Returns/SupplierReturnShipment (Send back), through WarehouseTaskServices.issue#SupplierReturnStock with the new assetId |
 | AssetServices | move#IssuancesToNewShipment |  |  |
 | AssetServices | cancel#AssetIssuance | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt | — Warehouse/Inventory/MaterialIssueReceipt (ReturnUnusedForm: return#UnusedMaterial, a receipt at original cost, never a cancel) |
 | AssetServices | update#AssetIssuedDate |  |  |
-| AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15); Warehouse/Inventory/MaterialIssueReceipt (Output Receive and Unused returns, through receive#ProductionOutput and return#UnusedMaterial, P16); Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Output Receive) and Manufacturing/ShopFloor/OperationExecution (Complete), through mantle.work.ProductionServices.receive#ProductionOutput (Manufacturing P5b, P10) |
+| AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15); Warehouse/Inventory/MaterialIssueReceipt (Output Receive and Unused returns, through receive#ProductionOutput and return#UnusedMaterial, P16); Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Output Receive) and Manufacturing/ShopFloor/OperationExecution (Complete), through mantle.work.ProductionServices.receive#ProductionOutput (Manufacturing P5b, P10); Maintenance/WorkOrders/MaterialIssueReceipt (Return unused, through return#MaintenanceMaterial, Maintenance P9) |
 | AssetServices | update#AssetAndReceipt |  |  |
 | AssetServices | replace#AssetPartyAssignment | Maintenance/Equipment/EquipmentDetail; People/Employees/EquipmentDetail | People/Employees/EquipmentDetail (End assignment, through PeopleServices.return#Equipment after People's scope check; the end completes the return task, PeopleChecklist.eecas.xml) (People P7); Maintenance/Equipment/EquipmentDetail/Assignments (Change custodian, through MaintenanceResourceServices.change#MaintenanceCustody, dated now or earlier) |
 | AssetServices | move#Product | Warehouse/Handheld/Move; Warehouse/Transfers/Move | — (Move chooses an asset in MoveContents and moves it with move#Stock; impl-warehouse §4 P5) |
@@ -1059,7 +1059,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | create#ProductAssetAdHoc |  |  |
 | AssetServices | update#PhysicalInventoryDate | Warehouse/Counts/CountDetail | — Not used: post#Count sets the count's date before its lines post (P10) |
 | EquipmentServices | create#Equipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentImport | Maintenance/Equipment/Find (New equipment, through MaintenanceResourceServices.store#MaintenanceEquipment) |
-| EquipmentServices | get#AssetMaintenanceNeeded |  |  |
+| EquipmentServices | get#AssetMaintenanceNeeded |  | — Not used: the baseline's helper (highest meter value, latest maintenance whatever its status) is left as it is; Maintenance's due projection is MaintenancePlanServices.get#MaintenanceDue (impl-maintenance P13, F11) |
 | EquipmentServices | create#AssetMaintenance | Manufacturing/WorkCenters/Downtime | Manufacturing/WorkCenters/Downtime and EquipmentDetail (Request maintenance: through mantle.work.ProductionServices.request#ProductionMaintenance, AsMntCreated and MntTpCorrective, Manufacturing P11) |
 | EquipmentServices | create#AssetMaintenanceContent | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
 | EquipmentServices | update#AssetMaintenanceContent | Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
@@ -1121,6 +1121,16 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TenantSubscriptionServices | revoke#TenantAccess |  |  |
 | TenantSubscriptionServices | restore#TenantAccess |  |  |
 | TenantSubscriptionServices | destroy#Tenant |  |  |
+
+### Added in the Maintenance build: parts and stock (P9)
+
+| Service | Verbs | Implemented in |
+| --- | --- | --- |
+| mantle.work.MaintenanceExecutionServices | get#MaintenanceMaterials, store#MaintenanceMaterial | Maintenance/WorkOrders/WorkOrderDetail/Parts (Planned parts, Add part, Add suggested parts, Edit, Remove, Parts used); Maintenance/WorkOrders/MaterialIssueReceipt (through ironstone.maintenance.MaterialServices.get#MaterialSource) |
+| mantle.work.MaintenanceExecutionServices | issue#MaintenanceMaterial, return#MaintenanceMaterial | Maintenance/WorkOrders/MaterialIssueReceipt (Issue, Return unused; ironstone.maintenance.MaterialServices.get#MaterialAction after check#Record) |
+| mantle.work.MaintenanceServices | store#MaintenanceWorkOrder (cost centre, project) | Maintenance/WorkOrders/WorkOrderDetail/Overview (Edit) |
+| mantle.ledger.SetupServices | store#PostingDefault, get#PostingDefaults (mapping kind maintenance: MaintenanceCostPolicy) | Accounting/Settings/PostingDefaults (Maintenance expense) |
+| ironstone.maintenance.MaterialServices | get#MaterialSource, get#MaterialAction | Maintenance/WorkOrders/MaterialIssueReceipt |
 
 ### Added in the Products build
 
@@ -1316,6 +1326,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | EventServices | get#FullCalendarData | Commons/Home; Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Home; Comms/Calls; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/Contacts/ContactDetail; Commons/Contacts/List; Commons/Home; Comms/Home; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (bookings and unavailableList, through ScheduleServices.get#ResourceBookings with includeUnavailable, impl-maintenance P16) |
 | EventServices | create#Event | Commons/QuickCreate; Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Comms/Inbox; Comms/Chat; Maintenance/Scheduling/ResourceCalendar; Marketing/Calendar; Marketing/Events; Marketing/Events/EventDetail; Marketing/QuickCreate | Commons/Calendar; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Commons/QuickCreate; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Maintenance/Scheduling/ResourceCalendar (Book, through ScheduleServices.book#ResourceSlot, impl-maintenance P16) |
 | EventServices | get#NextBusinessDay | People/Time/LeaveRequests |  |
+| EventServices | get#NextBusinessDay | People/Time/LeaveRequests | Maintenance/Preventive/Plans/PlanDetail and Plans (a plan's planned day after a weekend or holiday, over the organization's WepHoliday events and the plan's People holiday calendar, through MaintenancePlanServices.get#MaintenanceDue; impl-maintenance P13) |
 | EventServices | get#FutureBusinessDay | Projects/WorkItems/Timeline; People/Time/LeaveRequests |  |
 | GitServices | add#ProjectRepository | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Code; Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings | Projects/Code/Repositories; Projects/Code/RepositoryDetail/Settings; Projects/Projects/NewProject/Modules; Projects/Projects/ProjectDetail/Code |
 | GitServices | remove#ProjectRepository | Projects/Projects/ProjectDetail/Code; Projects/Code/RepositoryDetail/Settings | Projects/Code/RepositoryDetail/Settings; Projects/Projects/ProjectDetail/Code |
@@ -1385,7 +1396,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | add#TaskTime | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | update#TaskFromTime |  | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | update#ProjectTimeFromTask |  |  |
-| TimeServices | store#TimeEntry | Projects/Home; Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries; Maintenance/WorkOrders/WorkOrderDetail | Commons/Tasks/TaskDetail; Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; People/Time/MyTime; People/Time/TimeEntries (People P10, Projects' screen mounted under People); Maintenance/WorkOrders/WorkOrderDetail/Time (through MaintenanceServices.record#MaintenanceTime, which checks the work first, impl-maintenance F66, P3) |
+| TimeServices | store#TimeEntry | Projects/Home; Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries; Maintenance/WorkOrders/WorkOrderDetail | Commons/Tasks/TaskDetail; Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; People/Time/MyTime; People/Time/TimeEntries (People P10, Projects' screen mounted under People); Maintenance/WorkOrders/WorkOrderDetail/Time (through MaintenanceServices.record#MaintenanceTime, which checks the work first, impl-maintenance F66, P3; a new entry on managed work only through it, P7, F159) |
 | TimeServices | create#TimeEntryClockIn | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail |
 | TimeServices | delete#TimeEntry | Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; Projects/WorkItems/WorkItemDetail; People/Time/MyTime; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
 | TimeServices | delete#TimeEntries |  |  |
@@ -1415,7 +1426,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | WorkEffortServices | get#WorkEffortStartEnd |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | WorkEffortServices | get#WorkEffortContentLocation |  |  |
 | WorkEffortServices | create#WorkEffortContent | Commons/Tasks/TaskDetail; Projects/Projects/ProjectDetail/Files; Projects/WorkItems/WorkItemDetail; Shared/RecordFiles; Maintenance/Procedures/ProcedureDetail; Maintenance/RecordFiles; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
-| WorkEffortServices | update#WorkEffortContent | Projects/Projects/ProjectDetail/Files; Projects/WorkItems/WorkItemDetail; Maintenance/Procedures/ProcedureDetail; Maintenance/RecordFiles; Maintenance/WorkOrders/WorkOrderDetail |  |
+| WorkEffortServices | update#WorkEffortContent | Projects/Projects/ProjectDetail/Files; Projects/WorkItems/WorkItemDetail; Maintenance/Procedures/ProcedureDetail; Maintenance/RecordFiles; Maintenance/WorkOrders/WorkOrderDetail |  (refuses a check's evidence and a stored checklist, EVIDENCE_PROTECTED; Maintenance P7; the entity's guard WorkEffortEvidenceProtected covers every other path, P7 review) |
 | WorkEffortServices | save#WorkEffortContentFile | Commons/Tasks/TaskDetail; Shared/RecordFiles |  |
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
@@ -2182,7 +2193,7 @@ Added in `product/MaintenanceResourceServices.xml` and `facility/FacilityService
 | product/MaintenanceResourceServices | find#MaintenanceEquipment | Maintenance/Equipment | Maintenance/Equipment/Find (EquipmentRows); Maintenance/Facilities/FacilityDetail/Equipment; the palette and the equipment choice (ironstone.maintenance) |
 | product/MaintenanceResourceServices | find#MaintenanceFacilities | Maintenance/Facilities | Maintenance/Facilities/Find (FacilityTree, list and tree); Maintenance/Facilities/FacilityDetail (header, Children, Rooms); the palette |
 | product/MaintenanceResourceServices | store#MaintenanceEquipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/Find (CreateEquipment); Maintenance/Equipment/EquipmentDetail/Identity (Edit equipment) |
-| product/MaintenanceResourceServices | record#MaintenanceMeter | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading) |
+| product/MaintenanceResourceServices | record#MaintenanceMeter | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading); a checklist's counter reading (record#ProcessStep, its Measurement linked; in work, only the work's own equipment, Maintenance P7, F94) |
 | product/MaintenanceResourceServices | store#MaintenanceRegistration | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Registrations (Add registration) |
 | product/MaintenanceResourceServices | change#MaintenanceCustody | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Assignments (Change custodian) |
 | product/MaintenanceResourceServices | move#MaintenanceEquipment | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Identity (Move, with its preview) |
@@ -2273,7 +2284,7 @@ policy), called by built screens through the Maintenance screens after `ironston
 | work/ProcessServices | store#ProcessDependency | Maintenance/Procedures/ProcedureDetail | none yet: Steps' Waits for writes through store#ProcessStep's dependsOnIds |
 | work/ProcessServices | store#ProcessRequirements | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Resources (Add requirement, Remove) |
 | work/ProcessServices | store#ProcessInstruction | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Instructions (Edit, Remove) |
-| work/ProcessServices | find#ProcessInstructions | Maintenance/WorkOrders/WorkOrderDetail | none yet: an execution step's instruction, for P7's checklist |
+| work/ProcessServices | find#ProcessInstructions | Maintenance/WorkOrders/WorkOrderDetail | none directly: the checklist reads an execution step's instruction through MaintenanceProcedures.js executionInstruction (Maintenance P7) |
 | work/ProcessServices | request#WorkProcessApproval | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail (Request approval; Approval) |
 | work/ProcessServices | approve#WorkProcess | Maintenance/Procedures/ProcedureDetail; Commons/Notifications | Maintenance/Procedures/ProcedureDetail (Approve; Approval); Commons' approvals inbox (the WorkProcessApproval topic's approve service) |
 | work/ProcessServices | refuse#WorkProcess | Maintenance/Procedures/ProcedureDetail; Commons/Notifications | Maintenance/Procedures/ProcedureDetail/Approval (Refuse); Commons' approvals inbox (the topic's refuse service) |
@@ -2281,3 +2292,28 @@ policy), called by built screens through the Maintenance screens after `ironston
 | work/ProcessServices | find#ProcessExecutions | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Usage (ProcessUsage) |
 | work/ProcessServices | check#ProcessApplicability | Shared/Product360 | Products' CatalogRecordServices.store#CatalogRow (a maintenance default's work template; Product360's Equipment tab) |
 
+Added in `work/ProcessServices.xml` (impl-maintenance P7; `ProcessChecks.js`, executing a procedure's checklist), called by built
+screens through WorkOrderDetail's Procedure tab after `ironstone.maintenance.AccessServices.check#Record` (recordType workOrder):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/ProcessServices | get#ProcessExecution | Maintenance/WorkOrders/WorkOrderDetail (ProcedureSteps) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (the next step, the checklist, Checks, Waivers and amendments) |
+| work/ProcessServices | record#ProcessStep | Maintenance/WorkOrders/WorkOrderDetail (ProcedureSteps, StepResponse) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Start, Respond and Correct: template/MaintenanceChecklistParts.xml StepResponseForm; Skip) |
+| work/ProcessServices | transcribe#CheckVoiceNote | Maintenance/WorkOrders/WorkOrderDetail (StepResponse) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (after a response with a voice note, in a transaction of its own; only when the organization's work policy turns transcription on, TRANSCRIPTION_OFF otherwise, P7 review) |
+| work/ProcessServices | waive#ProcessStep | Maintenance/WorkOrders/WorkOrderDetail (ProcedureSteps) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Waive) |
+| work/ProcessServices | amend#ProcessExecution | Maintenance/WorkOrders/WorkOrderDetail (ExecutionAmendment) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Amend: change a step, add a step, or remove a step not started; Preview, then Amend with the reason; add and remove P7 review) |
+| work/ProcessServices | get#ProcessChecklist | Maintenance/WorkOrders/WorkOrderDetail (§12 the completed checklist) | Maintenance/WorkOrders/WorkOrderDetail/Procedure (Print checklist); stored at close by transition#MaintenanceWorkOrder |
+| work/ProcessServices | get#EvidencePolicy | Shared/RecordFiles (F69) | ironstone.shared.RecordFilesServices.get#ContentType (a managed work effort's files: changed only while the work is open, a check's evidence never removed or replaced) |
+| work/ProcessServices | check#EvidenceChange | (the content services) | none: WorkEffortServices.update#WorkEffortContent and save#WorkEffortContentFile refuse a check's evidence and a stored checklist with it (save# P7 review) |
+
+Added in `work/MaintenancePlanServices.xml` (impl-maintenance P13; `MaintenancePlans.js`, design-maintenance §5.1), called by built
+screens through the Maintenance screens after `ironstone.maintenance.AccessServices.check#Record` (recordType plan) where a plan is
+named:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenancePlanServices | find#MaintenanceSchedules | Maintenance/Preventive/Plans | Maintenance/Preventive/Plans/Find (PlanRows); Maintenance/Equipment/EquipmentDetail/Maintenance (Preventive plans) |
+| work/MaintenancePlanServices | get#MaintenanceSchedule | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail (header, findings) and its Schedule tab (ScheduleTerms, the terms' history) |
+| work/MaintenancePlanServices | store#MaintenanceSchedule | Maintenance/Preventive/Plans; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/Find (NewPlan); PlanDetail (Activate, More › End plan: PlanAction) and its Schedule tab (Edit terms) |
+| work/MaintenancePlanServices | get#MaintenanceDue | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/Schedule (DueExplanation, through get#MaintenanceSchedule); the next due of every PlanRows row |
+| work/MaintenancePlanServices | find#MaintenanceDue | Maintenance/Preventive/DueMaintenance | none yet: DueMaintenance is P14's |
