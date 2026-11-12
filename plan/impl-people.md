@@ -332,7 +332,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | built and reviewed Nov 11, merged |
 | P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | built and reviewed Nov 11, merged |
 | P19 Training | Mantle, BOSS | Training, TrainingDetail | built and reviewed Nov 11, merged |
-| P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | — |
+| P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | built and reviewed Nov 12, merged |
 | P21 Grievances | Mantle, BOSS | Grievances, RequestDetail | built and reviewed Nov 11, merged |
 | P22 Pay components, structures and groups | mr-moqui, Mantle, BOSS | PayComponents, PayComponentDetail, PayStructures, PayStructureDetail, PayGroups | — |
 | P23 Pay assignments and compensation | Mantle, BOSS | PayAssignments; Employee360's Compensation | — |
@@ -5490,7 +5490,7 @@ form) and P18.
   mapped).
 - Design edits: design-people (header; §1.2 Reviews & goals; §1.4 the two topics; §11 as built; §12 the topic's handlers; §15 the
   review release); design-drawers-commons §4 (the `PeopleReviewStep` row); design-admin §14 (People's participant: reviews).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F370 to F383 in order:
   - the sketch's PerformanceReviewItem is not built: an assessment's criteria are the questions of the step's review form (P16's
     `DbfpReview`), and a step with no form is a written summary and, for the reviewer, the overall rating on the sketch's scale;
   - review topics' titles name no person (design §1.4's rule), so a notice reads "A review for Annual 2026 waits for your assessment,
@@ -5603,7 +5603,7 @@ RecordNotes (24 of 24) and PeopleReviews and PeopleAccess (30 of 30) passed afte
     development, with the state and, once released, the overall rating). Specs PeopleReviews (Tomas's and Hannah's Today; Tomas's
     reviews as himself and Hannah with the released result, none to HR) and PeopleSelfService (MyTeam's render shows Reviews due).
     One-off renders, not kept: MyTeam in qvt and tui as Hannah, Employee360 in qvt and tui (development) with the region; no error.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F384 to F389 in order:
   - Mantle's generic REST resource `/workEfforts` (mantle.rest.xml) lists, reads, updates and clones work efforts with no type
     condition, a goal included, for a caller its artifact authorization admits (ADMIN's designed tools); a goal's own services are
     the only reviewed path.
@@ -6395,7 +6395,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
