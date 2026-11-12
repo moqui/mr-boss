@@ -2588,6 +2588,94 @@ Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetai
     Purchasing's check (as built) and grant STOCK_RECEIVE to whoever receives at the site; the alternative is a grant of STOCK_RECEIVE
     to BOSS_MAINTENANCE_SUPERVISE in BossSetupMaintenanceData.xml (it would also let them receive stock in Warehouse).
 
+**Review Nov 12 (P10).** mr-mantle 8558c4c1, mr-boss 0af35b68 and this note's commit (branch `mnt/p10`), over the worker's a37e1f3e,
+4b130d8f and 43be81ff, after merging master (Maintenance P9 and P13) in both repos: mr-mantle 0b382c7b (MaintenanceWork.js' loaders,
+both kept), mr-boss 8c05b37d (WorkOrders.xml's subscreens and comment, WorkOrderDetail's comment, Maintenance.js' linkPaths,
+BossZMaintenanceDemoData's appended rows, design-maintenance's header and mount rows, usl-inventory's appended tables,
+MaintenanceSpecLib's ids and MaintenanceAccess' header, each keeping both sides; mr-moqui's `mnt/p10` already at master 4994093f).
+Reviewed `git diff master...mnt/p10` in both repos against P10's text, §2, §4, design §3 PurchaseLinks, CompleteWork and the
+OrderDetail mount row, §13.3, F45, F128, design-purchasing "Maintenance purchases", AGENTS.md and Practices-App-Dev; read
+ServiceAcceptance.js and accept#ServiceItem, PurchaseRequests.js (purchaseRequest, requireRead, linkLine), every writer of
+RequestItemOrder, the framework's entity ECA runner (`eca.rs`) and service-call rollback (`call.rs`), MaintenanceAccess.js'
+scope, requireWork and workHidden, Shared/OrderDetail's branches and template/PurchasingRequestDetail.xml. The lead decided the
+worker's call per the plan's text (acceptance stays under Purchasing's own check, accept#ServiceItem's), recorded below as R1.
+- Checked and found sound:
+  - Linking without placing: `link#MaintenancePurchase` files a request through Purchasing's `create#PurchaseRequest`,
+    `store#PurchaseRequestItem` and `submit#PurchaseRequest` as its requester and calls no decide, convert or order service (the
+    planner's approval and sourcing refused, MaintenancePurchases); a retry under its key answers the first request (the
+    PostingOperation key, its fingerprint over the fields); the work is read through `requireWork` (another organization's work
+    RECORD_UNAVAILABLE, now also for link in MaintenanceAccess); an order line must be a purchase line whose customer is the
+    work's organization (another organization's line RECORD_UNAVAILABLE even for a buyer, now in the spec), not cancelled; a
+    line the work did not request needs PURCHASE_ORDER_EDIT; it writes AssetMaintenanceOrderItem once (ALREADY_LINKED), never an
+    OrderItemWorkEffort.
+  - Acceptance: completing the work completes no order item (no OrderItemWorkEffort is written anywhere, and ServiceAcceptance.js
+    changes no item status); the acceptance runs through `accept#ServiceItem` under its own PURCHASE_ORDER_EDIT or STOCK_RECEIVE
+    check, the buying organization's scope (FacilityScope.owns) and its operation key, once (the same key from the tab after
+    Complete answers `alreadyApplied`, one ServiceAcceptance); the evidence is a file of the work only (EVIDENCE_INVALID), attached
+    once per line and file (found by contentLocation; now asserted: one OctServiceEvidence row), and written in the acceptance's
+    transaction, so a refusal by Purchasing leaves no orphan. Acceptance of a draft (OrderOpen) order is Purchasing's rule and is
+    only noted (the spec's sourced order is a draft).
+  - OrderDetail's Maintenance branch: one else-if, read only (no transition, no form), `get#MaintenanceOrder` for a work reader
+    showing only the lines of work orders the user reads (each work read through `workOf`), RECORD_UNAVAILABLE for an order of
+    none; Purchasing's, Commerce's, Customer Service's, Warehouse's and Manufacturing's branches untouched (PurchasingOrders,
+    CommerceOrders, CustomerServiceOrders and ManufacturingSubcontracting pass).
+  - Restricted values: the tab, OrderDetail's branch and CompleteWork show unit prices, amounts, the order total and a request
+    line's maximum only when `priceRead` (PURCHASE_ORDER_EDIT, SUPPLIER_PRICE_VIEW or _EDIT, ACCOUNTING_VIEW, MAINTENANCE_COST_VIEW,
+    Manufacturing's subcontract rule plus the maintenance cost reader); the planner and the supervisor see none (specs), a buyer
+    sees the price (now in the spec).
+  - The ECA against a call in Purchasing's `linkLine`: RequestItemOrder is written by PurchaseRequests.js' linkLine, Sourcing.js,
+    Awards.js, SupplyPlanningRoutes.js, PurchasePegs.js and OrderServices.xml; the ECA covers every one with Purchasing's code and
+    specs unchanged, and the work's reads find a sourced line through its request without the link. Kept as built; R2 makes it
+    failure tolerant.
+- Fixes:
+  - **R1 (the lead's decision, Nov 12; access, demo).** Acceptance stays under Purchasing's own check. The demo's maint.supervisor
+    is in Warehouse's existing receiving capability group `BOSS_WAREHOUSE_RECEIVE` (STOCK_RECEIVE alone, CapabilityBundle of
+    Warehouse; its one screen grant is NewReceipt under the Warehouse root, which the supervisor cannot open), as P9's maint.tech
+    in BOSS_WAREHOUSE_ISSUE; BossZMaintenanceDemoData's P10 block. The acceptance MaintenancePurchaseWalk's supervisor accepts with
+    the technician's photo as the demo has it (the walk-local receiver group removed). MaintenancePurchasing's tab render now shows
+    the supervisor Accept outside service; MaintenanceAccess' purchases case checks that the supervisor gets no Warehouse app and no
+    receipt quick create. design-maintenance PurchaseLinks and header say so.
+  - **R2 (failure tolerance; Mantle).** A failure in the RequestItemOrder ECA rolled back Purchasing's sourcing: the rule runs
+    in the sourcing transaction (`eca.rs` returns its action's error to the write), and a failed service call marks the transaction
+    for rollback (`call.rs`), so `ignore-error` could not help. `link#SourcedMaintenancePurchase` now calls no service: each work's
+    link is written directly after its checks (the AssetMaintenance and order line exist, not linked yet), and anything that still
+    fails is logged with the request, the order line and the work while the rest goes on; the ECA calls it with the artifact check
+    aside (it checks nothing and writes only the link the RequestItemOrder implies, so a buyer's sourcing from a screen never fails on
+    Maintenance's service authorization). No spec: nothing provokes the failure without a test hook (finding below).
+  - **R3 (restricted values; owner contract).** Purchasing's RequestDetail showed every reader of the request the work order's
+    name, and the request's description carried it. `get#PurchaseRequestWork` gives the name only when Maintenance admits the user
+    (`workHidden`), the id, target, state and need date otherwise; the request names its work order by id ("For maintenance work
+    order …"), the demo request too; PurchasingRequestDetail shows the id alone for a user not admitted. The read uses Purchasing's
+    own `requireRead` (exported from PurchaseRequests.js, unchanged) instead of a copy of its permission list. Specs:
+    MaintenancePurchases (the approver reads the work order without its name, the planner with it, the description without it;
+    fails with the name given to all), MaintenancePurchasing (purchasing.services sees the id, not "Compressor motor vibration").
+    design-purchasing, impl-purchasing's log and usl-inventory as built.
+- Findings (provisional, unnumbered):
+  - Under the `MclOnComplete` policy the work closes at completion, and acceptance is refused on closed work (STATUS_INVALID): the
+    outside service is then accepted at Complete or in Purchasing, not from the tab afterwards.
+  - A refused acceptance at Complete fails the completion (one transaction): the user asked for both; the tab's Accept stays open
+    while the work is complete.
+  - `get#MaintenanceOrder` reads each work in a try/catch that takes any error for "not readable": a bug in `workOf` would hide a
+    line rather than surface.
+  - The ECA's failure path is reviewed, not tested: with the checks before the write nothing in the data provokes it.
+  - Prices follow Manufacturing's subcontract rule (ACCOUNTING_VIEW and the supplier price permissions beside PURCHASE_ORDER_EDIT
+    and MAINTENANCE_COST_VIEW); the lead's text names only the cost reader and Purchasing's permission. Left as built.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenancePurchases, PurchaseRequests, Sourcing, SourcingAwards,
+  ReplenishmentRoutes, ProductionSubcontract, MaintenanceWorkOrders and MaintenanceMaterials 47 of 47 (13.9 s feature time, 38.7 s
+  wall); MaintenancePurchases 3 of 3 (1.1 s), and with R3's name given to all it fails. mr-boss MaintenancePurchasing,
+  MaintenanceAccess, MaintenanceWorkOrders, MaintenanceParts, PurchasingRequests, PurchasingSourcing, PurchasingAccess,
+  PurchasingOrders, CommerceOrders, CustomerServiceOrders, ManufacturingSubcontracting and WarehouseReceiving 85 of 85 (23.0 s
+  feature time, 45.6 s wall); WarehouseAccess 8 of 8. `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before,
+  none in P10's screens; the symlinked binary unchanged. Prettier (mr-moqui's `.prettierrc.json`) clean on MaintenancePurchases.js,
+  its spec, MaintenancePurchasing and the walk; MaintenanceAccess' changed lines clean (the file is not clean on master). Not run:
+  ./moq test-apps, the acceptance suite, the client MaintenanceWorkOrdersWalk (unchanged by the review).
+- For the lead:
+  - Budget share: mr-mantle MaintenancePurchases 1.1 s (+0.1 s); mr-boss MaintenancePurchasing 0.5 s, MaintenanceAccess' purchases
+    case 0.3 s (+0.1 s); budgets not changed.
+  - Merge hot spots: the worker's list, plus BossZMaintenanceDemoData's P10 block (the supervisor's membership), PurchaseRequests.js'
+    export list, MaintenanceAccess' purchases case and header, design-maintenance's header and PurchaseLinks paragraph.
+  - The user's calls: none open from P10. The lead's decision of Nov 12 (R1) is recorded here and in design-maintenance.
+
 ### P11 — Costs
 
 Design §3 WorkCosts, §8 MaintenanceCostReport, review Y2, "Charging a project"; MT-08 (labor price), MT-09, MT-11.
