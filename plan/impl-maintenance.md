@@ -2849,14 +2849,15 @@ get#RecordLink, ProductionSchedule.js's offline path and the production scripts'
     MaintenanceScheduling.spec.js were not formatted (the repository's .prettierrc.json); formatted. Maintenance.js and
     MaintenanceAccess.spec.js were not clean on master and were left.
   - **R7 (process).** The phase table row is the lead's: back to "—".
+  - **R8 (medium, usability; the user's call 4 of Nov 12; owner change, Commons).** The ResourceBooking card's Open went to the event
+    (decorate#Notifications preferred the record's link), which refuses an approver the event is not shared with. An approval topic's
+    card (canApprove) with a screen link of its own (linkText under /qapps or /apps, not Commons' openRecord resolver) now opens it
+    first; a card that is no approval, or an approval topic with no such link, opens its record as before. Spec:
+    MaintenanceScheduling's "a ResourceBooking card in Commons' inbox opens BookingRequests" (fails without). Notifications,
+    KnowledgeReview, CommonsSettings, TodayPanel, MaintenanceProcedures, PeopleApprovals, PeopleAttendance, PeopleSchedules, PeopleTime
+    (BOSS) and WorkTimesheets, PeopleEmployment (Mantle) pass unchanged.
   - Design: design-maintenance §7.1 (the move's lock) and BookingRequests (a cancelled booking or event leaves the inboxes).
 - Findings (for the lead to number):
-  - The ResourceBooking card's Open in Commons' inbox goes to the event (decorate#Notifications prefers the record's link, WorkEffort ->
-    EventDetail, over the topic's link), which refuses an approver the event is not shared with; the topic's BookingRequests link
-    reaches only email and push. Approving and denying from the card work. A fix is Commons' (prefer an approval topic's own link) or
-    the notice's record; left for the lead.
-  - BookingRequests and find# show a policy reader's or supervisor's scope read only, with the requester's notes; design
-    BookingRequests says "for assigned resources" (an approver). See the calls.
   - A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers; a planned block's
     correction does.
   - restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests).
@@ -2873,20 +2874,19 @@ get#RecordLink, ProductionSchedule.js's offline path and the production scripts'
   ProductionShopFloor 76 of 76, MaintenanceScheduling, MaintenanceAccess, Notifications, Schedules and EventDetail 48 of 48. R2's case run
   without its fix failed. No screen changed (no lint run); both binaries still symlinks. Not run: ./moq test-apps, the acceptance suite.
 - For the lead:
-  - budget share: mr-mantle +0.3 s over the worker's (R2's feature; ResourceBookingDecisions about 2.0 s); mr-boss unchanged (assertions
-    on existing renders and calls).
+  - budget share: mr-mantle +0.3 s over the worker's (R2's feature; ResourceBookingDecisions about 2.0 s); mr-boss +0.1 s (R8's feature, no
+    render; the rest are assertions on existing renders and calls).
   - merge hot spots (added by the review): mr-mantle `EventServices.xml` (cancel#EventOccurrence's end, cancel#ResourceBooking,
     check#ResourceBookings' check closure), `ResourceBookingDecisions.js` (prettier, quietly, withdrawn), `ResourceOutages.js` (prettier,
-    three lines), the spec; mr-boss `test/Commons/Schedules.spec.js` (first feature), `MaintenanceAccess.spec.js` and
+    three lines), the spec; mr-boss `service/ironstone/commons/CommonsServices.xml` (decorate#Notifications' openUrl and description, R8), `test/Commons/Schedules.spec.js` (first feature), `MaintenanceAccess.spec.js` and
     `MaintenanceScheduling.spec.js` (P16's features), design-maintenance §7.1 and BookingRequests, this plan's phase row.
   - the user's calls:
     1. and 2. (the worker's): an approver sees the title only when shared; Commons' own calendar shows no blackouts. Built as
        recommended and accepted by the lead; nothing open.
-    3. Who reads BookingRequests: built for a booking approver (their resources) and, read only, a resource policy reader or supervisor
-       (the scope's, with the requester's notes, the purpose masked). Recommend keeping the read-only view for the resource
-       administrator and supervisor (they handle stuck requests and approvers' absences), or, if requests are the approvers' alone as
-       the design's "for assigned resources" says, dropping the broad branch in find# (a few lines).
-    4. The inbox card's Open (first finding): recommend Commons opening an approval topic's own link, a small owner change.
+    3. Who reads BookingRequests (decided by the user, Nov 12): keep the read-only view of the scope's requests for a resource policy
+       reader or administrator and a supervisor, as built; design §7.1 and BookingRequests say so.
+    4. The inbox card's Open (decided by the user, Nov 12): an approval topic's card opens the topic's own link before the record's;
+       built as R8, design-drawers-commons' header says so.
 
 ### P17 — Reports and Insights
 

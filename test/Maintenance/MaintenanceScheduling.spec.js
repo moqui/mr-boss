@@ -95,6 +95,43 @@ feature(
     }
 )
 
+feature("a ResourceBooking card in Commons' inbox opens BookingRequests; a card that is no approval opens its record as before", {
+    when() {
+        // the user's call (P16 review R8): an approval topic's card opens the topic's own link before the record's
+        const link = "/qapps/Maintenance/Scheduling/BookingRequests?facilityId=" + ids.managedRoomId
+        const row = (id, fields) =>
+            Object.assign(
+                {
+                    notificationMessageId: id,
+                    topic: "ResourceBooking",
+                    recordEntityName: "mantle.work.effort.WorkEffort",
+                    recordId: ids.requestedEventId,
+                    linkText: link,
+                    message: {}
+                },
+                fields
+            )
+        const rows = asUser(users.booking, () => {
+            ec.artifactExecution.disableAuthz()
+            return invoke("ironstone.commons.CommonsServices.decorate#Notifications", {
+                notificationList: [
+                    row("A", {canApprove: true}),
+                    row("B", {canApprove: false, topic: "ResourceBookingNotice"}),
+                    row("C", {canApprove: true, linkText: null})
+                ],
+                appTitles: {}
+            }).rows
+        })
+        return {rows}
+    },
+    then({rows}) {
+        rows[0].openUrl == "/qapps/Maintenance/Scheduling/BookingRequests?facilityId=" + ids.managedRoomId
+        rows[0].openIsScreen == true
+        rows[1].openUrl == "/qapps/Commons/Calendar/EventDetail?workEffortId=" + ids.requestedEventId
+        rows[2].openUrl == "/qapps/Commons/Calendar/EventDetail?workEffortId=" + ids.requestedEventId
+    }
+})
+
 feature("Admin's lifecycle participant lists the rooms a leaver approves; the resource administrator hands them over", {
     when() {
         const listed = asUser("john.doe", () => {
