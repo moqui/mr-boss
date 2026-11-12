@@ -1,5 +1,13 @@
 # IronStone BOSS — Maintenance implementation
 
+Nov 11, 2026 — P0 done (§6 F58–F75), at mr-moqui 5d83f22d, mr-boss 9c7e87e4 and mr-mantle 61e5ae33, with People P1–P7
+and Admin P17–P18 built. People P7 built the managed-work refusal in the generic task services already, reading the
+work order by the name P3 gives it (F59); the instantiation copies no content, requirements or skills (F58); a dated
+custody end may not be later than now (F61); Employee360 needs a Maintenance row and its own equipment read (F62);
+the time services check no work access, so Maintenance has its own time entry points (F66); `get#RecordLinkInfo`
+admits a work effort by organization in every app, so P3 adds a Maintenance rule there (F69). P8, P11, P12, P19 and
+P17's cost entry wait for People P9, P10, P12 and P18 (§4); the items of P0 on those People phases are left open
+(F64, F75). Design §1.3 and §13.2 are corrected for the time services (F66).
 Nov 11, 2026 — the open questions answered (§4): the budgets may rise by the plan's estimates as its phases land, the
 equipment import names `MAINTENANCE_IMPORT`, labor is priced from the one costing purpose `RaprCost` through
 `get#CostingRate`, P9 builds AC-24, gate 1 is released on its own, and the planned-work approval threshold compares
@@ -237,6 +245,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   BossMaintenanceDemoData.xml, the Maintenance root, `MaintenanceServices` and `ResourceBookingServices`) rebases on
   it before merging.
 
+  While People is built (§4, Nov 11): P8, P11, P12, P19 and P17's cost entry wait for People P9 and P18, P10, and
+  P12. Every other phase is built now: stage 3 (P9, P10), stage 4 (P13, P14) and stage 5 (P15, P16) start after P7,
+  since they use P3 and P6 and not P8, and P15 may start after P5, beside P7. Gate 2 is reached with P8, gate 3 with
+  P11 and P12; P17 builds its other entries.
+
   Gate 1 is released on its own (§4): corrective work with equipment, intake and downtime replaces the baseline's
   maintenance forms for a small organization, and each later gate adds an area to the menu.
 
@@ -347,7 +360,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 11 (§6 F1–F57); the checks below left |
+| P0 Checks | all (read) | — | done Nov 11 (§6 F1–F75); items waiting on People P9/P10/P12/P18 left open |
 | P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | — |
 | P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | — |
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | — |
@@ -373,7 +386,18 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 Verify the design's riskiest assumptions against the code before building. Each result is a row in §6 and, where it
 changes the design, an edit there. F1–F48 were found on Nov 11 while writing this plan and F49–F57 in its review;
-F12, F16, F17, F31 and F36 changed design-maintenance the same day. Still to check:
+F12, F16, F17, F31 and F36 changed design-maintenance the same day.
+
+**Done Nov 11 (§6 F58–F75); items waiting on People P9/P10/P12/P18 left open.** Read in the code with People P1–P7 and
+Admin P17–P18 built: the process records, services and clone as People built them (F58) and its managed-work refusal,
+already in the generic services (F59); the team membership's from-role (F60); the return task's rule and a dated end
+(F61); Employee360's context (F62); what People left out of the Tasks collection (F63); capacity and holidays as they
+are (F64); the status check by flow (F65); time on work (F66); the catalog context (F67); the instruction rule (F68);
+files and conversation (F69); meters (F70); stock (F71); exports (F72); Admin P17's audit registry (F73) and P18's
+route groups (F74). Left open, with the phases the user deferred (§4): `minimumSkillLevel` and `check#Qualifications`
+(People P18), capacity's schedule read and HolidayCalendars (People P9), `get#CostingRate` (People P10) and the
+projected collection kind (People P12) (F64, F75). The phases changed say so (P1, P2, P3, P6, P7, P9, P13, P17, P19,
+§7); design-maintenance §1.3 and §13.2 changed (F66). Phone width is P20's walk, not a check. The list as it was:
 
 - **After People is built** (it is not at the commits above): what People built of each item §1 takes, read from
   the code. For each, the phase that uses it takes the built name and contract, or builds the piece under the
@@ -439,6 +463,8 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
     keeps its rows. `BOSS_MAINTENANCE_REQUEST` does not hold the root group: a requester reports from Commons (P4).
   - The ordinary groups' authz on the root with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, and the
     `ironstone\.maintenance\..*` service pattern on the artifact group.
+  - `PEOPLE_DIRECTORY_VIEW` for `_PLAN`, `_SUPERVISE` and `_RESOURCE_ADMIN`, so Employee360's public work card opens
+    for them under Maintenance (P0, F62).
   - `maintenance` added to the client deny pattern of `BOSS_PROJECTS_INTERNAL`, after People's `people` (F50). An
     `artifactName` holds 255 characters: the first row (the verbs `add` to `clockOut`) reaches 256 with the two
     names and is split in two; the row of `record` to `reply` reaches 252 and is split now too, so that Sales and
@@ -457,7 +483,9 @@ Design §1.1, §1.2 (the menu), §1.3; MT-01 (groups, permissions and the access
 - **The Maintenance root** (design §1.2): Home and Settings now; the other areas are added by the phases that build
   them, and `later` entries stay absent. The six placeholders are removed, and the root's stale grant comment fixed
   (F1). `<shell-providers>` with the `maintenance` keymap and the palette source, on Manufacturing's pattern
-  (Manufacturing.xml:46-82); quick create, Today and the notification topics arrive with their records.
+  (Manufacturing.xml:46-82); quick create, Today and the notification topics arrive with their records. (P0, F74:
+  as Insights' root does, no context service and no Chatter or RecordFiles mount for a device's request, so a later
+  TechnicianKiosk is not blocked.)
 - **Admin's settings index** (owner contract; impl-admin §7): a `SettingsEntry` `maintenance.settings` to
   `Maintenance/Settings`, group Applications, scope organization, as Manufacturing's row is
   (BossSetupData.xml:2592-2595); its readiness provider key is set in P18.
@@ -487,7 +515,8 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
 - **Mantle records.** `Asset.warrantyThruDate` and `warrantyPartyId` (F20); ProductAssocType `PatSparePart` (F20);
   `Facility.timeZone`, inherited from the nearest ancestor that has one (F16, §5 Q9); a dated room feature record
   `mantle.facility.FacilityFeature` (facility, feature enumeration, from and thru) with a seeded `RoomFeature`
-  type; a cumulative flag on ProductMeter if P0 finds none.
+  type; `ProductMeter.isCumulative` and an `AssetMeterReadingReason` enumeration type with AssetMeter's relationship
+  (P0, F70: neither exists).
 - **Mantle `mantle.product.MaintenanceResourceServices`** (design §13.2):
   - `find#MaintenanceEquipment` and `find#MaintenanceFacilities`, scoped in the query before paging, the facility
     tree with hidden ancestors as unnamed nodes;
@@ -504,7 +533,8 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
     which itself checks nothing (F18) and gains an optional effective date. This phase adds only that guard and
     date: People's Mantle rule on the end of an AssetPartyAssignment completes the return task that names it
     (impl-people P7, review Y6), so a change from Maintenance's EquipmentDetail closes the task as one from
-    People's or Warehouse's does, and a dated end keeps that (P0);
+    People's or Warehouse's does, and a dated end keeps that (P0, F61: the effective date is now or earlier, never
+    later, since the rule completes the task when the end is written);
   - a move of equipment through `AssetServices.move#Asset` under Warehouse's stock movement guard and stock
     permission for both facilities, with the effect on the old and new facility shown first.
 - **`FacilityServices.store#Facility`** gains `bookable`, `capacity`, `capacityUomId` and `timeZone` (F16); its
@@ -523,10 +553,13 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
     update transition checking the mounting app's own record check instead of Warehouse's for every app (F22);
     Locations and stock tabs only with Warehouse's permissions.
   - Product360 at `Maintenance/Equipment/Product360`: the built Equipment tab (meters and maintenance defaults,
-    F23) with catalog authority unchanged, and a spare-parts pane of `PatSparePart` associations.
+    F23) with catalog authority unchanged, and a spare-parts pane of `PatSparePart` associations. Products'
+    SharedContext.js gains a `maintenanceContext()` branch, as an owner contract (P0, F67).
   - Employee360 at `Maintenance/Equipment/Employee360`: People's screen (impl-people P2) with Maintenance's row of
     its context table (public work identity, AssignedEquipment, qualification validity; no HR action), which this
-    phase adds to People's screen and design as an owner contract.
+    phase adds to People's screen and design as an owner contract (P0, F62: a row of People.js `employee360Apps` with
+    the Overview read only; AssignedEquipment read by Maintenance's own service, since People's answers only the
+    person and HR; qualification validity waits for People P18).
 - **Screens:** Equipment (EquipmentFind with the tag `scan-input` and the supplier warranty filter, EquipmentRows,
   CreateEquipment, AssetTags with the html-print label of `ec.resource.barcodeSvg`); Facilities (FacilityFind,
   FacilityTree with its list twin, NewFacility). The palette's equipment and facility sources.
@@ -589,16 +622,18 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
     `remove#WorkEffortParty`) refuse managed work with the reason `MANAGED_WORK`, by a data check on the record
     (§4): a root that has a MaintenanceWorkOrder row and its steps, and work whose process policy guards
     execution, which none does until P6 sets the flag for procedures; People's checklist tasks stay ordinary
-    tasks. WorkOrderDetail's Assignments form writes through `schedule#MaintenanceWorkOrder`;
+    tasks (P0, F59: People P7 built these refusals, reading the entity by name; defining
+    `mantle.work.maintenance.MaintenanceWorkOrder` turns them on, and P3 asserts them rather than rewriting them). WorkOrderDetail's Assignments form writes through `schedule#MaintenanceWorkOrder`;
   - BOSS `get#TaskAccess` and `check#TaskUpdate` treat a managed root and its steps as not a task, as they do a
     production operation (commons/TaskServices.xml:85-90), with a message that opens WorkOrderDetail;
   - `WorkEffortPartyAssignedNotify` is conditioned to leave managed records to the `MaintenanceWork` topic; managed
     records carry no recurrence fields; `WorkEffortPartyDocsUsers` is conditioned to project roots;
   - CalDAV: `get#TaskObjectTags` leaves templates and steps out and marks a managed root read only, beside what
-    People left out of it (P0); a PUT or DELETE on one answers 403 (DELETE today ends the assignment with a direct
+    People left out of it (P0, F63: `ChecklistStep.isProtected`); a PUT or DELETE on one answers 403 (DELETE today ends the assignment with a direct
     update).
 - **Time** (MT-08): the timer and `store#TimeEntry` admit an assigned technician's own time on a managed root or
-  step in progress and refuse a template (P0's access check); root totals sum distinct TimeEntry rows of the tree.
+  step in progress and refuse a template (P0, F66: the time services check no work access, so `MaintenanceServices`'
+  own time entry points check and then call them unchanged); root totals sum distinct TimeEntry rows of the tree.
 - **Manufacturing and Warehouse** (owner contracts, F13, F49): "in maintenance" is an AssetMaintenance in process,
   not any open one, in Mantle's `store#ProductionEquipment` guard (`EQUIPMENT_BLOCKED`) and in the two apps'
   equipment reads, so a planned work order and a request not yet started block nothing; the outage is P5's. No
@@ -610,7 +645,10 @@ CalDAV), MT-08 (time), MT-11 (Home, Today, the palette and notices).
   Projects' is registered (BossSetupData.xml:4060-4064); Admin's `find#Assignments` leaves managed work out of
   Projects' participant, whose reassignment would be refused. Booking approver roles join it in P15.
 - **Chatter and RecordFiles** under the Maintenance root admit a work order, step, asset, facility or request
-  host through `ironstone.maintenance.AccessServices.check#Record` (P0); old AssetMaintenance hosts stay readable.
+  host through `ironstone.maintenance.AccessServices.check#Record`; old AssetMaintenance hosts stay readable. (P0,
+  F69: Mantle's `get#RecordLinkInfo` admits a work effort by organization in every app, so its work effort branch
+  gains a Maintenance rule beside People's `protectedHidden`: a managed root and its steps only as MaintenanceAccess
+  admits them.)
 - **BOSS:** `ironstone.maintenance.WorkOrderServices` (the list's shapes, saved filters, board and calendar data);
   `HomeServices.get#TodayItems`; the root's quick create "Work order" for a planner, the `MaintenanceWork` topic
   and the palette's work-order source.
@@ -723,7 +761,7 @@ Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedu
   general (F4).
 - **Mantle `mantle.work.ProcessServices`:** `find#WorkProcesses`, `get#WorkProcess`, `store#WorkProcess`,
   `move#ProcessStep`, `store#ProcessDependency` (same tree, no cycle), `store#ProcessRequirements` (WorkEffortProduct,
-  WorkEffortAssetNeeded and WorkEffortSkillStandard rows with People's `minimumSkillLevel`),
+  WorkEffortAssetNeeded and WorkEffortSkillStandard rows; People's `minimumSkillLevel` joins in P8, F75),
   `request#WorkProcessApproval`, `approve#WorkProcess` (not the last author unless the policy allows it; the decision a
   WorkEffortApproval row, F44), `retire#WorkProcess`, `find#ProcessExecutions`, and People's `store#ProcessStep` and
   `instantiate#WorkProcess` extended, not replaced: a process whose policy guards execution takes the checked path of
@@ -731,7 +769,10 @@ Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedu
   map, remapped dependencies and one `WeatBasedOn` link per node); a People checklist, whose policy does not guard, is
   instantiated as People built it. The module stays its own, leaving `clone#WorkEffort` and `clone#Project` as they
   are (F5, §4). From this phase a procedure and its steps are managed work by the flag, as a template and as executed
-  (§4). Approved instructions are content rows the execution can still resolve (P0: the `WectInstruction` rule), and
+  (§4). (P0, F58: the policy's own edit and instantiation permissions in WorkProcesses.js' policies table; People's
+  instantiation copies no content, requirements or skills, so the checked path copies the requirements after it.)
+  Approved instructions are content rows the execution can still resolve (P0, F68: `WectInstruction` rows written at
+  publication by ProcessServices in the rule's shape, resolved through the `WeatBasedOn` link, not copied), and
   the published procedure is stored as a PDF.
 - **`create#MaintenanceWorkOrder`** takes a template and instantiates it in its transaction; a retired or
   unapproved template is refused for new work.
@@ -766,7 +807,8 @@ completed checklist); MT-04.
   observation saved with the step unresolved; a recheck appended), `waive#ProcessStep` (only where the execution's
   policy allows, by a supervisor), `amend#ProcessExecution` with its preview. The root's Complete reads the gate:
   required leaves complete or waived, dependencies met. Accepted evidence is protected in the content services the
-  file screens call (P0), not by caller.
+  file screens call, not by caller (P0, F69: RecordFiles' `get#ContentType` takes `catalogCanChange` for a managed
+  work effort from a Mantle evidence policy, which removal and new versions obey).
 - **The step guard** (design §4.3): the P3 refusals cover steps; a step's status moves only by its response, waiver,
   skip with a reason, or the root's close.
 - **WorkItemDetail's Maintenance context** (crosscut §3.12): follow-up tasks linked to a root, on Manufacturing's
@@ -824,10 +866,13 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
 - **Mantle `mantle.work.MaintenanceExecutionServices`:** `store#MaintenanceMaterial`, `issue#MaintenanceMaterial`
   (a new issuance each time, to the step, under Warehouse's posting guard and `STOCK_ISSUE` for the source facility
   as well as the maintenance grant) and `return#MaintenanceMaterial` (a new receipt naming its issuance, at its
-  cost, never more than the net issued). A customer's asset under repair is never issued as a spare.
+  cost, never more than the net issued). (P0, F71: Production's issue and return are the pattern; the cost a return
+  carries is the returned asset's `acquireCost`; a supplies part would post as a fixed asset, so it is refused or
+  routed explicitly.) A customer's asset under repair is never issued as a spare.
 - **Accounting** (owner contract, AC-24): the issuance posting of a managed maintenance work effort takes the
   expense account of the cost policy with the facility, cost centre and project dimensions, instead of the
-  same-owner WIP account (AssetAutoPostServices.xml:267-277); a return posts back with the original dimensions; no
+  same-owner WIP account (AssetAutoPostServices.xml:267-277); a return posts back with the original dimensions, its
+  receipt's credit routed as the issuance's debit was, not to WIP (AssetAutoPostServices.xml:73, :91; F71); no
   mapping is a named posting exception. The policy's rows are edited in Accounting's PostingMappings. Only an
   issuance to a managed maintenance root or step is routed: production, project and every other issuance post as
   today, and Accounting's and Manufacturing's ledger specs pass unchanged. Built here following design-accounting
@@ -836,7 +881,7 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
   with `ironstone.maintenance.MaterialServices.get#MaterialSource` and `get#MaterialAction` after its
   `check#Record`, as Manufacturing's is (MaterialIssueReceipt.xml:40-64; F31), with Issue, Return unused and
   History. InventoryAvailability at `Maintenance/WorkOrders/InventoryAvailability`, once the catalog context admits
-  the app root (P0).
+  the app root (P0, F67: P2's `maintenanceContext()` gains the Stock tab and the facilities the user reads).
 - **Screens:** WorkOrderDetail's Parts tab (PlannedParts with "Add suggested parts" from the model's `PatSparePart`
   rows, PartsUsed); WorkHeader gains the cost centre and the project.
 - **Demo data:** spare stock at the services warehouse, an order with a planned and an issued part and a return,
@@ -948,7 +993,8 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
 - **Demo data:** a monthly calendar plan on a room, a 250-hour plan on the compressor from its model default with
   an asset override, a plan whose meter is stale.
 - **Specs:** Mantle `test/work/MaintenanceDue` (the 31st clamps in a short month and returns to the 31st; a
-  daylight-saving change keeps the local due time; a holiday moves the planned day and not the due date; a planned or
+  daylight-saving change keeps the local due time; a holiday (a `WepHoliday` event, read through
+  `get#NextBusinessDay`, F64) moves the planned day and not the due date; a planned or
   cancelled maintenance and a synthetic threshold advance nothing; a stale meter answers unknown, not "not due"; a
   term change leaves earlier executions alone).
 - **Usable when** (`acceptance/Maintenance/MaintenancePlansWalk`; design §11.2 "PM chronology"): the planner
@@ -1071,7 +1117,8 @@ Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exp
   refresh registrations, and a `FlowTarget` `Maintenance.WorkOrders` with the internal flow map's Maintenance step
   pointed at it.
 - **Screens:** Reports (ReportOptions, ReportLinks); WorkStatusReport (StatusOptions, StatusTotals, StatusRows)
-  with CSV and print; Downtime opens from Reports.
+  with CSV and print; Downtime opens from Reports. (P0, F72: the CSV is the form-list's own, with `select-columns`;
+  Reports is listed in Admin's Exports by one `wizard` export target with its owner route, not one per report.)
 - **Specs:** Mantle `test/work/MaintenanceReports` (templates and steps not counted; an order completed, reopened
   and completed counts once; overdue is past due, not unscheduled; another organization's roots left out); BOSS
   `MaintenanceReports` (the catalog entries listed for a reader and the cost entry only for the cost reader; the
@@ -1149,7 +1196,8 @@ Design §1.4 (Assist, Comms hooks, Sync, Meetings), §12 (the outputs not built 
   bookings and templates' authoring, through URLs, transitions, shared mounts, the palette, choices, files, prints,
   exports, CalDAV, Assist and direct services; and `MaintenancePhoneWalk` at 390 px over WorkOrderDetail, Report a
   problem, a meter reading and a booking decision.
-- The checks P0 left for Admin P17 and P18, redone if those phases have landed.
+- The checks P0 left open on People P9, P10, P12 and P18 (F64, F75), with the phases deferred on them; Admin P17
+  and P18 were checked in P0 (F73, F74).
 - The inventories' **Implemented in** columns, the design's Impl column and status line, crosscut's rows that this
   build changed, Remaining-Work, and the mr-boss README's Maintenance line.
 
@@ -1188,6 +1236,7 @@ design-maintenance.md or the owner's design.
 | Nov 11, 2026 | Maintenance labor is priced from the one labor costing purpose, `RaprCost`: Maintenance only reads `mantle.humanres.RateServices.get#CostingRate` (P11) and adds no rate purpose; an entry with no rate shows as unpriced | The user's call (impl-people §4): impl-people P10 seeds `RaprCost`, builds `get#CostingRate` and moves Manufacturing's built `RaprProductionCost` rows and lookup to it (F33) |
 | Nov 11, 2026 | The planned-work approval threshold is by estimated duration or estimated cost, as design §9 has it, from what exists, with no stored estimated-cost field. Duration is the root's `WorkEffort.estimatedWorkTime` with its steps', against a threshold in hours, zero by default (P3). Cost is computed at the Approve gate: the planned parts' `WorkEffortProduct.estimatedQuantity` at the product's approved standard cost, plus the estimated hours at `get#CostingRate`, against a threshold unset by default; an estimate that cannot be priced is over it, and the planner sees no amount (P11, once P9's planned parts and impl-people P10's rate exist) | The user's call: as the design has it, estimated cost or duration, using features that exist; a piece count could be a third measure later, not for now (§7). WorkEffort has no estimated cost field (mr-mantle entity/WorkEffortEntities.xml:254) and none is added; `estimatedWorkTime` (:235), WorkEffortProduct's `estimatedQuantity` (:919) and `get#ApprovedStandardCost` (service/mantle/product/CostServices.xml:176) exist, and `get#CostingRate` is impl-people P10's |
 | Nov 11, 2026 | Gate 1 is released on its own. The phase order of §1 stands as written | The user's call, as recommended: corrective work with equipment, intake and downtime replaces the baseline's maintenance forms for a small organization; each later gate adds an area to the menu |
+| Nov 11, 2026 | P8, P11, P12, P19 and P17's cost entry wait for People P9 and P18, P10, and P12; the other phases are built now, stages 3, 4 and 5 starting after P7 (P15 after P5, beside P7) | The user's call (the build request): People is being built at the same time; P8 needs People P9's capacity and P18's `minimumSkillLevel` and `check#Qualifications`, P11 People P10's `RaprCost` and `get#CostingRate`, P12 P11's cost summary, P17's cost entry P11, and P19 People P12's projected collection kind. Stages 3 to 5 use P3 and P6, not P8. A phase built now that touches one of those pieces leaves a seam and says so: P6's skill standards carry no level (F75) |
 
 ## 5. Open questions
 
@@ -1207,7 +1256,8 @@ design-maintenance.md or the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design,
 it is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, and F49–F57 in its review the
-same day, at mr-moqui 16828c5f, mr-boss f1bf2a95 and mr-mantle 0048667f. Mantle paths are under `mr-mantle/`, BOSS
+same day, at mr-moqui 16828c5f, mr-boss f1bf2a95 and mr-mantle 0048667f; F58–F75 are P0's, at mr-moqui 5d83f22d,
+mr-boss 9c7e87e4 and mr-mantle 61e5ae33. Mantle paths are under `mr-mantle/`, BOSS
 paths under `mr-boss/`.
 
 | # | Finding | Resolution |
@@ -1269,6 +1319,24 @@ paths under `mr-boss/`.
 | F55 | P0 (review): impl-sales builds the chargeable repair's sales quote in its P8, over Customer Service's decision; it lists customer-equipment PM under a service agreement in its §7 as Maintenance's to design after its P15, and says supplier warranty terms as an Agreement are not Sales': the agreement is in the purchase direction, on statuses Purchasing seeded | §7: the second is later and Maintenance's to design (§5 Q8); the third is no link to Sales |
 | F56 | P0 (review): Admin's `find#Assignments` lists every open `WetTask` assignment of a user and reassigns through Projects' and Commons' services (service/ironstone/admin/Lifecycle.js:252-270, :301-325), which treat managed work as not a task from P3 | P3 registers Maintenance's participant and leaves managed work out of Projects'; §4 |
 | F57 | P0 (review): Customer Service built no action that sends an intervention report: impl-customer-service §7 left the report to Sales and Maintenance (impl-customer-service.md:3683) | P12 adds the send action to RepairLinks, as an owner contract |
+| F58 | P0: People P7's process records and services as built: `WorkEffortProcessPolicy` (policy, `guardsExecution` default N, `operationKey`, indexed) and `WorkEffortStepPolicy` (`isRequired`, `roleTypeId`, `dueOffsetDays`), both dated (entity/WorkProcessEntities.xml:25-64), with `WppPeopleChecklist` the one policy value; `store#ProcessStep`, `instantiate#WorkProcess` and `check#ManagedWork` (service/mantle/work/ProcessServices.xml:22-97) over WorkProcesses.js. One permission per policy, the same for changing and instantiating a process (WorkProcesses.js:34, :71-77). The instantiation copies the definition fields only (:36-51): every node In Planning with the start as its estimated start (:247-270), the in-tree `WeatDependsOn` edges remapped, one `WeatBasedOn` link, the step policies, Assignee rows by role, and the process policy with its flag (:272-317); no WorkEffortContent, WorkEffortProduct, WorkEffortAssetNeeded or WorkEffortSkillStandard row is copied. People's Checklists.js calls `storeStep` and `instantiate` directly after its own check (Checklists.js:264, :282, :413; WorkProcesses.js:362-372) | P6: `WppMaintenanceProcedure` joins the policies table with its own edit permission (`WORK_PROCESS_EDIT`) and instantiation permission (`MAINTENANCE_PLAN`, through `create#MaintenanceWorkOrder`), and its checked path (approval, effectivity) runs before People's `instantiate`, then copies what a procedure carries (requirements and skill standards from the template steps; instructions are resolved, not copied, F68); People's path and `test/work/WorkProcess` unchanged |
+| F59 | P0: People P7 built the managed-work refusal in Mantle already: `check#ManagedWork` (WorkProcesses.js:323-349) refuses with `MANAGED_WORK` work whose own, parent's or root's process policy guards execution, and a root, or work under a root, that has a `mantle.work.maintenance.MaintenanceWorkOrder` row once that entity is defined (:32, :338-342). It is called by `create#Task` for a parent or root (TaskServices.xml:175-180), `update#Task` (:245), `set#TaskDates` (:603), `set#TaskStatus` (:791), `move#Task` (:841), `set#TaskRecurrence` (:1082), `delete#WorkEffort` (WorkEffortServices.xml:225) and `add#`, `remove#` and `replace#WorkEffortParty` (:286, :312, :336); People's WorkProcess.spec.js:285-292 asserts it. Not covered: BOSS `get#TaskAccess` and `check#TaskUpdate` (no reference to it in mr-boss), CalDAV (F63), `create#WorkEffortContent` (WorkEffortServices.xml:964-990 checks only `check#WorkEffortOpen`) and the time services (F66) | P3 defines `MaintenanceWorkOrder` under that exact name, keyed by `workEffortId`, which turns the built refusal on for work orders; it does not change the generic services' calls, and `MaintenanceManagedWork` asserts them for a work order. P3 adds the BOSS, CalDAV and time halves |
+| F60 | P0: People P3's `store#Membership` writes a team membership as a dated `PrtMember` PartyRelationship from the person (from role `Assignee` for a member, `Manager` for the lead) to the unit (to role `OrgTeam`), a new lead's predecessor staying a member (service/mantle/humanres/Organization.js:12-16, :525-545); a department's members are the same relationship to an `OrgDepartment` (Employment.js writes them with an assignment); a unit's employer is its `ownerPartyId` (Organization.js:406). Writes need `PEOPLE_HR_VIEW` and `PEOPLE_HR_EDIT` (OrganizationServices.xml:119-130) | P8 (deferred): `find#MaintenanceTeams` reads `PrtMember` rows to role `OrgTeam` only, both from roles as members, dated, the team's organization its `ownerPartyId`; Teams stays read only with the link to People, as design §9 Teams has it |
+| F61 | P0: the return task's rule fires on any update that sets an empty `thruDate`, whatever its value (entity/PeopleChecklist.eecas.xml:21-26), and completes the open return tasks of the asset, holder and role through `set#TaskStatus` at once, logging a failure (PeopleServices.xml:994-1008; Checklists.js:557-607); `replace#AssetPartyAssignment` ends the other holders now (AssetServices.xml:3239-3253). A custody change ending a holding on a later date would complete its return task when entered, before the equipment is back; an earlier date completes it now | P2: the guarded custody change takes an effective date of now or earlier (a later one refused, `DATE_FUTURE`); the ended row and the new one share it, and the rule then holds as for People's and Warehouse's changes |
+| F62 | P0: Employee360's per-app table is People.js `employee360Apps` (service/ironstone/people/People.js:650-669): People, Commons and Insights; another app root is refused (`PEOPLE_CONTEXT`, :675-676). A row names its regions, own-only regions, edits and return. Mantle's `get#Employee360` admits a person by People's scope (self, team or staff; PeopleServices.xml:183-213), a staff admission needing `PEOPLE_DIRECTORY_VIEW` (mr-mantle service/mantle/humanres/People.js:36), which only `BOSS_PEOPLE_READ` holds in BOSS (BossSetupData.xml:5080). AssignedEquipment is People's mount only (`showsEquipment`, People.js:716) and `get#AssignedEquipment` answers the person and HR (PeopleServices.xml:1040-1054). Qualification validity is People P18's, not built | P2: Maintenance's row is the Overview, read only, returning to Equipment; its AssignedEquipment pane reads current AssetPartyAssignment rows through Maintenance's own service, in its scope, not People's; P1 grants `PEOPLE_DIRECTORY_VIEW` to the planner, supervisor and resource administrator groups so the public work card opens for them; qualification validity waits for People P18 (P8) |
+| F63 | P0: People left its protected tasks (`ChecklistStep.isProtected`) out of `get#TaskObjectTags` (CalendarDavServices.xml:97-141, :124-129); there is no template filter and no read-only mark. A PUT on a work order root would now reach `update#Task` and fail with `MANAGED_WORK`, which the DAV server answers 409, not 403 (:259-261, :307-330); DELETE still ends the assignment with a direct update (:449-455) | P3 adds its filter beside `protectedIds` (templates and the steps of managed work left out, a managed root marked read only) and answers 403 for a PUT or DELETE on a managed root before any update |
+| F64 | P0: capacity and holidays as they are: `get#PartyCapacity` (ResourceServices.xml:41) counts `WepHoliday` work efforts owned by the organization (:21, :123-125) and leave; `get#NextBusinessDay` reads the same events (EventServices.xml:2377-2426). People P9 (schedules first, HolidayCalendars' `get#Holidays` and `store#Holiday`) is not built | P13 reads holidays through `get#NextBusinessDay` and the `WepHoliday` events as they are, which People P9 keeps writing; P8 (deferred) uses `get#PartyCapacity` as People P9 leaves it. The schedule read stays open until People P9 |
+| F65 | P0: the framework's status check still matches a `StatusFlowTransition` by `statusId` and `toStatusId` alone, over every flow, ignoring `statusFlowId`; a transition's `userPermissionId` refuses only when every matching row needs a permission the user lacks (crates/moqui-core/src/service/call.rs:1702-1760) | P3 as planned: the service is the gate. A maintenance flow is seeded for its labels and `get#TaskStatusFlow`; a permission on its transition gates nothing, since the Default flow's row admits the same move |
+| F66 | P0: the time services check no work access: `store#TimeEntry` (TimeServices.xml:17-135) checks an active party and the timesheet lock (`check#TimeEntryTimesheet`, :410), `create#TimeEntryClockIn` (:391-409) and `start#Timer` (TimesheetServices.xml:1266-1306) the same; nothing reads the work effort's status, assignment, template flag or managed state. `get#TimesheetAccess` (:441) is the timesheet's. The work check is BOSS's, Commons' `clockIn#Task` through `get#TaskAccess` (commons/TaskServices.xml:1190-1207). A template is refused only in the time import (TimeServices.xml:1872) and left out of the timesheet's people (TimesheetServices.xml:984). All are `allow-remote="false"` (the default) | P3: there is no Mantle work-access check to extend. `MaintenanceServices` gains the time entry points of a work order (start and stop the timer, record time on a root or step): each checks the assigned person, a step in progress and no template, then calls `start#Timer`, `stop#Timer` or `store#TimeEntry` unchanged; Commons' clock-in refuses managed work through `get#TaskAccess`. Design §1.3's time row and §13.2 corrected |
+| F67 | P0: `ironstone.products.CatalogServices.get#SharedContext` is SharedContext.js `context()` (service/ironstone/products/SharedContext.js:379-386), which knows Commerce, CustomerService, Warehouse, Manufacturing, Purchasing and Products and refuses any other root. Each app's branch checks its own scope's read, narrows `get#CatalogAccess`' capabilities, and names its tabs, `sharedLinks` and organizations (Manufacturing's :107-149), Warehouse's also `facilityIds` (:66-105). Product360's Equipment tab shows when the tabs include `Equipment` (screen/Shared/Product360/Equipment.xml:34) and writes through `store#CatalogRow`, which checks catalog edit again; InventoryAvailability needs `capabilities.read` (InventoryAvailability.xml:25-26) | P2 adds `maintenanceContext()` to SharedContext.js as an owner contract: Maintenance's read scope, catalog writes as the user's catalog capabilities give them, tabs Summary, Identifiers, Equipment, Documents and the spare parts, links to `Maintenance/Equipment/Product360`; Products' specs unchanged. P9 adds Stock and the facilities the user reads stock in |
+| F68 | P0: `guardInstruction` (service/mantle/work/OperationTemplates.js:354-379; entity/Work.eecas.xml:43-58) holds for every `WectInstruction` row of any WorkEffort: created only with a checksum, a location under `dbresource://mantle/content/workEffort/` and a from date, never deleted, and changed only to end it. The one writer is Manufacturing's `store#OperationInstruction` (OperationTemplates.js:225-270) under a routing template's edit check, so a procedure cannot call it; RecordFiles refuses to remove an instruction (RecordFilesServices.xml:505-506) | P6: an approved procedure's instructions are `WectInstruction` rows written at publication by ProcessServices' own publisher in the same shape (the file stored once, its sha256, the from date, the one before ended); a draft's files are other content types until then. An execution step resolves its instruction through its `WeatBasedOn` link to the template step's row in effect when it was made (F58: nothing is copied). The rule is not changed |
+| F69 | P0: Chatter and RecordFiles admit a host by Mantle's `get#RecordLinkInfo` (CommunicationServices.xml:2005; ChatterServices.xml:56-90), not by app root: a work effort is visible when it or its root is owned by the user's party or organization, names them as a party, or is in a calendar they view (CommunicationServices.xml:2283-2290), so a work order of ORG_ZIZI_SERVICES would open in Commons' Chatter to any user of that organization. People's protected tasks are the precedent for narrowing it (`protectedHidden`, :2279-2282, :2691). A file is removed by whoever added it, or a user the host entity's update authorization admits, unless it is an instruction or `catalogCanChange` is false (RecordFilesServices.xml:504-507); a new or restored version obeys the same flag (:577). The content services: `create#WorkEffortContent`, `create#AssetContent` (no check), `create#RequestContent`, `create#AssetMaintenanceContent`, and a facility's file written by RecordFiles itself (:43-67) | P3 adds a Maintenance rule to `get#RecordLinkInfo`'s work effort branch beside `protectedHidden`: a managed root and its steps (and from P6 a maintenance template) are visible only as MaintenanceAccess admits them (the service organization's maintenance readers, the work's parties), for every app; Maintenance's `check#Record` guards its own mounts. P7: `get#ContentType`'s work effort branch takes `catalogCanChange` from a Mantle evidence policy, as payments do (:83-96), so accepted evidence is neither removed nor replaced. Asset and facility hosts stay by ownership |
+| F70 | P0: `AssetMeter.readingReasonEnumId` has no relationship and no enumeration type, and nothing writes it (entity/ProductAssetEntities.xml:821-836; `create#AssetMaintenance`'s reading has no reason, EquipmentServices.xml:108-112); AssetMeter carries a note to deprecate it for Measurement (:822), whose `MeasurementReason` type has no values (WorkEffortEntities.xml:1463-1466). ProductMeter has no cumulative field (ProductAssetEntities.xml:851-861) | P2 seeds an `AssetMeterReadingReason` enumeration type (reading, work, reset, correction) with the relationship on AssetMeter, adds `ProductMeter.isCumulative`, and `record#MaintenanceMeter` writes the reason; AssetMeter stays the counter record (design §5.1), Measurement P7's |
+| F71 | P0: Warehouse's posting guard is StockPosting.js: `begin` (a permission, then the operation key, :76-85), `scope` and `stock` (the asset locked, stock types `AstTpInventory` and `AstTpSupplies`, in a facility of the user's organizations, :94-122), `period` (:204) and `complete` (:233). Production's issue calls it with `STOCK_ISSUE`, then `issue#AssetToWorkEffort` with authorization disabled (ProductionServices.xml:167-232, :200, :214), which itself checks only expiry, on-hand and the work effort's consume product and facility (AssetServices.xml:2357-2420). `AssetReceipt.sourceAssetIssuanceId` (entity/WarehouseTaskEntities.xml:28) is provenance only: the original cost is the returned asset's `acquireCost`, which Production's return copies from the source (ProductionServices.xml:298), and a receipt with a `workEffortId` credits WIP (AssetAutoPostServices.xml:73, :91). Supplies post as fixed assets on issue and receipt (the TODOs at :76, :279) | P9 follows Production's pair: `posting.begin` with `STOCK_ISSUE`, `issue#AssetToWorkEffort` with the planned line's product, the return a receipt naming its issuance with the source's `acquireCost`. AC-24 routes the return receipt's credit to the issuance's expense and dimensions as well as the issuance; spare parts are `AstTpInventory` in the demo, and a supplies part is refused or routed explicitly, not posted as a fixed asset |
+| F72 | P0: Admin P16 registers an owner's export tied to a list or record as a `wizard` export target with an owner route, never dispatched; Insights' dataset and report exports are such places (impl-admin.md:4164-4171, F240 :4273-4276; BossSetupData.xml:4937-4957). A form-list's CSV menu is drawn only with a list header, such as `select-columns` (impl-admin F125) | P17 and P19: one `wizard` export target per Maintenance place (the work, PM and booking lists, and Reports), not one per report; each report's and list's CSV is its form-list's own, the screen's projection, with `select-columns` set |
+| F73 | P0: Admin P17 is built: `AuditServices.find#Changes` reads only entities with a registered `moqui.server.AuditProjection` (entity, field, category, value mode, source service, view permission, key kinds, link; framework entity/ServerEntities.xml:816-847), an organization's records through an owner source implementing `find#OwnedChanges` (ids only, the owner checking `ADMIN_AUDIT_VIEW` and its scope; framework service/org/moqui/admin/AuditServices.xml:31-56). A business entity is registered only if its owner seeds a projection, and its history is otherwise its owner's screen's (impl-admin F257); People registers none (impl-people F56) | Maintenance registers no projection: the work order, check, waiver, schedule term and booking decision histories are WorkOrderDetail's History and its owners' screens (P3, P7, P13, P16), read from EntityAuditLog by Maintenance's services in its scope. Whether they belong in AuditChanges is F257, the user's call (§7) |
+| F74 | P0: Admin P18 is built: a route group is a `moqui.security.DeviceRouteGroup` its owner seeds (framework entity/SecurityEntities.xml:472-497: an artifact group as an allow-list, `homePath`, one fixed parameter, idle timeout, lifetime); a device's request runs as a display account and cannot load the `/qapps` shell, so a kiosk is a page of its own, and Insights' root calls no context service for a device's request (screen/Insights.xml:44-56, `UserSecurityChecks.currentDevice()`); People P30 is replanned on it (impl-people F55) | Nothing built here blocks TechnicianKiosk if P1's root does as Insights' does: no context service and no Chatter or RecordFiles for a device's request. TechnicianKiosk stays later (§7), a page of its own with Maintenance's route group |
+| F75 | P0: still not in the code, as the user deferred them (§4): `WorkEffortSkillStandard.minimumSkillLevel` and `check#Qualifications` (People P18), `RaprCost` and `get#CostingRate` (People P10; no match in mr-mantle's entities, services or data), the schedule read of `get#PartyCapacity` and HolidayCalendars (People P9) and a projected kind in `get#DavCollections` (People P12; CalendarDavServices.xml:143). P6's `store#ProcessRequirements` names `minimumSkillLevel` | Left open: rechecked when those People phases land, for P8, P11, P12, P19 and P17's cost entry. P6 writes skill standards without a level and P8 adds it |
 
 ## 7. Later
 
@@ -1298,7 +1366,8 @@ Designed, not in this build:
   `report/boss-maintenance-*.json` (F37) and §3's Assignments row (§4) are changed; nothing waits for a phase.
 - **Framework and Admin pieces not built:** the maps dialog and the lists' map layers of crosscut §3.32
   (CX-MAPS); Maintenance's privacy provider, with Admin's PrivacyServices (impl-admin §7); audit evidence beyond the
-  audit log's own rows, when Admin P17 is built (P0); an in-page audio recorder for voice notes.
+  audit log's own rows: Admin P17 is built and reads a business entity only by its owner's projection (F73); whether
+  Maintenance's histories join AuditChanges is impl-admin F257, the user's call; an in-page audio recorder for voice notes.
 - **Design §15's other open items:** attributes per equipment category; listing steps read-only in the Tasks
   collection if technicians ask. A piece count as a third measure of the planned-work approval threshold (§4).
 - **Owners' later work found here:** a Measurement migration of AssetMeter history (design §14); the legacy due
