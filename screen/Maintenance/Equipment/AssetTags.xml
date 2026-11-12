@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Equipment › Asset tags (design-maintenance §6 Equipment AssetTags, §12 Asset tag labels; impl-maintenance P2): the
+    tag labels of the chosen equipment (assetIds, a comma list, from Find's Print tags or EquipmentDetail), each with the
+    equipment's name, id, serial and organization and a QR or Data Matrix of its EquipmentDetail link (ec.resource.barcodeSvg), at
+    the size chosen; Print opens the html-print of the same labels. Equipment outside the user's maintenance scope is left out and
+    counted. A scan of a tag opens EquipmentDetail for a reader (Find's tag field). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Asset tags" default-menu-index="2">
+    <parameter name="assetIds"/>
+    <parameter name="codeKind"/>
+    <parameter name="labelSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <!-- another piece of equipment added to the labels -->
+    <transition name="addTag">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:addAssetId}"/>
+            <set field="assetIds" from="String(assetIds || '').split(',').concat([addAssetId]).map(id =&gt; String(id).trim())
+                    .filter((id, index, all) =&gt; id &amp;&amp; all.indexOf(id) === index).join(',')"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetIds"/>
+            <parameter name="codeKind"/>
+            <parameter name="labelSize"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="symbology" from="codeKind == 'DataMatrix' ? 'DataMatrix' : 'QR'"/>
+        <set field="large" from="labelSize == 'large'"/>
+        <script><![CDATA[
+            const wanted = String(assetIds || '').split(',').map(id => id.trim()).filter(Boolean).slice(0, 60)
+            let root = ''
+            try { root = ec.web ? String(ec.web.getWebappRootUrl(true, null) || '') : '' } catch (error) { root = '' }
+            tagRows = []
+            leftOut = 0
+            for (const assetId of wanted) {
+                let record = null
+                ec.message.pushErrors()
+                try {
+                    record = ec.service.sync().name('ironstone.maintenance.AccessServices.check#Record')
+                        .parameters({appRoot: appRoot, recordType: 'asset', recordId: assetId}).call()
+                    if (ec.message.hasError()) record = null
+                } catch (error) { record = null } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                if (!record?.recordId) { leftOut++; continue }
+                const asset = ec.entity.find('mantle.product.asset.Asset').condition('assetId', assetId).disableAuthz().one()
+                const link = root + '/qapps/Maintenance/Equipment/EquipmentDetail?assetId=' + encodeURIComponent(assetId)
+                tagRows.push({assetId, assetName: asset.assetName || assetId, serialNumber: asset.serialNumber || '',
+                    detail: record.detail || '', link,
+                    codeSvg: ec.resource.barcodeSvg(symbology, link, {moduleWidth: large ? 0.6 : 0.4, quietZone: 4, humanReadable: false})})
+            }
+            printParameters = {assetIds: wanted.join(','), codeKind: symbology, labelSize: large ? 'large' : 'small', renderMode: 'html-print', lastStandalone: 'true'}
+            optionValues = {assetIds: wanted.join(','), codeKind: symbology, labelSize: large ? 'large' : 'small'}
+        ]]></script>
+    </actions>
+    <widgets>
+        <label text="You do not read equipment in Maintenance." type="p" style="m-muted" condition="!can.resourceRead"/>
+        <section name="AssetTagsFound" condition="can.resourceRead">
+            <widgets>
+                <render-mode>
+                    <text type="html-print"><![CDATA[<style>.m-tag{display:inline-block;border:1px solid #888;margin:2mm;padding:2mm;vertical-align:top;width:${large ? '90mm' : '60mm'}}</style>]]></text>
+                </render-mode>
+                <section name="TagOptions" condition="sri.getRenderMode() != 'html-print'">
+                    <widgets>
+                        <container style="row items-center q-col-gutter-sm">
+                            <container style="col">
+                                <label text="Asset tags" type="h5"/>
+                            </container>
+                            <container style="col-auto row q-gutter-sm">
+                                <link url="." text="Print" icon="sym_o_print" btn-type="primary" target-window="_blank"
+                                        parameter-map="printParameters" condition="tagRows.length"/>
+                            </container>
+                        </container>
+                        <form-single name="TagOptionsForm" transition="." map="optionValues">
+                            <field name="assetIds">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="codeKind">
+                                <default-field title="Code">
+                                    <drop-down allow-empty="false">
+                                        <option key="QR" text="QR code"/>
+                                        <option key="DataMatrix" text="Data Matrix"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="labelSize">
+                                <default-field title="Label size">
+                                    <drop-down allow-empty="false">
+                                        <option key="small" text="Small (60 mm)"/>
+                                        <option key="large" text="Large (90 mm)"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="">
+                                    <submit text="Show"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="codeKind"/>
+                                    <field-ref name="labelSize"/>
+                                    <field-ref name="submitButton"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                        <form-single name="AddTag" transition="addTag" map="optionValues">
+                            <field name="assetIds">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="codeKind">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="labelSize">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="addAssetId">
+                                <default-field title="Add equipment">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'equipment'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="">
+                                    <submit text="Add"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="addAssetId"/>
+                                    <field-ref name="submitButton"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                        <label text="Choose equipment on the Equipment list, or add it here." type="p" style="m-muted"
+                                condition="!tagRows.length"/>
+                        <label text="${leftOut} of the equipment asked for is not available to you." type="p" style="text-negative"
+                                condition="leftOut"/>
+                    </widgets>
+                </section>
+                <section-iterate name="TagCards" list="tagRows" entry="tag">
+                    <widgets>
+                        <container style="m-tag q-pa-sm q-ma-xs">
+                            <label text="${tag.assetName}" type="div" style="text-weight-bold"/>
+                            <label text="${[tag.assetId, tag.serialNumber ? 'Serial ' + tag.serialNumber : ''].filter(Boolean).join(' · ')}"
+                                    type="div" style="text-caption"/>
+                            <label text="${tag.detail}" type="div" style="text-caption"/>
+                            <render-mode>
+                                <text type="qvt">&lt;div class="bg-white q-pa-xs"&gt;${tag.codeSvg}&lt;/div&gt;</text>
+                                <text type="html">${tag.codeSvg}</text>
+                                <text type="html-print">${tag.codeSvg}</text>
+                                <text type="tui">${JSON.stringify({t: 'text', text: tag.link})}</text>
+                            </render-mode>
+                        </container>
+                    </widgets>
+                </section-iterate>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

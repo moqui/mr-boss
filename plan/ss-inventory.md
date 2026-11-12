@@ -297,7 +297,7 @@ is unchanged.
 | AssetCalendar | NewEventForm | Commons/Calendar/Schedules; Maintenance/Scheduling/ResourceCalendar; Maintenance/Equipment/EquipmentDetail | Commons/Calendar/Schedules |
 | AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
 | AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Audit |
-| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments) |
+| AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments); Maintenance/Equipment/EquipmentDetail/Identity (Edit equipment, store#MaintenanceEquipment) |
 | AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Reservations |
 | AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Ledger |
 | AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
@@ -308,16 +308,16 @@ is unchanged.
 | FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail |  |
 | FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail |  |
 | FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
-| AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail; Maintenance/Preventive/DueMaintenance |  |
-| AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail |  |
-| AssetParties | AddUserForm | Maintenance/Equipment/EquipmentDetail |  |
-| AssetParties | UpdateUserForm | Maintenance/Equipment/EquipmentDetail |  |
-| AssetRegistrations | NewRegistrationForm | Maintenance/Equipment/EquipmentDetail |  |
-| AssetRegistrations | RegistrationsForm | Maintenance/Equipment/EquipmentDetail |  |
+| AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail; Maintenance/Preventive/DueMaintenance | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading) |
+| AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Meters, Recent readings) |
+| AssetParties | AddUserForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Assignments (Change custodian) |
+| AssetParties | UpdateUserForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Assignments (the holding ended by Change custodian) |
+| AssetRegistrations | NewRegistrationForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Registrations (Add registration) |
+| AssetRegistrations | RegistrationsForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Registrations |
 | DetailHistory | AssetDetailList | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail | Warehouse/Inventory/Movements; Warehouse/Inventory/AssetDetail/Ledger |
 | FindAsset | UpdateProductCost | Accounting/Inventory/InventoryValuation | Accounting/Inventory/InventoryValuation (Repair product cost) |
-| FindAsset | CreateEquipment | Maintenance/Equipment |  |
-| FindAsset | ListAssets | Warehouse/Inventory/Assets; Maintenance/Equipment | Warehouse/Inventory/Assets |
+| FindAsset | CreateEquipment | Maintenance/Equipment | Maintenance/Equipment/Find (CreateEquipment) |
+| FindAsset | ListAssets | Warehouse/Inventory/Assets; Maintenance/Equipment | Warehouse/Inventory/Assets; Maintenance/Equipment/Find (EquipmentRows) |
 | FindSummary | ReceiveAssetForm | Warehouse/Receiving/Receive; Warehouse/Inventory/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt, receive#AdHocStock); Warehouse/Inventory/MaterialIssueReceipt (ReceiveOutputForm) |
 | FindSummary | PhysicalManualChange | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (AdjustmentScope, then Preview and PostAdjustment) |
 | FindSummary | AssetSummary | Warehouse/Inventory/Availability | Warehouse/Inventory/Availability/Summary (InventorySummary, InventoryLots) |
@@ -325,7 +325,7 @@ is unchanged.
 | PhysicalQuantity | RecordQuantity | Warehouse/Inventory/Adjustments | Warehouse/Inventory/Adjustments (AdjustmentScope, Enter: what is there, a count; PostAdjustment) |
 | MoveAsset | AssetInfoForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (MoveConfirm) |
 | MoveAsset | ScanMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (ScanSelect, MoveConfirm) |
-| MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (MoveConfirm) |
+| MoveAsset | EnterMoveAssetForm | Warehouse/Transfers/Move; Maintenance/Equipment/EquipmentDetail | Warehouse/Transfers/Move (MoveConfirm); Maintenance/Equipment/EquipmentDetail/Identity (Move, its effect shown first) |
 | SelectAsset | ScanAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (ScanSelect) |
 | SelectAsset | ActiveFacilityForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveSelect) |
 | SelectAsset | SelectAssetForm | Warehouse/Transfers/Move | Warehouse/Transfers/Move (MoveSelect) |
@@ -429,10 +429,10 @@ is unchanged.
 | EditProduct | UomDimensionsForm | Products/Products/Product360; Shared/Product360 | Shared/Product360/Dimensions (modern writes; legacy read only) |
 | EditProduct | CreateProductLocation | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
 | EditProduct | ProductLocationList | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
-| EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
-| EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
-| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
-| EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment |
+| EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
+| EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
+| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
+| EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
 | FindProduct | NewProductForm | Products/Products | Products/Products/NewProduct |
 | FindProduct | ProductsForm | Products/Products | Products/Products/List |
 | Search | AddCategoryForm | Products/Products | Products/Products/List (fixed-ID selection; per-product results) |
@@ -465,10 +465,10 @@ is unchanged.
 | BoxTypes | BoxTypeList | Warehouse/Locations/BoxTypes | Warehouse/Locations/BoxTypes (BoxTypeList, EditBoxType, Retire) |
 | CarrierShipMethods | CreateCarrierShipmentMethod | Warehouse/Locations/Carriers | Warehouse/Locations/Carriers (Add method, P13) |
 | CarrierShipMethods | CarrierShipmentMethodList | Warehouse/Locations/Carriers | Warehouse/Locations/Carriers (CarrierMethods, P13) |
-| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview) |
-| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail; Maintenance/Facilities | Warehouse/Locations/FacilityDetail/Children |
-| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
-| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter) |
+| EditFacility | EditFacilityForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Edit facility; Overview); Maintenance/Facilities/FacilityDetail (Edit facility, with time zone, capacity and booking) |
+| EditFacility | ChildListForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail; Maintenance/Facilities | Warehouse/Locations/FacilityDetail/Children; Maintenance/Facilities/FacilityDetail/Children; Maintenance/Facilities/Find (tree) |
+| EditFacility | NewNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter); Maintenance/Facilities/FacilityDetail/Conversation (chatter) |
+| EditFacility | UpdateNoteForm | Warehouse/Locations/FacilityDetail; Shared/Chatter; Shared/FacilityDetail; Maintenance/Chatter; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Conversation (chatter); Maintenance/Facilities/FacilityDetail/Conversation (chatter) |
 | EditFacility | AddBoxTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Box types tab: AddFacilityBoxType) |
 | EditFacility | BoxTypesForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail (Box types tab: FacilityBoxTypeList) |
 | EditFacility | AddLocationTypeForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Set status) |
@@ -477,8 +477,8 @@ is unchanged.
 | EditFacilityLocations | LocationsForm | Warehouse/Locations/FacilityDetail; Shared/FacilityDetail; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/FacilityDetail/Locations (Locations, Edit, Close, Reopen) |
 | EditFacilityProducts | AddProductForm | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability; Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products; Purchasing/Replenishment/ReorderRules/Rules (NewReorderRuleForm, EditRule) |
 | EditFacilityProducts | ProductList | Warehouse/Locations/FacilityDetail; Warehouse/Inventory/Product360; Purchasing/Replenishment/ReorderRules; Shared/FacilityDetail; Products/Products/Product360/Stock; Shared/InventoryAvailability; Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy (FacilityStockPolicy, FacilityPolicyRead); Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products; Purchasing/Replenishment/ReorderRules/Rules (ReorderRuleList); Purchasing/Replenishment/ReorderRules/SuggestLevels |
-| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children |
-| FindFacility | FacilityListForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (list and tree) |
+| FindFacility | NewFacilityForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (New facility); Warehouse/Locations/FacilityDetail/Children; Maintenance/Facilities/Find (New facility); Maintenance/Facilities/FacilityDetail/Children |
+| FindFacility | FacilityListForm | Warehouse/Locations/Facilities; Maintenance/Facilities | Warehouse/Locations/Facilities (list and tree); Maintenance/Facilities/Find (tree and list) |
 
 ## Gateway (6 forms)
 

@@ -2863,9 +2863,12 @@ Designed, not in this build:
   - Maintenance Teams over P3's `OrgTeam` teams and dated `PrtMember` rows, with its dispatch defaults (its P8);
   - `DevelopmentServices.check#Qualifications` (P18) and `get#PartyCapacity` with People's schedules, leave and
     shifts (P9, P12, P14) in technician assignment (its P8);
-  - Employee360's Maintenance row in P2's context table, and `Maintenance/Equipment/Employee360` (its P2);
+  - Employee360's Maintenance row in P2's context table, and `Maintenance/Equipment/Employee360` (its P2; built by
+    impl-maintenance P2: the Overview read only and AssignedEquipment from Maintenance's own read);
   - the guard and effective date of its custody change on `replace#AssetPartyAssignment` (its P2); P7's Mantle
-    rule on the assignment's end completes the return task for it as for People and Warehouse (F52);
+    rule on the assignment's end completes the return task for it as for People and Warehouse (F52); built by
+    impl-maintenance P2 (`change#MaintenanceCustody`, the date now or earlier, `replace#AssetPartyAssignment`'s optional
+    `effectiveDate`, People's return#Equipment unchanged);
   - its labor cost on P10's `RateServices.get#CostingRate`, which it only reads (its P11; §4);
   - its two projected calendars, registered on P12's projected kind (its P19).
 

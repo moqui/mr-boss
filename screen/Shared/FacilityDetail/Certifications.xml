@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Certifications tab, Maintenance's (design-maintenance §6, crosscut §3.10; impl-maintenance P2): the
+    facility's certifications (FacilityCertification) with their dates, registration and audit score, read only; their writer,
+    update#FacilityCertification under an owner guard, is left to the phase that needs it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Certifications"
+        default-menu-index="5">
+    <parameter name="facilityId"/>
+    <condition><expression>appRoot == 'Maintenance'</expression></condition>
+    <actions>
+        <!-- FacilityDetail's actions read the facility when it renders with the tab -->
+        <if condition="detail == null">
+            <set field="detail" from="null"/>
+            <service-call name="ironstone.maintenance.FacilityServices.get#FacilityDetail"
+                    in-map="{facilityId:facilityId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="recordFound" from="!!detail?.facility"/>
+        </if>
+        <set field="certificationList" from="detail?.certificationList || []"/>
+    </actions>
+    <widgets>
+        <section name="FacilityCertifications" condition="recordFound">
+            <widgets>
+                <form-list name="FacilityCertificationRows" list="certificationList" skip-form="true" paginate="false">
+                    <field name="certificationText"><default-field title="Certification"><display/></default-field></field>
+                    <field name="certRegistrationId"><default-field title="Registration"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                    <field name="auditScore"><default-field title="Audit score"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="certificationText"/><field-ref name="certRegistrationId"/></column>
+                        <column><field-ref name="thruDateText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No certification is recorded." type="p" style="q-pa-md m-muted" condition="!certificationList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -5,16 +5,31 @@ const ids = {
     // the Maintenance users' organization (Services) and the one maint.retail plans for alone (Retail)
     organizationId: "ORG_ZIZI_SERVICES",
     otherOrganizationId: "ORG_ZIZI_RETAIL",
-    // a facility of each (Manufacturing's and Warehouse's demo), and Retail's forklift (Warehouse's demo); P2 adds Services'
-    // equipment and facilities
+    // a facility of each (Manufacturing's and Warehouse's demo), and Retail's forklift (Warehouse's demo)
     facilityId: "BOSS_MFG_SVC_PLANT",
     otherFacilityId: "BOSS_WH_EAST",
     otherAssetId: "BOSS_WH_FORKLIFT",
-    // the menu of design §1.2 built so far: every Maintenance user's, and with Settings the Maintenance administrator's
-    staffMenu: ["Home"],
-    adminMenu: ["Home", "Settings"],
+    // P2: Services' campus, building, floors and rooms, the compressor (of the AC-200 model, held by Kenji) with its motor, the
+    // van, the multimeter and the air handler (BossMaintenanceDemoData.xml, BossZMaintenanceDemoData.xml)
+    siteId: "BOSS_MNT_SITE",
+    buildingId: "BOSS_MNT_BLDG",
+    floorId: "BOSS_MNT_FLOOR1",
+    otherFloorId: "BOSS_MNT_FLOOR2",
+    meetingRoomId: "BOSS_MNT_ROOM_101",
+    mechanicalRoomId: "BOSS_MNT_ROOM_102",
+    compressorId: "BOSS_MNT_COMPRESSOR",
+    motorId: "BOSS_MNT_MOTOR",
+    vanId: "BOSS_MNT_VAN",
+    airHandlerId: "BOSS_MNT_AIR_HANDLER",
+    modelId: "BOSS_MNT_COMP_MODEL",
+    custodianId: "BOSS_PPL_KENJI",
+    // the menu of design §1.2 built so far: a Maintenance user's who reads equipment, and with Settings the Maintenance
+    // administrator's; a user who reads none (a procedure author) has Home alone
+    staffMenu: ["Home", "Equipment", "Facilities"],
+    homeOnlyMenu: ["Home"],
+    adminMenu: ["Home", "Equipment", "Facilities", "Settings"],
     settingsMenu: ["SettingsHome"],
-    keys: ["g m"]
+    keys: ["g m", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS

@@ -14,7 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Employee360 (design-people §4 Employee360; design-crosscut §3.4; style-guide §3.4 360; impl-people P2): a person's employee
     record, shared by the apps that mount it: People/Employees/Employee360, Commons/People/Employee360 and
-    Insights/Records/Employee360. It takes partyId, an optional employment (partyRelationshipId) and the mounting app's appRoot.
+    Insights/Records/Employee360, and Maintenance/Equipment/Employee360 (impl-maintenance P2: the Overview read only, returning to
+    Equipment, and AssignedEquipment from Maintenance's own read, ironstone.maintenance.EquipmentServices.get#AssignedEquipment, in
+    its scope). It takes partyId, an optional employment (partyRelationshipId) and the mounting app's appRoot.
     ironstone.people.ContextServices.get#Employee360Context reads mantle.humanres.PeopleServices.get#Employee360 (the regions the
     user's People scope admits, each one they may not read absent) and narrows it to the app's context (People.js
     employee360Apps): People every admitted region, Commons the Overview and the user's own personal information, Insights the
@@ -108,6 +110,13 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{partyId:partyId}"/>
             <script>ec.message.clearErrors()</script>
         </if>
+        <!-- Maintenance (impl-maintenance P2, F62): the equipment the person holds that the user's maintenance scope reads -->
+        <if condition="recordFound &amp;&amp; appRoot == 'Maintenance'">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#AssignedEquipment" out-map="equipmentFound"
+                    transaction="force-new" ignore-error="true" in-map="{partyId:partyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="equipmentDetailLink" from="sharedLinks?.[appRoot == 'Maintenance' ? 'Equipment/EquipmentDetail' : 'Employees/EquipmentDetail']"/>
         <if condition="recordFound &amp;&amp; employee?.showsChanges">
             <service-call name="mantle.humanres.PeopleServices.find#EmploymentChanges" out-map="changesFound" transaction="force-new"
                     ignore-error="true" in-map="{partyId:partyId, includeDone:true}"/>
@@ -345,7 +354,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <form-list name="EquipmentRows" list="equipmentRows" skip-form="true" paginate="false" condition="equipmentRows.length">
                                     <field name="assetName">
                                         <default-field title="Equipment">
-                                            <link url="${sharedLinks['Employees/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                            <link url="${equipmentDetailLink}" text="${assetName}" link-type="anchor"
                                                     parameter-map="{assetId:assetId}"/>
                                         </default-field>
                                     </field>

@@ -15,4 +15,74 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance demo (impl-maintenance P1): its records, which each phase adds with what it builds, the equipment and
     facilities of Ziziwork Services first (P2). The demo users are in BossUsersDemoData.xml. -->
 <entity-facade-xml type="demo">
+    <!-- P2 (design-maintenance §6): Ziziwork Services' campus (its time zone set at the top, which the rooms inherit), a building,
+        two floors and four rooms: two meeting rooms with capacity, booking and features, a mechanical room and a store room -->
+    <mantle.facility.Facility facilityId="BOSS_MNT_SITE" facilityTypeEnumId="FcTpLand" ownerPartyId="ORG_ZIZI_SERVICES"
+            facilityName="Services Campus" timeZone="America/Chicago" openedDate="2020-01-01 00:00:00"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_BLDG" facilityTypeEnumId="FcTpBuilding" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_SITE" facilityName="Service Center"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_FLOOR1" facilityTypeEnumId="FcTpFloor" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_BLDG" facilityName="Service Center floor 1"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_FLOOR2" facilityTypeEnumId="FcTpFloor" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_BLDG" facilityName="Service Center floor 2"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_ROOM_101" facilityTypeEnumId="FcTpRoom" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_FLOOR1" facilityName="Room 101 Huddle" capacity="8" bookable="Y"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_ROOM_102" facilityTypeEnumId="FcTpRoom" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_FLOOR1" facilityName="Room 102 Mechanical"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_ROOM_201" facilityTypeEnumId="FcTpRoom" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_FLOOR2" facilityName="Room 201 Workshop" capacity="9" bookable="Y"/>
+    <mantle.facility.Facility facilityId="BOSS_MNT_ROOM_202" facilityTypeEnumId="FcTpRoom" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_FLOOR2" facilityName="Room 202 Store"/>
+    <mantle.facility.FacilityFeature facilityId="BOSS_MNT_ROOM_101" featureEnumId="RfDisplay" fromDate="2026-01-01 00:00:00"/>
+    <mantle.facility.FacilityFeature facilityId="BOSS_MNT_ROOM_101" featureEnumId="RfVideoConference" fromDate="2026-01-01 00:00:00"/>
+    <mantle.facility.FacilityFeature facilityId="BOSS_MNT_ROOM_201" featureEnumId="RfProjector" fromDate="2026-01-01 00:00:00"/>
+    <mantle.facility.FacilityFeature facilityId="BOSS_MNT_ROOM_201" featureEnumId="RfWhiteboard" fromDate="2026-01-01 00:00:00"/>
+    <mantle.facility.FacilityFeature facilityId="BOSS_MNT_ROOM_201" featureEnumId="RfStepFree" fromDate="2026-01-01 00:00:00"/>
+
+    <!-- an equipment model with a counting hour meter, a maintenance default every 500 hours and two spare parts -->
+    <mantle.product.Product productId="BOSS_MNT_COMP_MODEL" productName="Air compressor AC-200" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpEquipment" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.product.maintenance.ProductMeter productMeterId="BOSS_MNT_COMP_HOURS" productId="BOSS_MNT_COMP_MODEL"
+            productMeterTypeId="PdMtrMotorTime" meterUomId="TF_hr" meterName="Run hours" isCumulative="Y"/>
+    <mantle.product.maintenance.ProductMaintenance productMaintenanceId="BOSS_MNT_COMP_SERVICE" productId="BOSS_MNT_COMP_MODEL"
+            maintenanceTypeEnumId="MntTpOilChange" description="Oil and filter every 500 run hours" intervalQuantity="500"
+            intervalProductMeterId="BOSS_MNT_COMP_HOURS"/>
+    <mantle.product.Product productId="BOSS_MNT_PART_FILTER" productName="AC-200 intake filter" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.product.Product productId="BOSS_MNT_PART_BELT" productName="AC-200 drive belt" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.product.ProductAssoc productId="BOSS_MNT_COMP_MODEL" toProductId="BOSS_MNT_PART_FILTER" productAssocTypeEnumId="PatSparePart"
+            fromDate="2026-01-01 00:00:00" quantity="1"/>
+    <mantle.product.ProductAssoc productId="BOSS_MNT_COMP_MODEL" toProductId="BOSS_MNT_PART_BELT" productAssocTypeEnumId="PatSparePart"
+            fromDate="2026-01-01 00:00:00" quantity="2"/>
+
+    <!-- Services' equipment: a compressor (of the model) with a motor under it in the mechanical room, a van with a registration and
+        an odometer, a multimeter, and an air handler whose supplier warranty ends this month; Retail's forklift is Warehouse's demo
+        (BOSS_WH_FORKLIFT). Their custodians (People's Kenji and Sofia) and the warrantor (Purchasing's supplier) are in
+        BossZMaintenanceDemoData.xml, which loads after People's and Purchasing's demo. -->
+    <mantle.product.asset.Asset assetId="BOSS_MNT_COMPRESSOR" assetTypeEnumId="AstTpEquipment" classEnumId="AsClsMfgEquip" statusId="AstInUse"
+            assetName="Compressor C-1" productId="BOSS_MNT_COMP_MODEL" serialNumber="AC200-0042" ownerPartyId="ORG_ZIZI_SERVICES"
+            facilityId="BOSS_MNT_ROOM_102" hasQuantity="N" acquiredDate="2024-03-01 00:00:00" warrantyThruDate="2027-02-28"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_MOTOR" assetTypeEnumId="AstTpEquipment" statusId="AstInUse" parentAssetId="BOSS_MNT_COMPRESSOR"
+            assetName="Compressor C-1 motor" serialNumber="MTR-77810" ownerPartyId="ORG_ZIZI_SERVICES" facilityId="BOSS_MNT_ROOM_102"
+            hasQuantity="N"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_VAN" assetTypeEnumId="AstTpEquipment" classEnumId="AsClsCargoVehicle" statusId="AstInUse"
+            assetName="Service van 3" serialNumber="1FTBW2CM5HKA00003" ownerPartyId="ORG_ZIZI_SERVICES" facilityId="BOSS_MNT_SITE"
+            hasQuantity="N" acquiredDate="2023-05-15 00:00:00"/>
+    <mantle.product.maintenance.AssetRegistration assetId="BOSS_MNT_VAN" assetRegSeqId="01" registrationNumber="IL SVC 4471"
+            fromDate="2026-01-01 00:00:00" thruDate="2026-12-31 00:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_MULTIMETER" assetTypeEnumId="AstTpEquipment" statusId="AstInUse"
+            assetName="Multimeter M-7" serialNumber="FLK-87V-2231" ownerPartyId="ORG_ZIZI_SERVICES" facilityId="BOSS_MNT_ROOM_202"
+            hasQuantity="N"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_AIR_HANDLER" assetTypeEnumId="AstTpEquipment" statusId="AstInUse"
+            assetName="Air handler AHU-2" serialNumber="AHU2-5531" ownerPartyId="ORG_ZIZI_SERVICES" facilityId="BOSS_MNT_FLOOR2"
+            hasQuantity="N" warrantyThruDate="2026-11-28"/>
+    <mantle.product.maintenance.AssetMeter assetId="BOSS_MNT_COMPRESSOR" readingDate="2026-09-01 08:00:00" productMeterTypeId="PdMtrMotorTime"
+            productMeterId="BOSS_MNT_COMP_HOURS" meterValue="1200" readingReasonEnumId="AmrReading"/>
+    <mantle.product.maintenance.AssetMeter assetId="BOSS_MNT_COMPRESSOR" readingDate="2026-10-01 08:00:00" productMeterTypeId="PdMtrMotorTime"
+            productMeterId="BOSS_MNT_COMP_HOURS" meterValue="1310" readingReasonEnumId="AmrReading"/>
+    <mantle.product.maintenance.AssetMeter assetId="BOSS_MNT_COMPRESSOR" readingDate="2026-11-01 08:00:00" productMeterTypeId="PdMtrMotorTime"
+            productMeterId="BOSS_MNT_COMP_HOURS" meterValue="1420" readingReasonEnumId="AmrReading"/>
+    <mantle.product.maintenance.AssetMeter assetId="BOSS_MNT_VAN" readingDate="2026-10-15 17:00:00" productMeterTypeId="PdMtrDistance"
+            meterValue="48210" readingReasonEnumId="AmrReading"/>
 </entity-facade-xml>

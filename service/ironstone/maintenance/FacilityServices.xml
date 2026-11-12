@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Maintenance context of the shared FacilityDetail (impl-maintenance P2; design-maintenance §6; Resources.js), checked
+    through check#Record before it reads; facility writes are Mantle's FacilityServices.store#Facility and store#FacilityFeature
+    (FACILITY_EDIT), called by the screens after that check. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="FacilityDetail" allow-remote="false" read-only="true">
+        <description>FacilityDetail's Maintenance context: the facility's header (type, organization by its owner or nearest
+            owning ancestor, its parent only when the user reads it, its own or inherited time zone, capacity and booking,
+            state), its contact, the facilities inside it of the user's scope, the rooms among them, its room features (current
+            and ended), the equipment there (Mantle's scoped find) and its certifications. canEdit for FACILITY_EDIT, which
+            store#Facility checks again. Refuses a facility outside the user's maintenance scope as a missing one
+            (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="facilityId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="facility" type="Map"/>
+            <parameter name="contact" type="Map"/>
+            <parameter name="childList" type="List"/>
+            <parameter name="roomList" type="List"/>
+            <parameter name="featureList" type="List"/>
+            <parameter name="equipmentList" type="List"/>
+            <parameter name="certificationList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Resources.js')
+                    .execute('facilityDetail', context)"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="facility" from="found.facility"/>
+            <set field="contact" from="found.contact"/>
+            <set field="childList" from="found.childList"/>
+            <set field="roomList" from="found.roomList"/>
+            <set field="featureList" from="found.featureList"/>
+            <set field="equipmentList" from="found.equipmentList"/>
+            <set field="certificationList" from="found.certificationList"/>
+        </actions>
+    </service>
+</services>

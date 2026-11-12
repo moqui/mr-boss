@@ -38,6 +38,14 @@ along with this software (see the LICENSE.md file). If not, see
                         transaction="force-new"
                         ignore-error="true"/>
             </if>
+            <if condition="appRoot == 'Maintenance'">
+                <service-call name="ironstone.maintenance.FacilityServices.get#FacilityDetail"
+                        in-map="{facilityId:facilityId}"
+                        out-map="detail"
+                        transaction="force-new"
+                        ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
             <set field="recordFound" from="!!detail?.facility"/>
         </if>
     </actions>

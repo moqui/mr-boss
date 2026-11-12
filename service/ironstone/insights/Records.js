@@ -148,7 +148,9 @@ const recordTypes = {
         sources: [source(stock, "facilityId"), source(orderParts, "facilityId", "Order parts shipping from here")],
         owners: [
             {label: "Warehouse", path: "Warehouse/Locations/FacilityDetail", parameter: "facilityId"},
-            {label: "Manufacturing", path: "Manufacturing/WorkCenters/FacilityDetail", parameter: "facilityId"}
+            {label: "Manufacturing", path: "Manufacturing/WorkCenters/FacilityDetail", parameter: "facilityId"},
+            // impl-maintenance P2: the owner link to Maintenance's mount
+            {label: "Maintenance", path: "Maintenance/Facilities/FacilityDetail", parameter: "facilityId"}
         ]
     },
     EquipmentDetail: {
@@ -158,7 +160,9 @@ const recordTypes = {
         owners: [
             {label: "Accounting", path: "Accounting/FixedAssets/EquipmentDetail", parameter: "assetId"},
             {label: "Manufacturing", path: "Manufacturing/WorkCenters/EquipmentDetail", parameter: "assetId"},
-            {label: "Warehouse", path: "Warehouse/Locations/EquipmentDetail", parameter: "assetId"}
+            {label: "Warehouse", path: "Warehouse/Locations/EquipmentDetail", parameter: "assetId"},
+            // impl-maintenance P2 (impl-insights §7): the owner link to Maintenance's mount
+            {label: "Maintenance", path: "Maintenance/Equipment/EquipmentDetail", parameter: "assetId"}
         ]
     },
     InvoiceDetail: {

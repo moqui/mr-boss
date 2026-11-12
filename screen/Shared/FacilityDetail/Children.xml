@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- FacilityDetail's Children tab: the facilities inside this one that are the user's, each opening its FacilityDetail,
     and, for a facility administrator, New facility inside this one (Mantle's store#Facility, which refuses a parent
-    cycle). -->
+    cycle): Warehouse's dialog under Warehouse, Maintenance's (with the time zone, capacity and booking) under Maintenance
+    (impl-maintenance P2). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Children"
@@ -22,6 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="facilityId"/>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
     <transition-include name="createFacility" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <!-- Maintenance's New facility inside this one (impl-maintenance P2) -->
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="createMaintenanceFacility" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <!-- Warehouse's tab: the Manufacturing context has its own Work center tab -->
     <condition><expression>appRoot != 'Manufacturing'</expression></condition>
     <actions>
@@ -35,10 +39,22 @@ along with this software (see the LICENSE.md file). If not, see
                         transaction="force-new"
                         ignore-error="true"/>
             </if>
+            <if condition="appRoot == 'Maintenance'">
+                <service-call name="ironstone.maintenance.FacilityServices.get#FacilityDetail"
+                        in-map="{facilityId:facilityId}"
+                        out-map="detail"
+                        transaction="force-new"
+                        ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
             <set field="recordFound" from="!!detail?.facility"/>
         </if>
         <set field="childList" from="detail?.childList || []"/>
-        <set field="canEdit" from="!!detail?.canEdit"/>
+        <!-- Warehouse's New facility (WarehouseFacilityParts); Maintenance has its own (MaintenanceParts) -->
+        <set field="canEdit" from="appRoot == 'Warehouse' &amp;&amp; !!detail?.canEdit"/>
+        <set field="childLink" from="sharedLinks?.[appRoot == 'Maintenance' ? 'Facilities/FacilityDetail' : 'Locations/FacilityDetail']"/>
+        <set field="newFacilityDefaults" from="appRoot == 'Maintenance' ? {ownerPartyId: detail?.facility?.organizationPartyId || null,
+                facilityTypeEnumId: 'FcTpRoom'} : null"/>
         <!-- the new facility's parent and the dialog's words (WarehouseFacilityParts' NewFacility) -->
         <set field="parentFacilityId" from="facilityId"/>
         <set field="newFacilityTitle" value="New facility inside"/>
@@ -53,12 +69,17 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-toolbar>
                         <section-include name="NewFacility"
                                 location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+                        <section name="NewMaintenanceChild" condition="appRoot == 'Maintenance'">
+                            <widgets>
+                                <section-include name="NewMaintenanceFacility" location="component://mr-boss/template/MaintenanceParts.xml"/>
+                            </widgets>
+                        </section>
                     </box-toolbar>
                     <box-body-nopad>
                         <form-list name="FacilityChildren" list="childList" skip-form="true" paginate="false">
                             <field name="facilityName">
                                 <default-field title="Facility">
-                                    <link url="${sharedLinks['Locations/FacilityDetail']}"
+                                    <link url="${childLink}"
                                             text="${facilityName}"
                                             link-type="anchor"
                                             parameter-map="{facilityId:facilityId}"/>

@@ -124,7 +124,15 @@ function organizationOptions(partyIds, term, limit) {
 const linkPaths = [
     // P1: Home and Settings (design §1.2)
     "Home",
-    "Settings"
+    "Settings",
+    // P2: Equipment and Facilities, and the shared records mounted under them (design §6)
+    "Equipment/Find",
+    "Equipment/AssetTags",
+    "Equipment/EquipmentDetail",
+    "Equipment/Product360",
+    "Equipment/Employee360",
+    "Facilities/Find",
+    "Facilities/FacilityDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -166,7 +174,8 @@ const recordKinds = {
     facility: {
         name: "Facility",
         icon: "sym_o_domain",
-        destination: null,
+        destination: "Facilities/FacilityDetail",
+        parameter: "facilityId",
         read: (userScope, facilityId) => {
             const found = maintenanceAccess.requireFacility(userScope.mantle, facilityId)
             return {
@@ -179,7 +188,8 @@ const recordKinds = {
     asset: {
         name: "Equipment",
         icon: "sym_o_build",
-        destination: null,
+        destination: "Equipment/EquipmentDetail",
+        parameter: "assetId",
         read: (userScope, assetId) => {
             const found = maintenanceAccess.requireAsset(userScope.mantle, assetId)
             const asset = one("mantle.product.asset.Asset", {assetId})
@@ -233,6 +243,65 @@ function withSelected(options, selected, admits, label) {
         options.push({value: selected, label: label(selected)})
     return options
 }
+// enumeration options of a type, searched by description, with the selected one
+function enumOptions(enumTypeId, term, selected, filter = null) {
+    let query = find("moqui.basic.Enumeration").condition("enumTypeId", enumTypeId).orderBy("sequenceNum").orderBy("description").limit(choiceLimit * 2)
+    if (term) query = query.condition(ec.entity.conditionFactory.makeCondition("description", "like", likeText(term)).ignoreCase())
+    let rows = Array.from(query.list())
+    if (filter) rows = rows.filter(filter)
+    const options = rows.slice(0, choiceLimit).map(row => ({value: row.enumId, label: row.description || row.enumId}))
+    return withSelected(
+        options,
+        selected,
+        enumId => !!one("moqui.basic.Enumeration", {enumId, enumTypeId}),
+        enumId => one("moqui.basic.Enumeration", {enumId})?.description || enumId
+    )
+}
+const partyLabel = partyId => {
+    const row = partyId ? one("mantle.party.PartyDetail", {partyId}) : null
+    return row ? row.organizationName || [row.firstName, row.lastName].filter(Boolean).join(" ") || partyId : partyId || ""
+}
+// people and organizations by name (custodians, warrantors, agencies), searched in the query; a party another user keeps private
+// is not offered
+function partyOptions(term, selected, partyTypeEnumId = null) {
+    const factory = ec.entity.conditionFactory
+    let query = find("mantle.party.PartyDetail")
+        .condition("disabled", "is-null", null)
+        .condition("privateOwnerUserId", "is-null", null)
+        .orderBy("organizationName")
+        .orderBy("lastName")
+        .orderBy("firstName")
+        .limit(choiceLimit)
+    if (partyTypeEnumId) query = query.condition("partyTypeEnumId", partyTypeEnumId)
+    else query = query.condition("partyTypeEnumId", "in", ["PtyPerson", "PtyOrganization"])
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["partyId", "organizationName", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
+                "or"
+            )
+        )
+    const options = Array.from(query.list()).map(row => ({value: row.partyId, label: partyLabel(row.partyId)}))
+    return withSelected(options, selected, partyId => !!one("mantle.party.Party", {partyId}), partyLabel)
+}
+// the choices of equipment and facility records, answered only to a user who reads them (resourceRead)
+const resourceChoices = [
+    "facilityTypes",
+    "equipmentTypes",
+    "equipmentClasses",
+    "roomFeatures",
+    "custodyRoles",
+    "readingReasons",
+    "parties",
+    "people",
+    "equipmentModels",
+    "equipment",
+    "meters",
+    "timeZones",
+    "parentFacilities"
+]
 const choiceSources = {
     // the organizations of the user's maintenance scope
     organizations: (userScope, term, selected) =>
@@ -281,18 +350,158 @@ const choiceSources = {
             },
             facilityName
         )
+    },
+    // P2: the drop-downs of Equipment, Facilities and their shared records
+    facilityTypes: (userScope, term, selected) => enumOptions("FacilityType", term, selected),
+    equipmentTypes: (userScope, term, selected) =>
+        enumOptions("AssetType", term, selected, row => !["AstTpInventory", "AstTpSupplies"].includes(row.enumId))
+    ,
+    equipmentClasses: (userScope, term, selected) => enumOptions("AssetClass", term, selected),
+    roomFeatures: (userScope, term, selected) => enumOptions("RoomFeature", term, selected),
+    custodyRoles: (userScope, term, selected) => {
+        const roles = ["Custodian", "Operator"]
+        return roles
+            .map(roleTypeId => ({value: roleTypeId, label: one("mantle.party.RoleType", {roleTypeId})?.description || roleTypeId}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+    },
+    readingReasons: (userScope, term, selected) =>
+        enumOptions("AssetMeterReadingReason", term, selected, row => row.enumId !== "AmrCorrection")
+    ,
+    // people and organizations: a custodian, a warrantor, a registration agency
+    parties: (userScope, term, selected) => partyOptions(term, selected),
+    people: (userScope, term, selected) => partyOptions(term, selected, "PtyPerson"),
+    // equipment models: products of equipment type
+    equipmentModels: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product")
+            .condition("assetTypeEnumId", "AstTpEquipment")
+            .orderBy("productName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["productId", "productName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({value: row.productId, label: row.productName || row.productId}))
+        return withSelected(
+            options,
+            selected,
+            productId => !!one("mantle.product.Product", {productId}),
+            productId => one("mantle.product.Product", {productId})?.productName || productId
+        )
+    },
+    // equipment of the scope (a parent), never the asset itself (assetId)
+    equipment: (userScope, term, selected, p) => {
+        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {text: term || null, pageSize: choiceLimit})
+        const options = Array.from(found.equipmentList || [])
+            .filter(row => row.assetId !== p?.assetId)
+            .map(row => ({value: row.assetId, label: row.assetName + (row.serialNumber ? " (" + row.serialNumber + ")" : "")}))
+        return withSelected(
+            options,
+            selected,
+            assetId => {
+                try {
+                    return !!recordOf(userScope, "asset", assetId)
+                } catch (error) {
+                    return false
+                }
+            },
+            assetId => one("mantle.product.asset.Asset", {assetId})?.assetName || assetId
+        )
+    },
+    // the meters of an equipment's model, or the meter types for equipment whose model has none
+    meters: (userScope, term, selected, p) => {
+        const asset = p?.assetId ? one("mantle.product.asset.Asset", {assetId: p.assetId}) : null
+        if (!asset) return []
+        recordOf(userScope, "asset", asset.assetId)
+        const modelMeters = asset.productId
+            ? Array.from(find("mantle.product.maintenance.ProductMeter").condition("productId", asset.productId).list())
+            : []
+        if (modelMeters.length)
+            return modelMeters.map(row => ({
+                value: row.productMeterId,
+                label: row.meterName || one("mantle.product.maintenance.ProductMeterType", {productMeterTypeId: row.productMeterTypeId})?.description || row.productMeterId
+            }))
+        return Array.from(find("mantle.product.maintenance.ProductMeterType").orderBy("description").list()).map(row => ({
+            value: "type:" + row.productMeterTypeId,
+            label: row.description || row.productMeterTypeId
+        }))
+    },
+    // the time zones, searched by name
+    timeZones: (userScope, term, selected) => {
+        const zones = Array.from(ec.l10n.getAvailableTimeZones() || []).map(String)
+        const found = zones.filter(zone => !term || zone.toLowerCase().includes(term.toLowerCase())).slice(0, choiceLimit)
+        if (selected && !found.includes(selected) && zones.includes(selected)) found.push(selected)
+        return found.map(zone => ({value: zone, label: zone}))
+    },
+    // the facilities of the scope as a parent: every facility of the scope (a room inside a building), never the facility itself
+    // (facilityId)
+    parentFacilities: (userScope, term, selected, p) => {
+        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {text: term || null, pageSize: choiceLimit})
+        const options = Array.from(found.facilityList || [])
+            .filter(row => row.facilityId !== p?.facilityId)
+            .map(row => ({value: row.facilityId, label: row.facilityName}))
+        return withSelected(
+            options,
+            selected,
+            facilityId => {
+                try {
+                    return !!recordOf(userScope, "facility", facilityId)
+                } catch (error) {
+                    return false
+                }
+            },
+            facilityName
+        )
     }
 }
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Maintenance choice " + p.choice)
+    if (resourceChoices.includes(p.choice) && !userScope.capabilities.resourceRead) return {options: []}
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 
 // ===== palette =====
-// The palette's Maintenance records, each opening its Maintenance screen, with recordEntity and recordId for Assist's search.
-// None yet: equipment and facilities join with their screens (P2), work orders (P3), procedures (P6).
-const searchFinds = []
+// The palette's Maintenance records, each opening its Maintenance screen, with recordEntity and recordId for Assist's search:
+// equipment and facilities (P2), through Mantle's scoped finds (a user who reads no equipment finds none); work orders join in
+// P3, procedures in P6.
+const recordUrl = (kind, recordId) =>
+    "/qapps/Maintenance/" + recordKinds[kind].destination + "?" + recordKinds[kind].parameter + "=" + encodeURIComponent(recordId)
+const searchFinds = [
+    {
+        kind: "asset",
+        rows: (userScope, text, limit) => {
+            if (!userScope.mantle.capabilities.resourceRead) return []
+            const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {text, pageSize: limit})
+            return Array.from(found.equipmentList || []).map(row => ({
+                title: row.assetName,
+                subtitle: ["Equipment", row.serialNumber, row.facilityName].filter(Boolean).join(" · "),
+                icon: recordKinds.asset.icon,
+                recordEntity: "mantle.product.asset.Asset",
+                recordId: row.assetId,
+                url: recordUrl("asset", row.assetId)
+            }))
+        }
+    },
+    {
+        kind: "facility",
+        rows: (userScope, text, limit) => {
+            if (!userScope.mantle.capabilities.resourceRead) return []
+            const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {text, pageSize: limit})
+            return Array.from(found.facilityList || []).map(row => ({
+                title: row.facilityName,
+                subtitle: ["Facility", row.typeText, row.organizationName].filter(Boolean).join(" · "),
+                icon: recordKinds.facility.icon,
+                recordEntity: "mantle.facility.Facility",
+                recordId: row.facilityId,
+                url: recordUrl("facility", row.facilityId)
+            }))
+        }
+    }
+]
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}
@@ -311,7 +520,29 @@ function search(p) {
     return {rows: Array.from(found.values()).slice(0, limit)}
 }
 
-const operations = {sharedContext, capabilities: capabilitiesOf, checkRecord, choices, search}
+// ===== asset tag scans =====
+// resolve#EquipmentScan: the equipment a scanned tag (its EquipmentDetail link) or a typed id, serial or soft identifier names, of
+// the user's scope (Mantle's find, so the scope is checked on each scan): exact matches first, else those the text finds.
+function resolveScan(p) {
+    const userScope = scope()
+    const text = String(p.scanText || "").trim()
+    if (!userScope.read || !userScope.capabilities.resourceRead || !text) return {matches: []}
+    const linked = /[?&]assetId=([^&#]+)/.exec(text)
+    const wanted = linked ? decodeURIComponent(linked[1]) : text
+    const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {text: wanted, pageSize: 10})
+    const rows = Array.from(found.equipmentList || [])
+    const exact = rows.filter(row => [row.assetId, row.serialNumber].includes(wanted))
+    return {
+        matches: (exact.length ? exact : rows).map(row => ({
+            identityType: "asset",
+            id: row.assetId,
+            label: "Equipment " + row.assetName,
+            detail: [row.serialNumber, row.facilityName].filter(Boolean).join(" · ")
+        }))
+    }
+}
+
+const operations = {sharedContext, capabilities: capabilitiesOf, checkRecord, choices, search, resolveScan}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Maintenance operation " + op)
     return operations[op](p || {})

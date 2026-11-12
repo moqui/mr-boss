@@ -645,7 +645,7 @@ function search(p) {
 // ===== Employee360 (P2; design §4 Employee360, crosscut §3.4) =====
 // The per-app context of Shared/Employee360: for each app that mounts it, the regions it shows (of those get#Employee360 admits),
 // the regions it shows only for the user's own record, what may be changed there and the actions. A context narrows what Mantle
-// admits and grants nothing. Maintenance adds its row with its mount (impl-people §7); an app with no row (Projects, Admin, Sales)
+// admits and grants nothing. Maintenance's row came with its mount (impl-maintenance P2); an app with no row (Projects, Admin, Sales)
 // links the People mount for a People user and the Commons mount otherwise (employee360Link).
 const employee360Apps = {
     // People: every region the user's capabilities admit; personal corrections, the employment's files and activity
@@ -665,7 +665,11 @@ const employee360Apps = {
         returnPath: null
     },
     // Insights: the Overview of the person behind a report drill-down, read only, with the return to the report
-    Insights: {regions: ["overview"], ownOnly: [], edits: false, returnLabel: "Back to the report", returnPath: null}
+    Insights: {regions: ["overview"], ownOnly: [], edits: false, returnLabel: "Back to the report", returnPath: null},
+    // Maintenance (impl-maintenance P2, F62; design-people §4's Maintenance row): a custodian's or technician's public work
+    // identity, read only, returning to Equipment; the equipment they hold is Maintenance's own read in its scope
+    // (ironstone.maintenance.EquipmentServices.get#AssignedEquipment), not People's, and qualification validity waits for People P18
+    Maintenance: {regions: ["overview"], ownOnly: [], edits: false, returnLabel: "Equipment", returnPath: "//Maintenance/Equipment"}
 }
 const employee360Path = app => "/qapps/" + (app === "Commons" ? "Commons/People/Employee360" : "People/Employees/Employee360")
 // get#Employee360: the person's record under appRoot, the regions of Mantle's answer that the app's context shows, the fields the

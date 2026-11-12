@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Conversation tab under Maintenance (impl-maintenance P2, F82): the equipment's messages and activity log
+    (chatter on the Asset record, which Maintenance's root serves for equipment its check admits). Renders nothing outside
+    Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Conversation" default-menu-index="8">
+    <parameter name="assetId"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentConversation" condition="found?.asset">
+            <widgets>
+                <label text="Conversation" type="h6"/>
+                <chatter id="MaintenanceEquipmentConversation" record-entity="mantle.product.asset.Asset" record-id="${assetId}"
+                        default-tab="log"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Identity tab under Maintenance (design-maintenance §6, crosscut §3.10; impl-maintenance P2): the equipment's
+    identity, site and inherited time zone, and its supplier warranty. Edit equipment (store#MaintenanceEquipment: name, class, serial,
+    other identifier, parent, warranty and comments, with the revision read) for a holder of MAINTENANCE_RESOURCE_EDIT; Move
+    (move#MaintenanceEquipment) for one who also holds STOCK_MOVE, its effect (facilities, time zones, parts, bookings, an
+    organization change) shown before the move is confirmed. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Identity" default-menu-index="1">
+    <parameter name="assetId"/>
+    <parameter name="moveToFacilityId"/>
+    <parameter name="moveToLocationSeqId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeEquipment" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="moveEquipment" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+        <set field="asset" from="found?.asset || {}"/>
+        <set field="identityRows" from="[['Type', asset.typeText], ['Asset class', asset.classText], ['Model', asset.productName],
+                ['Serial number', asset.serialNumber], ['Other identifier', asset.softIdentifier], ['Owner', asset.ownerName],
+                ['Facility', [asset.facilityName, asset.locationSeqId].filter(Boolean).join(' · ')], ['Time zone', asset.timeZoneText],
+                ['Part of', asset.parentName], ['In service', asset.acquiredDateText], ['Received', asset.receivedDateText],
+                ['Status', asset.statusText], ['Comments', asset.comments]]
+                .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="warrantyRows" from="[['Through', asset.warrantyThruDate], ['Warrantor', asset.warrantyPartyName]]
+                .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: String(r[1])}))"/>
+        <set field="editValues" from="{assetId: asset.assetId, assetName: asset.assetName, serialNumber: asset.serialNumber,
+                softIdentifier: asset.softIdentifier, classEnumId: asset.classEnumId, parentAssetId: asset.parentAssetId,
+                warrantyThruDate: asset.warrantyThruDate || null, warrantyPartyId: asset.warrantyPartyId, comments: asset.comments,
+                expectedRevision: asset.revision}"/>
+        <!-- a move asked for (the Move dialog reloads the tab with the destination): its effect, before the move is made -->
+        <set field="moveEffect" from="null"/>
+        <if condition="found?.canMove &amp;&amp; moveToFacilityId">
+            <service-call name="mantle.product.MaintenanceResourceServices.move#MaintenanceEquipment" out-map="movePreview"
+                    in-map="{assetId:assetId, toFacilityId:moveToFacilityId, toLocationSeqId:(moveToLocationSeqId || null), preview:true}"
+                    transaction="force-new" ignore-error="true"/>
+            <set field="moveRefusal" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="moveEffect" from="movePreview?.effect || null"/>
+        </if>
+        <set field="moveRows" from="moveEffect ? [['From', moveEffect.fromFacilityName], ['To', [moveEffect.toFacilityName,
+                moveEffect.toLocationSeqId].filter(Boolean).join(' · ')], ['Time zone', moveEffect.fromTimeZone == moveEffect.toTimeZone ?
+                '' : (moveEffect.fromTimeZone || 'none') + ' to ' + (moveEffect.toTimeZone || 'none')], ['Parts that stay where they are',
+                moveEffect.childCount ? String(moveEffect.childCount) : ''], ['Bookings to come', moveEffect.bookingCount ?
+                String(moveEffect.bookingCount) : ''], ['Organization', moveEffect.organizationChanges ? 'Would change' : '']]
+                .filter((r) =&gt; r[1]).map((r) =&gt; ({label: r[0], value: r[1]})) : []"/>
+        <set field="moveValues" from="{assetId: assetId, toFacilityId: moveToFacilityId, toLocationSeqId: moveToLocationSeqId || null}"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentIdentity" condition="found?.asset">
+            <widgets>
+                <container-row>
+                    <row-col lg="7">
+                        <container-box>
+                            <box-header title="Identity"/>
+                            <box-body-nopad>
+                                <form-list name="EquipmentIdentity" list="identityRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><display style="m-muted"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col lg="5">
+                        <container-box>
+                            <box-header title="Supplier warranty"/>
+                            <box-body-nopad>
+                                <form-list name="EquipmentWarranty" list="warrantyRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><display style="m-muted"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <label text="No supplier warranty is recorded." type="p" style="m-muted q-pa-sm" condition="!warrantyRows.length"/>
+                    </row-col>
+                </container-row>
+                <container style="row q-gutter-sm q-mb-md">
+                    <container-dialog id="EditEquipmentDialog" button-text="Edit equipment" title="Edit ${asset.assetName}"
+                            icon="sym_o_edit" width="760" type="primary" condition="found.canEdit">
+                        <form-single name="EditEquipment" transition="storeEquipment" map="editValues">
+                                <field name="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="expectedRevision">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="assetName">
+                                    <default-field title="Name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="classEnumId">
+                                    <default-field title="Asset class">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'equipmentClasses', selected:classEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="serialNumber">
+                                    <default-field title="Serial number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="softIdentifier">
+                                    <default-field title="Other identifier">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="parentAssetId">
+                                    <default-field title="Part of">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'equipment', selected:parentAssetId, choiceAssetId:assetId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="warrantyThruDate">
+                                    <default-field title="Supplier warranty through">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="warrantyPartyId">
+                                    <default-field title="Warrantor">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'parties', selected:warrantyPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="comments">
+                                    <default-field title="Comments">
+                                        <text-area rows="3"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Save equipment"/>
+                                    </default-field>
+                                </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="assetName"/>
+                                    <field-ref name="classEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="serialNumber"/>
+                                    <field-ref name="softIdentifier"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="parentAssetId"/>
+                                    <field-ref name="warrantyThruDate"/>
+                                </field-row>
+                                <field-ref name="warrantyPartyId"/>
+                                <field-ref name="comments"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="MoveEquipmentDialog" button-text="Move" title="Move ${asset.assetName}" icon="sym_o_move_down"
+                            width="640" condition="found.canMove">
+                        <label text="Choose where it goes; what the move changes is shown before it is made." type="p"/>
+                        <form-single name="MoveEquipmentPreview" transition=".">
+                                <field name="assetId" from="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="moveToFacilityId">
+                                    <default-field title="To facility">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'parentFacilities', selected:moveToFacilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="moveToLocationSeqId">
+                                    <default-field title="Location" tooltip="An open location there, if any">
+                                        <text-line size="10"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Show what changes"/>
+                                    </default-field>
+                                </field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <section name="MovePreview" condition="moveToFacilityId">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Move ${asset.assetName}"/>
+                            <box-body>
+                                <label text="${moveRefusal}" type="p" style="text-negative" condition="moveRefusal"/>
+                                <form-list name="MoveEffect" list="moveRows" skip-form="true" skip-header="true" paginate="false"
+                                        condition="moveRows.length">
+                                    <field name="label"><default-field><display style="m-muted"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                                <form-single name="MoveEquipment" transition="moveEquipment" map="moveValues"
+                                        condition="moveEffect &amp;&amp; !moveEffect.organizationChanges">
+                                <field name="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="toFacilityId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="toLocationSeqId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Move it" confirmation="Move ${asset.assetName} to ${moveEffect?.toFacilityName}?"/>
+                                    </default-field>
+                                </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
