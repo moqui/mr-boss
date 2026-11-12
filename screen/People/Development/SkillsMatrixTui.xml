@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The terminal twin of the skills matrix (SkillsMatrix.xml's tui text is a dynamic container of this screen; design-people §10
     SkillsMatrix's TUI person-skill list, PE-20): the same people and skills (mantle.humanres.DevelopmentServices.get#SkillsMatrix,
     the same filters, a page of people at a time) as one row per person and skill, with the level (self-declared said so), the
-    requirement and whether it is met; and the same commands: Evaluate a skill (store#Skill, a development editor's) and Find
+    requirement and whether it is met; and the same commands: Evaluate a skill (store#Skill, a development editor's, or a manager's
+    for their reports) and Find
     available (ironstone.people.ContextServices.find#AvailablePeople over Projects' staffing search). Readers have the list only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Skills matrix" default-menu-include="false">

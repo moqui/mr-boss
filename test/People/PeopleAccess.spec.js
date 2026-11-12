@@ -55,7 +55,8 @@
 // P18: Skills & training's matrix development's, HR's and the managers' (the reader and the employee refused the screen), its
 // Qualifications the employee's by the area's own grant; a verified qualification revoked by the development administrator of its
 // employer (the reader refused with the same parameters, Services' qualification refused to Retail's development administrator), and
-// the Development group (the reader's without the matrix).
+// the Development group (the reader's without the matrix). P18 review (the user's call of Nov 12, 2026): the manager evaluates her
+// report's skill without PEOPLE_DEVELOP_EDIT, the reader is refused the same evaluation and the manager Services' employee.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1355,7 +1356,7 @@ feature(
 )
 
 feature(
-    "skills and qualifications: the matrix development's, HR's and the managers' screen; a verified qualification revoked by the development administrator of its employer, the reader refused with the same parameters, Services' refused to Retail's; the employee's qualifications by the area's own grant",
+    "skills and qualifications: the matrix development's, HR's and the managers' screen; a verified qualification revoked by the development administrator of its employer, the reader refused with the same parameters, Services' refused to Retail's; the manager evaluates her report's skill, the reader refused; the employee's qualifications by the area's own grant",
     {
         when() {
             const D = "mantle.humanres.DevelopmentServices."
@@ -1383,6 +1384,9 @@ feature(
                 )
             )
             const revoke = {partyQualificationId, decision: "revoke", reason: "Spec", expectedRevision: revision}
+            // the user's call of Nov 12, 2026: the manager evaluates her report Tomas's customer service (at the level he holds)
+            // without PEOPLE_DEVELOP_EDIT; the reader is refused the same evaluation, and the manager Services' Kenji
+            const evaluate = partyId => ({partyId, skillTypeEnumId: ids.serviceSkillId, skillLevel: "3", evidence: "Access spec"})
             const codes = {
                 reader: code(asUser(users.reader, () => system(() => refusal(D + "verify#Qualification", revoke)))),
                 develop: code(asUser(users.develop, () => system(() => refusal(D + "verify#Qualification", revoke)))),
@@ -1390,6 +1394,15 @@ feature(
                     asUser(users.develop, () =>
                         system(() => refusal(D + "find#Qualifications", {partyQualificationId: ids.otherQualificationId}))
                     )
+                ),
+                managerEvaluates: code(
+                    asUser(users.manager, () => system(() => refusal(D + "store#Skill", evaluate(ids.employeePartyId))))
+                ),
+                readerEvaluates: code(
+                    asUser(users.reader, () => system(() => refusal(D + "store#Skill", evaluate(ids.employeePartyId))))
+                ),
+                managerOther: code(
+                    asUser(users.manager, () => system(() => refusal(D + "store#Skill", evaluate(ids.otherEmployeePartyId))))
                 )
             }
             for (const user of [users.develop, users.hr, users.manager]) {
@@ -1405,7 +1418,15 @@ feature(
             return {codes, problems}
         },
         then({codes, problems}) {
-            codes == {reader: "PERMISSION_DENIED", develop: "accepted", otherEmployer: "RECORD_UNAVAILABLE"}
+            codes ==
+                {
+                    reader: "PERMISSION_DENIED",
+                    develop: "accepted",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    managerEvaluates: "accepted",
+                    readerEvaluates: "PERMISSION_DENIED",
+                    managerOther: "RECORD_UNAVAILABLE"
+                }
             problems.join("\n") == ""
         }
     }

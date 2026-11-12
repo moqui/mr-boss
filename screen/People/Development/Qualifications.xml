@@ -21,8 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
     editor's for someone; it waits for verification); a row has Verify, Reject and Revoke for a verifier who is not the person (an HR
     editor, or a development editor for a type that is not restricted; verify#Qualification at the revision read, a rejection or
     revocation with its reason), Change for one waiting or rejected, Renew for the person's verified one, and Files: the
-    qualification's content host (PartyQualification, PE-01), the person's and HR's alone, shown below the list. Every People user's
-    and a self-service employee's (the area's own grant, BOSS_PPL_DEVELOPMENT). -->
+    qualification's content host (PartyQualification, PE-01), the person's and HR's alone, shown below the list. The number is opted
+    out of AI wherever it shows (ai-opt-out, PE-21). Every People user's and a self-service employee's (the area's own grant,
+    BOSS_PPL_DEVELOPMENT). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Qualifications" default-menu-index="2" menu-image="sym_o_workspace_premium" menu-image-type="icon">
     <parameter name="show"/>
@@ -125,7 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </field>
                         <field name="title"><default-field title="Name" tooltip="The degree, certificate or document"><text-line size="40"/></default-field></field>
                         <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
-                        <field name="referenceNumber">
+                        <field name="referenceNumber" ai-opt-out="true">
                             <default-field title="Number" tooltip="An identity document's or work permit's number is read only by you and HR">
                                 <text-line size="30"/></default-field>
                         </field>
@@ -197,7 +198,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field name="typeText"><default-field title="Kind"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
                     <field name="issuerName"><default-field title="Issued by"><display/></default-field></field>
-                    <field name="referenceNumber"><default-field title="Number"><display/></default-field></field>
+                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><display/></default-field></field>
                     <field name="fromDateText"><default-field title="Issued"><display/></default-field></field>
                     <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
                     <field name="verificationText">
@@ -254,7 +255,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
                                     <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
-                                    <field name="referenceNumber"><default-field title="Number"><text-line size="30"/></default-field></field>
+                                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
                                     <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
                                     <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
                                     <field name="comments"><default-field title="Comments"><text-area rows="2"/></default-field></field>
@@ -271,7 +272,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="qualificationTypeEnumId"><default-field><hidden/></default-field></field>
                                     <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
                                     <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
-                                    <field name="referenceNumber"><default-field title="Number"><text-line size="30"/></default-field></field>
+                                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
                                     <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
                                     <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
                                     <field name="submitButton"><default-field title="Submit renewal"><submit/></default-field></field>

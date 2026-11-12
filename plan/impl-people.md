@@ -4645,6 +4645,103 @@ Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels)
   - for the user's call: whether managers evaluate their reports' skills (the second finding); and whether a requirement's history
     needs the key change (the first). Nothing else waits on the user.
 
+**Review Nov 12 (P18).** A fresh review of `git diff master...ppl/p18` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §10 SkillsMatrix and Qualifications, §4 Employee360, §5 JobClassDetail, PE-01 and PE-14, confidentiality first; the user's
+two calls of Nov 12 built and recorded in §4; fixes committed apart per repository ("People P18 review: …"). Both branches were
+rebased onto master after P15's and P16's merges: mr-mantle with one conflict, CommunicationServices.xml's `get#RecordLinkInfo`
+(the application host's and the qualification host's content map entries, visibility branches and description, all kept);
+mr-boss with BossSetupData (P18's groups after P15's permissions), People.xml (header, the panel check admitting the employment,
+application and qualification hosts, keys, topics after P16's prompts), PeopleSelfService (header, My expenses and My
+qualifications), ContextServices, People.js (`linkPaths`, the self-service links, `developmentAreaOpens` beside
+`expensesAreaOpens`), RecordFilesServices (both hosts), PeopleSpecLib (Expenses then Development in every menu, P15's, P16's and
+P18's keys), PeopleAccess (header, the employee's links, the P15, P16 and P18 features), design-people, ss- and usl-inventory,
+each keeping both sides. The phase commits are now mr-mantle 034017cd and mr-boss 6e73bb39. Qualifications (4 of 4) and
+PeopleSkills, PeopleAccess, PeopleRecruiting, PeopleExpenses (32 of 32) passed after it.
+- Checked and found sound:
+  - Confidentiality on every path: an identity document's or work permit's number is read only at the full level (the person and
+    HR of an employer of theirs: `accessTo` from People.js `checkedAccess`, staff kinds limited to the caller's employers);
+    development reads it as null, a manager and other staff readers read verified qualifications only as kind, dates and
+    validity (no title, issuer, number, reason or file). The same projection serves find#Qualifications (lists, the export of
+    Qualifications' form-list, the Files box), get#PersonDevelopment (Employee360's Skills and reviews, People's row alone:
+    `developmentApps`, so Commons', Insights' and an app with no row show nothing), Today (the user's own, kind and expiry), the
+    `QualificationExpiring` notice (kind and expiry, private), the palette's record link (People.js `qualificationLink`, the person
+    and HR), RecordFiles and Chatter (`get#RecordLinkInfo`'s branch for every caller, authorization off or not, and People's root
+    check). No dataset, search document or Assist tool reads the qualification entities.
+  - `check#Qualifications` answers no number, issuer, title, decision reason or file to any caller; a self-declared level, a
+    waiting, rejected or revoked certificate and one not yet valid meet nothing, an expired one answers expired and one inside
+    thirty days expiring; a person outside the caller's scope answers `unavailable` alone.
+  - Verification: at the revision read, a reason for reject and revoke, the state audit-logged with it (`verificationStatusId`
+    `enable-audit-log`, `_changeReason`); an identity document or work permit is HR's alone to verify; a verified one is renewed,
+    never changed.
+  - `send#ExpiryReminders`: verified, expiring within thirty days and not renewed, once per expiry (`reminderThruDate`), each in its
+    own transaction, a failure logged by the qualification's id and the rest going on.
+  - Projects' `find#StaffingCandidates`: `partyIdList` is optional and only narrows the pool (an empty list leaves no one),
+    `skillSelfDeclared` is an added field; Projects' callers pass neither and WorkResources, Resources and ProjectsAccess pass
+    unchanged. Find available bounds it to the matrix's `scopePartyIds` (the user's scope and filters).
+  - `BOSS_PPL_FILES_SELF` (a one-off probe, not kept, as the demo employee through each root's RecordFiles `filesData`): under
+    People the root's check admits the People hosts alone and the employee sees their own qualification, not their employment's
+    files nor Rafael's permit; under Commons, Admin and Projects the panel answers exactly what Commons' does (their own
+    qualification, a directory person; never an employment's or another's qualification), and Accounting's root refuses it. The
+    grant shows nothing beyond what Commons' panel shows a BOSS user (the provisional finding below names the routes it opens).
+- Fixed:
+  - R1 (high): an HR or development editor reached their own record through their own employment (People's staff admission) and,
+    holding no PEOPLE_SELF_SERVICE, was not "the person": an HR editor verified their own qualification (SELF_APPROVAL only
+    checked the self kind), a development editor recorded their own skill as an evaluation (meeting a requirement), and an HR
+    editor changed their own verified qualification's files. Development.js `accessOf` answers `own` by party; `verify#Qualification`
+    refuses SELF_APPROVAL for it and `canVerify` follows, `store#Skill` records a self-declaration, `check#QualificationAccess`
+    lets an HR editor change their own files only while it waits or was rejected. Spec Qualifications (an HR editor's own
+    verification refused, a development editor's own skill self-declared; both fail on the code as it was).
+  - R2 (the user's call): a manager of a live reporting line evaluates that report's skills without PEOPLE_DEVELOP_EDIT, recorded as
+    the manager's evaluation (`SkillSource` `SksManagerEvaluated`, the manager its assessor), meeting a requirement as an
+    evaluation does; `accessOf`'s `evaluates` and `evaluationSource`, the matrix's and Employee360's `canEvaluate`; verification
+    unchanged. The demo's evaluations (their managers') carry the new source. Specs Qualifications (Max evaluates his report, it
+    meets the requirement, he is refused another person) and PeopleAccess (the manager evaluates Tomas, the reader is refused the
+    same parameters, the manager Services' Kenji); PeopleSkills' manager development record now offers the evaluation.
+  - R3 (the user's call): `EmplPositionClassSkill`'s key gains `fromDate`; `store#JobRequirement` ends the period in effect on a
+    change and starts a new one (a period not started yet changed in place; a change before its start DATES_INVALID), ends every
+    open period on remove, and starts a new period when the skill is required again, never before the last ended (DATES_INVALID);
+    `get#JobClass` and `classRows` read the latest open period of each skill (counted once), Development.js `classRequirements`
+    the period in effect at its date. Every reader and writer checked: Mantle's Positions.js, Development.js and Lookups.js (its use
+    count), BOSS's JobClassDetail through the services and the demo rows (P4's dated to match P18's); Marble's HumanRes screens, the
+    other components and the data files hold none. Spec Qualifications (the change's and removal's periods kept, a change from a
+    later date read at its date).
+  - R4 (medium): a qualification's number reached the model tools (Assist's screen reads of Qualifications for HR):
+    `PartyQualification.referenceNumber` and Qualifications' number fields are `ai-opt-out` (PE-21).
+- Provisional findings (for the lead to number):
+  - `BOSS_PPL_FILES_SELF` grants Shared/RecordFiles.xml by location, so a self-service employee opens the panel under every app
+    root that mounts it (Admin, Projects, Sales and the rest; each root's always-actions run, Accounting's refuses), showing what
+    Commons' panel shows them; a grant for People's mount alone needs the record-files element to name the mounting app, or a
+    People panel location of its own;
+  - a staff reader of the employer (a directory reader, a manager) reads whether a person's work permit or identity document is
+    valid, expiring or expired, and its dates (the staffing projection of find#Qualifications and check#Qualifications); only the
+    number is withheld. Whether right-to-work validity is HR's alone is open;
+  - a verifier may verify a qualification they themselves submitted for the person (an HR or development editor entering and
+    verifying a certificate); only the person's own is refused;
+  - a manager's evaluation and development's replace each other (the latest sets the level); no precedence between sources;
+  - ContactBookServices' party merge map moves PartySkill but not PartySkillEvaluation, PartyQualification or PartyResume, which stay
+    on the merged-away person;
+  - a database with requirement rows written before the key change needs them dated (`fromDate`) before the new key applies; BOSS's
+    demo carries its dates, and no other data file holds any;
+  - mr-boss People.js on master is not Prettier-clean (P16's `openingOptions`); left as merged.
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase, Mantle Qualifications 4 of
+  4 and BOSS PeopleSkills, PeopleAccess, PeopleRecruiting, PeopleExpenses 32 of 32 (PeopleAccess's spec 24.4 s under a load average
+  of 16; 9.8 s of features later at a load of 4, so the 15 s limit was the load's); after the fixes, Mantle Qualifications and
+  PeoplePositions 9 of 9 (Qualifications 2.9 s: 0.73, 0.86, 0.68, 0.63), BOSS PeopleSkills, PeopleAccess, PeopleEmployees and
+  PeoplePositions 32 of 32 (PeopleAccess 9.8 s of features, its P18 feature 0.54 s; PeopleSkills 0.58 s), then Mantle WorkResources,
+  PeopleApprovals and RecordLinks 33 of 33 and BOSS Resources, ProjectsAccess, PeopleRecruiting, PeopleExpenses, PeopleSelfService
+  and TodayPanel 34 of 34. `moqui lint --screens` (release binary): 136 flagged sites, none in the screens P18 or this review
+  touched, no TUI worklist entry for them. Prettier clean on the changed JavaScript but People.js (above). Not run: test-apps, the
+  acceptance suite (PeopleSkillsUsable's manager steps read and do not evaluate, so R2 leaves them as written).
+- For the lead:
+  - budget share beside the Built note's: mr-mantle about +0.5 s (Qualifications' new checks); mr-boss about +0.05 s (PeopleAccess's
+    two evaluations);
+  - merge hot spots beside the Built note's (P17 rebases onto these): mr-mantle `HumanResourcesEntities.xml` (EmplPositionClassSkill's
+    key, SkillSource's values), `Positions.js` (`openRequirements`, `store#JobRequirement`), `Development.js` (`accessOf`,
+    `classRequirements`), `PositionServices.xml`, `DevelopmentServices.xml`; mr-boss `BossPeopleDemoData.xml` (P4's requirement rows
+    now dated; the P18 block), `PeopleAccess.spec.js` (the P18 feature), `PeopleSkills.spec.js`, design-people §5 and §10, §4 here;
+  - for the user's calls: none open; the provisional findings above on `BOSS_PPL_FILES_SELF` and right-to-work validity may want
+    one.
+
 ### P19 — Training
 
 Design §10 Training, TrainingDetail, §15 (the completion certificate); PE-14. After P16 (the assessment form) and
@@ -4990,6 +5087,8 @@ the owner's design.
 | Nov 12, 2026 | An interviewer with self-service only answers their scorecard from SelfService: My interviews on SelfService (People/SelfService and Commons/People/SelfService) lists the interviews the user is on the panel of, each opening MyInterview beside it (People/MyInterview, Commons/People/MyInterview), where the panel member reads their own interview, the candidate's name, the opening and the materials HR shares with the panel, and submits their scorecard once. "Shared with the panel" is a file of the application a recruiter marks shared on ApplicantDetail (none by default, the resume either); a panel member reads nothing else of the application (its stage, source, contact, notes, other files or record host) there or in People. Grants on F28's non-inheritable pattern (`BOSS_PPL_INTERVIEW_SELF`) | The user's call (P16's review). Built in P16's review: `RecruitingServices.find#MyInterviews`, `get#MyInterview`, `share#ApplicationContent`, `get#ApplicationFile`, `EmploymentApplicationContent.panelShared`; design §3 SelfService, §5 ApplicantDetail |
 | Nov 12, 2026 | Free-text form answers (`FormResponseAnswer.valueText`) are opted out of AI for every app's forms, as P16's review built it, not only People's purposes | The user's call: respondents' words reach no model in any app (case feedback comments and tax statement answers included) |
 | Nov 12, 2026 | An applicant's resume is shared with the interview panel by default when attached; other files only when the recruiter marks them; the recruiter can unshare it | The user's call, after P16's review shared nothing by default; P17 builds it |
+| Nov 12, 2026 | A manager with a live reporting line evaluates that report's skills without `PEOPLE_DEVELOP_EDIT`: `store#Skill` records it as the manager's evaluation (`SkillSource` `SksManagerEvaluated`, the manager its assessor), which sets the accepted level and meets a requirement as an evaluation does; the matrix, its terminal twin and Employee360 offer it on the manager's reports. Certificate verification stays the development and HR verifiers' (`verify#Qualification` unchanged) | The user's call on P18's question (built in P18's review, R2; design-people §10 SkillsMatrix; Qualifications and PeopleAccess check a manager evaluating their report and refused another's) |
+| Nov 12, 2026 | A job requirement keeps its dated history: `EmplPositionClassSkill`'s primary key gains `fromDate` (a Mantle entity change), so each period is its own row and readers take the row in effect at their date; removing ends the row, a change ends the period in effect and starts a new one (a period not started yet is changed in place), and requiring the skill again starts a new row, never before the last one ended | The user's call on P18's question (built in P18's review, R3: Positions.js `store#JobRequirement`, `get#JobClass`, `classRows`; Development.js `classRequirements`; BossPeopleDemoData's requirement rows; design-people §5 JobClassDetail). No other reader or writer exists: Marble's HumanRes screens and the data files hold none beyond BOSS's demo |
 
 ## 5. Open questions
 

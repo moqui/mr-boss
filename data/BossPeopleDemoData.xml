@@ -337,20 +337,25 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_STOREMGR" title="Store manager"
             description="Runs a store: its team, opening hours, stock and takings, and the service customers get."/>
     <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_STOREMGR" workTypeEnumId="WktpManagement"/>
-    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_LEAD"/>
-    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_SERVICE"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_LEAD"
+            fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_SERVICE"
+            fromDate="2024-01-01 00:00:00"/>
     <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_ASSOC" title="Sales associate"
             description="Serves customers on the shop floor and at the till, and keeps the shelves stocked."/>
     <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_ASSOC" workTypeEnumId="WktpGeneralLabor"/>
-    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_SERVICE"/>
-    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_POS"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_SERVICE"
+            fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_POS"
+            fromDate="2024-01-01 00:00:00"/>
     <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_MERCH" title="Merchandiser"
             description="Plans the ranges and displays of the stores with the buyers."/>
     <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_MERCH" workTypeEnumId="WktpGeneralOffice"/>
     <mantle.humanres.position.EmplPositionClass emplPositionClassId="BOSS_PPL_JC_TECH" title="Service technician"
             description="Installs and services equipment at customers' sites."/>
     <mantle.humanres.position.EmplPositionClassWorkType emplPositionClassId="BOSS_PPL_JC_TECH" workTypeEnumId="WktpSupport"/>
-    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_TECH" skillTypeEnumId="BOSS_PPL_SK_FIELD"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_TECH" skillTypeEnumId="BOSS_PPL_SK_FIELD"
+            fromDate="2024-01-01 00:00:00"/>
     <mantle.humanres.rate.PayGrade payGradeId="BOSS_PPL_PG_ASSOC" description="Associate" comments="Shop floor and office staff"
             organizationPartyId="ORG_ZIZI_RETAIL"/>
     <mantle.humanres.rate.PayGradeSalary payGradeId="BOSS_PPL_PG_ASSOC" fromDate="2024-01-01 00:00:00" currencyUomId="USD"
@@ -547,7 +552,8 @@ along with this software (see the LICENSE.md file). If not, see
         (people.employee) evaluated at Proficient in customer service, with point of sale only self-declared and no first aid
         certificate (his gaps; the acceptance PeopleSkillsUsable closes the first aid one); Rafael evaluated in both, with a verified
         first aid certificate and a verified work permit (its number HR's and his alone); Hannah evaluated in leadership and service;
-        Kenji in field service, with his electrical safety certificate verified. The evaluations are their managers'. -->
+        Kenji in field service, with his electrical safety certificate verified. The evaluations are their managers' (SksManagerEvaluated,
+        the user's call of Nov 12, 2026). Each requirement period is its own row keyed by its start (EmplPositionClassSkill.fromDate). -->
     <moqui.basic.Enumeration enumId="BOSS_PPL_SK_FIRSTAID" enumTypeId="SkillType" description="First aid"/>
     <moqui.basic.Enumeration enumId="BOSS_PPL_QT_FIRSTAID" enumTypeId="QualificationType" parentEnumId="QualCertification"
             description="First aid certificate" sequenceNum="21"/>
@@ -566,9 +572,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_TECH" skillTypeEnumId="BOSS_PPL_SK_FIELD"
             minimumLevel="3" qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_TOMAS_SVC" partyId="BOSS_PPL_TOMAS"
-            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksEvaluated" skillLevel="3" evaluationDate="2026-03-02 10:00:00"
+            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksManagerEvaluated" skillLevel="3" evaluationDate="2026-03-02 10:00:00"
             assessorPartyId="BOSS_PPL_HANNAH" evidence="Observed on the floor during the spring sale"/>
-    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_TOMAS" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="3" sourceEnumId="SksEvaluated"
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_TOMAS" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="3" sourceEnumId="SksManagerEvaluated"
             partySkillEvaluationId="BOSS_PPL_SE_TOMAS_SVC" evaluatedDate="2026-03-02 10:00:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_TOMAS_POS" partyId="BOSS_PPL_TOMAS"
             skillTypeEnumId="BOSS_PPL_SK_POS" sourceEnumId="SksSelfDeclared" skillLevel="3" evaluationDate="2026-04-10 09:00:00"
@@ -576,29 +582,29 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_TOMAS" skillTypeEnumId="BOSS_PPL_SK_POS" skillLevel="3" sourceEnumId="SksSelfDeclared"
             partySkillEvaluationId="BOSS_PPL_SE_TOMAS_POS" evaluatedDate="2026-04-10 09:00:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_SVC" partyId="BOSS_PPL_RAFAEL"
-            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksEvaluated" skillLevel="2" evaluationDate="2026-03-02 11:00:00"
+            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksManagerEvaluated" skillLevel="2" evaluationDate="2026-03-02 11:00:00"
             assessorPartyId="BOSS_PPL_HANNAH"/>
-    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_RAFAEL" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="2" sourceEnumId="SksEvaluated"
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_RAFAEL" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="2" sourceEnumId="SksManagerEvaluated"
             partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_SVC" evaluatedDate="2026-03-02 11:00:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_POS" partyId="BOSS_PPL_RAFAEL"
-            skillTypeEnumId="BOSS_PPL_SK_POS" sourceEnumId="SksEvaluated" skillLevel="3" evaluationDate="2026-03-02 11:30:00"
+            skillTypeEnumId="BOSS_PPL_SK_POS" sourceEnumId="SksManagerEvaluated" skillLevel="3" evaluationDate="2026-03-02 11:30:00"
             assessorPartyId="BOSS_PPL_HANNAH"/>
-    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_RAFAEL" skillTypeEnumId="BOSS_PPL_SK_POS" skillLevel="3" sourceEnumId="SksEvaluated"
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_RAFAEL" skillTypeEnumId="BOSS_PPL_SK_POS" skillLevel="3" sourceEnumId="SksManagerEvaluated"
             partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_POS" evaluatedDate="2026-03-02 11:30:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_HANNAH_LEAD" partyId="BOSS_PPL_HANNAH"
-            skillTypeEnumId="BOSS_PPL_SK_LEAD" sourceEnumId="SksEvaluated" skillLevel="4" evaluationDate="2026-02-16 14:00:00"
+            skillTypeEnumId="BOSS_PPL_SK_LEAD" sourceEnumId="SksManagerEvaluated" skillLevel="4" evaluationDate="2026-02-16 14:00:00"
             assessorPartyId="BOSS_PPL_GRETA"/>
-    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_HANNAH" skillTypeEnumId="BOSS_PPL_SK_LEAD" skillLevel="4" sourceEnumId="SksEvaluated"
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_HANNAH" skillTypeEnumId="BOSS_PPL_SK_LEAD" skillLevel="4" sourceEnumId="SksManagerEvaluated"
             partySkillEvaluationId="BOSS_PPL_SE_HANNAH_LEAD" evaluatedDate="2026-02-16 14:00:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_HANNAH_SVC" partyId="BOSS_PPL_HANNAH"
-            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksEvaluated" skillLevel="4" evaluationDate="2026-02-16 14:30:00"
+            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksManagerEvaluated" skillLevel="4" evaluationDate="2026-02-16 14:30:00"
             assessorPartyId="BOSS_PPL_GRETA"/>
-    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_HANNAH" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="4" sourceEnumId="SksEvaluated"
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_HANNAH" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="4" sourceEnumId="SksManagerEvaluated"
             partySkillEvaluationId="BOSS_PPL_SE_HANNAH_SVC" evaluatedDate="2026-02-16 14:30:00"/>
     <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_KENJI_FIELD" partyId="BOSS_PPL_KENJI"
-            skillTypeEnumId="BOSS_PPL_SK_FIELD" sourceEnumId="SksEvaluated" skillLevel="4" evaluationDate="2026-01-20 09:00:00"
+            skillTypeEnumId="BOSS_PPL_SK_FIELD" sourceEnumId="SksManagerEvaluated" skillLevel="4" evaluationDate="2026-01-20 09:00:00"
             assessorPartyId="BOSS_PPL_AMARA"/>
-    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_KENJI" skillTypeEnumId="BOSS_PPL_SK_FIELD" skillLevel="4" sourceEnumId="SksEvaluated"
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_KENJI" skillTypeEnumId="BOSS_PPL_SK_FIELD" skillLevel="4" sourceEnumId="SksManagerEvaluated"
             partySkillEvaluationId="BOSS_PPL_SE_KENJI_FIELD" evaluatedDate="2026-01-20 09:00:00"/>
     <mantle.humanres.ability.PartyQualification partyQualificationId="BOSS_PPL_QL_KENJI_ELEC" partyId="BOSS_PPL_KENJI"
             qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL" title="Electrical safety, low voltage" issuerName="Electrical Safety Board"

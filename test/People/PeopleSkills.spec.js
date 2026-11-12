@@ -5,8 +5,8 @@
 // available bounded to the people of the user's scope (no one of Services); the terminal twin's one tui render (SkillsMatrixTui, its
 // own template) as HR with the person and skill rows and the commands; Qualifications' one qvt render as HR (Rafael's work permit
 // number shown to HR) and the choices skillTypes, skillLevels and qualificationTypes, each with a selected value off the page; the
-// manager's part of Employee360's Skills and reviews (Tomas's skills and verified qualifications, no resume, nothing to change;
-// the region's render is PeopleEmployees' qvt render of Employee360). The rules are Mantle's Qualifications; access is
+// manager's part of Employee360's Skills and reviews (Tomas's skills and verified qualifications, no resume; his skills hers to
+// evaluate, the user's call of Nov 12, 2026; the region's render is PeopleEmployees' qvt render of Employee360). The rules are Mantle's Qualifications; access is
 // PeopleAccess's.
 // Run: ./moq test mr-boss --spec PeopleSkills
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
@@ -150,7 +150,7 @@ feature("Qualifications as HR shows a work permit's number; the choices of skill
         rendered.output.includes("Add qualification")
         skills == [ids.firstAidSkillId] && types == [ids.firstAidTypeId]
         levels == ["1 Basic", "2 Working", "3 Proficient", "4 Advanced", "5 Expert"]
-        development.showsSkills && !development.showsResume && !development.canEvaluate && !development.canEditResume
+        development.showsSkills && !development.showsResume && development.canEvaluate && !development.canEditResume
         development.skills.map(row => row.skillName).includes("Customer service")
         development.qualifications.every(row => row.verificationStatusId == "QlVerVerified" && row.referenceNumber === undefined)
     }

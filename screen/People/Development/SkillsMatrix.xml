@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     skills they hold), each cell the person's level (a self-declared one labelled so) and whether it meets the requirement, a
     certificate-proved one with its validity (mantle.humanres.DevelopmentServices.get#SkillsMatrix: a development or HR reader's
     employers' current employees, a manager's reports; by employer, department or team, job class, skill and name; paged by person).
-    A development editor clicks a cell to record an evaluation (EvaluateSkill, store#Skill). Find available (design's FindAvailable)
+    A development editor, or a manager for their reports (recorded as the manager's evaluation; the user's call of Nov 12, 2026),
+    clicks a cell to record an evaluation (EvaluateSkill, store#Skill). Find available (design's FindAvailable)
     ranks who has a skill and is free over the days, through Projects' find#StaffingCandidates (owner contract) bounded to the people
     of the user's scope; its cost rate shows only to PAYROLL_VIEW holders for employees (Y2). The terminal twin is SkillsMatrixTui (the
     person and skill list, with the same evaluation and search). Every People user's through the root; the services decide who reads
@@ -50,7 +51,8 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
-    <!-- EvaluateSkill: Mantle checks the evaluator (PEOPLE_DEVELOP_EDIT and the person in scope), the level, the date and the revision -->
+    <!-- EvaluateSkill: Mantle checks the evaluator (PEOPLE_DEVELOP_EDIT and the person in scope, or the person's manager), the level,
+        the date and the revision -->
     <transition name="evaluateSkill">
         <actions><script><![CDATA[
             const value = (name) => { const found = ec.context.get(name); return found == null || found === '' ? null : String(found) }
