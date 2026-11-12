@@ -375,6 +375,7 @@ const mountRoutes = {
     accountingOpenItems: {url: "/qapps/Accounting/Settings/Setup/OpenItems", plain: true},
     commonsContactImport: {url: "/qapps/Commons/Contacts/Import", plain: true},
     projectsWorkItemImport: {url: "/qapps/Projects/WorkItems/Import", plain: true},
+    peopleEmployeeImport: {url: "/qapps/People/Employees/EmployeeImport", plain: true},
     commonsContacts: {url: "/qapps/Commons/Contacts/List", plain: true},
     insightsDatasets: {url: "/qapps/Insights/ReportBuilder/Datasets", plain: true},
     insightsReports: {url: "/qapps/Insights/Reports", plain: true},

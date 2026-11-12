@@ -5171,6 +5171,11 @@ along with this software (see the LICENSE.md file). If not, see
         from People's Approvals or from the notification tray -->
     <moqui.security.user.NotificationTopic topic="PeopleEmploymentChangeApproval"
             linkTemplate="/qapps/People/Employees/Employee360?partyId=${partyId}"/>
+    <!-- impl-people P7 review (the user's call, Nov 11): a People hire's provisioning or a separation's access end waiting for an
+        identity operator (Mantle's IdentityOperatorRequest topic, sent to the employer's operators) opens the operation in Admin's
+        LifecycleDetail, where the operator runs its steps under Admin's delegation rules -->
+    <moqui.security.user.NotificationTopic topic="IdentityOperatorRequest"
+            linkTemplate="/qapps/Admin/Users/LifecycleDetail?operationId=${operationId}"/>
     <!-- impl-people P6 (design-people §4 HireEmployee and EmploymentChange, §1.4's quick create "Hire employee for HR"): the hire and
         employment change wizards are HR's: denied to the root user group, opened to the HR officers (ALWAYS, as the Products
         price areas are) and to the People administrator and ADMIN through their ALWAYS on the root. Mantle's PeopleServices check
@@ -5184,5 +5189,28 @@ along with this software (see the LICENSE.md file). If not, see
                 authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_PPL_EMPLOYMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-people P7 (design-people §12 ChecklistTemplates and EmployeeImport, §4 provisioning; design-admin §4.1): HR's own
+        editors, Checklists and Employee import, files under Employees/ (the user's call, Nov 11: Settings stays the People
+        administrator's): denied to the root user group, opened to the HR officers (ALWAYS, as the wizards above) and to the People
+        administrator and ADMIN through their ALWAYS on the root; Mantle checks PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_IMPORT and the
+        employer again. And People's access requests to Admin's lifecycle, which the tx-commit rules of
+        service/PeopleLifecycle.secas.xml call as the hire's HR officer or the approver whose decision applied a separation: any user
+        may call them (as Mantle's identity services), Mantle admitting only the change's requester, an HR editor of its employer,
+        the one whose decision applied it or an identity operator, with the caller's organizations as the identity scope. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_HR_AREA" description="People HR editors under Employees">
+        <artifacts artifactName="component://mr-boss/screen/People/Employees/(ChecklistTemplates|EmployeeImport)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_HR_AREA_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HR_AREA_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_ACCESS_REQUEST" description="People access requests to Admin's lifecycle">
+        <artifacts artifactName="ironstone\.admin\.LifecycleServices\.request#(Provisioning|AccessEnd)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_ACCESS_REQUEST_ALL" userGroupId="ALL_USERS" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/></authz>
     </artifactGroups>
 </entity-facade-xml>

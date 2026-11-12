@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Employees › Checklists (design-people §12 ChecklistTemplates; style-guide §3.9 Settings; impl-people P7, moved out of
+    Settings by the user's call of Nov 11, HR's area): an employer's
+    onboarding, transfer and offboarding checklist templates (Templates, over mantle.humanres.PeopleServices.find#Checklists) and the
+    steps of the one opened (ChecklistTasks: who does each, its due offset, required or not, what it links to, who sees it and
+    whether it is protected; store#ChecklistStep over mantle.work.ProcessServices.store#ProcessStep). New checklist (the one
+    primary), a template's Rename and End, Add step, a step's Edit and End: nothing is deleted, and an ended template or step starts
+    in no new checklist while the checklists started stay. A hire, an applied transfer and an applied separation start the
+    employer's templates of their kind after they commit. HR's: an HR reader reads them, an HR editor changes them (Mantle checks
+    PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer on every call); BOSS_PPL_HR_AREA opens it to HR (and to the People
+    administrator and ADMIN through their ALWAYS on the root). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Checklists" default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <parameter name="workEffortId"/>
+    <parameter name="includeEnded"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a template new, renamed or ended: Mantle checks the HR editor, the employer and the revision -->
+    <transition name="storeChecklist">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#Checklist" out-map="stored"
+                    in-map="{workEffortId:(workEffortId || null), organizationPartyId:(organizationPartyId || null),
+                        lifecycleKindEnumId:(lifecycleKindEnumId || null), workEffortName:(workEffortName ?? null), description:(description ?? null),
+                        expectedRevision:(expectedRevision || null), end:(endTemplate == 'Y'), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endTemplate == 'Y' ? 'Checklist ended' : 'Checklist saved'}</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId" from="endTemplate == 'Y' ? null : stored?.workEffortId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- a step new, changed or ended: Mantle checks the HR editor, the template's employer and the step's values -->
+    <transition name="storeChecklistStep">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#ChecklistStep"
+                    in-map="{templateWorkEffortId:templateWorkEffortId, workEffortId:(stepWorkEffortId || null),
+                        workEffortName:(workEffortName ?? null), description:(description ?? null), sequenceNum:(sequenceNum ?? null),
+                        isRequired:(isRequired ?? null), roleTypeId:(roleTypeId ?? null), assigneePartyId:(assigneePartyId ?? null),
+                        dueOffsetDays:(dueOffsetDays ?? null), sourceLinkEnumId:(sourceLinkEnumId ?? null),
+                        visibilityEnumId:(visibilityEnumId ?? null), isProtected:(stepWorkEffortId || isProtected ? (isProtected == 'Y' ? 'Y' : 'N') : null),
+                        end:(endStep == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endStep == 'Y' ? 'Step ended' : 'Step saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId" from="templateWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId" from="templateWorkEffortId"/></error-response>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <if condition="can.hrView">
+            <service-call name="mantle.humanres.PeopleServices.find#Checklists" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:(organizationPartyId || null), includeEnded:(includeEnded == 'Y')}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            checklistsFound = !!found?.checklists
+            canEditChecklists = !!found?.canEdit
+            checklistRows = Array.from(found?.checklists || [])
+            selected = checklistRows.find(row => row.workEffortId === workEffortId) || null
+            stepRows = Array.from(selected?.steps || []).map(row => Object.assign({}, row, {
+                templateWorkEffortId: selected.workEffortId, organizationPartyId: selected.organizationPartyId,
+                whoText: row.assigneeName ? row.roleText.replace(' (a named person)', '') + ': ' + row.assigneeName : row.roleText,
+                factsText: [row.requiredText, row.sourceLinkText, row.visibilityText, row.isProtected === 'Y' ? 'Protected' : ''].filter(Boolean).join(' · ')}))
+            findValues = {organizationPartyId: organizationPartyId || null, includeEnded: includeEnded || null}
+            newChecklist = {organizationPartyId: organizationPartyId || people.activeOrganizationPartyId || people.organizationPartyIds?.[0] || null,
+                lifecycleKindEnumId: 'ClkOnboarding'}
+            newStep = selected ? {templateWorkEffortId: selected.workEffortId, roleTypeId: 'Employee', isRequired: 'Y',
+                visibilityEnumId: 'ChvStaff', dueOffsetDays: '0', choiceOrganizationPartyId: selected.organizationPartyId} : {}
+            stateColors = {true: 'positive', false: 'grey-8'}
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="NotHrReader" condition="!can.hrView">
+            <widgets>
+                <label text="Checklists" type="h5"/>
+                <label text="Lifecycle checklists are HR's." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Checklists" condition="can.hrView">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Checklists" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="The tasks a hire, a transfer or a separation starts after it is made, each assigned by who does it and due from its date."/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="NewChecklistDialog" button-text="New checklist" icon="sym_o_add" type="primary" width="560"
+                                title="New checklist" condition="canEditChecklists">
+                            <form-single name="NewChecklist" transition="storeChecklist" map="newChecklist">
+                                <field name="organizationPartyId">
+                                    <default-field title="Employer">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'employers', selected:newChecklist.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="lifecycleKindEnumId">
+                                    <default-field title="Starts with">
+                                        <drop-down>
+                                            <option key="ClkOnboarding" text="A hire (onboarding)"/>
+                                            <option key="ClkTransfer" text="A transfer"/>
+                                            <option key="ClkOffboarding" text="A separation (offboarding)"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="description"><default-field title="Description"><text-area rows="3" cols="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Create checklist"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+
+                <form-single name="FindChecklists" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeEnded"><default-field title=" "><check><option key="Y" text="Include ended checklists and steps"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="organizationPartyId"/><field-ref name="includeEnded"/><field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+
+                <container-box>
+                    <box-header title="Templates"/>
+                    <box-body-nopad>
+                        <form-list name="Templates" list="checklistRows" skip-form="true" paginate="false" condition="checklistRows.length">
+                            <field name="workEffortName">
+                                <default-field title="Checklist">
+                                    <link url="." text="${workEffortName}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId, organizationPartyId:organizationPartyId, includeEnded:includeEnded}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Starts with"><display/></default-field></field>
+                            <field name="stepCount"><default-field title="Steps"><display format="#,##0"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[active]}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="RenameChecklist_${workEffortId}" button-text="Rename" icon="sym_o_edit" width="560"
+                                            title="Rename ${workEffortName}" condition="canEditChecklists &amp;&amp; active">
+                                        <form-single name="RenameChecklist" transition="storeChecklist"
+                                                map="{workEffortId:workEffortId, expectedRevision:revision, workEffortName:workEffortName,
+                                                    description:description}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="description"><default-field title="Description"><text-area rows="3" cols="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndChecklist_${workEffortId}" button-text="End" icon="sym_o_event_busy" width="520"
+                                            title="End ${workEffortName}" condition="canEditChecklists &amp;&amp; active">
+                                        <label type="p" text="${workEffortName} starts in no new ${kindText.toLowerCase()} from now; the checklists it started stay."/>
+                                        <form-single name="EndChecklist" transition="storeChecklist"
+                                                map="{workEffortId:workEffortId, expectedRevision:revision, endTemplate:'Y'}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="endTemplate"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End checklist"><submit type="danger" confirmation="End the checklist ${workEffortName}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="workEffortName"/><field-ref name="kindText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="checklistsFound &amp;&amp; !checklistRows.length"
+                                text="No checklist yet. Start one with New checklist: the tasks of a hire, a transfer or a separation."/>
+                        <label type="p" style="q-pa-md text-negative" condition="!checklistsFound"
+                                text="The checklists are not available just now."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="Steps" condition="selected">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Steps of ${selected.workEffortName}"/>
+                            <box-toolbar>
+                                <container-dialog id="AddStepDialog" button-text="Add step" icon="sym_o_add" width="720"
+                                        title="Add a step to ${selected.workEffortName}" condition="canEditChecklists &amp;&amp; selected.active">
+                                    <form-single name="AddStep" transition="storeChecklistStep" map="newStep">
+                                        <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="choiceOrganizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="workEffortName"><default-field title="Task"><text-line size="40"/></default-field></field>
+                                        <field name="description"><default-field title="What to do" tooltip="Only what the person doing it needs"><text-area rows="3" cols="50"/></default-field></field>
+                                        <field name="roleTypeId">
+                                            <default-field title="Who does it">
+                                                <drop-down>
+                                                    <option key="Employee" text="The employee"/>
+                                                    <option key="Manager" text="Their manager"/>
+                                                    <option key="HumanResourcesManager" text="The HR officer"/>
+                                                    <option key="SysAdmin" text="IT (a named person)"/>
+                                                    <option key="Assignee" text="A named person"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="assigneePartyId">
+                                            <default-field title="Named person" tooltip="For IT or a named person: an employee of the employer">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'employees', choiceOrganizationPartyId:selected.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="dueOffsetDays"><default-field title="Due (days after)" tooltip="Negative: days before the date"><text-line size="5" input-type="number"/></default-field></field>
+                                        <field name="isRequired">
+                                            <default-field title="Required"><drop-down><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down></default-field>
+                                        </field>
+                                        <field name="sourceLinkEnumId">
+                                            <default-field title="Links to">
+                                                <drop-down allow-empty="true">
+                                                    <option key="ClsItAccess" text="IT access (the account request)"/>
+                                                    <option key="ClsEquipmentReturn" text="Equipment return"/>
+                                                    <option key="ClsExitInterview" text="Exit interview"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="visibilityEnumId">
+                                            <default-field title="Who sees it">
+                                                <drop-down><option key="ChvStaff" text="Staff only"/><option key="ChvEmployee" text="The employee too"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="isProtected">
+                                            <default-field title=" "><check><option key="Y" text="Protected: kept off phones"/></check></default-field>
+                                        </field>
+                                        <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add step"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-ref name="workEffortName"/>
+                                            <field-ref name="description"/>
+                                            <field-row><field-ref name="roleTypeId"/><field-ref name="assigneePartyId"/></field-row>
+                                            <field-row><field-ref name="dueOffsetDays"/><field-ref name="isRequired"/></field-row>
+                                            <field-row><field-ref name="sourceLinkEnumId"/><field-ref name="visibilityEnumId"/></field-row>
+                                            <field-row><field-ref name="isProtected"/><field-ref name="sequenceNum"/></field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="ChecklistTasks" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
+                                    <field name="workEffortName"><default-field title="Task"><display/></default-field></field>
+                                    <field name="whoText"><default-field title="Who does it"><display/></default-field></field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="factsText"><default-field title="Details"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="EditStep_${workEffortId}" button-text="Edit" icon="sym_o_edit" width="720"
+                                                    title="Edit ${workEffortName}" condition="canEditChecklists &amp;&amp; !ended">
+                                                <form-single name="EditStep" transition="storeChecklistStep"
+                                                        map="{templateWorkEffortId:templateWorkEffortId, stepWorkEffortId:workEffortId, workEffortName:workEffortName,
+                                                            description:description, roleTypeId:roleTypeId, assigneePartyId:assigneePartyId,
+                                                            dueOffsetDays:dueOffsetDays, isRequired:isRequired, sourceLinkEnumId:sourceLinkEnumId,
+                                                            visibilityEnumId:visibilityEnumId, isProtected:isProtected, sequenceNum:sequenceNum}">
+                                                    <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortName"><default-field title="Task"><text-line size="40"/></default-field></field>
+                                                    <field name="description"><default-field title="What to do"><text-area rows="3" cols="50"/></default-field></field>
+                                                    <field name="roleTypeId">
+                                                        <default-field title="Who does it">
+                                                            <drop-down>
+                                                                <option key="Employee" text="The employee"/>
+                                                                <option key="Manager" text="Their manager"/>
+                                                                <option key="HumanResourcesManager" text="The HR officer"/>
+                                                                <option key="SysAdmin" text="IT (a named person)"/>
+                                                                <option key="Assignee" text="A named person"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="assigneePartyId">
+                                                        <default-field title="Named person">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:organizationPartyId, selected:assigneePartyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="dueOffsetDays"><default-field title="Due (days after)"><text-line size="5" input-type="number"/></default-field></field>
+                                                    <field name="isRequired">
+                                                        <default-field title="Required"><drop-down><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down></default-field>
+                                                    </field>
+                                                    <field name="sourceLinkEnumId">
+                                                        <default-field title="Links to">
+                                                            <drop-down allow-empty="true">
+                                                                <option key="ClsItAccess" text="IT access (the account request)"/>
+                                                                <option key="ClsEquipmentReturn" text="Equipment return"/>
+                                                                <option key="ClsExitInterview" text="Exit interview"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="visibilityEnumId">
+                                                        <default-field title="Who sees it">
+                                                            <drop-down><option key="ChvStaff" text="Staff only"/><option key="ChvEmployee" text="The employee too"/></drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="isProtected">
+                                                        <default-field title=" "><check><option key="Y" text="Protected: kept off phones"/></check></default-field>
+                                                    </field>
+                                                    <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                    <field-layout>
+                                                        <field-ref name="workEffortName"/>
+                                                        <field-ref name="description"/>
+                                                        <field-row><field-ref name="roleTypeId"/><field-ref name="assigneePartyId"/></field-row>
+                                                        <field-row><field-ref name="dueOffsetDays"/><field-ref name="isRequired"/></field-row>
+                                                        <field-row><field-ref name="sourceLinkEnumId"/><field-ref name="visibilityEnumId"/></field-row>
+                                                        <field-row><field-ref name="isProtected"/><field-ref name="sequenceNum"/></field-row>
+                                                        <field-ref name="submitButton"/>
+                                                    </field-layout>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="EndStep_${workEffortId}" button-text="End" icon="sym_o_event_busy" width="520"
+                                                    title="End ${workEffortName}" condition="canEditChecklists &amp;&amp; !ended">
+                                                <label type="p" text="${workEffortName} is left out of new checklists from now; the tasks already made stay."/>
+                                                <form-single name="EndStep" transition="storeChecklistStep"
+                                                        map="{templateWorkEffortId:templateWorkEffortId, stepWorkEffortId:workEffortId, endStep:'Y'}">
+                                                    <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="endStep"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="End step"><submit type="danger" confirmation="End the step ${workEffortName}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <label text="Ended" type="span" style="m-muted" condition="ended"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workEffortName"/><field-ref name="whoText"/></column>
+                                        <column><field-ref name="dueText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!stepRows.length"
+                                        text="No step yet. Add the first with Add step."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

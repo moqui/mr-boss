@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The People context of the shared EquipmentDetail (impl-people P7; design-people §13 EquipmentDetail, review Y6, F52): a piece of
+    equipment a person the user reads as HR holds or held (peopleEquipment from mantle.humanres.PeopleServices.get#EquipmentCustody):
+    the record header (the asset, its product and serial, its state and location; never cost) and Custody (the holders, current
+    first in time order, each with its open return task, and End assignment for an HR editor: the receiving custodian, an employee of
+    the employer, takes it through return#Equipment, which ends every other holder of the role and completes the return task). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PeopleEquipment" condition="recordFound &amp;&amp; appRoot == 'People'">
+            <actions>
+                <set field="custodyRows" from="Array.from(peopleEquipment.custodyList || [])"/>
+            </actions>
+            <widgets>
+                <link url="${sharedLinks['Employees']}" text="Employees" link-type="anchor" icon="arrow_back"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${peopleEquipment.asset.assetName}" type="h5"/>
+                            <label text="${[peopleEquipment.asset.productName, peopleEquipment.asset.serialNumber ? 'Serial ' + peopleEquipment.asset.serialNumber : '',
+                                    peopleEquipment.asset.facilityName].filter(Boolean).join(' · ')}" type="p" style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <label text="${peopleEquipment.asset.statusText}" type="span" condition="peopleEquipment.asset.statusText"/>
+                        </container>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Custody"/>
+                    <box-body-nopad>
+                        <form-list name="PeopleCustody" list="custodyRows" skip-form="true" paginate="false" condition="custodyRows.length">
+                            <field name="holderName"><default-field title="Held by"><display/></default-field></field>
+                            <field name="roleText"><default-field title="As"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Until"><display/></default-field></field>
+                            <field name="returnTaskId">
+                                <default-field title="Return task">
+                                    <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="Open" link-type="anchor"
+                                            parameter-map="{workEffortId:returnTaskId}" condition="returnTaskId"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ReturnEquipment_${partyId}_${roleTypeId}" button-text="End assignment" icon="sym_o_assignment_return"
+                                            width="560" title="Return ${peopleEquipment.asset.assetName} from ${holderName}" condition="canReturn">
+                                        <label type="p" text="The equipment goes to the person receiving it; the holding of ${holderName} ends now and its return task is completed."/>
+                                        <form-single name="ReturnEquipment" transition="returnEquipment"
+                                                map="{assetId:assetId, holderPartyId:partyId, roleTypeId:roleTypeId}">
+                                            <field name="assetId"><default-field><hidden/></default-field></field>
+                                            <field name="holderPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="roleTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="newPartyId">
+                                                <default-field title="Received by" tooltip="An employee of the employer, who now holds it">
+                                                    <drop-down>
+                                                        <dynamic-options transition="custodianChoices" server-search="true" min-length="0"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="End assignment">
+                                                    <submit type="danger" confirmation="Return ${peopleEquipment.asset.assetName} from ${holderName}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="holderName"/><field-ref name="fromDateText"/></column>
+                                <column><field-ref name="roleText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

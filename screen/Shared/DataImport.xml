@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="stage">
         <actions>
             <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
-            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <script>if (!importMount.canRun) throw new Error(importMount.appRoot == 'People' ? 'Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT' : 'ADMIN_TRANSFER_RUN is required')</script>
             <service-call name="org.moqui.admin.DataTransferServices.stage#Import" out-map="result"
                     in-map="{targetId:targetId, organizationPartyId:organizationPartyId, kindId:kindId, importFile:importFile,
                         sourceText:sourceText, delimiter:delimiter, updateMode:updateMode, forceNew:(forceNew == 'true' || forceNew === true)}"/>
@@ -52,7 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="mapping">
         <actions>
             <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
-            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <script>if (!importMount.canRun) throw new Error(importMount.appRoot == 'People' ? 'Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT' : 'ADMIN_TRANSFER_RUN is required')</script>
             <service-call name="ironstone.shared.DataImportServices.map#Import" in-map="context" out-map="result"/>
             <if condition="!ec.message.hasError() &amp;&amp; result?.refused"><script>ec.message.addMessage(result.reason, 'warning')</script></if>
         </actions>
@@ -65,7 +65,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="validate">
         <actions>
             <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
-            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <script>if (!importMount.canRun) throw new Error(importMount.appRoot == 'People' ? 'Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT' : 'ADMIN_TRANSFER_RUN is required')</script>
             <service-call name="org.moqui.admin.DataTransferServices.validate#Import" out-map="result"
                     in-map="{targetId:targetId, operationKey:operationKey, mappingRevision:mappingRevision}"/>
             <if condition="!ec.message.hasError() &amp;&amp; result?.refused"><script>ec.message.addMessage(result.reason, 'warning')</script></if>
@@ -79,7 +79,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="apply">
         <actions>
             <!-- the mount's own rule, besides the target's and its owner's: under Admin an import is run with ADMIN_TRANSFER_RUN -->
-            <script>if (!importMount.canRun) throw new Error('ADMIN_TRANSFER_RUN is required')</script>
+            <script>if (!importMount.canRun) throw new Error(importMount.appRoot == 'People' ? 'Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT' : 'ADMIN_TRANSFER_RUN is required')</script>
             <service-call name="org.moqui.admin.DataTransferServices.apply#Import" out-map="result"
                     in-map="{targetId:targetId, operationKey:operationKey, inputFingerprint:inputFingerprint,
                         selectedRowIds:(selectedRowIds ? [selectedRowIds] : null)}"/>
