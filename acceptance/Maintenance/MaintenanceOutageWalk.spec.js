@@ -218,7 +218,8 @@ feature("the supervisor restores the compressor from Downtime with the follow-up
         restored.errors.length == 0
         row.thruDate != null
         row.dispositionEnumId == "MdispRestricted"
-        row.openWorkReason.startsWith("Runs on the old fan motor")[("WeInPlanning", "WeApproved")].includes(followUp.statusId)
+        row.openWorkReason.startsWith("Runs on the old fan motor")
+        followUp.statusId == "WeInPlanning" || followUp.statusId == "WeApproved"
         availability != "Out of service"
         stops.downtimeList[0].outageText.startsWith("Restored")
     }

@@ -33,7 +33,8 @@ function as(user, service, parameters) {
 }
 const rows = (entity, conditions) => Array.from(ec.entity.find(entity).condition(conditions).disableAuthz().list())
 const one = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().one()
-const revisionOf = requestId => Number(one("mantle.request.Request", {requestId}).claimRevision || 0)
+// as the form posts it, a string: the screen reads a missing revision as claimRevision || null, so a number 0 would be missing
+const revisionOf = requestId => String(one("mantle.request.Request", {requestId}).claimRevision ?? 0)
 const notices = requestId =>
     rows("moqui.security.user.NotificationMessage", {topic: "WarrantyRepairFinished", recordId: requestId}).length
 
@@ -129,16 +130,21 @@ feature(
                 assetMaintenanceId: state.assetMaintenanceId
             })[0]?.workEffortId
             const detail = asUser(tech, () => page("WorkOrders/WorkOrderDetail", {workEffortId: state.workEffortId}))
-            return {consented, linked, detail}
+            // the charge and its consent are on the Overview tab, which the shell loads on its own
+            const overview = asUser(tech, () =>
+                page("WorkOrders/WorkOrderDetail/Overview", {workEffortId: state.workEffortId, lastStandalone: "true"})
+            )
+            return {consented, linked, detail, overview}
         },
-        then({consented, linked, detail}) {
+        then({consented, linked, detail, overview}) {
             consented.errors.length == 0
             linked.errors.length == 0
             state.workEffortId != null
             one("mantle.product.asset.Asset", {assetId: state.repair.assetId}).ownerPartyId == state.repair.customerPartyId
             detail.errors.length == 0
             detail.output.includes("Customer repair for Repair spec customer WALK")
-            detail.output.includes("The customer agreed")
+            overview.errors.length == 0
+            overview.output.includes("The customer agreed")
             detail.output.includes("Start")
         }
     }
@@ -158,7 +164,7 @@ feature("the technician starts it, issues a gasket and completes it; the agent i
             assetId: "MNT_SPEC_WALK_GASKETS",
             quantity: 1,
             operationKey: "repair-walk-issue"
-        })
+        }).result
         const completed = as(tech, "mantle.work.MaintenanceServices.transition#MaintenanceWorkOrder", {
             workEffortId: state.workEffortId,
             action: "complete",
@@ -206,14 +212,17 @@ feature("the technician stores the intervention report; the agent sends it to th
             },
             "CustomerService"
         )
-        const closed = asUser(agent, () =>
-            lib.refusal("mantle.request.SupportCaseServices.transition#Case", {
+        const closed = post(
+            agent,
+            "Cases/CaseDetail/transitionCase",
+            {
                 requestId,
                 toStatusId: "ReqCompleted",
                 resolutionEnumId: "RrFixed",
                 reason: "Repaired; the report is sent"
-            })
-        )
+            },
+            "CustomerService"
+        ).errors.join(" | ")
         return {report, stored, assessmentOutput: String(assessment.output || ""), sent, closed}
     },
     then({report, stored, assessmentOutput, sent, closed}) {

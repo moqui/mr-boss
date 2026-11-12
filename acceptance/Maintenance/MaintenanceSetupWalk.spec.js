@@ -138,7 +138,9 @@ feature("maint.resources imports twelve pieces of equipment with starting meters
         const csv = [header].concat(lines).join("\n")
         const wizard = (path, parameters) =>
             asUser(users.resources, () => page("Equipment/EquipmentImport/Index/" + path, parameters, "html"))
-        const staged = opened(wizard("stage", {organizationPartyId: ids.organizationId, sourceText: csv}))
+        // a transition: it redirects to the wizard's next step when it succeeds
+        const stage = wizard("stage", {organizationPartyId: ids.organizationId, sourceText: csv})
+        const staged = (stage.status == 200 || stage.status == 302) && stage.errors.length == 0
         const key = rows("moqui.server.TransferBatch", {targetId: "equipment", userId: "BOSS_MNT_RESOURCES"}).sort((a, b) =>
             String(b.transferId).localeCompare(String(a.transferId))
         )[0]?.transferId

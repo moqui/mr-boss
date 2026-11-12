@@ -123,7 +123,14 @@ feature("the planner creates the work order; a second report of the same fault i
 
 feature("an operator's equipment fault stop in Manufacturing appears in Retail's Requests and is made one work order", {
     when() {
-        const opened = asUser(operator, () =>
+        // as Manufacturing's Downtime transitions: the record check, then the Mantle verb, whose own checks decide
+        const asTransition = action =>
+            asUser(operator, () => {
+                invoke("ironstone.manufacturing.AccessServices.check#Record", {recordType: "workCenter", recordId: "BOSS_MFG_LINE_A"})
+                ec.artifactExecution.disableAuthz()
+                return action()
+            })
+        const opened = asTransition(() =>
             invoke("mantle.work.ProductionServices.store#ProductionDowntime", {
                 operationKey: key("walk-stop"),
                 action: "open",
@@ -133,7 +140,7 @@ feature("an operator's equipment fault stop in Manufacturing appears in Retail's
                 description: "Gripper jams"
             })
         ).result
-        const requested = asUser(operator, () =>
+        const requested = asTransition(() =>
             invoke("mantle.work.ProductionServices.request#ProductionMaintenance", {
                 operationKey: key("walk-request"),
                 productionDowntimeId: opened.productionDowntimeId,
