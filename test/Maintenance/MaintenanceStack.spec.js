@@ -4,7 +4,7 @@
 // and a facility open Maintenance, a work order not assigned to the technician is left to the other providers; the work order and
 // technician instructions print's one html-print render (the work order, its team and technicians, its QR, no procedure and the
 // sign-off line, no cost); Assist's Log as note and Send as message (each form's one qvt render) filing on the work order, Retail's
-// planner refused. Mantle's rules (the
+// planner and another technician refused, a forged record of the message form too (review R2). Mantle's rules (the
 // projected calendars, a PUT refused 403, the calendar files, Report a problem from a chat message, the video call) are Mantle's
 // MaintenanceStack; the skills resolve by their aliases in test/skill-retrieval.json (./moq test mr-boss --skills); the access
 // cases are MaintenanceAccess's; the "usable when" is the acceptance MaintenanceStackWalk.
@@ -152,9 +152,27 @@ feature("Assist's Log as note and Send as message file the answer on the work or
         )
         // Retail's planner may not note Services' work order
         const otherNoted = post(users.retailPlanner, "LogNote/logNote", Object.assign({noteText: "Not theirs"}, record))
-        return {noteForm, messageForm, noted, sent, otherNoted, added: linked() - before}
+        // nor file a message on it by the form's hidden fields; nor maint.tech2 on work not assigned to them (review R2)
+        const forged = user =>
+            post(
+                user,
+                "SendMessage/sendMessage",
+                Object.assign(
+                    {
+                        toValue: "party:" + ids.techPartyId,
+                        subject: "Forged",
+                        messageText: "Not theirs to file",
+                        messageRecordEntity: WORK,
+                        messageRecordId: ids.inProgressOrderId
+                    },
+                    record
+                )
+            )
+        const otherSent = forged(users.retailPlanner)
+        const unassignedSent = forged(users.tech2)
+        return {noteForm, messageForm, noted, sent, otherNoted, otherSent, unassignedSent, added: linked() - before}
     },
-    then({noteForm, messageForm, noted, sent, otherNoted, added}) {
+    then({noteForm, messageForm, noted, sent, otherNoted, otherSent, unassignedSent, added}) {
         noteForm.errors.length == 0
         noteForm.output.includes("Log the note")
         messageForm.errors.length == 0
@@ -162,6 +180,8 @@ feature("Assist's Log as note and Send as message file the answer on the work or
         noted.length == 0
         sent.length == 0
         otherNoted.join(" ").includes("not available")
+        otherSent.join(" ").includes("not available")
+        unassignedSent.join(" ").includes("not assigned") || unassignedSent.join(" ").includes("not available")
         added == 2
     }
 })

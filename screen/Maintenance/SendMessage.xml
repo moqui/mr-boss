@@ -36,6 +36,13 @@ along with this software (see the LICENSE.md file). If not, see
                 const words = String(messageText || '').trim()
                 if (!toValue) ec.message.addError(ec.l10n.localize('Choose who to send it to'))
                 else if (!words) ec.message.addError(ec.l10n.localize('Write the message'))
+                // the record it is filed on, checked again as Maintenance checks it (review R2): the form's hidden fields are the client's
+                const fileType = messageRecordEntity ? ({'mantle.work.effort.WorkEffort': 'workOrder', 'mantle.product.asset.Asset': 'asset',
+                    'mantle.facility.Facility': 'facility'})[messageRecordEntity] || null : null
+                if (!ec.message.hasError() && messageRecordEntity && (!fileType || !messageRecordId))
+                    ec.message.addError(ec.l10n.localize('A message is filed on a work order, equipment or a facility'))
+                if (!ec.message.hasError() && fileType) ec.service.sync().name('ironstone.maintenance.AccessServices.check#Record')
+                        .parameters({appRoot: appRoot, recordType: fileType, recordId: messageRecordId}).call()
                 if (!ec.message.hasError()) {
                     const escape = (line) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
                     const body = words.split(/\r?\n\s*\r?\n/).map((part) => '<p>' + part.split(/\r?\n/).map(escape).join('<br>') + '</p>').join('')

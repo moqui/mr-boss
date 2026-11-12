@@ -18,7 +18,8 @@
 // work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
 // accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P19's stack providers
 // (a work order's record card and a caller's work for its organization's planner, not a resource administrator, Retail's planner or
-// a requester without the root; Comms' Report a problem on a chat message for a user who may report, not another app's user),
+// a requester without the root; Comms' Report a problem on a chat message for a user who may report, not another app's user; the
+// message read under Comms' room check with the user's own filters, a record room of Retail's forklift refused: review R1),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1148,6 +1149,71 @@ feature(
             refused(out.requesterCall)
             out.requesterActions.includes("maintenance.reportProblem")
             !out.otherAppActions.includes("maintenance.reportProblem")
+        }
+    }
+)
+
+feature(
+    "Report a problem from a chat message reads it under Comms' room check with the user's own filters: a room of Retail's record is refused, a public room's message filed",
+    {
+        when() {
+            // a record room of Retail's forklift (read by those who may see the forklift) and a public room, made by the system
+            const made = system(() => {
+                const room = (fields, body) => {
+                    const chatRoomId = call("org.moqui.chat.ChatServices.create#Room", fields).chatRoomId
+                    const eventSeq = call("org.moqui.chat.ChatServices.send#Message", {chatRoomId, body}).eventSeq
+                    return {chatRoomId, eventSeq}
+                }
+                return {
+                    retail: room(
+                        {
+                            roomTypeEnumId: "CrtRecord",
+                            visibilityEnumId: "CrvRecord",
+                            recordEntityName: "mantle.product.asset.Asset",
+                            recordId: ids.otherAssetId,
+                            roomName: "Spec forklift room"
+                        },
+                        "<p>Forklift mast chain is frayed</p>"
+                    ),
+                    open: room(
+                        {roomTypeEnumId: "CrtPublic", visibilityEnumId: "CrvUsers", roomName: "Spec maintenance chat"},
+                        "<p>Compressor belt squeals at start</p>"
+                    )
+                }
+            })
+            // the requester's Report a problem from each (ReportProblem's transition, as the Comms action's dialog posts it)
+            const report = (source, summary) =>
+                asUser(users.requester, () =>
+                    page(
+                        "ReportProblem/reportProblem",
+                        {
+                            targetKey: "asset:" + ids.compressorId,
+                            summary,
+                            priority: "5",
+                            operationKey: "spec-mnt-chat-" + source.chatRoomId,
+                            sourceChatRoomId: source.chatRoomId,
+                            sourceEventSeq: String(source.eventSeq)
+                        },
+                        "json",
+                        "Commons"
+                    )
+                )
+            const retail = report(made.retail, "Spec forklift chain")
+            const open = report(made.open, "Spec compressor belt")
+            const filed = summary =>
+                system(() => {
+                    const request = ec.entity.find("mantle.request.Request").condition("requestName", summary).one()
+                    return request
+                        ? ec.entity.find("mantle.request.RequestCommEvent").condition("requestId", request.requestId).count()
+                        : -1
+                })
+            return {retail, open, retailFiled: filed("Spec forklift chain"), openFiled: filed("Spec compressor belt")}
+        },
+        then({retail, open, retailFiled, openFiled}) {
+            !retail.output.includes("Problem reported as request")
+            retailFiled == -1
+            open.output.includes("Problem reported as request")
+            openFiled == 1
         }
     }
 )
