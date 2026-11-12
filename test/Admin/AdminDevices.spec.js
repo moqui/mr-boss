@@ -32,6 +32,11 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
+        // a device another component's spec left under a name this one uses (Mantle's SharedDevices, when a run puts both
+        // on one database) is not this spec's refusal to find
+        ec.artifactExecution.disableAuthz()
+        ec.entity.find(DEVICE).condition("deviceName", "like", "Spec %").deleteAll()
+        ec.artifactExecution.enableAuthz()
     },
     cleanupSpec() {
         ec.message.clearErrors()
