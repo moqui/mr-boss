@@ -25,6 +25,16 @@ spec({
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
+// a message an action answered (a notification) or a dialog shows, or the page's text
+function waitForMessage(page, text) {
+    page.waitFor(
+        text =>
+            Array.from(document.querySelectorAll(".q-notification, .q-dialog, .q-page")).some(node =>
+                node.innerText.includes(text)
+            ),
+        {arg: text}
+    )
+}
 function waitForStatus(page, text) {
     page.waitFor(text => (document.querySelector(".m-record-status")?.innerText || "").trim() === text, {arg: text})
 }
@@ -66,7 +76,7 @@ function respondNext(page, name, fill) {
     const start = page.getByRole("button", {name: "Start this step", exact: true})
     if (start.count()) {
         start.click()
-        waitForText(page, "Step started")
+        waitForMessage(page, "Step started")
     }
     if (fill) fill(page)
     page.getByRole("button", {name: "Record", exact: true}).first().click()
@@ -88,7 +98,7 @@ feature("the planner makes the compressor's service from the AC-200 procedure; t
         planner.text().includes("supervisor")
         planner.getByRole("button", {name: "Assign and schedule", exact: true}).click()
         const dialog = planner.getByRole("dialog")
-        choose(planner, dialog, "Technicians", "Techn", /^Maintenance Technician$/)
+        choose(planner, dialog, "Technicians", "Techn", /^Maintenance Technician( ·|$)/)
         dialog.getByRole("button", {name: "Save", exact: true}).click()
         waitForText(planner, "Maintenance Technician")
         const supervisor = pages["maint.supervisor"]
@@ -110,15 +120,15 @@ feature("the technician works the checklist on a phone: the group's steps, the o
         // the oil change waits for the Prepare group
         waitForText(tech, "Waits for Prepare")
         respondNext(tech, "Isolate and lock out the compressor")
-        waitForText(tech, "Step done")
+        waitForMessage(tech, "Step done")
         respondNext(tech, "Drain the receiver")
-        waitForText(tech, "Step done")
+        waitForMessage(tech, "Step done")
         // the group is complete by its two steps; the oil change is open now and needs a photo
         !tech.text().includes("Waits for Prepare")
         respondNext(tech, "Change the oil", page => attachPhoto(page, "contentFile", "oil.png"))
-        waitForText(tech, "Step done")
+        waitForMessage(tech, "Step done")
         respondNext(tech, "Replace the intake filter")
-        waitForText(tech, "Step done")
+        waitForMessage(tech, "Step done")
     }
 })
 
@@ -129,14 +139,14 @@ feature("the pressure reading fails; a recheck with a photo fails again, and bot
             page.getByLabel("Reading", {exact: true}).last().fill("11")
             page.getByLabel("Notes", {exact: true}).last().fill("Relief valve sticks")
         })
-        waitForText(tech, "the step stays open")
+        waitForMessage(tech, "the step stays open")
         tech.text().includes("is outside 7–9")
         respondNext(tech, "Read the discharge pressure", page => {
             page.getByLabel("Reading", {exact: true}).last().fill("10.2")
             page.getByLabel("Notes", {exact: true}).last().fill("After bleeding the line")
             attachPhoto(page, "contentFile", "gauge.png")
         })
-        waitForText(tech, "the step stays open")
+        waitForMessage(tech, "the step stays open")
         tech.text().includes("Failures: 2") || tech.text().includes("Unresolved")
         // a technician neither waives nor amends
         tech.getByRole("button", {name: "Waive", exact: true}).count() == 0
@@ -144,7 +154,7 @@ feature("the pressure reading fails; a recheck with a photo fails again, and bot
         // the work order cannot be completed with a required step open
         tech.goto(detail(ids.work)).status == 200
         tech.getByRole("button", {name: "Lifecycle", exact: true}).click()
-        waitForText(tech, "Required steps are open")
+        waitForMessage(tech, "Required steps are open")
     }
 })
 
@@ -162,7 +172,7 @@ feature("the supervisor amends the filter step to need a photo; it reopens and t
         supervisor.text().includes("Reopened: Replace the intake filter")
         supervisor.getByLabel("Why", {exact: true}).fill("Photograph every new filter from now on")
         supervisor.getByRole("button", {name: "Amend", exact: true}).last().click()
-        waitForText(supervisor, "Execution amended")
+        waitForMessage(supervisor, "Execution amended")
         const tech = pages["maint.tech"]
         tech.goto(detail(ids.work, "Procedure")).status == 200
         waitForText(tech, "This step needs a file")
@@ -170,7 +180,7 @@ feature("the supervisor amends the filter step to need a photo; it reopens and t
         const respond = tech.getByRole("dialog")
         attachPhoto(tech, "contentFile", "filter.png")
         respond.getByRole("button", {name: "Record", exact: true}).click()
-        waitForText(tech, "Step done")
+        waitForMessage(tech, "Step done")
     }
 })
 
@@ -183,7 +193,7 @@ feature("the supervisor waives the pressure step with a reason, completes and cl
         const waive = supervisor.getByRole("dialog")
         waive.getByLabel("Why it is waived", {exact: true}).fill("Relief valve on order; within tolerance for a week")
         waive.getByRole("button", {name: "Waive", exact: true}).click()
-        waitForText(supervisor, "Step waived")
+        waitForMessage(supervisor, "Step waived")
         supervisor.text().includes("Waived")
         supervisor.goto(detail(ids.work)).status == 200
         supervisor.getByRole("button", {name: "Complete", exact: true}).first().click()
@@ -204,7 +214,7 @@ feature("the supervisor waives the pressure step with a reason, completes and cl
         text.includes("Photograph every new filter")
         // the completed checklist stored at close, as a PDF
         supervisor.evaluate(async workEffortId => {
-            const response = await fetch("/qapps/Maintenance/WorkOrders/WorkOrderDetail/Procedure/printChecklist?workEffortId=" + workEffortId)
+            const response = await fetch("/apps/Maintenance/WorkOrders/WorkOrderDetail/Procedure/printChecklist?workEffortId=" + workEffortId)
             const bytes = new Uint8Array(await response.arrayBuffer())
             return response.status === 200 && String.fromCharCode(...bytes.slice(0, 4)) === "%PDF"
         }, ids.work) == true

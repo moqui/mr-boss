@@ -27,6 +27,13 @@ spec({
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
+// a message an action answered (a notification), or the page's text
+function waitForMessage(page, text) {
+    page.waitFor(
+        text => Array.from(document.querySelectorAll(".q-notification, .q-page")).some(node => node.innerText.includes(text)),
+        {arg: text}
+    )
+}
 // the page fits the phone: nothing scrolls sideways, and nothing failed to render
 function fits(page) {
     page.settle()
@@ -137,7 +144,7 @@ feature("the resource approver approves a booking of Room 101 from BookingReques
         waitForText(approver, "09:00")
         fits(approver) == true
         approver.getByRole("button", {name: "Approve", exact: true}).first().click()
-        waitForText(approver, "booking approved")
+        waitForMessage(approver, "booking approved")
         fits(approver) == true
     }
 })

@@ -26,6 +26,13 @@ spec({
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
+// a message an action answered (a notification), or the page's text
+function waitForMessage(page, text) {
+    page.waitFor(
+        text => Array.from(document.querySelectorAll(".q-notification, .q-page")).some(node => node.innerText.includes(text)),
+        {arg: text}
+    )
+}
 // a weekday three weeks ahead (within Room 101's 90-day horizon and away from the demo's blackout), as yyyy-MM-dd in the browser
 function bookingDay(page) {
     return page.evaluate(() => {
@@ -60,6 +67,8 @@ feature("two people ask for Room 101 at overlapping times: the first waits for a
         ids.day = bookingDay(planner)
         const first = book(planner, ids.day, "14:00", "15:00", firstMeeting)
         first.includes("waits for approval")
+        // the conflict is the transition's refusal: its warning, and the error status of its answer
+        reader.allowProblems(/booked then: Busy|500 Internal Server Error .*bookSlot/)
         const second = book(reader, ids.day, "14:30", "15:30", secondMeeting)
         second.includes("Room 101 Huddle is booked then: Busy")
         !second.includes(firstMeeting)
@@ -98,12 +107,18 @@ feature("the organizer moves the approved meeting and it waits for approval agai
         waitForText(planner, "Pending approval")
         // the approver finds it waiting again in Maintenance's BookingRequests, at its new time, and approves it there
         const approver = pages["maint.booking"]
-        approver.goto("/qapps/Maintenance/Scheduling/BookingRequests").status == 200
+        // the walk's day only: the demo's handover request waits too, and stays waiting for the walks after this one
+        const next = planner.evaluate(
+            day => new Date(Date.parse(day + "T00:00:00Z") + 86400000).toISOString().substring(0, 10),
+            ids.day
+        )
+        approver.goto("/qapps/Maintenance/Scheduling/BookingRequests?fromDate=" + ids.day + "&thruDate=" + next).status == 200
         waitForText(approver, "Room 101 Huddle")
         waitForText(approver, "16:00")
         approver.getByRole("button", {name: "Approve", exact: true}).first().click()
-        waitForText(approver, "booking approved")
-        planner.reload()
+        waitForMessage(approver, "booking approved")
+        // the event again, from the server
+        planner.goto(planner.url().replace(/^[a-z]+:\/\/[^/]+/i, "")).status == 200
         waitForText(planner, "Booked")
     }
 })
