@@ -310,7 +310,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Job classes, positions and pay grades | Mantle, BOSS | JobClasses, JobClassDetail, Positions, PositionDetail, PayGrades | built and reviewed Nov 11, merged |
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | built and reviewed Nov 11, merged |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | built and reviewed Nov 11, merged |
-| P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | — |
+| P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | built and reviewed Nov 11, merged |
 | P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | — |
 | P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | — |
 | P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | — |
@@ -1964,7 +1964,7 @@ EquipmentDetail, Employee360's AssignedEquipment; PE-02, PE-19 (the `employees` 
 - Design edits: design-people (header; §4 as built; HireEmployee, EmploymentChange, EmployeeImport, ChecklistTemplates,
   WorkItemDetail and EquipmentDetail as built); design-admin §4.1 Provisioning from People as built (owner design); design-maintenance
   §4.1 MT-03's first part as built; design-crosscut §3.10's People row.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F137 to F147 in order:
   - People's provisioning and access end wait for an identity operator unless the HR officer is one: Admin's invitation needs an
     inviter with `ADMIN_IDENTITY_MANAGE` at sending and acceptance, so neither HR nor the system can send it. Nothing notifies the
     operators: they find the operation in LifecycleOperations' Needs attention, and the IT task shows it waiting;
@@ -2075,7 +2075,7 @@ the access requests and the import first; the user's four calls of Nov 11 (§4) 
     `Lifecycle.js withdrawAccessEnd` makes its access end `UlopWithdrawn` (waiting steps skipped, memberships and relationships ended
     at the date continued, never a privileged group's) and `cancelChecklists` cancels its checklist and return tasks. Employee360's
     Withdraw shows for it. Spec: PeopleScheduledChanges' last feature.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F148 to F155 in order:
   - `instantiate#WorkProcess` reads its key without a lock: two first runs of one key at once could each make a tree; a key reused for
     another template answers the first template's root;
   - a custody change rolled back after its EECA leaves the return task completed (R4's own transaction); the manager assigned a
@@ -2767,7 +2767,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
