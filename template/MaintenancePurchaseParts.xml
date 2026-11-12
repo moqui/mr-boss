@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of Maintenance's purchasing and outside service (impl-maintenance P10; design-maintenance §3 PurchaseLinks, CompleteWork and
+    the OrderDetail mount row). A screen includes each transition it uses by name (transition-include). Each checks the work order
+    through check#Record first, then calls Mantle's mantle.work.MaintenanceServices, which checks the permission, the scope, the
+    assignment and, for an acceptance, Purchasing's own check again (accept#ServiceItem):
+    - requestPurchase: Request a purchase (link#MaintenancePurchase without an order line), a purchase request of the work's
+      organization linked to the work and submitted to Purchasing's approvers;
+    - linkPurchase: Link an order line (link#MaintenancePurchase with one), a buyer's purchase order line made the work's;
+    - acceptService: Accept outside service (accept#MaintenanceService) with the work's file as evidence;
+    - MaintenanceOrder: OrderDetail under Maintenance (appRoot Maintenance, Maintenance/WorkOrders/OrderDetail), read only: an order
+      with lines of work orders the user reads (get#MaintenanceOrder, read by OrderDetail's actions), each with its work orders and
+      what was accepted, prices only for a price reader. Sourcing, placing, receiving and paying stay Purchasing's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="requestPurchase">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.link#MaintenancePurchase" out-map="requested"
+                    in-map="{workEffortId:workEffortId, operationKey:operationKey, requestName:requestName, description:description,
+                        productId:(productId || null), quantity:quantity, requiredByDate:requiredByDate}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${requested.repeated ? 'Purchase request ' + requested.requestId + ' was made already' : 'Purchase request ' + requested.requestId + ' sent to Purchasing'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="linkPurchase">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.link#MaintenancePurchase" out-map="linked"
+                    in-map="{workEffortId:workEffortId, orderId:orderId, orderItemSeqId:orderItemSeqId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${linked.resultCode == 'LINKED' ? 'Order line ' + orderId + ':' + orderItemSeqId + ' linked' : 'Order line ' + orderId + ':' + orderItemSeqId + ' was linked already'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="acceptService">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <set field="lineKey" from="String(serviceLine || '').split(':')"/>
+            <service-call name="mantle.work.MaintenanceServices.accept#MaintenanceService" out-map="accepted"
+                    in-map="{workEffortId:workEffortId, orderId:lineKey[0], orderItemSeqId:lineKey[1] || null,
+                        acceptedQuantity:acceptedQuantity, workEffortContentId:(workEffortContentId || null), comments:comments,
+                        operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${accepted.alreadyApplied ? 'The acceptance was recorded already' : 'Outside service accepted (' + accepted.totalAccepted + ' accepted in all)'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <widgets>
+        <section name="MaintenanceOrder" condition="appRoot == 'Maintenance'">
+            <actions>
+                <set field="mntItems" from="maintenanceOrder?.items || []"/>
+                <set field="mntPriceRead" from="!!maintenanceOrder?.priceRead"/>
+            </actions>
+            <widgets>
+                <section name="MaintenanceOrderFound" condition="maintenanceOrder">
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader" record-id="${orderId}" title="Purchase order ${orderId}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="${orderId}" type="span" style="m-key-chip text-mono"/>
+                                        <label text="Purchase order${maintenanceOrder.orderName ? ' · ' + maintenanceOrder.orderName : ''}"
+                                                type="h5" style="q-my-none"/>
+                                    </container>
+                                    <label text="From ${maintenanceOrder.vendorName} to ${maintenanceOrder.customerName} · entered ${maintenanceOrder.entryDateText}${maintenanceOrder.grandTotalText ? ' · ' + maintenanceOrder.grandTotalText : ''}"
+                                            type="div" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-primary">${
+                                            WebUtilities.encodeHtml(maintenanceOrder.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: maintenanceOrder.statusText})}]]></text>
+                                        <text type="html">${maintenanceOrder.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Lines for maintenance work · ${mntItems.length}"/>
+                            <box-body-nopad>
+                                <form-list name="MaintenanceOrderItems" list="mntItems" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="description"><default-field title="Item"><display/></default-field></field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Quantity"><display text="${quantityText} ${uomText}"/></default-field>
+                                    </field>
+                                    <field name="unitAmountText" align="right" hide="!mntPriceRead">
+                                        <default-field title="Price"><display/></default-field>
+                                    </field>
+                                    <field name="acceptedText" align="right"><default-field title="Accepted"><display/></default-field></field>
+                                    <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                                    <field name="workText">
+                                        <default-field title="Work order">
+                                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workText}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/><field-ref name="workText"/></column>
+                                        <column><field-ref name="quantityText"/><field-ref name="acceptedText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <label text="Sourcing, placing, receiving and paying for the order are Purchasing's; outside service is accepted on the work order."
+                                type="p" style="text-caption m-muted"/>
+                    </widgets>
+                </section>
+                <section name="MaintenanceOrderNotFound" condition="!maintenanceOrder">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label text="Order ${orderId} is not available: it does not exist or it is linked to none of the work orders you read."
+                                        type="p"/>
+                                <link url="${sharedLinks['WorkOrders/Find']}" text="Back to the work orders" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

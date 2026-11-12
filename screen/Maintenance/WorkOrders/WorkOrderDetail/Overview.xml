@@ -14,10 +14,11 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- WorkOrderDetail's Overview tab (design-maintenance §3 WorkHeader and Assignments; impl-maintenance P3): the work order's facts (its
     target, organization, kind, type, source, severity, priority, estimated hours, planned window, actual start and finish, hold or
-    cancel reason, outcome and the equipment's state after it) with Edit for a planner or supervisor (store#MaintenanceWorkOrder at
-    the revision read: name, description, priority, type, severity, failure mode; the estimate after approval a supervisor's), and
+    cancel reason, outcome and the equipment's state after it; P9: the cost centre and project it is charged to) with Edit for a planner or supervisor (store#MaintenanceWorkOrder at
+    the revision read: name, description, priority, type, severity, failure mode, P9's cost centre and project; the estimate after
+    approval a supervisor's), and
     its team and technicians with Assign and schedule (schedule#MaintenanceWorkOrder: the team, the technicians, the planned
-    window), the one writer of its assignments. -->
+    window), the one writer of its assignments; and its follow-up tasks (P7), each opening WorkItemDetail's Maintenance context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Overview" default-menu-index="10">
     <parameter name="workEffortId"/>
@@ -43,13 +44,23 @@ along with this software (see the LICENSE.md file). If not, see
                 ['Started', workOrder.actualStartText], ['Finished', workOrder.actualCompletionText],
                 ['Held for', workOrder.holdReasonText], ['Cancelled because', workOrder.cancelReasonText],
                 ['Outcome', workOrder.outcomeText], ['Equipment after the work', workOrder.dispositionText],
-                ['Failure mode', workOrder.failureModeText], ['Maintenance record', workOrder.assetMaintenanceStatusText]
+                ['Failure mode', workOrder.failureModeText], ['Maintenance record', workOrder.assetMaintenanceStatusText],
+                ['Cost centre', workOrder.costCenterName], ['Project', workOrder.projectName]
             ].filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])})) : []"/>
         <set field="assignmentList" from="workOrderDetail?.assignmentList || []"/>
+        <!-- P7: the follow-up tasks -->
+        <set field="followUpTaskList" from="null"/>
+        <if condition="workOrder">
+            <service-call name="ironstone.maintenance.WorkItemServices.find#FollowUpTasks" out-map="followUps" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="followUpTaskList" from="followUps?.taskList?.length ? followUps.taskList : null"/>
+        </if>
         <set field="headerValues" from="workOrder ? {workEffortId: workEffortId, expectedRevision: workOrder.revision,
                 workEffortName: workOrder.workEffortName, description: workOrder.description, priority: workOrder.priority != null ? String(workOrder.priority) : '5',
                 estimatedWorkTime: workOrder.estimatedHours, maintenanceTypeEnumId: workOrder.maintenanceTypeEnumId,
-                severityEnumId: workOrder.severityEnumId, failureModeEnumId: workOrder.failureModeEnumId} : {}"/>
+                severityEnumId: workOrder.severityEnumId, failureModeEnumId: workOrder.failureModeEnumId,
+                costCenterId: workOrder.costCenterId, projectWorkEffortId: workOrder.projectWorkEffortId} : {}"/>
         <set field="scheduleValues" from="workOrder ? {workEffortId: workEffortId, expectedRevision: workOrder.revision,
                 teamPartyId: workOrder.teamPartyId, estimatedStartDate: workOrder.estimatedStartDate,
                 estimatedCompletionDate: workOrder.estimatedCompletionDate,
@@ -103,6 +114,25 @@ along with this software (see the LICENSE.md file). If not, see
                                         <drop-down allow-empty="true">
                                             <dynamic-options transition="choices" server-search="true" min-length="0"
                                                     parameter-map="{choice:'failureModes', selected:headerValues.failureModeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <!-- P9: what the work is charged to; its parts' issues carry them into Accounting -->
+                                <field name="costCenterId">
+                                    <default-field title="Cost centre">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'costCenters', selected:headerValues.costCenterId,
+                                                        organizationPartyId:workOrder.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="projectWorkEffortId">
+                                    <default-field title="Project" tooltip="Charges the repair's parts and labor to a project">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'projects', selected:headerValues.projectWorkEffortId,
+                                                        organizationPartyId:workOrder.organizationPartyId}"/>
                                         </drop-down>
                                     </default-field>
                                 </field>
@@ -170,6 +200,25 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body>
                 </container-box>
+                <!-- P7: the work order's follow-up tasks (ordinary tasks linked to it), each opening WorkItemDetail's Maintenance context -->
+                <section name="FollowUpTasks" condition="followUpTaskList?.length &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Follow-up tasks"/>
+                            <box-body>
+                                <section-iterate name="FollowUpRows" list="followUpTaskList" entry="followUp">
+                                    <widgets>
+                                        <container style="row items-center q-gutter-x-sm">
+                                            <link url="${sharedLinks['WorkOrders/WorkItemDetail']}" link-type="anchor" text="${followUp.workEffortName}"
+                                                    parameter-map="{workEffortId:followUp.workEffortId}"/>
+                                            <label text="${followUp.statusText}" type="span" style="text-caption m-muted"/>
+                                        </container>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

@@ -133,6 +133,11 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="WorkProcessApproval"/>
         <!-- P14: preventive work made from a plan, told to the organization's planners (Mantle's topic; its link opens the work order) -->
         <notification-topic topic="MaintenanceDue"/>
+        <!-- P16: a booking waiting for the user's approval (Mantle's topic, approved or denied from Commons' approvals inbox through
+            ResourceBookingServices approve#ResourceBooking and refuse#ResourceBooking; its link opens BookingRequests), and what became
+            of a booking, told its organizer -->
+        <notification-topic topic="ResourceBooking"/>
+        <notification-topic topic="ResourceBookingNotice"/>
         <today-source service="ironstone.maintenance.HomeServices.get#TodayItems" label="Maintenance"/>
         <keymap scope="maintenance">
             <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>

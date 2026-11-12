@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
       work order opens;
     - adoptRecord: an open maintenance record of equipment made a work order (adopt#MaintenanceRecord), which opens;
     - lifecycleAction: an action of the lifecycle (transition#MaintenanceWorkOrder) at the revision read, with its reason or the
-      completion's outcome, disposition and finish (and a meter plan's reading, P14);
+      completion's outcome, disposition and finish (and a meter plan's reading, P14), and (P10) the outside-service line Complete
+      accepts with its evidence;
     - storeWorkOrder: WorkHeader's edit (store#MaintenanceWorkOrder);
     - scheduleWorkOrder: AssignSchedule (schedule#MaintenanceWorkOrder), the team, the technicians and the planned window;
     - startTimer, stopTimer, recordTime: the technician's own time (start#, stop#MaintenanceTimer, record#MaintenanceTime);
@@ -69,13 +70,20 @@ along with this software (see the LICENSE.md file). If not, see
                         holdReasonEnumId:holdReasonEnumId, cancelReasonEnumId:cancelReasonEnumId, outcomeEnumId:outcomeEnumId,
                         dispositionEnumId:dispositionEnumId, failureModeEnumId:failureModeEnumId,
                         actualCompletionDate:actualCompletionDate, offlineIntent:offlineIntent, followUpName:followUpName,
-                        meterValue:meterValue}"/>
+                        meterValue:meterValue,
+                        serviceOrderId:(serviceLine ? String(serviceLine).split(':')[0] : null),
+                        serviceOrderItemSeqId:(serviceLine ? String(serviceLine).split(':')[1] : null),
+                        serviceAcceptedQuantity:(serviceLine ? serviceAcceptedQuantity : null),
+                        serviceEvidenceContentId:(serviceLine ? serviceEvidenceContentId || null : null),
+                        serviceOperationKey:(serviceLine ? serviceOperationKey : null)}"/>
             <script><![CDATA[
                 if (!ec.message.hasError()) {
                     const done = {APPROVED: 'approved', STARTED: 'started', HELD: 'held', RESUMED: 'resumed', COMPLETED: 'completed',
                         CLOSED: 'closed', CANCELLED: 'cancelled'}
                     ec.message.addMessage('Work order ' + workEffortId + ' ' + (done[moved.resultCode] || moved.resultCode), 'success')
                     // P5: the downtime the action recorded or linked, and a completion's follow-up
+                    // P10: the outside service accepted with the completion
+                    if (moved.serviceAcceptanceId) ec.message.addMessage('Outside service accepted', 'success')
                     if (moved.followUpWorkEffortId) ec.message.addMessage('Follow-up work order ' + moved.followUpWorkEffortId + ' created', 'success')
                     if (moved.resourceUnavailabilityId) ec.message.addMessage('The ' + (moved.resultCode === 'STARTED' ? 'target is out of service' : 'target stays out of service') + ' (outage ' + moved.resourceUnavailabilityId + ')', 'info')
                 }
@@ -96,7 +104,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{workEffortId:workEffortId, expectedRevision:expectedRevision, workEffortName:workEffortName,
                         description:description, priority:priority, estimatedWorkTime:estimatedWorkTime,
                         maintenanceTypeEnumId:maintenanceTypeEnumId, severityEnumId:severityEnumId,
-                        failureModeEnumId:failureModeEnumId}"/>
+                        failureModeEnumId:failureModeEnumId, costCenterId:costCenterId, projectWorkEffortId:projectWorkEffortId}"/>
             <if condition="!ec.message.hasError()"><message type="success">Work order ${workEffortId} saved</message></if>
         </actions>
         <default-response url=".">
@@ -185,7 +193,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <widgets>
                             <form-single name="LifecycleForm_${formPrefix}_${actionRow.action}" transition="lifecycleAction"
                                     map="{workEffortId:workEffortId, lifecycleAction:actionRow.action, expectedRevision:workOrder.revision,
-                                        offlineIntent:(actionRow.offlineIntent ? 'Y' : 'N')}">
+                                        offlineIntent:(actionRow.offlineIntent ? 'Y' : 'N'),
+                                        serviceOperationKey:'mnt-acc-' + ec.user.randomString(20)}">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="lifecycleAction"><default-field><hidden/></default-field></field>
                                 <field name="expectedRevision"><default-field><hidden/></default-field></field>
@@ -236,6 +245,25 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="followUpName" hide="!actionRow.needsFollowUp">
                                     <default-field title="Follow-up work" tooltip="A new work order on the same target for what is left, linked to its outage">
                                         <text-line size="50"/>
+                                    </default-field>
+                                </field>
+                                <!-- P10: CompleteWork's outside-service line, accepted under Purchasing's check with the work's file -->
+                                <field name="serviceOperationKey"><default-field><hidden/></default-field></field>
+                                <field name="serviceLine" hide="!actionRow.serviceLines?.length">
+                                    <default-field title="Accept outside service" tooltip="Purchasing's acceptance of a service line of this work">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="actionRow.serviceLines || []" key="${key}" text="${text}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="serviceAcceptedQuantity" hide="!actionRow.serviceLines?.length">
+                                    <default-field title="Quantity accepted"><text-line size="6" input-type="number"/></default-field>
+                                </field>
+                                <field name="serviceEvidenceContentId" hide="!actionRow.serviceLines?.length">
+                                    <default-field title="Evidence" tooltip="A file of the work, such as the technician's photo">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="actionRow.evidenceFiles || []" key="${workEffortContentId}" text="${text}"/>
+                                        </drop-down>
                                     </default-field>
                                 </field>
                                 <!-- P14 (F187): a meter plan's work records the reading it took -->

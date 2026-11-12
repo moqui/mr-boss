@@ -310,7 +310,9 @@ const enumTypes = [
     "BudgetControlStage",
     "BudgetControlAction",
     "ProductionOverheadBasis",
-    "ProductionCoproductMethod"
+    "ProductionCoproductMethod",
+    // AC-24 (impl-maintenance P9): the maintenance expense mapping's kind
+    "MaintenanceKind"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {

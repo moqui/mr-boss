@@ -20,10 +20,12 @@ along with this software (see the LICENSE.md file). If not, see
     the threshold), and its input (a hold or cancel reason; for Complete the outcome, the equipment's state after the work, the
     failure mode and the finish, with the completion blockers), each posting transition#MaintenanceWorkOrder at the revision read.
     The tabs, by menu index in design §3's order, spaced by ten so a later tab takes its own gap (P5 review): Overview (10:
-    WorkHeader with Edit, Assignments with Assign and schedule), Time (30: the user's timer and own time; the team's total for a
+    WorkHeader with Edit, Assignments with Assign and schedule), Procedure (20, P7: the checklist, StepResponse, the waiver and
+    amendment dialogs, the printed checklist; Complete waits for its required steps), Time (30: the user's timer and own time; the team's total for a
     broad reader), Downtime (60, P5: the outages the work recorded or linked, Record outage, Restore), Files (70), Conversation (80)
-    and History (90). The other tabs of design §3 join with their phases at their gaps: Procedure (20, P6/P7), Parts (40, P9),
-    Purchasing (50, P10) and Costs (100, P11). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
+    and History (90). The other tabs of design §3 join with their phases at their gaps: Parts (40, P9: built, the planned parts and the parts used),
+    Purchasing (50, P10: the work's purchase requests and order lines, Request a purchase, Accept outside service, whose service line
+    Complete also offers to accept) and Costs (100, P11). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
     and the header says when the target is out of service. No cost. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work order" default-menu-include="false">

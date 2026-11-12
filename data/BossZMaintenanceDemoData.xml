@@ -255,6 +255,58 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.effort.WorkEffortApproval workEffortApprovalId="BOSS_MNT_PROC_OLD_A1" workEffortId="BOSS_MNT_PROC_OLD" statusId="WeaApproved"
             requestedByUserId="BOSS_MNT_AUTHOR" requestedDate="2026-01-04 08:00:00" decidedByUserId="BOSS_MNT_APPROVER" decidedDate="2026-01-05 08:00:00"/>
     <mantle.product.maintenance.ProductMaintenance productMaintenanceId="BOSS_MNT_COMP_SERVICE" templateWorkEffortId="BOSS_MNT_PROC_COMP"/>
+    <!-- P7: a follow-up task of the air handler's work order (an ordinary Commons task, maint.tech's, linked to the root by Caused By),
+        which Maintenance's WorkItemDetail shows with its work order. The checklist itself is worked on work made of the AC-200
+        service (the specs and walks make their own, so the procedure's demo usage stays as P6 left it). -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_TASK_AHU_GASKET" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" statusId="WeInPlanning"
+            ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" priority="4" workEffortName="Order a spare coil header gasket"
+            description="Keep one on the shelf after the AHU-2 leak" estimatedCompletionDate="2026-11-20 17:00:00"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_TASK_AHU_GASKET" partyId="BOSS_MNT_TECH" roleTypeId="Assignee"
+            fromDate="2026-11-11 11:00:00" statusId="WeptAssigned"/>
+    <mantle.work.effort.WorkEffortAssoc workEffortId="BOSS_MNT_TASK_AHU_GASKET" toWorkEffortId="BOSS_MNT_WO_AHU" workEffortAssocTypeEnumId="WeatCausedBy"
+            fromDate="2026-11-11 11:00:00"/>
+
+    <!-- P9 (design-maintenance §3 PlannedParts and PartsUsed, AC-24): maint.tech issues stock (Warehouse's BOSS_WAREHOUSE_ISSUE grants
+        STOCK_ISSUE; an assignment grants none) and maint.tech2 does not; spare parts in Services' stock warehouse; the air handler's
+        leak with three coil gaskets planned, two issued and one returned (the rows as the services write them; demo rows post nothing),
+        the compressor's oil service with its suggested filter planned; and Services' maintenance expense (Repairs and maintenance,
+        equipment) for every facility and kind -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <mantle.product.Product productId="BOSS_MNT_PART_GASKET" productName="AHU-2 coil gasket" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" ownerPartyId="ORG_ZIZI_SERVICES" amountUomId="OTH_ea"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_FILTER" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_FILTER" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="6"
+            availableToPromiseTotal="6" acquireCost="18.40" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_BELT" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_BELT" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="4"
+            availableToPromiseTotal="4" acquireCost="42.00" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_GASKET" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_GASKET" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="4"
+            availableToPromiseTotal="4" acquireCost="9.75" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_FILTER" assetId="BOSS_MNT_STOCK_FILTER" productId="BOSS_MNT_PART_FILTER"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="6" availableToPromiseDiff="6"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_BELT" assetId="BOSS_MNT_STOCK_BELT" productId="BOSS_MNT_PART_BELT"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="4" availableToPromiseDiff="4"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="5" availableToPromiseDiff="5"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_WO_AHU" productId="BOSS_MNT_PART_GASKET" fromDate="2026-11-11 08:30:00"
+            typeEnumId="WeptConsume" estimatedQuantity="3" quantityUomId="OTH_ea" requiredDate="2026-11-11 12:00:00" sourceFacilityId="BOSS_PRD_WH"/>
+    <mantle.product.issuance.AssetIssuance assetIssuanceId="BOSS_MNT_ISS_AHU" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            workEffortId="BOSS_MNT_WO_AHU" assetMaintenanceId="BOSS_MNT_AM_AHU" issuedByUserId="BOSS_MNT_TECH" issuedDate="2026-11-11 10:00:00"
+            quantity="2" enteredQuantity="2" appliedConversionFactor="1"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET_ISS" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-11-11 10:00:00" quantityOnHandDiff="-2" availableToPromiseDiff="-2" workEffortId="BOSS_MNT_WO_AHU"
+            assetIssuanceId="BOSS_MNT_ISS_AHU"/>
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_MNT_RCT_AHU" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            workEffortId="BOSS_MNT_WO_AHU" sourceAssetIssuanceId="BOSS_MNT_ISS_AHU" receivedByUserId="BOSS_MNT_TECH" receivedDate="2026-11-11 15:00:00"
+            quantityAccepted="1" enteredQuantity="1" appliedConversionFactor="1" itemDescription="One gasket left over"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET_RET" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-11-11 15:00:00" quantityOnHandDiff="1" availableToPromiseDiff="1" workEffortId="BOSS_MNT_WO_AHU"
+            assetReceiptId="BOSS_MNT_RCT_AHU"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_WO_COMP_OIL" productId="BOSS_MNT_PART_FILTER" fromDate="2026-11-10 09:00:00"
+            typeEnumId="WeptConsume" estimatedQuantity="1" requiredDate="2026-11-17 08:00:00" sourceFacilityId="BOSS_PRD_WH"/>
+    <mantle.ledger.config.MaintenanceCostPolicy maintenanceCostPolicyId="BOSS_MNT_COST_SVC" organizationPartyId="ORG_ZIZI_SERVICES"
+            glAccountId="613200000" fromDate="2026-01-01 00:00:00"/>
 
     <!-- P15 (impl-maintenance; design §7.1, Resources, ResourcePolicyDetail, Blackouts): Room 101 is managed, approved by the resource
         approver (maint.booking) and booked for at most two hours, up to 90 days ahead; Room 103, bookable with no policy, is booked
@@ -276,6 +328,14 @@ along with this software (see the LICENSE.md file). If not, see
             facilityId="BOSS_MNT_ROOM_101" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2026-11-17 07:00:00"
             thruDate="2026-11-17 13:00:00" unavailabilityReasonEnumId="RurClosure" plannedOutage="Y" revision="1"
             description="Carpet replacement on floor 1" createdByUserId="BOSS_MNT_RESOURCES" createdDate="2026-11-12 08:00:00"/>
+
+    <!-- P16 (impl-maintenance; design §7.1, BookingRequests): the technician's shift handover asks for Room 101 next Wednesday
+        afternoon and waits for the resource approver (maint.booking), with a note for them -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_EV_HANDOVER" workEffortTypeEnumId="WetEvent" purposeEnumId="WepMeeting"
+            ownerPartyId="BOSS_MNT_TECH" statusId="WeInPlanning" workEffortName="Shift handover"
+            estimatedStartDate="2026-11-18 14:00:00" estimatedCompletionDate="2026-11-18 15:00:00" timeUomId="TF_hr"/>
+    <mantle.work.effort.WorkEffortFacility workEffortId="BOSS_MNT_EV_HANDOVER" facilityId="BOSS_MNT_ROOM_101" statusId="WefRequested"
+            comments="Six of us, and the screen for the dashboards"/>
 
     <!-- P13 (design-maintenance §5): three preventive plans of Services, drafts the planner activates: Room 201's monthly
         inspection from November 30 (a month's end; planned on business days, the time zone inherited from the campus); the
@@ -350,4 +410,46 @@ along with this software (see the LICENSE.md file). If not, see
             obligationKey="2026-10-14 09:00" dueLocal="2026-10-14 09:00" dueDate="2026-10-14 09:00:00" termFromDate="2026-07-28 09:00:00"
             statusId="MocSkipped" decisionReason="Unit shut down for the coil cleaning" decidedByUserId="BOSS_MNT_PLANNER"
             decidedDate="2026-10-08 10:00:00" revision="1"/>
+    <!-- P10 (impl-maintenance; design §3 PurchaseLinks): the motor held for parts needs a rewind, an outside service. maint.planner
+        asked for it from the work order (a purchase request of Services linked to the work), Purchasing approved and sourced it to
+        Delta Motor Rewinds' purchase order, placed, whose service line is the work's (AssetMaintenanceOrderItem, written before the
+        RequestItemOrder so the sourcing rule finds it); nothing is accepted yet. maint.supervisor accepts outside service under
+        Purchasing's own check (accept#ServiceItem: PURCHASE_ORDER_EDIT or STOCK_RECEIVE), so is in Warehouse's receiving capability
+        group, which grants STOCK_RECEIVE alone and opens no Warehouse screen (the lead's decision, Nov 12; as P9's maint.tech in
+        BOSS_WAREHOUSE_ISSUE) -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_SUP_REWIND" pseudoId="DELTAREWIND" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_MNT_SUP_REWIND" organizationName="Delta Motor Rewinds"/>
+    <mantle.party.PartyRole partyId="BOSS_MNT_SUP_REWIND" roleTypeId="Supplier"/>
+    <mantle.product.Product productId="BOSS_MNT_PRD_REWIND" productName="Motor rewind (outside service)" productTypeEnumId="PtService"
+            amountUomId="OTH_ea" ownerPartyId="ORG_ZIZI_SERVICES" statusId="PrdActive"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_MNT_PRC_REWIND" productId="BOSS_MNT_PRD_REWIND" vendorPartyId="BOSS_MNT_SUP_REWIND"
+            pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="1" price="480"
+            priceUomId="USD"/>
+    <mantle.request.Request requestId="BOSS_MNT_PREQ_MOTOR" requestTypeEnumId="RqtPurchase" statusId="ReqInProgress"
+            requestName="Rewind the compressor motor" description="For maintenance work order BOSS_MNT_WO_MOTOR"
+            requestDate="2026-11-10 09:00:00" responseRequiredDate="2026-11-20 00:00:00" currencyUomId="USD" filedByPartyId="BOSS_MNT_PLANNER"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_PREQ_MOTOR" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal" fromDate="2026-11-10 09:00:00"/>
+    <mantle.request.RequestItem requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01" statusId="ReqInProgress" productId="BOSS_MNT_PRD_REWIND"
+            description="Motor rewind (outside service)" quantity="1" quantityUomId="OTH_ea" requiredByDate="2026-11-20 00:00:00"
+            supplierPartyId="BOSS_MNT_SUP_REWIND"/>
+    <mantle.request.RequestWorkEffort requestId="BOSS_MNT_PREQ_MOTOR" workEffortId="BOSS_MNT_WO_MOTOR"/>
+    <mantle.request.requirement.Requirement requirementId="BOSS_MNT_RQMT_REWIND" requirementTypeEnumId="RqTpProduct" statusId="RqmtStOrdered"
+            productId="BOSS_MNT_PRD_REWIND" description="Motor rewind (outside service)" quantity="1" requiredByDate="2026-11-20 00:00:00"/>
+    <mantle.request.requirement.RequirementRequestItem requirementId="BOSS_MNT_RQMT_REWIND" requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01"/>
+    <mantle.request.requirement.RequirementParty requirementId="BOSS_MNT_RQMT_REWIND" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal"
+            fromDate="2026-11-10 09:00:00"/>
+    <mantle.order.OrderHeader orderId="BOSS_MNT_PO_REWIND" orderName="Compressor motor rewind" statusId="OrderPlaced"
+            entryDate="2026-11-11 10:00:00" placedDate="2026-11-11 10:00:00" currencyUomId="USD" grandTotal="480"/>
+    <mantle.order.OrderPart orderId="BOSS_MNT_PO_REWIND" orderPartSeqId="01" statusId="OrderPlaced" vendorPartyId="BOSS_MNT_SUP_REWIND"
+            customerPartyId="ORG_ZIZI_SERVICES" partTotal="480"/>
+    <mantle.order.OrderItem orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_MNT_PRD_REWIND" itemDescription="Motor rewind (outside service)" quantity="1" quantityUomId="OTH_ea"
+            unitAmount="480" requiredByDate="2026-11-20 00:00:00"/>
+    <mantle.product.maintenance.AssetMaintenanceOrderItem assetMaintenanceId="BOSS_MNT_AM_MOTOR" orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01"/>
+    <mantle.request.RequestItemOrder requestItemOrderId="BOSS_MNT_RIO_REWIND" requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01"
+            orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" quantity="1"/>
+    <mantle.request.requirement.RequirementSupply requirementSupplyId="BOSS_MNT_RS_REWIND" requirementId="BOSS_MNT_RQMT_REWIND"
+            supplyTypeEnumId="RstPurchaseOrder" orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" requestId="BOSS_MNT_PREQ_MOTOR"
+            requestItemSeqId="01" quantity="1" quantityUomId="OTH_ea" fromDate="2026-11-11 10:00:00"/>
 </entity-facade-xml>

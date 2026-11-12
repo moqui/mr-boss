@@ -1,5 +1,6 @@
 # IronStone BOSS — Maintenance implementation
 
+Nov 12, 2026 — gate 5 built (P15, P16: scheduling administration) and P6, P7, P9 and P13 merged, each reviewed by a fresh agent and merged on its focused specs; P10 in review; P14 and P18 building; P11, P12, P17 and P19 next; P8 waits on People P18.
 Nov 12, 2026 — gate 1 built: P1–P5 (corrective maintenance from a report to a restored resource), each phase reviewed by a fresh agent and merged on its focused specs; the full suites and the acceptance suite run once at the end of the build (the user's call). P6 and P15 are built or building; only P8 waits on People (P18).
 Nov 11, 2026 — P0 done (§6 F58–F75), at mr-moqui 5d83f22d, mr-boss 9c7e87e4 and mr-mantle 61e5ae33, with People P1–P7
 and Admin P17–P18 built. People P7 built the managed-work refusal in the generic task services already, reading the
@@ -368,16 +369,16 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | built and reviewed Nov 12, merged |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
-| P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
+| P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | built and reviewed Nov 12, merged |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
-| P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | — |
-| P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | — |
+| P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
+| P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built Nov 12 |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
-| P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
+| P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | — |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | — |
@@ -2158,6 +2159,246 @@ completed checklist); MT-04.
   service on a phone, fails a pressure reading, attaches a photo and rechecks; the supervisor waives one allowed
   step with a reason and closes; the printed checklist shows the failure, the recheck and the waiver.
 
+**Built Nov 12 (P7).** mr-mantle 54eaa9e3, mr-boss 389626d0 and this note's commit (branch `mnt/p7`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P6's step policy fields and MaintenanceProcedures.js (instructions through the WeatBasedOn
+  link, `responseText`), P3's lifecycle in MaintenanceWork.js (`refusalOf`, `transitionWorkOrder`, the time entry points, `schedule`'s
+  `replacePartyId`) and P5's downtime hooks; F69 and F105 (RecordFiles' `get#ContentType` WorkEffort branch, `get#RecordFile`'s per-row
+  immutability, `check#RecordDrivePath`'s immutable paths for new and restored versions, `remove#RecordFile`; `update#WorkEffortContent`
+  rewrites a file); F43 (Measurement's work, asset, meter and AssetMaintenance fields; MeasurementType.productMeterTypeId names a counter);
+  F94 (`record#MaintenanceMeter` took any workEffortId); F113 and F160 (WorkOrders.js `openAssignments`, the replacement in `schedule`);
+  F159 (the `/mantle` REST writers; `start#Timer` calls `create#TimeEntryClockIn`, `stop#Timer` calls `store#TimeEntry` with the
+  entry's id); F26 (WorkItemDetail's Manufacturing context; Commons' `get#TaskAccess` answers a managed record not found); F38
+  (`transcribe#Audio` is internal, answers a reason rather than failing, and leaves consent to its caller); F128 (Procedure at 20);
+  F118 (no setup row is needed: the tab, its template and WorkItemDetail's mount inherit the root's grants); the Default status flow
+  (a step carries no flow; every step move is one of its rows).
+- Mantle:
+  - Records (`entity/WorkProcessEntities.xml`, appended): `WorkEffortCheck` (step, root, response kind, outcome WcoDone, WcoPass,
+    WcoFail or WcoSkipped, the Measurement and the value and unit as entered, observed and recorded time, who, notes, transcript,
+    findings, superseded check and correction reason, state WcsAccepted, WcsUnresolved, WcsSuperseded or WcsInvalidated, the
+    amendment that invalidated it, an operation key), `WorkEffortCheckEvidence` (a check's file or voice note), `WorkEffortWaiver`
+    (the step, the failed check it answers, the reason and who; ended by an amendment) and `WorkEffortExecutionAmendment` (root,
+    reason, effective time, what changed and what it invalidated, operation key); the content types WectCheckEvidence, WectVoiceNote
+    and WectCompletedChecklist.
+  - `mantle/work/ProcessChecks.js` over ProcessServices' new services: `get#ProcessExecution` (a reader of the work: the tree with
+    depth, groups, state, policy, the dependencies not done, assignees, instruction, the current check and failures, the waiver, what
+    the caller may do, a reading's units; the checks newest first, waivers, amendments, the next actionable step, the gate and the
+    stored checklist), `record#ProcessStep` (start, respond, skip; the root in progress, a leaf, the assigned technician with
+    MAINTENANCE_EXECUTE or a supervisor, the step's and its groups' dependencies; a missing file or comment, another unit, an
+    out-of-range reading and a failure saved as an unresolved check; a recheck appended; a correction superseding a check; an
+    accepted check completes the step; every reading a Measurement, a counter reading also through `record#MaintenanceMeter` with
+    its meter linked; files uploaded with the response stored on the root named for the step; the operation key answering a
+    retry), `transcribe#CheckVoiceNote`, `waive#ProcessStep` (a supervisor, the step's policy, a reason; the failure stays),
+    `amend#ProcessExecution` (a supervisor on open work; the policy fields from now and the dependencies; the preview naming the
+    acceptances it invalidates and the complete steps waiting for a reopened one), `get#ProcessChecklist`
+    (template/work/Checklist.print.html.fancy), `get#EvidencePolicy` and `check#EvidenceChange`. Groups follow their children.
+  - MaintenanceWork.js: Complete refused while a required leaf is open (`STEPS_OPEN`; `get#` lists it among the blockers); Close moves
+    complete nodes to Closed, cancels the open ones and stores the completed checklist (a PDF that cannot be made is logged); Cancel
+    cancels the open nodes; `schedule`'s replacement leaves a done step's assignee (F160); the three time entry points call the time
+    services inside `asManagedOwner`.
+  - The generic writers (F159): `add#WorkEffortProduct` and `create#TimeEntryClockIn` call `check#ManagedWork`; `store#TimeEntry` calls
+    it for a new entry and for one moved onto other work. WorkProcesses.js `asManagedOwner(workEffortIds, body)` is the owner's way
+    through: it holds the roots in the execution context's user map for the call (no parameter reaches it) and `managedReason`
+    admits their work. `update#WorkEffortContent` refuses a check's evidence (`EVIDENCE_PROTECTED`). `record#MaintenanceMeter` in work
+    refuses equipment that is not the work order's target (`WORK_TARGET_MISMATCH`, F94). MaintenanceProcedures.js exports
+    `executionInstruction` and `responseText`.
+- BOSS:
+  - Screens: WorkOrderDetail/Procedure (index 20): the next step first (its instruction, Start, the response form), the steps with
+    Start, Respond, Skip, Waive, Correct, the checks, waivers and amendments, Amend (preview, then the reason) and Print checklist;
+    `template/MaintenanceChecklistParts.xml` (the transitions and StepResponseForm: Pass or Fail, a reading in a unit of its kind,
+    notes, a photo or file, a voice note, the observed time, a correction's reason). Overview lists the work's follow-up tasks.
+    WorkItemDetail's Maintenance context (owner contract, on Manufacturing's pattern): mounted at Maintenance/WorkOrders/WorkItemDetail,
+    a follow-up task (an ordinary task with a current Caused By or Relates To link to a root the user reads) with a Work orders box
+    and the way back; a work order's root or step is not available there and links to its WorkOrderDetail, with no Complete
+    (`ironstone.maintenance.WorkItemServices` get#WorkItemContext and find#FollowUpTasks, WorkItems.js). WorkOrderDetail's comment.
+  - Services: RecordFilesServices' `get#ContentType` takes Mantle's evidence policy for a work effort (no new file on closed or
+    cancelled work; a check's evidence immutable in the list, refused by `remove#RecordFile`, new and restored versions); WorkOrders.js'
+    participant counts an open step's assignee only (F160) and `amendmentChange` (the amendment form as one change); Maintenance.js'
+    link path.
+  - Demo (BossZMaintenanceDemoData.xml): the air handler's follow-up task (maint.tech's, Caused By its work order). No execution of the
+    AC-200 service is seeded (see the findings).
+- Specs:
+  - Mantle `test/work/ProcessChecks` (5 features, about 2.4 s): a blocked step refused through `record#ProcessStep` and through
+    `set#TaskStatus` (MANAGED_WORK), a group's response refused, another technician and another organization refused, independent leaves
+    in progress together, the group complete only by its children; a missing file, another unit, an out-of-range reading, a missing
+    comment and a failure leaving the step open, a recheck appended, a retry under its key answered and changed input refused, a
+    Measurement for each reading, Complete refused (STEPS_OPEN) and the gate and next step read; a waiver refused to a technician, where
+    the policy forbids it and without a reason, the failures kept, the evidence policy protecting the photo and `update#WorkEffortContent`
+    refused, a required step's skip refused and an optional one skipped; an amendment refused to a technician, previewed, applied
+    (the check invalidated, the step and its group reopened), Complete refused again then done, Close closing the steps and storing the
+    checklist, an amendment of closed work refused, no file added to it; new time, a clock-in and a part refused on managed work while
+    `record#MaintenanceTime` passes, a reading in work of other equipment refused, a done step keeping its assignee when a leaver's work
+    moves.
+  - BOSS `test/Maintenance/MaintenanceChecklists` (4 features, about 0.5–1.2 s): the Procedure tab's one qvt render as the technician
+    (the next step, the group, the failed reading's finding, the blocked step, the progress, no supervisor action), RecordFiles keeping a
+    check's evidence and removing a file no check names, Admin's participant (an open step's assignee counted, a done one's not), and
+    the Overview's one render (the follow-up task), WorkItemDetail's Maintenance render of the follow-up task and a step's context (not
+    available, its link). A spec-local technician with maint.tech2's groups works it and the work order is cancelled at the end, so the
+    demo technicians' counts other specs read are unchanged. `MaintenanceAccess` gains the checklist rule (its technician reads, another
+    technician NOT_ASSIGNED, Retail RECORD_UNAVAILABLE; a waiver refused to the technician, the supervisor passing the permission).
+  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceChecklistWalk` (5 features: the planner makes the
+    service from the procedure and the supervisor approves it; the technician on a phone works the group, the oil change with a photo
+    and the filter; the pressure fails and a recheck with a photo fails again; the supervisor amends the filter step to need a photo and
+    the technician answers it again; the supervisor waives the pressure step, completes and closes; the checks and waiver stay and the
+    printed checklist is a PDF).
+- Tests run (release binary 03:39, `--nobuild`, this worktree): mr-mantle ProcessChecks, MaintenanceProcesses, WorkProcess,
+  PeopleChecklists, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceScope,
+  MaintenanceResources, WorkTimeEntries, TimeImports, WorkTimesheets, WorkProjectServices, WorkProjectBilling, WorkProjectMilestones,
+  WorkProjectReports, ProductionShopFloor, AccountingProjectCost, MethodTemplates, ProductCatalogImport, Dav: 144 of 144 (22 specs,
+  33.9 s feature time). mr-boss MaintenanceChecklists, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceProcedures,
+  MaintenanceDowntime, MaintenanceRequests, MaintenanceEquipment, RecordFiles, WorkItemDetail, Tasks, TimeEntries, AdminLifecycle,
+  PeopleLifecycle, ManufacturingDowntime, ManufacturingShopFloor, PeopleTime, Billing, ProjectsAccess, Chatter, AccountingIssuedFiles,
+  AccountingPaymentFiles: 157 of 157 (21 specs, 31.3 s feature time). Client MaintenanceWorkOrdersWalk 1 of 1 (7.9 s).
+  `./moq run --debug --nobuild lint --screens`: 136 flagged sites, the baseline (the Overview's new condition was flagged and fixed);
+  the new screens appear only in the information list of unnamed containers; the release symlink intact. Prettier (3.10.1, the repo's
+  .prettierrc.json) on the new JavaScript and on WorkProcesses.js, MaintenanceProcedures.js, WorkOrders.js and MaintenanceSpecLib.js;
+  MaintenanceWork.js, MaintenanceResources.js, Maintenance.js and MaintenanceAccess.spec.js were not prettier-clean before P7 and are
+  left so. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's Added table for ProcessServices' P7 services, find#ProcessInstructions, check#ManagedWork's new callers,
+  store#TimeEntry, update#WorkEffortContent and record#MaintenanceMeter; ss-inventory's P7 line (no baseline form maps to the checklist).
+- Design edits: design-maintenance's header, §3 WorkOrderDetail (the Procedure tab and follow-up tasks), the WorkItemDetail mount row,
+  §4.3 and §12's completed checklist, as built.
+- Findings, numbered by the lead F208 to F216 in order:
+  - A step's moves (planned to in progress, complete or cancelled; complete back to in progress for an invalidation) are all rows of
+    the Default status flow, which steps follow (instantiation sets no flow); no flow row is added.
+  - `store#TimeEntry`'s guard is for a new entry and an entry moved onto managed work; an entry already on it keeps its timesheet
+    rules, so a maintenance timer still stops from the shell's timer and when another timer starts (`start#Timer` stops it through
+    `store#TimeEntry`), and Projects' TimeEntries still corrects one.
+  - The owner's way through is `asManagedOwner`, in the execution context's user map; only `check#ManagedWork` honors it (the lists'
+    `managedIds` do not). P9's planned parts on a managed step go through it if they call `add#WorkEffortProduct`, or write
+    WorkEffortProduct directly as the procedure requirements do.
+  - Evidence uploaded with a response is stored on the work order's root, named for the step, so Files shows it and RecordFiles
+    protects it there; a file on the step is accepted too. Every file a check names is protected, an unresolved check's included (a
+    waiver keeps the failure), and the stored checklist.
+  - The `.fancy` templates take JavaScript expressions: FreeMarker's `?has_content` fails to compile; the checklist template uses
+    `.length`.
+  - StepResponse's "expected update time" is not taken: the step is read for update, a done step is refused (STEP_DONE) and the
+    operation key answers a retry.
+  - The amendment changes a step's policy fields and dependencies; adding or removing an open execution's steps is not built.
+  - WorkOrderDetail's Overview tab had no render in the regression suite; MaintenanceChecklists renders it once.
+  - No execution of the AC-200 service is seeded: MaintenanceProcedures' spec reads that maint.tech has no work of it and counts
+    maint.tech2's open work orders, so a seeded one would change both; the specs and the walk make their own.
+- For the lead:
+  - Budget share: mr-mantle ProcessChecks about 2.4 s; mr-boss server MaintenanceChecklists about 1 s and MaintenanceAccess +0.2 s;
+    client unchanged (MaintenanceWorkOrdersWalk 7.9 s); budgets not changed.
+  - Merge hot spots: mr-mantle `entity/WorkProcessEntities.xml` and `ProcessServices.xml` (appended), `MaintenanceWork.js` (two requires
+    at the top, the three time entry points, `schedule`'s replacement, `refusalOf`'s complete, the close hook after the closure
+    policy, `get#`'s blockers), `WorkProcesses.js` (`managedReason`, the export), `MaintenanceProcedures.js` (an export before approval),
+    `TimeServices.xml`, `WorkEffortServices.xml` (`add#WorkEffortProduct`: P9 may meet it), `MaintenanceResources.js`; mr-boss
+    `screen/Shared/WorkItemDetail.xml`, `RecordFilesServices.xml`, `WorkOrders.js`, `Maintenance.js` (one link path after P6's),
+    `screen/Maintenance/WorkOrders.xml` (the mount), `WorkOrderDetail.xml` (its comment), `WorkOrderDetail/Overview.xml` (actions and an
+    appended box), `BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (one id after P6's), `MaintenanceAccess.spec.js`
+    (an appended feature), the inventories and design-maintenance. Not touched: MaintenanceEntities.xml, screen/Maintenance.xml,
+    BossSetupMaintenanceData.xml.
+  - The user's calls: whether a technician's voice note may be sent to the transcription model without an organization consent
+    setting (`transcribe#Audio` leaves consent to its caller; built meanwhile: transcribed when a model is bound, the audio kept either
+    way); whether an amendment should add or remove an open execution's steps (built meanwhile: policy fields and dependencies only).
+
+**Review Nov 12 (P7).** mr-mantle 25d1c7b8, mr-boss e8f31e1a and this note's commit (branch `mnt/p7`), over the worker's 54eaa9e3,
+389626d0 and f8e7d89a, after "Merge master into mnt/p7" (mr-mantle 167aa3e6, mr-boss 9508b5d9; mr-moqui's `mnt/p7` already at master
+4994093f). Reviewed `git diff master...mnt/p7` in both repos against P7's text, §2, §4, F26, F38, F43, F69, F94, F113, F159 and F160,
+design §3 (ProcedureSteps, StepResponse, ExecutionAmendment, the WorkItemDetail row), §4.3, §9 and §12, AGENTS.md and Practices-App-Dev;
+read the generic content services (`create#`, `update#`, `save#WorkEffortContentFile`), Manufacturing's instruction EECA, RecordFiles'
+`get#ContentType`, `get#RecordFile`, `remove#RecordFile` and `check#RecordDrivePath`, TaskServices' guarded writers, CalDAV's task
+collection, Commons' `get#TaskAccess`, the timer and time services, the Rust `ec.user.context` (moqui-core `context/factory.rs`,
+`script/host/user.rs`), and P9's `MaintenanceMaterials.js` on `mnt/p9`.
+- The merge: master's P15 came in. mr-mantle merged clean. mr-boss: `BossZMaintenanceDemoData.xml` keeps P7's follow-up task and then
+  P15's room policy and blackout; design-maintenance's header has P7's line above P15's; `MaintenanceAccess.spec.js` names both phases in
+  its header and keeps P15's feature, then P7's.
+- Checked and found sound:
+  - The step guard. A step's status moves only through `record#ProcessStep` (start, respond, skip with a reason), `waive#ProcessStep` and
+    the root's close or cancel (`closeExecution`): `set#TaskStatus`, `update#Task`, `move#Task`, `delete#WorkEffort` and the party writers
+    call `check#ManagedWork` (MANAGED_WORK, the spec's `set#TaskStatus` case); CalDAV leaves a managed step out of the collection and
+    lists the root read only; Commons' `get#TaskAccess` answers a managed record MANAGED_WORK; WorkItemDetail's Maintenance context shows a
+    step as not available, with its work order's link and no Complete.
+  - Gates. A blocked step (its own or a group's dependency) is refused by `record#ProcessStep` (DEPENDENCY_OPEN) and by `set#TaskStatus`;
+    independent leaves are in progress together; a group takes no response and follows its children (`rollUp`); Complete is refused while a
+    required leaf is open (STEPS_OPEN, and the blockers list); Close closes complete nodes and cancels open ones.
+  - `asManagedOwner`. `ec.user.context` is a map of the execution context (`ContextState.user_context`, made empty per context, never filled
+    from request parameters, a screen field or the session); a service called inside the body shares it (the intended call and its own
+    nested calls), an async call or job gets a new context; the value is restored or removed in `finally`. Only `managedReason` reads it;
+    the time entry points wrap exactly the one time call after their own checks; `start#Timer`/`stop#Timer`/`store#TimeEntry` change no
+    status inside it (the `TimeEntryUpdateTask` EECA writes actuals only).
+  - F159's guards. `add#WorkEffortProduct` and `create#TimeEntryClockIn` refuse managed work; `store#TimeEntry` refuses a new entry and an
+    entry moved onto managed work, an entry already there keeping its rules (so a timer stops). Projects' and Commons' time specs pass
+    (WorkTimeEntries, TimeImports, WorkTimesheets, WorkProject*, TimeEntries, PeopleTime, Billing). P9: `MaintenanceMaterials.js` writes
+    planned parts with entity-auto `create#`/`update#WorkEffortProduct` and issues through `issue#AssetToWorkEffort`, neither guarded, so
+    its path survives; were it to call `add#WorkEffortProduct` it would need `asManagedOwner` (see For the lead).
+  - Waivers. MAINTENANCE_SUPERVISE in the work order's organization only (a technician PERMISSION_DENIED, another organization
+    RECORD_UNAVAILABLE), the step's execution policy (WAIVER_NOT_ALLOWED), a reason; the failed checks stay Unresolved beside the waiver.
+  - The checklist PDF: `Checklist.print.html.fancy` is HTML-escaped, no cost; stored at Close as the root's WectCompletedChecklist under
+    `dbresource://mantle/content/workEffort/`, served by `printChecklist` for a reader (check#Record, then `get#ProcessChecklist`'s scope).
+  - WorkItemDetail (owner contract): every Maintenance branch is behind `mntTask` (`appRoot === 'Maintenance'`); Manufacturing's,
+    Projects', People's and Customer Service's sections and conditions are unchanged; WorkItemDetail, Tasks and ManufacturingShopFloor pass.
+  - The participant (F160): `openAssignments` counts a step's assignee only while the step is open; `schedule`'s replacement leaves a done
+    step's assignee; AdminLifecycle, PeopleLifecycle and the spec's participant feature pass.
+  - Access: the Procedure tab's transitions call `check#Record` and then Mantle, which checks permission, scope and assignment again;
+    ProcessServices are allow-remote false with no BOSS grant; `get#EvidencePolicy` is a data check read by RecordFiles only after its own
+    record check.
+- Fixes:
+  - R1 (the user's call, Nov 12; feature): a voice note is transcribed only when the organization turns transcription on.
+    `MaintenancePolicy.voiceNoteTranscription` (off by default) through `get#`/`store#MaintenancePolicy` and Settings' Work policy ("Transcribe
+    technicians' voice notes"); `transcribe#CheckVoiceNote` answers TRANSCRIPTION_OFF and sends nothing when it is off; the audio stays
+    the check's evidence either way, and the response says the organization does not transcribe. ProcessChecks' voice note feature (off by
+    default: TRANSCRIPTION_OFF; turned on, the speech model is asked; the audio row kept); MaintenanceWorkOrders' Work policy render
+    checks the setting.
+  - R2 (the user's call, Nov 12; feature): an amendment adds or removes steps of an open execution. `amend#ProcessExecution` takes an action
+    per change: add (under the root or a group, GROUP_REQUIRED under a step; a complete group it joins reopens and is named among the
+    invalidations) and remove (a step, or a group with its steps, not started and with no check; STEP_STARTED otherwise; cancelled and
+    named in the amendment's `removedList`, the dependencies on and of it ended, so what waited for it no longer does, a finding of the
+    preview). The gate leaves a cancelled leaf out (a required step is never skipped, so only a removed one is cancelled before close);
+    the tab and print say "Removed"; the amendment's summary lists what was added and removed. The Procedure tab's Amend dialog takes
+    Change, Add a step (name, under, response) or Remove a step not started; WorkOrders.js `amendmentChange` builds each. ProcessChecks'
+    amendment feature (a started step, a completed step and a started group refused; a technician refused; a step under a leaf refused;
+    the preview naming the reopened group and the removed step and writing nothing; applied: the group reopened, the new step planned in
+    the tree, the removed step cancelled, the gate with the new step and without the removed one; the new step answered completes the
+    group) and MaintenanceChecklists' dialog feature (the form's add and remove reaching the preview; a started group refused).
+  - R3 (security, high): the evidence guard was only in `update#WorkEffortContent` and RecordFiles: entity-auto `delete#` and `update#`
+    (the entity REST, any server path) removed or changed a check's evidence and the stored checklist, `save#WorkEffortContentFile` wrote new
+    bytes over evidence, `check#EvidenceChange` did not cover the stored checklist, a check's evidence link could be deleted to unprotect
+    the file, a closed or cancelled work order took new files through `create#WorkEffortContent`, and anyone could store a
+    WectCompletedChecklist. Now an entity guard (Work.eecas.xml `WorkEffortEvidenceProtected`, run before, on Manufacturing's pattern)
+    refuses the update or delete of evidence and a stored checklist (EVIDENCE_PROTECTED) and a new file on closed or cancelled managed work
+    (WORK_CLOSED), and admits a completed checklist only under the close's `asManagedOwner`; `WorkEffortEvidenceLinkKept` refuses changing
+    or deleting a WorkEffortCheckEvidence row; `save#WorkEffortContentFile` calls `check#EvidenceChange`. ProcessChecks' evidence feature
+    (each path refused; an ordinary task's file still deleted). RecordFiles (11 features) passes unchanged.
+  - R4 (correctness, medium): a waiver completed a step whose dependencies were open, so a step could be complete before its predecessor.
+    `waive#ProcessStep` now refuses DEPENDENCY_OPEN as a response does, and `canWaive` waits for them. In ProcessChecks' amendment feature.
+  - R5 (failure tolerance, low): a stored checklist that failed after a service error left the error in the close's messages, failing the
+    close the comment says stands. `storeChecklist` makes the PDF first and isolates its messages (pushErrors, clear, pop).
+- Findings, numbered by the lead F217 to F223 in order:
+  - `find#FollowUpTasks` (the Overview's box) lists the names of the tasks linked to a work order without checking the reader may see each
+    task in Commons; WorkItemDetail itself does (Commons' visibility). Linking needs a writer who sees both, so the exposure is small.
+  - A supervisor may amend a step's `waiverAllowed` to Y and then waive it; both are the supervisor's, each with its reason on record.
+  - `issue#AssetToWorkEffort` and entity-auto WorkEffortProduct writes are not guarded by F159 (P9's path relies on this).
+  - The evidence guard runs on every WorkEffortContent write: one root read on create, one evidence-link count on update or delete.
+  - A service failure inside the close's transaction may still mark it rollback-only; with R5 the likely failure (the PDF) happens before
+    any service call.
+  - Correction to the Built note: adding and removing an open execution's steps is now built (R2).
+  - Prettier 3.10.1 was run on ProcessChecks.js, WorkProcesses.js, WorkOrders.js and the three changed specs (ProcessChecks.js and the
+    specs were not prettier-clean before; the diff includes that reformatting).
+- Tests (release binary 03:39, `--nobuild`, this worktree, after the merge and the fixes): mr-mantle ProcessChecks, MaintenanceProcesses,
+  WorkProcess, PeopleChecklists, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceScope,
+  MaintenanceResources, WorkTimeEntries, TimeImports, WorkTimesheets, WorkProjectServices, WorkProjectBilling, WorkProjectMilestones,
+  WorkProjectReports, ProductionShopFloor, AccountingProjectCost, MethodTemplates, ProductCatalogImport, Dav, ResourceBookingPolicy:
+  156 of 156 (23 specs, 46.0 s feature time; ProcessChecks 8 features, about 4.0 s). mr-boss MaintenanceChecklists, MaintenanceAccess,
+  MaintenanceWorkOrders, RecordFiles, WorkItemDetail, MaintenanceProcedures, MaintenanceDowntime, MaintenanceRequests, MaintenanceEquipment,
+  Tasks, TimeEntries, AdminLifecycle, PeopleLifecycle, ManufacturingDowntime, ManufacturingShopFloor, PeopleTime, Billing, ProjectsAccess,
+  Chatter, AccountingIssuedFiles, AccountingPaymentFiles: 159 of 159 (21 specs, 50.8 s feature time; MaintenanceChecklists 5 features, about
+  1.3 s); MaintenanceScheduling 3 of 3. Before the fixes, the merged branch passed ProcessChecks 5 of 5 and MaintenanceChecklists,
+  MaintenanceAccess and RecordFiles 30 of 30. `./moq run --debug --nobuild lint --screens`: 136 flagged sites, the baseline, none in the
+  changed screens; the release symlink intact. Not run: ./moq test-apps, the acceptance suite (MaintenanceChecklistWalk not changed).
+- For the lead:
+  - Budget share: mr-mantle ProcessChecks +1.6 s (three features); mr-boss MaintenanceChecklists +0.1 s; budgets not changed.
+  - Merge hot spots: mr-mantle `entity/Work.eecas.xml` (two EECAs appended), `entity/MaintenanceEntities.xml` (a MaintenancePolicy field),
+    `MaintenanceWork.js` (the policy's default, read and store), `MaintenanceSettingsServices.xml`, `WorkEffortServices.xml`
+    (`save#WorkEffortContentFile`), `ProcessChecks.js`, `ProcessServices.xml`, `WorkProcesses.js` (one export); mr-boss
+    `Settings/WorkPolicy.xml` (P13 or P18 may add settings beside it), `Procedure.xml`, `MaintenanceChecklistParts.xml`, `WorkOrders.js`,
+    the design header and §9, usl-inventory.
+  - P9's merge: its planned parts and issues survive F159's guard (entity-auto writes, `issue#AssetToWorkEffort`); a planned part added
+    through `add#WorkEffortProduct` would be refused MANAGED_WORK unless wrapped in `asManagedOwner`. A part file on closed work would be
+    refused by R3's guard (WORK_CLOSED).
+  - The user's calls: both of Nov 12 are built (R1, R2). None open from P7.
+
 ### P8 — Dispatch: teams, skills and qualifications
 
 Design §3 AssignSchedule and BulkWork, §9 Teams, review Y4 and Y8; MT-01, MT-02. People's services are used as
@@ -2224,6 +2465,239 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
   the work order shows one used, and Accounting's journal shows maintenance expense with the facility and cost
   centre; with the mapping removed the issue stops with the named exception.
 
+**Built Nov 12 (P9).** mr-mantle and mr-boss on branch `mnt/p9` (hashes in the lead's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F30 (WorkEffortProduct's key and fields; AssetIssuance's `facilityId`, `assetMaintenanceId`,
+  no cost centre or project), F31 (MaterialIssueReceipt's sources and its `materialAction`), F32 and F71 (AssetAutoPostServices'
+  WIP rule for an issuance and a receipt with a work effort; StockPosting.js begin, scope, stock, period, complete; Production.js
+  issuePlan and returnPlan; `issue#AssetToWorkEffort`'s `issuanceFields`; `receive#Asset` posting inside the call, before the
+  caller can name the issuance), F67 and F24 (SharedContext.js `maintenanceContext()`, Inventory.js' scoped roots and
+  InventoryAvailability's `capabilities.read` and Stock tab), F96, F118, F128, P6's `store#ProcessRequirements` and `copyRequirements`
+  (dated WorkEffortProduct rows of a node), MaintenanceWorkOrder's existing `costCenterId` and `projectWorkEffortId` (audited, never
+  written before), AccountingPolicy.js `dimensions` (a facility dimension must be the posting organization's own, a cost centre an
+  internal organization rolling up to it), AccountingSetup.js' mapping kinds, and `AcctgTrans.workEffortId` as the project
+  (ProjectCosts.js).
+- Mantle:
+  - Records (`entity/MaintenanceMaterialEntities.xml`, a file of its own): WorkEffortProduct gains `quantityUomId`, `requiredDate`,
+    `sourceFacilityId`; AssetIssuance `costCenterId` and `projectWorkEffortId`; `mantle.ledger.config.MaintenanceCostPolicy` (surrogate
+    key; organization, maintenance kind or any, facility or every facility, GL account, from and thru, all audited).
+  - `mantle.work.MaintenanceExecutionServices` over `MaintenanceMaterials.js`: `get#MaintenanceMaterials` (planned lines with step,
+    unit, required date, source facility, issued, returned, used, left; issues and returns once each; used net of returns; the model's
+    PatSparePart suggestions not yet planned; the nodes to plan on; free stock per line with `withStock`; values only with
+    MAINTENANCE_COST_VIEW; each list one query, F96), `store#MaintenanceMaterial` (plan or supervise, open work; a change ends the
+    open row and starts the next, naming the row read, RECORD_CHANGED; remove; `addSuggested`; a supplies part SUPPLIES_REFUSED; a
+    source facility of the work's organization), `issue#MaintenanceMaterial` (StockPosting.js begin with STOCK_ISSUE and the
+    operation key, the assigned technician of the root or step or a supervisor, approved or started work, the stock locked in the
+    user's facilities, inventory only, the planned product, available, the work organization's own, free, the cost policy for an
+    organization that posts (COST_POLICY_MISSING), the period; then `issue#AssetToWorkEffort` with `issuanceFields` (cost centre,
+    project, primary AssetMaintenance): a new issuance each time to the root or step) and `return#MaintenanceMaterial` (the issuance
+    locked, never more than is left of it, into the original asset or a location of the same owner at its `acquireCost`; the receipt
+    names its issuance). The work order's charge: `store#MaintenanceWorkOrder` takes `costCenterId` and `projectWorkEffortId`
+    (validated, VALUE_INVALID) and `get#` names them (`chargeFields`, `chargeOf`; two grouped lines in MaintenanceWork.js).
+  - AC-24 (owner contract with Accounting): `MaintenanceCostRouting.js`, called from `post#AssetIssuance` (an inventory issuance to a
+    managed root or step, not a template: the most specific policy row in effect for the asset owner, kind and the work's facility or
+    nearest ancestor with a row; the expense entry carries the facility, the nearest of the chain the organization owns, and the cost
+    centre; the transaction the project; no row: error journal, `MAINTENANCE_COST_UNMAPPED` with what to map) and `post#AssetReceipt`
+    (a return of such an issuance credited to the account and dimensions of the issuance's own debit). `receive#Asset` posts the
+    receipt before the return names its issuance, so a receipt with a managed work effort and no source is routed by the policy at
+    once (never WIP), and the return reposts it the issuance's way only when the two differ (`settleReturnPosting`, as repost does:
+    one transaction remains). Every other issuance and receipt posts as before. Posting defaults: the mapping kind `maintenance`
+    (Maintenance expense) in AccountingSetup.js' table, its key text, its checks (an account, a MaintenanceKind, a facility of the
+    organization), an existing row only ended, and a clone copying only the rows of every facility.
+- BOSS:
+  - Services: `ironstone.maintenance.MaterialServices` get#MaterialSource and get#MaterialAction (`Materials.js`, F31); Maintenance.js'
+    choices `costCenters`, `projects`, `stockParts`, `partFacilities` and link paths `WorkOrders/MaterialIssueReceipt` and
+    `WorkOrders/InventoryAvailability`; Products' `maintenanceContext()` gains the Stock tab and `facilityIds` (the facilities of the
+    scope's organizations that hold stock), and Inventory.js scopes to them as for Warehouse (F67); Accounting's choices gain
+    `enum:MaintenanceKind`.
+  - Screens: WorkOrderDetail's Parts tab at 40 (F128): Planned parts with Add part, Add suggested parts, Edit and Remove, each line's
+    Stock link, Issue and return for a stock issuer, Parts used (net totals and the movements, value for a cost reader);
+    `WorkOrders/MaterialIssueReceipt` and `WorkOrders/InventoryAvailability` mounted (hidden); Overview's facts and Edit gain the cost
+    centre and project (the template's storeWorkOrder passes them). Shared/MaterialIssueReceipt (owner contract with Warehouse and
+    Manufacturing): a `Maintenance` branch in `materialAction` and the actions, the `workEffortId` parameter declared, the Unused
+    returns box moved into its own section shown for a production run (as before) or a maintenance work order, the history's asset
+    plain text under Maintenance. Accounting's PostingDefaults: the kind's fields (maintenance kind, facility, from, until) and its
+    precedence note.
+  - Demo (BossZMaintenanceDemoData.xml): maint.tech in BOSS_WAREHOUSE_ISSUE (STOCK_ISSUE; maint.tech2 has none); the AHU-2 coil gasket;
+    filter, belt and gasket stock in Services' stock warehouse; the air handler's leak with three gaskets planned, two issued, one
+    returned (rows as the services write them; demo rows post nothing); the compressor's oil service with its filter planned; Services'
+    MaintenanceCostPolicy (613200000, every facility and kind). No setup rows were needed (F118: none added).
+- Specs:
+  - Mantle `test/work/MaintenanceMaterials` (3 features, 0.8 s): suggestions added, a change ending the line, a stale change, supplies
+    and a technician's plan refused; an assigned technician without STOCK_ISSUE refused, a second issue a second issuance, a retry
+    answering the first, supplies, another organization's stock and another product refused; a return above what is left refused, a
+    partial one at the original cost naming its issuance, the used total.
+  - Mantle `test/ledger/MaintenanceExpenseRouting` (5 features, 0.6 s): the issue to the site's row (the room's nearest) with the room,
+    cost centre and project, not WIP, posted once on a retry, a cost centre of another organization refused; an ordinary task of the
+    same owner still to WIP; no mapping refused by name and the backstop to the error journal unposted (`MAINTENANCE_COST_UNMAPPED`); the
+    return credited to the issuance's account and dimensions after the policy changed, one transaction; Posting defaults' kind (another
+    organization's facility refused, a rewrite refused, an end allowed, the list's key text).
+  - BOSS `test/Maintenance/MaintenanceParts` (4 features, 0.3 s): the Parts tab's one qvt render (planner), MaterialIssueReceipt's
+    Maintenance render (the technician's Issue, Return unused, History), InventoryAvailability under Maintenance (Services' warehouse,
+    not Retail's), the compressor's suggestion and the charge's choices. `MaintenanceAccess` gains the issue rule (maint.tech issues;
+    maint.tech2 and the planner refused PERMISSION_DENIED; Retail's stock in Services' warehouse OWNER_MISMATCH; 0.2 s).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePartsWalk` (4 features: create, charge and add suggested parts;
+    issue two and return one through MaterialIssueReceipt's transition; the journal's expense with the room and cost centre and the
+    return; the mapping ended in Posting defaults refusing the next issue by name, a new mapping letting it go).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle every ledger spec (19, Accounting's and Manufacturing's
+  ProductionCostClose among them), the twelve Production specs, WarehouseProduction, the Warehouse stock specs (shipment and product,
+  17), the Maintenance specs, MaintenanceResources and WorkProcess: 486 of 486 (58 specs, 125.9 s feature time); after the last changes
+  MaintenanceMaterials, MaintenanceExpenseRouting, AccountingSetup, AccountingControls, MaintenanceWorkOrders and MaintenanceProcesses
+  63 of 63. mr-boss MaintenanceParts, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceProcedures,
+  MaintenanceRequests, MaintenanceDowntime, ProductsSharedContext, ProductsInventory, ManufacturingMaterials, ManufacturingAccess,
+  WarehouseInventory, WarehousePacking, WarehouseAccess, PurchasingReplenishment, CustomerServiceOrders, CommerceAccess, AccountingAccess,
+  AccountingValuation, AccountingProductionCostClose: 135 of 135 (20 specs, 39.5 s); a first run failed two MaintenanceParts checks
+  that depended on MaintenanceAccess' issue running first (fixed: the demo plans three gaskets). Client MaintenanceWorkOrdersWalk 1 of
+  1 (8.26 s). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before; the changed screens appear only in the
+  information list of unnamed containers; both target symlinks intact. Prettier (`npx prettier --config` from inside each component:
+  from mr-moqui's root it skips the components, which its .gitignore lists) clean on the new JavaScript and on AccountingSetup.js and
+  Inventory.js; MaintenanceWork.js, Maintenance.js, SharedContext.js and MaintenanceAccess.spec.js were not prettier-clean before P9 and
+  are left so. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: ss-inventory's RunProducts and RunConsumed forms and a P9 line; usl-inventory's post#AssetIssuance, post#AssetReceipt,
+  issue#AssetToWorkEffort and receive#Asset rows, and an Added table for MaintenanceExecutionServices, the charge, the Posting defaults
+  kind and MaterialServices.
+- Design edits: design-maintenance's header, §3 PlannedParts, PartsUsed, "Charging a project", the InventoryAvailability and
+  MaterialIssueReceipt mount rows, MT-08, MT-09 and §13.2's stock and ledger bullets as built; design-accounting's header,
+  PostingDefaults' "Maintenance expense routing" and §18's AC-24 row; impl-accounting §7's note of other plans' builds.
+- Findings, numbered by the lead F195 to F202 in order:
+  - `receive#Asset` posts the receipt inside the call (AssetReceiptGlPost), before a caller can name its issuance, so Production's
+    return posts to WIP by the work effort and a maintenance return could not be routed by its source at posting. Built: a receipt to
+    managed work is routed by the policy at once and reposted the issuance's way only when they differ.
+  - Supplies are refused rather than routed: Mantle's TODOs (AssetAutoPostServices) still post a supplies issuance as a fixed asset; a
+    supplies route is Accounting's to design.
+  - A facility dimension must be owned by the posting organization (AccountingPolicy.js `dimensions`), so an ownerless room carries
+    its nearest owned ancestor; the policy itself matches the room's ancestors.
+  - The policy's "maintenance purpose" is built as the work's MaintenanceKind (corrective, preventive), with any kind as the fallback;
+    MaintenanceType rows would be a finer key if Accounting wants one.
+  - Missing mappings are not yet listed in Posting defaults' MissingMappings nor in Maintenance's readiness (P18).
+  - The plan's planned line is per node and product (one open row); Issue on MaterialIssueReceipt is from planned lines only, an
+    unplanned part is planned first.
+  - Demo issuances and returns are rows, not postings (data load runs no SECA), so the demo journal holds no maintenance expense until a
+    part is issued in the app.
+  - maint.tech is now in BOSS_WAREHOUSE_ISSUE (a capability group with no Warehouse root) for the demo; no spec run here checks it against Admin's matrix.
+- For the lead:
+  - Budget share: mr-mantle +1.4 s (MaintenanceMaterials 0.8 s, MaintenanceExpenseRouting 0.6 s); mr-boss server +0.5 s
+    (MaintenanceParts 0.3 s, MaintenanceAccess +0.2 s); client unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `AssetAutoPostServices.xml` (two inserts each in post#AssetIssuance and post#AssetReceipt),
+    `AccountingSetup.js` (prettier-formatted), `MaintenanceWork.js` (one require line, two lines in storeWorkOrder and getWorkOrder),
+    `MaintenanceServices.xml` (store#'s parameters); mr-boss `screen/Shared/MaterialIssueReceipt.xml`, `screen/Maintenance/WorkOrders.xml`,
+    `WorkOrderDetail.xml` (comment), `WorkOrderDetail/Overview.xml`, `template/MaintenanceWorkOrderParts.xml` (storeWorkOrder),
+    `Maintenance.js` (workChoices, linkPaths, choiceSources' end), `SharedContext.js`, `Inventory.js`, `Accounting.js`, `PostingDefaults.xml`,
+    `data/BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (ids), `MaintenanceAccess.spec.js` (appended feature), the
+    inventories, design-maintenance, design-accounting and impl-accounting. No edit to `MaintenanceEntities.xml`, `screen/Maintenance.xml`
+    or `BossSetupMaintenanceData.xml`. P7's guard on `add#WorkEffortProduct` does not touch this path (store#MaintenanceMaterial writes the
+    entity after its own checks).
+  - The user's calls: none blocking. For a decision: whether the maintenance purpose key of MaintenanceCostPolicy should be the kind
+    (built) or the MaintenanceType; and whether a supplies part should get a route of its own (refused meanwhile).
+
+**Review Nov 12 (P9).** mr-mantle 4ea88788 and 51d5426f (R3), mr-boss c4aed074 and this note's commit (branch `mnt/p9`), over the worker's ae1ad9ce
+and c47ce459, after merging master (Maintenance P15) in both repos: mr-mantle 2bb8c441 (clean), mr-boss f701867e
+(BossZMaintenanceDemoData's appended rows, design-maintenance's header and MaintenanceAccess' header and appended feature, each keeping
+both sides; mr-moqui's `mnt/p9` already at master 4994093f). Reviewed `git diff master...mnt/p9` in both repos against P9's text, §2,
+§4, design §3 PlannedParts and PartsUsed, the two mount rows, "Charging a project", MT-08, MT-09, §13.2, design-accounting's
+PostingMappings and §18 (AC-24), F30, F31, F32, F67, F71, AGENTS.md and Practices-App-Dev; read AssetAutoPostServices' post#,
+repost# of AssetIssuance and AssetReceipt and their SECAs, StockPosting.js, Production's return#UnusedMaterial (the pattern),
+MaintenanceAccess.js' assignment and requireWork, AccountingSetup.js' mapping and clone, Shared/MaterialIssueReceipt's three branches,
+SharedContext.js' contexts and Inventory.js.
+- Checked and found sound:
+  - AC-24 as an owner contract: `MaintenanceCostRouting.js` routes only an issuance (and a receipt) whose work effort is a managed
+    MaintenanceWorkOrder root or a step under one, never a template; a production run, a project task and any other work effort
+    finds no MaintenanceWorkOrder and posts as before (an ordinary task of the same owner still to WIP, in the spec). Every ledger,
+    Production, Warehouse stock and Maintenance spec passes unchanged (below). No mapping: the issuance's account is left empty, the
+    transaction goes to the error journal named `MAINTENANCE_COST_UNMAPPED` with what to map and does not post, and the issue entry
+    point refuses before it (`COST_POLICY_MISSING`) for an organization that posts and a cost to post. One operation posts once:
+    the operation key answers a retry with the first issuance or receipt.
+  - The receipt's posting order: `receive#Asset` posts in AssetReceiptGlPost before the return names its issuance. Built, such a
+    receipt was credited to WIP and `settleReturnPosting` unposted, deleted and reposted it the issuance's way (one transaction left,
+    never committed with WIP); R2 routes it to the policy at once, so the repost runs only when the policy or the charge changed since
+    the issue. A return cannot post twice: post#AssetReceipt refuses a receipt already posted, the repost deletes before posting, and
+    the operation key answers a retry. A return is at the original cost: into the original asset at its `acquireCost`, or a new asset
+    copying it; the credit takes the account, facility and cost centre of the issuance's own debit and its project, read from the
+    issuance's posting (else the policy as of the issue date), so a policy ended between issue and return does not move it (spec).
+  - Stock authority: `issue#` and `return#` begin with `STOCK_ISSUE` (StockPosting's begin), lock the stock in a facility of the
+    user's organizations (the posting guard's scope, as Warehouse and Production), then require the technician assigned to the root
+    or the step with MAINTENANCE_EXECUTE, or a supervisor, on a work order the user reads. An assigned technician without the stock
+    grant is refused PERMISSION_DENIED (MaintenanceMaterials, MaintenanceAccess); another owner's stock is refused (RECORD_UNAVAILABLE
+    outside the user's facilities, OWNER_MISMATCH inside them); the equipment under repair is NOT_STOCK, and a customer's asset is
+    another owner's.
+  - Returns never exceed the net issued: the issuance is locked and its receipts summed before the receipt is written
+    (QUANTITY_EXCEEDS_ISSUED, spec).
+  - MaterialIssueReceipt and InventoryAvailability: Warehouse's and Manufacturing's branches are unchanged; the Unused returns box,
+    moved into its own section, shows for a production run as before (ManufacturingMaterials, WarehousePacking, WarehouseInventory
+    and the access specs pass). The Maintenance branch's `clearErrors` after its own check does not hide a posting's refusal (the
+    error response redirects): MaintenanceParts now posts a refused issue through `materialAction` and reads the reason.
+  - `maintenanceContext()`'s Stock tab and InventoryAvailability: there is no stock read permission; they read the facilities of the
+    organizations the user reads in Maintenance that hold those organizations' stock (as Customer Service's and Commerce's mounts
+    scope theirs), quantities only. `costRead` and every price, cost and method capability are false in the context, so Inventory.js
+    shows no value and neither do its exports.
+  - Restricted values: `get#MaintenanceMaterials` gives a value only with MAINTENANCE_COST_VIEW (the Parts tab and MaterialIssueReceipt's
+    History hide the column without it, `financialRead` from it); stock options carry quantities, not costs (MaintenanceParts: no
+    value for the planner).
+  - The demo grant: `BOSS_WAREHOUSE_ISSUE` carries only STOCK_ISSUE and opens no Warehouse screen; Manufacturing's demo already puts
+    its material operator in it for the same purpose. A reasonable demo grant: maint.tech issues parts in Services' facilities only,
+    and every other stock posting needs its own app's record check as well.
+  - The charge: `store#MaintenanceWorkOrder` validates the cost centre (an internal organization rolling up to the work's) and the
+    project (a project of the work's organization), VALUE_INVALID otherwise (spec); the choices are the work organization's only.
+  - Posting defaults' `maintenance` kind: ACCOUNTING_ADMIN of the organization, a facility of the organization, a row ended not
+    rewritten, a clone copying only the rows of every facility under new ids.
+- Fixes:
+  - **R1 (the user's call of Nov 12; accounting).** A supplies part issued to managed maintenance work is routed to the cost policy's
+    expense too, overriding Mantle's fixed-asset posting for that case only: `MaintenanceCostRouting.js` routes inventory and supplies;
+    for supplies the policy's expense replaces the `GatUnissuedFixedAsset` debit and the credit stays the asset account the supplies
+    were received into, and a return reverses it with the issuance's dimensions. Supplies issued anywhere else post as before.
+    `store#` and `issue#MaintenanceMaterial` plan and issue supplies (`SUPPLIES_REFUSED` removed; equipment stays NOT_STOCK),
+    `get#MaintenanceMaterials` offers supplies stock and Maintenance.js' `stockParts` choice supplies parts. Specs:
+    MaintenanceExpenseRouting's supplies feature (the issue on the site's row with the room, cost centre and project; the same
+    supplies issued to an ordinary task posted as a fixed asset, the same asset account credited; the return), MaintenanceMaterials
+    (supplies planned and issued); they fail on the code as built. design-maintenance §13.2 and MT-09, design-accounting's
+    "Maintenance expense routing" and usl-inventory as built.
+  - **R2 (medium, accounting; the Built note's claim).** The Built note says a receipt to managed work naming no issuance yet is
+    routed by the policy at once; the code returned no route without `sourceAssetIssuanceId`, so every return first posted Cr WIP and
+    was always reposted. `receipt()` now routes such a receipt by the policy as of its date (inventory or supplies, the work order's
+    cost centre and project), never WIP; post#AssetReceipt names `MAINTENANCE_COST_UNMAPPED` as post#AssetIssuance does. Spec:
+    MaintenanceExpenseRouting's receipt feature (receive#Asset to the work order credits the site's expense with its dimensions, not
+    WIP); it fails on the code as built.
+  - **R3 (low, accounting; the lead's call on the review's recommendation, under §2's dated rows).** A policy row's end could be set
+    before issues already posted under it (`maintenanceMapping` checked only that it followed its start), so a later
+    `repost#AssetIssuance` would take another row. Posting defaults' maintenance kind now refuses an end earlier than now, on a new
+    row or an existing one, with `DATE_INVALID` (an end already stored is left as it is). Spec: MaintenanceExpenseRouting's Posting
+    defaults feature (a backdated end and a new row ended in the past refused); MaintenanceExpenseRouting, AccountingSetup and
+    AccountingControls 48 of 48 after it. design-accounting's Maintenance expense routing as built.
+- Findings, numbered by the lead F203 to F207 in order:
+  - A clone run twice copies the every-facility rows twice (the rows have a surrogate key, so no conflict is found); harmless for
+    routing (the first in effect wins) but untidy.
+  - An issue checks the work order's status, not the step's: a part may be issued to a completed step of started work.
+  - `maintenanceFacilities` reads the distinct facilities of the organizations' stock on every Maintenance catalog context; cheap at
+    the demo's size, a facility-owner query would scale better.
+  - The demo's cost policy (613200000 for ORG_ZIZI_SERVICES) is exercised only by the acceptance MaintenancePartsWalk (not run): no
+    regression spec checks that Services posts to that account.
+  - P7's `check#ManagedWork` guard (on master after P7): `store#MaintenanceMaterial` writes WorkEffortProduct directly after its own
+    checks and `issue#` calls `issue#AssetToWorkEffort` with `noConsumeProduct: ignore`, so neither reaches `add#WorkEffortProduct`;
+    to be confirmed by MaintenanceMaterials and MaintenanceExpenseRouting after the merge.
+- Tests (release binary, `--nobuild`, this worktree):
+  - mr-mantle MaintenanceExpenseRouting and MaintenanceMaterials 10 of 10 (0.73 s and 0.92 s); then every ledger spec
+    (AccountingActivities, AccountingApplicationRules, AccountingBookDates, AccountingControls, AccountingCurrency,
+    AccountingFiscalPeriodDays, AccountingFixedAssets, AccountingPaymentCorrections, AccountingPeriodClose, AccountingProjectCost,
+    AccountingReceivables, AccountingReports, AccountingSetup, AccountingValuation, FinancialReports, LedgerMaintenance,
+    MaintenanceExpenseRouting, ProductionCostClose, ReceiptAdjustments), the Production specs (Changes, Costs, Downtime, Materials,
+    Orders, Policy, Quality, Quantities, Reports, Schedule, ShopFloor, Subcontract), WarehouseProduction, WorkProcess, the Maintenance
+    specs (Intake, ManagedWork, Materials, Outages, Processes, Scope, WorkOrders), AccountingInternalTransfers, WarehouseReturns,
+    WarehouseTransfers, WarehouseReceiving, WarehouseAdjustments, WarehousePacking and PurchaseReceipts: 417 of 417 (50 specs,
+    164.9 s).
+  - mr-boss MaintenanceParts, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment, ProductsSharedContext,
+    ProductsInventory, ManufacturingMaterials, ManufacturingAccess, WarehouseInventory, WarehousePacking, WarehouseAccess,
+    CustomerServiceOrders, CommerceAccess, AccountingAccess, AccountingValuation, AccountingProductionCostClose: 123 of 123 (16 specs,
+    88.2 s; MaintenanceParts 0.42 s).
+  - Lint not run (the review changed no screen). Prettier clean on MaintenanceCostRouting.js, MaintenanceMaterials.js, the two Mantle
+    specs and MaintenanceParts.spec.js. The target symlink is intact. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle +0.25 s over the Built note (MaintenanceExpenseRouting 0.73 s, MaintenanceMaterials 0.92 s); mr-boss
+    MaintenanceParts +0.1 s (0.42 s); budgets not changed.
+  - Merge hot spots added by the review: mr-mantle `AssetAutoPostServices.xml` (post#AssetReceipt's result block), mr-boss
+    `Maintenance.js` (`productOptions`), design-accounting's "Maintenance expense routing", design-maintenance's header. When P7 lands,
+    merge master again and run MaintenanceMaterials, MaintenanceExpenseRouting and WorkProcess.
+  - The user's calls: none open; both of Nov 12 are built (the kind with the any-kind fallback as built, supplies routed by R1), and
+    the backdated end is R3.
+
 ### P10 — Purchasing and outside service
 
 Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetail mount row; MT-10.
@@ -2243,6 +2717,205 @@ Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetai
 - **Usable when** (`acceptance/Maintenance/MaintenancePurchaseWalk`): a planner requests a motor rewind from the
   work order, Purchasing sources it to a PO, the work order shows the PO line, and at completion the supervisor
   accepts the service with the technician's photo.
+
+**Built Nov 12 (P10).** mr-mantle a37e1f3e, mr-boss 4b130d8f (branch `mnt/p10`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F45 (`accept#ServiceItem`, OrderServices.xml:3233, over ServiceAcceptance.js: PURCHASE_ORDER_EDIT or
+  STOCK_RECEIVE through StockPosting.begin, the buying organization, at most as ordered, an operation key; AssetMaintenanceOrderItem with no
+  writer); Purchasing P10's purchase request (`create#PurchaseRequest`, `store#PurchaseRequestItem`, `submit#PurchaseRequest`: a requester
+  files and submits their own request with no Purchasing permission; `decide#`, `convert#PurchaseSourcing` and RequestItemOrder's
+  `linkLine`), `OrderItemWorkEffortCheckComplete`, Shared/OrderDetail's app branches (Manufacturing's read-only subcontract branch the
+  model), Shared/RequestDetail's Purchasing section (template/PurchasingRequestDetail.xml), P3's lifecycle and CompleteWork
+  (`MaintenanceWork.js` actionsFor and transitionWorkOrder), P4's request links (RequestWorkEffort), F118 and F128.
+- Mantle (`service/mantle/work/MaintenancePurchases.js`, appended to `MaintenanceServices.xml`):
+  - `link#MaintenancePurchase`: without an order line, a purchase request of the work's organization through Purchasing's
+    `create#PurchaseRequest` (the code's path, not `create#Request` as the plan has it: it adds the OrgInternal party, the currency
+    and the line checks), one line through `store#PurchaseRequestItem` (the product, quantity, needed-by date, the work's due date by
+    default), `RequestWorkEffort` to the work order and `submit#PurchaseRequest` (unless submit is false); a planner's or supervisor's,
+    the work open, once under its operation key (PostingOperation). With an order line, an `AssetMaintenanceOrderItem` for the work's
+    primary AssetMaintenance: a purchase line of the work's organization, not cancelled; one sourced from the work's request is the
+    work's, another only a buyer's (PURCHASE_ORDER_EDIT); facility work has no AssetMaintenance (LINK_UNAVAILABLE). Never an
+    OrderItemWorkEffort. It places and approves nothing.
+  - `link#SourcedMaintenancePurchase` and the entity ECA `MaintenancePurchaseSourced` (`entity/MaintenancePurchase.eecas.xml`) on
+    RequestItemOrder's create: when Purchasing sources a line of a request linked to managed equipment work, the work's primary
+    AssetMaintenance is linked to the order line, so the lines that fulfil the work are its own with no step and Purchasing's
+    sourcing code is unchanged.
+  - `get#MaintenancePurchases` (the work's requests and lines; the order lines linked or sourced from its requests, with supplier,
+    order state, quantity and a service line's accepted and remaining; prices only for PURCHASE_ORDER_EDIT, SUPPLIER_PRICE_VIEW/EDIT,
+    ACCOUNTING_VIEW or MAINTENANCE_COST_VIEW; what the caller may do; the work's files as evidence), `accept#MaintenanceService` (a
+    line of the work, LINE_UNLINKED otherwise; the assigned technician or a supervisor, NOT_ASSIGNED; the work in progress, held or
+    complete; Purchasing's permission checked before anything is written, then `accept#ServiceItem` with the work order, the comments
+    and the evidence: a file of the work attached once to the order line as OrderContent `OctServiceEvidence`, seeded in
+    `data/MaintenancePurchaseData.xml`; the line linked to the equipment record), `get#MaintenanceOrder` (OrderDetail under Maintenance:
+    the lines of work orders the user reads; RECORD_UNAVAILABLE for an order of none) and `get#PurchaseRequestWork` (Purchasing's
+    RequestDetail: the work orders of a request the user reads under Purchasing's rule, id, name, target, status and need date, and
+    whether Maintenance opens it).
+  - `MaintenanceWork.js` (CompleteWork's outside-service line, three small edits): `transition#MaintenanceWorkOrder`'s complete takes
+    serviceOrderId, serviceOrderItemSeqId, serviceAcceptedQuantity, serviceEvidenceContentId and serviceOperationKey and accepts the
+    line in the completion's transaction (before the MclOnComplete close), answering serviceAcceptanceId; the complete action carries
+    `serviceLines` and `evidenceFiles` for a caller who may accept.
+- BOSS:
+  - Screens: WorkOrderDetail's Purchasing tab (`WorkOrderDetail/Purchasing.xml`, index 50, F128: Purchase requests with Request a
+    purchase; Purchase order lines, each opening OrderDetail, with Accept outside service and a buyer's Link an order line; why the
+    user cannot accept) over `template/MaintenancePurchaseParts.xml` (requestPurchase, linkPurchase, acceptService and the section
+    MaintenanceOrder); the Complete row of the Lifecycle (`MaintenanceWorkOrderParts.xml`) with Accept outside service, quantity and
+    evidence, hidden unless the caller may accept a line; `Maintenance/WorkOrders/OrderDetail` mounting Shared/OrderDetail with a
+    read-only Maintenance branch (`OrderDetail.xml`: one else-if, the section-include, Maintenance among the apps with their own
+    not-found); Maintenance.js's linkPath `WorkOrders/OrderDetail`. The product drop-down reuses the `parts` choice (P6's).
+  - Owner contract with Purchasing: `template/PurchasingRequestDetail.xml` reads `get#PurchaseRequestWork` in its section's actions and
+    shows "From work order" under the header, linked into Maintenance only for a user Maintenance admits; its services and specs
+    unchanged. Written into design-purchasing and impl-purchasing's log.
+  - Demo (BossZMaintenanceDemoData.xml, appended): the held motor's rewind, maint.planner's purchase request of Services (in progress)
+    sourced to Delta Motor Rewinds' placed purchase order BOSS_MNT_PO_REWIND, its service line linked to the motor's record (the
+    AssetMaintenanceOrderItem before the RequestItemOrder, so the ECA finds it), nothing accepted.
+- Specs:
+  - Mantle `test/work/MaintenancePurchases` (3 features, 1.0 s): a planner without Purchasing's grant requests a rewind (submitted
+    RqtPurchase of the organization, filed by the planner, linked to the work, once under its key), a technician refused, the
+    planner's approval and sourcing refused; Purchasing's approval and sourcing link the order line to the work's AssetMaintenance
+    (the ECA) and write no OrderItemWorkEffort, the planner's read shows it without a price and no accept, a line the work did not
+    request linked by a buyer and refused to the planner; the technician without Purchasing's grant refused, the supervisor (a
+    receiver) completes with the line and the technician's photo, the same key again `alreadyApplied` with one ServiceAcceptance
+    (the work order, the OctServiceEvidence file), the order line not completed, OrderDetail's read showing the work.
+  - BOSS `test/Maintenance/MaintenancePurchasing` (2 features, 0.46 s): the Purchasing tab's one qvt render (the supervisor: the
+    request, the line, the supplier, Request a purchase, no Accept and why, no price), OrderDetail under Maintenance rendered once
+    (the line with its work order; Services' office order not available), Purchasing's RequestDetail rendered once for
+    purchasing.services (the work order's name, no link into Maintenance). `MaintenanceAccess` gains the purchases rule (the planner
+    reads, the resource administrator and Retail's planner refused, a technician asks for nothing, a planner links no unrequested
+    line; 0.20 s) and MaintenanceSpecLib the P10 ids.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePurchaseWalk` (3 features: the planner requests the rewind from
+    the tab; a walk-local approver and buyer of Services approve and source it, the tab, OrderDetail and Purchasing's RequestDetail show
+    it; the supervisor, made a receiver for the walk, completes with the technician's photo, once).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenancePurchases, PurchaseRequests, Sourcing, SourcingAwards,
+  ReplenishmentRoutes, WarehouseProduction, ProductionSubcontract, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake and
+  MaintenanceOutages 69 of 69 (20.0 s feature time); mr-boss MaintenancePurchasing, MaintenanceAccess, MaintenanceWorkOrders,
+  MaintenanceDowntime, MaintenanceRequests, PurchasingOrders, PurchasingRequests, PurchasingSourcing, PurchasingAccess, CommerceOrders,
+  CustomerServiceOrders, ManufacturingSubcontracting, AccountingPayables, InsightsRecords, WarehousePicking and Requests 113 of 113
+  (27.3 s); client MaintenanceWorkOrdersWalk 1 of 1 (7.96 s). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as
+  before, none in the new or changed screens; both symlinked binaries unchanged. Prettier (`npx prettier` with the repo's
+  `.prettierrc.json`, from each component) on the new files; the changed lines of MaintenanceWork.js, Maintenance.js and
+  MaintenanceAccess.spec.js are clean (those files are not clean on master and were not reformatted whole). Not run: ./moq test-apps,
+  the acceptance suite.
+- Inventories: usl-inventory's accept#ServiceItem and create#PurchaseRequest rows and an Added table for P10's MaintenanceServices;
+  ss-inventory has no row naming these screens.
+- Design edits: design-maintenance's header, §3 (PurchaseLinks, CompleteWork, the OrderDetail mount row) and §13.3's
+  OrderItemWorkEffortCheckComplete row as built; design-purchasing's header and "Maintenance purchases"; impl-purchasing's log.
+- Findings, numbered by the lead F237 to F245 in order:
+  - The request is filed through Purchasing's `create#PurchaseRequest`, not `RequestServices.create#Request` as the plan says: Purchasing
+    P10 built the purchase request's path (its organization party, currency and line checks), and the plain create would skip them.
+  - The order lines that fulfil a request are linked by an entity ECA on RequestItemOrder rather than inside Purchasing's sourcing: the
+    plan's "AssetMaintenanceOrderItem rows for the order lines that fulfil it" with Purchasing's code unchanged. The reviewer may prefer a
+    call in PurchaseRequests.js `linkLine` (an owner change §2 names for P10).
+  - Facility work has no AssetMaintenance, so AssetMaintenanceOrderItem cannot hold its lines: they are read through its requests, and a
+    buyer's direct purchase order line cannot be linked to it (LINK_UNAVAILABLE).
+  - Accepting outside service needs Purchasing's PURCHASE_ORDER_EDIT or STOCK_RECEIVE (accept#ServiceItem's own check, "buying stays
+    Purchasing's"); no Maintenance group holds either, so the demo's supervisor cannot accept (the tab and Complete say why), and the
+    walk makes the supervisor a receiver. See the user's call below.
+  - accept#ServiceItem accepts a line of a draft (OrderOpen) order; Purchasing's rule, unchanged.
+  - The planner files the request but has no Purchasing root, so follows it on the work order's Purchasing tab, not in Purchasing.
+  - Request a purchase names a product (any, through the `parts` choice; Purchasing's check#ProductUsable decides) and no supplier; the
+    buyer chooses the supplier before sourcing (a line with no product cannot be sourced, PRODUCT_REQUIRED).
+  - The evidence's OrderContent points at the work's file (the same contentLocation), not a copy.
+  - The request's description carries the work order's id and name, which a buyer reads; the work's notes are not copied.
+- For the lead:
+  - Budget share: mr-mantle MaintenancePurchases 1.0 s; mr-boss server MaintenancePurchasing 0.46 s and MaintenanceAccess +0.20 s;
+    client unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceServices.xml` (appended; transition#MaintenanceWorkOrder's parameters), `MaintenanceWork.js`
+    (the purchases loader, actionsFor's complete row, transitionWorkOrder after downtimeOf and its answer: P7's Complete gate is nearby);
+    mr-boss `screen/Maintenance/WorkOrders.xml` (the OrderDetail item beside P9's MaterialIssueReceipt and InventoryAvailability),
+    `WorkOrderDetail.xml`'s comment, `template/MaintenanceWorkOrderParts.xml` (the Complete row's fields and lifecycleAction's in-map),
+    `Maintenance.js` linkPaths, `BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (ids after P6's),
+    `MaintenanceAccess.spec.js` (header and an appended feature), `screen/Shared/OrderDetail.xml`, `template/PurchasingRequestDetail.xml`,
+    usl-inventory (appended), design-maintenance §3 and header.
+  - The user's call: may Maintenance's supervisor accept outside service without a Purchasing permission? Recommended: keep
+    Purchasing's check (as built) and grant STOCK_RECEIVE to whoever receives at the site; the alternative is a grant of STOCK_RECEIVE
+    to BOSS_MAINTENANCE_SUPERVISE in BossSetupMaintenanceData.xml (it would also let them receive stock in Warehouse).
+
+**Review Nov 12 (P10).** mr-mantle 8558c4c1, mr-boss 0af35b68 and this note's commit (branch `mnt/p10`), over the worker's a37e1f3e,
+4b130d8f and 43be81ff, after merging master (Maintenance P9 and P13) in both repos: mr-mantle 0b382c7b (MaintenanceWork.js' loaders,
+both kept), mr-boss 8c05b37d (WorkOrders.xml's subscreens and comment, WorkOrderDetail's comment, Maintenance.js' linkPaths,
+BossZMaintenanceDemoData's appended rows, design-maintenance's header and mount rows, usl-inventory's appended tables,
+MaintenanceSpecLib's ids and MaintenanceAccess' header, each keeping both sides; mr-moqui's `mnt/p10` already at master 4994093f).
+Reviewed `git diff master...mnt/p10` in both repos against P10's text, §2, §4, design §3 PurchaseLinks, CompleteWork and the
+OrderDetail mount row, §13.3, F45, F128, design-purchasing "Maintenance purchases", AGENTS.md and Practices-App-Dev; read
+ServiceAcceptance.js and accept#ServiceItem, PurchaseRequests.js (purchaseRequest, requireRead, linkLine), every writer of
+RequestItemOrder, the framework's entity ECA runner (`eca.rs`) and service-call rollback (`call.rs`), MaintenanceAccess.js'
+scope, requireWork and workHidden, Shared/OrderDetail's branches and template/PurchasingRequestDetail.xml. The lead decided the
+worker's call per the plan's text (acceptance stays under Purchasing's own check, accept#ServiceItem's), recorded below as R1.
+- Checked and found sound:
+  - Linking without placing: `link#MaintenancePurchase` files a request through Purchasing's `create#PurchaseRequest`,
+    `store#PurchaseRequestItem` and `submit#PurchaseRequest` as its requester and calls no decide, convert or order service (the
+    planner's approval and sourcing refused, MaintenancePurchases); a retry under its key answers the first request (the
+    PostingOperation key, its fingerprint over the fields); the work is read through `requireWork` (another organization's work
+    RECORD_UNAVAILABLE, now also for link in MaintenanceAccess); an order line must be a purchase line whose customer is the
+    work's organization (another organization's line RECORD_UNAVAILABLE even for a buyer, now in the spec), not cancelled; a
+    line the work did not request needs PURCHASE_ORDER_EDIT; it writes AssetMaintenanceOrderItem once (ALREADY_LINKED), never an
+    OrderItemWorkEffort.
+  - Acceptance: completing the work completes no order item (no OrderItemWorkEffort is written anywhere, and ServiceAcceptance.js
+    changes no item status); the acceptance runs through `accept#ServiceItem` under its own PURCHASE_ORDER_EDIT or STOCK_RECEIVE
+    check, the buying organization's scope (FacilityScope.owns) and its operation key, once (the same key from the tab after
+    Complete answers `alreadyApplied`, one ServiceAcceptance); the evidence is a file of the work only (EVIDENCE_INVALID), attached
+    once per line and file (found by contentLocation; now asserted: one OctServiceEvidence row), and written in the acceptance's
+    transaction, so a refusal by Purchasing leaves no orphan. Acceptance of a draft (OrderOpen) order is Purchasing's rule and is
+    only noted (the spec's sourced order is a draft).
+  - OrderDetail's Maintenance branch: one else-if, read only (no transition, no form), `get#MaintenanceOrder` for a work reader
+    showing only the lines of work orders the user reads (each work read through `workOf`), RECORD_UNAVAILABLE for an order of
+    none; Purchasing's, Commerce's, Customer Service's, Warehouse's and Manufacturing's branches untouched (PurchasingOrders,
+    CommerceOrders, CustomerServiceOrders and ManufacturingSubcontracting pass).
+  - Restricted values: the tab, OrderDetail's branch and CompleteWork show unit prices, amounts, the order total and a request
+    line's maximum only when `priceRead` (PURCHASE_ORDER_EDIT, SUPPLIER_PRICE_VIEW or _EDIT, ACCOUNTING_VIEW, MAINTENANCE_COST_VIEW,
+    Manufacturing's subcontract rule plus the maintenance cost reader); the planner and the supervisor see none (specs), a buyer
+    sees the price (now in the spec).
+  - The ECA against a call in Purchasing's `linkLine`: RequestItemOrder is written by PurchaseRequests.js' linkLine, Sourcing.js,
+    Awards.js, SupplyPlanningRoutes.js, PurchasePegs.js and OrderServices.xml; the ECA covers every one with Purchasing's code and
+    specs unchanged, and the work's reads find a sourced line through its request without the link. Kept as built; R2 makes it
+    failure tolerant.
+- Fixes:
+  - **R1 (the lead's decision, Nov 12; access, demo).** Acceptance stays under Purchasing's own check. The demo's maint.supervisor
+    is in Warehouse's existing receiving capability group `BOSS_WAREHOUSE_RECEIVE` (STOCK_RECEIVE alone, CapabilityBundle of
+    Warehouse; its one screen grant is NewReceipt under the Warehouse root, which the supervisor cannot open), as P9's maint.tech
+    in BOSS_WAREHOUSE_ISSUE; BossZMaintenanceDemoData's P10 block. The acceptance MaintenancePurchaseWalk's supervisor accepts with
+    the technician's photo as the demo has it (the walk-local receiver group removed). MaintenancePurchasing's tab render now shows
+    the supervisor Accept outside service; MaintenanceAccess' purchases case checks that the supervisor gets no Warehouse app and no
+    receipt quick create. design-maintenance PurchaseLinks and header say so.
+  - **R2 (failure tolerance; Mantle).** A failure in the RequestItemOrder ECA rolled back Purchasing's sourcing: the rule runs
+    in the sourcing transaction (`eca.rs` returns its action's error to the write), and a failed service call marks the transaction
+    for rollback (`call.rs`), so `ignore-error` could not help. `link#SourcedMaintenancePurchase` now calls no service: each work's
+    link is written directly after its checks (the AssetMaintenance and order line exist, not linked yet), and anything that still
+    fails is logged with the request, the order line and the work while the rest goes on; the ECA calls it with the artifact check
+    aside (it checks nothing and writes only the link the RequestItemOrder implies, so a buyer's sourcing from a screen never fails on
+    Maintenance's service authorization). No spec: nothing provokes the failure without a test hook (finding below).
+  - **R3 (restricted values; owner contract).** Purchasing's RequestDetail showed every reader of the request the work order's
+    name, and the request's description carried it. `get#PurchaseRequestWork` gives the name only when Maintenance admits the user
+    (`workHidden`), the id, target, state and need date otherwise; the request names its work order by id ("For maintenance work
+    order …"), the demo request too; PurchasingRequestDetail shows the id alone for a user not admitted. The read uses Purchasing's
+    own `requireRead` (exported from PurchaseRequests.js, unchanged) instead of a copy of its permission list. Specs:
+    MaintenancePurchases (the approver reads the work order without its name, the planner with it, the description without it;
+    fails with the name given to all), MaintenancePurchasing (purchasing.services sees the id, not "Compressor motor vibration").
+    design-purchasing, impl-purchasing's log and usl-inventory as built.
+- Findings, numbered by the lead F246 to F250 in order:
+  - Under the `MclOnComplete` policy the work closes at completion, and acceptance is refused on closed work (STATUS_INVALID): the
+    outside service is then accepted at Complete or in Purchasing, not from the tab afterwards.
+  - A refused acceptance at Complete fails the completion (one transaction): the user asked for both; the tab's Accept stays open
+    while the work is complete.
+  - `get#MaintenanceOrder` reads each work in a try/catch that takes any error for "not readable": a bug in `workOf` would hide a
+    line rather than surface.
+  - The ECA's failure path is reviewed, not tested: with the checks before the write nothing in the data provokes it.
+  - Prices follow Manufacturing's subcontract rule (ACCOUNTING_VIEW and the supplier price permissions beside PURCHASE_ORDER_EDIT
+    and MAINTENANCE_COST_VIEW); the lead's text names only the cost reader and Purchasing's permission. Left as built.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenancePurchases, PurchaseRequests, Sourcing, SourcingAwards,
+  ReplenishmentRoutes, ProductionSubcontract, MaintenanceWorkOrders and MaintenanceMaterials 47 of 47 (13.9 s feature time, 38.7 s
+  wall); MaintenancePurchases 3 of 3 (1.1 s), and with R3's name given to all it fails. mr-boss MaintenancePurchasing,
+  MaintenanceAccess, MaintenanceWorkOrders, MaintenanceParts, PurchasingRequests, PurchasingSourcing, PurchasingAccess,
+  PurchasingOrders, CommerceOrders, CustomerServiceOrders, ManufacturingSubcontracting and WarehouseReceiving 85 of 85 (23.0 s
+  feature time, 45.6 s wall); WarehouseAccess 8 of 8. `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before,
+  none in P10's screens; the symlinked binary unchanged. Prettier (mr-moqui's `.prettierrc.json`) clean on MaintenancePurchases.js,
+  its spec, MaintenancePurchasing and the walk; MaintenanceAccess' changed lines clean (the file is not clean on master). Not run:
+  ./moq test-apps, the acceptance suite, the client MaintenanceWorkOrdersWalk (unchanged by the review).
+- For the lead:
+  - Budget share: mr-mantle MaintenancePurchases 1.1 s (+0.1 s); mr-boss MaintenancePurchasing 0.5 s, MaintenanceAccess' purchases
+    case 0.3 s (+0.1 s); budgets not changed.
+  - Merge hot spots: the worker's list, plus BossZMaintenanceDemoData's P10 block (the supervisor's membership), PurchaseRequests.js'
+    export list, MaintenanceAccess' purchases case and header, design-maintenance's header and PurchaseLinks paragraph.
+  - The user's calls: none open from P10. The lead's decision of Nov 12 (R1) is recorded here and in design-maintenance.
 
 ### P11 — Costs
 
@@ -3005,6 +3678,227 @@ approval kind; MT-07 (decisions), MT-01, MT-11.
   phone and the other is answered a conflict; the organizer moves the approved meeting and it waits for approval
   again. **Gate 5.**
 
+**Built Nov 12 (P16).** mr-mantle 146f52da, mr-boss 04946d5b and this note's commit (branch `mnt/p16`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P15's Built and Review notes; `ResourcePolicy.js` (resourceOf, the guard, seriesInstances,
+  conflictsOver, blocksOver, availability), book#Resource (its own lock before the guard), check#ResourceBookings (reapprove,
+  checkOnly), create#Event, store#EventRecurrence, get#FreeBusy and get#FullCalendarData's P15 reads; `ResourceOutages.js` record#,
+  recordBlock (Manufacturing's entry not locking), correctBlock and affectedBookings; ProductionSchedule.js store#WorkCenterOffline (the
+  outer transaction, then each move through lib.probe in a transaction of its own) and what the moves lock and write (WorkEffort rows,
+  which reference the Facility; nothing writes or locks a WorkCenter row but WorkCenters.js' own edits); every reader of
+  ResourceUnavailability for F119 (ResourcePolicy blocksOver, ProductionCalendar, ProductionShopFloor, ProductionOrders, BOSS
+  WorkCenters.js and Facilities.js: all already leave out superseded rows; P16's reads go through blocksOver); the framework's
+  approve#NotificationMessage and refuse#NotificationMessage (the topic's services get recordEntityName, recordId, message, reason; on
+  success every recipient's row is marked viewed) and Commons' inbox (CommonsServices decorate#Notifications: every unviewed message of
+  a topic with an approve service is an approval card); P6's WorkProcessApproval seeds and notices as the model; Commons' Schedules
+  (Schedules.xml, Schedules.qvue, SchedulesTui.xml, ScheduleServices) and EventDetail's When form.
+- Mantle:
+  - `mantle.work.ResourceBookingServices` over the new `ResourceBookingDecisions.js`: `find#ResourceBookingRequests` (a booking
+    approver's resources, a policy reader's or supervisor's scope read only; requested by default, assigned or denied; each row with the
+    span now, organizer, purpose only when the user may open the event, the requester's notes, the policy in words, the clashes with
+    Busy for a hidden event, how long it waited, canDecide and the expected state and span), `decide#ResourceBooking` (RESOURCE_BOOKING_APPROVE
+    and a current BookingApprover, NOT_APPROVER otherwise; the resource locked through `lockResource`; STATE_CHANGED, SPAN_CHANGED; an
+    approval runs the guard with the assigned bookings over the span, `assignedOnly`, CONFLICT unless the policy's override applies; a
+    denial needs its reason, kept as "Denied: ..." in the booking's comments), `decide#ResourceBookings` (each through lib.probe in its own
+    transaction, failures named and logged), `approve#ResourceBooking` and `refuse#ResourceBooking` (the topic's services: the notice's
+    span and state as the expected ones).
+  - Notices: `notifyRequested` (book#Resource's request; check#ResourceBookings with reapprove, for each booking waiting after a move)
+    tells the resource's approvers on `ResourceBooking`, the message holding the event, resource, span (fromMs, thruMs), its words and the
+    requester, no title; an older notice of the same booking leaves the inboxes, as it does after a decision. `ResourceBookingNotice`
+    tells the organizer of a decision and, from `record#ResourceUnavailability` (an actual outage, a planned block, a correction's newly
+    covered bookings), that an outage or block now covers their booking, with the resource and a safe reason. Seeds in
+    `MaintenanceWorkResourceData.xml`: both topics and their TopicRegistrations (ResourceBooking with subscriptionPermission
+    RESOURCE_BOOKING_APPROVE).
+  - F171: `ResourcePolicy.js lockCenters` locks the WorkCenter rows of a facility and those above it, in id order; `lockResource` locks
+    them then the resource; book#Resource calls lockCenters before its own Facility lock, the guard's write path (check#, create#Event's
+    equipment, decisions) uses lockResource; ResourceOutages' Manufacturing entry (record#, correct#) locks its center's WorkCenter row.
+    WorkCenter rows are always taken before Facility rows and the moves never touch them, so the P15 hang cannot recur: ProductionSchedule
+    (apply with moves), ProductionShopFloor and the rest pass.
+  - F172: resourceOf takes allowStock; the guard answers an inventory or supplies asset unmanaged at once (no policy, no block; a hidden
+    conflict still Busy), unavailableOver answers it none, so book#Resource, create#Event and get#FreeBusy of stock work as before P15.
+  - F165: the guard expands a recurring booking for every resource (seriesInstances from now within 365 days for an unmanaged one) and
+    reads the blocks once over the range, matched to each meeting (and to the time asked for, a phone's move not stored yet); an unmanaged
+    resource's conflicts stay on the first meeting, so Commons' booking behaves as before.
+- BOSS:
+  - Screens: `Scheduling/BookingRequests` (menu index 2: BookingFind, BookingRows, BookingDecision with Approve and Deny with its reason,
+    BulkBookingDecision on the selected rows; the transitions refuse a user without bookingApprove, Mantle checks again) and
+    `Scheduling/ResourceCalendar` (index 4; Commons' Schedules.qvue with transitions of its own: Maintenance.js `calendarResources` over
+    find#BookableResources, the bookings and blocks through Commons' get#ResourceBookings with includeUnavailable, booking and cancelling
+    through Commons' book#ResourceSlot and cancel#MyBooking), `ResourceCalendarTui` its terminal twin (hidden; the day's intervals from
+    get#ResourceAvailability). Maintenance.js: linkPaths and calendarResources. The root declares both topics; BossSetupMaintenanceData
+    links ResourceBooking to BookingRequests and ResourceBookingNotice to the event in Commons.
+  - Commons (owner contract): `get#ResourceBookings` gains includeUnavailable (blocked items, off by default, so Commons' Schedules is
+    unchanged); Schedules' resources transition answers `adminUrl` ("Scheduling admin", Maintenance's Scheduling, for a user whose
+    Maintenance capabilities match the Scheduling menu); Schedules.qvue finds its mount as Schedules or ResourceCalendar, hides the way
+    back to the Calendar under Maintenance, shows "Scheduling admin" and draws a blocked item in negative (never dragged, its dialog with
+    no event or cancel). The approvals inbox card is the generic one over the ResourceBooking topic.
+  - Demo (BossZMaintenanceDemoData.xml, appended): maint.tech's shift handover asks for Room 101 on Nov 18 with a note, waiting for
+    maint.booking.
+- Specs:
+  - Mantle `test/work/ResourceBookingDecisions` (6 features, 1.7 s): a request notifies both approvers (no title in the message); Bob's
+    overlapping request refused while Ann's waits, then requested with the override; the first approver approves Ann's, the second's
+    approval of Bob's is CONFLICT, the other approver's notice gone and Ann told; a non-holder PERMISSION_DENIED, another room's approver
+    NOT_APPROVER, a policy reader read only, an approver of nothing sees nothing, a denial without reason REASON_REQUIRED, the bulk denial
+    one decided and one STATE_CHANGED, Bob told "denied"; a moved approved booking requested again, its old notice SPAN_CHANGED, the new
+    one approved; the availability read's assigned, requested (Busy, no id), planned and actual intervals, no description; F165: an
+    unmanaged daily series refused by a blackout on its third day, a two-day series whose second meeting clashes accepted; F172: book#,
+    create#Event and get#FreeBusy of an inventory asset; F171: store#WorkCenterOffline applied (its center locked) and a booking of the
+    line under it refused. The lock order itself is not covered (two transactions), as P15's R5.
+  - BOSS `MaintenanceScheduling` (+1 feature, 0.10 s): BookingRequests' one qvt render for Room 101's approver (the handover, its notes,
+    "Not shared with you", Approve, Decide selected) and ResourceCalendarTui's (Room 101's day: Blocked, the blackout's reason, the
+    vendor walkthrough Busy). ResourceCalendar's qvue is Commons' component, rendered by no regression spec (it has no qvt template of
+    its own). `MaintenanceAccess` (+1 feature, 0.15 s): the approver lists the handover with canDecide; the planner refused the list and
+    the decision; the approver refused a room they do not approve (NOT_APPROVER).
+  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceBookingWalk` (4 features: two overlapping asks, the
+    second answered the conflict; the approval from Commons' inbox at 390 px and the organizer told; the organizer's move waiting again
+    and approved from BookingRequests; the approver's ResourceCalendar with the booking Busy and the demo blackout).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceOutages,
+  CalendarServices, CalendarChanges, Dav, CommonsToday, ProductionSchedule, ProductionDowntime, ProductionShopFloor, ProductionOrders,
+  ProductionReports, ProductionPolicy, ManufacturingServices, WorkCenters, WorkResources, MaintenanceWorkOrders, MaintenanceManagedWork,
+  MaintenanceScope and MaintenanceIntake 161 of 161 (64.6 s; 37.9 s of features); mr-boss MaintenanceAccess, MaintenanceDowntime,
+  MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceScheduling, MaintenanceRequests, MaintenanceProcedures, Schedules, EventDetail,
+  Calendar, QuickCreate, PublishedCalendar, Notifications, WarehouseFacilities, ManufacturingWorkCenters, ManufacturingDowntime,
+  ManufacturingSchedule, AdminLifecycle, PeopleLifecycle and PeopleSchedules 171 of 171 (46.8 s); after prettier ResourceBookingDecisions,
+  ResourceBookingPolicy, CalendarServices, ProductionSchedule and ProductionShopFloor 50 of 50, MaintenanceScheduling, MaintenanceAccess,
+  Schedules and Notifications 34 of 34. `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before; none in the new or
+  changed screens (Maintenance.xml's one is P1's). Both binaries still symlinks. Prettier (`npx prettier`, the repository's
+  .prettierrc.json) on the new and changed JavaScript. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's P15 table names ResourceCalendarTui for get#ResourceAvailability, a new P16 Added table (find#, decide#,
+  decide#ResourceBookings, approve# and refuse#ResourceBooking), and EventServices' get#FullCalendarData, create#Event, book#Resource,
+  cancel#ResourceBooking (and get#FreeBusy, not called) for ResourceCalendar; ss-inventory's AssetCalendar NewEventForm names it.
+- Design edits: design-maintenance's header, §1.2, §7.1 (F171, F165, F172), BookingRequests and ResourceCalendar as built;
+  design-drawers-commons' header and its ResourceBooking topic row; impl-manufacturing's log (F171).
+- Findings, numbered by the lead F224 to F233 in order:
+  - The plan's one `ResourceBooking` topic cannot tell the organizer: the inbox makes every unviewed message of a topic with an approve
+    service an approval card (CommonsServices decorate#Notifications). The organizer's notices are `ResourceBookingNotice`.
+  - A request already holds the resource: book#Resource refuses an overlapping request as a conflict (P15's guard reads requested
+    bookings too), so two overlapping requests exist only through an override, an unmanaged resource's allowConflicts or a move. The
+    decision counts assigned bookings only, so of two overlapping requests the second approval is CONFLICT; the "usable when" walk has the
+    second person answered the conflict when asking, since that is what the built path does.
+  - An approver sees a request's purpose only when the event is shared with them (check#EventAccess); otherwise "Not shared with you" and
+    the requester's notes. The design's "purpose when authorized" is read that way; see the user's calls.
+  - F172 is "as before" except that a hidden event in a conflict is still Busy (P15's rule for every resource), a privacy change kept.
+  - F165's range check costs a get#EventInstances call for each recurring booking of any resource, up to 500 meetings within 365 days.
+  - Maintenance's ResourceCalendar books through Commons' book#ResourceSlot, which books a room (FcTpRoom) or equipment (AstTpEquipment,
+    not AsClsMfgEquip) only: a bookable facility of another type (a work center) is shown and its booking refused there.
+  - Commons' own Schedules does not show blackouts and outages (includeUnavailable is off for it, so its specs and behavior are as
+    before); a booking under one is refused when made. Showing them in Commons too is a one-line change.
+  - A request's age is the booking row's lastUpdatedStamp (WorkEffortFacility has no request date) or an asset booking's fromDate.
+  - The screen offers no approval over a soft conflict; decide#ResourceBooking takes allowConflicts with overrideReason (the policy's
+    override, RESOURCE_BOOKING_OVERRIDE) for a later need.
+  - F119 needed no change: every availability reader already leaves out superseded rows.
+- For the lead:
+  - budget share: mr-mantle +1.7 s (ResourceBookingDecisions); mr-boss server about +0.25 s (MaintenanceScheduling 0.10 s,
+    MaintenanceAccess 0.15 s); mr-boss client unchanged; budgets not changed.
+  - merge hot spots: mr-mantle `EventServices.xml` (book#Resource's lock and notice, check#ResourceBookings' notice, two descriptions),
+    `ResourcePolicy.js` (resourceOf, lockCenters, lockResource, unavailableOver, conflictsOver, the guard, blockOverAny, exports, header),
+    `ResourceOutages.js` (header, record's answer, recordBlock and correctBlock), `ResourceBookingServices.xml` (header, appended services),
+    `MaintenanceWorkResourceData.xml` (appended); mr-boss `screen/Maintenance.xml` (two notification-topic lines after
+    WorkProcessApproval), `screen/Maintenance/Scheduling.xml` (header comment), `Maintenance.js` (linkPaths after P15's, calendarResources
+    before the operations table and that table's line), `BossSetupMaintenanceData.xml` (appended after P6's topic link),
+    `BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (one id after P15's), `MaintenanceAccess.spec.js` (header, appended
+    feature), `MaintenanceScheduling.spec.js`, Commons' `Schedules.xml`, `Schedules.qvue`, `ScheduleServices.xml`; design-maintenance
+    (header, §1.2, §7.1, BookingRequests, ResourceCalendar), design-drawers-commons (header, topic row), usl-inventory, ss-inventory,
+    impl-manufacturing's log.
+  - the user's calls (built as recommended meanwhile):
+    1. Should a booking approver see the meeting's title when deciding? Built: only when the event is shared with them, else "Not
+       shared with you" with the requester's notes (Commons' Book dialog labels the notes "Notes for the approver"). Recommend keeping it.
+    2. Should Commons' own Rooms and equipment show blackouts and outages, as Maintenance's ResourceCalendar does? Built: not (Commons
+       unchanged); recommend yes in a later Commons change, since a booking under one is refused anyway.
+
+**Review Nov 11 (P16).** mr-mantle and mr-boss review commits on `mnt/p16` (the review's hashes are in the lead's reply); master not merged
+(P7, P9 and P13 merge first). Reviewed `git diff master...mnt/p16` in both repos (mr-moqui unchanged) against the phase, §2, §4, F15,
+F119, F165, F171, F172, design §7.1, BookingRequests and ResourceCalendar, design-drawers-commons' approval kind, AGENTS.md and
+Practices-App-Dev, and the Built note; the framework's approve# and refuse#NotificationMessage, Commons' decorate#Notifications and
+get#RecordLink, ProductionSchedule.js's offline path and the production scripts' row locks.
+- Checked and found sound:
+  - Decision races: decide# locks the resource (lockResource: the work centers above it in id order, then its row) before it reads the
+    booking (locked), the event's span and the assigned bookings, so two approvers of overlapping requests are decided one after the
+    other and the second gets CONFLICT (assignedOnly: a waiting request holds nothing against the one decided). STATE_CHANGED and
+    SPAN_CHANGED refuse a stale state or span, the topic's services passing the notice's own; a move re-requests, re-notifies with the
+    new span, and an approval on the old one is SPAN_CHANGED. Bulk decisions each in its own transaction (lib.probe), failures named.
+  - F171's lock order: every booking write takes WorkCenter rows before Facility or Asset rows (book#Resource, the guard's lock path,
+    decisions); Manufacturing's record# and correct# take its center's (and the centers above it) in the same id order, and its moves,
+    in transactions of their own, lock or write no WorkCenter row (the only other WorkCenter locks are store#WorkCenter and the rate
+    edit, each one row, before any Facility). Maintenance's facility blocks lock Facility rows only, and nothing locks a Facility before a
+    WorkCenter. So no cycle between a booking and an offline block, or between two bookings of rooms under one work center (they meet
+    at the shared center in the same order). Two events booking two unrelated rooms in opposite orders could deadlock as before P15
+    (unchanged). All the Production specs pass.
+  - F172: a stock asset is answered by resourceOf(allowStock), the guard returns at once (no policy, no block, the caller's approver
+    fallback), unavailableOver answers none, create#Event assigns it at once; the only change is P15's Busy masking of a hidden conflict.
+  - F165: one get#EventInstances (from now, at most 365 days and 500 meetings) and one blocks read over the range, matched to each
+    meeting and to the asked time; an unmanaged resource's conflicts stay the caller's first-meeting list; Commons' booking is unchanged.
+  - Notices: ResourceBooking to the resource's current approvers (not the requester), the message with the resource, span, words and
+    requester, no title; ResourceBookingNotice to the organizer alone on a decision or a covering outage or block, with the resource and
+    a safe reason. A superseded notice (a move's, a decision's) is marked viewed for every recipient.
+  - `ResourceBookingNotice`: its NotificationTopic has no approve service (the inbox's approval test is an approve service, so it is
+    an ordinary notification), and its TopicRegistration (Maintenance, no subscriptionPermission: Admin sets no subscription of it)
+    matches the entity's contract; ResourceBooking's names RESOURCE_BOOKING_APPROVE.
+  - BookingRequests: decide# needs RESOURCE_BOOKING_APPROVE and a current BookingApprover of that resource (NOT_APPROVER otherwise, so
+    another organization's room is refused); find# lists an approver's own resources and a policy reader's or supervisor's scope's
+    (covers), canDecide only for an approver holding APPROVE; the purpose only for a shared event, clashes Busy when hidden.
+  - ResourceCalendar: its transitions limit the keys to calendarResources (find#BookableResources' scope), blocked items open a
+    dialog with no event or cancel, and Schedules.qvue has no drag of an existing item (an item stops pointerdown), so no maintenance
+    interval is moved; Commons' Schedules is unchanged but for "Scheduling admin" and the inCommons back link; its specs pass. The
+    terminal twin renders (MaintenanceScheduling).
+  - Commons owner contract: get#ResourceBookings' includeUnavailable defaults false and only ResourceCalendar passes it.
+  - The two calls built as recommended (title only when shared; Commons' own calendar without blackouts) are as described.
+- Fixes:
+  - **R1 (medium, concurrency; "everything under the resource lock").** check#ResourceBookings (a move: update#EventOccurrence,
+    store#EventRecurrence, the CalDAV PUT) read the resource's other bookings before the guard locked it, so a move and a booking of the
+    same time (or two moves) could both pass. It now locks the resource (lockResource) before reading them when it writes. Not covered
+    by a spec (two transactions), as P15's R5.
+  - **R2 (low, notices).** A request whose booking or event was cancelled stayed in the approvers' inboxes as an approval card that
+    could only fail. cancel#ResourceBooking and cancel#EventOccurrence now withdraw its notices (ResourceBookingDecisions.js
+    withdrawn). Spec: ResourceBookingDecisions' "a request withdrawn leaves the approvers' inboxes" (fails without).
+  - **R3 (medium, tests).** MaintenanceScheduling's BookingRequests render and MaintenanceAccess's list read the demo handover (Nov 18,
+    2026 14:00) through find#'s default "not over from now", so both would fail from Nov 18 on. Both pass fromDate 2026-11-12.
+  - **R4 (low, tests).** "Scheduling admin" was untested: Schedules' first feature checks john.doe gets Maintenance's Scheduling and
+    Joe Developer none; MaintenanceAccess checks another organization's facility asked by name lists nothing.
+  - **R5 (low, failure tolerance; AGENTS.md).** The notices caught their exceptions but left a failing call's error in ec.message, which
+    would fail the decision, booking or block that sent them. Each notice now runs in an error frame of its own (quietly).
+  - **R6 (low, style).** The note says prettier was run; ResourceBookingDecisions.js, its spec, ResourceOutages.js and
+    MaintenanceScheduling.spec.js were not formatted (the repository's .prettierrc.json); formatted. Maintenance.js and
+    MaintenanceAccess.spec.js were not clean on master and were left.
+  - **R7 (process).** The phase table row is the lead's: back to "—".
+  - **R8 (medium, usability; the user's call 4 of Nov 12; owner change, Commons).** The ResourceBooking card's Open went to the event
+    (decorate#Notifications preferred the record's link), which refuses an approver the event is not shared with. An approval topic's
+    card (canApprove) with a screen link of its own (linkText under /qapps or /apps, not Commons' openRecord resolver) now opens it
+    first; a card that is no approval, or an approval topic with no such link, opens its record as before. Spec:
+    MaintenanceScheduling's "a ResourceBooking card in Commons' inbox opens BookingRequests" (fails without). Notifications,
+    KnowledgeReview, CommonsSettings, TodayPanel, MaintenanceProcedures, PeopleApprovals, PeopleAttendance, PeopleSchedules, PeopleTime
+    (BOSS) and WorkTimesheets, PeopleEmployment (Mantle) pass unchanged.
+  - Design: design-maintenance §7.1 (the move's lock) and BookingRequests (a cancelled booking or event leaves the inboxes).
+- Findings, numbered by the lead F234 to F236 in order:
+  - A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers; a planned block's
+    correction does.
+  - restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests).
+  - An unmanaged resource's series extended later (store#EventRecurrence) is not checked against blocks (P15's R4 recheck runs only for
+    a managed one); a booking or move is.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceOutages,
+  CalendarServices, CalendarChanges, Dav, CommonsToday, ProductionSchedule, ProductionDowntime, ProductionShopFloor, ProductionOrders,
+  ProductionReports, ProductionPolicy, ManufacturingServices, WorkCenters, WorkResources, MaintenanceWorkOrders, MaintenanceManagedWork,
+  MaintenanceScope and MaintenanceIntake 162 of 162 (94.2 s on a loaded machine; the worker's 161 plus R2's); mr-boss MaintenanceAccess,
+  MaintenanceDowntime, MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceScheduling, MaintenanceRequests, MaintenanceProcedures,
+  Schedules, EventDetail, Calendar, QuickCreate, PublishedCalendar, Notifications, WarehouseFacilities, ManufacturingWorkCenters,
+  ManufacturingDowntime, ManufacturingSchedule, AdminLifecycle, PeopleLifecycle and PeopleSchedules 171 of 171 (73.8 s); after R5
+  ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceOutages, CalendarServices, CalendarChanges, Dav, ProductionSchedule and
+  ProductionShopFloor 76 of 76, MaintenanceScheduling, MaintenanceAccess, Notifications, Schedules and EventDetail 48 of 48. R2's case run
+  without its fix failed. No screen changed (no lint run); both binaries still symlinks. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle +0.3 s over the worker's (R2's feature; ResourceBookingDecisions about 2.0 s); mr-boss +0.1 s (R8's feature, no
+    render; the rest are assertions on existing renders and calls).
+  - merge hot spots (added by the review): mr-mantle `EventServices.xml` (cancel#EventOccurrence's end, cancel#ResourceBooking,
+    check#ResourceBookings' check closure), `ResourceBookingDecisions.js` (prettier, quietly, withdrawn), `ResourceOutages.js` (prettier,
+    three lines), the spec; mr-boss `service/ironstone/commons/CommonsServices.xml` (decorate#Notifications' openUrl and description, R8), `test/Commons/Schedules.spec.js` (first feature), `MaintenanceAccess.spec.js` and
+    `MaintenanceScheduling.spec.js` (P16's features), design-maintenance §7.1 and BookingRequests, this plan's phase row.
+  - the user's calls:
+    1. and 2. (the worker's): an approver sees the title only when shared; Commons' own calendar shows no blackouts. Built as
+       recommended and accepted by the lead; nothing open.
+    3. Who reads BookingRequests (decided by the user, Nov 12): keep the read-only view of the scope's requests for a resource policy
+       reader or administrator and a supervisor, as built; design §7.1 and BookingRequests say so.
+    4. The inbox card's Open (decided by the user, Nov 12): an approval topic's card opens the topic's own link before the record's;
+       built as R8, design-drawers-commons' header says so.
+
 ### P17 — Reports and Insights
 
 (F117: dataset readiness and refresh rows are `moqui.server.ReadinessProvider` and `RefreshOperation` with `fixRoute="insightsDataset"`; Insights' registries are unchanged.)
@@ -3171,6 +4065,8 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P9: a supplies part issued to managed maintenance work is routed to the cost policy's expense account; supplies elsewhere post as today | The user's call (P9) |
 | Nov 12, 2026 | P13: a procedure is optional on a plan; one named (or the model default's) must qualify; with none P14 generates an ad hoc work order with the term's estimate; activation needs a time zone. A draft's terms change in place until activation, dated rows from it | The user's calls (P13); the estimate optional and the model default inherited, as the review recommended |
 | Nov 12, 2026 | P16: an approver sees a meeting's title only when it is shared with them; Commons' own Rooms and equipment are unchanged (blackouts shown later, in a Commons change) | The lead's acceptance of the worker's recommendations (P16) |
+| Nov 12, 2026 | P16: resource administrators and supervisors read BookingRequests read only; Commons' approvals inbox opens an approval topic's own link first, so a ResourceBooking card opens BookingRequests | The user's calls (P16) |
+| Nov 12, 2026 | P10: accepting outside service stays under Purchasing's own check (`accept#ServiceItem`); the demo supervisor holds `STOCK_RECEIVE` through a Warehouse capability group that opens no Warehouse screen | The lead's decision, by the phase's text |
 
 ## 5. Open questions
 
@@ -3390,6 +4286,62 @@ paths under `mr-boss/`.
 | F192 | P13 review: caps of 500 plans in `find#MaintenanceDue` and 1000 assets in the model filter | P14 or later |
 | F193 | P13 review: P13's JS formatted by Prettier in the review | None |
 | F194 | P13 review: MaintenancePlansWalk feature 4 rewritten, not run | P20 / the final acceptance run |
+| F195 | P9: `receive#Asset` posts the receipt inside the call (AssetReceiptGlPost), before a caller can name its issuance, so Production's return posts to WIP by the work effort and a maintenance return could not be routed by its source at posting. | P9's Built note |
+| F196 | P9: Supplies are refused rather than routed | P9's Built note |
+| F197 | P9: A facility dimension must be owned by the posting organization (AccountingPolicy.js `dimensions`), so an ownerless room carries its nearest owned ancestor | P9's Built note |
+| F198 | P9: The policy's "maintenance purpose" is built as the work's MaintenanceKind (corrective, preventive), with any kind as the fallback | P9's Built note |
+| F199 | P9: Missing mappings are not yet listed in Posting defaults' MissingMappings nor in Maintenance's readiness (P18). | P9's Built note |
+| F200 | P9: The plan's planned line is per node and product (one open row) | P9's Built note |
+| F201 | P9: Demo issuances and returns are rows, not postings (data load runs no SECA), so the demo journal holds no maintenance expense until a part is issued in the app. | P9's Built note |
+| F202 | P9: maint.tech is now in BOSS_WAREHOUSE_ISSUE (a capability group with no Warehouse root) for the demo | P9's Built note |
+| F203 | P9 review: A clone run twice copies the every-facility rows twice (the rows have a surrogate key, so no conflict is found) | P9's Review note |
+| F204 | P9 review: An issue checks the work order's status, not the step's | P9's Review note |
+| F205 | P9 review: `maintenanceFacilities` reads the distinct facilities of the organizations' stock on every Maintenance catalog context | P9's Review note |
+| F206 | P9 review: The demo's cost policy (613200000 for ORG_ZIZI_SERVICES) is exercised only by the acceptance MaintenancePartsWalk (not run) | P9's Review note |
+| F207 | P9 review: P7's `check#ManagedWork` guard (on master after P7) | P9's Review note |
+| F208 | P7: A step's moves (planned to in progress, complete or cancelled | P7's Built note |
+| F209 | P7: `store#TimeEntry`'s guard is for a new entry and an entry moved onto managed work | P7's Built note |
+| F210 | P7: The owner's way through is `asManagedOwner`, in the execution context's user map | P7's Built note |
+| F211 | P7: Evidence uploaded with a response is stored on the work order's root, named for the step, so Files shows it and RecordFiles protects it there | P7's Built note |
+| F212 | P7: The `.fancy` templates take JavaScript expressions | P7's Built note |
+| F213 | P7: StepResponse's "expected update time" is not taken | P7's Built note |
+| F214 | P7: The amendment changes a step's policy fields and dependencies | P7's Built note |
+| F215 | P7: WorkOrderDetail's Overview tab had no render in the regression suite | P7's Built note |
+| F216 | P7: No execution of the AC-200 service is seeded | P7's Built note |
+| F217 | P7 review: `find#FollowUpTasks` (the Overview's box) lists the names of the tasks linked to a work order without checking the reader may see each task in Commons | P7's Review note |
+| F218 | P7 review: A supervisor may amend a step's `waiverAllowed` to Y and then waive it | P7's Review note |
+| F219 | P7 review: `issue#AssetToWorkEffort` and entity-auto WorkEffortProduct writes are not guarded by F159 (P9's path relies on this). | P7's Review note |
+| F220 | P7 review: The evidence guard runs on every WorkEffortContent write | P7's Review note |
+| F221 | P7 review: A service failure inside the close's transaction may still mark it rollback-only | P7's Review note |
+| F222 | P7 review: Correction to the Built note | P7's Review note |
+| F223 | P7 review: Prettier 3.10.1 was run on ProcessChecks.js, WorkProcesses.js, WorkOrders.js and the three changed specs (ProcessChecks.js and the specs were not prettier-clean before | P7's Review note |
+| F224 | P16: The plan's one `ResourceBooking` topic cannot tell the organizer | P16's Built note |
+| F225 | P16: A request already holds the resource | P16's Built note |
+| F226 | P16: An approver sees a request's purpose only when the event is shared with them (check#EventAccess) | P16's Built note |
+| F227 | P16: F172 is "as before" except that a hidden event in a conflict is still Busy (P15's rule for every resource), a privacy change kept. | P16's Built note |
+| F228 | P16: F165's range check costs a get#EventInstances call for each recurring booking of any resource, up to 500 meetings within 365 days. | P16's Built note |
+| F229 | P16: Maintenance's ResourceCalendar books through Commons' book#ResourceSlot, which books a room (FcTpRoom) or equipment (AstTpEquipment, not AsClsMfgEquip) only | P16's Built note |
+| F230 | P16: Commons' own Schedules does not show blackouts and outages (includeUnavailable is off for it, so its specs and behavior are as before) | P16's Built note |
+| F231 | P16: A request's age is the booking row's lastUpdatedStamp (WorkEffortFacility has no request date) or an asset booking's fromDate. | P16's Built note |
+| F232 | P16: The screen offers no approval over a soft conflict | P16's Built note |
+| F233 | P16: F119 needed no change | P16's Built note |
+| F234 | P16 review: A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers | P16's Review note |
+| F235 | P16 review: restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests). | P16's Review note |
+| F236 | P16 review: An unmanaged resource's series extended later (store#EventRecurrence) is not checked against blocks (P15's R4 recheck runs only for a managed one) | P16's Review note |
+| F237 | P10: The request is filed through Purchasing's `create#PurchaseRequest`, not `RequestServices.create#Request` as the plan says | P10's Built note |
+| F238 | P10: The order lines that fulfil a request are linked by an entity ECA on RequestItemOrder rather than inside Purchasing's sourcing | P10's Built note |
+| F239 | P10: Facility work has no AssetMaintenance, so AssetMaintenanceOrderItem cannot hold its lines | P10's Built note |
+| F240 | P10: Accepting outside service needs Purchasing's PURCHASE_ORDER_EDIT or STOCK_RECEIVE (accept#ServiceItem's own check, "buying stays Purchasing's") | P10's Built note |
+| F241 | P10: accept#ServiceItem accepts a line of a draft (OrderOpen) order | P10's Built note |
+| F242 | P10: The planner files the request but has no Purchasing root, so follows it on the work order's Purchasing tab, not in Purchasing. | P10's Built note |
+| F243 | P10: Request a purchase names a product (any, through the `parts` choice | P10's Built note |
+| F244 | P10: The evidence's OrderContent points at the work's file (the same contentLocation), not a copy. | P10's Built note |
+| F245 | P10: The request's description carries the work order's id and name, which a buyer reads | P10's Built note |
+| F246 | P10 review: Under the `MclOnComplete` policy the work closes at completion, and acceptance is refused on closed work (STATUS_INVALID) | P10's Review note |
+| F247 | P10 review: A refused acceptance at Complete fails the completion (one transaction) | P10's Review note |
+| F248 | P10 review: `get#MaintenanceOrder` reads each work in a try/catch that takes any error for "not readable" | P10's Review note |
+| F249 | P10 review: The ECA's failure path is reviewed, not tested | P10's Review note |
+| F250 | P10 review: Prices follow Manufacturing's subcontract rule (ACCOUNTING_VIEW and the supplier price permissions beside PURCHASE_ORDER_EDIT and MAINTENANCE_COST_VIEW) | P10's Review note |
 
 
 ## 7. Later
