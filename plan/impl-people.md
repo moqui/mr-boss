@@ -3007,6 +3007,91 @@ Design §7 (the model), LeavePolicies, LeavePolicyDetail, LeaveAllocations, Leav
   - nothing waits on the user's decision; the lead may record in §4 that Leave policies and Allocations are HR's under Time, as P9's
     Holidays.
 
+**Review Nov 11 (P11).** A fresh review of `git diff master...ppl/p11` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §7 (LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances), §3 SelfService, §1.4's Assist tool and PE-07, with
+the ledger, allocation and accrual keys, the scope of policies, balances and movements, the Assistant tool and the legacy rows
+first; the user's and the lead's calls of Nov 11 recorded in §4; fixes committed apart per repository ("People P11 review: …").
+- Rebased first: P10 (time mounts, rates and labor costing) merged to master in both repositories, and `ppl/p11` was rebased onto
+  it (mr-mantle cleanly; mr-boss with the conflicts resolved in the rebased P11 commit, so both phases' work stands):
+  - Time & leave keeps P10's subscreens and default (Timesheets 1, My time 2, Time entries 3, P9's Working schedules 5 and
+    Holidays 9) with P11's files by their own menu indexes (Leave balances 7, Leave policies 10, Allocations 11; LeavePolicyDetail
+    out of the menu); Time.xml's header names P11's groups. People.xml's keymap is `g w`, `g t`, `g r`, `g b`; PeopleSpecLib's
+    `hrTimeMenu` and `managerTimeMenu` are P10's lists with P11's screens in menu order, and the HR officer's keys end `g w`, `g t`,
+    `g b`; `costingRateId` and `leavePolicyId` both kept. People.js's `linkPaths` (P10's then P11's), the demo data's appended blocks
+    (Retail's timesheet policy, then the annual leave policy), SelfService's header and actions (P10's weeks to submit and P11's
+    balances), PeopleAccess's header and both features (P10's self-service Time feature, then P11's), usl-inventory's rows (P10's
+    then the LeaveServices rows) and design-people's §1.2 and §3 are merged.
+  - P10's `BOSS_PPL_TIME` is now an inheritable ALLOW of the area for `BOSS_PEOPLE_SELF`. P11's `BOSS_PPL_LEAVE` already denied
+    them (policies, a policy's detail and allocations stay refused), but `BOSS_PPL_LEAVE_BALANCES` did not: R1.
+  - Run after the rebase, before the review: Mantle LeaveLedger 5 of 5 (2.2 s); BOSS PeopleAccess, PeopleSelfService, PeopleTime,
+    PeopleSchedules 31 of 31 (8.8 s).
+- Checked and found sound:
+  - The ledger is append-only in code: `Leave.js` creates `LeaveLedgerEntry` rows and never updates or deletes one; every entry has
+    a source (allocation, assignment, accrual rule and period, reversed entry) and a key under the unique index `LEAVE_LEDGER_KEY`
+    (`opening:<assignment>`, `allocation:<operation>:<employment>`, `accrual:<employment>:<policy>:<period>`,
+    `carry:<employment>:<type>:<year>`, `expire:<allocation>`). Every write to an employment's entitlement locks its relationship
+    row first, so the checks and the key hold under concurrency.
+  - An allocation posts once per operation key and employment (checked before and again under the lock); a second grant of the
+    policy for an overlapping period is refused (`DUPLICATE_PERIOD`, under the lock, whatever the key); an adjustment needs a
+    reason. The accrual takes each assignment in its own transaction (`accrue#Assignment`, `force-new`, called with
+    `requireNewTransaction`), logs a failure by employment and policy and goes on; a second run posts nothing (the spec's fault
+    rolls back the faulted employment's whole run and the others post). A policy change never touches posted entries (the unit
+    and frequency fixed once posted, a step changed from today once accruals were posted). A balance as of a date sums the entries
+    effective by then.
+  - Scope: policies, blocked days, assignments, allocations and the accrual are an HR reader's or editor's of the employer
+    (`editablePolicy`, `canEditAt`), another employer's answered as missing; balances are the person's own, a manager's live
+    reports' at the line's employers (balances alone, `canSeeLedger` false and `find#Ledger` refused) and an HR reader's
+    employers'; a supplied person, employer, department or employment only narrows. `run#AccrualJob` and `accrue#Assignment` are
+    `anonymous-all` and not remote, as `apply#DueAssignments`.
+  - The Assistant tool: `people_my_leave_balances` over `get#MyBalances` (`exposeAssistant` Y, `exposeMcp` N, `AgclRead`, no schema
+    override); the service declares only `leaveTypeEnumId` and `asOfDate`, so the framework drops anything else, and
+    `getMyBalances` passes only those two to `getBalances` in self scope (`selfOnly` is not reachable from parameters). The
+    framework runs a tool only for a user its `AT_SERVICE` authz admits (`BOSS_PPL_LEAVE_SELF`).
+  - Legacy `EmploymentLeave` rows are read only in `find#Ledger` (dates, type, approval, a "Historical" label), counted in no
+    balance; `leaveReasonEnumId` is read nowhere in either repository's diff, and the spec checks the reason is absent.
+- Fixes:
+  - **R1 (medium, access, from the rebase).** With P10's inheritable ALLOW on Time & leave, a self-service employee opened Leave
+    balances (the screen's `get#Balances` inheriting the grant and answering their own balances, and the menu listing it), where
+    design §7 keeps it HR's and the managers' and the employee's own balances on SelfService. `BOSS_PPL_LEAVE_BALANCES` denies
+    `BOSS_PEOPLE_SELF` too (`BOSS_PPL_LEAVE_BALANCES_SELF`; the managers' and HR's ALWAYS still open it). Spec: PeopleAccess's P11
+    feature refuses the employee Allocations and Leave balances (Leave balances opened on the code as rebased).
+  - **R2 (low, scope).** `assign#Policy`, `preview#Allocation` and `allocate#Leave` named the person of an employment of another
+    employer in their rows (refused `EMPLOYMENT_OUTSIDE`, but `withTexts` read the person), while a missing one was named by its
+    id: an HR editor could tell another employer's employment exists and whose it is. Only an employment of the policy's employer
+    is read (`policyEmployment`); another is answered as a missing one. Spec: LeaveLedger's first feature (Eve's employment at B and
+    a missing id answered alike; Eve was named on the code as built).
+  - **R3 (low, revisions).** Ending an assignment (`assign#Policy` with `end`) accepted no `expectedRevision`; it is required, as
+    blocked days and policies require theirs (LeavePolicyDetail's End passes it). Spec: LeaveLedger's first feature.
+  - **R4 (low, query).** `run#Accrual` without a policy listed every leave policy and filtered by employer in JavaScript; it finds
+    the editor's employers' policies in the query.
+  - LeaveLedger's fifth feature also passes another person's employment and party to `get#MyBalances` and still reads Ana's
+    balance alone.
+- Provisional findings (for the lead to number):
+  - `find#Ledger` shows the person HR's adjustment and grant reasons in each movement's "From" (an allocation's `reason`); no BOSS
+    path gives a self-service employee their movements today (`BOSS_PPL_LEAVE_SELF` covers `get#MyBalances` alone), so this
+    decides nothing yet; P12, if the employee reads their movements, should say whether HR's reasons are theirs to read;
+  - an assignment may be ended from a past date (no `DATE_PAST`, as a policy's close has), leaving accruals posted after its end in
+    place (posted entries never change); blocked days may be added to a closed policy;
+  - `allocate#Leave`'s operation key is not bound to the previewed terms: a resubmit under the same key with other terms answers
+    the posted rows as repeated (nothing posts twice, but the answer shows the new amount);
+  - `get#Balances` pages by employment while LeaveBalances lists a row per employment and leave type, so its page counts are
+    employments';
+  - the worker's findings stand otherwise.
+- Tests (release binary, `--nobuild`, this worktree's runtime): after the rebase, Mantle LeaveLedger 5 of 5 (2.2 s) and BOSS
+  PeopleAccess, PeopleSelfService, PeopleTime, PeopleSchedules 31 of 31 (8.8 s); after the fixes, LeaveLedger 5 of 5 (2.4 s; the
+  first feature 1.05 s) and the four BOSS specs 31 of 31 (9.7 s; PeopleAccess's P11 feature 0.73 s). The new checks fail on the
+  code as rebased (LeaveLedger's first feature on Eve's name; PeopleAccess's P11 feature on "the employee opens
+  Time/LeaveBalances"). No screen changed, so no `moqui lint --screens` run. Prettier clean on the changed JavaScript. Not run:
+  `./moq test-apps`, the acceptance suite (PeopleLeavePoliciesUsable as built).
+- For the lead:
+  - budget share: mr-mantle about +0.1 s over the Built note (LeaveLedger's first feature, 1.05 s); mr-boss about +0.1 s
+    (PeopleAccess's P11 feature, 0.71 s);
+  - the rebase rewrote the phase commits: mr-mantle's P11 commit is f6af4cb3 (the Built note's 6d7ec7b2), mr-boss's 1730e6f4;
+  - merge hot spots: the rebase onto P10 is done; mr-mantle `Leave.js` (`policyEmployment`, the assignment end, `runAccrual`); mr-boss
+    `BossSetupData.xml` (`BOSS_PPL_LEAVE_BALANCES`), `PeopleAccess.spec.js` (the P11 feature's employee loop);
+  - the user's call on the shared costing rate (P10's first finding) and the lead's call on Leave policies and Allocations under
+    Time & leave are recorded in §4; nothing waits on the user's decision.
+
 ### P12 — Leave requests and the team calendar
 
 Design §7 LeaveRequests, LeaveRequestDetail, §13 TeamCalendar, Employee360's TimeAndLeave; PE-07, PE-21, PE-24
@@ -3525,6 +3610,8 @@ the owner's design.
 | Nov 11, 2026 | The four timesheet notification topics link through a neutral record-link resolver, so a notice opens People's or Projects' screen for whichever the user may open, as the tray does, a TimesheetMissing week with no timesheet included; Projects users' links keep opening Projects | The user's call on P10's question (built in P10's review, R2: Commons' `openRecord` over `get#RecordLink`, the docType `MantleTimesheetWeek`; design-projects §8, design-people §13) |
 | Nov 11, 2026 | My team's Last week lists only reports who keep time: those who kept time in recent weeks (the last eight) or whose employer's timesheet policy requires it; the others show nothing | The user's call on P10's question (built in P10's review, R3: `get#LineReports`' `keeperIdList`, the policy key `rq`; design-people §3, §13) |
 | Nov 11, 2026 | `RateAmount` gains an optional `organizationPartyId`, used for `RaprCost` rows: `get#CostingRate` prefers the employer's row, then a shared one; `store#`/`end#CostingRate` and Accounting's Labor costing box are scoped by organization (a shared row needs an all-organizations grant to change, as pay grades do); Projects' rate rows unchanged | The user's call on P10's finding (built in P10's review, R4, with LaborCostingRate's spec; design-accounting §15, design-people PE-23) |
+| Nov 11, 2026 | A shared (no-organization) costing rate is changed by an Accounting administrator working with no active organization chosen, or by ADMIN, as P10's review built it; there is no `ACCOUNTING_ALL_ORGANIZATIONS` permission | The user's call on P10's first finding (F190): kept as built (design-accounting §15) |
+| Nov 11, 2026 | Leave policies (with LeavePolicyDetail) and Allocations stay under Time & leave as HR's own screens (`People/Time/LeavePolicies`, `LeavePolicyDetail`, `LeaveAllocations`, `BOSS_PPL_LEAVE`), not under People Settings as design §7 placed them, as Holidays | The lead's call, following the user's call of Nov 11 that moved HR's editors out of Settings (P7's review); as built in P11 (design-people §2, §7) |
 
 ## 5. Open questions
 

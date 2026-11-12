@@ -905,6 +905,12 @@ feature(
                 const refused = screenRefusal(user, "Time/LeavePolicies")
                 if (!unauthorized(refused)) problems.push(`${user} opens LeavePolicies: ${refused || "opened"}`)
             }
+            // the self-service employee opens Time & leave by its own grant (P10): HR's allocations and Leave balances stay refused
+            // to them (their own balances are SelfService's)
+            for (const path of ["Time/LeaveAllocations", "Time/LeaveBalances"]) {
+                const refused = screenRefusal(users.employee, path)
+                if (!unauthorized(refused)) problems.push(`the employee opens ${path}: ${refused || "opened"}`)
+            }
             const balances = screenRefusal(users.manager, "Time/LeaveBalances")
             if (balances) problems.push(`the manager's LeaveBalances: ${balances}`)
             // the two leave choices, each with a selected value off the page

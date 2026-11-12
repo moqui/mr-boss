@@ -5304,8 +5304,9 @@ along with this software (see the LICENSE.md file). If not, see
         leave editors (policies, a policy's detail and allocations) under Time & leave rather than Settings, as Holidays (the user's
         call of Nov 11 put HR's own editors out of Settings): denied to the root user group, opened to the HR officers (ALWAYS) and to
         the People administrator and ADMIN through their ALWAYS on the root. Leave balances are HR's and the managers' (an HR
-        reader's employers' employees, a manager's live reports, balances alone). Mantle's LeaveServices check PEOPLE_HR_VIEW,
-        PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and PEOPLE_SELF_SERVICE and the employer or line again. -->
+        reader's employers' employees, a manager's live reports, balances alone), denied to the root user group and to self-service.
+        Mantle's LeaveServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and PEOPLE_SELF_SERVICE and the employer or line
+        again. -->
     <artifactGroups artifactGroupId="BOSS_PPL_LEAVE" description="People leave policies and allocations">
         <artifacts artifactName="component://mr-boss/screen/People/Time/(LeavePolicies|LeavePolicyDetail|LeaveAllocations)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
@@ -5326,6 +5327,10 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- P11's review: the Time area is a self-service employee's by its inheritable ALLOW (BOSS_PPL_TIME, P10), so Leave
+            balances is denied to them here too; their own balances are SelfService's (get#MyBalances) -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <!-- P11: an employee's own leave balances, on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is
