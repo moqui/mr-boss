@@ -93,6 +93,9 @@ along with this software (see the LICENSE.md file). If not, see
                 menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
         <subscreens-item name="Facilities" location="component://mr-boss/screen/Maintenance/Facilities.xml" menu-index="7"
                 menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
+        <!-- P15: Scheduling (design §7), for a resource administrator, a resource approver, a supervisor and a resource reader -->
+        <subscreens-item name="Scheduling" location="component://mr-boss/screen/Maintenance/Scheduling.xml" menu-index="8"
+                menu-include="ec.user.hasPermission('RESOURCE_POLICY_VIEW') || ec.user.hasPermission('RESOURCE_BOOKING_VIEW_ASSIGNED') || ec.user.hasPermission('MAINTENANCE_SUPERVISE') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
     </subscreens>
 
     <!-- P1: the maintenance keymap and the palette source (design §1.2; its records join with their screens: equipment and

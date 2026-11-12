@@ -113,7 +113,7 @@ function today(p) {
 }
 
 // ===== the lifecycle participant (Admin's offboarding, design-admin §14; impl-maintenance F56) =====
-const assignmentNames = {workOrders: "Open work orders", custody: "Equipment held"}
+const assignmentNames = {workOrders: "Open work orders", custody: "Equipment held", bookingApprovals: "Resources approved"}
 // The user's own, or another's for a holder of ADMIN_IDENTITY_VIEW (to read) or ADMIN_IDENTITY_MANAGE (to move), as Projects'
 // participant reads them; the party of the identity.
 function participantParty(userId, permission) {
@@ -125,7 +125,7 @@ function participantParty(userId, permission) {
 // A party's open work orders (a current Assignee on an open managed root) and the equipment it holds now (a current custodian
 // or operator), as ids; counts are what the participant shows.
 function openAssignments(partyId) {
-    const found = {workOrders: [], custody: []}
+    const found = {workOrders: [], custody: [], bookingApprovals: []}
     if (!partyId) return found
     const assigned = Array.from(
         find("mantle.work.effort.WorkEffortParty", {partyId, roleTypeId: "Assignee"})
@@ -150,6 +150,22 @@ function openAssignments(partyId) {
             .selectField("assetId,roleTypeId")
             .list()
     ).map(row => row.assetId + "|" + row.roleTypeId)
+    // P15: the rooms and equipment whose bookings the party approves now (BookingApprover)
+    found.bookingApprovals = Array.from(
+        find("mantle.facility.FacilityParty", {partyId, roleTypeId: "BookingApprover"})
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .selectField("facilityId")
+            .list()
+    )
+        .map(row => "facility|" + row.facilityId)
+        .concat(
+            Array.from(
+                find("mantle.product.asset.AssetPartyAssignment", {partyId, roleTypeId: "BookingApprover"})
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .selectField("assetId")
+                    .list()
+            ).map(row => "asset|" + row.assetId)
+        )
     return found
 }
 // Who moves each kind (the user's call, Nov 12: offboarding stays with Maintenance's staff, no new permission): the services
@@ -157,7 +173,9 @@ function openAssignments(partyId) {
 // moves them, and gets no transfer step, so the offboarding hands them off and nothing fails for the operator.
 const movers = {
     workOrders: {permissions: ["MAINTENANCE_PLAN", "MAINTENANCE_SUPERVISE"], who: "a Maintenance planner or supervisor"},
-    custody: {permissions: ["MAINTENANCE_RESOURCE_EDIT"], who: "a Maintenance resource administrator"}
+    custody: {permissions: ["MAINTENANCE_RESOURCE_EDIT"], who: "a Maintenance resource administrator"},
+    // P15: handed over through store#ResourceApprover (RESOURCE_POLICY_EDIT in the resource's organization)
+    bookingApprovals: {permissions: ["RESOURCE_POLICY_EDIT"], who: "a Maintenance resource administrator"}
 }
 function findAssignments(p) {
     const found = openAssignments(participantParty(p.userId, "ADMIN_IDENTITY_VIEW"))
@@ -205,6 +223,16 @@ function transferAssignments(p) {
                 lib.probe("mantle.work.MaintenanceServices.schedule#MaintenanceWorkOrder", {
                     workEffortId: id,
                     assigneePartyIds: wanted
+                })
+            } else if (kind === "bookingApprovals") {
+                // the leaver ended now and the new person approving from then, the requests waiting kept for them
+                const [resourceType, resourceId] = id.split("|")
+                lib.probe("mantle.work.ResourceBookingServices.store#ResourceApprover", {
+                    assetId: resourceType === "asset" ? resourceId : null,
+                    facilityId: resourceType === "facility" ? resourceId : null,
+                    partyId: fromPartyId,
+                    end: "Y",
+                    replacementPartyId: to.partyId
                 })
             } else {
                 const [assetId, roleTypeId] = id.split("|")

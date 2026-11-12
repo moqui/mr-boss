@@ -179,6 +179,12 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_COST" appName="Maintenance" description="Maintenance cost reader" scopeDependency="organization" sequenceNum="1410"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <!-- impl-maintenance P15 (design §7.1): the override of a managed resource's soft conflict (where its policy allows, with a reason),
+        the resource administrator's and the Maintenance administrator's, in their bundles -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
     <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
         administrator's settings of each organization; its readiness provider (check#MaintenanceReadiness) is set in P18. -->
     <moqui.server.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"

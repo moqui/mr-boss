@@ -7,7 +7,8 @@
 // Settings' one html render (the administrator's; the reader's a refusal), P2's equipment write (the resource administrator's,
 // the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
-// Retail) and its record panels,
+// Retail) and its record panels, P15's booking policy and blackout (the resource administrator's, the planner refused, Retail's
+// facility refused; a booking approver reads the policy of the room they approve only),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -687,6 +688,43 @@ feature(
             planner.includes("PERMISSION_DENIED")
             otherAsset.includes("RECORD_UNAVAILABLE")
             techRestores.includes("PERMISSION_DENIED")
+        }
+    }
+)
+
+feature(
+    "a booking policy and a blackout are the resource administrator's: the planner is refused, and Retail's facility is refused to both",
+    {
+        when() {
+            const R = "mantle.work.ResourceBookingServices."
+            const write = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            // preview# writes nothing: the holder's case is its answer
+            const unmanaged = {facilityId: ids.unmanagedRoomId, approvalModeEnumId: "RbamAutomatic"}
+            const blackout = {facilityId: ids.otherFacilityId, unavailabilityKindEnumId: "RukPlanned", fromDate: new Date(Date.now() + 864e5),
+                thruDate: new Date(Date.now() + 2 * 864e5)}
+            return {
+                holder: write(users.resources, R + "preview#ResourceBookingPolicy", unmanaged),
+                planner: write(users.planner, R + "preview#ResourceBookingPolicy", unmanaged),
+                otherOrganization: write(users.resources, R + "preview#ResourceBookingPolicy", {facilityId: ids.otherFacilityId}),
+                plannerBlackout: write(users.planner, R + "record#ResourceUnavailability", Object.assign({}, blackout, {facilityId: ids.unmanagedRoomId})),
+                otherBlackout: write(users.resources, R + "record#ResourceUnavailability", blackout),
+                approverReads: write(users.booking, R + "get#ResourceBookingPolicy", {facilityId: ids.managedRoomId}),
+                approverOther: write(users.booking, R + "get#ResourceBookingPolicy", {facilityId: ids.unmanagedRoomId})
+            }
+        },
+        then({holder, planner, otherOrganization, plannerBlackout, otherBlackout, approverReads, approverOther}) {
+            holder == ""
+            planner.includes("PERMISSION_DENIED")
+            otherOrganization.includes("RECORD_UNAVAILABLE")
+            plannerBlackout.includes("PERMISSION_DENIED")
+            otherBlackout.includes("RECORD_UNAVAILABLE") || otherBlackout.includes("PERMISSION_DENIED")
+            // a booking approver reads the policy of the room they approve, not another's
+            approverReads == ""
+            approverOther.includes("RECORD_UNAVAILABLE")
         }
     }
 )

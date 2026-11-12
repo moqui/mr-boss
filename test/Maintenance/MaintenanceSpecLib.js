@@ -39,11 +39,17 @@ const ids = {
     roomOutageId: "BOSS_MNT_OUT_ROOM201",
     roomOutageFacilityId: "BOSS_MNT_ROOM_201",
     restoredOutageId: "BOSS_MNT_OUT_COMP_BELT",
+    // P15: Room 101 managed (maint.booking approves, two hours at most), Room 103 not managed, the planner's vendor walkthrough in
+    // Room 101 next Tuesday and the carpet replacement's blackout over it
+    managedRoomId: "BOSS_MNT_ROOM_101",
+    unmanagedRoomId: "BOSS_MNT_ROOM_103",
+    vendorEventId: "BOSS_MNT_EV_VENDOR",
+    blackoutId: "BOSS_MNT_BLK_ROOM101",
     // the menu of design §1.2 built so far: a Maintenance user's who reads work and equipment, and with Settings the Maintenance
     // administrator's; a user who reads none (a procedure author) has Home alone
     staffMenu: ["Home", "WorkOrders", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
-    adminMenu: ["Home", "WorkOrders", "Equipment", "Facilities", "Settings"],
+    adminMenu: ["Home", "WorkOrders", "Equipment", "Facilities", "Scheduling", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
     keys: ["g m", "g w", "g e", "g f"]
 }

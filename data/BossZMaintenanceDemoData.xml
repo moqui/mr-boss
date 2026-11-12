@@ -148,4 +148,25 @@ along with this software (see the LICENSE.md file). If not, see
             createdByUserId="BOSS_MNT_TECH" createdDate="2026-10-20 07:35:00" endedByUserId="BOSS_MNT_SUPERVISOR"
             endedDate="2026-10-20 11:05:00" dispositionEnumId="MdispAvailable" endComments="New belt tensioned; ran 30 minutes under load"/>
     <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_COMP_BELT" resourceUnavailabilityId="BOSS_MNT_OUT_COMP_BELT"/>
+
+    <!-- P15 (impl-maintenance; design §7.1, Resources, ResourcePolicyDetail, Blackouts): Room 101 is managed, approved by the resource
+        approver (maint.booking) and booked for at most two hours, up to 90 days ahead; Room 103, bookable with no policy, is booked
+        as before; the planner's vendor walkthrough in Room 101 next Tuesday was approved, and the floor's carpet replacement blacks
+        the room out that morning, the booking kept and flagged for review -->
+    <mantle.facility.Facility facilityId="BOSS_MNT_ROOM_103" facilityTypeEnumId="FcTpRoom" ownerPartyId="ORG_ZIZI_SERVICES"
+            parentFacilityId="BOSS_MNT_FLOOR1" facilityName="Room 103 Focus" capacity="4" bookable="Y"/>
+    <mantle.work.effort.ResourceBookingPolicy resourceBookingPolicyId="BOSS_MNT_POL_ROOM101" facilityId="BOSS_MNT_ROOM_101"
+            organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2026-11-01 00:00:00" bookable="Y" approvalModeEnumId="RbamApprovers"
+            bookingHorizonDays="90" maximumDurationMinutes="120" softConflictOverride="N" revision="1"
+            changeReason="Huddle room shared by three teams" createdByUserId="BOSS_MNT_RESOURCES" createdDate="2026-11-01 08:00:00"/>
+    <mantle.facility.FacilityParty facilityId="BOSS_MNT_ROOM_101" partyId="BOSS_MNT_BOOKING" roleTypeId="BookingApprover"
+            fromDate="2026-11-01 00:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_EV_VENDOR" workEffortTypeEnumId="WetEvent" purposeEnumId="WepMeeting"
+            ownerPartyId="BOSS_MNT_PLANNER" statusId="WeInPlanning" workEffortName="HVAC vendor walkthrough"
+            estimatedStartDate="2026-11-17 10:00:00" estimatedCompletionDate="2026-11-17 11:00:00" timeUomId="TF_hr"/>
+    <mantle.work.effort.WorkEffortFacility workEffortId="BOSS_MNT_EV_VENDOR" facilityId="BOSS_MNT_ROOM_101" statusId="WefAssigned"/>
+    <mantle.work.effort.ResourceUnavailability resourceUnavailabilityId="BOSS_MNT_BLK_ROOM101" unavailabilityKindEnumId="RukPlanned"
+            facilityId="BOSS_MNT_ROOM_101" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2026-11-17 07:00:00"
+            thruDate="2026-11-17 13:00:00" unavailabilityReasonEnumId="RurClosure" plannedOutage="Y" revision="1"
+            description="Carpet replacement on floor 1" createdByUserId="BOSS_MNT_RESOURCES" createdDate="2026-11-12 08:00:00"/>
 </entity-facade-xml>

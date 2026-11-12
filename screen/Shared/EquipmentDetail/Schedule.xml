@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Schedule tab under Maintenance (design-maintenance §6 EquipmentDetail's Schedule pane, §7.1; impl-maintenance
+    P15): the equipment's booking policy in words and its availability for two weeks (mantle.work.ResourceBookingServices
+    get#ResourceAvailability: its bookings, blackouts and outages kept apart, an event the user may not see named Busy), linking
+    its policy record and Blackouts. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Schedule" default-menu-index="10">
+    <parameter name="assetId"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+        <if condition="found?.asset">
+            <service-call name="mantle.work.ResourceBookingServices.get#ResourceAvailability" out-map="availability"
+                    transaction="force-new" ignore-error="true" in-map="{assetId:assetId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="scheduleRows" from="availability?.intervalList || []"/>
+        <set field="schedulePolicyText" from="availability?.policyText"/>
+        <set field="scheduleResource" from="{assetId:assetId}"/>
+        <set field="scheduleReadsPolicy" from="!!(maintenance?.capabilities?.policyView || maintenance?.capabilities?.policyEdit
+                || maintenance?.capabilities?.resourceRead)"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentSchedule" condition="found?.asset">
+            <widgets>
+                <section-include name="ResourceSchedule" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

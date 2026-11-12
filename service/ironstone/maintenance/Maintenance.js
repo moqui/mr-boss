@@ -139,7 +139,11 @@ const linkPaths = [
     "WorkOrders/WorkOrderDetail",
     "Settings/WorkPolicy",
     // P5: Downtime, under Equipment (design §6)
-    "Equipment/Downtime"
+    "Equipment/Downtime",
+    // P15: Scheduling's Resources, a resource's policy and Blackouts (design §7)
+    "Scheduling/Resources",
+    "Scheduling/ResourcePolicyDetail",
+    "Scheduling/Blackouts"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -378,7 +382,11 @@ const resourceChoices = [
     "parentFacilities",
     // P5: downtime
     "downtimeReasons",
-    "restoreDispositions"
+    "restoreDispositions",
+    // P15: a blackout's reasons, a policy's approval modes and the people who may approve bookings
+    "blockReasons",
+    "approvalModes",
+    "approvers"
 ]
 // the choices of work orders, answered to a user who reads work (workRead) or keeps the work policy (settingsEdit)
 const workChoices = [
@@ -627,6 +635,12 @@ const choiceSources = {
     downtimeReasons: (userScope, term, selected) => enumOptions("ResourceUnavailabilityReason", term, selected),
     restoreDispositions: (userScope, term, selected) =>
         enumOptions("MaintenanceDisposition", term, selected, row => row.enumId !== "MdispUnavailable"),
+    // P15: a planned block's reasons (the planned ones), how a managed resource's bookings are approved, and its approvers: the
+    // people of the scope's organizations, as a work order's
+    blockReasons: (userScope, term, selected) =>
+        enumOptions("ResourceUnavailabilityReason", term, selected, row => row.optionIndicator === "Y"),
+    approvalModes: (userScope, term, selected) => enumOptions("ResourceBookingApprovalMode", term, selected),
+    approvers: (userScope, term, selected, p) => workPeopleOptions(userScope, term, selected, p),
     // the teams and people work may be given to
     teams: (userScope, term, selected, p) => teamOptions(userScope, term, selected, p),
     workPeople: (userScope, term, selected, p) => workPeopleOptions(userScope, term, selected, p),
