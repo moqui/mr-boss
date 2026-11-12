@@ -172,7 +172,10 @@ const linkPaths = [
     // P18: the lookups, the setup readiness and the equipment import (design §9, §6)
     "Settings/Lookups",
     "Settings/Readiness",
-    "Equipment/EquipmentImport"
+    "Equipment/EquipmentImport",
+    // P17: the Reports landing and the work status report (design §8)
+    "Reports/Overview",
+    "Reports/WorkStatusReport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")

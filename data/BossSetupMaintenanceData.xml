@@ -351,4 +351,157 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Maintenance/Scheduling/BookingRequests?${facilityId ? 'facilityId=' + facilityId : 'assetId=' + assetId}"/>
     <moqui.security.user.NotificationTopic topic="ResourceBookingNotice"
             linkTemplate="/qapps/Commons/Calendar/EventDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P17 (design §1.4, §8; impl-insights §7; F37, F117): Maintenance's shipped datasets (BossMaintenanceReportData.xml
+        and report/boss-maintenance-*.json, no cost, rate or amount) read by the Insights groups, as Customer Service's are (the
+        steward updates and refreshes them), and by Maintenance's supervisors and administrators, each viewer their own
+        organizations' rows (Mantle's organization row filter); admitted by setup as BOSS's own datasets are, operations data. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_DATASETS" description="Maintenance: the shipped datasets">
+        <artifacts artifactName="org.moqui.report.dataset.boss-maintenance-work-status" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-maintenance-pm-compliance" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-maintenance-outages" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_READ" userGroupId="BOSS_INSIGHTS_READ" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_DATA" userGroupId="BOSS_INSIGHTS_DATA" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_MAINTENANCE_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_MAINTENANCE_ADMIN" userGroupId="BOSS_MAINTENANCE_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_MAINTENANCE_SUPERVISE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_MAINTENANCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_MAINTENANCE_SUPERVISE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_MAINTENANCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_MAINTENANCE_SUPERVISE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_MAINTENANCE_ADMIN"/>
+    <moqui.report.BusinessDataset datasetId="boss-maintenance-work-status" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-maintenance-pm-compliance" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-maintenance-outages" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="boss-maintenance-work-status" version="1" domainOwner="Maintenance" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-maintenance-pm-compliance" version="1" domainOwner="Maintenance" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-maintenance-outages" version="1" domainOwner="Maintenance" classEnumId="InsDcOperations"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-maintenance-work-status" version="1" ownerApp="Insights"
+            title="Maintenance work orders index" description="The work orders dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-maintenance-work-status" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-maintenance-pm-compliance" version="1" ownerApp="Insights"
+            title="Preventive obligations index" description="The preventive obligations dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-maintenance-pm-compliance" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-maintenance-outages" version="1" ownerApp="Insights"
+            title="Equipment and facility outages index" description="The outages dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-maintenance-outages" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-maintenance-work-status.index" version="1" ownerApp="Insights"
+            title="Rebuild the work orders index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-work-status" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-maintenance-work-status"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-maintenance-pm-compliance.index" version="1" ownerApp="Insights"
+            title="Rebuild the preventive obligations index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-pm-compliance" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-maintenance-pm-compliance"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-maintenance-outages.index" version="1" ownerApp="Insights"
+            title="Rebuild the outages index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-outages" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-maintenance-outages"/>
+    <!-- Maintenance's reports in Insights' catalog (owner contract, impl-insights §7; design-insights §6.1), read through Maintenance's
+        get#ReportCatalogue (a maintenance reader's: work status and PM compliance; the cost report the cost reader's,
+        MAINTENANCE_COST_VIEW, added with impl-maintenance P11's report) -->
+    <ironstone.insights.ReportCatalogEntry entryId="Maintenance.WorkStatus" version="1" ownerApp="Maintenance" title="Work status"
+            description="Maintenance work orders opened, completed and cancelled in a period, and the backlog, overdue and unassigned at its end, by state, team, resource or source."
+            purpose="Maintenance" basis="Opened, first completed and cancelled in the period; backlog as of a time"
+            routePath="Maintenance/Reports/WorkStatusReport" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" metricIds="Maintenance.Backlog"
+            catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue" catalogueKey="Maintenance.WorkStatus"
+            exportFormats="CSV" sequenceNum="610"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Maintenance.PreventiveCompliance" version="1" ownerApp="Maintenance"
+            title="PM compliance"
+            description="Preventive obligations due in a period, each on time, late, outstanding, skipped or unknown, over the obligations due, not the work orders made."
+            purpose="Maintenance" basis="Due date in the period, as of a time" routePath="Maintenance/Reports/PreventiveComplianceReport"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance"
+            metricIds="Maintenance.OverduePm,Maintenance.OnTimePm"
+            catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue"
+            catalogueKey="Maintenance.PreventiveCompliance" exportFormats="CSV" sequenceNum="620"/>
+    <!-- Maintenance's measures (owner contract, design-insights §6.2): the backlog, overdue PM and on-time PM -->
+    <ironstone.insights.MetricRegistration metricId="Maintenance.Backlog" version="1" ownerApp="Maintenance" title="Maintenance backlog"
+            description="Maintenance work orders open at a moment (in planning, approved, in progress or on hold)."
+            serviceName="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" datasetIds="boss-maintenance-work-status"
+            catalogEntryId="Maintenance.WorkStatus" grain="Work order (an execution root)" recordKey="workEffortId"
+            dateBasis="As of a time, from the status history" statusBasis="Open: not complete, closed or cancelled"
+            aggregation="snapshot" unitPolicy="count" additiveDimensions="team, resource, source, kind, organization"
+            nonAdditiveDimensions="date" allowedDimensions="state, team, resource, source, kind, organization"
+            supportedFilters="organizationPartyId, facilityId, assetId, teamPartyId, sourceEnumId, maintenanceKindEnumId, thruDate"
+            exclusions="Procedures and process steps; a work order not yet created at the as-of time"
+            scopePolicy="The viewer's organizations; a maintenance reader" freshness="Live" sequenceNum="90"/>
+    <ironstone.insights.MetricRegistration metricId="Maintenance.OverduePm" version="1" ownerApp="Maintenance" title="Overdue preventive maintenance"
+            description="Preventive obligations past their due date and not done, in a period."
+            serviceName="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" datasetIds="boss-maintenance-pm-compliance"
+            catalogEntryId="Maintenance.PreventiveCompliance" grain="Preventive obligation" recordKey="maintenanceScheduleId, obligationKey"
+            dateBasis="Due date in the period, as of a time" statusBasis="Outstanding: passed and not done (a coalesced one until its catch-up is done)"
+            aggregation="count" unitPolicy="count" additiveDimensions="plan, equipment, facility, organization"
+            nonAdditiveDimensions="date" allowedDimensions="plan, equipment, facility, organization"
+            supportedFilters="organizationPartyId, maintenanceScheduleId, assetId, facilityId, fromDate, thruDate"
+            exclusions="Unknown obligations (no time zone, no meter reading, a stale meter) and those not yet due"
+            scopePolicy="The viewer's organizations; a maintenance reader" freshness="Live" sequenceNum="100"/>
+    <ironstone.insights.MetricRegistration metricId="Maintenance.OnTimePm" version="1" ownerApp="Maintenance" title="On-time preventive maintenance"
+            description="Preventive obligations satisfied by their due date over the obligations due, in a period."
+            serviceName="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" datasetIds="boss-maintenance-pm-compliance"
+            catalogEntryId="Maintenance.PreventiveCompliance" grain="Preventive obligation" recordKey="maintenanceScheduleId, obligationKey"
+            dateBasis="Due date in the period, as of a time" statusBasis="On time, late, outstanding, skipped"
+            aggregation="ratio" numerator="Obligations satisfied by their due date"
+            denominator="Obligations due: on time, late, outstanding and skipped" unitPolicy="percent"
+            additiveDimensions="none (recompute from the parts)" nonAdditiveDimensions="every dimension"
+            allowedDimensions="plan, equipment, facility, organization"
+            supportedFilters="organizationPartyId, maintenanceScheduleId, assetId, facilityId, fromDate, thruDate"
+            exclusions="Unknown obligations and those not yet due are named, never in the denominator; a skipped or coalesced one is not compliant"
+            scopePolicy="The viewer's organizations; a maintenance reader" freshness="Live" sequenceNum="110"/>
+    <!-- Maintenance's worklists on Insights' attention board (owner contract, design-insights §7): Home's counts, null for a user a
+        count is not for (then left out) -->
+    <ironstone.insights.AttentionProvider providerKey="Maintenance.Unassigned" version="1" ownerApp="Maintenance" title="Unassigned work orders"
+            description="Open maintenance work orders with no technician."
+            countService="mantle.work.MaintenanceReportServices.get#MaintenanceHome" countField="counters.unassignedCount"
+            organizationParameter="organizationPartyId"
+            routePath="Maintenance/WorkOrders/Find" routeParameters="savedFind=unassigned"
+            organizationScope="Your organizations" sequenceNum="920"/>
+    <ironstone.insights.AttentionProvider providerKey="Maintenance.OverduePm" version="1" ownerApp="Maintenance" title="Overdue preventive maintenance"
+            description="Active preventive plans past their due date."
+            countService="mantle.work.MaintenanceReportServices.get#MaintenanceHome" countField="counters.overduePmCount"
+            organizationParameter="organizationPartyId"
+            routePath="Maintenance/Preventive/DueMaintenance" routeParameters="state=overdue" requiredPermission="MAINTENANCE_VIEW"
+            organizationScope="Your organizations" sequenceNum="930"/>
+    <ironstone.insights.AttentionProvider providerKey="Maintenance.ResourcesDown" version="1" ownerApp="Maintenance" title="Resources down"
+            description="Equipment and facilities out of service now."
+            countService="mantle.work.MaintenanceReportServices.get#MaintenanceHome" countField="counters.downResourceCount"
+            organizationParameter="organizationPartyId"
+            routePath="Maintenance/Equipment/Downtime" routeParameters="open=true"
+            organizationScope="Your organizations" sequenceNum="940"/>
+    <!-- Maintenance's worklist for the flow maps (owner contract, impl-insights P9): the internal flow's Maintenance step opens it -->
+    <ironstone.insights.FlowTarget targetId="Maintenance.WorkOrders" version="1" ownerApp="Maintenance" title="Maintenance work orders"
+            description="Maintenance work orders, open, unassigned or overdue."
+            routePath="Maintenance/WorkOrders/Find"
+            parameterContract='{"savedFind":{"type":"choice","values":["unassigned","overdue"]},"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="350"/>
+    <!-- Reports' exports in Admin's Exports (owner contract, impl-admin P16; F53, F72): one wizard target for the Reports area, whose
+        reports export their own form-list's CSV (the screen's projection, the columns chosen), nothing dispatched -->
+    <moqui.server.TransferTarget targetId="maintenanceReports" direction="export" targetMode="wizard" title="Maintenance reports"
+            description="A Maintenance report's rows as CSV, from Reports in Maintenance (work status, PM compliance)"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceReports" sequenceNum="67"/>
 </entity-facade-xml>

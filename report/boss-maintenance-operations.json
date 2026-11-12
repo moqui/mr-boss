@@ -1,0 +1,150 @@
+{
+  "id": "boss-maintenance-operations",
+  "type": "dashboard",
+  "title": "Maintenance operations",
+  "body": {
+    "folder": "Maintenance",
+    "description": "Work orders by status, preventive obligations by state and the outages in force, among the organizations each viewer reads. Counts only: no cost, rate or amount.",
+    "panels": {
+      "workByStatus": {
+        "title": "Work orders by status",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-maintenance-work-status",
+            "aggregations": [
+              {
+                "id": "status",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "statusId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "workOrders",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "workEffortId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "obligations": {
+        "title": "Preventive obligations by state",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "boss-maintenance-pm-compliance",
+            "aggregations": [
+              {
+                "id": "week",
+                "type": "date_histogram",
+                "role": "x-axis",
+                "params": {
+                  "field": "dueDate",
+                  "calendar_interval": "1w"
+                }
+              },
+              {
+                "id": "state",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "statusId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "obligations",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "maintenanceOccurrenceId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "outages": {
+        "title": "Outages in force by reason",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-maintenance-outages",
+            "aggregations": [
+              {
+                "id": "reason",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "unavailabilityReasonEnumId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "outages",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "resourceUnavailabilityId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ],
+            "filters": [
+              {
+                "query": {
+                  "field": {
+                    "name": "thruDate",
+                    "op": "exists"
+                  }
+                },
+                "negated": true,
+                "label": "Not restored"
+              },
+              {
+                "query": {
+                  "field": {
+                    "name": "supersededByUnavailabilityId",
+                    "op": "exists"
+                  }
+                },
+                "negated": true,
+                "label": "The row in force"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

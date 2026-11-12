@@ -19,7 +19,8 @@
 // accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1), P18's equipment
 // import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
-// plan refused; the compliance a reader's, not a technician's or Retail's),
+// plan refused; the compliance a reader's, not a technician's or Retail's), P17's work status and report catalogue (a reader's,
+// not a technician's; Retail's planner refused Services' organization),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1206,6 +1207,36 @@ feature(
             !out.retailScopes.includes(ids.organizationId)
             out.adminReadiness == ""
             out.resourcesReadiness.includes("PERMISSION_DENIED")
+        }
+    }
+)
+
+// P17: the work status report and the reports catalogue are a maintenance reader's (MAINTENANCE_VIEW), not a technician's; Retail's
+// planner asking for Services' organization is refused
+feature(
+    "work status and the reports catalogue are a reader's, not a technician's; Retail's planner gets no Services report (P17)",
+    {
+        when() {
+            const status = (user, parameters = {}) =>
+                asUser(user, () =>
+                    system(() => refusal("mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport", parameters))
+                )
+            const catalogue = user =>
+                asUser(user, () => refusal("ironstone.maintenance.ReportServices.get#ReportCatalogue", {appRoot: "Maintenance"}))
+            return {
+                reader: status(users.reader),
+                tech: status(users.tech),
+                retail: status(users.retailPlanner, {organizationPartyId: ids.organizationId}),
+                readerCatalogue: catalogue(users.reader),
+                techCatalogue: catalogue(users.tech)
+            }
+        },
+        then(out) {
+            out.reader == ""
+            out.tech.includes("PERMISSION_DENIED")
+            out.retail.includes("ORGANIZATION_DENIED")
+            out.readerCatalogue == ""
+            out.techCatalogue.includes("PERMISSION_DENIED")
         }
     }
 )

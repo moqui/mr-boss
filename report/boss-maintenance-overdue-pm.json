@@ -1,0 +1,78 @@
+{
+  "id": "boss-maintenance-overdue-pm",
+  "type": "alert",
+  "title": "Overdue preventive maintenance",
+  "body": {
+    "description": "Fires when preventive obligations due in the last 90 days are past their due date and not done (open or with their work order still unfinished), by plan, among the organizations its owner reads. An obligation counts once its plan's generation or a decision brought it due. A template: copy it in Insights \u203a Business alerts, set the threshold and the audience, then activate it; it tells its subscribers when it starts firing, not at every check.",
+    "query": {
+      "datasetId": "boss-maintenance-pm-compliance",
+      "from": "now-90d",
+      "thru": "now",
+      "aggregations": [
+        {
+          "id": "plan",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "maintenanceScheduleId",
+            "size": 50
+          }
+        },
+        {
+          "id": "obligations",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "maintenanceOccurrenceId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "bool": {
+              "any": [
+                {
+                  "field": {
+                    "name": "statusId",
+                    "op": "eq",
+                    "value": "MocOpen"
+                  }
+                },
+                {
+                  "field": {
+                    "name": "statusId",
+                    "op": "eq",
+                    "value": "MocGenerated"
+                  }
+                }
+              ]
+            }
+          },
+          "label": "Open or generated, not done"
+        }
+      ]
+    },
+    "field": "obligations",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "maintenance",
+      "severity": "warning"
+    }
+  }
+}

@@ -12,14 +12,19 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Maintenance (design-maintenance §8, §1.2; impl-maintenance P14): PM compliance
-    (PreventiveComplianceReport) first, shown to a reader of maintenance work (the root's menu condition, MAINTENANCE_VIEW); Mantle's
-    MaintenanceReportServices check again. P17 adds the landing (ReportLinks), work status and costs. -->
+<!-- The Reports area of IronStone Maintenance (design-maintenance §8, §1.2; impl-maintenance P14, P17), shown to a reader of
+    maintenance work (the root's menu condition, MAINTENANCE_VIEW); Mantle's MaintenanceReportServices check again: Overview (P17,
+    ReportOptions and ReportLinks: the reports the user reads as linked cards, and Downtime, which opens the Equipment area's list),
+    Work status (P17), PM compliance (P14). The cost report joins with impl-maintenance P11. Listed in Admin's Exports by one wizard
+    export target (maintenanceReports, F72); each report's CSV is its own form-list's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_analytics" menu-image-type="icon">
-    <subscreens default-item="PreventiveComplianceReport" always-use-full-path="true">
-        <subscreens-item name="PreventiveComplianceReport" location="component://mr-boss/screen/Maintenance/Reports/PreventiveComplianceReport.xml"
+    <subscreens default-item="Overview" always-use-full-path="true">
+        <subscreens-item name="Overview" location="component://mr-boss/screen/Maintenance/Reports/Overview.xml" menu-index="1"/>
+        <subscreens-item name="WorkStatusReport" location="component://mr-boss/screen/Maintenance/Reports/WorkStatusReport.xml"
                 menu-index="2"/>
+        <subscreens-item name="PreventiveComplianceReport" location="component://mr-boss/screen/Maintenance/Reports/PreventiveComplianceReport.xml"
+                menu-index="3"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MaintenanceReportsPanel" type="tab"/>

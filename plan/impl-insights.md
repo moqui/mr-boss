@@ -3354,6 +3354,11 @@ Designed, not in this build:
   - Picked up by [impl-maintenance.md](impl-maintenance.md) (Nov 11, 2026): the entries, metrics, datasets
     (`report/boss-maintenance-*.json`) and the internal flow map's flow target, its P17; EquipmentDetail's context,
     P2.
+  - Built by impl-maintenance P17 (Nov 12, 2026): the entries `Maintenance.WorkStatus` and `Maintenance.PreventiveCompliance`
+    (through Maintenance's `get#ReportCatalogue`), the measures `Maintenance.Backlog`, `.OverduePm` and `.OnTimePm`, three
+    attention providers, three admitted operations datasets with their readiness and refresh rows, a dashboard, three alert
+    templates and the flow target `Maintenance.WorkOrders`, which the internal flow map's Maintenance step opens (template
+    version 2); InsightsHome's provider list gained the three keys. The `Maintenance.Cost` entry joins with impl-maintenance P11.
 - **Design §17's other open items:** usage analytics for stewards (Q3), alerts to a Comms chat room (Q4).
 
 ## 8. Verification

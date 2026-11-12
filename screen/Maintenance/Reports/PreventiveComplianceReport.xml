@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     outcome. The summary: the obligations due (the denominator: on time, late, outstanding and skipped), each count opening its
     rows, the on-time percentage, and what is left out of the denominator (unknown, not yet due). The rows: each obligation's plan,
     target, due date or threshold, outcome, when it was satisfied, its work order and a note (coalesced into a catch-up, a skip's
-    reason, the reading at a meter completion). No cost. -->
+    reason, the reading at a meter completion); its CSV is the form-list's own (P17: the columns chosen, every row). No cost. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="PM compliance" default-menu-index="2">
     <parameter name="fromDate"/>
@@ -30,11 +30,13 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="outcome"/>
     <parameter name="pageIndex"/>
     <parameter name="pageSize"/>
+    <parameter name="pageNoLimit"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <actions>
         <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" out-map="report" transaction="force-new"
                 ignore-error="true" in-map="{fromDate:fromDate, thruDate:thruDate, organizationPartyId:organizationPartyId, assetId:assetId,
-                    facilityId:facilityId, outcome:outcome, pageIndex:pageIndex, pageSize:pageSize}"/>
+                    facilityId:facilityId, outcome:outcome, pageIndex:pageIndex, pageSize:pageSize,
+                    pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true}"/>
         <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="summary" from="report?.summary || {}"/>
@@ -118,7 +120,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="." text="All outcomes" link-type="anchor" parameter-map="options" condition="outcome"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="ComplianceRows" list="complianceList" skip-form="true" paginate="true">
+                        <form-list name="ComplianceRows" list="complianceList" skip-form="true" paginate="true" select-columns="true"
+                                show-csv-button="true">
                             <field name="maintenanceScheduleId">
                                 <default-field title="Plan">
                                     <link url="${sharedLinks['Preventive/Plans/PlanDetail']}" text="${scheduleName}" link-type="anchor"

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's reports catalogue (impl-maintenance P17; Reports.js): for Insights' catalog and the Reports landing. The reports'
+    figures are Mantle's mantle.work.MaintenanceReportServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="ReportCatalogue" allow-remote="false" read-only="true">
+        <description>The reports Maintenance owns that the user may read (design §8 Reports), each in Insights' catalog contract
+            (entryId, ownerApp, title, description, path, url, exports): work status and PM compliance for a maintenance reader
+            (MAINTENANCE_VIEW). Refuses a user who reads no maintenance work (PERMISSION_DENIED) and another app root.</description>
+        <in-parameters><parameter name="appRoot"/></in-parameters>
+        <out-parameters><parameter name="reports" type="List"/></out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Reports.js').execute('catalogue', context)"/>
+            <set field="reports" from="out.reports"/>
+        </actions>
+    </service>
+</services>
