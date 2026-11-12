@@ -170,6 +170,8 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="People/Staffing/Openings" sequence="43"/>
         <!-- P18: the person's own qualification expiring (QualificationExpiring, Mantle's daily reminder; Today's item is the source above) -->
         <notification-topic topic="QualificationExpiring"/>
+        <!-- P17: an offer of employment to approve (PeopleOfferApproval), opening OfferDetail -->
+        <notification-topic topic="PeopleOfferApproval"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

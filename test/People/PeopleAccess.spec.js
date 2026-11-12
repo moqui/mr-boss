@@ -57,6 +57,11 @@
 // employer (the reader refused with the same parameters, Services' qualification refused to Retail's development administrator), and
 // the Development group (the reader's without the matrix). P18 review (the user's call of Nov 12, 2026): the manager evaluates her
 // report's skill without PEOPLE_DEVELOP_EDIT, the reader is refused the same evaluation and the manager Services' employee.
+// P17: an offer read by a recruiter of its employer (the directory reader refused it with the same parameters, Services' offer refused
+// to Retail's recruiter), its pay set by payroll and refused to the HR officer with the same parameters, and an employment change's
+// letter print HR's (the directory reader refused the screen). P17 review (the user's call of Nov 12, 2026): the employee reads
+// their own issued letter through SelfService's My letters (the services and the transition by its own grant) and is refused Ines's;
+// the reader (no self-service) is refused the employee's letter with the same parameters.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -1431,3 +1436,121 @@ feature(
         }
     }
 )
+
+feature(
+    "P17: an offer is read by its employer's recruiters, its pay set by payroll alone; an employment letter's print is HR's",
+    {
+        when() {
+            const R = "mantle.humanres.RecruitingServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const day = days => ec.l10n.format(new Date(Date.now() + days * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+            // an interviewed application's draft offer of an employer: Retail's by its recruiter, Services' by the system administrator
+            const draftOffer = (organizationPartyId, seatId, lastName) =>
+                system(() => {
+                    const opening = invoke(R + "store#Opening", {
+                        organizationPartyId,
+                        title: "Access spec offer opening",
+                        emplPositionIds: seatId,
+                        action: "open"
+                    })
+                    const made = invoke(R + "create#Application", {
+                        jobOpeningId: opening.jobOpeningId,
+                        firstName: "Access",
+                        lastName
+                    })
+                    for (const statusId of ["EaScreening", "EaInterview"])
+                        invoke("update#mantle.humanres.employment.EmploymentApplication", {
+                            employmentApplicationId: made.employmentApplicationId,
+                            statusId
+                        })
+                    return invoke(R + "store#Offer", {
+                        employmentApplicationId: made.employmentApplicationId,
+                        emplPositionId: seatId,
+                        fromDate: day(45)
+                    }).employmentOfferId
+                })
+            const retail = asUser(users.recruiter, () => draftOffer(ids.organizationId, ids.openingSeatId, "Offeree"))
+            const services = draftOffer(ids.otherOrganizationId, ids.otherOpeningSeatId, "Elsewhere")
+            const as = (user, service, parameters) => asUser(user, () => system(() => code(refusal(service, parameters))))
+            const pay = {employmentOfferId: retail, payAmount: "38000", currencyUomId: "USD", timePeriodTypeId: "PayrollYear"}
+            const codes = {
+                recruiter: as(users.recruiter, R + "get#Offer", {employmentOfferId: retail}),
+                reader: as(users.reader, R + "get#Offer", {employmentOfferId: retail}),
+                otherEmployer: as(users.recruiter, R + "get#Offer", {employmentOfferId: services}),
+                hrPay: as(users.hr, R + "store#Offer", pay),
+                payrollPay: as(users.payroll, R + "store#Offer", pay)
+            }
+            const problems = []
+            const hrLetter = screenRefusal(users.hr, "Employees/EmploymentLetter", {employmentChangeId: "_NA_"})
+            if (hrLetter) problems.push(`the HR officer's employment letter: ${hrLetter}`)
+            const readerLetter = screenRefusal(users.reader, "Employees/EmploymentLetter", {employmentChangeId: "_NA_"})
+            if (!unauthorized(readerLetter)) problems.push(`the reader opens an employment letter: ${readerLetter || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    recruiter: "accepted",
+                    reader: "RECORD_UNAVAILABLE",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    hrPay: "PERMISSION_DENIED",
+                    payrollPay: "accepted"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature("P17 review: an employee reads their own issued letters in self-service, no one else's", {
+    when() {
+        const P = "mantle.humanres.PeopleServices."
+        const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+        // spec-local issued lifecycle letters of Tomas (the employee) and Ines, as Mantle stores them
+        const letterOf = (partyId, key) =>
+            system(() => {
+                const location = "dbresource://mantle/content/peopleLetter/access-spec-" + key + ".html"
+                ec.resource.getLocationReference(location).putText("<html><body>Access spec letter " + key + "</body></html>")
+                return call("create#mantle.humanres.employment.EmploymentLetter", {
+                    employmentChangeId: "PPL_ACCESS_SPEC_" + key,
+                    changeKindEnumId: "EckTransfer",
+                    partyId,
+                    organizationPartyId: ids.organizationId,
+                    title: "Transfer",
+                    contentLocation: location,
+                    contentType: "text/html",
+                    fileName: "Transfer-" + key + ".html",
+                    includesPay: "N",
+                    issuedDate: ec.user.nowTimestamp
+                }).employmentLetterId
+            })
+        const own = letterOf(ids.employeePartyId, "OWN")
+        const other = letterOf(ids.reportPartyId, "OTHER")
+        // as the user with artifact authorization on: the services by SelfService's own grant, then Mantle's checks
+        const as = (user, service, parameters) =>
+            asUser(user, () => {
+                const message = refusal(service, parameters)
+                return /is not authorized/.test(message) ? "UNAUTHORIZED" : code(message)
+            })
+        const listed = asUser(users.employee, () => invoke(P + "find#MyLetters").letters || [])
+        const opened = asUser(users.employee, () => hit("apps/Commons/People/SelfService/myLetter", {employmentLetterId: own}))
+        return {
+            codes: {
+                employee: as(users.employee, P + "get#MyLetter", {employmentLetterId: own}),
+                reader: as(users.reader, P + "get#MyLetter", {employmentLetterId: own}),
+                another: as(users.employee, P + "get#MyLetter", {employmentLetterId: other})
+            },
+            listed: listed.map(row => row.employmentLetterId).filter(id => id === own || id === other),
+            opened: !opened.refused && opened.output.includes("Access spec letter OWN")
+        }
+    },
+    then({codes, listed, opened}) {
+        codes ==
+            {
+                employee: "accepted",
+                reader: "UNAUTHORIZED",
+                another: "RECORD_UNAVAILABLE"
+            }
+        listed.length == 1
+        opened == true
+    }
+})

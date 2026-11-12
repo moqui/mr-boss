@@ -23,13 +23,14 @@ along with this software (see the LICENSE.md file). If not, see
     (PeopleLeaveApproval; LeaveServices approve#Request and refuse#Request), opening LeaveRequestDetail. P13: an attendance correction
     (PeopleAttendanceApproval; AttendanceServices approve#Correction and refuse#Correction), opening the day on Attendance. P15: an
     expense claim (PeopleExpenseApproval; ExpenseServices approve#Claim and refuse#Claim), opening ExpenseClaimDetail, and an employee
-    advance (PeopleAdvanceApproval; approve#Advance and refuse#Advance), opening Advances. Later phases add their topics (offers,
-    pay). -->
+    advance (PeopleAdvanceApproval; approve#Advance and refuse#Advance), opening Advances. P17: an offer of employment
+    (PeopleOfferApproval; RecruitingServices approve#Offer and refuse#Offer), opening OfferDetail. Later phases add their topics
+    (pay). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="3" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
         <set field="notificationTopics" from="['PeoplePositionApproval', 'PeopleEmploymentChangeApproval', 'PeopleLeaveApproval',
-            'PeopleAttendanceApproval', 'PeopleExpenseApproval', 'PeopleAdvanceApproval']"/>
+            'PeopleAttendanceApproval', 'PeopleExpenseApproval', 'PeopleAdvanceApproval', 'PeopleOfferApproval']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">

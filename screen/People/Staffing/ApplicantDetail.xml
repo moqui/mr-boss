@@ -24,7 +24,12 @@ along with this software (see the LICENSE.md file). If not, see
     (the source, referral, contact permission and notes, a recruiter's), Files (the application's private files: its content host,
     the resume an application by mail brought, a recruiter adds more), Interviews (each opening its event under Interviews) and
     the scorecards, opted out of AI (ai-opt-out, PE-21): a panel member's own to answer once (Submit scorecard,
-    submit#Scorecard) and answered, a recruiter's every one. An application outside the reader's reach shows "Not available". -->
+    submit#Scorecard) and answered, a recruiter's every one. An application outside the reader's reach shows "Not available".
+    P17 (design §5 ApplicantDetail and OfferDetail): Create offer for a recruiter of an application at Interview or Offer with no open
+    offer (store#Offer: a seat of the opening, the start, when it is open until and a note; it moves the application to Offer and
+    opens OfferDetail), the primary once a scorecard is in (Schedule interview the primary before), and the Offers box (each offer of
+    the application with its state, opening OfferDetail; find#Offers). An applicant's resume is shared with the panel when attached
+    (the user's call of Nov 12, 2026), and the recruiter can stop sharing it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Applicant" default-menu-include="false">
     <parameter name="employmentApplicationId"/>
@@ -66,6 +71,18 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- P17: an offer of the application, drafted (Mantle checks the recruiter, the stage, the seat and the dates), then opened -->
+    <transition name="createOffer">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.store#Offer" out-map="drafted"
+                    in-map="{employmentApplicationId:employmentApplicationId, emplPositionId:(emplPositionId || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), expireDate:(expireDate || null), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Offer drafted: set its terms and submit it for approval</message></if>
+            <set field="employmentOfferId" from="drafted?.employmentOfferId"/>
+        </actions>
+        <default-response url="../OfferDetail"><parameter name="employmentOfferId"/></default-response>
         <error-response url="."><parameter name="employmentApplicationId"/></error-response>
     </transition>
     <!-- the panel member's own scorecard, once: the form's answers are the request's values, checked again in Mantle -->
@@ -146,7 +163,19 @@ along with this software (see the LICENSE.md file). If not, see
                 .map(file => ({value: file.applicationContentId, label: file.description})) : []
             shareValue = app ? {employmentApplicationId: app.employmentApplicationId,
                 sharedContentIds: sharedRows.map(file => file.applicationContentId)} : {}
+            // P17: an offer of it: made by a recruiter once assessed (the primary once a scorecard is in), and its offers
+            canOffer = !!app?.canOffer
+            offerPrimary = canOffer && scorecardRows.length > 0
+            offerSeatOptions = app ? Array.from(app.openingSeats || []).map(row => ({key: row.emplPositionId, text: row.positionName})) : []
+            offerValue = app ? {employmentApplicationId: app.employmentApplicationId, emplPositionId: offerSeatOptions[0]?.key || null} : {}
+            offerLink = sharedLinks['Staffing/OfferDetail']
         ]]></script>
+        <if condition="recruiter">
+            <service-call name="mantle.humanres.RecruitingServices.find#Offers" out-map="offersFound" transaction="force-new" ignore-error="true"
+                    in-map="{employmentApplicationId:app.employmentApplicationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="offerRows" from="Array.from(offersFound?.offers || [])"/>
     </actions>
     <widgets>
         <section name="ApplicationMissing" condition="!recordFound">
@@ -181,7 +210,39 @@ along with this software (see the LICENSE.md file). If not, see
                             </render-mode>
                         </container>
                         <container style="col-12 col-md-auto m-record-actions">
-                            <container-dialog id="ScheduleInterviewDialog" button-text="Schedule interview" icon="sym_o_event" type="primary"
+                            <!-- P17: an offer of the application, the primary once assessed -->
+                            <container-dialog id="CreateOfferDialog" button-text="Create offer" icon="sym_o_contract"
+                                    type="${offerPrimary ? 'primary' : 'default'}" width="640" title="Offer ${app.applicantName} the position"
+                                    condition="canOffer">
+                                <label type="p" style="text-caption m-muted"
+                                        text="A draft: its terms are checked as a hire checks them; payroll sets the pay, and it is submitted for approval before it is issued."/>
+                                <form-single name="CreateOffer" transition="createOffer" map="offerValue">
+                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                    <field name="emplPositionId">
+                                        <default-field title="Position" tooltip="A seat of the opening">
+                                            <drop-down><list-options list="offerSeatOptions" key="${key}" text="${text}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="Starts"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+                                    <field name="thruDate">
+                                        <default-field title="Ends" tooltip="Empty for an open-ended employment"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                                    </field>
+                                    <field name="expireDate">
+                                        <default-field title="Open until" tooltip="The candidate answers by then"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                                    </field>
+                                    <field name="note"><default-field title="Note for the letter"><text-area rows="2" cols="60"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Draft the offer"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-ref name="emplPositionId"/>
+                                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                        <field-ref name="expireDate"/>
+                                        <field-ref name="note"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ScheduleInterviewDialog" button-text="Schedule interview" icon="sym_o_event"
+                                    type="${offerPrimary ? 'default' : 'primary'}"
                                     width="720" title="Schedule an interview with ${app.applicantName}" condition="canSchedule">
                                 <form-single name="ScheduleInterview" transition="scheduleInterview" map="interviewValue">
                                     <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
@@ -320,7 +381,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <form-single name="SharePanelFiles" transition="sharePanelFiles" map="shareValue">
                                         <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
                                         <field name="sharedContentIds">
-                                            <default-field title="The panel reads" tooltip="None is shared until you choose it, the resume either">
+                                            <default-field title="The panel reads" tooltip="A resume is shared when attached; another file once you choose it">
                                                 <check><list-options list="shareOptions" key="${value}" text="${label}"/></check>
                                             </default-field>
                                         </field>
@@ -349,6 +410,39 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-box>
                     </row-col>
                     <row-col lg="6">
+                        <!-- P17: the offers of the application, each opening OfferDetail (a recruiter's) -->
+                        <section name="ApplicationOffers" condition="offerRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Offers"/>
+                                    <box-body-nopad>
+                                        <form-list name="Offers" list="offerRows" skip-form="true" paginate="false">
+                                            <field name="positionName">
+                                                <default-field title="Offer">
+                                                    <link url="${offerLink}" text="${positionName || employmentOfferId}" link-type="anchor"
+                                                            parameter-map="{employmentOfferId:employmentOfferId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDateText"><default-field title="Starts"><display/></default-field></field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="positionName"/><field-ref name="fromDateText"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                         <container-box>
                             <box-header title="Interviews"/>
                             <box-body-nopad>

@@ -32,7 +32,9 @@ along with this software (see the LICENSE.md file). If not, see
     change set for a later date (withdraw#EmploymentChange, HR's) and Request access again when a hire's or separation's access
     request failed (ironstone.admin.LifecycleServices, keyed by the change). P8: the emergency contacts beside Personal information
     (template/PeopleEmergencyContacts.xml: the person and HR read them; the person and an HR editor add, change and end them,
-    wherever they may change the personal information: People's mount, and Commons' for their own record). P18, under People: Skills and reviews
+    wherever they may change the personal information: People's mount, and Commons' for their own record). P17, under People: an applied
+    change's lifecycle letter in Employment changes (Issue letter with its preview, then Letter: the stored one; issue#EmploymentLetter
+    and get#EmploymentLetter, HR's). P18, under People: Skills and reviews
     (mantle.humanres.DevelopmentServices.get#PersonDevelopment: the person's skills with their level and whether self-declared or
     evaluated, their qualifications as the reader may see them with their expiry, and their resume lines for the person, HR and
     development; a manager reads the skills and the verified qualifications' validity), with Add resume line for the person and an
@@ -108,6 +110,27 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
     </transition>
+    <!-- P17: an applied change's lifecycle letter issued by HR (Mantle renders and stores it once, on the offer letter's template),
+        and the issued letter as it was stored -->
+    <transition name="issueLetter">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.issue#EmploymentLetter" out-map="issuedLetter"
+                    in-map="{employmentChangeId:employmentChangeId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${issuedLetter.repeated ? 'The letter was issued already' : 'Letter issued'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <transition name="employmentLetter" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.get#EmploymentLetter" out-map="letterFound"
+                    in-map="{employmentChangeId:employmentChangeId}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !letterFound?.issued"><return error="true" message="The letter is not issued yet"/></if>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(letterFound.letter.location, true, letterFound.letter.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
 
     <actions>
         <service-call name="ironstone.people.ContextServices.get#Employee360Context" out-map="employee" transaction="force-new"
@@ -160,7 +183,11 @@ along with this software (see the LICENSE.md file). If not, see
                     : [row.departmentName, row.positionName, row.managerName ? 'manager ' + row.managerName : '', row.facilityName]
                         .filter(Boolean).join(' · '),
                 waitingText: row.approval?.waitingText || (row.accessFailure ? 'Access request failed: ' + row.accessFailure : ''),
-                peopleApprovalId: row.approval?.peopleApprovalId || null
+                peopleApprovalId: row.approval?.peopleApprovalId || null,
+                // P17: the change's lifecycle letter, HR's under People (the print of its preview is People's route)
+                letterPrintUrl: row.letterOffered && !row.letterIssued && sharedLinks?.['Employees/EmploymentLetter']
+                    ? '/apps/People/Employees/EmploymentLetter?renderMode=html-print&employmentChangeId=' + encodeURIComponent(row.employmentChangeId) : null,
+                canIssueLetter: !!row.letterOffered && !row.letterIssued && !!sharedLinks?.['Employees/EmploymentLetter']
             }))
             changeColors = {EchRequested: 'warning', EchApplied: 'positive', EchRefused: 'negative', EchSuperseded: 'grey-8', EchWithdrawn: 'grey-8'}
             // P7: the equipment the person holds (People's mount, the person and HR)
@@ -585,6 +612,24 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <field name="submitButton"><default-field title="Request access"><submit/></default-field></field>
                                                 </form-single>
                                             </container-dialog>
+                                            <!-- P17: the change's lifecycle letter: previewed and issued once (stored as it reads then), then opened -->
+                                            <container-dialog id="IssueLetter_${employmentChangeId}" button-text="Issue letter" icon="sym_o_mail"
+                                                    width="520" title="The ${changeText.toLowerCase()} letter of ${overview.personName}" condition="canIssueLetter">
+                                                <label type="p" text="The letter is stored as it reads now and is not changed after."/>
+                                                <link url="${letterPrintUrl}" url-type="plain" text="Preview the letter" link-type="anchor"
+                                                        target-window="_blank"/>
+                                                <form-single name="IssueLetter" transition="issueLetter"
+                                                        map="{partyId:partyId, partyRelationshipId:record.partyRelationshipId, employmentChangeId:employmentChangeId}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="employmentChangeId"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Issue letter"><submit confirmation="Issue the ${changeText.toLowerCase()} letter of ${overview.personName}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="employmentLetter" text="Letter" icon="sym_o_picture_as_pdf" target-window="_blank"
+                                                    parameter-map="{employmentChangeId:employmentChangeId, partyId:partyId}" condition="letterIssued"/>
                                         </default-field>
                                     </field>
                                     <columns type="mobile">

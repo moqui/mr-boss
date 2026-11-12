@@ -17,11 +17,34 @@ along with this software (see the LICENSE.md file). If not, see
     employer) by name among the people related to the user's employers (an employee, a contractor, a contact, an applicant), and
     anyone else, a person another employer employs among them, by their exact email (the user's call); a new person is named with
     their work email and phone. A new hire's employer is the active one, else the first of the user's with someone employed. Next checks the person (preview#Hire: someone who matches a new person's names or email is refused
-    until chosen, or the new person confirmed) and keeps the draft. -->
+    until chosen, or the new person confirmed) and keeps the draft. P17: the accepted offers of the user's employers to hire from
+    (mantle.humanres.RecruitingServices.find#Offers; OfferDetail's Hire opens this step with its offer): Start from the offer keeps a
+    draft of the offer's employer, applicant and terms (get#Offer's hireTerms, never pay), whose hire consumes the offer once. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Identity" default-menu-index="1" menu-image="sym_o_person_search" menu-image-type="icon">
+    <parameter name="employmentOfferId"/>
 
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- P17: a hire from an accepted offer: the draft starts again from the offer's employer, applicant and terms -->
+    <transition name="startFromOffer">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.get#Offer" out-map="offerFound" in-map="{employmentOfferId:employmentOfferId}"/>
+            <script><![CDATA[
+                if (ec.message.hasError()) return
+                const terms = offerFound?.offer?.hireTerms
+                if (!terms) { ec.message.addError('Only an accepted offer is hired from, by HR'); return }
+                const draft = {organizationPartyId: terms.organizationPartyId, partyId: terms.partyId, firstName: '', lastName: '',
+                    preferredName: '', workEmail: '', workPhone: '', confirmNewPerson: '', fromDate: terms.fromDate, thruDate: terms.thruDate,
+                    departmentPartyId: terms.departmentPartyId, emplPositionId: terms.emplPositionId, managerPartyId: terms.managerPartyId,
+                    facilityId: terms.facilityId, reason: '', employmentOfferId: terms.employmentOfferId}
+                ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
+                    employmentDraftId: hireDraftId, draft}).call()
+                if (!ec.message.hasError()) ec.message.addMessage('The hire starts from the accepted offer: check each step', 'success')
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <transition name="saveIdentity">
         <actions>
             <script><![CDATA[
@@ -47,11 +70,12 @@ along with this software (see the LICENSE.md file). If not, see
                 if (ec.message.hasError()) return
                 const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#Hire').parameters({
                     organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
-                    lastName: draft.lastName, workEmail: draft.workEmail, confirmNewPerson: draft.confirmNewPerson === 'Y'}).call()
+                    lastName: draft.lastName, workEmail: draft.workEmail, confirmNewPerson: draft.confirmNewPerson === 'Y',
+                    employmentOfferId: draft.employmentOfferId || null}).call()
                 if (ec.message.hasError()) return
-                // the person's refusals belong to this step; the terms' to the next
+                // the person's refusals (and an offer's, P17) belong to this step; the terms' to the next
                 for (const finding of Array.from(previewed?.findings || []))
-                    if (finding.severity === 'error' && ['PERSON_REQUIRED', 'PERSON_MATCHES'].includes(finding.code))
+                    if (finding.severity === 'error' && (['PERSON_REQUIRED', 'PERSON_MATCHES'].includes(finding.code) || finding.code.startsWith('OFFER_')))
                         ec.message.addError(finding.message)
             ]]></script>
         </actions>
@@ -73,12 +97,53 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the chosen person's name, as Mantle admits them (a person found by their email named with it) -->
         <if condition="identity.partyId &amp;&amp; identity.organizationPartyId">
             <service-call name="mantle.humanres.PeopleServices.preview#Hire" out-map="chosen" transaction="force-new" ignore-error="true"
-                    in-map="{organizationPartyId:identity.organizationPartyId, partyId:identity.partyId, workEmail:(identity.workEmail || null)}"/>
+                    in-map="{organizationPartyId:identity.organizationPartyId, partyId:identity.partyId, workEmail:(identity.workEmail || null),
+                        employmentOfferId:(identity.employmentOfferId || null)}"/>
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="chosenName" from="chosen?.person?.personName || ''"/>
+        <!-- P17: the accepted offers to hire from (an HR reader's), the one OfferDetail's Hire names first; and the draft's offer -->
+        <service-call name="mantle.humanres.RecruitingServices.find#Offers" out-map="acceptedFound" transaction="force-new" ignore-error="true"
+                in-map="{statusId:'OfrAccepted', pageSize:20}"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const accepted = Array.from(acceptedFound?.offers || []).filter(row => row.canHire)
+            draftOffer = identity.employmentOfferId ? accepted.find(row => row.employmentOfferId === identity.employmentOfferId) || null : null
+            acceptedRows = identity.employmentOfferId ? [] : employmentOfferId
+                ? accepted.filter(row => row.employmentOfferId === employmentOfferId) : accepted
+            draftOfferText = identity.employmentOfferId ? 'From the accepted offer to ' + (draftOffer?.applicantName || chosenName) +
+                (draftOffer ? ' (' + [draftOffer.positionName, draftOffer.fromDateText ? 'starts ' + draftOffer.fromDateText : ''].filter(Boolean).join(', ') + ')' : '')
+                + ': the hire consumes it once.' : ''
+        ]]></script>
     </actions>
     <widgets>
+        <!-- P17: hire from an accepted offer -->
+        <section name="AcceptedOffers" condition="acceptedRows.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Accepted offers to hire from"/>
+                    <box-body-nopad>
+                        <form-list name="AcceptedOfferRows" list="acceptedRows" skip-form="true" paginate="false">
+                            <field name="applicantName"><default-field title="Applicant"><display/></default-field></field>
+                            <field name="positionName"><default-field title="Position"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Starts"><display/></default-field></field>
+                            <field name="start">
+                                <default-field title="">
+                                    <link url="startFromOffer" text="Start from the offer" icon="sym_o_person_add" link-type="hidden-form"
+                                            parameter-map="{employmentOfferId:employmentOfferId}"
+                                            confirmation="Hire ${applicantName} from their accepted offer? The hire you started is replaced."/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="applicantName"/><field-ref name="positionName"/></column>
+                                <column><field-ref name="start"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <label type="p" style="text-weight-medium" condition="draftOfferText" text="${draftOfferText}"/>
         <container-box>
             <box-header title="Who is hired"/>
             <box-body>

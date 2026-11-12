@@ -146,6 +146,8 @@ feature(
             return asUser(users.employee, () => {
                 const mine = invoke(R + "find#MyInterviews", {})
                 const rendered = page("People/MyInterview", {workEffortId: scheduled.workEffortId}, "qvt", "Commons")
+                // P17 review: the shared file itself, as the panel member downloads it (its transition by its own grant)
+                const downloaded = lib.hit("apps/Commons/People/MyInterview/sharedFile", {applicationContentId: sharedId})
                 const card = invoke(R + "get#MyInterview", {workEffortId: scheduled.workEffortId}).interview.scorecard
                 const submitted = refusal(R + "submit#Scorecard", {invitationId: card.invitationId, values: {[fieldName]: "2"}})
                 const invitation = system(() =>
@@ -158,10 +160,10 @@ feature(
                         })
                     )
                 )
-                return {mine, rendered, submitted, invitation, caseResponse}
+                return {mine, rendered, downloaded, submitted, invitation, caseResponse}
             })
         },
-        then({mine, rendered, submitted, invitation, caseResponse}) {
+        then({mine, rendered, downloaded, submitted, invitation, caseResponse}) {
             // PeopleAccess, when it runs first, puts Tomas on another panel too
             mine.interviews.filter(row => row.applicantName == "Spec Boardcandidate" && row.toAnswer).length == 1
             mine.toAnswerCount >= 1
@@ -170,6 +172,8 @@ feature(
             rendered.output.includes("Spec sales associate")
             rendered.output.includes("spec-shared-notes.txt")
             !rendered.output.includes("spec-private-notes.txt")
+            !downloaded.refused
+            downloaded.output == "spec-shared-notes.txt"
             rendered.output.includes("Submit scorecard")
             rendered.output.includes("Store office")
             submitted == ""

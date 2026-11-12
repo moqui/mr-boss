@@ -5220,9 +5220,13 @@ along with this software (see the LICENSE.md file). If not, see
                 inheritAuthz="N"/>
         <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/storeEmergencyContact"
                 artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <!-- P17 review (the user's call of Nov 12, 2026): My letters, the user's own issued lifecycle letters (find#MyLetters and
+            get#MyLetter take the caller's own party alone) -->
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/myLetter"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
         <artifacts artifactName="ironstone\.people\.ContextServices\.get#(SharedContext|SelfServiceContext)" artifactTypeEnumId="AT_SERVICE"
                 nameIsPattern="Y" inheritAuthz="N"/>
-        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact)"
+        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact|find#MyLetters|get#MyLetter)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
@@ -5500,4 +5504,14 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="QualificationExpiring"
             linkTemplate="/qapps/People/Development/Qualifications?show=mine&amp;partyQualificationId=${partyQualificationId}"/>
+    <!-- impl-people P17 (design-people §5 OfferDetail, §15 the letters): an offer of employment to approve (Mantle's PeopleOfferApproval
+        topic) opens OfferDetail, which the Staffing area opens to every People user (Mantle's RecruitingServices check who reads an
+        offer: its recruiters, HR and payroll readers of the employer, and the approver of the step waiting). An employment change's
+        lifecycle letter print (Employees/EmploymentLetter) is HR's, with the hire and change wizards (BOSS_PPL_EMPLOYMENT); Mantle's
+        PeopleServices check PEOPLE_HR_VIEW and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleOfferApproval"
+            linkTemplate="/qapps/People/Staffing/OfferDetail?employmentOfferId=${employmentOfferId}"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
+            artifactName="component://mr-boss/screen/People/Employees/EmploymentLetter.xml" artifactTypeEnumId="AT_XML_SCREEN"
+            inheritAuthz="Y"/>
 </entity-facade-xml>
