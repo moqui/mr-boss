@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     dated policy from now and ends the one in effect. The cost half of the threshold, the qualification check and the job defaults
     join with their phases (P11, P8, P14). P18: a change starts from a date chosen (now or later; the one in effect ends then, a
     later plan is withdrawn), and the policies planned and the last ended are listed (PolicyDates); a field a form does not post
-    is kept from the policy in effect, so each phase's section stores its own fields. -->
+    is kept from the policy in effect, so each phase's section stores its own fields. P18 review R4: a start before a planned policy is
+    refused (PLAN_PENDING) unless Withdraw, which the form offers while a policy is planned. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work policy" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -32,7 +33,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId, capability:'settingsEdit'}"/>
             <service-call name="mantle.work.MaintenanceSettingsServices.store#MaintenancePolicy"
                     in-map="{organizationPartyId:organizationPartyId, approvalThresholdHours:approvalThresholdHours,
-                        fromDate:(fromDate || null), closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
+                        fromDate:(fromDate || null), withdrawPlanned:(withdrawPlanned == 'Y'), closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
                         defaultTeamPartyId:defaultTeamPartyId, productionRequestsManaged:productionRequestsManaged,
                         warrantyRepairsManaged:warrantyRepairsManaged, procedureSelfApproval:procedureSelfApproval,
                         voiceNoteTranscription:voiceNoteTranscription, comments:comments}"/>
@@ -65,6 +66,8 @@ along with this software (see the LICENSE.md file). If not, see
                 warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', procedureSelfApproval: policy.procedureSelfApproval ? 'Y' : 'N',
                 voiceNoteTranscription: policy.voiceNoteTranscription ? 'Y' : 'N',
                 comments: policy.comments} : {organizationPartyId: organizationPartyId}"/>
+        <!-- P18 review R4 (the user's call of Nov 12): a start before a planned policy withdraws it only when asked -->
+        <set field="plannedText" from="(policyOut?.planned || []).map(row =&gt; row.fromDateText).join(', ')"/>
         <set field="sinceText" from="policy?.fromDate ? 'In effect since ' + policy.fromDateText : 'The defaults are in effect: no policy has been saved.'"/>
     </actions>
     <widgets>
@@ -145,6 +148,13 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="Starts" tooltip="Empty: now. The policy in effect ends when this one starts">
                                     <date-time type="timestamp"/>
                                 </default-field>
+                            </field>
+                            <field name="withdrawPlanned">
+                                <conditional-field condition="plannedText" title="Withdraw the policy planned from ${plannedText}"
+                                        tooltip="No: a policy that starts before the planned one is refused. Yes: the planned one is withdrawn and this one stays in effect">
+                                    <radio no-current-selected-key="N"><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                </conditional-field>
+                                <default-field><hidden default-value="N"/></default-field>
                             </field>
                             <field name="comments"><default-field title="Why it changes"><text-line size="60"/></default-field></field>
                             <field name="submitButton">

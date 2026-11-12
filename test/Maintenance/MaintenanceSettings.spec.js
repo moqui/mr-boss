@@ -1,7 +1,7 @@
 // Maintenance's settings in BOSS (impl-maintenance P18; design-maintenance §9 Settings, Readiness and Lookups, §6 EquipmentImport):
-// the work policy dated (a change from next month ends the one in effect then and keeps the fields it does not name; an earlier
-// change withdraws the plan; a past start and a reader refused), the lookups (a vocabulary's value added and ended, then offered
-// for no new choice; a fixed kind renamed only; a failure mode offered for the equipment of its model alone) with Lookups' one
+// the work policy dated (a change from next month ends the one in effect then and keeps the fields it does not name; a change
+// before the plan refused, PLAN_PENDING, and withdrawing it when asked; a past start and a reader refused), the lookups (a
+// vocabulary's value added and ended, then offered for no new choice; a fixed kind renamed only; a failure mode offered for the equipment of its model alone) with Lookups' one
 // qvt render, the setup readiness (each finding named with its owner's place as a route key Admin's mount resolves, Admin's
 // Health showing the provider to the administrator and not to a reader) with Readiness' one qvt render, and the equipment import
 // listed in Admin's Imports for a data operator who also holds MAINTENANCE_RESOURCE_VIEW and not for one without it. The import's
@@ -122,10 +122,13 @@ feature("a policy change is dated: from next month it ends the one in effect the
             organizationPartyId: specOrg,
             approvalThresholdHours: 1
         })
-        // a change from now, before the plan starts, withdraws the plan
-        const again = store({approvalThresholdHours: 6})
+        // a change from now, before the plan starts, is refused naming the plan, and withdraws it when asked (P18 review R4, the
+        // user's call of Nov 12)
+        const pending = store({approvalThresholdHours: 6})
+        const pendingRead = as(users.admin, S + "get#MaintenancePolicy", {organizationPartyId: specOrg})
+        const again = store({approvalThresholdHours: 6, withdrawPlanned: true})
         const after = as(users.admin, S + "get#MaintenancePolicy", {organizationPartyId: specOrg})
-        return {now, later, read, rows, past, reader, again, after, nextMonth}
+        return {now, later, read, rows, past, reader, pending, pendingRead, again, after, nextMonth}
     },
     then(r) {
         r.now == "" && r.later == ""
@@ -140,6 +143,8 @@ feature("a policy change is dated: from next month it ends the one in effect the
         r.rows[1].thruDate == null
         r.past.includes("DATE_INVALID")
         r.reader.includes("PERMISSION_DENIED")
+        r.pending.includes("PLAN_PENDING") && r.pending.includes(r.read.planned[0].fromDateText)
+        String(r.pendingRead.policy.approvalThresholdHours) == "4" && r.pendingRead.planned.length == 1
         r.again == ""
         String(r.after.policy.approvalThresholdHours) == "6"
         r.after.policy.procedureSelfApproval === true

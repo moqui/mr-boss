@@ -3953,7 +3953,7 @@ Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outco
   - The user's calls: (1) a default holiday calendar per organization in MaintenancePolicy (not built, above); (2) whether a lookup value
     ended should also be refused by the services that store it, beyond the choices (built: choices only, as People's).
 
-**Review Nov 12 (P18).** mr-mantle 151aec09, mr-boss b397aae4 and this note's commit (branch `mnt/p18`), over the worker's 1a954fe0,
+**Review Nov 12 (P18).** mr-mantle 151aec09 and R4's commit, mr-boss b397aae4, R4's commit and this note's commits (branch `mnt/p18`), over the worker's 1a954fe0,
 61ab716f and 1800923e, after merging master (Maintenance P7, P10, P16) in both repos: mr-moqui's `mnt/p18` fast-forwarded to master
 729e1ffb; mr-mantle 5ed75159 (MaintenanceWork.js' policy block and store#MaintenancePolicy's description: P7's `voiceNoteTranscription`
 is one `policyFields` row, a flag, read and kept like the others), mr-boss df1c218a (WorkPolicy's transition and form: the voice note
@@ -3976,7 +3976,7 @@ route tables and MaintenanceAccess.js' scope.
     its own transaction (DataTransferBatch `apply#TransferItem`); `keyFields` refuses a repeat in one file; Admin's Imports lists a
     run for a holder of MAINTENANCE_RESOURCE_VIEW whose scopes (the row service's, as them) include the run's organization (spec).
   - `store#MaintenancePolicy`: a start before now (a minute's grace) refused; the row in effect at the start ends there; a later plan
-    is withdrawn by its end at its own start and left out of `planned`, `ended` and `policyOf`; a field not given is kept from the
+    (since R4, only when the call withdraws it) is withdrawn by its end at its own start and left out of `planned`, `ended` and `policyOf`; a field not given is kept from the
     policy in effect at the start (a plan that the new start falls inside is truncated, not withdrawn, and its values are the ones
     kept). A plan changed in place for the same start never took effect (no `policyOf` read it), as P13's draft terms change in place
     until activation (the user's call of Nov 12): §2's "never overwritten" holds for every row that was ever in effect.
@@ -4005,9 +4005,14 @@ route tables and MaintenanceAccess.js' scope.
   - **R3 (low, choice).** The failure mode choice filtered the applicable modes after the query's limit (twice the 30 offered), so with
     more than 60 current failure modes one that applies to the work's equipment could be missing; the applicable ids now narrow the
     query (`enumOptions`' `onlyIds`). No spec (it would add 60 instance-wide failure modes).
+  - **R4 (medium, the user's call of Nov 12).** A change from now withdrew every later plan without saying so: a section saving one
+    field (P7's voice notes, P14's lead days) "from now" silently dropped a threshold change planned for next month.
+    `store#MaintenancePolicy` now refuses a start before a planned policy with PLAN_PENDING, naming the plan's date, unless the call
+    says `withdrawPlanned` (then the plan is withdrawn as before); a start inside a plan's own span still truncates it and one at the
+    plan's start still changes it in place. Work policy offers "Withdraw the policy planned from ..." while a policy is planned (No by
+    default). MaintenanceSettings' dated policy feature: the change from now refused naming the plan's date, the policy in effect and
+    the plan unchanged, then withdrawn with `withdrawPlanned` (failed without the fix: PLAN_PENDING not answered).
 - Findings (unnumbered):
-  - A change from now withdraws every later plan without saying so: a section saving one field (P7's voice notes, P14's lead days)
-    "from now" silently drops a threshold change planned for next month. A user's call (below).
   - A field given as null is given: it resets to its default (a radio's empty, a drop-down's none clears the default type or team, which
     is wanted). So a later section keeps the others only by its own transition naming its own fields; WorkPolicy's transition names
     them all.
@@ -4030,17 +4035,15 @@ route tables and MaintenanceAccess.js' scope.
   - Budget: mr-mantle MaintenanceImport +1 feature (about +0.2 s, 0.6 s in all); mr-boss unchanged.
   - Merge hot spots: as the Built note's; P14's `pmLeadDays` and P11's cost threshold become `policyFields` rows (their range checks
     in `store`), their parameters in store#MaintenancePolicy and their fields in WorkPolicy's form and transition.
-  - The user's calls:
-    1. Lookup writes. Maintenance's lookups are the instance's, so one organization's Maintenance administrator renames or ends a
-       value, and adds a failure mode's applicability, for every organization. Recommendation: `store#MaintenanceLookup` asks
-       MAINTENANCE_SETTINGS_EDIT with an all-organizations scope (the system administrator or a holder of the maintenance
-       all-organizations permission); an organization's administrator reads the lookups. People's lookups have the same exposure and
-       would follow. Not built.
-    2. A change that withdraws a plan. Recommendation: `store#MaintenancePolicy` refuses a start before a planned policy
-       (PLAN_PENDING, naming its date) unless the call says to withdraw it, and Work policy offers that; or, short of it, the save's
-       message names the plan withdrawn. Not built.
-    3. Held from the Built note, accepted by the lead: no default holiday calendar per organization; an ended lookup value leaves the
+  - The user's calls of Nov 12, decided:
+    1. Lookup writes stay as built: any holder of MAINTENANCE_SETTINGS_EDIT changes Maintenance's instance-wide lookups (and a failure
+       mode's applicability) for every organization, as People's are; no instance-level permission (design §9 says so).
+    2. A change that would withdraw a plan is refused unless it withdraws it explicitly: built as R4.
+    3. Accepted by the lead from the Built note: no default holiday calendar per organization; an ended lookup value leaves the
        choices only.
+  - R4's tests: mr-boss MaintenanceSettings, MaintenanceAccess, MaintenanceWorkOrders 30 of 30 (9.9 s feature time); mr-mantle
+    MaintenanceWorkOrders, MaintenanceProcesses, MaintenanceIntake, ProcessChecks 30 of 30 (12.8 s). The acceptance
+    MaintenanceSetupWalk plans from the first of next month only (no change before it), unchanged and not run.
 
 ### P19 — Assist, Comms, sync and outputs
 
