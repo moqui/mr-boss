@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Reports › Work status (design-maintenance §8 WorkStatusReport: StatusOptions, StatusTotals, StatusRows; style-guide
+    §3.7 Report; impl-maintenance P17): the work orders of the user's organizations opened, completed and cancelled in a period and
+    the backlog, overdue and unassigned at its end (mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport: MAINTENANCE_VIEW,
+    execution roots only, each from its status history; a completion counts once and only while the order is still complete;
+    overdue is past its required completion, never unscheduled). StatusOptions: the period (30 days to now unless given), the
+    organization, facility (with those inside it), equipment, team, source, kind and the grouping (team by default; state,
+    resource, source, kind or none). StatusTotals: the six counts and the groups, each count opening its rows. StatusRows: the work
+    orders counted (of one measure and one group when chosen), each opening WorkOrderDetail; its CSV is the form-list's own (the
+    columns chosen, every row; the totals are left out of an export, review R2), and Print renders the page with its options (renderMode=html-print). No cost, rate or amount. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work status" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="assetId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="sourceEnumId"/>
+    <parameter name="maintenanceKindEnumId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="groupBy"/>
+    <parameter name="measure"/>
+    <parameter name="groupKey"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <parameter name="pageNoLimit"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, assetId:assetId || null,
+                teamPartyId:teamPartyId || null, sourceEnumId:sourceEnumId || null, maintenanceKindEnumId:maintenanceKindEnumId || null,
+                fromDate:fromDate || null, thruDate:thruDate || null, groupBy:groupBy || null}"/>
+        <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" out-map="report" transaction="force-new"
+                ignore-error="true" in-map="Object.assign({}, options, {measure:measure || null, groupKey:groupKey || null,
+                    pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true})"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="reportFound" from="!!report?.summary"/>
+        <set field="summary" from="report?.summary || {}"/>
+        <set field="groupRows" from="report?.groupList || []"/>
+        <set field="measureRows" from="report?.measureList || []"/>
+        <set field="statusList" from="report?.statusList || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['statusList' + key] = report['statusList' + key]</script>
+        <set field="groupOptions" from="[{value:'team', label:'Team'}, {value:'state', label:'State'}, {value:'resource', label:'Resource'},
+                {value:'source', label:'Source'}, {value:'kind', label:'Kind'}, {value:'none', label:'No grouping'}]"/>
+        <set field="measureText" from="measure ? (measureRows.find(row =&gt; row.key == measure)?.label || measure) : null"/>
+        <set field="groupText" from="groupKey ? (groupRows.find(row =&gt; row.groupKey == groupKey)?.groupText || groupKey) : null"/>
+        <set field="rowsTitle" from="'Work orders' + (measureText ? ': ' + measureText : '') + (groupText ? ' · ' + groupText : '')"/>
+        <set field="linkOptions" from="Object.fromEntries(Object.entries(options).filter(([, value]) =&gt; value != null &amp;&amp; value !== ''))"/>
+        <set field="printUrl" from="'/apps/Maintenance/Reports/WorkStatusReport?' + Object.entries(Object.assign({renderMode:'html-print'}, linkOptions,
+                measure ? {measure} : {}, groupKey ? {groupKey} : {}, {pageNoLimit:'true'})).map(([key, value]) =&gt; key + '=' + encodeURIComponent(value)).join('&amp;')"/>
+        <!-- an export (CSV, XLSX) is StatusRows alone, not the totals' lists before it (review R2) -->
+        <set field="exporting" from="['csv', 'xlsx'].includes(sri.getRenderMode())"/>
+        <set field="optionsText" from="'From ' + (summary.fromText || '') + ' to ' + (summary.asOfText || '') + ' · grouped by ' +
+                (groupOptions.find(row =&gt; row.value == (groupBy || 'team'))?.label || groupBy).toLowerCase()"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Work status" type="h5"/>
+                <label text="The work orders opened, completed and cancelled in the period, and the backlog at its end: what was open, overdue and unassigned then."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="m-record-actions">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" link-type="anchor-button" target-window="_blank"
+                        condition="reportFound"/>
+            </container>
+        </container>
+        <form-single name="StatusOptions" transition="." map="options">
+            <field name="fromDate"><default-field title="From" tooltip="30 days before the end when empty"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="As of" tooltip="Now when empty: the end of the period, when the backlog is counted"><date-time type="date"/></default-field></field>
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:options.organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Facility" tooltip="With the facilities inside it">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'workFacilities', selected:options.facilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="assetId">
+                <default-field title="Equipment">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'equipment', selected:options.assetId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="teamPartyId">
+                <default-field title="Team">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'teams', selected:options.teamPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="sourceEnumId">
+                <default-field title="Source">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'maintenanceSources', selected:options.sourceEnumId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="maintenanceKindEnumId">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'maintenanceKinds', selected:options.maintenanceKindEnumId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="groupBy">
+                <default-field title="Group by">
+                    <drop-down allow-empty="false" no-current-selected-key="team"><list-options list="groupOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="groupBy"/></field-row-big>
+                <field-row-big><field-ref name="organizationPartyId"/><field-ref name="facilityId"/><field-ref name="assetId"/></field-row-big>
+                <field-row-big><field-ref name="teamPartyId"/><field-ref name="sourceEnumId"/><field-ref name="maintenanceKindEnumId"/></field-row-big>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${reportError}" type="p" style="text-negative" condition="reportError"/>
+        <section name="StatusFound" condition="reportFound">
+            <widgets>
+                <label text="${optionsText}. ${summary.noteText}" type="p" style="text-caption m-muted"/>
+                <section name="StatusSummary" condition="!exporting">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Totals"/>
+                            <box-body>
+                                <form-list name="StatusMeasures" list="measureRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="Measure">
+                                            <link url="." text="${label}" link-type="anchor" condition="count"
+                                                    parameter-map="Object.assign({measure: key}, linkOptions)"/>
+                                            <label text="${label}" type="span" condition="!count"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="count" align="right"><default-field title="Work orders"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                        <section name="GroupsFound" condition="groupRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="By ${(groupOptions.find(row =&gt; row.value == (groupBy || 'team'))?.label || '').toLowerCase()}"/>
+                                    <box-body-nopad>
+                                        <form-list name="StatusTotals" list="groupRows" skip-form="true" paginate="false">
+                                            <field name="groupText">
+                                                <default-field title="Group">
+                                                    <link url="." text="${groupText}" link-type="anchor" parameter-map="Object.assign({groupKey: groupKey}, linkOptions)"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="openedCount" align="right"><default-field title="Opened"><link url="." text="${openedCount}" link-type="anchor"
+                                                    condition="openedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'opened'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!openedCount"/></default-field></field>
+                                            <field name="completedCount" align="right"><default-field title="Completed"><link url="." text="${completedCount}" link-type="anchor"
+                                                    condition="completedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'completed'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!completedCount"/></default-field></field>
+                                            <field name="cancelledCount" align="right"><default-field title="Cancelled"><link url="." text="${cancelledCount}" link-type="anchor"
+                                                    condition="cancelledCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'cancelled'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!cancelledCount"/></default-field></field>
+                                            <field name="backlogCount" align="right"><default-field title="Backlog"><link url="." text="${backlogCount}" link-type="anchor"
+                                                    condition="backlogCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'backlog'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!backlogCount"/></default-field></field>
+                                            <field name="overdueCount" align="right"><default-field title="Overdue"><link url="." text="${overdueCount}" link-type="anchor"
+                                                    condition="overdueCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'overdue'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!overdueCount"/></default-field></field>
+                                            <field name="unassignedCount" align="right"><default-field title="Unassigned"><link url="." text="${unassignedCount}" link-type="anchor"
+                                                    condition="unassignedCount" parameter-map="Object.assign({groupKey: groupKey, measure: 'unassigned'}, linkOptions)"/>
+                                                <label text="0" type="span" condition="!unassignedCount"/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="groupText"/><field-ref name="backlogCount"/></column>
+                                                <column><field-ref name="completedCount"/><field-ref name="overdueCount"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="${rowsTitle}"/>
+                    <box-toolbar>
+                        <link url="." text="Every work order counted" link-type="anchor" parameter-map="linkOptions" condition="measure || groupKey"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="StatusRows" list="statusList" skip-form="true" paginate="true" select-columns="true"
+                                show-csv-button="true">
+                            <field name="workEffortId">
+                                <default-field title="Work order">
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="workEffortName"><default-field title="Name"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State at the end"><display/></default-field></field>
+                            <field name="measuresText"><default-field title="Counted as"><display/></default-field></field>
+                            <field name="targetName"><default-field title="For"><display/></default-field></field>
+                            <field name="teamName"><default-field title="Team"><display/></default-field></field>
+                            <field name="assigneeNames"><default-field title="Technicians"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="elapsedDays" align="right"><default-field title="Days open"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="workEffortId"/><field-ref name="workEffortName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="dueText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No work order in these options." type="p" style="m-muted q-pa-sm q-mb-none" condition="!statusList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -22,7 +22,8 @@
 // message read under Comms' room check with the user's own filters, a record room of Retail's forklift refused: review R1), P18's equipment
 // import (run by the resource administrator, read by the planner, the importer's organizations only) and setup readiness (the
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
-// plan refused; the compliance a reader's, not a technician's or Retail's),
+// plan refused; the compliance a reader's, not a technician's or Retail's), P17's work status and report catalogue (a reader's,
+// not a technician's; Retail's planner refused Services' organization),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -45,13 +46,23 @@ function screenRefusalIn(user, path) {
     const rendered = asUser(user, () => page(path, {}, "html", "Commons"))
     return rendered.status === 200 && rendered.errors.length === 0 ? "" : rendered.status + " " + rendered.errors.join(" | ")
 }
-// the quick create kinds of the user's + menu (the shell's data)
-const quickCreates = user =>
-    JSON.stringify(
-        asUser(user, () =>
-            JSON.parse(ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output)
+// the shell's data of the user (the launcher's apps, the + menu's quick creates), rendered once a user in the spec: no feature
+// changes a demo user's groups
+const shellDataCache = new Map()
+const shellData = user => {
+    if (!shellDataCache.has(user))
+        shellDataCache.set(
+            user,
+            asUser(user, () =>
+                JSON.parse(
+                    ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output
+                )
+            )
         )
-    )
+    return shellDataCache.get(user)
+}
+// the quick create kinds of the user's + menu
+const quickCreates = user => JSON.stringify(shellData(user))
 // a spec-local Maintenance user whose only capability group holds MAINTENANCE_PLAN, an agent of Services
 const editOnly = "MNT_SPEC_EDIT_ONLY"
 
@@ -1155,7 +1166,7 @@ feature(
                 ),
                 otherAsks: as(users.retailPlanner, S + "link#MaintenancePurchase", Object.assign({requestName: "Bearings"}, work)),
                 // the supervisor holds STOCK_RECEIVE through Warehouse's receiving group (R1), which opens no Warehouse screen
-                supervisorApps: shell(users.supervisor).apps,
+                supervisorApps: shellData(users.supervisor).apps.map(app => app.name),
                 supervisorQuickCreates: quickCreates(users.supervisor)
             }
         },
@@ -1413,6 +1424,36 @@ feature(
             !r.plannerAreas.includes("MaintenanceCostReport")
             r.plannerTab != ""
             r.plannerReport != ""
+        }
+    }
+)
+
+// P17: the work status report and the reports catalogue are a maintenance reader's (MAINTENANCE_VIEW), not a technician's; Retail's
+// planner asking for Services' organization is refused
+feature(
+    "work status and the reports catalogue are a reader's, not a technician's; Retail's planner gets no Services report (P17)",
+    {
+        when() {
+            const status = (user, parameters = {}) =>
+                asUser(user, () =>
+                    system(() => refusal("mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport", parameters))
+                )
+            const catalogue = user =>
+                asUser(user, () => refusal("ironstone.maintenance.ReportServices.get#ReportCatalogue", {appRoot: "Maintenance"}))
+            return {
+                reader: status(users.reader),
+                tech: status(users.tech),
+                retail: status(users.retailPlanner, {organizationPartyId: ids.organizationId}),
+                readerCatalogue: catalogue(users.reader),
+                techCatalogue: catalogue(users.tech)
+            }
+        },
+        then(out) {
+            out.reader == ""
+            out.tech.includes("PERMISSION_DENIED")
+            out.retail.includes("ORGANIZATION_DENIED")
+            out.readerCatalogue == ""
+            out.techCatalogue.includes("PERMISSION_DENIED")
         }
     }
 )

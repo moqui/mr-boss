@@ -1,0 +1,75 @@
+{
+  "id": "boss-maintenance-resource-down",
+  "type": "alert",
+  "title": "Resource down too long",
+  "body": {
+    "description": "Fires when equipment or a facility has been out of service for more than four hours (an outage in force, not restored, that started at least four hours ago and within the last 30 days), by reason, among the organizations its owner reads. The threshold is the query's end: copy it in Insights \u203a Business alerts, change now-4h to the time a resource may stay down, set the audience, then activate it.",
+    "query": {
+      "datasetId": "boss-maintenance-outages",
+      "from": "now-30d",
+      "thru": "now-4h",
+      "aggregations": [
+        {
+          "id": "reason",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "unavailabilityReasonEnumId",
+            "size": 20
+          }
+        },
+        {
+          "id": "outages",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "resourceUnavailabilityId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "query": {
+            "field": {
+              "name": "thruDate",
+              "op": "exists"
+            }
+          },
+          "negated": true,
+          "label": "Not restored"
+        },
+        {
+          "query": {
+            "field": {
+              "name": "supersededByUnavailabilityId",
+              "op": "exists"
+            }
+          },
+          "negated": true,
+          "label": "The row in force"
+        }
+      ]
+    },
+    "field": "outages",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 900,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "maintenance",
+      "severity": "warning"
+    }
+  }
+}

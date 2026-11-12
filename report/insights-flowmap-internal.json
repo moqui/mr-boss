@@ -6,7 +6,7 @@
     "kind": "flowmap",
     "folder": "Insights",
     "description": "What the organization does for itself: the catalog, production, stock, projects, the books and its people. Copy it for your organization to rename steps and link your own procedures.",
-    "templateVersion": 1,
+    "templateVersion": 2,
     "lanes": [
       {
         "laneId": "catalog",
@@ -212,7 +212,10 @@
         "laneId": "upkeep",
         "title": "Keep equipment running",
         "sequenceNum": 1,
-        "description": "Preventive and corrective work on equipment. The Maintenance app is not part of this installation yet, so this step is information only."
+        "description": "Preventive and corrective work on equipment and facilities: work orders planned, assigned, done and closed, and the backlog waiting for a technician.",
+        "targetRegistrationId": "Maintenance.WorkOrders",
+        "countProviderKey": "Maintenance.Unassigned",
+        "catalogEntryId": "Maintenance.WorkStatus"
       }
     ]
   }

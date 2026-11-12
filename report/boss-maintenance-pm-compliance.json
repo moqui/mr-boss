@@ -1,0 +1,53 @@
+{
+  "id": "boss-maintenance-pm-compliance",
+  "type": "dataset",
+  "title": "Preventive obligations",
+  "body": {
+    "folder": "Maintenance",
+    "description": "Preventive maintenance obligations made due (each plan's occurrence: open, generated, completed, skipped or coalesced into a catch-up) with their plan, organization, target, due date or meter threshold and completion, by due date. Obligations not yet brought due by a generation or a decision of their plan are in the PM compliance report, not here. No cost, rate or amount.",
+    "documentType": "BossMaintenanceOccurrence",
+    "timeField": "dueDate",
+    "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "statusId": {
+        "lookup": {
+          "entityName": "moqui.basic.StatusItem",
+          "keyField": "statusId",
+          "displayField": "description"
+        }
+      },
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "facilityId": {
+        "lookup": {
+          "entityName": "mantle.facility.Facility",
+          "keyField": "facilityId",
+          "displayField": "facilityName"
+        }
+      },
+      "assetId": {
+        "lookup": {
+          "entityName": "mantle.product.asset.Asset",
+          "keyField": "assetId",
+          "displayField": "assetName"
+        }
+      },
+      "maintenanceScheduleId": {
+        "lookup": {
+          "entityName": "mantle.work.maintenance.MaintenanceSchedule",
+          "keyField": "maintenanceScheduleId",
+          "displayField": "scheduleName"
+        }
+      }
+    }
+  }
+}
