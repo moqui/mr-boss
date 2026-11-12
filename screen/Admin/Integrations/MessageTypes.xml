@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- MessageTypes (design-admin §8 MessageTypes, §14; mr-moqui plans/Admin-Screens-Down.md): the framework's System ›
+<!-- MessageTypes (design-admin §8 MessageTypes, §14; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's System ›
     Integrations message types at this location, for the integration administrator. Reading needs ADMIN_CONNECTION_VIEW,
     checked by the service. The System screen's own part for the instance administrator (a type created directly) is not
     shown under a mount and its transition is not taken in, so it does not exist on this route: no type is started here. -->

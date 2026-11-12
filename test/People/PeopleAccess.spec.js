@@ -34,6 +34,9 @@
 // self-service employee refused all three); a leave policy changed by an HR editor of the employer (the directory reader refused
 // with the same parameters and the screen, Services' policy refused to Retail's HR), LeavePolicyDetail's one html render (the HR
 // officer's), the employee's own balances through get#MyBalances alone (get#Balances not theirs), and the two leave choices.
+// P13: the employee's clock on SelfService under Commons by its own grant (BOSS_PPL_CLOCK_SELF; the reader refused the punch with
+// the same parameters), Time import HR's (the reader, the manager and the employee refused the screen; the reader refused the import
+// with the parameters HR is answered, Services' employer refused to Retail's HR).
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -116,12 +119,14 @@ feature(
                 problems.push(`the manager's scope: ${manager.organizationPartyIds} ${JSON.stringify(manager.employments)}`)
             const otherRoot = asUser(users.hr, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
-            // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer
+            // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
+            // P12, P13: and their own time, leave, attendance and clock links)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
-                Object.keys(employee.sharedLinks || {}).join() !== "SelfService,Time/MyTime" ||
+                Object.keys(employee.sharedLinks || {}).join() !==
+                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -151,11 +156,12 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         const keymap = (hr.providers?.keymaps || []).find(keymap => keymap.scope === "people")
         const keys = (keymap?.keys || []).map(key => key.keys)
         if (JSON.stringify(keys) !== JSON.stringify(ids.keys)) problems.push(`the HR officer's people keys: ${keys}`)
-        // P6: the HR officer's quick create is Hire employee (the wizard's grant); a directory reader is offered none
+        // P6: the HR officer's quick create is Hire employee (the wizard's grant); a directory reader is offered none of HR's; P12:
+        // Request leave is every People user's (Leave requests opens to them)
         const quick = shell => (shell.providers?.quickCreate || []).map(entry => entry.kind).join()
-        if (quick(hr) !== "peopleHireEmployee") problems.push(`the HR officer's quick create: ${quick(hr)}`)
+        if (quick(hr) !== "peopleHireEmployee,peopleRequestLeave") problems.push(`the HR officer's quick create: ${quick(hr)}`)
         const reader = shell(users.reader)
-        if (quick(reader)) problems.push(`the reader's quick create: ${quick(reader)}`)
+        if (quick(reader) !== "peopleRequestLeave") problems.push(`the reader's quick create: ${quick(reader)}`)
         // P3: Employees is a menu group of the directory, Organization and Org chart; P7: and, for HR, Checklists and Employee import
         const group = shell(users.hr, true, "Employees/OrgChart", "Employees")
         if (JSON.stringify(group.names) !== JSON.stringify(ids.hrEmployeesMenu))
@@ -934,6 +940,76 @@ feature(
                     hrOther: "RECORD_UNAVAILABLE",
                     employeeOwn: "accepted",
                     employeeStaff: true
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "attendance: the employee clocks on SelfService under Commons by its own grant, the reader refused the punch with the same parameters; Time import HR's: the reader refused the import with the parameters HR is answered and the screen, Services' employer refused to Retail's HR",
+    {
+        when() {
+            const A = "mantle.humanres.AttendanceServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            const punches = () =>
+                system(() =>
+                    ec.entity
+                        .find("mantle.humanres.attendance.AttendancePunch")
+                        .condition({partyRelationshipId: ids.employmentId, sourceEnumId: "AtsSelf"})
+                        .count()
+                )
+            // the employee's clock transition under Commons (BOSS_PPL_CLOCK_SELF), in and out again
+            const clock = () =>
+                asUser(users.employee, () => {
+                    const result = ec.screen
+                        .makeTest()
+                        .rootScreen("component://mr-boss/screen/Commons.xml")
+                        .render("People/SelfService/clock", {}, "post")
+                    const errors = Array.from(result.errorMessages || []).join(" | ")
+                    ec.message.clearAll()
+                    return errors
+                })
+            const before = punches()
+            for (const pass of ["in", "out"]) {
+                const errors = clock()
+                if (errors) problems.push(`the employee's clock ${pass}: ${errors}`)
+            }
+            if (punches() !== before + 2) problems.push(`the employee's punches: ${before} then ${punches()}`)
+            const file = {
+                organizationPartyId: ids.organizationId,
+                importText: "worker,time,direction\n" + ids.employeePartyId + ",2026-09-07 08:00,in\n",
+                sourceSystem: "Access spec door",
+                timeZone: "America/Chicago"
+            }
+            const codes = {
+                readerPunch: code(asUser(users.reader, () => system(() => refusal(A + "record#Punch", {})))),
+                hrImport: code(asUser(users.hr, () => system(() => refusal(A + "preview#Import", file)))),
+                readerImport: code(asUser(users.reader, () => system(() => refusal(A + "preview#Import", file)))),
+                hrOther: code(
+                    asUser(users.hr, () =>
+                        system(() =>
+                            refusal(A + "preview#Import", Object.assign({}, file, {organizationPartyId: ids.otherOrganizationId}))
+                        )
+                    )
+                )
+            }
+            const opened = screenRefusal(users.hr, "Time/TimeImport")
+            if (opened) problems.push(`the HR officer's TimeImport: ${opened}`)
+            for (const user of [users.reader, users.manager, users.employee]) {
+                const refused = screenRefusal(user, "Time/TimeImport")
+                if (!unauthorized(refused)) problems.push(`${user} opens TimeImport: ${refused || "opened"}`)
+            }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    readerPunch: "PERMISSION_DENIED",
+                    hrImport: "accepted",
+                    readerImport: "PERMISSION_DENIED",
+                    hrOther: "ORGANIZATION_DENIED"
                 }
             problems.join("\n") == ""
         }

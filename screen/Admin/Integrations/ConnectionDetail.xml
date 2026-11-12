@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- ConnectionDetail (design-admin §8.1, §8 ConnectionDetail; style-guide §3.3 Detail; impl-admin P11; mr-moqui
-    plans/Admin-Screens-Down.md): one connection of a registered kind (a payment, shipping or tax gateway, a remote system, a
+    plans/archive/Admin-Screens-Down.md): one connection of a registered kind (a payment, shipping or tax gateway, a remote system, a
     mail sign-in provider, a network printer), as Admin's own screen for what Admin adds to the framework's System ›
     Integrations connection screen: OrganizationAvailability, which for a payment gateway permits its use by an internal
     organization the administrator administers, dated and enabled, through Mantle's store#PaymentGatewayOrganization (never

@@ -1,6 +1,6 @@
 // Insights' business alerts (impl-insights P8; design-insights §8, Alerts, AlertDetail; INS-07). Business alerts' two screens are
 // the framework's Dashboards alert screens, included at Insights' own locations with the transitions Insights offers and
-// its policy (mr-moqui plans/Admin-Screens-Down.md, Track I), so the rules are held through Insights' route, by the
+// its policy (mr-moqui plans/archive/Admin-Screens-Down.md, Track I), so the rules are held through Insights' route, by the
 // transitions a browser posts: an author sets an alert over a panel's saved query for themselves and not for others; a
 // reader sets none, and neither does a dataset steward, who holds the engine's save but not Insights' alert feature; a
 // distributor's audience is Insights' readers and groups of their own, within the organization's recipient cap, checked by

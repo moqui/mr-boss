@@ -302,7 +302,8 @@ along with this software (see the LICENSE.md file). If not, see
             the request with its type, status, priority, customer, assignee, reporter and dates, what its status-bar shows (the
             stages Draft, Submitted, Reviewed, In Progress and Completed, and allowedStatusIds, the transitions the user may take:
             Submit for a draft the user raised, Cancel for an open request the user raised), the parties, the tasks linked by
-            RequestWorkEffort (decorated as task rows), the other records it is on (WikiPageRequest and RequestRecord; a record
+            RequestWorkEffort (decorated as task rows; a maintenance work order only for a user Maintenance admits to it,
+            impl-maintenance P4), the other records it is on (WikiPageRequest and RequestRecord; a record
             the user may not see is left out) and the actions that apply.</description>
         <in-parameters><parameter name="requestId" required="true"/></in-parameters>
         <out-parameters>
@@ -396,8 +397,13 @@ along with this software (see the LICENSE.md file). If not, see
                     isWatcher: !!access.isWatcher, roleList: access.roleList || []})
 
                 const taskIds = Array.from(ec.entity.find('mantle.request.RequestWorkEffort').condition('requestId', requestId).list()).map((link) => link.workEffortId)
+                // a maintenance work order only for one Maintenance admits to it (impl-maintenance P4, F69, F78: its reporter follows it in
+                // the request's Maintenance summary, never its time or people)
+                const maintenanceAccess = ec.resource.script('component://mr-mantle/service/mantle/work/MaintenanceAccess.js')
                 const tasks = taskIds.length ? Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', taskIds)
-                        .condition('workEffortTypeEnumId', 'WetTask').orderBy('estimatedCompletionDate').list()).map((task) => task.getMap()) : []
+                        .condition('workEffortTypeEnumId', 'WetTask').orderBy('estimatedCompletionDate').list())
+                        .filter((task) => task.purposeEnumId !== 'WepMaintenance' || !maintenanceAccess.workHidden(task.workEffortId, partyId))
+                        .map((task) => task.getMap()) : []
                 taskList = tasks.length ? (ec.service.sync().name('ironstone.commons.TaskServices.decorate#TaskRows').parameters({taskList: tasks}).call()?.rowList || []) : []
 
                 // records other than tasks: a wiki page through its own join, anything else through RequestRecord

@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P11, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P13, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -590,6 +590,20 @@ the screens that call it.
 | LeaveServices | get#Balances, find#Ledger | People/Time/LeaveBalances | People/Time/LeaveBalances (BalancesAndLedger: the balances, an employee's movements with the CSV export and their historical leave) (People P11) |
 | LeaveServices | get#MyBalances | People/SelfService | Shared/PeopleSelfService (My leave balances); the Assistant's people_my_leave_balances tool (People P11) |
 | LeaveServices | run#Accrual, run#AccrualJob, accrue#Assignment | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Run accrual); the run_LeaveAccrual ServiceJob (People P11) |
+| LeaveServices | preview#Request, submit#Request | People/Time/LeaveRequests | People/Time/LeaveRequests (RequestLeave: the terms, the preview, Request leave) (People P12) |
+| LeaveServices | find#Requests | People/Time/LeaveRequests | People/Time/LeaveRequests (Requests: mine, to decide, all I see); Shared/PeopleSelfService (My leave requests); the palette's own leave requests (ironstone.people.ContextServices.search#Records) (People P12) |
+| LeaveServices | get#Request, decide#Request | People/Time/LeaveRequestDetail | People/Time/LeaveRequestDetail (RequestAndBalance, Decision: Approve, Refuse, Withdraw, Ask to cancel, Cancel leave); the LeaveRequest record-lookup (ContextServices.lookup#Records) (People P12) |
+| LeaveServices | approve#Request, refuse#Request | People/Approvals | People/Approvals (the PeopleLeaveApproval topic's approve and refuse, through Commons' Notifications) (People P12) |
+| LeaveServices | get#TeamAbsences | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui; People/MyTeam (Who is out); People's Today source (leave starting for my team) (People P12) |
+| LeaveServices | get#AbsenceProjection | — (CX-SYNC) | the Team absence projected CalDAV collection (mantle.work.CalendarDavServices, CalendarProjection PeopleTeamAbsence) (People P12) |
+| AttendanceServices | record#Punch, get#MyClock | Shared/PeopleSelfService (Clock) | Shared/PeopleSelfService and People/Time/Clock (template/PeopleClock.xml: the user's own clock; the quick create Clock in on Commons' root) (People P13) |
+| AttendanceServices | get#ClockOffer | — (the shell) | Commons' quick create Clock in, its condition-service (People P13 review) |
+| AttendanceServices | store#Clocking, find#Clocking | — | People/Time/Attendance (Who clocks: Turn clocking on, Turn off, Follow the employer; the employer's default, PartySetting PeopleClocking, is People Settings', P29) (People P13) |
+| AttendanceServices | find#Attendance, get#Day | People/Time/Attendance | People/Time/Attendance (AttendanceDays: mine, to decide, all I see, missing punches only, the CSV export; the day open with its punches and corrections) (People P13) |
+| AttendanceServices | request#Correction, decide#Correction | People/Time/Attendance | People/Time/Attendance (CorrectAttendance, Correct a missed day, AttendanceDecision: Approve, Refuse, Withdraw, Approve selected) (People P13) |
+| AttendanceServices | approve#Correction, refuse#Correction | People/Approvals | People/Approvals (the PeopleAttendanceApproval topic's approve and refuse, through Commons' Notifications) (People P13) |
+| AttendanceServices | preview#Import, import#Records, get#Import | People/Time/TimeImport | People/Time/TimeImport (FileAndMapping, ImportResults) (People P13) |
+| AttendanceServices | find#ImportRuns | — (Admin's Imports) | the time-and-attendance transfer target's findService (TransferTarget timeAndAttendance), Admin's Imports opening People/Time/TimeImport (People P13) |
 
 ## Ledger (81 services)
 
@@ -1171,7 +1185,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/WorkCenters/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15); Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: create#PurchaseRequest and create#QuoteRequest (Purchasing P10, P11); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2) |
+| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/WorkCenters/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/ReportProblem (through MaintenanceServices.report#MaintenanceProblem, RqtMaintenance, impl-maintenance P4); Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15); Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: create#PurchaseRequest and create#QuoteRequest (Purchasing P10, P11); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2) |
 | RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; Warehouse/Transfers/RequestDetail (Submit, Complete, Cancel; approve#InventoryRequest, P15); — Purchasing: the purchase request's own verbs (submit, cancel and complete#PurchaseRequest) (Purchasing P10, P17); CustomerService/Cases/CaseDetail (through mantle.request.SupportCaseServices.update#Case and transition#Case, Customer Service P2) |
 | RequestServices | create#ContactRequest | Projects/Requests/Intake |  |
 | RequestServices | create#ContactRequestReCaptcha | Projects/Requests/Intake |  |
@@ -1189,7 +1203,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | get#UserTodayRequests |  | Commons |
-| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2); CustomerService/Cases/CaseDetail (Knowledge tab: an article by WikiPageRequest, Customer Service P12); CustomerService/Knowledge/Knowledge (Link to case); CustomerService/Orders/OrderDetail (Link to case; NewCase with the order through create#Case; Customer Service P3); CustomerService/Returns/WarrantyAssessment (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Maintenance/Requests/RequestDetail (a maintenance request's one target: a second Asset or Facility is ONE_TARGET; report#MaintenanceProblem and triage record the target, impl-maintenance P4); Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2); CustomerService/Cases/CaseDetail (Knowledge tab: an article by WikiPageRequest, Customer Service P12); CustomerService/Knowledge/Knowledge (Link to case); CustomerService/Orders/OrderDetail (Link to case; NewCase with the order through create#Case; Customer Service P3); CustomerService/Returns/WarrantyAssessment (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/CaseDetail (Knowledge tab: Unlink an article, Customer Service P12) |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
@@ -1525,7 +1539,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | set#TaskSprint |  | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail; People/Tasks/WorkItemDetail (a checklist task, on the Commons rule; refuses managed work, MANAGED_WORK) (People P7) |
 | TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
-| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
+| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source; People/Time/TimeEntries (People P10, Projects' screen mounted under People; People's TimeImport reads clock events only, and project time keeps this importer, People P13) |
 | TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the work order's supervisor; with it sync#ProductionLaborCost writes the labor cost events, Manufacturing P10); People/Time/MyTime; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
 | TimesheetServices | find#Timesheets | People/Time/Timesheets | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets; People/Time/Timesheets (People P10, Projects' screen mounted under People) |
 | TimesheetServices | get#PartyTimesheet | People/Time/MyTime | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry; People/Time/MyTime (People P10, Projects' screen mounted under People) |
@@ -2196,6 +2210,30 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from now) |
 | work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work) |
 
+Added in `work/MaintenanceServices.xml` (impl-maintenance P4; `MaintenanceIntake.js`): the requests and intake, called by Maintenance's
+Requests and RequestDetail after `check#Record` and by Commons' Report a problem and RequestDetail (a requester holds no Maintenance
+root, F78; the services check MAINTENANCE_REQUEST and the organization themselves):
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenanceServices | report#MaintenanceProblem | Maintenance/Requests | Commons/ReportProblem (the + menu's Report a problem, Maintenance/Requests' link to it) |
+| work/MaintenanceServices | find#MaintenanceReportTargets | Maintenance/Requests | Commons/ReportProblem (Equipment or facility) |
+| work/MaintenanceServices | resolve#MaintenanceReportScan | Maintenance/Requests | Commons/ReportProblem (Or scan its tag) |
+| work/MaintenanceServices | find#MaintenanceRequests | Maintenance/Requests; Maintenance/Requests/RequestDetail | Maintenance/Requests/Find (through ironstone.maintenance.RequestServices.find#RequestRows); Maintenance/Requests/RequestDetail (get#RequestContext); Commons/Requests/RequestDetail (the reporter's Maintenance summary) |
+| work/MaintenanceServices | triage#MaintenanceRequest | Maintenance/Requests; Maintenance/Requests/RequestDetail | Maintenance/Requests/RequestDetail (Create work order, Add to a work order, Reject, Assign); Maintenance/Requests/Find (the adoption queue's Make a work order of a request) |
+| work/MaintenanceServices | find#UnmanagedMaintenance | Maintenance/Requests | Maintenance/Requests/Find (Maintenance records with no work order) |
+| work/MaintenanceServices | create#MaintenanceRequestFromEmail | Maintenance/Requests | the mail rules' Make a maintenance request (EmailRuleAction ErActCreateMaintenanceRequest; no screen) |
+
+Added in `work/ResourceBookingServices.xml` (impl-maintenance P5; `ResourceOutages.js`; `record#ResourceUnavailability` was
+Manufacturing P11's internal service and gains Maintenance's entry point), called by built screens through the Maintenance screens
+after `ironstone.maintenance.AccessServices.check#Record`:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/ResourceBookingServices | record#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime (RecordDowntime); Maintenance/WorkOrders/WorkOrderDetail/Downtime (Record outage); WorkOrderDetail's Start with offline intent and Complete leaving equipment down (through transition#MaintenanceWorkOrder); Manufacturing/WorkCenters/Downtime (an equipment-fault stop, through store#ProductionDowntime, Manufacturing P11) |
+| work/ResourceBookingServices | find#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime (DowntimeRows, the correction history); Maintenance/WorkOrders/WorkOrderDetail/Downtime |
+| work/ResourceBookingServices | correct#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (Correct) |
+| work/ResourceBookingServices | end#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (RestoreResource) |
 Added in `work/ProcessServices.xml` (impl-maintenance P6; `MaintenanceProcedures.js`, the checked path of the WppMaintenanceProcedure
 policy), called by built screens through the Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`
 (recordType procedure):

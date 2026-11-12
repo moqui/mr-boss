@@ -57,6 +57,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="${[maintenanceAsset.ownerName, maintenanceAsset.facilityName, maintenanceAsset.warrantyText ?
                                 'supplier warranty ' + maintenanceAsset.warrantyText.toLowerCase() : ''].filter(Boolean).join(' · ')}"
                                     type="p" style="q-mb-none"/>
+                            <!-- P5: its current state, from its one open outage -->
+                            <link url="${sharedLinks['Equipment/Downtime']}" text="${maintenanceAsset.outage.text}" link-type="anchor"
+                                    style="text-negative" condition="maintenanceAsset.outage"
+                                    parameter-map="{resourceUnavailabilityId:maintenanceAsset.outage.resourceUnavailabilityId}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <link url="${sharedLinks['Equipment/AssetTags']}" text="Print tag" icon="sym_o_qr_code_2"

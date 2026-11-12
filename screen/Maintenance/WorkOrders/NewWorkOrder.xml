@@ -124,6 +124,12 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
+                            <!-- P5: whether starting the work takes its target out of service -->
+                            <field name="offlineIntent">
+                                <default-field title="When the work starts">
+                                    <drop-down allow-empty="true"><option key="Y" text="Take it out of service"/></drop-down>
+                                </default-field>
+                            </field>
                             <field name="submitButton"><default-field title="Create work order"><submit type="primary"/></default-field></field>
                             <field-layout>
                                 <field-ref name="targetKind"/>
@@ -135,6 +141,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field-row><field-ref name="severityEnumId"/><field-ref name="priority"/></field-row>
                                 <field-row><field-ref name="estimatedStartDate"/><field-ref name="estimatedCompletionDate"/></field-row>
                                 <field-row><field-ref name="estimatedWorkTime"/><field-ref name="teamPartyId"/></field-row>
+                                <field-ref name="offlineIntent"/>
                                 <field-ref name="submitButton"/>
                             </field-layout>
                         </form-single>

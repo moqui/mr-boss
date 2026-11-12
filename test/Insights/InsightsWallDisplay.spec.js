@@ -6,7 +6,8 @@
 // too. Sharing is the framework Playlists' sharePlaylist through Insights' route, under Insights' policy: an author shares
 // their playlist with the wall displays (the policy's group, whose share artifact is the author's); a group that is neither
 // theirs nor the policy's, a reader, and a distributor who saves a definition with the wall displays' group by the engine
-// itself are refused. Playlists lists the devices showing a playlist and offers Register as display to an access administrator. The credential itself is the framework's (DeviceCredential,
+// itself are refused. A new playlist through the same route is the author's: a distributor, who holds the engine's save but
+// has no editor under Insights, is refused. Playlists lists the devices showing a playlist and offers Register as display to an access administrator. The credential itself is the framework's (DeviceCredential,
 // SecurityDevice, which also has the plain refusal page over HTTP), registering Admin's (AdminDevices).
 // Run: ./moq test mr-boss --spec Insights/InsightsWallDisplay
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -14,6 +15,23 @@ const {ids, users, asUser, system, invoke, refusal, transition} = lib
 const webroot = "component://webroot/screen/webroot.xml"
 const sharePlaylist = (user, definitionId, userGroupId) =>
     transition(user, webroot, "apps/Insights/Playlists/sharePlaylist", {shareDefinitionId: definitionId, userGroupId})
+const createPlaylist = (user, playlistId) =>
+    transition(user, webroot, "apps/Insights/Playlists/createPlaylist", {
+        playlistId,
+        playlistDashboardIds: "insights-suite",
+        playlistSeconds: "20"
+    })
+const createdIds = ["SPEC_WALL_BY_AUTHOR", "SPEC_WALL_BY_DISTRIBUTOR"]
+function removeCreated() {
+    system(() => {
+        for (const entityName of [
+            "moqui.report.DefinitionReference",
+            "moqui.report.DefinitionVersion",
+            "moqui.report.Definition"
+        ])
+            ec.entity.find(entityName).condition("definitionId", "in", createdIds).deleteAll()
+    })
+}
 const reports = "org.moqui.report.ReportServices."
 const DEVICE = "moqui.security.DeviceCredential"
 const playlistId = "SPEC_WALL_PLAYLIST"
@@ -34,10 +52,12 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
+        removeCreated()
     },
     cleanupSpec() {
         ec.message.clearErrors()
         login("john.doe")
+        removeCreated()
         system(() => ec.entity.find(DEVICE).condition("deviceName", "like", "Spec wall%").deleteAll())
     }
 })
@@ -86,6 +106,14 @@ feature("an author shares a playlist with the wall displays, and a display accou
             refusal(reports + "save#Definition", {definition: {id: "SPEC_WALL_DISTRIBUTORS", type: "report", title: "Spec distributor's playlist",
                 userGroupId: "BOSS_INSIGHTS_DISPLAY", body: {kind: "playlist", seconds: 30, playlist: [{definitionId: "SPEC_WALL_SHOWN"}]}}, note: "Wall display spec"}))
         out.afterRefusals = groupOf("SPEC_WALL_AUTHORS")
+        // a new playlist through Insights' route: the author's taken; the distributor holds the engine's save (for alert
+        // rules) but has no editor under Insights, so the same request is refused and nothing is stored
+        out.createdByAuthor = createPlaylist(users.author, "SPEC_WALL_BY_AUTHOR").errors
+        out.createdByDistributor = createPlaylist(users.distributor, "SPEC_WALL_BY_DISTRIBUTOR").errors
+        const stored = definitionId =>
+            system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", definitionId).one())
+        out.authorsCreated = stored("SPEC_WALL_BY_AUTHOR")
+        out.distributorsCreated = stored("SPEC_WALL_BY_DISTRIBUTOR")
         out.shared = system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", playlistId).one())
         // the display account (Retail's, the reader and wall display bundles) and its device, registered by an administrator
         display = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.wall.display").one())
@@ -102,11 +130,25 @@ feature("an author shares a playlist with the wall displays, and a display accou
         login("john.doe")
         return out
     },
-    then({byAuthor, authorsGroup, byReader, otherGroup, byDistributor, afterRefusals, shared}) {
+    then({
+        byAuthor,
+        authorsGroup,
+        byReader,
+        otherGroup,
+        byDistributor,
+        afterRefusals,
+        shared,
+        createdByAuthor,
+        createdByDistributor,
+        authorsCreated,
+        distributorsCreated
+    }) {
         byAuthor == "" && authorsGroup == "BOSS_INSIGHTS_DISPLAY"
         otherGroup.includes("Share only with a group you belong to") && byReader.includes("Sharing is not offered to you here")
         byDistributor.includes("SHARE_GROUP_UNAVAILABLE")
         afterRefusals == "BOSS_INSIGHTS_DISPLAY"
+        createdByAuthor == "" && authorsCreated?.ownerId == "BOSS_INS_AUTHOR"
+        createdByDistributor.includes("Making a playlist is not offered to you here") && distributorsCreated == null
         shared.userGroupId == "BOSS_INSIGHTS_DISPLAY"
         display != null && display.displayAccount == "Y"
         cookie.includes(".")

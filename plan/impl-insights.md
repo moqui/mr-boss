@@ -1,7 +1,7 @@
 # IronStone BOSS — Insights implementation
 
 Nov 11, 2026 — after the build, the screens with no business model in them moved to the framework's Dashboards app and
-Insights shows them under its root (mr-moqui `plans/Admin-Screens-Down.md`, Track I). The phase entries below are the
+Insights shows them under its root (mr-moqui `plans/archive/Admin-Screens-Down.md`, Track I). The phase entries below are the
 record of what was built then; §9 says what they name that is gone or is the framework's now.
 Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
 and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
@@ -3393,7 +3393,7 @@ Designed, not in this build:
 After both apps were built, the screens with no business model in them moved from Insights into the framework's
 Dashboards app (mr-moqui `runtime/base-component/tools/screen/Dashboards/`), and Insights shows them under its root. The
 plan, the record of each phase with its findings, and the tables of where each deleted service's work went are mr-moqui
-[plans/Admin-Screens-Down.md](../../../../plans/Admin-Screens-Down.md) (Track I, I0 to I4; A6 for the registries); how a
+[plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md) (Track I, I0 to I4; A6 for the registries); how a
 screen is shown under another root is in mr-moqui
 [docs/tools/Monitoring.md](../../../../docs/tools/Monitoring.md#mounting-the-report-screens) and the
 [tools README](../../../../runtime/base-component/tools/README.md). [design-insights.md](design-insights.md) §4.2 has

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Downtime tab (design-maintenance §3 WorkDowntime, §6; impl-maintenance P5): the outages this work order recorded
+    or linked (mantle.work.ResourceBookingServices.find#ResourceUnavailability with its workEffortId), with their production context
+    and the other work orders linked; whether starting the work takes its target out of service (its offline intent); Record outage
+    for the work's own target (record#ResourceUnavailability: the assigned technician, a supervisor or the resource administrator;
+    an open outage is linked, not doubled); and each row's Restore and Correct for a supervisor or resource administrator. Only
+    Restore ends an outage: completing or cancelling the work restores nothing, so two work orders on one resource cannot each end
+    the other's; a Restore with linked work still open lists it, asks why, and leaves it open (the user's call, Nov 12). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Downtime" default-menu-index="60">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="recordDowntime" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+    <transition-include name="restoreResource" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+    <transition-include name="correctDowntime" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+    <actions>
+        <!-- WorkOrderDetail's actions read the work order when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here -->
+        <if condition="workOrderDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workOrder" from="workOrderDetail?.workOrder || null"/>
+        <set field="outageList" from="null"/>
+        <if condition="workOrder">
+            <service-call name="mantle.work.ResourceBookingServices.find#ResourceUnavailability" out-map="context"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId, pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="outageList" from="outageList || []"/>
+        <set field="canRestoreAny" from="!!canRestore"/>
+        <set field="outageTab" from="true"/>
+        <set field="recordFixed" from="true"/>
+        <set field="openStatus" from="['WeInPlanning', 'WeApproved', 'WeInProgress', 'WeOnHold'].includes(workOrder?.statusId)"/>
+        <set field="recordValues" from="{workEffortId:workEffortId, assetId:workOrder?.assetId || null,
+                facilityId:(workOrder?.assetId ? null : workOrder?.facilityId || null)}"/>
+        <set field="intentText" from="workOrder?.offlineIntent ? 'Starting the work takes ' + workOrder.targetName + ' out of service.'
+                : 'Starting the work leaves ' + (workOrder?.targetName || 'its target') + ' in service; Start can take it out of service.'"/>
+    </actions>
+    <widgets>
+        <section name="DowntimeFound" condition="workOrder">
+            <widgets>
+                <container-box>
+                    <box-header title="Downtime"/>
+                    <box-toolbar>
+                        <container-dialog id="RecordWorkDowntime" button-text="Record outage" icon="sym_o_report"
+                                title="Record an outage of ${workOrder.targetName}" width="640" condition="canRecord &amp;&amp; openStatus">
+                            <section-include name="RecordDowntimeForm" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+                        </container-dialog>
+                        <link url="${sharedLinks['Equipment/Downtime']}" text="All downtime" icon="sym_o_list" link-type="anchor-button"
+                                parameter-map="workOrder.assetId ? {assetId:workOrder.assetId} : {facilityId:workOrder.facilityId}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${workOrder.outage?.text || (workOrder.targetName + ' has no outage recorded with this work.')}" type="p"
+                                style="${workOrder.outage?.open ? 'text-negative' : 'm-muted'}"/>
+                        <label text="${intentText}" type="p" style="text-caption m-muted" condition="openStatus"/>
+                        <label text="Completing the work does not restore it: a supervisor or resource administrator restores it."
+                                type="p" style="text-caption m-muted" condition="workOrder.outage?.open"/>
+                        <section-include name="DowntimeRows" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

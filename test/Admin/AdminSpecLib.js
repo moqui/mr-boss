@@ -114,7 +114,7 @@ function shell(user, menuOnly = false) {
 
 // The screen sweeps' screens (P19; acceptance AdminTui and AdminServerStatic): [path under Admin, location] of every screen file
 // under screen/Admin, the shared screens its areas mount (Data/DataImport) and the framework's System screens its areas mount
-// by location (mr-moqui plans/Admin-Screens-Down.md: Operations' Jobs, JobRuns and JobRunDetail, Mail and protocols' MailRelays
+// by location (mr-moqui plans/archive/Admin-Screens-Down.md: Operations' Jobs, JobRuns and JobRunDetail, Mail and protocols' MailRelays
 // and MailRelayDetail, Access' Capabilities and RowRules, Security's SignInPolicy, IdentityProviders and
 // IdentityProviderDetail, Audit's AuditChanges, Data's Exports and DataExport), but System, which is Tools' screens for
 // ADMIN, swept with Tools.

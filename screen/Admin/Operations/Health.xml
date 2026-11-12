@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Health (design-admin §10 Health; style-guide §3.2 List; mr-moqui plans/Admin-Screens-Down.md A6): the framework's System ›
+<!-- Health (design-admin §10 Health; style-guide §3.2 List; mr-moqui plans/archive/Admin-Screens-Down.md A6): the framework's System ›
     Operations › Health (the readiness checks the user may read, from every registered provider, over
     org.moqui.admin.ReadinessServices) with what is Admin's around its sections: the organization as a filter (ReadinessFind
     extended; choices), sent as the scope the providers of an organization or a store take, an organization the user does

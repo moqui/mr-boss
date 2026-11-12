@@ -7,7 +7,9 @@
 // Settings' one html render (the administrator's; the reader's a refusal), P2's equipment write (the resource administrator's,
 // the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
-// Retail) and its record panels, P6's procedure record (a reader of its organization's procedures; an author's change),
+// Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
+// panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P6's procedure record (a reader of its
+// organization's procedures; an author's change),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -21,10 +23,22 @@ const contextServices = "ironstone.maintenance.ContextServices."
 const context = contextServices + "get#SharedContext"
 const checkRecord = access + "check#Record"
 const choices = contextServices + "get#Choices"
-const registry = "ironstone.admin.RegistryServices."
+const registry = "org.moqui.admin.ReadinessServices."
 // a refusal of a user without Maintenance: the service is not authorized for them, or it refuses them
 const refused = message => /MAINTENANCE_UNAVAILABLE|is not authorized/.test(message)
 const unauthorized = message => /^40[13] |is not authorized/.test(message)
+// a Commons screen's refusal as the user (P4's Report a problem): "" when it opens
+function screenRefusalIn(user, path) {
+    const rendered = asUser(user, () => page(path, {}, "html", "Commons"))
+    return rendered.status === 200 && rendered.errors.length === 0 ? "" : rendered.status + " " + rendered.errors.join(" | ")
+}
+// the quick create kinds of the user's + menu (the shell's data)
+const quickCreates = user =>
+    JSON.stringify(
+        asUser(user, () =>
+            JSON.parse(ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output)
+        )
+    )
 // a spec-local Maintenance user whose only capability group holds MAINTENANCE_PLAN, an agent of Services
 const editOnly = "MNT_SPEC_EDIT_ONLY"
 
@@ -198,20 +212,20 @@ const capabilityNames = [
     "settings"
 ]
 const reads = ["workRead", "resourceRead", "anyRead"]
-// design §1.1's table
+// design §1.1's table; every group also reports a problem and follows it (MAINTENANCE_REQUEST and _VIEW_OWN, the user's call of Nov 12, P4 review)
 const capabilityUsers = [
-    {user: users.reader, granted: ["view", "processView", ...reads]},
-    {user: users.planner, granted: ["view", "plan", "processView", ...reads]},
-    {user: users.tech, granted: ["assignedView", "execute", ...reads]},
-    {user: users.supervisor, granted: ["view", "supervise", "processView", ...reads]},
-    {user: users.author, granted: ["processView", "processEdit", "anyRead"]},
-    {user: users.approver, granted: ["processView", "processApprove", "anyRead"]},
-    {user: users.booking, granted: ["bookingViewAssigned", "bookingApprove", "anyRead"]},
+    {user: users.reader, granted: ["request", "requestViewOwn", "view", "processView", ...reads]},
+    {user: users.planner, granted: ["request", "requestViewOwn", "view", "plan", "processView", ...reads]},
+    {user: users.tech, granted: ["request", "requestViewOwn", "assignedView", "execute", ...reads]},
+    {user: users.supervisor, granted: ["request", "requestViewOwn", "view", "supervise", "processView", ...reads]},
+    {user: users.author, granted: ["request", "requestViewOwn", "processView", "processEdit", "anyRead"]},
+    {user: users.approver, granted: ["request", "requestViewOwn", "processView", "processApprove", "anyRead"]},
+    {user: users.booking, granted: ["request", "requestViewOwn", "bookingViewAssigned", "bookingApprove", "anyRead"]},
     {
         user: users.resources,
-        granted: ["resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
+        granted: ["request", "requestViewOwn", "resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
     },
-    {user: users.cost, granted: ["view", "costView", ...reads]},
+    {user: users.cost, granted: ["request", "requestViewOwn", "view", "costView", ...reads]},
     // the user's call (P1 review): every Maintenance permission, every organization among them, and not FACILITY_EDIT
     {user: users.admin, granted: capabilityNames.filter(name => name !== "facilityEdit")},
     {user: "maint.spec.planonly", granted: ["plan"]},
@@ -545,6 +559,107 @@ feature(
     }
 )
 
+feature(
+    "a maintenance request is a planner's of its organization, not a technician's or Retail's; a requester reports in Commons only (P4)",
+    {
+        when() {
+            const check = (user, requestId = ids.openRequestId) =>
+                asUser(user, () => refusal(checkRecord, {appRoot: "Maintenance", recordType: "request", recordId: requestId}))
+            const panel = user =>
+                asUser(
+                    user,
+                    () =>
+                        deviceRequest("apps/Maintenance/RecordFiles/filesData", null, {
+                            recordEntity: "mantle.request.Request",
+                            recordId: ids.openRequestId
+                        }).errors
+                )
+            return {
+                planner: check(users.planner),
+                tech: check(users.tech),
+                retail: check(users.retailPlanner),
+                missing: check(users.planner, "BOSS_MNT_REQ_NONE"),
+                plannerPanel: panel(users.planner),
+                retailPanel: panel(users.retailPlanner),
+                // Report a problem: the requester's screen in Commons (BOSS_MNT_REPORT_PROBLEM), not another Commons user's
+                requesterReport: screenRefusalIn(users.requester, "ReportProblem"),
+                // the user's call (Nov 12, P4 review): every Maintenance group has Report a problem in its + menu, another
+                // app's user neither the item nor the screen
+                withoutReport: [
+                    users.reader,
+                    users.planner,
+                    users.tech,
+                    users.supervisor,
+                    users.author,
+                    users.approver,
+                    users.booking,
+                    users.resources,
+                    users.cost,
+                    users.admin,
+                    users.requester
+                ].filter(user => !quickCreates(user).includes("maintenanceReportProblem")),
+                otherQuickCreate: quickCreates(users.otherApp).includes("maintenanceReportProblem"),
+                // a technician reports a problem and follows their own report (the Commons Maintenance box's
+                // find#MaintenanceRequests), not the requester's
+                techFollows: asUser(users.tech, () =>
+                    system(() => {
+                        const reported = invoke("mantle.work.MaintenanceServices.report#MaintenanceProblem", {
+                            assetId: ids.compressorId,
+                            summary: "Compressor guard loose",
+                            operationKey: "spec-mnt-tech-report"
+                        })
+                        const own = id =>
+                            Array.from(
+                                invoke("mantle.work.MaintenanceServices.find#MaintenanceRequests", {requestId: id, statusId: "all"})
+                                    .requestList || []
+                            ).length
+                        return {own: own(reported.requestId), colleague: own(ids.openRequestId)}
+                    })
+                ),
+                otherReport: screenRefusalIn(users.otherApp, "ReportProblem"),
+                // P4 review: the Requests area is the planner's and supervisor's (BOSS_MNT_REQUESTS); the planner's render is
+                // MaintenanceRequests'
+                techRequests: screenRefusal(users.tech, "Requests"),
+                readerRequests: screenRefusal(users.reader, "Requests"),
+                // P4 review: a reported problem by its id in Commons is its reporter's and Maintenance's, not every member's of its
+                // organization (Mantle's MaintenanceAccess.requestHidden in get#RecordLinkInfo): the technician, an agent of Services
+                // not on its work, does not see the requester's untriaged report
+                // (Commons' files panel of the request, which asks get#RecordLinkInfo)
+                seen: Object.fromEntries(
+                    [users.requester, users.planner, users.tech].map(user => {
+                        const files = asUser(user, () =>
+                            deviceRequest("apps/Commons/RecordFiles/filesData", null, {
+                                recordEntity: "mantle.request.Request",
+                                recordId: ids.openRequestId
+                            })
+                        )
+                        return [user, files.status === 200 && JSON.parse(files.output || "{}").visible === true]
+                    })
+                )
+            }
+        },
+        then(out) {
+            out.planner == ""
+            out.tech.includes("RECORD_UNAVAILABLE")
+            out.retail.includes("RECORD_UNAVAILABLE")
+            out.missing.includes("RECORD_UNAVAILABLE")
+            !out.plannerPanel.includes("RECORD_PANEL_UNAVAILABLE")
+            out.retailPanel.includes("RECORD_PANEL_UNAVAILABLE")
+            out.requesterReport == ""
+            out.withoutReport.length == 0
+            out.otherQuickCreate == false
+            out.techFollows.own == 1
+            out.techFollows.colleague == 0
+            out.otherReport != ""
+            out.techRequests != ""
+            out.readerRequests != ""
+            out.seen[users.requester] == true
+            out.seen[users.planner] == true
+            out.seen[users.tech] == false
+        }
+    }
+)
+
 feature("Home shows the planner their organization and the counters not configured; Settings is the administrator's", {
     when() {
         const plannerHome = asUser(users.planner, () =>
@@ -680,7 +795,8 @@ feature(
                     problems.push(`MAINTENANCE_ALL_ORGANIZATIONS's bundles: ${holders("MAINTENANCE_ALL_ORGANIZATIONS")}`)
             })
             const settingsKeys = user =>
-                Array.from(asUser(user, () => invoke(registry + "find#Settings", {})).entries || []).map(
+                // the settings index is the framework's since Admin Screens Down (impl-maintenance F116)
+                Array.from(asUser(user, () => invoke("org.moqui.admin.ReadinessServices.find#Settings", {})).entries || []).map(
                     entry => entry.settingsKey
                 )
             if (!settingsKeys(users.admin).includes("maintenance.settings"))
@@ -690,6 +806,50 @@ feature(
         },
         then({problems}) {
             problems.join("\n") == ""
+        }
+    }
+)
+
+// P5: recording an outage is a supervisor's, a resource administrator's or an assigned technician's (Mantle's
+// record#ResourceUnavailability): the supervisor links Room 201's open outage, the planner is refused, and Retail's forklift is
+// refused to the supervisor as a missing one; restoring is the supervisor's, not the technician's
+feature(
+    "recording and restoring an outage is the supervisor's: the planner is refused, and Retail's forklift is refused to both",
+    {
+        when() {
+            const record = "mantle.work.ResourceBookingServices.record#ResourceUnavailability"
+            const write = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const room = {facilityId: ids.roomOutageFacilityId, unavailabilityReasonEnumId: "RurSafety"}
+            return {
+                supervisor: write(users.supervisor, record, room),
+                planner: write(users.planner, record, room),
+                otherAsset: write(users.supervisor, record, {
+                    assetId: ids.otherAssetId,
+                    unavailabilityReasonEnumId: "RurEquipmentFault"
+                }),
+                techRestores: write(users.tech, "mantle.work.ResourceBookingServices.end#ResourceUnavailability", {
+                    resourceUnavailabilityId: ids.roomOutageId,
+                    expectedRevision: 1,
+                    dispositionEnumId: "MdispAvailable"
+                }),
+                rows: system(() =>
+                    ec.entity
+                        .find("mantle.work.effort.ResourceUnavailability")
+                        .condition("facilityId", ids.roomOutageFacilityId)
+                        .count()
+                )
+            }
+        },
+        then({supervisor, planner, otherAsset, techRestores, rows}) {
+            supervisor == ""
+            rows == 1
+            planner.includes("PERMISSION_DENIED")
+            otherAsset.includes("RECORD_UNAVAILABLE")
+            techRestores.includes("PERMISSION_DENIED")
         }
     }
 )

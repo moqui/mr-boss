@@ -1,5 +1,5 @@
 // Admin over the framework's registries (impl-admin P2; design-admin §3, §7 SettingsHome, §10 Health, §14; mr-moqui
-// plans/Admin-Screens-Down.md A6). The registries' own rules (a failing provider named, one not readable or naming no service
+// plans/archive/Admin-Screens-Down.md A6). The registries' own rules (a failing provider named, one not readable or naming no service
 // left out, a refresh's permission, a settings entry's screen, the support summary's redaction) are the framework's
 // AdminReadiness spec. Here is what is Admin's: its contract service over the owners that keep their own shapes (Accounting's
 // setup for a holder of ACCOUNTING_VIEW, an instance administrator among them; a Commerce store's summary for an
@@ -278,8 +278,12 @@ feature("Health shows the reader the checks of an organization they administer, 
         health.errors == []
         health.output.includes("Organization")
         health.output.includes("Store readiness")
+        // a check is named by its title alone where it is its provider's, "Provider: Check" where they differ
+        !health.output.includes("Store readiness: Store readiness")
         health.output.includes("Check again")
         health.output.includes("Support summary")
+        // the framework's header, with the sign-in failures of the last day for a reader of the overview's
+        health.output.includes("Sign-in failures, last 24 hours")
         // the instance's checks take no organization: with one asked for they are left out
         !health.output.includes("Outgoing mail")
         !health.output.includes("/qapps/Commerce/Stores/StoreDetail")

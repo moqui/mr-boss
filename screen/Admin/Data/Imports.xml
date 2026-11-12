@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Imports (design-admin §11 Imports; style-guide §3.2 List; impl-admin P15; mr-moqui plans/Admin-Screens-Down.md): the
+<!-- Imports (design-admin §11 Imports; style-guide §3.2 List; impl-admin P15; mr-moqui plans/archive/Admin-Screens-Down.md): the
     framework's System › Data imports list, as Admin's own screen for what Admin adds: the organization an import is for,
     as a filter (the organizations the administrator administers, ironstone.admin.ContextServices.get#Choices) and the
     name of its column. The runs and the targets are read here from org.moqui.admin.DataTransferServices.find#ImportRuns

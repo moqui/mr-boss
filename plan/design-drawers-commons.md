@@ -1,5 +1,6 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 12, 2026 — impl-maintenance P4 as built (owner contract): Commons' + menu offers Maintenance's Report a problem (`Commons/ReportProblem`, quick create `maintenanceReportProblem`) to a holder of its screen's grant (`BOSS_MNT_REPORT_PROBLEM`: requesters and the Maintenance administrator), since a requester has no Maintenance launcher; it calls Mantle's `report#MaintenanceProblem` only. Commons' RequestDetail of a maintenance request shows its reporter a Maintenance box (the request's state, its equipment or facility, the work order's name and status, from Mantle's `find#MaintenanceRequests`), and its Tasks tab lists a maintenance work order only for a user Maintenance admits to it (`MaintenanceAccess.workHidden`, impl-maintenance F69). Reviewed (P4): a maintenance report opens by its id in Commons (RequestDetail, Chatter, files, search) only for its reporter, its people in person and Maintenance's, not for every member of its organization (Mantle's `MaintenanceAccess.requestHidden` in `get#RecordLinkInfo`).
 Nov 12, 2026 — impl-maintenance P3 as built (owner contract): a maintenance work order and its steps (managed work) are no task in Commons: `ironstone.commons.TaskServices.get#TaskAccess` answers not found with `MANAGED_WORK` naming the work order to open in Maintenance, Tasks' rows and `CommonsServices.check#TaskUpdate` (Today's Mark done) refuse to change them, Mantle's Today leaves them to Maintenance's today-source (which opens WorkOrderDetail with no Mark done), and the palette's `get#RecordLink` opens them under Maintenance for a user Maintenance admits, else nowhere; Commons' own tasks are unchanged.
 Nov 11, 2026 — impl-people P10 as built (owner contract): People's Today source adds the user's own weeks to submit, opening
 People's My time, which Today's rows keep (a Projects timesheet item still opens Projects' My time); a timesheet's record link
@@ -235,7 +236,10 @@ the current app's kinds first; each kind names a screen and parameters. Commons 
 event, note, contact and request, and activity while a record is in context (all
 `Commons/QuickCreate?kind=…`, §4); Comms registers email
 (the composer, §12), chat message (a people picker that opens the room in the tray panel) and
-call. Prefill from the screen context: a record in context becomes the link chip (the task,
+call. People's Clock in (impl-people P13; owner contract, as People's Today source) is declared on Commons' root too, since a
+self-service employee opens no People root: it opens `People/Time/Clock`, the user's own clock, and is offered only to someone who
+clocks (its `condition-service`, Mantle's `AttendanceServices.get#ClockOffer`; the framework's quick-create condition, People P13's
+review). Prefill from the screen context: a record in context becomes the link chip (the task,
 event, note or request is linked to it, §1.6); a party in context (a customer, supplier, contact
 or employee screen) becomes the contact's organization or the request's customer; a product in
 context is noted in the description. On a phone the menu is the same and each dialog is

@@ -19,11 +19,15 @@ along with this software (see the LICENSE.md file). If not, see
     (PeopleEmploymentChangeApproval). Approve and refuse (with a reason) call the topic's services through the framework
     (mantle.humanres.PositionServices approve#PositionApproval and refuse#PositionApproval, PeopleServices approve#EmploymentChange
     and refuse#EmploymentChange, which recheck the approver and the source's revision); opening a row opens PositionDetail or the
-    person's Employee360, which show the route and the decisions. Later phases add their topics (leave, expenses, offers, pay). -->
+    person's Employee360, which show the route and the decisions. P12: leave and the cancellation of approved leave
+    (PeopleLeaveApproval; LeaveServices approve#Request and refuse#Request), opening LeaveRequestDetail. P13: an attendance correction
+    (PeopleAttendanceApproval; AttendanceServices approve#Correction and refuse#Correction), opening the day on Attendance. Later
+    phases add their topics (expenses, offers, pay). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="3" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
-        <set field="notificationTopics" from="['PeoplePositionApproval', 'PeopleEmploymentChangeApproval']"/>
+        <set field="notificationTopics" from="['PeoplePositionApproval', 'PeopleEmploymentChangeApproval', 'PeopleLeaveApproval',
+            'PeopleAttendanceApproval']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">

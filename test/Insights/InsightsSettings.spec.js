@@ -2,7 +2,8 @@
 // defaults are the Insights administrator's to change (a reader with the same input refused), for an organization of theirs
 // at the revision read, a recipient cap above Admin's instance ceiling refused and nothing stored; the saved cap is the one
 // delivery then uses for that organization and no other: what Scheduled reports adds to Insights' policy for the
-// framework's schedule screens, so a schedule saved through its route is stored with it. Data readiness reads Admin's
+// framework's schedule screens, so a schedule saved through its route is stored with it; its display zone and week start are
+// the calendar of Insights' policy, which an author's analysis by week is cut in. Data readiness reads Admin's
 // registry as the viewer: a source rebuilt two hours ago is ready under the default policy and stale, with its lag, once
 // the organization allows an hour;
 // a source the reader may not read is not listed; the refresh is refused to an author (the registration's permission) and
@@ -18,6 +19,7 @@ const {ids, users, asUser, system, refusal, invoke, page, transition} = lib
 const C = "ironstone.insights.ContextServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
+const AN = "ironstone.insights.AnalysisServices."
 const REFRESH = "org.moqui.admin.ReadinessServices.request#Refresh"
 const salesId = "mantle-sales-orders"
 const sourceId = "boss-commerce-checkouts"
@@ -125,17 +127,27 @@ feature(
                     () => invoke(C + "get#Context", {appRoot: "Insights", organizationPartyId: ids.organizationId}).defaults
                 ),
                 otherDefaults: asUser(users.services, () => invoke(C + "get#Context", {appRoot: "Insights"}).defaults),
+                // an author's analysis by week, in the organization: the policy's calendar in the engine's bucket
+                weekly: asUser(users.author, () =>
+                    invoke(
+                        AN + "get#AnalysisResult",
+                        Object.assign({datasetId: salesId, timeGrain: "week", organizationPartyId: ids.organizationId}, range)
+                    )
+                ).result,
                 // a reader reads the controls in effect, never the form
                 reader: asUser(users.reader, () => invoke(C + "get#Settings", {organizationPartyId: ids.organizationId}))
             }
         },
-        then({retail, saved, stored, services, defaults, otherDefaults, reader}) {
+        then({retail, saved, stored, services, defaults, otherDefaults, weekly, reader}) {
             retail.recipientCap == 20
             saved.errors == ""
             stored == 20
             services == 50
             defaults.displayTimeZone == "America/Chicago" && defaults.weekStart == "InsWsSunday"
             otherDefaults.displayTimeZone == null
+            weekly.available && weekly.query.aggregations[0].params.calendar_interval == "week"
+            weekly.query.aggregations[0].params.time_zone == "America/Chicago" &&
+                weekly.query.aggregations[0].params.offset == "-1d"
             reader.canView === false && reader.settings == null && reader.sources.length == 0
             reader.controls.some(row => row.control == "Group recipients" && row.value.includes("At most 20"))
         }

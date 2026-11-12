@@ -24,6 +24,9 @@
         {"query": "explain this number", "page": "/qapps/Insights/Dashboard", "expect": ["insights-analyst"]},
         {"query": "how many orders did we take last month by currency", "expect": ["insights-analyst"]},
         {"query": "compare this metric with the period before", "page": "/qapps/Insights/ReportBuilder/Explore", "expect": ["insights-analyst"]},
-        {"query": "which data source is stale", "expect": ["insights-analyst"]}
+        {"query": "which data source is stale", "expect": ["insights-analyst"]},
+        {"query": "how many days of annual leave do I have left", "expect": ["people-leave-balance"]},
+        {"query": "explain my balance", "page": "/qapps/People/Time/LeaveRequestDetail", "expect": ["people-leave-balance"]},
+        {"query": "why does this request reserve two days of my vacation", "expect": ["people-leave-balance"]}
     ]
 }

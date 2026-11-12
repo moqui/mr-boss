@@ -35,6 +35,15 @@ const ids = {
     heldOrderId: "BOSS_MNT_WO_MOTOR",
     techPartyId: "BOSS_MNT_TECH",
     tech2PartyId: "BOSS_MNT_TECH2",
+    // P4: maint.requester's reports (BossZMaintenanceDemoData.xml): the air handler's water triaged into its work order (maint.reader's
+    // report of the same fault linked to it too) and the compressor's oil leak not yet triaged
+    triagedRequestId: "BOSS_MNT_REQ_AHU",
+    otherReportId: "BOSS_MNT_REQ_AHU2",
+    openRequestId: "BOSS_MNT_REQ_COMP",
+    // P5: Room 201 out of service (a safety stop linked to its work order) and the compressor's restored belt failure
+    roomOutageId: "BOSS_MNT_OUT_ROOM201",
+    roomOutageFacilityId: "BOSS_MNT_ROOM_201",
+    restoredOutageId: "BOSS_MNT_OUT_COMP_BELT",
     // P6: the procedures (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
     // steps, a dependency and a pressure reading), the room inspection (approved, for rooms), the van's pre-trip check (a draft) and
     // the old compressor checklist (retired)
@@ -45,15 +54,15 @@ const ids = {
     roomProcedureId: "BOSS_MNT_PROC_ROOM",
     draftProcedureId: "BOSS_MNT_PROC_VAN",
     retiredProcedureId: "BOSS_MNT_PROC_OLD",
-    // the menu of design §1.2 built so far: a Maintenance user's who reads work, procedures and equipment, and with Settings the
-    // Maintenance administrator's; a procedure author reads procedures alone (P6: Procedures, for a reader of procedures or a planner
-    // or supervisor)
-    staffMenu: ["Home", "WorkOrders", "Procedures", "Equipment", "Facilities"],
+    // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
+    // a reader of procedures or a planner or supervisor) and equipment, and with Settings the Maintenance administrator's; a procedure
+    // author reads procedures alone
+    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
     authorMenu: ["Home", "Procedures"],
-    adminMenu: ["Home", "WorkOrders", "Procedures", "Equipment", "Facilities", "Settings"],
+    adminMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Equipment", "Facilities", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
-    keys: ["g m", "g w", "g p", "g e", "g f"]
+    keys: ["g m", "g w", "g r", "g p", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS

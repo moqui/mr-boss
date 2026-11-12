@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- ImportDetail (design-admin §11 ImportDetail; style-guide §3.3 Detail; impl-admin P15; mr-moqui
-    plans/Admin-Screens-Down.md): the framework's System › Data import detail, as Admin's own screen for what Admin adds:
+    plans/archive/Admin-Screens-Down.md): the framework's System › Data import detail, as Admin's own screen for what Admin adds:
     the import is read with the shared wizard's context (ironstone.shared.DataImportServices.get#ImportContext under
     Admin's mount: the same read the wizard continues from, with the organization by its name where the target's owner
     names its organizations itself, as Products' catalog does). The summary, the results, the result files and the

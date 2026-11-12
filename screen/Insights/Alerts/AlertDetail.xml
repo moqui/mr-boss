@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Business alerts › an alert (design-insights §8 AlertDetail; impl-insights P8, INS-07; mr-moqui
-    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › AlertRule at this location, for anyone who reads the
+    plans/archive/Admin-Screens-Down.md, Track I): the framework's Dashboards › AlertRule at this location, for anyone who reads the
     rule, with the seven transitions Insights offers: recipientChoices (Insights' readers, for a distributor), storeAlert
     (the reading, condition and timing of a rule of the caller's own; a new one over a panel's saved query, from the panel's
     New alert rule), storeAudience (the people and groups it tells, each accepted and then checked by the engine),

@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- TopicDetail (design-admin §10 TopicDetail; mr-moqui plans/Admin-Screens-Down.md): the framework's System › Operations
+<!-- TopicDetail (design-admin §10 TopicDetail; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's System › Operations
     notification topic at this location (BOSS_ADM_OPERATIONS_TOPICS), with its two transitions: saveDefaults for the
     configuration administrator (ADMIN_SETTINGS_MANAGE) and saveSubscription for the operations operator
     (ADMIN_OPERATION_MANAGE), each checked by its service. -->

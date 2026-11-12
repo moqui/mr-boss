@@ -16,8 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     register (EquipmentFind, EquipmentRows, CreateEquipment), and AssetTags, the asset tag labels; the shared EquipmentDetail with
     Maintenance's tabs, Product360 (the equipment model's meters, maintenance defaults and spare parts) and Employee360 (a
     custodian's public work card and their equipment), hidden from the menu. Shown to a user who reads equipment (the root's
-    menu condition); every read is Mantle's scoped find (MaintenanceResourceServices). Downtime and EquipmentImport join with P5
-    and P18. -->
+    menu condition); every read is Mantle's scoped find (MaintenanceResourceServices). P5: Downtime, the outages of equipment and
+    facilities (mantle.work.ResourceBookingServices). EquipmentImport joins with P18. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Equipment" default-menu-index="6" menu-image="sym_o_precision_manufacturing" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true">

@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Report builder › DatasetView (design-insights §5 DatasetView; impl-insights P3, INS-03, INS-11; mr-moqui
-    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetView at this location, which
+    plans/archive/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetView at this location, which
     BOSS_INS_DATASET_SCREENS opens to the author and the steward, with its one transition: exportDocuments, the rows the
     viewer reads through the engine's query with the dataset's row filter, to the cap, recorded through audit#Export. Every
     row passes the dataset's row filter in the engine, so a reader of one organization sees and exports only its rows. The

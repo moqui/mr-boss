@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- SystemMessages (design-admin §8 SystemMessages, §8.1, §15.3; mr-moqui plans/Admin-Screens-Down.md): the framework's
+<!-- SystemMessages (design-admin §8 SystemMessages, §8.1, §15.3; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's
     System › Integrations system messages at this location, which BOSS_ADM_INTEGRATIONS_OPS opens to the operations operator
     beside the integration administrator, with the one transition an operator uses: recoverMessages, through
     org.moqui.admin.OperationServices.execute#Recovery, which checks ADMIN_OPERATION_MANAGE and what each message's owner
