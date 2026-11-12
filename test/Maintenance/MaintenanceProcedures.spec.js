@@ -1,7 +1,8 @@
 // Maintenance procedures in BOSS (impl-maintenance P6; design-maintenance §4 Procedures and ProcedureDetail, §1.2, §12): ProcedureDetail's
 // one qvt render (as a technician assigned to work made of the procedure: read only, no author or approver action) and each of its
 // tabs and Procedures' list rendered once with their records; the approval card in Commons' approvals inbox approving a procedure
-// through the WorkProcessApproval topic (approve#NotificationMessage as the approver); a step's assignee counted by Admin's
+// through the WorkProcessApproval topic (Commons' Notifications approve transition clicked with artifact authorization on; a
+// recipient who is no approver refused by Mantle); a step's assignee counted by Admin's
 // Maintenance participant and replaced on the step (F113); and Product360's maintenance default taking only a procedure the
 // applicability check admits (an owner contract with Products). The procedure rules are Mantle's MaintenanceProcesses; the "usable
 // when" is the acceptance MaintenanceProceduresWalk.
@@ -114,33 +115,54 @@ feature("the approval card in Commons' approvals inbox approves a procedure thro
                   row => row.userId
               )
             : []
-        // the approver decides the card as Commons' Notifications screen runs it (under the screen's grant), so the decision is
-        // approve#WorkProcess' own permission and scope check; the author, who is not asked, is refused
-        const decide = user =>
-            asUser(user, () =>
-                system(() =>
-                    refusal("org.moqui.ui.NotificationServices.approve#NotificationMessage", {
-                        notificationMessageId: notices[0]?.notificationMessageId
-                    })
-                )
-            )
-        const byAuthor = decide(users.author)
-        const approved = decide(users.approver)
+        // the card is clicked as Commons' Notifications screen runs it, with artifact authorization on: the screen's grant admits
+        // the topic's service, so the decision is approve#WorkProcess' own permission and scope check. The author, who is not
+        // asked, is refused by the framework; a planner made a recipient (who holds no WORK_PROCESS_APPROVE) is refused by
+        // Mantle, approving and refusing; the approver's click approves it
+        const click = (user, decision, extra = {}) =>
+            asUser(user, () => {
+                const out = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Commons.xml")
+                    .render(
+                        "Notifications/" + decision,
+                        Object.assign({notificationMessageId: notices[0]?.notificationMessageId}, extra),
+                        "post"
+                    )
+                return out.errorMessages.join(" | ")
+            })
+        const byAuthor = click(users.author, "approve")
+        system(() =>
+            invoke("create#moqui.security.user.NotificationMessageUser", {
+                notificationMessageId: notices[0]?.notificationMessageId,
+                userId: one("moqui.security.UserAccount", {username: users.planner}).userId
+            })
+        )
+        const byPlanner = click(users.planner, "approve")
+        const refusedByPlanner = click(users.planner, "refuse", {reason: "Not mine to decide"})
+        const plannerStatus = one("mantle.work.effort.WorkEffort", {workEffortId: made.workEffortId}).statusId
+        const approved = click(users.approver, "approve")
         return {
             requested,
             notices,
             recipients,
             byAuthor,
+            byPlanner,
+            refusedByPlanner,
+            plannerStatus,
             approved,
             status: one("mantle.work.effort.WorkEffort", {workEffortId: made.workEffortId}).statusId
         }
     },
-    then({requested, notices, recipients, byAuthor, approved, status}) {
+    then({requested, notices, recipients, byAuthor, byPlanner, refusedByPlanner, plannerStatus, approved, status}) {
         requested.notifiedCount >= 1
         notices.length == 1
         // the author is not asked (they changed it last, and approve nothing)
         recipients.includes("BOSS_MNT_APPROVER") && !recipients.includes("BOSS_MNT_AUTHOR")
         byAuthor.includes("not addressed to you")
+        byPlanner.includes("PERMISSION_DENIED")
+        refusedByPlanner.includes("PERMISSION_DENIED")
+        plannerStatus == "WeInPlanning"
         approved == ""
         status == "WeApproved"
     }
