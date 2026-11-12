@@ -952,8 +952,10 @@ bookings rechecked as the system: a clash refuses the move, an approved booking 
 `keptEventCancelled` (the requested and assigned bookings withdrawn, the approvers' notices cleared). Schedules offers Cancel
 booking exactly where `cancel#MyBooking` succeeds: the organizer, also of a kept event, or an editor of a calendar that holds
 an event no app keeps (`get#ResourceBookings` reads the managed state and calendars once over the listed events); never a
-recurring booking from one meeting's cell. EventDetail's booking forms still show only to an editor (`canEdit`), so a kept event's
-organizer books through the services and the screens of the app that keeps it (impl-maintenance's follow-ups note).
+recurring booking from one meeting's cell, and an item it offers Cancel on shows its title (never Cancel under Busy). EventDetail
+shows its Book a room and Book equipment forms and each booking's Cancel to whoever may book (`canBook`), so the organizer of an
+interview or a training session books there; its place, details, attendees and the other edits stay with `canEdit` (the
+follow-ups' review, R1 and R2).
 
 ### Calendar
 

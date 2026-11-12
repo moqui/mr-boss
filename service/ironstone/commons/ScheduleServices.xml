@@ -101,7 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
             unavailableList), as items with blocked true, kind (actual or planned), the safe label as the title and no event.
             canCancel is when cancel#MyBooking succeeds (check#EventAccess's canBook): the organizer, also of an event an application
             keeps, or an editor of a calendar holding an event no application keeps; never a recurring booking from one meeting
-            (impl-maintenance F357).</description>
+            (impl-maintenance F357). An item the user may cancel shows its title, organizer and link, as for an event the user is
+            on: none is offered Cancel under Busy (F357 review R2).</description>
         <in-parameters>
             <parameter name="start" required="true"/>
             <parameter name="end" required="true"/>
@@ -122,6 +123,8 @@ along with this software (see the LICENSE.md file). If not, see
             const wall = (text) => text ? String(text).replace('T', ' ').substring(0, 16) : null
             const rows = new Map()
             const names = new Map()
+            // the title of an item shown Busy, kept aside: it shows only when the user may cancel the booking (below)
+            const hidden = new Map()
             const nameOf = (id) => {
                 if (!id) return null
                 if (!names.has(id)) {
@@ -149,6 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 .condition('partyId', partyId).condition(cf.makeConditionDate('fromDate', 'thruDate', null)).count() > 0)
                         const seen = onIt || row?.visibilityEnumId === 'WevAllUsers'
                         const info = statusInfo[event.bookingStatusId] || ['Booked', 'primary']
+                        if (!seen) hidden.set(event.workEffortId, event.title)
                         bookingList.push({resourceKey: key, key: key + '|' + event.workEffortId + '|' + event.startMillis, workEffortId: event.workEffortId,
                             title: seen ? event.title : L('Busy'), start: event.allDay ? event.start : wall(event.start), end: event.allDay ? event.end : wall(event.end),
                             allDay: !!event.allDay, bookingStatusId: event.bookingStatusId || null, statusLabel: L(info[0]), statusColor: info[1],
@@ -185,8 +189,13 @@ along with this software (see the LICENSE.md file). If not, see
                     const subscriptions = new Set(calendarIds.length ? Array.from(ec.entity.find('mantle.work.calendar.Calendar').condition(cf.makeCondition('calendarId', 'in', calendarIds))
                             .condition('calendarKindEnumId', 'CalkSubscription').selectField('calendarId').list()).map((calendar) => calendar.calendarId) : [])
                     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-                    for (const item of bookingList) if (item.workEffortId && !item.mine && !item.recurring && !managed[item.workEffortId])
+                    for (const item of bookingList) if (item.workEffortId && !item.mine && !item.recurring && !managed[item.workEffortId]) {
                         item.canCancel = (editCalendarsOf.get(item.workEffortId) || []).some((id) => ['CalpEdit', 'CalpManage'].includes(permissions[id]) && !subscriptions.has(id))
+                        // an editor of its calendar may see the event (check#EventAccess): never a Cancel on an item titled Busy (F357 review R2)
+                        if (item.canCancel && hidden.has(item.workEffortId)) Object.assign(item, {title: hidden.get(item.workEffortId),
+                            organizerName: nameOf(rows.get(item.workEffortId)?.ownerPartyId),
+                            url: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(item.workEffortId)})
+                    }
                 } catch (err) {
                     ec.logger.error(`Booking cancel access for ${ec.user.username} not read, the organizer's alone: ${err && err.message ? err.message : err}`)
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }

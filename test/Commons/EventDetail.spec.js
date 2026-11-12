@@ -10,6 +10,7 @@
 // a note; a link to a changed instance by its series and start opens the instance; the linked records as record cards, linked by
 // an id (lookup#ById) and taken off, a record the user may not see left out, and Joe Developer may not change them.
 // Joe Developer gets "not available" for john.doe's family birthday and may not change john.doe's events (IronStone R5, R28).
+// A People training session john.doe organizes is read-only but he books and cancels its room there; Joe, on it, may not (F356 R1).
 // Run: ./moq test mr-boss --spec EventDetail
 const webroot = "component://webroot/screen/webroot.xml"
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -328,6 +329,41 @@ feature("a new time that clashes with another booking of its room is refused; wi
     },
 })
 
+// impl-maintenance F356 review R1: an event an application keeps (here a People training session john.doe organizes) is read-only
+// on EventDetail, but its organizer books and cancels its rooms and equipment there (canBook); an attendee does not
+feature("a kept event's organizer books and cancels its room on EventDetail, while its place and details stay read-only", {
+    when() {
+        const id = quickEvent("BOSS_TEST kept session", day(9) + " 15:00", day(9) + " 16:00")
+        sys(() => {
+            ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", id).one().set("purposeEnumId", "WepTraining").update()
+            ec.entity.makeValue("mantle.humanres.ability.TrainingSession").setAll({ workEffortId: id, capacity: 4 }).create()
+            call("create#mantle.work.effort.WorkEffortParty", { workEffortId: id, partyId: "ORG_ZIZI_JD", roleTypeId: "Assignee",
+                fromDate: ec.user.nowTimestamp, statusId: "WeptAssigned" })
+        })
+        const booked = detailPost("bookResource", { workEffortId: id, facilityId: "BOSS_DEMO_ROOM_MAPLE" })
+        const shown = render("apps/Commons/Calendar/EventDetail", { workEffortId: id })
+        const joe = as("joe.developer", () => detailPost("bookResource", { workEffortId: id, assetId: "BOSS_DEMO_PROJECTOR" }))
+        const cancelled = detailPost("cancelBooking", { workEffortId: id, facilityId: "BOSS_DEMO_ROOM_MAPLE" })
+        return { booked, shown, joe, cancelled, facts: detail(id),
+            room: one("mantle.work.effort.WorkEffortFacility", { workEffortId: id, facilityId: "BOSS_DEMO_ROOM_MAPLE" }) }
+    },
+    then({ booked, shown, joe, cancelled, facts, room }) {
+        facts.managedBy == "its People training session"
+        !facts.canEdit
+        facts.canBook
+        booked.errors == ""
+        shown.output.includes("is changed on its People training session")
+        shown.output.includes("Book a room")
+        shown.output.includes("Book equipment")
+        shown.output.includes("Cancel the booking")
+        !shown.output.includes("Video call link")
+        !shown.output.includes("Cancel event")
+        joe.errors.includes("Only the organizer of BOSS_TEST kept session books its rooms and equipment")
+        cancelled.errors == ""
+        room == null
+    },
+})
+
 feature("a link to a changed instance, by its series and the instance's start, opens the instance", {
     when() {
         return { moved: render("apps/Commons/Calendar/EventDetail", { workEffortId: "BOSS_DEMO_EV_SYNC", instanceStart: day(7) + " 10:00" }),
@@ -476,6 +512,8 @@ feature("Joe Developer: john.doe's family birthday is not available, and john.do
         workshop.output.includes("Team sync")
         workshop.output.includes("Going?")
         !workshop.output.includes("Save repeat")
+        // nor books for it (canBook, impl-maintenance F356 review R1)
+        !workshop.output.includes("Book a room")
         save.errors != ""
         one("mantle.work.effort.WorkEffort", { workEffortId: "BOSS_DEMO_EV_WORKSHOP" }).workEffortName == "Client workshop: Acme rollout"
         repeat.errors.includes("Only the organizer")

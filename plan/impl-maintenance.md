@@ -5703,6 +5703,74 @@ leave (`WetTimeOff`) and no training session.
   through `book#Resource`); a Schedules item a calendar editor may cancel is still titled Busy when they are not on the event
   (the grid's own seen rule, narrower than check#EventAccess's view).
 
+**Review Nov 12 (follow-ups F356–F360).** A fresh review of mnt/fu (mr-mantle ae0d18b1, mr-boss 4b804b88) against F356–F360,
+the follow-up note, §2, AGENTS.md and Practices-App-Dev, with the lead's calls on the worker's two open gaps; fixes in mr-mantle
+35213411 and mr-boss (this commit).
+- Checked and found sound:
+  - `canBook` (`check#EventAccess`) is canEdit, or for a kept event being its organizer; a calendar editor of a kept event, a
+    calendar viewer, an attendee and a user who cannot see the event (another organization) are refused, and with no user and
+    authorization on the event is "not found" (the system scope is only no user with authorization off). `book#Resource`,
+    `cancel#ResourceBooking` and `check#ResourceBookings` ask `book` and nothing else changed in them: the policy, blocks and
+    outages, approval, the lock and Busy apply to the organizer as to an editor.
+  - `keptEventMoved` and `keptEventCancelled` cannot book or keep what the policy refuses: the recheck only turns an assigned
+    booking needing approval back to requested (never requested to assigned) and creates no row; `ResourcePolicy.guard` reads the
+    user only for approval (no user approves, so it is asked again: stricter than the organizer's own move) and for the override
+    (not asked: `allowConflicts` false). The cancel withdraws only the event's own requested and assigned bookings. A refusal
+    throws through `EntityLib.call`, so the People service's write rolls back (the worker's interview case checks the time kept);
+    Training's move and both cancels use the same path. The hooks run after the event's write, only on a time change, and leave
+    never moves. People's Recruiting, Training, LeaveRequests and LeaveLedger pass unchanged.
+  - F357's `canCancel` matches `cancel#MyBooking` (`cancel#ResourceBooking`'s `book`): the organizer (also of a kept event), or
+    for an event no app keeps an editor (CalpEdit, CalpManage) of a calendar holding it for its editors (not `viewOnly`, not a
+    subscription), as `check#EventAccess` computes `editByCalendar`; `get#ManagedEvents`, the links, `check#CalendarAccess` and the
+    calendar kinds are read once over the listed events, and a failure leaves the organizer's alone.
+  - F358: `eventVisibility` sees no event with no user, so the system's recheck names a clash Busy.
+  - F359: the three notices go `directOnly()`; the named approvers still get the card and decide from it (MaintenanceProcedures'
+    and ResourceBookingDecisions' inbox cases), a catch-all subscriber gets none (now tested, below).
+  - F360: `sessionHours` is read only, counts PtsEnrolled places and trainers, leaves out cancelled sessions, clips each session to
+    the range and merges overlaps once. Dispatch's days are `find#StaffingCandidates`' own (the local days of windowFrom to
+    windowThru, both inclusive, in the user's time zone), and the recomputed `fits` is staffing's windowed rule (free + 0.01 >=
+    need, need > 0), so it only ever turns false.
+- Fixes:
+  - R1 (Medium, the lead's call (i)): Commons' EventDetail showed its booking forms and each booking's Cancel only with canEdit, so
+    a kept event's organizer could not book there. `get#EventAccessInfo` and `get#EventDetail` answer `canBook`; the screen's Book a
+    room and Book equipment forms are a section of their own on `canBook`, and the rooms' and equipment's Cancel follows it; the
+    place, details, repeat, attendees, Cancel event and links keep canEdit. EventDetail.spec: "a kept event's organizer books and
+    cancels its room on EventDetail, while its place and details stay read-only" (a People training session of john.doe's,
+    rendered once: the forms and Cancel there, no Video call link or Cancel event; Joe, on it, refused), and Joe's existing render
+    of the sync now checks no Book a room.
+  - R2 (Medium, the lead's call (ii)): Schedules offered Cancel on an item titled Busy (a calendar editor not on the event).
+    `get#ResourceBookings` keeps a Busy item's title aside and, where the calendar read makes it cancellable, shows its title,
+    organizer and link, as for an event the user is on; otherwise no Cancel. Schedules.spec: "Bob's interview in a calendar
+    john.doe edits shows its title with Cancel; put there only to be seen it stays Busy with none" (fails without the fix).
+  - R3 (Low, tests): the refusals of `book` beyond the attendee, and F359, had no case. ResourceBookingDecisions: "of a kept event
+    only its organizer books: a calendar editor or viewer, another organization and no user are refused; an approval notice skips
+    a catch-all subscriber" (the editor of the same calendar books for a plain event; the subscriber check fails without
+    `directOnly`).
+- Findings:
+  - Manufacturing's production runs are kept events whose moves and cancels do not call `keptEventMoved` or
+    `keptEventCancelled`; their work centers are booked by Manufacturing's own rules, not `book#Resource`, but a room or equipment
+    booked on a run through the services would not be rechecked or withdrawn. For later, with Manufacturing.
+  - `canBook` reaches every kept event's organizer: the person of an approved leave's "Out of office" (PeopleLeave) and a
+    production run's owner may book a room or equipment on it through `book#Resource` (no screen offers it: EventDetail refuses
+    both). Harmless, but a booking on leave holds a room for nothing.
+  - Dispatch takes a person's session hours off the whole window's free hours, not day by day, so a session on a day with no
+    capacity (a weekend, a holiday, leave) still takes hours off. Rare; a day-wise figure needs `get#PartyCapacity`'s dayList.
+  - People's interview and training screens have no link to their event's EventDetail booking box; the organizer reaches it from
+    the calendar.
+- Tests: mr-mantle Recruiting 10 (3.9 s), Training 4 (3.0 s), LeaveRequests 5 (2.2 s), LeaveLedger 5 (2.4 s), CalendarServices
+  23 (3.3 s), CalendarChanges 11 (2.7 s), ResourceBookingPolicy 8 (2.7 s), ResourceBookingDecisions 9 (2.6 s), MaintenanceDispatch
+  5 (1.5 s), WorkResources 6 (0.9 s): 86 of 86, 25.2 s feature time. mr-boss Schedules 6 (0.5 s), Calendar 24 (1.2 s), EventDetail
+  15 (1.7 s), Notifications 10 (2.2 s), CalendarSettings 8 (0.7 s), MaintenanceScheduling 5 (0.6 s), MaintenanceProcedures 4
+  (2.2 s), PeopleRecruiting 4 (0.7 s), PeopleTraining 3 (0.7 s), PeopleLeave 2 (0.4 s): 81 of 81, 10.7 s. Each new check failed
+  with its fix taken out (R2, R3's subscriber). `lint --screens`: no new flag (EventDetail's container notices as before, lines
+  moved); the binary still the symlink. Prettier on the Mantle spec (BOSS's specs are not Prettier-formatted). Not run:
+  `./moq test-apps`, the acceptance suite.
+- For the lead: budget share +0.4 s mr-mantle, +0.2 s mr-boss. Merge hot spots: Commons' `ScheduleServices.get#ResourceBookings`,
+  `CalendarServices.get#EventAccessInfo`, `EventServices.get#EventDetail` and EventDetail.xml's Where box; People's Training.js,
+  Recruiting.js and Leave.js (the worker's hooks, unchanged here). The user's call, open: whether `canBook` should be limited to
+  kept events of type WetEvent (interviews and training sessions), leaving leave and production runs to their apps; recommended,
+  a one-line change in `check#EventAccess`.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
