@@ -85,8 +85,9 @@ feature("the resource administrator records a reading of the van's odometer on a
         fits(resources) == true
         resources.getByRole("button", {name: "Record a reading", exact: true}).click()
         const dialog = resources.getByRole("dialog")
+        // the van has no model meter, so the choice lists every meter type by name: its odometer reading is the Distance Meter's
         dialog.getByLabel("Meter", {exact: true}).click()
-        resources.getByRole("option").first().click()
+        resources.getByRole("option", {name: "Distance Meter", exact: true}).click()
         resources.keyboard.press("Tab")
         // above the demo's last reading (48,210 on October 15) and every earlier run's: minutes since November 1, 2026
         const reading = String(60000 + Math.floor((Date.now() - Date.parse("2026-11-01T00:00:00Z")) / 60000))

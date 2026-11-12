@@ -1,6 +1,7 @@
 // Maintenance P1's "usable when" (impl-maintenance P1), as an acceptance walk with artifact authorization on, brought to the app
 // as built (P20, F169): the menu renders for each group with only its areas (each root entry's menu-include and the Requests, Costs
-// and Settings grants), each entry of it opening and the others refused; maint.requester has no Maintenance launcher and is refused
+// and Settings grants), each entry of it opening and the others refused (Requests and Settings, by their grants) or showing none of
+// their records (the areas a menu condition keeps out, whose Mantle reads refuse the user); maint.requester has no Maintenance launcher and is refused
 // the root and every ironstone.maintenance service, as a Projects client and a PASS public account are; Admin's Capabilities shows
 // the Maintenance bundles and an access administrator grants the planner bundle (its permissions, its artifact grants and the
 // launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities and menu (Settings for its Teams tab alone);
@@ -47,6 +48,21 @@ const menus = {
     [users.system]: ids.adminMenu
 }
 const refused = message => /MAINTENANCE_UNAVAILABLE|is not authorized/.test(message)
+// An entry outside a user's menu: Requests and Settings are refused by their artifact grants (BOSS_MNT_REQUESTS, BOSS_MNT_SETTINGS);
+// the other areas are kept out of the menu by permission alone and open with nothing of theirs, Mantle's reads refusing the user
+// (Equipment and Facilities read nothing without a resource read, the lists and reports say none is open), so none of the demo
+// record each would list shows. Scheduling has none: its resources are any resource reader's (find#BookableResources).
+const outsideMarkers = {
+    WorkOrders: "Air handler coil leak",
+    Procedures: "Air compressor AC-200 service",
+    Preventive: "Air handler AHU-2 filter change",
+    Equipment: "Compressor C-1",
+    Facilities: "Service Center",
+    Scheduling: null,
+    Reports: "Work status · backlog now"
+}
+const keptOut = (entry, rendered) =>
+    !opened(rendered) || (Object.hasOwn(outsideMarkers, entry) && !(outsideMarkers[entry] && rendered.output.includes(outsideMarkers[entry])))
 // every ironstone.maintenance service a screen calls, with parameters it accepts from a user who has Maintenance
 const maintenanceServices = [
     ["ironstone.maintenance.ContextServices.get#SharedContext", {}],
@@ -117,7 +133,7 @@ spec({
     }
 })
 
-feature("the menu renders for each group with only its areas; each entry opens and the others are refused", {
+feature("the menu renders for each group with only its areas; each entry opens and the others are refused or show none of theirs", {
     when() {
         const problems = []
         for (const user of groupUsers.concat([users.system])) {
@@ -127,7 +143,7 @@ feature("the menu renders for each group with only its areas; each entry opens a
                 problems.push(`${user}'s menu: ${found.status} ${found.names}`)
             for (const entry of ids.adminMenu) {
                 const rendered = asUser(user, () => page(entry, {}, "html"))
-                if (opened(rendered) !== expected.includes(entry))
+                if (expected.includes(entry) ? !opened(rendered) : !keptOut(entry, rendered))
                     problems.push(`${user} ${opened(rendered) ? "opens" : "is refused"} ${entry}: ${rendered.errors.join(" | ")}`)
             }
         }

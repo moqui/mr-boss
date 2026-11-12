@@ -3688,9 +3688,9 @@ and Accounting; MT-13 extends CX-QUALITY. MT-03/MT-04 use the same WorkEffort fo
 People's checklists. Existing widgets, timers, bookings, content and asset books are reused, not
 separate needs.
 
-Built Nov 11–12, 2026 by impl-maintenance P1–P19: MT-01 to MT-12, MT-15 and MT-16, except
-MT-03's skill level and qualification check and MT-10's customer repair adapter (P8 and P12, in
-review). MT-13 and MT-14 are later.
+Built Nov 11–12, 2026 by impl-maintenance P1–P19: MT-01 to MT-12, MT-15 and MT-16, MT-03's skill
+level and qualification check by P8 and MT-10's customer repair adapter by P12. MT-13 and MT-14 are
+later.
 
 | Need | Kind | Owner | Shared contract |
 | --- | --- | --- | --- |
