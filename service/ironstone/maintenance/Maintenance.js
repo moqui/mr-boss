@@ -172,7 +172,9 @@ const linkPaths = [
     // P18: the lookups, the setup readiness and the equipment import (design §9, §6)
     "Settings/Lookups",
     "Settings/Readiness",
-    "Equipment/EquipmentImport"
+    "Equipment/EquipmentImport",
+    // P11: the cost report (the cost reader's, BOSS_MNT_COSTS)
+    "Reports/MaintenanceCostReport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")

@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MaintenanceCostReport (design-maintenance §8 MaintenanceCostReport, §12 operational reports; review Y2; impl-maintenance P11): the
+    cost reader's only (the artifact group BOSS_MNT_COSTS; mantle.work.MaintenanceReportServices.get#MaintenanceCosts answers
+    MAINTENANCE_COST_VIEW alone), in the Reports area beside PM compliance (design §1.2). CostOptions: the organization, facility, equipment, team, project, kind, component,
+    currency and the period of the sources (from, before); CostTotals: parts, labor and outside service by currency, never added across
+    currencies, the outside service ordered and not yet accepted pending, the hours not approved or with no costing rate apart, and the
+    cost by project; CostSources: each source once (a part issued or returned, a time entry at the costing rate of its class and work
+    type, a supplier bill, an acceptance beyond the bills, an order not yet accepted) with its work order, quantity or hours, amount,
+    currency and posting state. Export CSV (the options and the same sources) and Print (renderMode=html-print, every value escaped)
+    carry the same scope. No person's pay rate. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Cost report" default-menu-index="3" menu-image="sym_o_request_quote" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="assetId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="projectWorkEffortId"/>
+    <parameter name="maintenanceKindEnumId"/>
+    <parameter name="component"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCosts" out-map="exported" in-map="options"/>
+            <script><![CDATA[
+                const cell = (value) => {
+                    let text = value == null ? '' : String(value)
+                    // a spreadsheet does not take a text cell for a formula (a plain number, a return's negative amount, stays a number)
+                    if (!/^-?\d+(\.\d+)?$/.test(text) && /^[=+\-@\t\r]/.test(text)) text = "'" + text
+                    return '"' + text.replace(/"/g, '""') + '"'
+                }
+                const line = (cells) => cells.map(cell).join(',')
+                const costs = exported.costs
+                const lines = [line(['Maintenance costs', costs.asOfText]),
+                    line(['Options', Object.entries(options).filter(([, value]) => value != null && value !== '').map(([key, value]) => key + '=' + value).join('; ') || 'none'])]
+                lines.push(line(['Currency', 'Parts', 'Labor', 'Outside service', 'Total', 'Ordered, not accepted']))
+                for (const row of costs.totalList) lines.push(line([row.currencyUomId, row.parts, row.labor, row.outside, row.total, row.pending]))
+                lines.push(line(['Hours not approved', costs.unapprovedHoursText]), line(['Hours with no costing rate', costs.unpricedHoursText]), '')
+                lines.push(line(['Work order', 'Name', 'Component', 'Source', 'Source id', 'Step', 'Date', 'What', 'Quantity or hours', 'Costing rate',
+                    'Amount', 'Currency', 'Not counted', 'State', 'Cost centre', 'Project']))
+                for (const row of costs.sourceList)
+                    lines.push(line([row.workEffortId, row.workEffortName, row.component, row.sourceTypeText, row.sourceId, row.stepName, row.dateText,
+                        row.description, row.quantityText, row.rateText || '', row.amount == null ? '' : String(row.amount), row.currencyUomId || '',
+                        row.stateText, row.postingText, row.costCenterId || '', row.projectWorkEffortId || '']))
+                ec.web.sendTextResponse(lines.join('\r\n') + '\r\n', 'text/csv', 'maintenance-costs.csv')
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, assetId:assetId || null,
+                teamPartyId:teamPartyId || null, projectWorkEffortId:projectWorkEffortId || null, maintenanceKindEnumId:maintenanceKindEnumId || null,
+                component:component || null, currencyUomId:currencyUomId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCosts" out-map="found" in-map="options"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="costs" from="found?.costs || null"/>
+        <set field="totalRows" from="costs?.totalList || []"/>
+        <set field="projectRows" from="costs?.projectList || []"/>
+        <set field="sourceRows" from="costs?.sourceList || []"/>
+        <set field="apartText" from="[costs &amp;&amp; costs.unapprovedHoursText != '0' ? costs.unapprovedHoursText + ' h not approved yet' : null,
+                costs &amp;&amp; costs.unpricedHoursText != '0' ? costs.unpricedHoursText + ' h approved with no costing rate' : null,
+                costs?.unpricedParts ? costs.unpricedParts + ' part movements with no cost' : null].filter(Boolean).join(' · ')"/>
+        <set field="componentOptions" from="[{value:'parts', label:'Parts'}, {value:'labor', label:'Labor'}, {value:'outside', label:'Outside service'}]"/>
+        <set field="currencyOptions" from="Array.from(new Set((costs?.currencies || []).concat(currencyUomId ? [currencyUomId] : []))).map(value =&gt; ({value, label:value}))"/>
+        <set field="exportParameters" from="Object.fromEntries(Object.entries(options).filter(([, value]) =&gt; value != null &amp;&amp; value !== ''))"/>
+        <set field="printParameters" from="Object.assign({renderMode:'html-print', lastStandalone:'true'}, exportParameters)"/>
+        <set field="printing" from="sri.getRenderMode() == 'html-print'"/>
+        <script><![CDATA[
+            // the printed page: the same options, totals and sources, every value escaped
+            printHtml = ''
+            if (!printing) return
+            const enc = (value) => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\u0022/g, '&quot;')
+            const table = (heads, rows) => '<table class="m-print"><thead><tr>' + heads.map((head) => '<th>' + enc(head) + '</th>').join('')
+                + '</tr></thead><tbody>' + rows.map((cells) => '<tr>' + cells.map((value) => '<td>' + enc(value) + '</td>').join('') + '</tr>').join('')
+                + '</tbody></table>'
+            const optionText = Object.entries(exportParameters).map(([key, value]) => key + ' ' + value).join(' · ') || 'Every work order you read'
+            printHtml = '<style>table.m-print{border-collapse:collapse;width:100%;margin-bottom:12px}table.m-print th,table.m-print td{border-bottom:1px solid #ccc;padding:3px 6px;text-align:left;font-size:12px}</style>'
+                + '<h2>' + enc('Maintenance costs') + '</h2><p>' + enc('As of ' + (costs?.asOfText || '') + ' · ' + optionText) + '</p>'
+            if (!costs) { printHtml += '<p>' + enc(reportError || 'The costs are not available to you.') + '</p>'; return }
+            printHtml += table(['Currency', 'Parts', 'Labor', 'Outside service', 'Total', 'Ordered, not accepted'],
+                    totalRows.map((row) => [row.currencyUomId, row.partsText, row.laborText, row.outsideText, row.totalText, row.pendingText]))
+                + (apartText ? '<p>' + enc('Apart: ' + apartText) + '</p>' : '')
+                + (projectRows.length ? table(['Project', 'Cost'], projectRows.map((row) => [row.projectName + ' (' + row.projectWorkEffortId + ')', row.totalText])) : '')
+                + table(['Work order', 'Source', 'Step', 'Date', 'What', 'Quantity or hours', 'Costing rate', 'Amount', 'Not counted', 'State'],
+                    sourceRows.map((row) => [row.workEffortId + ' ' + row.workEffortName, row.sourceTypeText + ' ' + row.sourceId, row.stepName, row.dateText,
+                        row.description, row.quantityText, row.rateText || '', row.amountText, row.stateText, row.postingText]))
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="CostPrint" condition="printing">
+            <widgets>
+                <render-mode><text type="html-print"><![CDATA[${printHtml}]]></text></render-mode>
+            </widgets>
+            <fail-widgets>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Maintenance costs" type="h5"/>
+                        <label text="Parts, labor and outside service of the work orders you read, each source once, by currency." type="p"
+                                style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="m-record-actions">
+                        <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor-button" parameter-map="exportParameters"
+                                condition="costs"/>
+                        <link url="." text="Print" icon="sym_o_print" link-type="anchor-button" target-window="_blank" parameter-map="printParameters"
+                                condition="costs"/>
+                    </container>
+                </container>
+                <form-single name="CostOptions" transition="." map="options">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field title="Equipment">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'equipment', selected:assetId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="teamPartyId">
+                        <default-field title="Team">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'teams', selected:teamPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="projectWorkEffortId">
+                        <default-field title="Project" tooltip="Choose the organization first">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'projects', selected:projectWorkEffortId}">
+                                    <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="maintenanceKindEnumId">
+                        <default-field title="Kind">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'maintenanceKinds', selected:maintenanceKindEnumId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="component">
+                        <default-field title="Component" tooltip="Every component when empty">
+                            <drop-down allow-empty="true"><list-options list="componentOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency" tooltip="Every currency, each apart, when empty">
+                            <drop-down allow-empty="true"><list-options list="currencyOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="Before" tooltip="The day itself is not included"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="organizationPartyId"/><field-ref name="facilityId"/><field-ref name="assetId"/></field-row-big>
+                        <field-row-big><field-ref name="teamPartyId"/><field-ref name="projectWorkEffortId"/><field-ref name="maintenanceKindEnumId"/></field-row-big>
+                        <field-row-big><field-ref name="component"/><field-ref name="currencyUomId"/><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row-big>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <label text="${reportError}" type="p" style="text-negative" condition="!costs &amp;&amp; reportError"/>
+                <section name="CostsFound" condition="costs">
+                    <widgets>
+                        <label text="${costs.workOrderCount} work orders as of ${costs.asOfText}${costs.capped ? '; only the first 2000 are counted: narrow the options' : ''}"
+                                type="p" style="text-caption m-muted"/>
+                        <container-box>
+                            <box-header title="Cost by currency"/>
+                            <box-body-nopad>
+                                <form-list name="CostTotals" list="totalRows" skip-form="true" paginate="false">
+                                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                    <field name="partsText" align="right"><default-field title="Parts"><display/></default-field></field>
+                                    <field name="laborText" align="right"><default-field title="Labor"><display/></default-field></field>
+                                    <field name="outsideText" align="right"><default-field title="Outside service"><display/></default-field></field>
+                                    <field name="totalText" align="right"><default-field title="Total"><display style="text-weight-medium"/></default-field></field>
+                                    <field name="pendingText" align="right"><default-field title="Ordered, not accepted"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="currencyUomId"/><field-ref name="totalText"/></column>
+                                        <column><field-ref name="partsText"/><field-ref name="laborText"/><field-ref name="outsideText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No cost in these options." type="p" style="m-muted q-pa-sm q-mb-none" condition="!totalRows.length"/>
+                                <label text="Apart: ${apartText}" type="p" style="text-caption text-warning q-pa-sm q-mb-none" condition="apartText"/>
+                                <label text="Each currency is totalled apart; none is converted." type="p" style="text-caption m-muted q-pa-sm q-mb-none"
+                                        condition="totalRows.length &gt; 1"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="ProjectsFound" condition="projectRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="By project"/>
+                                    <box-body-nopad>
+                                        <form-list name="CostProjects" list="projectRows" skip-form="true" paginate="false">
+                                            <field name="projectName"><default-field title="Project"><display text="${projectName} (${projectWorkEffortId})"/></default-field></field>
+                                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                            <field name="totalText" align="right"><default-field title="Cost"><display/></default-field></field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Sources · ${sourceRows.length}${costs.sourcesCapped ? ' (the first 5000)' : ''}"/>
+                            <box-body-nopad>
+                                <form-list name="CostSources" list="sourceRows" skip-form="true" paginate="false">
+                                    <field name="workEffortId"><default-field title="Work order">
+                                        <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}/Costs" text="${workEffortId} · ${workEffortName}" link-type="anchor"
+                                                parameter-map="{workEffortId:workEffortId}"/></default-field></field>
+                                    <field name="sourceTypeText"><default-field title="Source"><display text="${sourceTypeText} ${sourceId}"/></default-field></field>
+                                    <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                                    <field name="description"><default-field title="What"><display/></default-field></field>
+                                    <field name="quantityText" align="right"><default-field title="Quantity or hours"><display/></default-field></field>
+                                    <field name="rateText"><default-field title="Costing rate"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="Not counted"><display style="text-warning"/></default-field></field>
+                                    <field name="postingText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workEffortId"/><field-ref name="description"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No source in these options." type="p" style="m-muted q-pa-sm q-mb-none" condition="!sourceRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

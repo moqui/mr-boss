@@ -795,6 +795,22 @@ feature(
                     .list()
                 if (launcher.size() !== 1 || launcher.get(0).artifactGroupId !== "BOSS_MAINTENANCE")
                     problems.push("the launcher's artifact")
+                // P11 review (R2): every area a Maintenance bundle's group opens by an ALWAYS grant, its bundle carries, so a group given
+                // the bundle in Admin opens it too (the planner's and supervisor's Requests were carried by none)
+                for (const authz of Array.from(
+                    ec.entity
+                        .find("moqui.security.ArtifactAuthz")
+                        .condition("userGroupId", "in", bundles)
+                        .condition("authzTypeEnumId", "AUTHZT_ALWAYS")
+                        .list()
+                )) {
+                    if (authz.userGroupId === "BOSS_MAINTENANCE_ADMIN") continue
+                    const carried = ec.entity
+                        .find("moqui.security.CapabilityBundleArtifact")
+                        .condition({userGroupId: authz.userGroupId, artifactGroupId: authz.artifactGroupId})
+                        .count()
+                    if (!carried) problems.push(`${authz.userGroupId}'s bundle does not carry ${authz.artifactGroupId}`)
+                }
                 const holders = userPermissionId =>
                     Array.from(ec.entity.find("moqui.security.CapabilityBundlePermission").condition({userPermissionId}).list())
                         .map(row => row.userGroupId)
@@ -1206,6 +1222,51 @@ feature(
             !out.retailScopes.includes(ids.organizationId)
             out.adminReadiness == ""
             out.resourcesReadiness.includes("PERMISSION_DENIED")
+        }
+    }
+)
+
+// P11: costs are the cost reader's (MAINTENANCE_COST_VIEW): Mantle's get#MaintenanceCosts answers maint.cost and refuses the planner
+// and the supervisor, and another organization; the Costs tab and the cost report (BOSS_MNT_COSTS) are in the cost reader's menu and
+// no one else's (the report in the Reports area beside PM compliance), and refused to the planner
+feature(
+    "a work order's costs are the cost reader's: the planner and the supervisor are refused, Retail is refused, and only the cost reader has the tab and the report",
+    {
+        when() {
+            const as = (user, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal("mantle.work.MaintenanceReportServices.get#MaintenanceCosts", parameters)
+                })
+            const work = {workEffortId: ids.heldOrderId}
+            const tabs = user =>
+                shell(user, true, "WorkOrders/WorkOrderDetail/Overview?workEffortId=" + ids.heldOrderId, "WorkOrderDetail").names
+            const areas = user => shell(user, true, "Reports/PreventiveComplianceReport", "Reports").names
+            return {
+                holder: as(users.cost, work),
+                planner: as(users.planner, work),
+                supervisor: as(users.supervisor, work),
+                otherOrganization: as(users.cost, {organizationPartyId: ids.otherOrganizationId}),
+                costTabs: tabs(users.cost),
+                plannerTabs: tabs(users.planner),
+                costAreas: areas(users.cost),
+                plannerAreas: areas(users.planner),
+                plannerTab: screenRefusal(users.planner, "WorkOrders/WorkOrderDetail/Costs", work),
+                plannerReport: screenRefusal(users.planner, "Reports/MaintenanceCostReport")
+            }
+        },
+        then(r) {
+            r.holder == ""
+            r.planner.includes("PERMISSION_DENIED")
+            r.supervisor.includes("PERMISSION_DENIED")
+            r.otherOrganization.includes("ORGANIZATION_DENIED")
+            r.costTabs.includes("Costs")
+            r.plannerTabs.includes("Overview")
+            !r.plannerTabs.includes("Costs")
+            r.costAreas.includes("MaintenanceCostReport")
+            !r.plannerAreas.includes("MaintenanceCostReport")
+            r.plannerTab != ""
+            r.plannerReport != ""
         }
     }
 )

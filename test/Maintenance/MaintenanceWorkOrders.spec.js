@@ -222,6 +222,8 @@ feature(
             policy.output.includes("Transcribe technicians' voice notes")
             // P18: a change starts from a date chosen
             policy.output.includes("Starts")
+            // P11: the threshold's cost half, a policy field
+            policy.output.includes("Approve planned work estimated up to")
         }
     }
 )

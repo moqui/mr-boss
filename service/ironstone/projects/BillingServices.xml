@@ -1325,7 +1325,8 @@ along with this software (see the LICENSE.md file). If not, see
             invoice when it may be invoiced), Milestone billing (each share: milestone, order line, percent, amount, status: billed with
             its invoice, due, waiting for approval, not reached), Invoices (client invoices) and Expenses (expense invoices), Commercial (the
             order lines it fulfils, linked to OrderDetail); the billing basis; whether the user manages the project (canManage: the edits,
-            Send estimate, link a line).</description>
+            Send estimate, link a line); and the maintenance work charged to the project with its cost by currency (maintenanceRows,
+            maintenanceTotalText; impl-maintenance P11, an owner contract: the repair is a project cost).</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="money" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -1377,6 +1378,11 @@ along with this software (see the LICENSE.md file). If not, see
                 sharedText: line.shareCount ? ec.resource.expand('${percent} in ${count} milestones', '', {percent: pct(toDecimal(line.sharedAmount).isZero() || toDecimal(line.total).isZero() ? 0
                     : toDecimal(line.sharedAmount).multiply(toDecimal(100)).divide(toDecimal(line.total)).setScale(1, 'HALF_UP')), count: line.shareCount}) : L('No milestone shares'),
                 billedText: cash(line.billedAmount, line.currencyUomId)}))
+            // impl-maintenance P11: the repairs charged to the project, each currency apart (listed, never joined by a plus)
+            const costText = (totals) => Array.from(totals || []).map((row) => row.totalText).join(', ')
+            const maintenanceRows = Array.from(sm.maintenanceList || []).map((work) => ({workEffortId: work.workEffortId, workEffortName: work.workEffortName,
+                statusText: work.statusText, costText: costText(work.totalList) || cash(0),
+                unpricedText: toDecimal(work.unpricedHours ?? 0).isZero() ? '' : hoursText(work.unpricedHours) + ' h ' + L('not priced yet')}))
             const ready = !!unbilled?.canInvoice
             money = {workEffortId: workEffortId, currencyUomId: uom, canManage: !!access.canManage, clientName: sm.clientName || '', hasClient: !!sm.clientPartyId,
                 budgetRows: budgetRows, warning: !!(sm.projectWarning || sm.projectDanger),
@@ -1389,6 +1395,7 @@ along with this software (see the LICENSE.md file). If not, see
                 canInvoice: ready, cannotReason: unbilled ? (unbilled.cannotReason || '') : L('Nothing to invoice'),
                 shareRows: shareRows, invoiceRows: Array.from(sm.invoiceList || []).map(invoiceRow), expenseRows: Array.from(sm.expenseList || []).map(invoiceRow),
                 expenseTotalText: cash(sm.expenseTotal), expenseBilledText: cash(sm.expenseBilled), lineRows: lineRows,
+                maintenanceRows: maintenanceRows, maintenanceTotalText: costText(sm.maintenanceTotalList),
                 unbilledUrl: '/qapps/Projects/Billing/Unbilled?rootWorkEffortId=' + encodeURIComponent(workEffortId),
                 timeUrl: '/qapps/Projects/Projects/ProjectDetail/Time?workEffortId=' + encodeURIComponent(workEffortId) + '&list=unbilled',
                 estimateUrl: '/apps/Projects/Projects/EstimatePrint?renderMode=html-print&workEffortId=' + encodeURIComponent(workEffortId)}
