@@ -256,7 +256,7 @@ along with this software (see the LICENSE.md file). If not, see
             icon and label, the app's title (appTitles, from the shell data), when it came ("5 min ago", "Yesterday 3:12
             PM", "Oct 12"), whether it is unread, an approval's summary, and the link a row opens: the record's BOSS screen
             (ironstone.commons.PaletteServices.get#RecordLink) for a notification on a record or for a Mantle record-update topic,
-            else its own link (one through Commons' openRecord resolved here the same way). openIsScreen is true for a /qapps or /apps link, which opens in the canvas.</description>
+            except an approval topic's, which opens its own screen link first when it has one (impl-maintenance P16 review), else its own link (one through Commons' openRecord resolved here the same way). openIsScreen is true for a /qapps or /apps link, which opens in the canvas.</description>
         <in-parameters>
             <parameter name="notificationList" type="List"/>
             <parameter name="appTitles" type="Map"/>
@@ -306,7 +306,12 @@ along with this software (see the LICENSE.md file). If not, see
                     recordId = message[topicRecords[row.topic][1]]
                 }
                 let openUrl = null
-                if (recordEntityName && recordId) {
+                // an approval topic's card opens the topic's own screen link first (the place its approver decides it, such as
+                // Maintenance's BookingRequests for ResourceBooking, impl-maintenance P16 review R8), else the record's as any card
+                const ownLink = row.canApprove && row.linkText && /^\/q?apps\//.test(String(row.linkText))
+                        && !/^\/q?apps\/Commons\/openRecord\?/.test(String(row.linkText)) ? String(row.linkText) : null
+                if (ownLink) openUrl = ownLink
+                else if (recordEntityName && recordId) {
                     try {
                         openUrl = ec.service.sync().name('ironstone.commons.PaletteServices.get#RecordLink')
                                 .parameters({recordEntityName: recordEntityName, id: recordId}).call()?.url || null

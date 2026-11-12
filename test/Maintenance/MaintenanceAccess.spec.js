@@ -973,6 +973,45 @@ feature(
     }
 )
 
+feature(
+    "booking requests are their approver's: a planner is refused the list and the decision, and a room the approver does not approve is refused",
+    {
+        when() {
+            const R = "mantle.work.ResourceBookingServices."
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const listed = asUser(users.booking, () => {
+                ec.artifactExecution.disableAuthz()
+                // from the demo's week, so the handover (Nov 18, 2026) is listed after its day has passed too
+                return invoke(R + "find#ResourceBookingRequests", {fromDate: "2026-11-12"}).requestList || []
+            })
+            // another organization's facility asked by name lists nothing
+            const otherListed = asUser(users.booking, () => {
+                ec.artifactExecution.disableAuthz()
+                return invoke(R + "find#ResourceBookingRequests", {facilityId: ids.otherFacilityId, fromDate: "2026-11-12"}).requestList || []
+            })
+            const deny = {workEffortId: ids.requestedEventId, facilityId: ids.managedRoomId, decision: "deny", reason: "Spec"}
+            return {
+                listed,
+                otherListed,
+                planner: as(users.planner, R + "find#ResourceBookingRequests", {}),
+                plannerDecides: as(users.planner, R + "decide#ResourceBooking", deny),
+                otherRoom: as(users.booking, R + "decide#ResourceBooking", Object.assign({}, deny, {facilityId: ids.otherFacilityId}))
+            }
+        },
+        then({listed, otherListed, planner, plannerDecides, otherRoom}) {
+            listed.some(row => row.workEffortId == ids.requestedEventId && row.canDecide)
+            otherListed.length == 0
+            planner.includes("PERMISSION_DENIED")
+            plannerDecides.includes("PERMISSION_DENIED")
+            otherRoom.includes("NOT_APPROVER")
+        }
+    }
+)
+
 // P7: a work order's checklist is read by its readers (Mantle's get#ProcessExecution: the technician it is assigned to, not another
 // technician, and not Retail's planner), and a waiver is a supervisor's (waive#ProcessStep: the technician refused before anything
 // else; the supervisor passes the permission and is refused only for naming the work order, not a step)

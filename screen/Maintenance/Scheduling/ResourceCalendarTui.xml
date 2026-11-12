@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The terminal twin of Maintenance's ResourceCalendar (style-guide §4.8; impl-maintenance P16): ResourceCalendar.xml's tui text is a
+    dynamic container of this screen. The day's (date, else today) intervals of the bookable rooms and equipment of the user's scope,
+    each resource's from its one availability read (mantle.work.ResourceBookingServices.get#ResourceAvailability: booked, pending
+    approval, blocked and out of service kept apart, an event the user may not see named Busy), soonest first, each resource opening
+    its policy. Booking is in the browser or Commons. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Resource calendar" default-menu-include="false">
+
+    <parameter name="date"/>
+
+    <actions><script><![CDATA[
+        const day = /^\d{4}-\d{2}-\d{2}/.test(String(date || '')) ? String(date).substring(0, 10) : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')
+        const pattern = 'yyyy-MM-dd HH:mm:ss.SSS'
+        const dayStart = ec.l10n.parseTimestamp(day + ' 00:00:00.000', pattern)
+        dayText = ec.l10n.format(ec.l10n.parseTimestamp(day + ' 12:00:00.000', pattern), 'EEEE, MMM d, yyyy')
+        const [year, month, dayOfMonth] = day.split('-').map(Number)
+        const dayAfter = (count) => new Date(Date.UTC(year, month - 1, dayOfMonth + count)).toISOString().substring(0, 10)
+        previousDay = dayAfter(-1)
+        nextDay = dayAfter(1)
+        const startMs = Number(String(dayStart))
+        const resources = Array.from(ec.resource.script('component://mr-boss/service/ironstone/maintenance/Maintenance.js')
+                .execute('calendarResources', {resourceType: 'all'}).resourceList).slice(0, 50)
+        resourceRows = resources.map((resource) => ({name: resource.name, typeLabel: resource.typeLabel || '', site: resource.site || '',
+            policyText: resource.policyText || '', facilityId: resource.resourceType === 'room' ? resource.resourceId : null,
+            assetId: resource.resourceType === 'equipment' ? resource.resourceId : null}))
+        intervalRows = []
+        for (const resource of resourceRows) {
+            ec.message.pushErrors()
+            try {
+                const read = ec.service.sync().name('mantle.work.ResourceBookingServices.get#ResourceAvailability').parameters({facilityId: resource.facilityId,
+                    assetId: resource.assetId, fromDate: new Date(startMs), thruDate: new Date(startMs + 86400000)}).call()
+                if (!ec.message.hasError()) for (const row of Array.from(read?.intervalList || []))
+                    intervalRows.push({sortKey: String(row.fromText) + '|' + resource.name, timeText: row.fromText + ' – ' + row.thruText,
+                        resourceName: resource.name, kindText: row.kindText, label: row.label})
+            } catch (err) {
+                ec.logger.warn(`Availability of ${resource.name} not read: ${err && err.message ? err.message : err}`)
+            } finally { ec.message.clearErrors(); ec.message.popErrors() }
+        }
+        intervalRows.sort((left, right) => left.sortKey < right.sortKey ? -1 : left.sortKey > right.sortKey ? 1 : 0)
+    ]]></script></actions>
+    <widgets>
+        <container-box><box-header title="Rooms and equipment"/><box-body-nopad>
+            <form-list name="ResourceCalendarTuiResources" list="resourceRows" skip-form="true" paginate="false">
+                <field name="name"><default-field title="Name">
+                    <link url="${sharedLinks['Scheduling/ResourcePolicyDetail']}" link-type="anchor" text="${name}"
+                            parameter-map="{facilityId:facilityId, assetId:assetId}"/></default-field></field>
+                <field name="typeLabel"><default-field title="Type"><display/></default-field></field>
+                <field name="site"><default-field title="Where"><display/></default-field></field>
+                <field name="policyText"><default-field title="Booking rule"><display style="text-caption"/></default-field></field>
+            </form-list>
+        </box-body-nopad></container-box>
+        <label type="p" style="text-caption m-muted" condition="!resourceRows.length" text="No bookable rooms or equipment in your scope."/>
+
+        <container style="row items-center q-gutter-sm q-mt-md">
+            <label type="h6" text="On ${dayText}" style="q-my-none"/>
+            <link url="${sharedLinks['Scheduling/ResourceCalendar']}" link-type="anchor" text="Day before" parameter-map="{date:previousDay}"/>
+            <link url="${sharedLinks['Scheduling/ResourceCalendar']}" link-type="anchor" text="Today"/>
+            <link url="${sharedLinks['Scheduling/ResourceCalendar']}" link-type="anchor" text="Day after" parameter-map="{date:nextDay}"/>
+        </container>
+        <form-list name="ResourceCalendarTuiIntervals" list="intervalRows" skip-form="true" paginate="false">
+            <field name="timeText"><default-field title="When"><display/></default-field></field>
+            <field name="resourceName"><default-field title="Resource"><display/></default-field></field>
+            <field name="kindText"><default-field title="State"><display/></default-field></field>
+            <field name="label"><default-field title="What"><display/></default-field></field>
+        </form-list>
+        <label type="p" style="text-caption m-muted" condition="!intervalRows.length" text="Nothing booked or blocked on this day."/>
+        <label type="p" style="text-caption m-muted q-mt-sm" text="Booking a room or equipment is in the browser and in Commons."/>
+    </widgets>
+</screen>

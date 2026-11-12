@@ -324,7 +324,7 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AssetCalendar | NewEventForm | Commons/Calendar/Schedules; Maintenance/Scheduling/ResourceCalendar; Maintenance/Equipment/EquipmentDetail | Commons/Calendar/Schedules |
+| AssetCalendar | NewEventForm | Commons/Calendar/Schedules; Maintenance/Scheduling/ResourceCalendar; Maintenance/Equipment/EquipmentDetail | Commons/Calendar/Schedules; Maintenance/Scheduling/ResourceCalendar (Commons' Book dialog, impl-maintenance P16) |
 | AssetDetail | UpdateAssetAcquireCost | Accounting/FixedAssets/EquipmentDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (Repair acquire cost) |
 | AssetDetail | AuditLogList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Audit |
 | AssetDetail | EditAsset | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail (Edit details: name and comments); Maintenance/Equipment/EquipmentDetail/Identity (Edit equipment, store#MaintenanceEquipment) |

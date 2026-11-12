@@ -329,6 +329,14 @@ along with this software (see the LICENSE.md file). If not, see
             thruDate="2026-11-17 13:00:00" unavailabilityReasonEnumId="RurClosure" plannedOutage="Y" revision="1"
             description="Carpet replacement on floor 1" createdByUserId="BOSS_MNT_RESOURCES" createdDate="2026-11-12 08:00:00"/>
 
+    <!-- P16 (impl-maintenance; design §7.1, BookingRequests): the technician's shift handover asks for Room 101 next Wednesday
+        afternoon and waits for the resource approver (maint.booking), with a note for them -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_EV_HANDOVER" workEffortTypeEnumId="WetEvent" purposeEnumId="WepMeeting"
+            ownerPartyId="BOSS_MNT_TECH" statusId="WeInPlanning" workEffortName="Shift handover"
+            estimatedStartDate="2026-11-18 14:00:00" estimatedCompletionDate="2026-11-18 15:00:00" timeUomId="TF_hr"/>
+    <mantle.work.effort.WorkEffortFacility workEffortId="BOSS_MNT_EV_HANDOVER" facilityId="BOSS_MNT_ROOM_101" statusId="WefRequested"
+            comments="Six of us, and the screen for the dashboards"/>
+
     <!-- P13 (design-maintenance §5): three preventive plans of Services, drafts the planner activates: Room 201's monthly
         inspection from November 30 (a month's end; planned on business days, the time zone inherited from the campus); the
         compressor's oil service every 250 run hours, following the AC-200 model's 500-hour default with this compressor's override
