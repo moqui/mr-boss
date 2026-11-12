@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     impl-maintenance P3): the equipment's work orders (Mantle's find#MaintenanceWorkOrders, every status) and its maintenance records,
     each with its work order or, for an open record with none (Manufacturing's request, the baseline's), Adopt for a planner or
     supervisor (adopt#MaintenanceRecord: once; completed history stays as it is); Create work opens New work order for the equipment.
-    Renders nothing outside Maintenance. -->
+    P13: its preventive plans (Mantle's find#MaintenanceSchedules, drafts and active ones), each with its interval, next due and due
+    state, for a maintenance reader; New plan opens Plans for a planner or supervisor. Renders nothing outside Maintenance. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Maintenance" default-menu-index="6">
     <parameter name="assetId"/>
@@ -36,6 +37,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
         </if>
         <set field="equipmentWorkOrders" from="workOrdersFound?.workOrderList || []"/>
+        <!-- P13: its preventive plans -->
+        <if condition="found?.asset &amp;&amp; maintenance.capabilities.view">
+            <service-call name="mantle.work.MaintenancePlanServices.find#MaintenanceSchedules" out-map="plansFound"
+                    transaction="force-new" ignore-error="true" in-map="{assetId:assetId, pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="equipmentPlans" from="plansFound?.scheduleList || []"/>
         <set field="recordRows" from="found?.maintenanceRecords || []"/>
         <set field="canPlan" from="!!(maintenance?.capabilities?.plan || maintenance?.capabilities?.supervise)"/>
     </actions>
@@ -68,6 +76,36 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <section name="EquipmentPlans" condition="maintenance.capabilities.view">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Preventive plans"/>
+                            <box-toolbar>
+                                <link url="${sharedLinks['Preventive/Plans/Find']}" text="New plan" icon="sym_o_add" link-type="anchor-button"
+                                        parameter-map="{assetId:assetId}" condition="canPlan"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label text="No preventive plan covers this equipment." type="p" style="m-muted q-pa-sm" condition="!equipmentPlans.length"/>
+                                <form-list name="EquipmentPlanList" list="equipmentPlans" skip-form="true" paginate="false">
+                                    <field name="maintenanceScheduleId">
+                                        <default-field title="Plan">
+                                            <link url="${sharedLinks['Preventive/Plans/PlanDetail']}" text="${scheduleName}" link-type="anchor"
+                                                    parameter-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="intervalText"><default-field title="Interval"><display/></default-field></field>
+                                    <field name="nextDueText"><default-field title="Next due"><display/></default-field></field>
+                                    <field name="dueStateText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="maintenanceScheduleId"/><field-ref name="intervalText"/></column>
+                                        <column><field-ref name="dueStateText"/><field-ref name="nextDueText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
                 <section name="EquipmentRecords" condition="recordRows.length">
                     <widgets>
                         <container-box>

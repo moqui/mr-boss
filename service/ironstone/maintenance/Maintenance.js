@@ -16,6 +16,7 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
 const procedures = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceProcedures.js")
+const plans = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenancePlans.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -153,7 +154,10 @@ const linkPaths = [
     "Procedures/ProcedureDetail",
     // P9: a work order's parts issued and returned, and a part's stock (design §3 mount rows)
     "WorkOrders/MaterialIssueReceipt",
-    "WorkOrders/InventoryAvailability"
+    "WorkOrders/InventoryAvailability",
+    // P13: preventive plans and the plan record (design §5)
+    "Preventive/Plans/Find",
+    "Preventive/Plans/PlanDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -267,6 +271,21 @@ const recordKinds = {
                 detail: organizationName(found.organizationPartyId),
                 readOnly: !!found.readOnly,
                 assignedRead: !!found.assignedRead
+            }
+        }
+    },
+    // P13: a preventive plan, through Mantle's plan read (a maintenance reader of its organization)
+    plan: {
+        name: "Plan",
+        icon: "sym_o_event_repeat",
+        destination: "Preventive/Plans/PlanDetail",
+        parameter: "maintenanceScheduleId",
+        read: (userScope, maintenanceScheduleId) => {
+            const schedule = plans().requireSchedule(userScope.mantle, maintenanceScheduleId)
+            return {
+                organizationPartyId: schedule.organizationPartyId,
+                label: schedule.scheduleName || maintenanceScheduleId,
+                detail: organizationName(schedule.organizationPartyId)
             }
         }
     },
@@ -458,6 +477,8 @@ const procedureChoices = [
     "skillTypes",
     "parts"
 ]
+// P13: the choices of preventive plans, answered to a reader of maintenance work or a planner or supervisor
+const planChoices = ["planDefaults", "planMeters", "holidayCalendars"]
 const workChoices = [
     "maintenanceKinds",
     "maintenanceTypes",
@@ -860,6 +881,67 @@ const choiceSources = {
             uomId => one("moqui.basic.Uom", {uomId})?.description || uomId
         )
     },
+    // P13: the maintenance defaults of an equipment's model (assetId), for a plan that follows one
+    planDefaults: (userScope, term, selected, p) => {
+        const asset = p?.assetId ? one("mantle.product.asset.Asset", {assetId: p.assetId}) : null
+        if (!asset?.productId) return []
+        recordOf(userScope, "asset", asset.assetId)
+        return Array.from(find("mantle.product.maintenance.ProductMaintenance", {productId: asset.productId}).list())
+            .filter(
+                row =>
+                    !term ||
+                    String(row.description || row.productMaintenanceId)
+                        .toLowerCase()
+                        .includes(term.toLowerCase())
+            )
+            .slice(0, choiceLimit)
+            .map(row => ({value: row.productMaintenanceId, label: row.description || row.productMaintenanceId}))
+    },
+    // the counting meters of an equipment's model (assetId), the meters a plan reads
+    planMeters: (userScope, term, selected, p) => {
+        const asset = p?.assetId ? one("mantle.product.asset.Asset", {assetId: p.assetId}) : null
+        if (!asset?.productId) return []
+        recordOf(userScope, "asset", asset.assetId)
+        return Array.from(
+            find("mantle.product.maintenance.ProductMeter", {productId: asset.productId, isCumulative: "Y"}).list()
+        ).map(row => ({value: row.productMeterId, label: row.meterName || row.productMeterId}))
+    },
+    // People's holiday calendars (WcatHoliday categories) of the scope's organizations (one organization's with
+    // organizationPartyId) and the shared ones
+    holidayCalendars: (userScope, term, selected, p) => {
+        const owners = p?.organizationPartyId
+            ? covers(userScope, p.organizationPartyId)
+                ? [p.organizationPartyId]
+                : []
+            : organizationIds(userScope)
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.effort.WorkEffortCategory", {categoryTypeEnumId: "WcatHoliday"})
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("ownerPartyId", "is-null", null)].concat(
+                        owners.length ? [factory.makeCondition("ownerPartyId", "in", owners)] : []
+                    ),
+                    "or"
+                )
+            )
+            .orderBy("description")
+            .limit(choiceLimit)
+        if (term) query = query.condition(factory.makeCondition("description", "like", likeText(term)).ignoreCase())
+        const options = Array.from(query.list()).map(row => ({
+            value: row.workEffortCategoryId,
+            label: row.description || row.workEffortCategoryId
+        }))
+        const admits = id => {
+            const row = one("mantle.work.effort.WorkEffortCategory", {workEffortCategoryId: id})
+            return row?.categoryTypeEnumId === "WcatHoliday" && (!row.ownerPartyId || owners.includes(row.ownerPartyId))
+        }
+        return withSelected(
+            options,
+            selected,
+            admits,
+            id => one("mantle.work.effort.WorkEffortCategory", {workEffortCategoryId: id})?.description || id
+        )
+    },
     // the steps of a procedure (rootWorkEffortId) a step may wait for, never the step itself (workEffortId)
     procedureSteps: (userScope, term, selected, p) => {
         if (!p?.rootWorkEffortId) return []
@@ -965,6 +1047,7 @@ function choices(p) {
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Maintenance choice " + p.choice)
     const caps = userScope.capabilities
     if (procedureChoices.includes(p.choice) && !caps.processView && !caps.plan && !caps.supervise) return {options: []}
+    if (planChoices.includes(p.choice) && !caps.view && !caps.plan && !caps.supervise) return {options: []}
     if (resourceChoices.includes(p.choice) && !userScope.capabilities.resourceRead) return {options: []}
     if (workChoices.includes(p.choice) && !userScope.capabilities.workRead && !userScope.capabilities.settingsEdit)
         return {options: []}

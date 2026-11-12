@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance demo's links to People's and Purchasing's demo records (impl-maintenance P2), in a file that loads after
     theirs (BossMaintenanceDemoData.xml loads before them): the custodians of Services' compressor and multimeter, Kenji and Sofia,
     Services' technicians in People's demo, and the supplier warranty's warrantor of the compressor and the air handler; P3's team
-    and work orders; P6's procedures. -->
+    and work orders; P6's procedures; P13's preventive plans. -->
 <entity-facade-xml type="demo">
     <mantle.product.asset.AssetPartyAssignment assetId="BOSS_MNT_COMPRESSOR" partyId="BOSS_PPL_KENJI" roleTypeId="Custodian"
             fromDate="2026-01-05 08:00:00"/>
@@ -318,4 +318,35 @@ along with this software (see the LICENSE.md file). If not, see
             facilityId="BOSS_MNT_ROOM_101" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2026-11-17 07:00:00"
             thruDate="2026-11-17 13:00:00" unavailabilityReasonEnumId="RurClosure" plannedOutage="Y" revision="1"
             description="Carpet replacement on floor 1" createdByUserId="BOSS_MNT_RESOURCES" createdDate="2026-11-12 08:00:00"/>
+
+    <!-- P13 (design-maintenance §5): three preventive plans of Services, drafts the planner activates: Room 201's monthly
+        inspection from November 30 (a month's end; planned on business days, the time zone inherited from the campus); the
+        compressor's oil service every 250 run hours, following the AC-200 model's 500-hour default with this compressor's override
+        (baseline 1200 hours on September 1, so its readings put the next threshold at 1450); and the compressor's contactor check
+        every 500 starts, whose start counter (a second counting meter of the model) was last read in August, so its due is
+        unknown until it is read again. Each names a procedure that applies to its target. -->
+    <mantle.product.maintenance.ProductMeter productMeterId="BOSS_MNT_COMP_STARTS" productId="BOSS_MNT_COMP_MODEL"
+            productMeterTypeId="PdMtrUseCount" meterName="Starts" isCumulative="Y"/>
+    <mantle.product.maintenance.AssetMeter assetId="BOSS_MNT_COMPRESSOR" readingDate="2026-08-15 08:00:00" productMeterTypeId="PdMtrUseCount"
+            productMeterId="BOSS_MNT_COMP_STARTS" meterValue="4380" readingReasonEnumId="AmrReading"/>
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_ROOM201" scheduleName="Room 201 monthly inspection"
+            organizationPartyId="ORG_ZIZI_SERVICES" facilityId="BOSS_MNT_ROOM_201" statusId="MschDraft" revision="1"
+            createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-11-02 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_ROOM201" fromDate="2026-11-02 09:00:00"
+            triggerEnumId="MstCalendar" cadenceEnumId="MscFixed" intervalQuantity="1" intervalUomId="TF_mon" firstDueLocal="2026-11-30 09:00"
+            businessDaysOnly="Y" leadDays="7" templateWorkEffortId="BOSS_MNT_PROC_ROOM" maintenanceTypeEnumId="MntTpInspection"
+            teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_COMP" scheduleName="Compressor C-1 oil service every 250 hours"
+            organizationPartyId="ORG_ZIZI_SERVICES" assetId="BOSS_MNT_COMPRESSOR" productMaintenanceId="BOSS_MNT_COMP_SERVICE"
+            statusId="MschDraft" revision="1" createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-11-02 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_COMP" fromDate="2026-11-02 09:00:00"
+            triggerEnumId="MstMeter" intervalQuantity="250" baselineValue="1200" baselineDate="2026-09-01 08:00:00" leadDays="3"
+            teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
+    <mantle.work.maintenance.MaintenanceSchedule maintenanceScheduleId="BOSS_MNT_PLAN_STARTS" scheduleName="Compressor C-1 contactor check every 500 starts"
+            organizationPartyId="ORG_ZIZI_SERVICES" assetId="BOSS_MNT_COMPRESSOR" statusId="MschDraft" revision="1"
+            createdByUserId="BOSS_MNT_PLANNER" createdDate="2026-11-02 09:00:00"/>
+    <mantle.work.maintenance.MaintenanceScheduleTerm maintenanceScheduleId="BOSS_MNT_PLAN_STARTS" fromDate="2026-11-02 09:00:00"
+            triggerEnumId="MstMeter" productMeterId="BOSS_MNT_COMP_STARTS" intervalQuantity="500" baselineValue="4200"
+            baselineDate="2026-08-01 08:00:00" maxReadingAgeDays="30" templateWorkEffortId="BOSS_MNT_PROC_COMP"
+            maintenanceTypeEnumId="MntTpPreventive" teamPartyId="BOSS_MNT_TEAM" changedByUserId="BOSS_MNT_PLANNER"/>
 </entity-facade-xml>

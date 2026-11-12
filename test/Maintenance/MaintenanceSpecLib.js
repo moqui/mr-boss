@@ -66,16 +66,22 @@ const ids = {
     gasketStockId: "BOSS_MNT_STOCK_GASKET",
     gasketIssuanceId: "BOSS_MNT_ISS_AHU",
     otherOwnerStockId: "BOSS_PRD_FOREIGN_STOCK",
+    // P13: the preventive plans (BossZMaintenanceDemoData.xml), drafts: Room 201's monthly inspection, the compressor's 250-hour oil
+    // service over the AC-200 model's 500-hour default (next threshold 1450 hours), and its contactor check by a start counter last
+    // read in August (stale)
+    roomPlanId: "BOSS_MNT_PLAN_ROOM201",
+    compressorPlanId: "BOSS_MNT_PLAN_COMP",
+    stalePlanId: "BOSS_MNT_PLAN_STARTS",
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
-    // a reader of procedures or a planner or supervisor) and equipment, and with Settings the Maintenance administrator's; a procedure
-    // author reads procedures alone
-    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Equipment", "Facilities"],
+    // a reader of procedures or a planner or supervisor), preventive plans (P13, a reader of work or a planner or supervisor) and
+    // equipment, and with Settings the Maintenance administrator's; a procedure author reads procedures alone
+    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
     authorMenu: ["Home", "Procedures"],
     bookingMenu: ["Home", "Scheduling"],
-    adminMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Equipment", "Facilities", "Scheduling", "Settings"],
+    adminMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Scheduling", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
-    keys: ["g m", "g w", "g r", "g p", "g e", "g f"]
+    keys: ["g m", "g w", "g r", "g p", "g l", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS
