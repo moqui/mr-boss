@@ -2562,7 +2562,7 @@ the error journal by name, and Maintenance activation lists it. Maintenance's pl
 (impl-maintenance P9), as an owner contract (Nov 11, 2026). As built (Nov 12, 2026, impl-maintenance P9): the mapping kind
 Maintenance expense (`maintenance`) of `store#PostingDefault` and `get#PostingDefaults` edits `MaintenanceCostPolicy` rows (a
 maintenance kind or any, a facility of the organization with those under it or every facility, the account, from and until;
-an existing row is ended, not rewritten, and a clone copies only the rows of every facility). `post#AssetIssuance` debits the
+an existing row is ended, not rewritten, never before now (`DATE_INVALID`, impl-maintenance P9 review R3), and a clone copies only the rows of every facility). `post#AssetIssuance` debits the
 most specific row in effect for an issuance to a managed maintenance root or step (MaintenanceCostRouting.js), with the
 facility (the nearest of the work's facility and its ancestors the organization owns) and the cost centre on the entry and the
 project as the transaction's `workEffortId`; `post#AssetReceipt` credits a return of such an issuance the same account and
