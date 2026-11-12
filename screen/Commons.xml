@@ -70,6 +70,10 @@ along with this software (see the LICENSE.md file). If not, see
         <quick-create kind="note" label="Note" icon="sym_o_sticky_note_2" sequence="30"/>
         <quick-create kind="contact" label="Contact" icon="sym_o_person" sequence="40"/>
         <quick-create kind="request" label="Request" icon="sym_o_support" sequence="50"/>
+        <!-- People's Clock in (owner contract, impl-people P13, as F64's Today source): declared here, since a self-service employee
+            opens no People root; it opens People's Clock screen (the time area's grant: every People user and a self-service
+            employee), which shows the user's own clock or says clocking is not on for them -->
+        <quick-create kind="peopleClockIn" label="Clock in" icon="sym_o_timer" screen="People/Time/Clock" sequence="97"/>
 
         <palette-type doc-type="MantleParty"/>
         <palette-type doc-type="MantleTask"/>

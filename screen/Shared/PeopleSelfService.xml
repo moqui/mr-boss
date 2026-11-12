@@ -27,11 +27,16 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.humanres.LeaveServices.get#MyBalances, which takes no party), each leave type's balance and what is available, by the
     policy in effect. P12: My leave requests, the user's own newest (mantle.humanres.LeaveServices.find#Requests with mine: days, leave
     type, what each charges and its state, never a reason), each opening LeaveRequestDetail, and Request leave (People's Leave
-    requests, when the time area opens to them). The clock (P13), payslips (P26) and claims (P15) join with their phases. -->
+    requests, when the time area opens to them). P13: the Clock (template/PeopleClock.xml: the user's own employments with clocking
+    on, mantle.humanres.AttendanceServices get#MyClock and record#Punch, which take no party; the worker is the session's), shown only
+    where an employment has clocking on, and then the page's primary action in place of Open my employee record (design §3
+    SelfService); My attendance links People's Attendance. Payslips (P26) and claims (P15) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
     <transition-include name="storeEmergencyContact" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
+    <!-- P13: the clock (record#Punch, the user's own) -->
+    <transition-include name="clock" location="component://mr-boss/template/PeopleClock.xml"/>
 
     <actions>
         <service-call name="ironstone.people.ContextServices.get#SelfServiceContext" out-map="links" transaction="force-new"
@@ -85,6 +90,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="leaveRequestColors" from="{LrsRequested: 'warning', LrsApproved: 'positive', LrsRefused: 'negative', LrsWithdrawn: 'grey-8',
                 LrsCancelRequested: 'warning', LrsCancelled: 'grey-8'}"/>
         <set field="leaveEmployers" from="new Set(leaveRows.map(row => row.organizationPartyId)).size"/>
+        <!-- P13: the user's own clock (get#MyClock takes no party); clocking makes the clock the primary action -->
+        <if condition="available">
+            <service-call name="mantle.humanres.AttendanceServices.get#MyClock" out-map="myClock" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="clocking" from="!!myClock?.clocking"/>
     </actions>
 
     <widgets>
@@ -109,7 +120,10 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <link url="${links.employee360Url}" url-type="plain" text="Open my employee record" link-type="anchor-button"
-                                    btn-type="primary" icon="sym_o_badge" condition="links?.employee360Url"/>
+                                    btn-type="primary" icon="sym_o_badge" condition="links?.employee360Url &amp;&amp; !clocking"/>
+                            <!-- P13: with clocking on the clock below is the primary action -->
+                            <link url="${links.employee360Url}" url-type="plain" text="Open my employee record" link-type="anchor-button"
+                                    icon="sym_o_badge" condition="links?.employee360Url &amp;&amp; clocking"/>
                             <link url="${links.approvalsUrl}" url-type="plain" text="Approvals" link-type="anchor-button"
                                     icon="sym_o_approval" condition="links?.approvalsUrl"/>
                             <link url="${links.myTimeUrl}" url-type="plain" text="My time" link-type="anchor-button"
@@ -117,9 +131,15 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P12 -->
                             <link url="${links.leaveRequestsUrl}?request=Y" url-type="plain" text="Request leave" link-type="anchor-button"
                                     icon="sym_o_event_busy" condition="links?.leaveRequestsUrl"/>
+                            <!-- P13 -->
+                            <link url="${links.attendanceUrl}" url-type="plain" text="My attendance" link-type="anchor-button"
+                                    icon="sym_o_fact_check" condition="links?.attendanceUrl"/>
                         </container>
                     </container>
                 </container>
+
+                <!-- P13: the Clock, where an employment has clocking on -->
+                <section-include name="Clock" location="component://mr-boss/template/PeopleClock.xml"/>
 
                 <!-- MySummary: the counts, and each employment the user has (several need a visible choice) -->
                 <dashboard min-width="160">

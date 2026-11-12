@@ -3379,6 +3379,141 @@ Design §6 (attendance), Attendance, TimeImport, SelfService's Clock; PE-05 (wit
   evidence half): an employee clocks in and out from SelfService; a missed punch is corrected and approved by the
   manager; a device file imported twice adds its rows once and names the bad one.
 
+**Built Nov 11 (P13).** mr-mantle 4d67437a, mr-boss (branch `ppl/p13`).
+- Checked first (the code over the plan): P5's approval kinds and `record#Decision` (a kind with its topic, `describe`, the request
+  at the source's revision; the topic's approve and refuse services through `decide#NotificationMessage`), P12's decide pattern
+  (`decide#Request`: answered as missing before `record#Decision`, under the employment's lock) and its `waitingFor` To decide; P9's
+  schedules (the zone is the schedule's, a primary assignment's `workingScheduleId`; `Schedules.js` exports no zone helper, so
+  `Attendance.js` reads the assignment and schedule itself); P10's time area grants (BOSS_PPL_TIME's inheritable ALLOW opens Time's
+  screens to a self-service employee; SelfService's own grant is non-inheritable, so its transitions and services need their own);
+  the framework's transfer imports (a `wizard` target is listed only, `find#Transfers` skips it for a caller without its
+  `viewPermission`, the `runs` contract `targetId`, `scopeKey`, `fromDate`, `thruDate`, `maxRows` answering `runList`;
+  `DataTransferLib.parseDelimited` the bounded reader) and Accounting's statement imports (their own batch, `find#StatementImportRuns`);
+  the shell's quick create (offered by the screen's grant alone, `shell.rs link_entry`: no condition; the first finding) and Commons' root
+  declaring People's Today source for a self-service employee (F64). No clocking setting existed (design §12's PeoplePreferences is
+  P29's).
+- Mantle:
+  - `entity/PeopleAttendanceEntities.xml`: `AttendancePunch` (an employment's raw event: `AttendanceDirection` in or out, the instant,
+    the zone it was read in and its local time as given, `AttendanceSource` self-service, imported or kiosk, the source system and its
+    event key, a unique `sourceKey`, the import, the work location of the assignment, who recorded it; never changed or deleted),
+    `AttendanceDay` (one an employment and day, in the zone of the working schedule, else the recorder's: first in, last out, count,
+    the minutes between paired punches, `flagsText` MISSING_OUT, MISSING_IN, REPEATED, `AttendanceDayStatus` recorded, correction asked,
+    corrected, and the approved correction in effect), `AttendanceCorrection` with `AttendanceCorrectionInterval` (the intervals and
+    minutes of a day, the reason, `AttendanceCorrectionStatus`), `AttendanceImport` and `AttendanceImportRow` (a file's employer,
+    source system, zone, worker naming and columns; each row's values, what it resolved to and its outcome); `PakAttendance` in
+    `PeopleApprovalKind`; `Employment.clockingEnabled` (audit-logged);
+  - `AttendanceServices` over `Attendance.js`: `record#Punch` (PEOPLE_SELF_SERVICE: the session's worker, never a parameter, the
+    server's time, the employment only chosen among the caller's own current ones and one with clocking on, `CLOCKING_OFF`,
+    `EMPLOYMENT_REQUIRED`, `ALREADY_IN`, `NOT_IN`; an operation key's retry answers the first punch, checked again under the employment's
+    lock), `get#MyClock` (no party: each own employment's clocking, state, last punch, today's time and the action), `store#Clocking`
+    and `find#Clocking` (an HR editor turns it on or off with a reason; who clocks, for an HR reader), `find#Attendance` (own, a manager's
+    reports' at the line's employers, an HR reader's employers', or toDecide from the user's notices; a person, an employer, days,
+    exceptionsOnly; paged in the query, an export up to 5000), `get#Day` (the punches, the corrections with their approval, canCorrect,
+    canDecide, canWithdraw), `request#Correction` (the person, their manager or an HR editor; intervals as times of the day, a To at or
+    before the From the next day, at most a day; a day with no punch by employment and date; `REASON_REQUIRED`, `DATE_FUTURE`,
+    `DATE_OUTSIDE`, `TIME_INVALID`, `INTERVALS_OVERLAP`, `CORRECTION_PENDING`; a People approval of kind PakAttendance, the person's
+    manager by default), `decide#Correction` (approve and refuse through `record#Decision`, the last approval making it the day's time,
+    the punches unchanged; withdraw by the person or who asked; answered as missing for one who reads nothing of it) with
+    `approve#Correction` and `refuse#Correction`, `preview#Import` (PEOPLE_IMPORT, PEOPLE_HR_VIEW and PEOPLE_HR_EDIT of the employer;
+    the framework's `parseDelimited`, 5000 rows and 1 MiB; a worker by People id or work email, `EmailWork`; each row resolved to the
+    worker's one employment by the employer at that instant and its source key, the employer, source system and event id or else the
+    worker, instant and direction: ready, known, duplicate or refused with `WORKER_UNKNOWN`, `WORKER_AMBIGUOUS`, `NOT_EMPLOYED`,
+    `EMPLOYMENT_AMBIGUOUS`, `TIME_INVALID`, `TIME_FUTURE`, `DIRECTION_INVALID`, `ROW_INVALID`; nothing recorded), `import#Records` (the
+    batch locked; ready rows in time order by employment, each in its own transaction, a key recorded meanwhile skipped, a failure
+    named and the rest going on; an import done answers as it ended), `get#Import` (an HR reader of the employer; all rows, an outcome
+    or the problems) and `find#ImportRuns` (the `runs` contract: an HR reader's employers' imports with `ownerParameters`);
+  - `data/PeopleAttendanceSetupData.xml`: the `PeopleAttendanceApproval` topic (approve and refuse services, a title naming the person,
+    the day and the hours, never the reason), the `wizard` target `timeAndAttendance` (`importPermission` PEOPLE_IMPORT,
+    `viewPermission` PEOPLE_HR_VIEW, no ADMIN_* permission, owner route `peopleTimeImport`) and `find#ImportRuns` granted to every user
+    (it checks PEOPLE_HR_VIEW and the scope itself, as the employees target's row services).
+- BOSS:
+  - `People/Time/Attendance` (menu 8, key `g d`; Mine, To decide, All I see, Missing punches only, the list's CSV export; a day opened
+    above the list with its punches and corrections; Correct, the primary while no correction waits; Approve and Refuse for an approver,
+    Withdraw; Approve selected on To decide; Correct a missed day; HR's Who clocks with Turn clocking on and Turn off), `Time/TimeImport`
+    (out of the menu: FileAndMapping, the file or pasted rows; ImportResults with Import, all rows or the problems and their CSV),
+    `Time/Clock` (out of the menu: the quick create's screen, the user's own clock or why there is none) and `template/PeopleClock.xml`
+    (the clock section and its transition); all under the time area's grants, Time import HR's (`BOSS_PPL_TIME_IMPORT`: ALWAYS HR, DENY
+    the root user group and self-service);
+  - SelfService: the Clock where an employment has clocking on, then the page's primary (Open my employee record a plain button), and
+    My attendance; `BOSS_PPL_CLOCK_SELF` (the clock transition, `get#MyClock` and `record#Punch`, non-inheritable, for the self-service
+    employee); `get#SelfServiceContext`'s `attendanceUrl`; the self-service context's Attendance and Clock links;
+  - the quick create Clock in (`peopleClockIn`) on Commons' root (owner contract, as F64's Today source); People's root: the key `g d`
+    and the attendance topic; Approvals lists `PeopleAttendanceApproval`, whose link opens the day on Attendance; People.js: the link
+    paths, the decision link to Attendance's To decide; Admin's mount route `peopleTimeImport` (owner contract with Admin);
+  - demo: clocking on for Tomas (people.employee); no punch is seeded.
+- Specs: Mantle `test/humanres/Attendance` (5 features, stepwise, 1.4 s: 0.34, 0.07, 0.44, 0.36, 0.15: a file imported twice records its
+  rows once, a row repeated in the file skipped, the unknown worker and a bad direction named, the import retried answering as it
+  ended, an in-punch with no out flagged and the only exception, the runs listed; an overnight shift 22:00 to 06:15 one day of 495
+  minutes on its start day; a correction asked by the person with two intervals, its retry answering the first, a second one
+  refused while it waits, the person refused `SELF_APPROVAL`, another employer's HR refused the day and the decision as missing, the
+  manager's To decide, a refusal without a reason refused, the approval correcting the day to 7:30 with its one raw punch kept; the
+  self-service clock refused with clocking off and for another's employment, HR turning it on and a manager refused, in, a retry,
+  in again refused, the clock's state, out, out again refused; an import refused without PEOPLE_IMPORT and for another employer, whose
+  runs show none). BOSS `test/People/PeopleAttendance` (3 features, stepwise, 0.4 s: Attendance's one qvt render as the manager with
+  Tomas's imported day open, its punch, what is missing, his correction and Approve, approved from her notice through the tray's
+  approve service, the notice's title without the reason; Time import's one html render as HR with the problem rows; Admin's
+  Imports (the framework's `find#ImportRuns`) listing the run with `peopleTimeImport`; the employee's shell offering Clock in from
+  Commons, Clock's one html render as the employee, the reader's `get#MyClock` with no clocking). PeopleAccess gains one feature
+  (0.35 s: the employee clocking in and out through SelfService's transition under Commons by its own grant, the reader refused
+  `record#Punch` with the same parameters; Time import opened by HR and refused to the reader, the manager and the employee, the
+  reader refused `preview#Import` with the parameters HR is answered, Services' employer refused to Retail's HR) and its context
+  feature the employee's Attendance and Clock links; PeopleSpecLib's Time menus and keys; PeopleSelfService's SelfService render
+  checks the clock and My attendance. Acceptance, written and not run: `acceptance/People/PeopleAttendanceUsable` (3 features: Tomas
+  clocks in and out from SelfService at phone width and his attendance shows the day; a door file has his in-punch of a past day with
+  no out, his attendance names it, he asks a correction through Attendance and Hannah approves it from Approvals, the punch kept; a
+  device file imported twice through Time import adds its rows once and names the bad one).
+- Tests run (release binary, `--nobuild`, this phase's runtime): Mantle Attendance, PeopleApprovals, LeaveRequests, PeopleScope,
+  HumanResServices and PeopleEmployment 38 of 38 (mr-mantle 11.0 s of features), then Attendance, PeopleApprovals, LeaveRequests and
+  HumanResServices 26 of 26 after formatting; BOSS PeopleAttendance, PeopleAccess, PeopleSelfService, PeopleApprovals, PeopleLeave,
+  PeopleTime, AdminImports and TodayPanel 48 of 48 (mr-boss 12.2 s of features), then PeopleAttendance, PeopleAccess (18 of 18), PeopleSelfService, PeopleApprovals,
+  PeopleLeave, PeopleTime, AdminImports, QuickCreate and PeopleEmployees 67 of 67 after formatting (mr-boss 11.8 s). `moqui lint --screens`: 135 flagged
+  sites as before, none in the screens P13 touched, no TUI worklist entry. Prettier clean on the new and changed JavaScript. Not
+  run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added rows (the AttendanceServices) and `import#TimeEntryCsv`'s note; ss-inventory's P13 note
+  (no baseline form is mapped; PartyTimeEntries' ClockInForm stays Projects' and blank).
+- Design edits: design-people (header; §1.2 Time & leave; §1.4 Quick create; §3 SelfService; §6 Attendance and TimeImport as
+  built); design-admin §11.1 (the time-and-attendance target as built); design-drawers-commons §1.5 (People's Clock in on Commons'
+  root).
+- Findings (provisional, numbered by the lead):
+  - the quick create Clock in is offered to every user the time area opens to, clocking on or not: the shell offers a quick create by
+    its screen's grant alone (`shell.rs link_entry`), so "only where the employment has clocking on" holds for SelfService's clock and
+    not for the + menu, whose Clock screen says clocking is not on; a condition on a quick create (a provider service or a condition
+    the shell evaluates) is a framework ask;
+  - Clock in is declared on Commons' root, not People's (a self-service employee, the one who clocks, opens no People root; one
+    declaration avoids a People user's second entry);
+  - clocking is a flag of the employment (`Employment.clockingEnabled`, audit-logged), not a dated term of the assignment nor an
+    employer policy; design §12 PeoplePreferences' clocking and attendance zone policy are P29's;
+  - a day's zone is the employment's working schedule's at the punch, else the recorder's (the user's for a self punch, the file's for
+    an import); an out-punch joins the employment's punch just before it within a day when that is an in-punch, so punches imported out
+    of order across files are attributed as they arrive (within a file they are recorded in time order by employment);
+  - a day flags a missing out-punch (shown as clocked in while the in is under 16 hours old), an out with no in, and a repeated punch;
+    overlapping intervals of one person's two employments are not flagged, and employment ambiguity is an import refusal
+    (`EMPLOYMENT_AMBIGUOUS`), not a day's flag;
+  - a day is not approved as a whole: an uncorrected day stays Recorded and a correction approved makes it Corrected; what P24 counts as
+    approved attendance (corrected, or past and unflagged) is P24's to decide;
+  - the person is not told a correction's decision (no decision topic as leave has; they see the day's state), and a correction a
+    manager asks for their report goes to the alternate or HR fallback, else waits (the requester never decides);
+  - an import names workers by People id or work email only (badge or device ids are P30's); a preview is a new batch each time
+    (it records no punch; no operation key), and import batches are kept with no retention;
+  - To decide reads the user's notices (`Approvals.js waitingFor`), as leave: a correction whose step no one may decide is in no one's
+    list;
+  - the form's file field cannot be posted by a spec's render, so TimeImport also takes the rows pasted (the acceptance posts them).
+- For the lead:
+  - budget share: mr-mantle about 1.4 s (Attendance); mr-boss about 0.8 s (PeopleAttendance 0.4 s, PeopleAccess's new feature 0.35 s,
+    PeopleSelfService's checks on its one render); the client walk unchanged;
+  - merge hot spots: mr-mantle `Approvals.js` (the `ATTENDANCE_CORRECTION` constant and `PakAttendance` after `PakLeave` in `kinds`),
+    `PeopleApprovalEntities.xml` (the kind), `HumanResourcesEntities.xml` (Employment's field); mr-boss `data/BossSetupData.xml` (the P13
+    block appended at the end), `BossPeopleDemoData.xml` (appended), `screen/People.xml` (the header, the key `g d`, the topic),
+    `screen/Commons.xml` (the quick create), `screen/People/Approvals.xml`, `screen/People/Time.xml` (the header),
+    `screen/Shared/PeopleSelfService.xml`, `People.js` (linkPaths, the self-service links, `decisionUrl`, `selfServiceContext`),
+    `ContextServices.xml`, `Admin.js` (`mountRoutes`), `test/People/PeopleSpecLib.js` (the Time menus, keys, ids),
+    `PeopleAccess.spec.js` (the context's links, the appended feature), `PeopleSelfService.spec.js`, the inventories, design-people
+    (header, §1.2, §1.4, §3, §6), design-admin §11.1, design-drawers-commons §1.5;
+  - acceptance to run with the full suites: PeopleAttendanceUsable (new);
+  - for the user's call: whether the + menu's Clock in may show to users without clocking until the shell can condition a quick
+    create (a framework ask), and whether clocking stays a per-employment flag or becomes an employer setting with per-employment
+    exceptions (P29).
+
 ### P14 — Shift roster
 
 Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its roster part). Ends stage 2.

@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Attendance (design-people §6 Attendance, §15 the attendance export; style-guide §3.2 List; impl-people P13): the attendance
+    days the user reads (mantle.humanres.AttendanceServices.find#Attendance): their own, a manager's reports', an HR reader's
+    employers', and the days whose correction they decide (To decide, AttendanceDecision, with Approve selected); by days and
+    exceptions (a missing or repeated punch, a correction asked); each with its first in, last out, time worked and what is missing,
+    and the CSV export of the list. A day opens above the list (get#Day): its raw punches, its corrections with their approval, and
+    Correct (CorrectAttendance: the intervals worked and the reason, request#Correction; the person, their manager or HR, the punches
+    kept), Approve and Refuse for an approver of the step waiting, and Withdraw for the person or who asked (decide#Correction).
+    Correct a missed day asks for a day with no punch of the user's own. Who clocks (HR's): the employments with clocking on
+    (find#Clocking), turned on and off by an HR editor (store#Clocking). Every People user's and a self-service employee's (the time
+    area's own grant, BOSS_PPL_TIME); what each reads and may do is Mantle's check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Attendance" default-menu-index="8" menu-image="sym_o_fact_check" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="exceptionsOnly"/>
+    <parameter name="pageIndex"/>
+    <parameter name="attendanceDayId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a correction asked of the day open (or of a missed day of the user's own): Mantle checks who asks and keeps the punches -->
+    <transition name="requestCorrection">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.request#Correction" out-map="asked"
+                    in-map="{attendanceDayId:(attendanceDayId || null), partyRelationshipId:(partyRelationshipId || null),
+                        attendanceDate:(attendanceDate || null), fromTime:(fromTime || null), thruTime:(thruTime || null),
+                        fromTime2:(fromTime2 || null), thruTime2:(thruTime2 || null), reason:(reason || null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; asked?.attendanceDayId">
+                <message type="success">Correction asked: it waits for approval</message>
+                <set field="attendanceDayId" from="asked.attendanceDayId"/>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="attendanceDayId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- approve, refuse (with its reason) or withdraw the correction waiting -->
+    <transition name="decideCorrection">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.decide#Correction" out-map="decided"
+                    in-map="{attendanceCorrectionId:attendanceCorrectionId, decision:(decision || 'approve'), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decided.statusText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="attendanceDayId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- AttendanceDecision: approve the corrections of the selected days, each on its own; a refusal is named and the rest go on -->
+    <transition name="approveSelected">
+        <actions>
+            <script><![CDATA[
+                const dayIds = Array.from(new Set(String(selectedIds || '').split(',').map(id => id.trim()).filter(id => id)))
+                let approved = 0
+                const refused = []
+                for (const dayId of dayIds) {
+                    const waiting = Array.from(ec.entity.find('mantle.humanres.attendance.AttendanceCorrection')
+                        .condition({attendanceDayId: dayId, statusEnumId: 'AcsRequested'}).disableAuthz().limit(1).list())[0]
+                    if (!waiting) continue
+                    ec.message.pushErrors()
+                    try {
+                        ec.service.sync().name('mantle.humanres.AttendanceServices.decide#Correction')
+                            .parameters({attendanceCorrectionId: waiting.attendanceCorrectionId, decision: 'approve'})
+                            .requireNewTransaction(true).call()
+                        if (ec.message.hasError()) refused.push(ec.message.getErrorsString())
+                        else approved++
+                    } catch (error) {
+                        refused.push(String(error.message || error))
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                }
+                ec.message.addMessage(approved + (approved === 1 ? ' correction approved' : ' corrections approved') +
+                    (refused.length ? '; not approved: ' + refused.join('; ') : ''), refused.length ? 'warning' : 'success')
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- Who clocks: an HR editor turns clocking on or off for an employment, with a reason -->
+    <transition name="storeClocking">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.store#Clocking" out-map="stored"
+                    in-map="{partyRelationshipId:partyRelationshipId, clockingEnabled:clockingEnabled, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stored.clockingEnabled ? 'Clocking is on' : 'Clocking is off'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="seesOthers" from="!!(caps.team || caps.hrView)"/>
+        <set field="canDecide" from="ec.user.hasPermission('PEOPLE_REQUEST_APPROVE')"/>
+        <set field="showing" from="['mine', 'decide', 'all', 'clocking'].includes(show) ? show : (seesOthers ? 'all' : 'mine')"/>
+        <if condition="showing == 'clocking'">
+            <service-call name="mantle.humanres.AttendanceServices.find#Clocking" out-map="clockingFound" transaction="force-new"
+                    ignore-error="true" in-map="{pageIndex:(pageIndex || 0)}"/>
+        </if>
+        <if condition="showing != 'clocking'">
+            <service-call name="mantle.humanres.AttendanceServices.find#Attendance" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{mine:(showing == 'mine'), toDecide:(showing == 'decide'), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        exceptionsOnly:(exceptionsOnly == 'Y'), pageIndex:(pageIndex || 0), pageSize:(pageSize || null),
+                        pageNoLimit:(pageNoLimit || null)}"/>
+        </if>
+        <if condition="attendanceDayId">
+            <service-call name="mantle.humanres.AttendanceServices.get#Day" out-map="opened" transaction="force-new" ignore-error="true"
+                    in-map="{attendanceDayId:attendanceDayId}"/>
+            <set field="openError" from="ec.message.hasError() ? 'This day is not available to you.' : ''"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            days = Array.from(found?.days || [])
+            daysCount = found?.daysCount || 0
+            daysPageIndex = found?.daysPageIndex || 0
+            daysPageSize = found?.daysPageSize || 20
+            daysPageMaxIndex = found?.daysPageMaxIndex || 0
+            daysPageRangeLow = found?.daysPageRangeLow || 0
+            daysPageRangeHigh = found?.daysPageRangeHigh || 0
+            clockingRows = Array.from(clockingFound?.clocking || [])
+            clockingRowsCount = clockingFound?.clockingCount || 0
+            clockingRowsPageIndex = clockingFound?.clockingPageIndex || 0
+            clockingRowsPageSize = clockingFound?.clockingPageSize || 20
+            clockingRowsPageMaxIndex = clockingFound?.clockingPageMaxIndex || 0
+            clockingRowsPageRangeLow = clockingFound?.clockingPageRangeLow || 0
+            clockingRowsPageRangeHigh = clockingFound?.clockingPageRangeHigh || 0
+            statusColors = {AdsRecorded: 'grey-8', AdsCorrectionAsked: 'warning', AdsCorrected: 'positive'}
+            correctionColors = {AcsRequested: 'warning', AcsApproved: 'positive', AcsRefused: 'negative', AcsWithdrawn: 'grey-8'}
+            day = opened?.day || null
+            punches = Array.from(opened?.punches || [])
+            corrections = Array.from(opened?.corrections || [])
+            waitingCorrectionId = opened?.waitingCorrectionId || null
+            findValues = {show: showing, fromDate: fromDate || null, thruDate: thruDate || null, exceptionsOnly: exceptionsOnly || null}
+            // a missed day of the user's own: their current employments (several need a visible choice)
+            ownEmployments = Array.from(people?.employments || []).filter(row => !row.thruDate || new Date(row.thruDate).getTime() > Date.now())
+            ownEmploymentOptions = ownEmployments.map(row => ({key: row.partyRelationshipId,
+                text: (ec.entity.find('mantle.party.Organization').condition('partyId', row.organizationPartyId).disableAuthz().one()?.organizationName) || row.organizationPartyId}))
+            correctionKey = 'AC' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8)
+            importUrl = caps.import && caps.hrEdit ? sharedLinks?.['Time/TimeImport'] || null : null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Attendance" type="h5"/>
+                <label text="When people clocked in and out, what is missing, and corrections to decide." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="CorrectMissedDay" button-text="Correct a missed day" icon="sym_o_edit_calendar" type="default" width="600"
+                        title="Correct a missed day" condition="caps.self &amp;&amp; ownEmployments.length">
+                    <label type="p" style="text-caption m-muted" text="For a day you worked with no punch: the times you worked and why. Your manager approves it."/>
+                    <form-single name="CorrectMissedDay" transition="requestCorrection"
+                            map="{partyRelationshipId:(ownEmployments[0]?.partyRelationshipId || null), operationKey:correctionKey}">
+                        <field name="partyRelationshipId">
+                            <conditional-field condition="ownEmploymentOptions.length &gt; 1" title="Employer">
+                                <drop-down><list-options list="ownEmploymentOptions" key="${key}" text="${text}"/></drop-down>
+                            </conditional-field>
+                            <default-field><hidden/></default-field>
+                        </field>
+                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                        <field name="attendanceDate"><default-field title="Day"><date-time type="date"/></default-field></field>
+                        <field name="fromTime"><default-field title="From"><date-time type="time"/></default-field></field>
+                        <field name="thruTime"><default-field title="To"><date-time type="time"/></default-field></field>
+                        <field name="reason"><default-field title="Reason"><text-area rows="2"/></default-field></field>
+                        <field name="submitButton"><default-field title="Ask for the correction"><submit/></default-field></field>
+                        <field-layout>
+                            <field-ref name="partyRelationshipId"/>
+                            <field-row><field-ref name="attendanceDate"/></field-row>
+                            <field-row><field-ref name="fromTime"/><field-ref name="thruTime"/></field-row>
+                            <field-ref name="reason"/>
+                            <field-ref name="operationKey"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <link url="${importUrl}" url-type="plain" text="Time import" icon="sym_o_upload_file" link-type="anchor-button" condition="importUrl"/>
+            </container>
+        </container>
+
+        <!-- the day open: its punches as they came, its corrections, and what the user may do -->
+        <section name="DayOpenError" condition="attendanceDayId &amp;&amp; !day">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="${openError || 'This day is not available to you.'}"/>
+                        <link url="." text="Back to attendance" link-type="anchor" parameter-map="{attendanceDayId:null}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="DayOpen" condition="day">
+            <widgets>
+                <container-box>
+                    <box-header title="${day.personName}: ${day.weekdayText} ${day.attendanceDate}"/>
+                    <box-toolbar>
+                        <container-dialog id="CorrectAttendance_${day.attendanceDayId}" button-text="Correct" icon="sym_o_edit" type="primary"
+                                width="640" title="Correct the attendance of ${day.personName} on ${day.attendanceDate}" condition="opened.canCorrect">
+                            <label type="p" style="text-caption m-muted"
+                                    text="Recorded: ${day.firstInText || 'no in-punch'} to ${day.lastOutText || 'no out-punch'}${day.flagsText ? ' (' + day.flagsText.toLowerCase() + ')' : ''}. The punches stay as they are; the correction is the day's time once approved."/>
+                            <form-single name="CorrectAttendance" transition="requestCorrection"
+                                    map="{attendanceDayId:day.attendanceDayId, operationKey:correctionKey}">
+                                <field name="attendanceDayId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="fromTime"><default-field title="From"><date-time type="time"/></default-field></field>
+                                <field name="thruTime"><default-field title="To" tooltip="At or before From: the next day"><date-time type="time"/></default-field></field>
+                                <field name="fromTime2"><default-field title="From again" tooltip="Optional: after a break"><date-time type="time"/></default-field></field>
+                                <field name="thruTime2"><default-field title="To"><date-time type="time"/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-area rows="2"/></default-field></field>
+                                <field name="submitButton"><default-field title="Ask for the correction"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="fromTime"/><field-ref name="thruTime"/></field-row>
+                                    <field-row><field-ref name="fromTime2"/><field-ref name="thruTime2"/></field-row>
+                                    <field-ref name="reason"/>
+                                    <field-ref name="attendanceDayId"/>
+                                    <field-ref name="operationKey"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <section name="DecideShown" condition="opened.canDecide">
+                            <widgets>
+                                <form-single name="ApproveCorrection" transition="decideCorrection"
+                                        map="{attendanceCorrectionId:waitingCorrectionId, attendanceDayId:day.attendanceDayId, decision:'approve'}">
+                                    <field name="attendanceCorrectionId"><default-field><hidden/></default-field></field>
+                                    <field name="attendanceDayId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit icon="sym_o_check"/></default-field></field>
+                                </form-single>
+                                <container-dialog id="RefuseCorrection_${waitingCorrectionId}" button-text="Refuse" icon="sym_o_close" type="danger"
+                                        width="520" title="Refuse the correction of ${day.personName} on ${day.attendanceDate}">
+                                    <form-single name="RefuseCorrection" transition="decideCorrection"
+                                            map="{attendanceCorrectionId:waitingCorrectionId, attendanceDayId:day.attendanceDayId, decision:'refuse'}">
+                                        <field name="attendanceCorrectionId"><default-field><hidden/></default-field></field>
+                                        <field name="attendanceDayId"><default-field><hidden/></default-field></field>
+                                        <field name="decision"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Refuse"><submit type="danger" confirmation="Refuse this correction?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section>
+                        <section name="WithdrawShown" condition="opened.canWithdraw &amp;&amp; !opened.canDecide">
+                            <widgets>
+                                <form-single name="WithdrawCorrection" transition="decideCorrection"
+                                        map="{attendanceCorrectionId:waitingCorrectionId, attendanceDayId:day.attendanceDayId, decision:'withdraw'}">
+                                    <field name="attendanceCorrectionId"><default-field><hidden/></default-field></field>
+                                    <field name="attendanceDayId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Withdraw the correction">
+                                            <submit type="danger" confirmation="Withdraw the correction of ${day.attendanceDate}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <link url="." text="Close" icon="sym_o_close" link-type="anchor" parameter-map="{attendanceDayId:null}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <dashboard min-width="140">
+                            <number-card title="Worked" value="${day.workedText}" icon="sym_o_timer" size="sm"/>
+                            <number-card title="First in" value="${day.firstInText || '-'}" icon="sym_o_login" size="sm"/>
+                            <number-card title="Last out" value="${day.lastOutText || '-'}" icon="sym_o_logout" size="sm"/>
+                            <number-card title="State" value="${day.statusText}" icon="sym_o_fact_check" size="sm"/>
+                        </dashboard>
+                        <label type="p" style="text-warning" text="${day.flagsText}" condition="day.flagsText"/>
+                        <form-list name="DayPunches" list="punches" skip-form="true" paginate="false" condition="punches.length">
+                            <field name="directionText"><default-field title="Punch"><display/></default-field></field>
+                            <field name="timeText"><default-field title="Time"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="sourceSystem"><default-field title="Device or system"><display/></default-field></field>
+                            <field name="externalKey"><default-field title="Event id"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="directionText"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="timeText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted" condition="!punches.length" text="No punch was recorded this day."/>
+                        <form-list name="DayCorrections" list="corrections" skip-form="true" paginate="false" condition="corrections.length">
+                            <field name="intervalsText"><default-field title="Corrected to"><display/></default-field></field>
+                            <field name="workedText" align="right"><default-field title="Worked"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="requestedByName"><default-field title="Asked by"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${correctionColors[statusEnumId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="waitingText"><default-field title="Waiting for"><display text="${approval?.waitingText || ''}"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="intervalsText"/><field-ref name="reason"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="workedText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <form-single name="FindAttendance" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio>
+                        <option key="mine" text="Mine"/>
+                        <option key="decide" text="To decide"/>
+                        <option key="all" text="All I see"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+            <field name="exceptionsOnly"><default-field title="Missing punches only"><check><option key="Y" text=" "/></check></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                    <field-ref name="exceptionsOnly"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <link url="." text="Who clocks" icon="sym_o_timer" link-type="anchor" parameter-map="{show:'clocking'}"
+                condition="caps.hrView &amp;&amp; showing != 'clocking'"/>
+
+        <!-- AttendanceDays -->
+        <section name="DaysShown" condition="showing != 'clocking'">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="AttendanceDays" list="days" skip-form="true" paginate="true" show-csv-button="true" condition="days.length">
+                            <row-selection id-field="attendanceDayId" parameter="selectedIds" list-mode="true" condition="showing == 'decide'">
+                                <action><form-single name="ApproveSelected" transition="approveSelected">
+                                    <field name="submitButton"><default-field title="Approve selected"><submit icon="sym_o_done_all"
+                                            confirmation="Approve the corrections of the selected days?"/></default-field></field>
+                                </form-single></action>
+                            </row-selection>
+                            <field name="personName">
+                                <default-field title="Person">
+                                    <link url="." text="${personName}" link-type="anchor" parameter-map="{attendanceDayId:attendanceDayId}"/>
+                                </default-field>
+                            </field>
+                            <field name="attendanceDate"><default-field title="Day"><display text="${weekdayText} ${attendanceDate}"/></default-field></field>
+                            <field name="firstInText"><default-field title="First in"><display/></default-field></field>
+                            <field name="lastOutText"><default-field title="Last out"><display/></default-field></field>
+                            <field name="workedText" align="right"><default-field title="Worked"><display/></default-field></field>
+                            <field name="flagsText"><default-field title="Missing"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[statusEnumId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>${toDecide ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">' +
+                                            WebUtilities.encodeHtml(ec.l10n.localize('To decide')) + '</q-chip>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText + (toDecide ? " · to decide" : "")})}]]></text>
+                                        <text type="html">${statusText}${toDecide ? ' · to decide' : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="attendanceDate"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="flagsText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!days.length &amp;&amp; showing == 'decide'" text="No correction waits for your decision."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!days.length &amp;&amp; showing != 'decide'"
+                                text="No attendance yet: days show here once people clock in or a time file is imported."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- Who clocks: HR's list of the employments with clocking on -->
+        <section name="ClockingShown" condition="showing == 'clocking'">
+            <widgets>
+                <container-box>
+                    <box-header title="Who clocks"/>
+                    <box-toolbar>
+                        <container-dialog id="ClockingOn" button-text="Turn clocking on" icon="sym_o_timer" type="primary" width="560"
+                                title="Turn clocking on for an employee" condition="caps.hrEdit">
+                            <form-single name="ClockingOn" transition="storeClocking" map="{clockingEnabled:'Y'}">
+                                <field name="clockingEnabled"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId">
+                                    <default-field title="Employer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="partyRelationshipId">
+                                    <default-field title="Employee">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employments'}">
+                                                <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Turn on"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="." text="Back to days" icon="sym_o_arrow_back" link-type="anchor" parameter-map="{show:null}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ClockingRows" list="clockingRows" skip-form="true" paginate="true" condition="clockingRows.length">
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Now"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ClockingOff_${partyRelationshipId}" button-text="Turn off" icon="sym_o_timer_off" type="default"
+                                            width="520" title="Turn clocking off for ${personName}" condition="canChange">
+                                        <label type="p" text="Their punches are kept; their self-service no longer offers the clock."/>
+                                        <form-single name="ClockingOff" transition="storeClocking"
+                                                map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'N'}">
+                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                            <field name="clockingEnabled"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Turn off"><submit type="danger" confirmation="Turn clocking off for ${personName}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!clockingRows.length"
+                                text="Nobody clocks yet: Turn clocking on offers an employee the clock in their self-service."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

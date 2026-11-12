@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The self-service clock (design-people §3 SelfService's Clock, §1.4 Quick create; impl-people P13), shown on SelfService (both
+    mounts) and on People/Time/Clock, the quick create "Clock in": the user's own employments with clocking on
+    (mantle.humanres.AttendanceServices.get#MyClock, which takes no party), each with whether they are clocked in and since when,
+    today's time, and the Clock in or Clock out button (record#Punch: the worker is the session's, the time the server's; the
+    employment only chooses among the user's own). A screen includes the transition by name (transition-include clock) and the
+    section (section-include Clock), and reads myClock in its actions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="clock">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.record#Punch" out-map="punched"
+                    in-map="{partyRelationshipId:(partyRelationshipId || null), directionEnumId:(directionEnumId || null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; punched?.attendancePunchId">
+                <message type="success">${punched.directionEnumId == 'AtdIn' ? 'Clocked in' : 'Clocked out'} at ${punched.punchDateText}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="Clock">
+            <actions>
+                <script><![CDATA[
+                    clockRows = Array.from(myClock?.employments || []).filter(row => row.clockingEnabled)
+                        .map(row => Object.assign({}, row, {operationKey: 'CL' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8)}))
+                    clockEmployers = clockRows.length
+                ]]></script>
+            </actions>
+            <widgets>
+                <section name="ClockShown" condition="clockRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Clock"/>
+                            <box-body-nopad>
+                                <form-list name="ClockRows" list="clockRows" transition="clock" paginate="false">
+                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                    <field name="directionEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="organizationName" hide="clockEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="Now">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${clockedIn ? 'positive' : 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="todayText" align="right"><default-field title="Today"><display/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="${actionText}" icon="sym_o_timer"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stateText"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="submitButton"/><field-ref name="todayText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

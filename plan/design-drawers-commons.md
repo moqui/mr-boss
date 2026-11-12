@@ -234,7 +234,8 @@ the current app's kinds first; each kind names a screen and parameters. Commons 
 event, note, contact and request, and activity while a record is in context (all
 `Commons/QuickCreate?kind=…`, §4); Comms registers email
 (the composer, §12), chat message (a people picker that opens the room in the tray panel) and
-call. Prefill from the screen context: a record in context becomes the link chip (the task,
+call. People's Clock in (impl-people P13; owner contract, as People's Today source) is declared on Commons' root too, since a
+self-service employee opens no People root: it opens `People/Time/Clock`, the user's own clock. Prefill from the screen context: a record in context becomes the link chip (the task,
 event, note or request is linked to it, §1.6); a party in context (a customer, supplier, contact
 or employee screen) becomes the contact's organization or the request's customer; a product in
 context is noted in the description. On a phone the menu is the same and each dialog is

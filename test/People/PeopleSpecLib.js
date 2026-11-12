@@ -45,8 +45,8 @@ const ids = {
     payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll"],
     // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
     // managers') and holidays (HR's); P11's leave balances (HR's and the managers'), leave policies and allocations (HR's); P12's
-    // leave requests and team calendar (every People user's)
-    timeMenu: ["Timesheets", "MyTime", "TimeEntries", "LeaveRequests", "TeamCalendar"],
+    // leave requests and team calendar (every People user's); P13's attendance (every People user's)
+    timeMenu: ["Timesheets", "MyTime", "TimeEntries", "LeaveRequests", "TeamCalendar", "Attendance"],
     hrTimeMenu: [
         "Timesheets",
         "MyTime",
@@ -55,6 +55,7 @@ const ids = {
         "WorkingSchedules",
         "TeamCalendar",
         "LeaveBalances",
+        "Attendance",
         "HolidayCalendars",
         "LeavePolicies",
         "LeaveAllocations"
@@ -66,7 +67,8 @@ const ids = {
         "LeaveRequests",
         "WorkingSchedules",
         "TeamCalendar",
-        "LeaveBalances"
+        "LeaveBalances",
+        "Attendance"
     ],
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
@@ -75,8 +77,8 @@ const ids = {
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
     // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers;
     // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll; P11's g b, Leave balances, to HR and managers; P12's
-    // g l, Leave requests, to every People user)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l"],
+    // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user)
+    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
     // P7: Retail's onboarding and offboarding checklists, and the laptop Ines holds
@@ -91,7 +93,9 @@ const ids = {
     // P11: Retail's annual leave policy (monthly accrual, nobody under it in the demo)
     leavePolicyId: "BOSS_PPL_LP_ANNUAL",
     // P12: Ines's employment (Retail), whose leave requests her manager Hannah does not decide (Ines leads the floor team)
-    reportEmploymentId: "BOSS_PPL_INES_EMP"
+    reportEmploymentId: "BOSS_PPL_INES_EMP",
+    // P13: the time-and-attendance import target (Mantle's TransferTarget) and its owner route
+    timeImportTargetId: "timeAndAttendance"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

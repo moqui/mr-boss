@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Clock in (design-people §1.4 Quick create, §3 SelfService's Clock; impl-people P13): the quick create "Clock in" (declared
+    on Commons' root, which every People user and a self-service employee opens), out of the menu: the user's own clock
+    (template/PeopleClock.xml: their employments with clocking on, each with its state, today's time and Clock in or Clock out), or,
+    when clocking is not on for their employment, why, with Request leave. Every People user's and a self-service employee's by the
+    time area's grant (BOSS_PPL_TIME); record#Punch and get#MyClock answer the user alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Clock in" default-menu-include="false" menu-image="sym_o_timer" menu-image-type="icon">
+    <transition-include name="clock" location="component://mr-boss/template/PeopleClock.xml"/>
+    <actions>
+        <service-call name="mantle.humanres.AttendanceServices.get#MyClock" out-map="myClock" transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="clocking" from="!!myClock?.clocking"/>
+        <set field="leaveUrl" from="sharedLinks?.['Time/LeaveRequests'] || null"/>
+    </actions>
+    <widgets>
+        <label text="Clock in" type="h5"/>
+        <section-include name="Clock" location="component://mr-boss/template/PeopleClock.xml"/>
+        <section name="ClockOff" condition="!clocking">
+            <widgets>
+                <label type="p" text="Clocking is not on for your employment: HR turns it on where your work is recorded by the clock."/>
+                <link url="${leaveUrl}" url-type="plain" text="Request leave" link-type="anchor-button" icon="sym_o_event_busy"
+                        parameter-map="{request:'Y'}" condition="leaveUrl"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

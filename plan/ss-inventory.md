@@ -43,6 +43,11 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**People P13 (Nov 11, 2026):** no baseline form is mapped to Attendance, TimeImport or SelfService's Clock: attendance punches
+are new records (`AttendancePunch`, design-people §14.2 "Attendance punch capture is new"), and PartyTimeEntries' ClockInForm is
+Projects' work-time clock (a time entry on a work item), which stays blank as before (impl-projects §7); their Implemented in is in
+usl-inventory's People rows.
+
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own
 record (`LeaveRequest`).
