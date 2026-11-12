@@ -57,7 +57,10 @@ along with this software (see the LICENSE.md file). If not, see
             bookFields = {resourceType: resourceType, resourceId: resourceId, date: todayText, from: ec.user.getPreference('CALENDAR_WORK_START') || '09:00', to: '', purpose: '', notes: ''}
             const [hours, minutes] = String(bookFields.from).split(':').map(Number)
             bookFields.to = String(Math.min(23, hours + 1)).padStart(2, '0') + ':' + String(minutes || 0).padStart(2, '0')
-            maintenanceUrl = resourceType === 'room' ? '//Maintenance/Facilities' : '//Maintenance/Equipment'
+            // the resource's own record in Maintenance (impl-maintenance P2, F77): FacilityDetail or EquipmentDetail there, which
+            // checks the user's maintenance scope again
+            maintenanceUrl = resourceType === 'room' ? '//Maintenance/Facilities/FacilityDetail' : '//Maintenance/Equipment/EquipmentDetail'
+            maintenanceParameters = resourceType === 'room' ? {facilityId: resourceId} : {assetId: resourceId}
             maintenanceAllowed = false
             try { maintenanceAllowed = !sri.buildUrl(maintenanceUrl).getDisableLink() } catch (err) { maintenanceAllowed = false }
         ]]></script>
@@ -82,7 +85,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                         <link url="${weekUrl}" url-type="plain" text="See its week" icon="sym_o_date_range"/>
-                        <link url="${maintenanceUrl}" text="Open in Maintenance" icon="sym_o_build" condition="maintenanceAllowed"/>
+                        <link url="${maintenanceUrl}" text="Open in Maintenance" icon="sym_o_build" condition="maintenanceAllowed" parameter-map="maintenanceParameters"/>
                     </container>
                 </container>
             </container>

@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Equipment › Find (design-maintenance §6 Equipment: EquipmentFind, EquipmentRows, CreateEquipment; style-guide
+    §3.2 List; impl-maintenance P2): the equipment of the user's maintenance scope (Mantle's find#MaintenanceEquipment, scoped in the
+    query before paging), found by id, name, serial or registration, facility, model, class, custodian and supplier warranty, each
+    row with its model, owner, site, custodian, state and warranty and opening EquipmentDetail. A scanned asset tag (or a typed id
+    or serial) opens the equipment (resolve#EquipmentScan, the scope checked again). New equipment for a holder of
+    MAINTENANCE_RESOURCE_EDIT (store#MaintenanceEquipment); Print tags of the chosen rows opens AssetTags. No cost or book value. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Equipment" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="classEnumId"/>
+    <parameter name="custodianPartyId"/>
+    <parameter name="warranty"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeEquipment" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <!-- a scanned tag's equipment (the scan-input filled assetId with the one match) -->
+    <transition name="openScanned">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+        </actions>
+        <default-response url="${sharedLinks['Equipment/EquipmentDetail']}">
+            <parameter name="assetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the chosen rows' tags: AssetTags with their ids -->
+    <transition name="printTags">
+        <actions>
+            <set field="assetIds" from="(assetIds &amp;&amp; typeof assetIds === 'object' ? Array.from(assetIds) : String(assetIds || '')
+                    .split(',')).map(id =&gt; String(id).trim()).filter(Boolean).join(',')"/>
+        </actions>
+        <default-response url="${sharedLinks['Equipment/AssetTags']}">
+            <parameter name="assetIds"/>
+        </default-response>
+    </transition>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <if condition="can.resourceRead">
+            <service-call name="mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment" out-map="context"
+                    in-map="{text:text, facilityId:facilityId, productId:productId, classEnumId:classEnumId,
+                        custodianPartyId:custodianPartyId, warranty:warranty, pageIndex:pageIndex}"/>
+        </if>
+        <set field="equipmentList" from="equipmentList || []"/>
+        <set field="newEquipmentDefaults" from="{ownerPartyId: maintenance.activeOrganizationPartyId ||
+                (maintenance.organizationPartyIds?.length == 1 ? maintenance.organizationPartyIds[0] : null),
+                assetTypeEnumId: 'AstTpEquipment', facilityId: facilityId || null}"/>
+    </actions>
+    <widgets>
+        <label text="You do not read equipment in Maintenance." type="p" style="m-muted" condition="!can.resourceRead"/>
+        <section name="EquipmentRegister" condition="can.resourceRead">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Equipment" type="h5"/>
+                    </container>
+                    <container style="col-auto row q-gutter-sm">
+                        <container-dialog id="NewEquipmentDialog" button-text="New equipment" title="Register equipment"
+                                icon="sym_o_add" width="760" type="primary" condition="can.resourceEdit">
+                            <form-single name="CreateEquipment" transition="storeEquipment" map="newEquipmentDefaults">
+                                <field name="assetName">
+                                    <default-field title="Name">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Model">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'equipmentModels', selected:productId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="assetTypeEnumId">
+                                    <default-field title="Type">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'equipmentTypes', selected:assetTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="classEnumId">
+                                    <default-field title="Asset class">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'equipmentClasses', selected:classEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="serialNumber">
+                                    <default-field title="Serial number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="ownerPartyId">
+                                    <default-field title="Owner">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations', selected:ownerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="facilityId">
+                                    <default-field title="Facility">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'parentFacilities', selected:facilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="parentAssetId">
+                                    <default-field title="Part of" tooltip="The equipment it is a part of">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'equipment', selected:parentAssetId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="acquiredDate">
+                                    <default-field title="In service">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="warrantyThruDate">
+                                    <default-field title="Supplier warranty through">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="warrantyPartyId">
+                                    <default-field title="Warrantor">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'parties', selected:warrantyPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Register equipment"/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="assetName"/>
+                                        <field-ref name="productId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="assetTypeEnumId"/>
+                                        <field-ref name="classEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="serialNumber"/>
+                                        <field-ref name="ownerPartyId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="facilityId"/>
+                                        <field-ref name="parentAssetId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="acquiredDate"/>
+                                        <field-ref name="warrantyThruDate"/>
+                                    </field-row>
+                                    <field-ref name="warrantyPartyId"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <link url="${sharedLinks['Equipment/AssetTags']}" text="Print tags" icon="sym_o_qr_code_2" link-type="anchor-button"/>
+                    </container>
+                </container>
+                <form-single name="ScanTag" transition="openScanned">
+                    <field name="assetId">
+                        <default-field title="Asset tag" tooltip="Scan a tag, or type an equipment id or serial number">
+                            <scan-input resolver="ironstone.maintenance.AccessServices.resolve#EquipmentScan" size="30"
+                                    placeholder="Scan or type a tag"/>
+                        </default-field>
+                    </field>
+                </form-single>
+                <form-list name="EquipmentRows" list="equipmentList" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <row-selection id-field="assetId" parameter="assetIds" list-mode="true">
+                        <action>
+                            <dialog button-text="Print tags" title="Print the chosen equipment's tags"/>
+                            <form-single name="PrintChosenTags" transition="printTags">
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Open the tags"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="text">
+                        <header-field title="Id, name, serial or registration">
+                            <text-line size="20"/>
+                        </header-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'parentFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Model">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'equipmentModels', selected:productId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="classEnumId">
+                        <header-field title="Asset class">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'equipmentClasses', selected:classEnumId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="custodianPartyId">
+                        <header-field title="Custodian">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'custodians', selected:custodianPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="warranty">
+                        <header-field title="Supplier warranty">
+                            <drop-down allow-empty="true">
+                                <option key="expiring" text="Ends within 30 days"/>
+                                <option key="expired" text="Expired"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="assetName">
+                        <default-field title="Equipment">
+                            <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                    parameter-map="{assetId:assetId}"/>
+                        </default-field>
+                    </field>
+                    <field name="serialNumber">
+                        <default-field title="Serial">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Model">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="ownerName">
+                        <default-field title="Owner">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName">
+                        <default-field title="Site">
+                            <link url="${sharedLinks['Facilities/FacilityDetail']}" text="${facilityName}" link-type="anchor"
+                                    parameter-map="{facilityId:facilityId}" condition="facilityId"/>
+                        </default-field>
+                    </field>
+                    <field name="custodianName">
+                        <default-field title="Custodian">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="warrantyText">
+                        <default-field title="Supplier warranty">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[${warrantyText ? '<q-chip dense square class="q-ma-none m-tonal text-' +
+                                    warrantyColor + '">' + WebUtilities.encodeHtml(warrantyText) + '</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: warrantyText || ""})}]]></text>
+                                <text type="html">${warrantyText || ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="assetName"/>
+                            <field-ref name="facilityName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="warrantyText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No equipment matches. Search by another name, or register equipment." type="p" style="m-muted"
+                        condition="!equipmentList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

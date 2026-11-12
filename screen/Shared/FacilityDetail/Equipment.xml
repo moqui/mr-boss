@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Equipment tab, Maintenance's (design-maintenance §6, crosscut §3.10; impl-maintenance P2): the equipment at
+    the facility and the facilities inside it, as Mantle's scoped find gives it, each with its site, custodian, state and supplier
+    warranty and opening EquipmentDetail under Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Equipment"
+        default-menu-index="4">
+    <parameter name="facilityId"/>
+    <condition><expression>appRoot == 'Maintenance'</expression></condition>
+    <actions>
+        <!-- FacilityDetail's actions read the facility when it renders with the tab -->
+        <if condition="detail == null">
+            <set field="detail" from="null"/>
+            <service-call name="ironstone.maintenance.FacilityServices.get#FacilityDetail"
+                    in-map="{facilityId:facilityId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="recordFound" from="!!detail?.facility"/>
+        </if>
+        <set field="equipmentList" from="detail?.equipmentList || []"/>
+    </actions>
+    <widgets>
+        <section name="FacilityEquipmentTab" condition="recordFound">
+            <widgets>
+                <form-list name="FacilityEquipmentRows" list="equipmentList" skip-form="true" paginate="false">
+                    <field name="assetName">
+                        <default-field title="Equipment">
+                            <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                    parameter-map="{assetId:assetId}"/>
+                        </default-field>
+                    </field>
+                    <field name="facilityName"><default-field title="At"><display/></default-field></field>
+                    <field name="custodianName"><default-field title="Custodian"><display/></default-field></field>
+                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                    <field name="warrantyText"><default-field title="Supplier warranty"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="assetName"/><field-ref name="facilityName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="warrantyText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No equipment is at this facility." type="p" style="q-pa-md m-muted" condition="!equipmentList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

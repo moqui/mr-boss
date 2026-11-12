@@ -12,20 +12,237 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Parts of the IronStone Maintenance screens (impl-maintenance P1). A screen includes each transition it uses by name
+<!-- Parts of the IronStone Maintenance screens (impl-maintenance P1, P2). A screen includes each transition it uses by name
     (transition-include), so a form here posts to the screen it is on.
-    - choices: the app's drop-downs (ironstone.maintenance.ContextServices.get#Choices: organizations, facilities), after the
-      root's Maintenance check; choiceOrganizationPartyId names the organization whose facilities are offered. -->
+    - choices: the app's drop-downs (ironstone.maintenance.ContextServices.get#Choices), after the root's Maintenance check;
+      choiceOrganizationPartyId names the organization whose facilities are offered, choiceAssetId the equipment whose meters
+      (or which not as its own parent) and choiceFacilityId the facility not offered as its own parent.
+    - P2, the equipment and facility writes, each after check#Record with its capability (the record in the user's scope) and
+      then the Mantle service, which checks again: storeEquipment (store#MaintenanceEquipment; a new one opens its
+      EquipmentDetail), changeCustody, recordMeter, storeRegistration, moveEquipment (move#MaintenanceEquipment, after its
+      preview), createMaintenanceFacility (FacilityServices.store#Facility, a new one opens its FacilityDetail) and storeFeature
+      (store#FacilityFeature, added or ended). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="choices" read-only="true">
         <actions>
             <service-call name="ironstone.maintenance.ContextServices.get#Choices" out-map="found"
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
-                        organizationPartyId:(choiceOrganizationPartyId || null)}"/>
+                        organizationPartyId:(choiceOrganizationPartyId || null), assetId:(choiceAssetId || null),
+                        facilityId:(choiceFacilityId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>
     </transition>
-    <widgets/>
+    <transition name="storeEquipment">
+        <actions>
+            <if condition="assetId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId, capability:'resourceEdit'}"/>
+            </if>
+            <service-call name="mantle.product.MaintenanceResourceServices.store#MaintenanceEquipment" out-map="saved"
+                    in-map="{assetId:assetId, assetName:assetName, comments:comments, serialNumber:serialNumber,
+                        softIdentifier:softIdentifier, classEnumId:classEnumId, assetTypeEnumId:assetTypeEnumId,
+                        parentAssetId:parentAssetId, warrantyThruDate:warrantyThruDate, warrantyPartyId:warrantyPartyId,
+                        ownerPartyId:ownerPartyId, productId:productId, facilityId:facilityId, acquiredDate:acquiredDate,
+                        expectedRevision:expectedRevision}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="assetId" from="saved.assetId"/>
+                <message type="success">${saved.created ? 'Registered' : 'Saved'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Equipment/EquipmentDetail']}">
+            <parameter name="assetId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="changeCustody">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId, capability:'resourceEdit'}"/>
+            <service-call name="mantle.product.MaintenanceResourceServices.change#MaintenanceCustody" out-map="changed"
+                    in-map="{assetId:assetId, roleTypeId:roleTypeId, newPartyId:newPartyId, effectiveDate:effectiveDate}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Custody changed</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+        </error-response>
+    </transition>
+    <transition name="recordMeter">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+            <!-- a meter choice is a model's meter, or "type:" and a meter type for equipment whose model has none -->
+            <set field="meterTypeId" from="String(meterChoice || '').startsWith('type:') ? String(meterChoice).slice(5) : null"/>
+            <service-call name="mantle.product.MaintenanceResourceServices.record#MaintenanceMeter"
+                    in-map="{assetId:assetId, productMeterId:(meterTypeId ? null : meterChoice), productMeterTypeId:meterTypeId,
+                        meterValue:meterValue, readingDate:readingDate, readingReasonEnumId:readingReasonEnumId,
+                        changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Reading recorded</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+        </error-response>
+    </transition>
+    <transition name="storeRegistration">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId, capability:'resourceEdit'}"/>
+            <service-call name="mantle.product.MaintenanceResourceServices.store#MaintenanceRegistration"
+                    in-map="{assetId:assetId, assetRegSeqId:assetRegSeqId, registrationNumber:registrationNumber,
+                        licenseNumber:licenseNumber, govAgencyPartyId:govAgencyPartyId, fromDate:fromDate, thruDate:thruDate}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Registration saved</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+        </error-response>
+    </transition>
+    <transition name="moveEquipment">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId, capability:'resourceEdit'}"/>
+            <service-call name="mantle.product.MaintenanceResourceServices.move#MaintenanceEquipment"
+                    in-map="{assetId:assetId, toFacilityId:toFacilityId, toLocationSeqId:toLocationSeqId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Moved</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+        </error-response>
+    </transition>
+    <transition name="createMaintenanceFacility">
+        <actions>
+            <if condition="parentFacilityId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:parentFacilityId, capability:'facilityEdit'}"/>
+            </if>
+            <service-call name="mantle.facility.FacilityServices.store#Facility" out-map="saved"
+                    in-map="{facilityName:facilityName, facilityTypeEnumId:facilityTypeEnumId, ownerPartyId:ownerPartyId,
+                        parentFacilityId:parentFacilityId, timeZone:timeZone, capacity:capacity, bookable:bookable,
+                        description:description}"/>
+        </actions>
+        <default-response url="${sharedLinks['Facilities/FacilityDetail']}">
+            <parameter name="facilityId" from="saved.facilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeFeature">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:roomFacilityId, capability:'facilityEdit'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#FacilityFeature"
+                    in-map="{facilityId:roomFacilityId, featureEnumId:featureEnumId, end:(end == 'true' || end == 'Y'),
+                        comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${end == 'true' || end == 'Y' ? 'Feature ended' : 'Feature added'}</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="facilityId"/>
+        </error-response>
+    </transition>
+    <widgets>
+        <!-- NewFacility (design §6 Facilities) for a holder of FACILITY_EDIT (maintenance.capabilities.facilityEdit): the including
+            screen's newFacilityDefaults, a parentFacilityId in its context the new facility's parent and newFacilityTitle and
+            newFacilityType the dialog's words; a top-level facility asks for its time zone (rooms inherit theirs) -->
+        <section name="NewMaintenanceFacility" condition="maintenance?.capabilities?.facilityEdit">
+            <widgets>
+                <container-dialog id="NewMaintenanceFacilityDialog" button-text="${newFacilityTitle || 'New facility'}"
+                        title="${newFacilityTitle || 'New facility'}" icon="sym_o_add" width="760" type="${newFacilityType || 'primary'}">
+                    <form-single name="NewMaintenanceFacility" transition="createMaintenanceFacility" map="newFacilityDefaults">
+                        <field name="facilityName">
+                            <default-field title="Name">
+                                <text-line required="true"/>
+                            </default-field>
+                        </field>
+                        <field name="facilityTypeEnumId">
+                            <default-field title="Type">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'facilityTypes', selected:facilityTypeEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="parentFacilityId" from="parentFacilityId">
+                            <default-field title="Inside" tooltip="The site, building or floor it is part of">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'parentFacilities', selected:parentFacilityId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="ownerPartyId">
+                            <default-field title="Owner">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:ownerPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="timeZone">
+                            <default-field title="Time zone" tooltip="Needed for a facility at the top; one inside takes its parent's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="1"
+                                            parameter-map="{choice:'timeZones', selected:timeZone}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="capacity">
+                            <default-field title="Holds" tooltip="How many people it holds">
+                                <text-line size="5"/>
+                            </default-field>
+                        </field>
+                        <field name="bookable">
+                            <default-field title="Bookable">
+                                <check>
+                                    <option key="Y" text="Can be booked on a calendar"/>
+                                </check>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Description">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="">
+                                <submit text="Create facility"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="facilityName"/>
+                                <field-ref name="facilityTypeEnumId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="parentFacilityId"/>
+                                <field-ref name="ownerPartyId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="timeZone"/>
+                                <field-ref name="capacity"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="bookable"/>
+                                <field-ref name="description"/>
+                            </field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
 </screen>

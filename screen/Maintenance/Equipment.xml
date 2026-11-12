@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Equipment area of IronStone Maintenance (design-maintenance §6 Equipment, §1.2; impl-maintenance P2): Find, the equipment
+    register (EquipmentFind, EquipmentRows, CreateEquipment), and AssetTags, the asset tag labels; the shared EquipmentDetail with
+    Maintenance's tabs, Product360 (the equipment model's meters, maintenance defaults and spare parts) and Employee360 (a
+    custodian's public work card and their equipment), hidden from the menu. Shown to a user who reads equipment (the root's
+    menu condition); every read is Mantle's scoped find (MaintenanceResourceServices). Downtime and EquipmentImport join with P5
+    and P18. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Equipment" default-menu-index="6" menu-image="sym_o_precision_manufacturing" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true">
+        <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml" menu-include="false"/>
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+        <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenanceEquipmentPanel" type="tab"/>
+    </widgets>
+</screen>

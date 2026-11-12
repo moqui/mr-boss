@@ -4,7 +4,9 @@
 // refused Services' organization and facility and Services' planner refused Retail's with the same parameters, the
 // ironstone.maintenance services refused without the root grant, a shared device's request given no context and refused the
 // Chatter and RecordFiles panels (F74) and a user served only Maintenance's record hosts' panels, Home's one qvt render (its counters not configured) and
-// Settings' one html render (the administrator's; the reader's a refusal), and Maintenance's rows in Admin's capability and
+// Settings' one html render (the administrator's; the reader's a refusal), P2's equipment write (the resource administrator's,
+// the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
+// and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
 // asset's organization, assignment) are Mantle's MaintenanceScope. The access and isolation walk is the acceptance
@@ -138,9 +140,19 @@ feature("the Maintenance menu, keys and palette follow the groups; the launcher 
             problems.push(`the administrator's Settings tabs: ${settings.status} ${settings.names}`)
         for (const user of [users.requester, users.otherApp])
             if (shell(user).apps.includes("Maintenance")) problems.push(`${user} has Maintenance`)
-        // the palette answers nothing yet (its records join with their screens), and nothing to a user without Maintenance
-        const rows = user => asUser(user, () => invoke(contextServices + "search#Records", {text: "a"}).rows || [])
-        if (rows(users.planner).length) problems.push(`the planner's palette rows: ${JSON.stringify(rows(users.planner))}`)
+        // P2: a user who reads no equipment (the procedure author) has Home alone
+        const author = shell(users.author, true).names
+        if (JSON.stringify(author) !== JSON.stringify(ids.homeOnlyMenu)) problems.push(`the author's menu: ${author}`)
+        // the palette finds the scope's equipment and facilities (P2), Retail's planner none of Services', and a user who reads no
+        // equipment none
+        const rows = (user, text) => asUser(user, () => invoke(contextServices + "search#Records", {text}).rows || [])
+        const compressor = rows(users.planner, "Compressor C-1")
+        if (!compressor.some(row => row.recordId === ids.compressorId && row.url.includes("Equipment/EquipmentDetail")))
+            problems.push(`the planner's palette rows: ${JSON.stringify(compressor)}`)
+        if (!rows(users.planner, "Service Center").some(row => row.recordId === ids.buildingId))
+            problems.push(`the planner's palette has no Service Center`)
+        if (rows(users.retailPlanner, "Compressor C-1").length) problems.push(`Retail's planner finds Services' compressor`)
+        if (rows(users.author, "Compressor C-1").length) problems.push(`the author finds equipment`)
         return {problems}
     },
     then({problems}) {
@@ -272,6 +284,12 @@ feature(
                 const facilities = invoke(choices, {choice: "facilities"}).options.map(option => option.value)
                 if (!facilities.includes(ids.facilityId) || facilities.includes(ids.otherFacilityId))
                     problems.push(`the planner's facilities: ${facilities}`)
+                // P2: a custodian is one of the scope's employees; a warrantor or agency an organization, never a person or
+                // another internal organization
+                const options = (choice, term) => invoke(choices, {choice, term}).options.map(option => option.value)
+                if (!options("custodians", "Kenji").includes(ids.custodianId)) problems.push("the planner's custodians lack Kenji")
+                if (options("parties", "Kenji").length) problems.push(`the planner's parties offer people: ${options("parties", "Kenji")}`)
+                if (options("parties", "Retail").includes(ids.otherOrganizationId)) problems.push("the planner's parties offer Retail")
             })
             asUser(users.retailPlanner, () => {
                 expect(
@@ -299,6 +317,8 @@ feature(
                 const organizations = invoke(choices, {choice: "organizations"}).options.map(option => option.value)
                 if (!organizations.includes(ids.otherOrganizationId) || organizations.includes(ids.organizationId))
                     problems.push(`Retail's planner's organizations: ${organizations}`)
+                const custodians = invoke(choices, {choice: "custodians", term: "Kenji"}).options.map(option => option.value)
+                if (custodians.includes(ids.custodianId)) problems.push("Retail's planner's custodians offer Services' Kenji")
             })
             return {problems}
         },
@@ -307,6 +327,39 @@ feature(
         }
     }
 )
+
+// P2: equipment writes need MAINTENANCE_RESOURCE_EDIT and the equipment's organization (the Mantle writer checks them; the screens'
+// transitions check check#Record with resourceEdit first)
+feature("an equipment write is the resource administrator's: the planner is refused, and Retail's forklift is refused to both", {
+    when() {
+        const store = "mantle.product.MaintenanceResourceServices.store#MaintenanceEquipment"
+        const original = system(() => ec.entity.find("mantle.product.asset.Asset").condition("assetId", ids.compressorId).one().comments)
+        const parameters = assetId => ({assetId, comments: "Checked by the Maintenance access spec"})
+        // the Mantle writer as the screens call it under the root's inheritable grant: the artifact check aside, its own
+        // permission and scope checks decide
+        const write = (user, assetId) =>
+            asUser(user, () => {
+                ec.artifactExecution.disableAuthz()
+                return refusal(store, parameters(assetId))
+            })
+        const resources = write(users.resources, ids.compressorId)
+        const planner = write(users.planner, ids.compressorId)
+        const otherAsset = write(users.resources, ids.otherAssetId)
+        const checkEdit = asUser(users.planner, () =>
+            refusal(checkRecord, {recordType: "asset", recordId: ids.compressorId, capability: "resourceEdit"})
+        )
+        const saved = system(() => ec.entity.find("mantle.product.asset.Asset").condition("assetId", ids.compressorId).one().comments)
+        system(() => call("update#mantle.product.asset.Asset", {assetId: ids.compressorId, comments: original}))
+        return {resources, planner, otherAsset, checkEdit, saved}
+    },
+    then({resources, planner, otherAsset, checkEdit, saved}) {
+        resources == ""
+        saved == "Checked by the Maintenance access spec"
+        planner.includes("PERMISSION_DENIED")
+        otherAsset.includes("RECORD_UNAVAILABLE")
+        checkEdit.includes("PERMISSION_DENIED")
+    }
+})
 
 feature("the ironstone.maintenance services are refused without the root grant", {
     when() {
@@ -387,27 +440,38 @@ feature("a shared device gets no Maintenance context and no record panel; a user
             return String(redeemed.header("Set-Cookie") || "").split(";")[0].replace("moqui.device=", "")
         })
         login("john.doe")
-        // the panels' data, as the chatter and record-files elements ask for it: of a facility the planner reads (no Maintenance
-        // host yet), and naming no record (as a person search does)
+        // the panels' data, as the chatter and record-files elements ask for it: of a facility and equipment the planner reads (P2's
+        // hosts, F82), of Retail's warehouse and forklift with the same parameters, of a record that is no Maintenance host (a
+        // product), and naming no record (as a person search does)
         const record = {recordEntity: "mantle.facility.Facility", recordId: ids.facilityId}
+        const panel = (recordEntity, recordId) =>
+            deviceRequest("apps/Maintenance/RecordFiles/filesData", null, {recordEntity, recordId}).errors
         return {
             cookie,
             home: deviceRequest("apps/Maintenance/Home", cookie),
             chatter: deviceRequest("apps/Maintenance/Chatter/chatterData", cookie),
             files: deviceRequest("apps/Maintenance/RecordFiles/filesData", cookie, record),
             ...asUser(users.planner, () => ({
-                plannerFiles: deviceRequest("apps/Maintenance/RecordFiles/filesData", null, record),
+                plannerFiles: panel("mantle.facility.Facility", ids.facilityId),
+                plannerAsset: panel("mantle.product.asset.Asset", ids.compressorId),
+                otherFacility: panel("mantle.facility.Facility", ids.otherFacilityId),
+                otherAsset: panel("mantle.product.asset.Asset", ids.otherAssetId),
+                product: panel("mantle.product.Product", ids.modelId),
                 plannerChatter: deviceRequest("apps/Maintenance/Chatter/chatterData", null)
             }))
         }
     },
-    then({cookie, home, chatter, files, plannerFiles, plannerChatter}) {
+    then({cookie, home, chatter, files, plannerFiles, plannerAsset, otherFacility, otherAsset, product, plannerChatter}) {
         cookie.includes(".")
         home.status == 200 && home.errors == ""
         home.output.includes("Nothing of it is open to you.")
         chatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
         files.errors.includes("RECORD_PANEL_UNAVAILABLE")
-        plannerFiles.errors.includes("RECORD_PANEL_UNAVAILABLE")
+        !plannerFiles.includes("RECORD_PANEL_UNAVAILABLE")
+        !plannerAsset.includes("RECORD_PANEL_UNAVAILABLE")
+        otherFacility.includes("RECORD_PANEL_UNAVAILABLE")
+        otherAsset.includes("RECORD_PANEL_UNAVAILABLE")
+        product.includes("RECORD_PANEL_UNAVAILABLE")
         !plannerChatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
     }
 })

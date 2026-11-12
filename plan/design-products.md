@@ -344,6 +344,11 @@ rows and its legacy-association migration skips `PtPickAssembly` products.
 
 Tags appear as chips on the Summary tab; ProductTags is that chip editor, and catalog readers
 see the chips read only (R-PRD-36).
+Maintenance's mount (impl-maintenance P2, F67; an owner contract): `Maintenance/Equipment/Product360` takes SharedContext.js
+`maintenanceContext()`: Summary, Identifiers, Equipment, Spare parts and Documents, for a user who reads Maintenance's equipment,
+over the products of Maintenance's organizations; catalog writes only with the user's own catalog permissions, and no price,
+cost, method or stock read. Spare parts are `ProductAssoc` rows of type `PatSparePart`, which the catalog row writer keeps beside
+the substitutes (`CatalogRecords.js`); the Associations tab still shows substitutes only.
 Source: research §3–§4, §7–§10 and Catalog Product forms (§12).
 **Needs.** PRD-ACCESS, PRD-LIFECYCLE, PRD-VARIANTS, PRD-PRICE, PRD-COST, PRD-PACKAGING, PRD-CONTENT, PRD-KITS.
 

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Book tab under Maintenance (design-maintenance §6; impl-maintenance P2): the equipment's book (class, in
+    service, method, cost, depreciation and net book value) for a user Accounting's get#AssetBook admits (Accounting read authority
+    in its owner organization), read only; the Book actions stay Accounting's dialogs, in Accounting's mount. No book value is read
+    for anyone else. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Book" default-menu-index="6">
+    <parameter name="assetId"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentBook" condition="found?.asset">
+            <widgets>
+                <section name="EquipmentBookShown" condition="found.book">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Book · ${found.book.stateText}"/>
+                            <box-body-nopad>
+                                <form-list name="EquipmentBook" list="found.book.rows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><display style="m-muted"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <label text="Capitalizing, adjusting and disposing of it are done in Accounting." type="p" style="m-muted"/>
+                    </widgets>
+                    <fail-widgets>
+                        <label text="Its book is shown to Accounting readers." type="p" style="m-muted"/>
+                    </fail-widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

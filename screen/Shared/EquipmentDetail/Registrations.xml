@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Registrations tab under Maintenance (impl-maintenance P2): the equipment's registrations (a vehicle's plate,
+    an inspection licence) with their agency and dates; Add registration (store#MaintenanceRegistration) for a holder of
+    MAINTENANCE_RESOURCE_EDIT. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Registrations" default-menu-index="5">
+    <parameter name="assetId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeRegistration" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+        <set field="registrationValues" from="{assetId: assetId}"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentRegistrations" condition="found?.asset">
+            <widgets>
+                <container-box>
+                    <box-header title="Registrations"/>
+                    <box-toolbar>
+                        <container-dialog id="AddRegistrationDialog" button-text="Add registration" title="Add a registration of ${found.asset.assetName}"
+                                icon="sym_o_add" width="640" type="primary" condition="found.canEdit">
+                            <form-single name="AddRegistration" transition="storeRegistration" map="registrationValues">
+                                <field name="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="registrationNumber">
+                                    <default-field title="Registration number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="licenseNumber">
+                                    <default-field title="License number">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="govAgencyPartyId">
+                                    <default-field title="Agency">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'parties', selected:govAgencyPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="thruDate">
+                                    <default-field title="Through">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Add registration"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="EquipmentRegistrations" list="found.registrations" skip-form="true" paginate="false">
+                            <field name="registrationNumber"><default-field title="Registration"><display/></default-field></field>
+                            <field name="licenseNumber"><default-field title="License"><display/></default-field></field>
+                            <field name="agencyName"><default-field title="Agency"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="registrationNumber"/><field-ref name="agencyName"/></column>
+                                <column><field-ref name="thruDateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No registration is recorded." type="p" style="m-muted q-pa-md" condition="!found.registrations?.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

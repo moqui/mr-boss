@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Files tab under Maintenance (impl-maintenance P2, F82): the equipment's files (the Asset record host of the
+    record files drive, which Maintenance's root serves for equipment its check admits) and the files of its earlier maintenance
+    records (AssetMaintenanceContent), listed where they are kept, never copied. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Files" default-menu-index="7">
+    <parameter name="assetId"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentFiles" condition="found?.asset">
+            <widgets>
+                <label text="Files" type="h6"/>
+                <record-files id="MaintenanceEquipmentFiles" record-entity="mantle.product.asset.Asset" record-id="${assetId}"/>
+                <section name="OldMaintenanceFiles" condition="found.maintenanceFiles?.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Files of its earlier maintenance records"/>
+                            <box-body-nopad>
+                                <form-list name="EquipmentMaintenanceFiles" list="found.maintenanceFiles" skip-form="true" paginate="false">
+                                    <field name="fileName"><default-field title="File"><display/></default-field></field>
+                                    <field name="description"><default-field title="Description"><display/></default-field></field>
+                                    <field name="contentDateText"><default-field title="Added"><display/></default-field></field>
+                                    <field name="assetMaintenanceId"><default-field title="Maintenance record"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fileName"/></column>
+                                        <column><field-ref name="contentDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

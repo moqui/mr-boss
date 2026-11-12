@@ -67,4 +67,22 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="detail" from="record.detail"/>
         </actions>
     </service>
+    <service verb="resolve" noun="EquipmentScan" allow-remote="false" read-only="true">
+        <description>The resolver of Maintenance's asset tag scan-input (impl-maintenance P2; design §6 AssetTags): the equipment a
+            scanned tag (the EquipmentDetail link it holds) or a typed id, serial or soft identifier names, in the user's
+            maintenance scope (Mantle's find#MaintenanceEquipment, so the scope is checked on each scan; its parameters are client
+            input): exact matches first. Nothing for a user without Maintenance or without an equipment read.</description>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="allowedTypes" type="List"/>
+            <parameter name="scanId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="matches" from="ec.resource.script(module).execute('resolveScan', context).matches"/>
+        </actions>
+    </service>
 </services>
