@@ -5237,6 +5237,111 @@ PeopleApprovals (36 of 36) passed after it.
     full suites as the Built note says;
   - the user's calls: both recorded in §4 as built; the Commons-wide calendar finding above may want one.
 
+**Follow-up Nov 12 (Commons calendar editors).** The user's call (§4): F330, the Commons-wide hole, is fixed in Commons now,
+generally. mr-mantle b936d768 and mr-boss (this commit), branch `ppl/cal`.
+- Putting an event in a calendar gives its editors no more than the one who put it there: `CalendarWorkEffort.viewOnly` (new) is Y
+  when `add#CalendarEvent` puts an event the user may not change (an attendee's invitation) in a calendar, and `check#EventAccess`
+  makes no editor through such a link (the attendee, nor a delegate who edits their calendar); feeds, `import#Calendar` and CalDAV
+  writes (`store#CalendarFeedEvents`) neither change nor cancel it, and a split series copies the flag. The organizer, editors of a
+  calendar that holds the event for its editors (a delegate of the organizer's calendar, a team calendar it was made in) and their
+  own events are as before.
+- An event an application keeps: R1's hard-coded training check is now the `EventManager` entity (an entity whose row names the
+  event, optionally a purpose, and where it changes), seeded beside its entity: `PeopleTrainingSession` (TrainingSession,
+  WepTraining) and `PeopleInterview` (ApplicationInterview); any app's event declares one the same way. `check#EventAccess` answers
+  `managedBy` and `eventManagerId` (`get#ManagedEvents`, a batch) and refuses the edit to every user ("X is changed on its
+  application's interviews in People"); the owner's services write the event themselves or call the event services as the system
+  (`runAsSystem`, admitted with no user and authorization off).
+- Interviews change only through RecruitingServices: `change#Interview` (start from now on, length, place unless a video call, whose
+  link is kept open past the new end, note) and `cancel#Interview` (the scorecards stay), a recruiter of the employer's; the
+  invitations of schedule, change and cancel go as the system. ApplicantDetail's Interviews rows have Change and Cancel (danger,
+  confirmed); Commons' EventDetail shows a kept event read-only with "This event is changed on …", and `get#EventAccessInfo`'s
+  edit refusal names where.
+- CalDAV: `put#DavObject` refuses (403) a write to an event of the calendar the user may not change, under its name or another
+  with its UID, and `delete#DavObject` its delete; the organizer's delete cancels the event though an attendee's calendar shows it
+  (a viewOnly link is not "elsewhere"). The tasks branch is untouched.
+- Commons' calendar data (`get#CalendarEvents`) computes `canEdit` with the same rule (viewOnly links, kept events), so the grid
+  offers no drag of an invitation the user put in their calendar, nor of a session or interview to its organizer (F331).
+- Specs (each new check fails on the code as it was): Mantle CalendarServices (Ben's invitation in his calendar, viewOnly, he and
+  Cy, his calendar's editor, refused a move, a cancel and a booking; Dee, an editor of Ada's calendar, still changes it), Dav (the
+  attendee's phone reads it and is refused a change, under its name and another with its UID, and a delete; the organizer's delete
+  cancels it), Recruiting (the organizer refused update and cancel on Commons with where it changes, the panel member refused a
+  calendar, a reader and another employer's recruiter refused, the change, the cancel, then INTERVIEW_CANCELLED); BOSS Calendar
+  (Joe's planning in john.doe's own calendar: no canEdit on the grid or the popover, the move refused) and PeopleRecruiting (the
+  recruiter's changeInterview on ApplicantDetail; EventDetail's save refused naming People). Training unchanged and passing.
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): Mantle Training, Recruiting, Dav, CalendarServices,
+  CalendarChanges, CommonsToday, LeaveRequests, ShiftRoster, PeopleChecklists, Qualifications, Offers, BusinessTime 89 of 89; BOSS
+  Calendar, EventDetail, Schedules, CalendarSettings, PublishedCalendar, SyncSettings, TodayPanel, QuickCreate, PeopleRecruiting,
+  PeopleTraining, PeopleLeave, PeopleRoster, PeopleTime, ManufacturingAccess 115 of 115, PeopleAccess and PeopleSelfService 30 of
+  30. Budget share: mr-mantle about +0.9 s (CalendarServices 0.42, Dav 0.12, Recruiting 0.37), mr-boss about +0.2 s. `moqui lint
+  --screens`: 136 flagged sites as before, none in ApplicantDetail or EventDetail. Prettier clean on Recruiting.js, Recruiting.spec
+  and PeopleRecruiting.spec (CalendarServices, Dav and Calendar specs were not Prettier-formatted before; left in their style). Not
+  run: test-apps, the acceptance suite.
+- Findings:
+  - an attendee's link made before this fix has no viewOnly and still makes its calendar's editors the event's; no data upgrade
+    marks them (a personal calendar of an attendee who is not the organizer is the likely set);
+  - a phone's change of an event made in the app (no `universalId`; served as `mantle-{id}`) is stored as a new event beside it,
+    since `store#CalendarFeedEvents` matches by `universalId` only: a duplicate, before and after this fix;
+  - an interview's panel is fixed once scheduled (EventDetail's attendees are refused on a kept event): cancel and schedule again;
+    a cancelled interview's call link stays open until it expires (`revoke#CallLink` is its owner's);
+  - by the rule, an attendee who may already change an event (an editor of its team calendar) makes their own calendar's editors
+    its editors too when they put it there.
+
+**Review Nov 12 (calendar follow-up).** Every write path was walked against the rule: Mantle EventServices (update, cancel and
+restore#EventOccurrence, store#EventRecurrence, send#EventInvitations, remove#EventAttendee, book#Resource, cancel and
+check#ResourceBookings all check `check#EventAccess` edit), CalendarServices (`add#CalendarEvent` marks, `store#CalendarFeedEvents`
+skips viewOnly and kept events for feeds, `import#Calendar` and CalDAV), CalendarDavServices (PUT by name and by UID, DELETE), the
+BOSS Commons event and calendar services and screens (every change behind `get#EventAccessInfo` edit; `duplicate#Event` and
+`save#EventOverview` add through `add#CalendarEvent`), Projects' calendar (a WetEvent through the same check, other items through
+`move#TimelineItem`'s task and project access), Manufacturing (runs are not events to `get#EventAccessInfo`, F39), ShiftRoster
+(ShiftAssignment rows, no events) and holidays (no organizer, no calendar). Sound: an attendee, their delegates, a shared calendar's
+editors and a phone change or cancel no invitation they did not organize; kept events change only in People; the organizer's own,
+the delegate of the organizer's calendar and the team calendar it was made in are as before (CalendarServices' Dee, Calendar spec).
+The system scope (no user, authorization off) is reached only by `runAsSystem`, scheduler jobs, data loads and the mail sync;
+the anonymous services and screens (PublishedCalendar, `fetch#CalendarSubscriptions`, `send#DueReminders`, the call link token
+routes, `create#ApplicationFromEmail`) pass no request-chosen event to an event write service, so it is safe as built.
+- R1 (High; the follow-up's first finding): attendee links made before the fix still gave edit. `migrate#CalendarViewOnlyLinks`
+  (CalendarServices, run from the new seed file `data/CalendarSeedData.xml`, as P10's `migrate#ProductionCostRates`) marks each
+  link with no viewOnly: Y when the event has an organizer who neither owns nor edits the calendar and the calendar's owner could
+  not change the event through another calendar link, else N (the organizer's own, a delegate's or team member's, an event with
+  no organizer, a feed's). Each link in its own transaction, a failure logged and counted. `add#CalendarEvent` now writes N for
+  an editor's link, so a later load judges no new link again. Spec: CalendarServices (Ben's old link Y, he and Cy refused;
+  Ada's own, Dee's delegated call, the all-hands Ben edits through the team calendar and an event with no organizer N; a second
+  run does nothing).
+- R2 (Medium; the follow-up's third finding, in part): `cancel#Interview` closes the interview's video call link: the recruiter
+  who scheduled it through the framework's `revoke#CallLink` (guests removed at once), another recruiter of the employer as the
+  system (the link revoked, so its token and guests are refused, and the guests' credentials ended for `expire#Calls`), with
+  `revoke#CallLink`'s preconditions checked first so no error rolls the cancel back. Spec: Recruiting (both paths: the link
+  revoked, the token refused, the guest out).
+- R3 (Low): a phone's delete of an invitation the attendee's calendar only shows was refused (403), so it came back on the phone
+  with no way to drop it there (before the follow-up the delete took it out of that calendar); it now takes it out of that
+  calendar and leaves the event as it was. A kept event's delete is still 403. Spec: Dav (204, the calendar empty, the event
+  unchanged; the organizer's delete still cancels it).
+- Provisional findings (for the lead to number):
+  - `tellAttendees` (schedule, change and cancel#Interview) catches a failing `send#EventInvitations`, but the failure has
+    already marked the transaction rollback-only (docs/logic/Services.md), so the interview change rolls back while the screen
+    says it was made and the attendees were not told; the invitations want to go after commit (pre-existing in schedule since P16);
+  - Leave's WetTimeOff projections are owned by the employee, so Mantle's event services (update, cancel and restore#EventOccurrence,
+    `add#CalendarEvent` and then CalDAV) let the employee move or cancel their approved leave's "Out of office" on a direct call;
+    the BOSS screens refuse it (`get#EventAccessInfo` is WetEvent only) and no remote endpoint reaches it today. An EventManager
+    row on LeaveRequestSegment.workEffortId (with an index) would close it; production runs (WepProductionRun, guarded in BOSS
+    only, F39) likewise by an EventManager on WorkEffort with that purpose;
+  - as the system, `send#EventInvitations` no longer leaves out the acting user, so a recruiter on the panel who changes or
+    cancels an interview is notified of their own change;
+  - a cancelled interview's scorecards stay open to submit (`submit#Scorecard` does not look at the event);
+  - the migration errs toward view only on a shared calendar: a link an editor of the event (not its organizer) put in a shared
+    calendar is marked Y unless the calendar's owner edits the event through another calendar; the organizer and that other
+    calendar's editors still change it.
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): Mantle Training, Recruiting, Dav,
+  CalendarServices, CalendarChanges, CommonsToday, LeaveRequests, ShiftRoster, PeopleChecklists, Qualifications, Offers,
+  BusinessTime 91 of 91 (52.5 s, features 28.1 s); BOSS Calendar, EventDetail, Schedules, CalendarSettings, PublishedCalendar,
+  SyncSettings, TodayPanel, QuickCreate, PeopleRecruiting, PeopleTraining, PeopleLeave, PeopleRoster, PeopleTime,
+  ManufacturingAccess, PeopleAccess, PeopleSelfService 145 of 145 (48.5 s, features 24.9 s). New checks: the migration feature
+  0.42 s, the call link feature 0.22 s, the changed Dav feature 0.12 s; each fails on the code before the fixes. Prettier clean on
+  Recruiting.js and Recruiting.spec. The seed file was not loaded into a database here (the service is spec'd directly).
+- For the lead: budget share mr-mantle about +0.65 s, mr-boss none. Merge hot spots: CalendarServices.xml, CalendarDavServices.xml,
+  Recruiting.js, Recruiting.spec, impl-people.md; nothing in P21's files. R3 departs from the follow-up's "DELETE refused to
+  non-editors" for a link the calendar only shows (it changes the user's calendar, never the event): the user may want to confirm.
+
 ### P20 — Reviews and goals
 
 Design §11 ReviewCycles, Reviews, ReviewDetail, Goals; PE-16. After P16 (an assessment is a response of a review
@@ -5798,6 +5903,7 @@ the owner's design.
 | Nov 11, 2026 | At most two phase workers run at once, and only as a pair §1 lets run side by side: P9 with P10; in stage 3 two of the tracks P15, P16–P17, P18 and P21 (P19 and P20 after both P16 and P18); P22–P23 beside a stage 3 track. Every other phase runs alone, in §1's order | The user's call. A pair that appends to the same file rebases before merging (§1) |
 | Nov 11, 2026 | Mantle seeds an `EmailWork` contact purpose; the directory and every People projection of a work email (the list, the export, Employee360's Overview, the palette and the record-lookup card) show only `EmailWork`, never `EmailPrimary`; People's demo stores its employees' work emails under `EmailWork` | The user's call on P2's question (built in P2's review, R1). `EmailPrimary` may be a person's own address. No other app's spec or screen reads the demo employees' emails; a purpose drop-down offers "Email - Work" |
 | Nov 11, 2026 | An employment's files and activity stay HR's (an HR reader of its employer, as built in P2): the person does not read the files on their own employment | The user's call on P2's question: left as built (design §4 Employee360) |
+| Nov 12, 2026 | The Commons-wide calendar editor hole of P19's review (F330) is fixed in Commons now, generally: putting an event in a calendar gives view only to whoever could not change it, and an event an app keeps (People's training sessions and interviews, any app's through `EventManager`) changes only through that app; interviews get `change#Interview` and `cancel#Interview` | The user's call; built in P19's follow-up (Commons calendar editors) |
 | Nov 11, 2026 | A user's organizations (`PartyServices.get#PartyInternalOrgIds`, so `userOrgIds` and `filterOrgIds`) admit an internal organization's rollup children only when they are internal (`OrgInternal`) themselves: a department or team is never an organization in any app's scope, and People walks its units itself (F49). Admin's Organizations counts and lists only internal child organizations, and Accounting's and Purchasing's cost centres are the internal ones (the ledger's dimension rule) | The user's call on P3's question: kept as built in P3; P3's review carried it to the readers of rollup children that assumed every child internal |
 | Nov 11, 2026 | Department memberships stay open in P3 (`store#Membership` writes a department's members as a team's). P6 makes the employment assignment write the department membership and makes OrgStructure read only for a department's members, a team's staying editable | The user's call on P3's question; P6's text gains it |
 | Nov 11, 2026 | An emergency contact is a Person party per contact, linked from the employee by a dated `PartyRelationship` of a new type; built in P8 (PersonalInfo and SelfService) | The user's call on P2's F80; P8's text gains it |

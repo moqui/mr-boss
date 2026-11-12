@@ -29,7 +29,9 @@ along with this software (see the LICENSE.md file). If not, see
     offer (store#Offer: a seat of the opening, the start, when it is open until and a note; it moves the application to Offer and
     opens OfferDetail), the primary once a scorecard is in (Schedule interview the primary before), and the Offers box (each offer of
     the application with its state, opening OfferDetail; find#Offers). An applicant's resume is shared with the panel when attached
-    (the user's call of Nov 12, 2026), and the recruiter can stop sharing it. -->
+    (the user's call of Nov 12, 2026), and the recruiter can stop sharing it. An interview's event is People's (Commons calendar
+    editors, Nov 12, 2026): a recruiter changes its time, length, place or note (change#Interview) and cancels it (cancel#Interview)
+    on its row here, and Commons' EventDetail shows it read-only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Applicant" default-menu-include="false">
     <parameter name="employmentApplicationId"/>
@@ -68,6 +70,31 @@ along with this software (see the LICENSE.md file). If not, see
                         inviteCandidate:(inviteCandidate == 'Y'), note:(note || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">${scheduled.invitationsSent ? 'Interview scheduled; the panel and the candidate are invited' : 'Interview scheduled; the invitations were not sent: send them from the interview'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <!-- an interview changed or cancelled here, the only place its event changes (Mantle checks the recruiter and the times; the
+        attendees are told) -->
+    <transition name="changeInterview">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.change#Interview" out-map="changed"
+                    in-map="{workEffortId:workEffortId, startDate:(startDate || null), durationMinutes:(durationMinutes || null),
+                        location:(hasCall == 'Y' ? null : (location ?? '')), note:(note || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${changed.invitationsSent ? 'Interview changed; the attendees are told' : 'Interview changed; the attendees were not told'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="employmentApplicationId"/></default-response>
+        <error-response url="."><parameter name="employmentApplicationId"/></error-response>
+    </transition>
+    <transition name="cancelInterview">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.cancel#Interview" out-map="cancelled"
+                    in-map="{workEffortId:workEffortId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${cancelled.invitationsSent ? 'Interview cancelled; the attendees are told' : 'Interview cancelled; the attendees were not told'}</message>
             </if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
@@ -144,6 +171,9 @@ along with this software (see the LICENSE.md file). If not, see
                 ['Owner', app.ownerName]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, whenText: interview.whenText,
                 panelText: interview.panelText, location: interview.location, stateText: interview.cancelled ? 'Cancelled' : '',
+                canChange: canEdit && !interview.cancelled, hasCall: interview.hasCall ? 'Y' : 'N',
+                startText: interview.startMs != null ? ec.l10n.format(new Date(interview.startMs), 'yyyy-MM-dd HH:mm') : '',
+                durationMinutes: interview.startMs != null && interview.endMs != null ? String(Math.round((interview.endMs - interview.startMs) / 60000)) : '',
                 scorecardText: interview.scorecards.length ? interview.scorecards.filter(card => card.answered).length + ' of ' + interview.scorecards.length + ' submitted' : ''})) : []
             scorecardRows = app ? app.interviews.flatMap(interview => interview.scorecards.map(card => Object.assign({}, card,
                 {interviewText: interview.whenText}))).filter(card => card.answered) : []
@@ -457,9 +487,47 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="panelText"><default-field title="Panel"><display/></default-field></field>
                                     <field name="location"><default-field title="Where"><display/></default-field></field>
                                     <field name="scorecardText"><default-field title="Scorecards"><display/></default-field></field>
+                                    <field name="actions" align="right">
+                                        <conditional-field condition="canChange" title="">
+                                            <container-dialog id="ChangeInterview_${workEffortId}" button-text="Change" icon="sym_o_edit_calendar" type="default"
+                                                    width="560" title="Change the interview of ${whenText}">
+                                                <form-single name="ChangeInterview" transition="changeInterview"
+                                                        map="{workEffortId:workEffortId, startDate:startText, durationMinutes:durationMinutes, hasCall:hasCall,
+                                                            location:(hasCall == 'Y' ? '' : location)}">
+                                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="hasCall"><default-field><hidden/></default-field></field>
+                                                    <field name="startDate"><default-field title="Starts"><date-time/></default-field></field>
+                                                    <field name="durationMinutes">
+                                                        <default-field title="Minutes"><text-line size="5" input-type="number"/></default-field>
+                                                    </field>
+                                                    <field name="location">
+                                                        <conditional-field condition="hasCall != 'Y'" title="Where"><text-line size="40"/></conditional-field>
+                                                        <default-field><hidden/></default-field>
+                                                    </field>
+                                                    <field name="note"><default-field title="Note to the attendees"><text-area rows="2" cols="50"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Change and tell the attendees"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="CancelInterview_${workEffortId}" button-text="Cancel" icon="sym_o_event_busy" type="danger"
+                                                    width="480" title="Cancel the interview of ${whenText}">
+                                                <form-single name="CancelInterview" transition="cancelInterview" map="{workEffortId:workEffortId}">
+                                                    <field name="employmentApplicationId"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Cancel the interview">
+                                                            <submit type="danger" confirmation="Cancel the interview of ${whenText} and tell the attendees?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </conditional-field>
+                                        <default-field title=""><display text=" "/></default-field>
+                                    </field>
                                     <columns type="mobile">
                                         <column><field-ref name="whenText"/><field-ref name="panelText"/></column>
-                                        <column><field-ref name="scorecardText"/></column>
+                                        <column><field-ref name="scorecardText"/><field-ref name="actions"/></column>
                                     </columns>
                                 </form-list>
                                 <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!interviewRows.length"

@@ -26,7 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
     search index. A change to a repeating
     event asks which events (this, this and following, all) and whether to tell the attendees. An event the user may not see
     is "not available" (ironstone.commons.CalendarServices.get#EventAccessInfo: IronStone R5, R28); one the user may not change shows
-    the same layout read-only. -->
+    the same layout read-only, and one an application keeps (a People training session or interview) says where it is changed
+    (Commons calendar editors, Nov 12, 2026). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Event" default-menu-include="false">
 
@@ -244,6 +245,7 @@ along with this software (see the LICENSE.md file). If not, see
             edit = detail.edit
             recurrence = detail.recurrence || {}
             canEdit = !!detail.canEdit
+            managedBy = detail.managedBy || ''
             canRsvp = !!detail.canRsvp
             canSetReminders = !!detail.canSetReminders
             isOrganizer = !!detail.isOrganizer
@@ -424,6 +426,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </container>
                 <container style="m-record-foot">
                     <render-mode><text type="qvt"><![CDATA[${factsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(Object.assign({t: "html", id: "EventFacts"}, JSON.parse(sri.htmlText(factsHtml))))}]]></text></render-mode>
+                    <section name="ManagedNote" condition="managedBy"><widgets>
+                        <label type="div" style="q-mt-xs text-body2 m-muted" text="This event is changed on ${managedBy}, not here."/>
+                    </widgets></section>
                     <section name="InstanceNote" condition="event.isInstance"><widgets>
                         <container style="q-mt-xs text-body2">
                             <label type="span" text="This instance was changed on its own from its repeating series. " style="m-muted"/>

@@ -5,7 +5,8 @@
 // approved seat and its application, the board and Move to stage); P16 review (the user's call of Nov 12, 2026): an interviewer
 // with self-service only reads their interviews and answers their scorecard from MyInterview under Commons (its one qvt render:
 // the applicant, the opening and only the file the recruiter shared, never the stage or another file), and Customer Service's
-// response reader refuses the scorecard's response. The rules are Mantle's Recruiting and FormDefinitions;
+// response reader refuses the scorecard's response; the recruiter changes the interview from ApplicantDetail's row, and Commons'
+// EventDetail refuses its save, naming People (Commons calendar editors). The rules are Mantle's Recruiting and FormDefinitions;
 // access is PeopleAccess's; the scenario is the acceptance PeopleRecruitingUsable. Customer Service's survey screens are its own
 // specs' (CustomerServiceFeedback), unchanged.
 // Run: ./moq test mr-boss --spec PeopleRecruiting
@@ -123,6 +124,7 @@ feature(
                     })
                 )
             )
+            state.interviewId = scheduled.workEffortId
             // two files of the application, one shared with the panel
             const file = name => {
                 const location = "dbresource://spec/people-recruiting/" + state.applicationId + "/" + name
@@ -179,6 +181,56 @@ feature(
             submitted == ""
             invitation.formResponseId != null
             caseResponse.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
+
+// Commons calendar editors (Nov 12, 2026): the interview's event is People's. The recruiter, its organizer, changes it from its
+// row on ApplicantDetail (the changeInterview transition, Mantle's change#Interview) and is refused its save on Commons'
+// EventDetail, which names where it changes. The rules are Mantle's Recruiting
+feature(
+    "the recruiter changes the interview from ApplicantDetail's row; Commons' EventDetail refuses its save and names People",
+    {
+        when() {
+            const post = (root, path, parameters) => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/" + root + ".xml")
+                    .render(path, parameters, "post")
+                const errors = Array.from(result.errorMessages || []).join(" | ")
+                ec.message.clearErrors()
+                return {status: result.status, errors}
+            }
+            const event = () =>
+                system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", state.interviewId).one())
+            const before = event()
+            return asUser(users.recruiter, () => {
+                const changed = post("People", "Staffing/ApplicantDetail/changeInterview", {
+                    employmentApplicationId: state.applicationId,
+                    workEffortId: state.interviewId,
+                    durationMinutes: "30",
+                    hasCall: "N",
+                    location: "Store office, back room"
+                })
+                const saved = post("Commons", "Calendar/EventDetail/saveOverview", {
+                    workEffortId: state.interviewId,
+                    scope: "all",
+                    workEffortName: "Taken over"
+                })
+                // as the recruiter, the access EventDetail reads (its service's grant is the screen's)
+                const access = system(() =>
+                    invoke("ironstone.commons.CalendarServices.get#EventAccessInfo", {workEffortId: state.interviewId})
+                )
+                return {before, changed, saved, access, after: event()}
+            })
+        },
+        then({before, changed, saved, access, after}) {
+            changed.errors == ""
+            Number(String(after.estimatedCompletionDate)) == Number(String(before.estimatedStartDate)) + 30 * 60000
+            after.location == "Store office, back room"
+            saved.errors.includes("is changed on its application's interviews in People")
+            after.workEffortName == before.workEffortName
+            access.visible && !access.canEdit && access.managedBy == "its application's interviews in People"
         }
     }
 )
