@@ -5455,7 +5455,8 @@ Written while P8 and P12 were in review, then extended after master was merged w
     acceptance spec's services, screen paths and other roots' paths exist in the code; nothing else was plainly stale.
 - Checks P0 left (F73, F74), redone on the built Admin P17 and P18: unchanged. Audit: `moqui.server.AuditProjection` (framework
   entity/ServerEntities.xml:816) and `find#OwnedChanges` (AuditServices.xml:31) are as P0 read them; Maintenance registers no
-  projection (only Party's account fields are registered, mr-mantle PartyAuditData.xml), and its histories are read from
+  projection (the registered ones are the framework's Admin and terminal rows and Party's account fields, mr-mantle
+  PartyAuditData.xml; review), and its histories are read from
   EntityAuditLog by its own services in its scope (MaintenanceWork.js, MaintenanceReports.js); whether they join AuditChanges
   stays impl-admin F257 (§7). Route groups: `moqui.security.DeviceRouteGroup` (SecurityEntities.xml:472) is as P0 read it; only
   Insights' INSIGHTS_PLAYLISTS is registered; Maintenance's root gives a device's request no context and refuses its record
@@ -5510,6 +5511,87 @@ Written while P8 and P12 were in review, then extended after master was merged w
     `docs/Upgrading.md` names the rows P8 and P12 added to `MaintenanceWorkData` and `BossSetupMaintenanceData`.
   - Tests run after the merge: mr-boss MaintenanceAccess and MaintenanceStack, 31 of 31 features (2 specs, 31.2 s). Prettier on
     the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+
+**Review Nov 12 (P20).** mr-boss, mr-mantle and mr-moqui commits on branch `mnt/p20r` (cut from master after P20's merge; hashes in
+the reviewer's reply), over mr-boss 3eb1f8a1 and 85b671e8, mr-mantle 7ce4035b and f6f3262d and mr-moqui b0191cae and 508b592a.
+Reviewed those commits against the phase's text, §2, AGENTS.md's rendering and suite rules and the Built note, reading each new and
+changed acceptance spec against the code it names (screen paths, transitions, services and their parameters and refusal codes,
+demo ids and names, the groups' permissions and artifact grants), and the documents against the code and data. No acceptance spec
+was run (the lead's run follows); nothing in MaintenanceSpecLib changed, so no regression spec was run.
+- Checked and found sound:
+  - The sweeps follow the earlier apps' pattern (ProjectsTui's and InsightsTui's walk of the root's files, ServerStaticLib's
+    check) and the rule of one sweep per app per mode: MaintenanceTui the one tui sweep, MaintenanceServerStatic the one
+    server-static sweep; TuiRender and ServerStatic leave Maintenance out, and no other Maintenance spec walks screens (AppStructure,
+    the cross-app html check, is not Maintenance's). They add the twelve shared mounts (each Maintenance file's `subscreens-item` of a
+    Shared location: the regex matches every one, all on one line) and the tabs each mount's menu shows, which the files' walk does
+    not reach. `sweepRecords` has a demo record for every screen that takes an id (each id is in the lib and the data), and
+    WorkOrders/InterventionReport opens on the customer repair each sweep makes; get#InterventionReport answers work not yet done,
+    so the report renders. ServerStatic's `sharedTab` reads the mounts' tabs from elsewhere (Product360's Prices, Stock).
+  - MaintenanceSpecLib's new helpers (`mountedScreens`, `mountTabs`, `sweepRecords`, `sweepParameters`) are called only by the two
+    sweeps; the regression specs that load the lib get function definitions and one small object, so no time.
+  - MaintenanceAccessWalk: every service exists with the parameters given (Mantle's MaintenanceServices, ProcessServices,
+    MaintenanceReportServices, MaintenanceSettingsServices, MaintenanceResourceServices, CalendarDavServices, EventServices; BOSS's
+    AccessServices.check#Record, ContextServices.get#Choices and search#Records), every choice name is in `choiceSources`, every
+    transition posted is on its screen (lifecycleAction, triageRequest and recordMeter by transition-include; storeProcedure and
+    storeStep; LogNote's logNote, SendMessage's sendMessage; the cost report's exportCsv), and the scope checks run before any
+    validation in the services called with partial parameters (`record#MaintenanceMeter`, `approve#` and `retire#WorkProcess`,
+    `store#MaintenanceTeamDefaults`), so a refusal is the scope's. The record panels' RECORD_PANEL_UNAVAILABLE is the root's
+    always-actions. The serials (FL-2026-002, AC200-0042), the events' names and organizers, the belt time entry, the
+    `$48.00/h` costing-rate text (as MaintenanceCosts), "Compressor and field service" and the repair's customer name are the data's.
+    The menus' extra groups do not open another root: BOSS_WAREHOUSE_ISSUE and _RECEIVE grant a permission and NewReceipt alone.
+  - MaintenancePhoneWalk's labels and messages are the screens' (ReportProblem's "Equipment or facility", "What is wrong",
+    "Report problem" and "Problem reported as request"; Meters' "Record a reading", "Reading", "Record reading", "Reading
+    recorded"; BookingRequests' Approve and "booking approved"), and its booking day keeps clear of MaintenanceBookingWalk's.
+  - MaintenanceFoundationWalk's menus are the root's `menu-include` conditions over each group's permissions (computed from
+    BossSetupMaintenanceData for every group) with Requests' and Settings' grants; `org.moqui.admin.AccessServices`
+    get#MatrixContext and apply#MatrixChanges and `ReadinessServices.find#Settings` take the parameters given.
+  - The documents: the inventories' Implemented in cells spot-checked (find#MaintenanceCandidates, act#MaintenanceWorkOrders, the
+    Teams services, get#AssetBook's Book tab, MoveEquipmentPreview and MoveEquipment on Identity, FacilityDetail's Maintenance tabs
+    without box types, locations or products, get# and store#InterventionReport) all match the code; design-maintenance's status
+    line and §2 Impl column; README's paragraph (its links resolve); Remaining-Work's row; the Upgrading note's seed files are
+    exactly the Maintenance data files and their types (nine `seed`, four `seed-initial`).
+  - F73 and F74 as recorded: AuditProjection (ServerEntities.xml:816), find#OwnedChanges (AuditServices.xml:31) and
+    DeviceRouteGroup (SecurityEntities.xml:472) are where the note says; Maintenance registers neither a projection nor a route
+    group, and INSIGHTS_PLAYLISTS is the only route group. One wording fixed (below).
+- Fixes:
+  - R1 (minor, test): MaintenancePhoneWalk recorded the van's reading on the first meter offered, and the van, which has no model
+    meter, is offered every meter type by name, the first Copy Count Meter; it now picks Distance Meter, the type of the demo's
+    48,210 reading the walk's value is meant to exceed.
+  - R2 (medium, test): MaintenanceFoundationWalk required every area outside a user's menu to be refused, but only Requests and
+    Settings are (their artifact grants); WorkOrders, Procedures, Preventive, Equipment, Facilities, Scheduling and Reports are kept
+    out of the menu by permission alone and open with nothing (their lists clear Mantle's refusal and say none is open; Equipment
+    and Facilities read nothing without a resource read), so the walk would have failed on, among others, the author's Work orders
+    and the technician's Reports. Now an entry outside the menu is refused or shows none of the demo record its landing would
+    list (the air handler's leak, the AC-200 procedure, the filter plan, the compressor, the Service Center, the Work status card;
+    Scheduling none, its resources being any resource reader's).
+  - R3 (minor, docs): design-crosscut §7.6 still said MT-03's skill level and qualification check and MT-10's repair adapter were
+    in review; P8 and P12 built them.
+  - R4 (minor, docs): mr-mantle `docs/Upgrading.md` left out the `RequestTriage` topic's link (BossSetupData.xml, Maintenance
+    P4), which on an older database opens Projects' RequestDetail for a maintenance request.
+  - R5 (minor, docs): the Built note's F73 recheck said only Party's account fields register an AuditProjection; the framework's
+    AdminAuditData and TerminalTypeData register theirs too.
+- Findings:
+  - MaintenanceFoundationWalk's `teamSettings == ["Teams"]` will fail as the code stands (the Built note's first finding, F346,
+    read through): the custom group holds the BOSS_MAINTENANCE artifact group, not membership of the BOSS_MAINTENANCE user group,
+    so BOSS_MNT_SETTINGS' deny (and BOSS_MNT_REQUESTS' and the cost tab's and report's) does not reach it; `areaGrant` drops the
+    non-inheritable BOSS_MNT_TEAMS rows and falls back to the root's ALLOW, so the settings area is the team's and Settings shows
+    SettingsHome, WorkPolicy, Teams, Lookups and Readiness. Mantle still refuses every write and the cost reads
+    (MAINTENANCE_SETTINGS_EDIT, MAINTENANCE_COST_VIEW), so it is the screens, not the data. The walk keeps the intended rule.
+  - A Maintenance user whose menu lacks an area can still open it by its URL and read whatever their permissions allow there:
+    Scheduling's resources for any resource reader (a planner, a reader, a technician, the cost reader). As built, not a leak (the
+    resources are theirs to read); noted because the menu suggests otherwise.
+  - MaintenanceAccessWalk's booking feature assumes `get#FullCalendarData` answers a requested booking (the handover, WefRequested)
+    to its organizer; not read to the end here, the run tells.
+- Tests: none run (acceptance specs are the lead's run; MaintenanceSpecLib unchanged). `node --check` and Prettier 3 (`--check`,
+  the repo's `.prettierrc.json`) on the two changed specs: clean.
+- For the lead:
+  - Budget share: none.
+  - Merge hot spots: `acceptance/Maintenance/MaintenanceFoundationWalk.spec.js` (the menu feature), this note.
+  - The user's call: F346, the custom group given the planner bundle in Admin and the BOSS_MAINTENANCE deny rows. Recommended: carry
+    the denies with the bundles rather than the root user group, as Settings' own permission check (the areas' DENY rows on each
+    Maintenance capability group but the administrator's, or the Settings, Requests and Costs subscreens' `menu-include` and an
+    always-action on MAINTENANCE_SETTINGS_EDIT, MAINTENANCE_PLAN or _SUPERVISE, MAINTENANCE_COST_VIEW); Manufacturing's areas,
+    which deny the same way, would want the same. Until then the FoundationWalk's last check fails.
 
 ## 4. Decisions
 
