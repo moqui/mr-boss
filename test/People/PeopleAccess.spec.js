@@ -462,7 +462,10 @@ feature(
             }
         },
         then({checks, otherDepartments, admin, hr}) {
-            checks.sort() == ["people.departments ready ", "people.managers warning EMPLOYEE_NO_MANAGER"]
+            checks.filter(check => !check.startsWith("people.payroll ")).sort() ==
+                ["people.departments ready ", "people.managers warning EMPLOYEE_NO_MANAGER"]
+            // P23: the payroll check, a warning while Retail has no pay group or an employee without a pay assignment
+            checks.filter(check => check.startsWith("people.payroll warning ")).length == 1
             otherDepartments.join(",") == "ready"
             admin.includes("people.settings")
             !hr.includes("people.settings")

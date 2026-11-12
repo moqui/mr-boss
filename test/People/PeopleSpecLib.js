@@ -98,8 +98,9 @@ const ids = {
     ],
     // P16: Forms, the survey builder with People's registration
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups", "Forms"],
-    // P10: Rates; P22 (its review's call of Nov 12, 2026): payroll configuration's components, structures and groups, payroll's
-    payrollGroupMenu: ["Rates", "PayComponents", "PayStructures", "PayGroups"],
+    // P10: Rates; P22 (its review's call of Nov 12, 2026): payroll configuration's components, structures and groups, payroll's;
+    // P23: pay assignments, before Rates
+    payrollGroupMenu: ["PayAssignments", "Rates", "PayComponents", "PayStructures", "PayGroups"],
     // P21: Grievances, every People user's
     employeesMenu: ["List", "OrgStructure", "OrgChart", "Grievances"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings

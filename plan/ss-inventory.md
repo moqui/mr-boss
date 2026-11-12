@@ -100,6 +100,10 @@ is in usl-inventory's People rows.
 PayGroups: Marble has no payroll configuration form (the legacy `PayrollAdjustment` rows had no screen, and People reads none of them,
 design-people §8.4), and components, terms, examples, structures, groups and their periods are new records
 (`mantle.humanres.payroll`); their Implemented in is in usl-inventory's People rows.
+**People P23 (Nov 12, 2026):** no baseline form is mapped to PayAssignments or Employee360's Compensation: Marble's HumanRes has no
+salary, benefit or pay assignment form (EmploymentSalary and EmploymentBenefit had only their fields), and pay assignments and tax
+profiles are new records (`PayrollAssignment`, `PayrollTaxProfile`); their Implemented in is in usl-inventory's People rows
+(create#EmploymentSalary's among them).
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

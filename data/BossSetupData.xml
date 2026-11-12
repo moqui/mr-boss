@@ -5147,7 +5147,7 @@ along with this software (see the LICENSE.md file). If not, see
             serviceName="mantle.humanres.PeopleServices.get#Readiness" scopeParameters="organizationPartyId"
             requiredPermission="PEOPLE_CONFIGURE" fixRoute="peopleSettings" sequenceNum="150"/>
     <moqui.server.SettingsEntry settingsKey="people.settings" version="1" ownerApp="People" title="People settings"
-            description="Each employer's setup checks: departments, and a manager for every employee"
+            description="Each employer's setup checks: departments, a manager for every employee, and payroll setup"
             settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="peopleSettings"
             screenLocation="component://mr-boss/screen/People/Settings.xml" viewPermission="PEOPLE_CONFIGURE"
             configuredBy="People administrator" providerKey="people.setup" sequenceNum="85"/>

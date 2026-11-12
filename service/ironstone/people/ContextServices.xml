@@ -110,8 +110,10 @@ along with this software (see the LICENSE.md file). If not, see
             and agents of a development reader's employers) and trainingForms (P19: the published training assessment forms of
             organizationPartyId, else of every employer the user reads); payComponents, payGroups and glAccounts (P22: a payroll
             reader's, of organizationPartyId: its pay components in use by code and name, its pay groups, its accounts by code and
-            name; never an amount) and payrollLocalizations (P22: the registered localizations). Refuses a user without
-            People and an unknown choice.</description>
+            name; never an amount) and payrollLocalizations (P22: the registered localizations); payEmployments, payStructures,
+            payElections and benefitTypes (P23: a payroll reader's: organizationPartyId's current employments by the person's name,
+            its structures published and not ended, the elective lines of payrollStructureId, and the benefit types; never an
+            amount). Refuses a user without People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
@@ -120,6 +122,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="organizationPartyId"><description>employees and departments: the employer whose employees or departments
                 are offered</description></parameter>
             <parameter name="departmentPartyId"><description>positions: the department whose seats are offered</description></parameter>
+            <parameter name="payrollStructureId"><description>payElections: the structure whose elective lines are offered (P23)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
@@ -168,7 +171,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordFound" type="Boolean"/>
             <parameter name="regions" type="List"/>
             <parameter name="record" type="Map"><description>partyId, overview, personalInfo (when shown), partyRelationshipId,
-                hostEmploymentId (the employment host, when its files and activity are shown)</description></parameter>
+                hostEmploymentId (the employment host, when its files and activity are shown), compensation (P23: People's mount, a
+                payroll reader of the opened employment's employer: PayrollSetupServices.get#Compensation's answer; absent
+                otherwise)</description></parameter>
             <parameter name="own" type="Boolean"/>
             <parameter name="editableFields" type="List"/>
             <parameter name="canChangeEmployment" type="Boolean"><description>P6: People's mount, an HR editor of the opened
@@ -179,6 +184,8 @@ along with this software (see the LICENSE.md file). If not, see
                 holds (mantle.humanres.PeopleServices.get#AssignedEquipment: the person and HR of their employer)</description></parameter>
             <parameter name="showsDevelopment" type="Boolean"><description>P18: People's mount, which shows Skills and reviews
                 (mantle.humanres.DevelopmentServices.get#PersonDevelopment: each reader their part)</description></parameter>
+            <parameter name="canChangePay" type="Boolean"><description>P23: People's mount, a payroll editor of the opened
+                employment's employer, who asks for its pay change</description></parameter>
             <parameter name="returnLabel"/>
             <parameter name="returnPath"/>
         </out-parameters>
@@ -189,6 +196,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="showsChanges" from="!!found.showsChanges"/>
             <set field="showsEquipment" from="!!found.showsEquipment"/>
             <set field="showsDevelopment" from="!!found.showsDevelopment"/>
+            <set field="canChangePay" from="!!found.canChangePay"/>
             <set field="recordFound" from="found.recordFound"/>
             <set field="regions" from="found.regions"/>
             <set field="record" from="found.record"/>

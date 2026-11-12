@@ -462,7 +462,7 @@ Added in Accounting P17 (returns and order changes):
 | EmploymentServices | create#Employment | People/Employees/HireEmployee | People/Employees/HireEmployee (through PeopleServices.hire#Employee; its overlap check of PrtEmployee alone, F3) (People P6) |
 | EmploymentServices | update#Employment |  | — (its overlap check of PrtEmployee alone, F3; People ends an employment through apply#EmploymentChange) (People P6) |
 | EmploymentServices | delete#Employment |  |  |
-| EmploymentServices | create#EmploymentSalary | People/Employees/Employee360 |  |
+| EmploymentServices | create#EmploymentSalary | People/Employees/Employee360 | People/Employees/Employee360 (Compensation's Set salary and Change salary, through PeopleServices.apply#EmploymentChange's pay change, which writes the salary as this service does: PAYROLL_EDIT checked, the row in effect ended on the new one's date, F4) (People P23) |
 | EmploymentServices | check#NextPayrollTimePeriods |  |  |
 | PayrollDocumentServices | get#EmploymentInfo |  |  |
 | PayrollDocumentServices | get#EmploymentWageAndTaxInfo |  |  |
@@ -498,7 +498,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P22, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P23, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -699,6 +699,11 @@ the screens that call it.
 | PayrollSetupServices | find#Groups | People/Payroll/PayGroups (Groups) | People/Payroll/PayGroups (Groups with their readiness; a group opened: GroupTerms, Periods) (People P22) |
 | PayrollSetupServices | store#Group | People/Payroll/PayGroups (GroupTerms) | People/Payroll/PayGroups (New pay group, Edit policy, End group) (People P22) |
 | PayrollSetupServices | prepare#Periods | People/Payroll/PayGroups (Periods) | People/Payroll/PayGroups (Prepare periods; Preview the next periods) (People P22) |
+| PayrollSetupServices | find#Assignments | People/Payroll/PayAssignments (Assignments) | People/Payroll/PayAssignments (FindAssignments, AssignmentList with each employment's readiness; an employment opened: AssignmentHistory) (People P23) |
+| PayrollSetupServices | assign#PayStructure | People/Payroll/PayAssignments (AssignPay) | People/Payroll/PayAssignments (Assign pay with its preview; a row's End) (People P23) |
+| PayrollSetupServices | store#PayrollProfile | People/Payroll/PayAssignments (TaxAndBenefits) | People/Payroll/PayAssignments (Tax and benefits: Edit tax profile with the localization's declared fields, Add benefit, a benefit's End; bank accounts as masked references only) (People P23) |
+| PayrollSetupServices | get#Compensation | People/Employees/Employee360 (Compensation) | People/Employees/Employee360 (Compensation, a payroll reader's, through ironstone.people.ContextServices.get#Employee360Context); People/Payroll/PayAssignments (Tax and benefits) (People P23) |
+| PeopleServices | apply#EmploymentChange (changeKind pay), decide#EmploymentChange | People/Employees/Employee360 (Compensation's salary change dialog) | People/Employees/Employee360 (Compensation's Change salary; Employment changes' Approve and Refuse for the pay change's approver) (People P23) |
 | PayrollLocalizationServices | calculate#Localization (interface), calculate#Demonstration | People/Payroll/PayStructureDetail (PreviewStructure's rule coverage) | People/Payroll/PayStructureDetail (Preview gross to net, through preview#Structure and the localization's registered service) (People P22) |
 | PayrollLocalizationServices | find#Localizations | People/Payroll/PayGroups | — (the screens' localization choice reads the registrations; P29's settings may list them) (People P22) |
 

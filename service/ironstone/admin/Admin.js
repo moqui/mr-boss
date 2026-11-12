@@ -387,6 +387,9 @@ const settingsRoutes = {
     commsConsent: {url: "/qapps/Comms/Consent/List", plain: true},
     insightsSettings: {url: "/qapps/Insights/Settings/AnalyticsSettings", plain: true},
     peopleSettings: {url: "/qapps/People/Settings", plain: true},
+    // People P23: the payroll check's places (people.setup's people.payroll check)
+    peoplePayAssignments: {url: "/qapps/People/Payroll/PayAssignments", plain: true},
+    peoplePayGroups: {url: "/qapps/People/Payroll/PayGroups", plain: true},
     maintenanceSettings: {url: "/qapps/Maintenance/Settings", plain: true},
     voice: {url: "/qapps/system/Voice", plain: true},
     toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}

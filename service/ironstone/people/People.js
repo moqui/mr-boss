@@ -271,7 +271,9 @@ const linkPaths = [
     "Payroll/PayComponentDetail",
     "Payroll/PayStructures",
     "Payroll/PayStructureDetail",
-    "Payroll/PayGroups"
+    "Payroll/PayGroups",
+    // P23: pay assignments (design §8 PayAssignments), payroll's under Payroll
+    "Payroll/PayAssignments"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1289,6 +1291,78 @@ choiceSources.glAccounts = (userScope, term, selected, p) => {
         id => label(one(A, {glAccountId: id}) || {accountCode: id})
     )
 }
+// P23: pay assignments' drop-downs, a payroll reader's of one employer in scope: its current employments by the person's name (whom
+// AssignPay puts on a structure), its structures published and not ended (by name), the elective lines of one structure
+// (payrollStructureId: its components by code and name) and Mantle's benefit types. No amount is in any of them.
+choiceSources.payEmployments = (userScope, term, selected, p) => {
+    const organizationPartyId = payrollEmployer(userScope, p)
+    if (!organizationPartyId) return []
+    const base = () =>
+        find("mantle.party.PartyFromAndRelationship")
+            .condition("relationshipTypeEnumId", "PrtEmployee")
+            .condition("toPartyId", organizationPartyId)
+            .conditionDate("fromDate", "thruDate", null)
+            .selectField(["partyRelationshipId", "fromPartyId", "firstName", "lastName"])
+            .orderBy(["^firstName", "^lastName"])
+    const label = row => [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+    const rows = Array.from(searched(base(), term, ["fromPartyId", "firstName", "lastName"]).limit(choiceLimit).list())
+    return withSelected(
+        rows.map(row => ({value: row.partyRelationshipId, label: label(row)})),
+        selected,
+        id => base().condition("partyRelationshipId", id).count() > 0,
+        id => label(Array.from(base().condition("partyRelationshipId", id).list())[0] || {fromPartyId: id})
+    )
+}
+choiceSources.payStructures = (userScope, term, selected, p) => {
+    const organizationPartyId = payrollEmployer(userScope, p)
+    if (!organizationPartyId) return []
+    const S = "mantle.humanres.payroll.PayrollStructure"
+    const base = () => inUse(find(S).condition({organizationPartyId, statusId: "PtsPublished"}))
+    const rows = Array.from(searched(base(), term, ["structureName"]).orderBy("^structureName").limit(choiceLimit).list())
+    const label = row => row.structureName + " · " + row.currencyUomId
+    return withSelected(
+        rows.map(row => ({value: row.payrollStructureId, label: label(row)})),
+        selected,
+        id => base().condition("payrollStructureId", id).count() > 0,
+        id => label(one(S, {payrollStructureId: id}) || {structureName: id, currencyUomId: ""})
+    )
+}
+choiceSources.payElections = (userScope, term, selected, p) => {
+    if (!userScope.capabilities.payrollView || !p?.payrollStructureId) return []
+    const structure = one("mantle.humanres.payroll.PayrollStructure", {payrollStructureId: p.payrollStructureId})
+    if (!structure || !employerIds(userScope).includes(structure.organizationPartyId)) return []
+    const componentIds = Array.from(
+        inUse(
+            find("mantle.humanres.payroll.PayrollStructureComponent").condition({
+                payrollStructureId: structure.payrollStructureId,
+                eligibilityEnumId: "PleElected",
+                statusId: "PtsPublished"
+            })
+        )
+            .selectField("payrollComponentId")
+            .list()
+    ).map(row => row.payrollComponentId)
+    if (!componentIds.length) return []
+    const C = "mantle.humanres.payroll.PayrollComponent"
+    const label = row => row.componentCode + " · " + (row.componentName || row.componentCode)
+    return Array.from(
+        searched(find(C).condition("payrollComponentId", "in", componentIds), term, ["componentCode", "componentName"])
+            .orderBy("componentCode")
+            .limit(choiceLimit)
+            .list()
+    ).map(row => ({value: row.payrollComponentId, label: label(row)}))
+}
+choiceSources.benefitTypes = (userScope, term, selected) => {
+    if (!userScope.capabilities.payrollView) return []
+    const B = "mantle.humanres.employment.BenefitType"
+    const rows = Array.from(searched(find(B), term, ["description"]).orderBy("description").limit(choiceLimit).list())
+    return withSelected(
+        rows.map(row => ({value: row.benefitTypeId, label: row.description || row.benefitTypeId})),
+        selected,
+        id => !!one(B, {benefitTypeId: id}),
+        id => one(B, {benefitTypeId: id})?.description || id
+    )
+}
 choiceSources.payrollLocalizations = (userScope, term, selected) => {
     if (!userScope.capabilities.payrollView) return []
     const L = "mantle.humanres.payroll.PayrollLocalization"
@@ -1448,8 +1522,10 @@ function search(p) {
 // links the People mount for a People user and the Commons mount otherwise (employee360Link).
 const employee360Apps = {
     // People: every region the user's capabilities admit; personal corrections, the employment's files and activity
+    // P23: Compensation, People's alone (design §4 Employee360's per-app context: Commons, Projects, Maintenance and Insights show
+    // no compensation); Mantle admits it only to a payroll reader of the opened employment's employer
     People: {
-        regions: ["overview", "employmentHistory", "personalInfo", "filesAndActivity"],
+        regions: ["overview", "employmentHistory", "personalInfo", "filesAndActivity", "compensation"],
         ownOnly: [],
         edits: true,
         returnLabel: "Employees",
@@ -1508,6 +1584,12 @@ function employee360(p) {
         partyRelationshipId: found.partyRelationshipId || null,
         hostEmploymentId: regions.includes("filesAndActivity") ? found.hostEmploymentId : null
     }
+    // P23: the opened employment's compensation, read by Mantle for a payroll reader alone (absent from this answer otherwise)
+    if (regions.includes("compensation"))
+        record.compensation = call("mantle.humanres.PayrollSetupServices.get#Compensation", {
+            partyId: found.partyId,
+            partyRelationshipId: found.partyRelationshipId || null
+        })
     return {
         recordFound: true,
         regions,
@@ -1517,6 +1599,8 @@ function employee360(p) {
         // P6: the employment changes, People's alone: an HR editor of the opened employment's employer with the wizards' grant
         // changes it (Mantle checks again), and People shows the changes waiting to HR and to their approvers
         canChangeEmployment: !!userScope && !!caps.changeEmployment && !!userScope.capabilities.employment,
+        // P23: a payroll editor of the opened employment's employer asks for its pay change (Mantle checks again)
+        canChangePay: regions.includes("compensation") && !!caps.changePay,
         showsChanges: !!userScope,
         // P7: the equipment the person holds (AssignedEquipment), People's: Mantle answers the person and HR of their employer
         showsEquipment: !!userScope,

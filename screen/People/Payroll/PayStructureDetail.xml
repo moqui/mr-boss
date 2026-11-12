@@ -65,7 +65,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{payrollStructureId:payrollStructureId, expectedRevision:(expectedRevision || null),
                         payrollStructureComponentId:(payrollStructureComponentId || null), payrollComponentId:(payrollComponentId || null),
                         fromDate:(fromDate ?? null), thruDate:(thruDate ?? null), sequenceNum:(sequenceNum ?? null),
-                        parameterValues:(parameterValues ?? null), remove:(remove == 'true'), end:(end == 'true'), reason:(reason || null)}"/>
+                        parameterValues:(parameterValues ?? null), eligibilityEnumId:(eligibilityEnumId ?? null), remove:(remove == 'true'),
+                        end:(end == 'true'), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">${remove == 'true' ? 'Component removed' : (end == 'true' ? 'Component ended' : (payrollStructureComponentId ? 'Component changed' : 'Component added'))}</message></if>
         </actions>
@@ -316,10 +317,16 @@ along with this software (see the LICENSE.md file). If not, see
                                 </field>
                                 <field name="fromDate">
                                     <default-field title="From" tooltip="The publishing date when empty"><date-time type="date"/></default-field></field>
+                                <field name="eligibilityEnumId">
+                                    <default-field title="Applies to" tooltip="Every assignment, or only an assignment that elects it (such as a voluntary pension)">
+                                        <drop-down><option key="PleAll" text="Every assignment"/><option key="PleElected" text="When elected"/></drop-down>
+                                    </default-field>
+                                </field>
                                 <field name="submitButton"><default-field title="Add component"><submit/></default-field></field>
                                 <field-layout>
                                     <field-row><field-ref name="payrollComponentId"/><field-ref name="sequenceNum"/></field-row>
                                     <field-row><field-ref name="parameterValues"/><field-ref name="fromDate"/></field-row>
+                                    <field-ref name="eligibilityEnumId"/>
                                     <field-ref name="submitButton"/>
                                 </field-layout>
                             </form-single>
@@ -337,6 +344,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="kindText"><default-field title="Kind"><display/></default-field></field>
                             <field name="termText"><default-field title="Calculation"><display/></default-field></field>
                             <field name="parameterValuesText"><default-field title="Values"><display/></default-field></field>
+                            <field name="eligibilityText"><default-field title="Applies to"><display/></default-field></field>
                             <field name="fromDateText"><default-field title="From"><display/></default-field></field>
                             <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
                             <field name="stateText">
@@ -356,12 +364,17 @@ along with this software (see the LICENSE.md file). If not, see
                                         <form-single name="EditLine" transition="storeLine"
                                                 map="{payrollStructureId:structure.payrollStructureId, expectedRevision:structure.revision,
                                                     payrollStructureComponentId:payrollStructureComponentId, sequenceNum:sequenceNum,
-                                                    parameterValues:parameterValuesText}">
+                                                    parameterValues:parameterValuesText, eligibilityEnumId:eligibilityEnumId}">
                                             <field name="payrollStructureId"><default-field><hidden/></default-field></field>
                                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                             <field name="payrollStructureComponentId"><default-field><hidden/></default-field></field>
                                             <field name="sequenceNum"><default-field title="Payslip order"><text-line size="5" input-type="number"/></default-field></field>
                                             <field name="parameterValues"><default-field title="Values"><text-line size="50"/></default-field></field>
+                                            <field name="eligibilityEnumId">
+                                                <default-field title="Applies to">
+                                                    <drop-down><option key="PleAll" text="Every assignment"/><option key="PleElected" text="When elected"/></drop-down>
+                                                </default-field>
+                                            </field>
                                             <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                                         </form-single>
                                     </container-dialog>

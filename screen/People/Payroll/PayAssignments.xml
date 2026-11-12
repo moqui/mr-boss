@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Pay assignments (design-people §8 PayAssignments; style-guide §3.2 List; impl-people P23): the employments
+    of the employers a payroll reader reads, each with its pay assignment in effect (structure, pay group and dates), its salary and
+    pay rate references and its readiness, from mantle.humanres.PayrollSetupServices.find#Assignments; found by name, filtered by
+    employer and readiness. Assignments; AssignPay (the one primary, a payroll editor's: employments of one employer put on a
+    published structure and a pay group of it from a date, with their inputs and elective lines, the assignment in effect replaced
+    with a reason, previewed before it is made; assign#PayStructure, each employment on its own, a refusal named and the rest
+    going on); an employment opened (partyRelationshipId) shows its assignments, each ended from a date, and TaxAndBenefits: the
+    tax profile of its group's localization, whose fields are only those the installed localization declares (Edit tax profile,
+    store#PayrollProfile), its benefits (Add benefit, End), and its bank accounts as masked references, changed through Accounting's
+    payment-method services and never here. Assigning a structure changes no salary: the salary is changed on Employee360's
+    Compensation as a pay change. Under Payroll, payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and change. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay assignments" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="readiness"/>
+    <parameter name="term"/>
+    <parameter name="partyRelationshipId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- employments put on a structure and a pay group from a date (each on its own), or previewed: Mantle checks each -->
+    <transition name="assignPay">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.assign#PayStructure" out-map="assigned"
+                    in-map="{partyRelationshipIds:(partyRelationshipIds ? (Array.isArray(partyRelationshipIds) ? partyRelationshipIds.join(',') : String(partyRelationshipIds)) : null),
+                        payrollStructureId:(payrollStructureId || null), payrollGroupId:(payrollGroupId || null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), isPrimary:(isPrimary || 'Y'), inputValues:(inputValues || null),
+                        electedComponentIds:(electedComponentIds ? (Array.isArray(electedComponentIds) ? electedComponentIds.join(',') : String(electedComponentIds)) : null),
+                        replaceCurrent:(replaceCurrent == 'Y'), reason:(reason || null), preview:(preview == 'Y')}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError() && assigned) {
+                    const assignedRows = Array.from(assigned.rows || [])
+                    const refused = assignedRows.filter(row => row.outcome === 'refused')
+                    if (preview == 'Y') {
+                        const ready = assignedRows.filter(row => row.outcome === 'ready')
+                        ec.message.addMessage('Preview, nothing assigned: ' + (ready.length ? ready.map(row => row.personName +
+                            (row.message ? ' (' + row.message + ')' : '')).join('; ') + ' would be assigned' : 'nobody would be assigned'), 'info')
+                    } else ec.message.addMessage('Pay assigned to ' + assigned.assignedCount + ' employee' + (assigned.assignedCount == 1 ? '' : 's'), 'success')
+                    if (refused.length) ec.message.addMessage('Not assigned: ' + refused.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."><parameter name="organizationPartyId"/></error-response>
+    </transition>
+    <!-- one assignment ended from a date, at its revision -->
+    <transition name="endAssignment">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.assign#PayStructure"
+                    in-map="{payrollAssignmentId:payrollAssignmentId, expectedRevision:(expectedRevision || null), end:true,
+                        thruDate:(thruDate || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Pay assignment ended</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <!-- the employment's tax profile from a date: the values of the localization's own fields, named by the form's slots -->
+    <transition name="storeProfile">
+        <actions>
+            <script><![CDATA[
+                profileValues = {}
+                for (const slot of [1, 2, 3, 4]) if (ec.context['name' + slot]) profileValues[ec.context['name' + slot]] = ec.context['value' + slot] || ''
+            ]]></script>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#PayrollProfile"
+                    in-map="{partyRelationshipId:partyRelationshipId, payrollLocalizationId:payrollLocalizationId, profileValues:profileValues,
+                        expectedRevision:(expectedRevision || null), fromDate:(fromDate || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Tax profile saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <!-- a benefit added, or one ended from a date -->
+    <transition name="storeBenefit">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#PayrollProfile"
+                    in-map="{partyRelationshipId:partyRelationshipId, benefitTypeId:benefitTypeId, fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), cost:(cost || null), employerPaidPercent:(employerPaidPercent || null),
+                        endBenefit:(endBenefit == 'true'), benefitFromDate:(benefitFromDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${endBenefit == 'true' ? 'Benefit ended' : 'Benefit added'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollSetupServices.find#Assignments" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), readiness:(readiness || null), term:(term || null),
+                    pageIndex:(pageIndex || 0), pageSize:(pageSize || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="partyRelationshipId &amp;&amp; found?.assignments">
+            <service-call name="mantle.humanres.PayrollSetupServices.find#Assignments" out-map="opened" transaction="force-new" ignore-error="true"
+                    in-map="{partyRelationshipId:partyRelationshipId}"/>
+            <script>ec.message.clearErrors()</script>
+            <if condition="opened?.employment">
+                <service-call name="mantle.humanres.PayrollSetupServices.get#Compensation" out-map="compensation" transaction="force-new"
+                        ignore-error="true" in-map="{partyId:opened.employment.partyId, partyRelationshipId:partyRelationshipId}"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <script><![CDATA[
+            assignmentsFound = !!found?.assignments
+            canEdit = !!found?.canEdit
+            readinessColors = {ready: 'positive', warning: 'orange-9', failed: 'negative', unavailable: 'grey-8'}
+            assignmentRows = Array.from(found?.assignments || [])
+            assignmentsCount = found?.assignmentsCount || 0
+            assignmentsPageIndex = found?.assignmentsPageIndex || 0
+            assignmentsPageSize = found?.assignmentsPageSize || 20
+            assignmentsPageMaxIndex = found?.assignmentsPageMaxIndex || 0
+            assignmentsPageRangeLow = found?.assignmentsPageRangeLow || 0
+            assignmentsPageRangeHigh = found?.assignmentsPageRangeHigh || 0
+            findValues = {organizationPartyId: organizationPartyId || null, readiness: readiness || null, term: term || null}
+            employment = opened?.employment || null
+            historyRows = Array.from(opened?.history || [])
+            profile = compensation?.profile || null
+            profileFields = Array.from(profile?.fields || [])
+            profileRows = profileFields.map(field => ({fieldLabel: field.fieldLabel, valueText: field.valueText || 'Not set',
+                requiredText: field.required ? 'Required' : 'Optional'}))
+            // the form's slots: each field of the localization by its place (the installed localizations declare at most four)
+            profileValues = {partyRelationshipId, payrollLocalizationId: profile?.payrollLocalizationId, expectedRevision: profile?.revision}
+            profileFields.slice(0, 4).forEach((field, index) => {
+                profileValues['name' + (index + 1)] = field.fieldName
+                profileValues['value' + (index + 1)] = field.value
+            })
+            benefitRows = Array.from(compensation?.benefits || [])
+            paymentRows = Array.from(compensation?.paymentMethods || [])
+            employee360Url = sharedLinks?.['Employees/Employee360'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Pay assignments" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="AssignPayDialog" button-text="Assign pay" icon="sym_o_add" type="primary" width="760"
+                        title="Assign pay" condition="canEdit">
+                    <label type="p" text="Put employees of one employer on a published pay structure and a pay group from a date. Their salaries and rates do not change. Preview first to see who would be assigned."/>
+                    <form-single name="AssignPay" transition="assignPay" map="{organizationPartyId:organizationPartyId, isPrimary:'Y'}">
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="partyRelationshipIds">
+                            <default-field title="Employees">
+                                <drop-down allow-multiple="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payEmployments'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="payrollStructureId">
+                            <default-field title="Pay structure">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payStructures'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="payrollGroupId">
+                            <default-field title="Pay group">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payGroups'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                        <field name="thruDate"><default-field title="Through" tooltip="Open when empty"><date-time type="date"/></default-field></field>
+                        <field name="isPrimary">
+                            <default-field title="Kind" tooltip="One primary assignment per employee and date; a secondary one adds another structure">
+                                <drop-down><option key="Y" text="Primary"/><option key="N" text="Secondary"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="electedComponentIds">
+                            <default-field title="Elected components" tooltip="The structure's components that apply only when elected">
+                                <drop-down allow-multiple="true" allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payElections'}">
+                                        <depends-on field="payrollStructureId" parameter="choicePayrollStructureId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="inputValues">
+                            <default-field title="Their own inputs" tooltip="Values of the structure's declared inputs, such as pensionRate = 0.05">
+                                <text-line size="40"/></default-field>
+                        </field>
+                        <field name="replaceCurrent">
+                            <default-field title=" "><check><option key="Y" text="Replace the assignment in effect from that date"/></check></default-field>
+                        </field>
+                        <field name="reason"><default-field title="Reason" tooltip="Needed when it replaces an assignment"><text-line size="50"/></default-field></field>
+                        <field name="preview">
+                            <default-field title=" "><check><option key="Y" text="Preview only: assign nobody"/></check></default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Assign pay"><submit confirmation="Assign this pay structure and group to the employees chosen?"/></default-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="organizationPartyId"/><field-ref name="partyRelationshipIds"/></field-row>
+                            <field-row><field-ref name="payrollStructureId"/><field-ref name="payrollGroupId"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-row><field-ref name="isPrimary"/><field-ref name="electedComponentIds"/></field-row>
+                            <field-ref name="inputValues"/>
+                            <field-row><field-ref name="replaceCurrent"/><field-ref name="reason"/></field-row>
+                            <field-ref name="preview"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!assignmentsFound">
+            <widgets>
+                <label text="Pay assignments are open to payroll. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Assignments" condition="assignmentsFound">
+            <widgets>
+                <form-single name="FindAssignments" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="readiness">
+                        <default-field title="Readiness">
+                            <drop-down allow-empty="true">
+                                <option key="attention" text="Needs attention"/>
+                                <option key="unassigned" text="No pay assignment"/>
+                                <option key="ready" text="Ready"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="term"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big><field-ref name="organizationPartyId"/><field-ref name="readiness"/><field-ref name="term"/>
+                            <field-ref name="submitButton"/></field-row-big>
+                    </field-layout>
+                </form-single>
+                <label text="Each employee's pay terms in effect and what still stops a preview run. Salaries change on the employee's record, as a pay change."
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="AssignmentList" list="assignmentRows" skip-form="true" paginate="true" condition="assignmentRows.length">
+                            <field name="personName">
+                                <default-field title="Employee">
+                                    <link url="." text="${personName}" link-type="anchor"
+                                            parameter-map="{partyRelationshipId:partyRelationshipId, organizationPartyId:organizationPartyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="structureName"><default-field title="Pay structure"><display/></default-field></field>
+                            <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
+                            <field name="assignmentText"><default-field title="Assignment"><display/></default-field></field>
+                            <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
+                            <field name="rateText"><default-field title="Pay rate"><display/></default-field></field>
+                            <field name="readinessText">
+                                <default-field title="Readiness">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColors[readinessState] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readinessText})}]]></text>
+                                        <text type="html">${readinessText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="structureName"/></column>
+                                <column><field-ref name="salaryText"/><field-ref name="readinessText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!assignmentRows.length"
+                                text="No employee matches.${canEdit ? ' Assign pay puts employees on a pay structure and group.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="OpenedEmployment" condition="employment">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Pay of ${employment.personName}"/>
+                            <box-toolbar>
+                                <link url="${employee360Url}" text="Employee record" icon="sym_o_badge" link-type="anchor-button" btn-type="default"
+                                        parameter-map="{partyId:employment.partyId, partyRelationshipId:employment.partyRelationshipId}"
+                                        condition="employee360Url"/>
+                                <link url="." text="Close" icon="sym_o_close" link-type="anchor-button" btn-type="default"
+                                        parameter-map="{partyRelationshipId:''}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="AssignmentHistory" list="historyRows" skip-form="true" paginate="false" condition="historyRows.length">
+                                    <field name="structureName"><default-field title="Pay structure"><display/></default-field></field>
+                                    <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="electedText"><default-field title="Elected"><display/></default-field></field>
+                                    <field name="inputValuesText"><default-field title="Inputs"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="EndAssignment_${payrollAssignmentId}" button-text="End" icon="sym_o_block" width="520"
+                                                    title="End the pay assignment to ${structureName}" condition="canEnd">
+                                                <form-single name="EndAssignment" transition="endAssignment"
+                                                        map="{payrollAssignmentId:payrollAssignmentId, expectedRevision:revision, partyRelationshipId:partyRelationshipId}">
+                                                    <field name="payrollAssignmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="thruDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="End assignment">
+                                                            <submit type="danger" confirmation="End the pay assignment of ${employment.personName} to ${structureName}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="structureName"/><field-ref name="fromDateText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!historyRows.length"
+                                        text="${employment.personName} has no pay assignment yet.${canEdit ? ' Assign pay puts them on a structure and group.' : ''}"/>
+                            </box-body-nopad>
+                        </container-box>
+
+                        <container-box>
+                            <box-header title="Tax and benefits"/>
+                            <box-toolbar>
+                                <container-dialog id="EditProfileDialog" button-text="Edit tax profile" icon="sym_o_edit" width="620"
+                                        title="Tax profile of ${employment.personName}" condition="canEdit &amp;&amp; profile &amp;&amp; profileFields.length">
+                                    <label type="p" text="The fields of ${profile.localizationName}, from a date. The profile in effect ends then."/>
+                                    <form-single name="EditProfile" transition="storeProfile" map="profileValues">
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="payrollLocalizationId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="name1"><default-field><hidden/></default-field></field>
+                                        <field name="name2"><default-field><hidden/></default-field></field>
+                                        <field name="name3"><default-field><hidden/></default-field></field>
+                                        <field name="name4"><default-field><hidden/></default-field></field>
+                                        <field name="value1">
+                                            <conditional-field condition="profileFields[0]?.fieldKindEnumId == 'PpfChoice'" title="${profileFields[0]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><list-options list="profileFields[0].options" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[0]?.fieldKindEnumId == 'PpfIndicator'" title="${profileFields[0]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[0]" title="${profileFields[0]?.fieldLabel}"><text-line size="20"/></conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="value2">
+                                            <conditional-field condition="profileFields[1]?.fieldKindEnumId == 'PpfChoice'" title="${profileFields[1]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><list-options list="profileFields[1].options" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[1]?.fieldKindEnumId == 'PpfIndicator'" title="${profileFields[1]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[1]" title="${profileFields[1]?.fieldLabel}"><text-line size="20"/></conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="value3">
+                                            <conditional-field condition="profileFields[2]?.fieldKindEnumId == 'PpfChoice'" title="${profileFields[2]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><list-options list="profileFields[2].options" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[2]?.fieldKindEnumId == 'PpfIndicator'" title="${profileFields[2]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[2]" title="${profileFields[2]?.fieldLabel}"><text-line size="20"/></conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="value4">
+                                            <conditional-field condition="profileFields[3]?.fieldKindEnumId == 'PpfChoice'" title="${profileFields[3]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><list-options list="profileFields[3].options" key="${value}" text="${label}"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[3]?.fieldKindEnumId == 'PpfIndicator'" title="${profileFields[3]?.fieldLabel}">
+                                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                                            </conditional-field>
+                                            <conditional-field condition="profileFields[3]" title="${profileFields[3]?.fieldLabel}"><text-line size="20"/></conditional-field>
+                                            <default-field><ignored/></default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save tax profile"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="AddBenefitDialog" button-text="Add benefit" icon="sym_o_add" width="560"
+                                        title="Add a benefit for ${employment.personName}" condition="canEdit">
+                                    <form-single name="AddBenefit" transition="storeBenefit" map="{partyRelationshipId:partyRelationshipId}">
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="benefitTypeId">
+                                            <default-field title="Benefit">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'benefitTypes'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                        <field name="thruDate"><default-field title="Through" tooltip="Open when empty"><date-time type="date"/></default-field></field>
+                                        <field name="cost"><default-field title="Cost"><text-line size="10" input-type="number"/></default-field></field>
+                                        <field name="employerPaidPercent">
+                                            <default-field title="Employer pays (%)"><text-line size="6" input-type="number"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add benefit"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-ref name="benefitTypeId"/>
+                                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                            <field-row><field-ref name="cost"/><field-ref name="employerPaidPercent"/></field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="No localization covers ${employment.personName}'s pay group, so no tax fields apply." type="p" style="m-muted"
+                                        condition="!profile"/>
+                                <section name="ProfileFields" condition="profile">
+                                    <widgets>
+                                        <label text="${profile.localizationName}${profile.hasProfile ? ', from ' + profile.fromDateText : ': no profile yet'}"
+                                                type="p" style="text-weight-medium"/>
+                                        <form-list name="ProfileRows" list="profileRows" skip-form="true" paginate="false" condition="profileRows.length">
+                                            <field name="fieldLabel"><default-field title="Field"><display/></default-field></field>
+                                            <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                                            <field name="requiredText"><default-field title=""><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <form-list name="BenefitRows" list="benefitRows" skip-form="true" paginate="false" condition="benefitRows.length">
+                                    <field name="benefitText"><default-field title="Benefit"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="costText"><default-field title="Cost"><display/></default-field></field>
+                                    <field name="employerPaidText"><default-field title="Employer pays"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="EndBenefit_${benefitTypeId}_${fromDate}" button-text="End" icon="sym_o_block" width="480"
+                                                    title="End ${benefitText}" condition="canEdit &amp;&amp; state != 'ended'">
+                                                <form-single name="EndBenefit" transition="storeBenefit"
+                                                        map="{partyRelationshipId:partyRelationshipId, benefitTypeId:benefitTypeId, benefitFromDate:fromDate, endBenefit:'true'}">
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="benefitTypeId"><default-field><hidden/></default-field></field>
+                                                    <field name="benefitFromDate"><default-field><hidden/></default-field></field>
+                                                    <field name="endBenefit"><default-field><hidden/></default-field></field>
+                                                    <field name="thruDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="End benefit"><submit type="danger" confirmation="End ${benefitText} of ${employment.personName}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="benefitText"/><field-ref name="fromDateText"/></column>
+                                        <column><field-ref name="employerPaidText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No benefit is recorded." type="p" style="m-muted" condition="!benefitRows.length"/>
+                                <form-list name="PaymentRows" list="paymentRows" skip-form="true" paginate="false" condition="paymentRows.length">
+                                    <field name="referenceText"><default-field title="Paid to"><display/></default-field></field>
+                                </form-list>
+                                <label text="Bank accounts change in Accounting, through its payment-method services, never here."
+                                        type="p" style="text-caption m-muted"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

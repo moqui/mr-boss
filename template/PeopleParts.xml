@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.people.ContextServices.get#Choices" out-map="found"
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
-                        organizationPartyId:(choiceOrganizationPartyId || null), departmentPartyId:(choiceDepartmentPartyId || null)}"/>
+                        organizationPartyId:(choiceOrganizationPartyId || null), departmentPartyId:(choiceDepartmentPartyId || null),
+                        payrollStructureId:(choicePayrollStructureId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>
