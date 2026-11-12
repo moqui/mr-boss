@@ -1081,3 +1081,48 @@ feature(
         }
     }
 )
+
+// P11: costs are the cost reader's (MAINTENANCE_COST_VIEW): Mantle's get#MaintenanceCosts answers maint.cost and refuses the planner
+// and the supervisor, and another organization; the Costs tab and the cost report (BOSS_MNT_COSTS) are in the cost reader's menu and
+// no one else's, and refused to the planner
+feature(
+    "a work order's costs are the cost reader's: the planner and the supervisor are refused, Retail is refused, and only the cost reader has the tab and the report",
+    {
+        when() {
+            const as = (user, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal("mantle.work.MaintenanceReportServices.get#MaintenanceCosts", parameters)
+                })
+            const work = {workEffortId: ids.heldOrderId}
+            const tabs = user =>
+                shell(user, true, "WorkOrders/WorkOrderDetail/Overview?workEffortId=" + ids.heldOrderId, "WorkOrderDetail").names
+            const areas = user => shell(user, true, "WorkOrders/Find", "WorkOrders").names
+            return {
+                holder: as(users.cost, work),
+                planner: as(users.planner, work),
+                supervisor: as(users.supervisor, work),
+                otherOrganization: as(users.cost, {organizationPartyId: ids.otherOrganizationId}),
+                costTabs: tabs(users.cost),
+                plannerTabs: tabs(users.planner),
+                costAreas: areas(users.cost),
+                plannerAreas: areas(users.planner),
+                plannerTab: screenRefusal(users.planner, "WorkOrders/WorkOrderDetail/Costs", work),
+                plannerReport: screenRefusal(users.planner, "WorkOrders/MaintenanceCostReport")
+            }
+        },
+        then(r) {
+            r.holder == ""
+            r.planner.includes("PERMISSION_DENIED")
+            r.supervisor.includes("PERMISSION_DENIED")
+            r.otherOrganization.includes("ORGANIZATION_DENIED")
+            r.costTabs.includes("Costs")
+            r.plannerTabs.includes("Overview")
+            !r.plannerTabs.includes("Costs")
+            r.costAreas.includes("MaintenanceCostReport")
+            !r.plannerAreas.includes("MaintenanceCostReport")
+            r.plannerTab != ""
+            r.plannerReport != ""
+        }
+    }
+)

@@ -339,4 +339,19 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Maintenance/Scheduling/BookingRequests?${facilityId ? 'facilityId=' + facilityId : 'assetId=' + assetId}"/>
     <moqui.security.user.NotificationTopic topic="ResourceBookingNotice"
             linkTemplate="/qapps/Commons/Calendar/EventDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P11: the cost screens (WorkOrderDetail's Costs tab and MaintenanceCostReport), the cost reader's: denied to the
+        root user group, as Requests are, and always for the cost reader group, so the tab and the report are in no other user's menu;
+        BOSS_MAINTENANCE_ADMIN and ADMIN open them through their ALWAYS on the root. Mantle's get#MaintenanceCosts checks
+        MAINTENANCE_COST_VIEW again. The cost reader's bundle carries the grant, so a group given it in Admin opens them. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail/Costs.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/MaintenanceCostReport.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_COSTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_COSTS_COST" userGroupId="BOSS_MAINTENANCE_COST" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs (the Costs tab and the cost report)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
 </entity-facade-xml>

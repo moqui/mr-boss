@@ -410,4 +410,16 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.request.requirement.RequirementSupply requirementSupplyId="BOSS_MNT_RS_REWIND" requirementId="BOSS_MNT_RQMT_REWIND"
             supplyTypeEnumId="RstPurchaseOrder" orderId="BOSS_MNT_PO_REWIND" orderItemSeqId="01" requestId="BOSS_MNT_PREQ_MOTOR"
             requestItemSeqId="01" quantity="1" quantityUomId="OTH_ea" fromDate="2026-11-11 10:00:00"/>
+
+    <!-- P11 (design-maintenance §3 WorkCosts, §8 MaintenanceCostReport; review Y2): Services' labor costing rate for its service
+        technicians (People's position class; RaprCost, Services' own row, 48 USD an hour, never a person's pay), and maint.tech's
+        approved timesheet of the week of the compressor's belt, whose two hours are of that class; so maint.cost reads the belt's labor
+        priced, the air handler's and Room 102's hours not approved yet, the air handler's gaskets at cost and the motor's rewind
+        ordered and not accepted (pending) -->
+    <mantle.humanres.rate.RateAmount rateAmountId="BOSS_MNT_RATE_TECH" rateTypeEnumId="RatpStandard" ratePurposeEnumId="RaprCost"
+            emplPositionClassId="BOSS_PPL_JC_TECH" organizationPartyId="ORG_ZIZI_SERVICES" rateAmount="48" rateCurrencyUomId="USD"
+            timePeriodUomId="TF_hr" fromDate="2026-01-01 00:00:00"/>
+    <mantle.work.time.Timesheet timesheetId="BOSS_MNT_TS_BELT" partyId="BOSS_MNT_TECH" statusId="TmshApproved"
+            fromDate="2026-10-19 00:00:00" thruDate="2026-10-26 00:00:00" comments="Week of the compressor's belt"/>
+    <mantle.work.time.TimeEntry timeEntryId="BOSS_MNT_TE_BELT1" timesheetId="BOSS_MNT_TS_BELT" emplPositionClassId="BOSS_PPL_JC_TECH"/>
 </entity-facade-xml>

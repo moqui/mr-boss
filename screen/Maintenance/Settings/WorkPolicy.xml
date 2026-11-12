@@ -18,8 +18,10 @@ along with this software (see the LICENSE.md file). If not, see
     work by a planner is approved on create), the closure policy, the default work type and team, and whether production requests
     and warranty repairs become managed work (off), whether a procedure's last author may approve it (P6; off), and whether a
     technician's voice note on a checklist step is transcribed (P7 review, the user's call of Nov 12; off). A change starts a
-    dated policy from now and ends the one in effect. The cost half of the threshold, the qualification check and the job defaults
-    join with their phases (P11, P8, P14). -->
+    dated policy from now and ends the one in effect. P11: the threshold's cost half, a field group of its own
+    (mantle.work.MaintenanceSettingsServices.store#MaintenanceCostThreshold): planned work estimated above the amount, or that cannot be
+    priced, waits for a supervisor; empty, the cost is not compared; the work policy's save keeps it. The qualification check and the
+    job defaults join with their phases (P8, P14). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work policy" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -35,6 +37,23 @@ along with this software (see the LICENSE.md file). If not, see
                         warrantyRepairsManaged:warrantyRepairsManaged, procedureSelfApproval:procedureSelfApproval,
                         voiceNoteTranscription:voiceNoteTranscription, comments:comments}"/>
             <if condition="!ec.message.hasError()"><message type="success">Work policy saved from now</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="organizationPartyId"/>
+        </error-response>
+    </transition>
+    <!-- P11: the cost threshold, its own field group -->
+    <transition name="storeCostThreshold">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId, capability:'settingsEdit'}"/>
+            <service-call name="mantle.work.MaintenanceSettingsServices.store#MaintenanceCostThreshold"
+                    in-map="{organizationPartyId:organizationPartyId, approvalThresholdCost:approvalThresholdCost,
+                        approvalThresholdCurrencyUomId:approvalThresholdCurrencyUomId, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Cost threshold saved from now</message></if>
         </actions>
         <default-response url=".">
             <parameter name="organizationPartyId"/>
@@ -59,6 +78,9 @@ along with this software (see the LICENSE.md file). If not, see
                 warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', procedureSelfApproval: policy.procedureSelfApproval ? 'Y' : 'N',
                 voiceNoteTranscription: policy.voiceNoteTranscription ? 'Y' : 'N',
                 comments: policy.comments} : {organizationPartyId: organizationPartyId}"/>
+        <set field="costValues" from="policy ? {organizationPartyId: organizationPartyId,
+                approvalThresholdCost: policy.approvalThresholdCost == null ? '' : String(policy.approvalThresholdCost),
+                approvalThresholdCurrencyUomId: policy.approvalThresholdCurrencyUomId || ''} : {organizationPartyId: organizationPartyId}"/>
         <set field="sinceText" from="policy?.fromDate ? 'In effect since ' + policy.fromDateText : 'The defaults are in effect: no policy has been saved.'"/>
     </actions>
     <widgets>
@@ -142,6 +164,32 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                         </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Cost threshold"/>
+                    <box-body>
+                        <form-single name="CostThreshold" transition="storeCostThreshold" map="costValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="approvalThresholdCost">
+                                <default-field title="Approve planned work estimated up to"
+                                        tooltip="The planned parts at their approved standard cost and the estimated hours at the costing rate; above this, or when it cannot be priced, a supervisor approves. Empty: the cost is not compared">
+                                    <text-line size="10" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="approvalThresholdCurrencyUomId">
+                                <default-field title="Currency" tooltip="The organization's own currency when empty">
+                                    <text-line size="4"/>
+                                </default-field>
+                            </field>
+                            <field name="comments"><default-field title="Why it changes"><text-line size="60"/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="Save from now">
+                                    <submit confirmation="Save this cost threshold from now? The work policy in effect ends and the next keeps its other values."/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                        <label text="A planner is told only that the work needs a supervisor, never its estimate." type="p" style="text-caption m-muted q-mb-none"/>
                     </box-body>
                 </container-box>
             </widgets>

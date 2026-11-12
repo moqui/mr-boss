@@ -164,7 +164,9 @@ const linkPaths = [
     "Preventive/Plans/Find",
     "Preventive/Plans/PlanDetail",
     // P10: a purchase order of the work (the shared OrderDetail, read only)
-    "WorkOrders/OrderDetail"
+    "WorkOrders/OrderDetail",
+    // P11: the cost report (the cost reader's; under Work orders until P17's Reports area)
+    "WorkOrders/MaintenanceCostReport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
