@@ -362,7 +362,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 11 (§6 F1–F75); items waiting on People P9/P10/P12/P18 left open |
 | P1 Foundation | Mantle, BOSS | the Maintenance root and menu, Home (its frame), Settings (its frame) | built and reviewed Nov 11, merged |
-| P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | — |
+| P2 Equipment and facilities | Mantle, BOSS | Equipment, EquipmentDetail, Product360, Employee360, Facilities, FacilityDetail | built and reviewed Nov 11, merged |
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | — |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | — |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | — |
@@ -847,7 +847,7 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
 - Design edits: design-maintenance §1.1 (the panels), §1.2 (the menu, keys, palette and mounts), §6 Equipment, Facilities and the
   shared records as built (and the move's direct write); design-people §4 Employee360's Maintenance row; design-products Product360's
   Maintenance mount; impl-people §7's Employee360 row and custody guard marked built.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F85 to F92 in order:
   - `AssetServices.move#Asset` makes a new asset whenever the facility changes (a stock rule), and Warehouse's `move#Stock` refuses
     equipment (`NOT_STOCK`), so P2's equipment move writes the asset's facility and location directly after its own checks (design §6
     and §13.2 said through `move#Asset`); design §6 changed.
@@ -973,7 +973,7 @@ FacilityScope.js, People.js `employers()`, Products' Catalog.js options); lint r
     gains the case (the editor renames and adds a location to an ownerless room under its warehouse and owns it without a reason;
     an ownerless room under another organization's site refused); fails without the change. Written into design-warehouse §1 and
     impl-warehouse §4's log.
-- Findings (for the lead to number):
+- Findings, numbered by the lead F93 to F96 in order (after the note on the calls):
   - (The two user's calls, the custody holder Mantle admits and the ownerless facility's organization, are built as R7 and R8.)
   - With R8, an ownerless facility moved under another organization's facility changes organization with it and no owner-change
     reason is asked (store#Facility asks one only for a change of the stored owner); Maintenance's
@@ -1662,6 +1662,8 @@ design-maintenance.md or the owner's design.
 | Nov 11, 2026 | Maintenance has its own all-organizations permission, `MAINTENANCE_ALL_ORGANIZATIONS`, granted to `BOSS_MAINTENANCE_ADMIN` alone; `FACILITY_ALL_ORGANIZATIONS` no longer widens Maintenance's scope | The user's call (P1, F76), as People's `PEOPLE_ALL_ORGANIZATIONS`; built in P1's review (R3) |
 | Nov 11, 2026 | `BOSS_MAINTENANCE_ADMIN` holds every `MAINTENANCE_*`, `WORK_PROCESS_*` and `RESOURCE_*` permission, and its bundle follows | The user's call (P1, F76); design §1.1 named none; built in P1's review (R4) |
 | Nov 11, 2026 | The planner, supervisor and resource administrator groups hold `PEOPLE_DIRECTORY_VIEW`, so Employee360's public work card opens under Maintenance | The user's call (P0's F62), kept after P1 |
+| Nov 11, 2026 | A custodian Maintenance names is one of the scope's internal organizations, a person one of them employs now, or the equipment's own owner organization for a customer's equipment (`HOLDER_UNAVAILABLE`), in Mantle | The user's call (P2 review), as People's return; built as R7 |
+| Nov 11, 2026 | An ownerless facility belongs to its nearest owning ancestor in Warehouse's facility checks too (FacilityScope.js, FacilitySetup.js), as in Maintenance's; owned facilities unchanged; the stock guards still read the facility's own owner | The user's call (P2 review), an owner contract with Warehouse (design-warehouse §1, impl-warehouse §4); built as R8 |
 
 ## 5. Open questions
 
@@ -1771,6 +1773,18 @@ paths under `mr-boss/`.
 | F82 | P1 review: the root serves Chatter and RecordFiles only for the entities in its `panelHosts`, empty in P1 | P2 adds Asset and Facility with their checks; P3 the work order and step |
 | F83 | P1 review: a holder of `MAINTENANCE_ALL_ORGANIZATIONS` sees every organization even with an active one chosen (FacilityScope's rule); People narrows to the active one | P3's lists decide; People's rule recommended |
 | F84 | P1 review: the root's ALWAYS gives the administrator and `ADMIN` every area | With F76's grants the administrator holds what each area reads |
+| F85 | P2: `move#Asset` makes a new asset when the facility changes and `move#Stock` refuses equipment | P2's equipment move writes the facility and location itself after its checks; design §6 changed |
+| F86 | P2: FacilitySetup.js owned a facility by its own owner only, so ownerless rooms Maintenance lists were not editable | §4: Warehouse follows the ancestor (P2 review R8) |
+| F87 | P2: the plan's forklift is Warehouse's and Retail's (`BOSS_WH_FORKLIFT`) | Serves as Retail's equipment |
+| F88 | P2: BossMaintenanceDemoData loads before People's and Purchasing's demo; Commons' Schedules seats filter expects one room of ten or more | Links in BossZMaintenanceDemoData.xml; Room 201 holds nine |
+| F89 | P2: Product360 asked `get#CatalogOptions` with no `appRoot` | Maintenance's root passed under Maintenance only |
+| F90 | P2: Mantle maintenance services are reached under the root's inheritable grant, as other apps' | None; each checks its own permission and scope (P2 review) |
+| F91 | P2: the Equipment and Facilities menu conditions repeat MaintenanceAccess.js's view permissions | None |
+| F92 | P2: built in part: the facility close preview on screen, Certifications writer, Employee360's return-task link, the list's availability and next PM, the reading screen | P3, P5, P7, P13 |
+| F93 | P2 review: an ownerless facility moved under another organization's facility changes organization with no reason asked; Maintenance previews it, Warehouse's edit does not | Later, Warehouse's |
+| F94 | P2 review: `record#MaintenanceMeter` in work does not check the equipment is the work's target | P7 |
+| F95 | P2 review: EquipmentDetail's subscreens add `/Identity` to its URL under every mount | None; nothing renders there outside Maintenance |
+| F96 | P2 review: list rows read counts with per-row queries | Batch with P3's work-order counts |
 
 
 ## 7. Later
