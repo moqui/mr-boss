@@ -935,8 +935,9 @@ the existing type `WetAvailable`.
 **Who changes an event (Nov 12, 2026; impl-people P19 follow-up, Commons calendar editors).** Its organizer and the editors of a
 calendar that holds it for its editors (a delegate of the organizer's calendar, a team calendar it was made in). Putting an event
 in a calendar gives view only to whoever could not change it (`CalendarWorkEffort.viewOnly`: an attendee's own calendar, its
-delegates, CalDAV), and an event an app keeps (`EventManager`: People's training sessions and interviews) changes only in that
-app; EventDetail shows it read-only, saying where, and CalDAV refuses its writes (403).
+delegates, CalDAV), and an event an app keeps (`EventManager`: People's training sessions, interviews and approved leave,
+Manufacturing's production runs) changes only in that app; EventDetail shows it read-only, saying where, and CalDAV refuses its
+writes (403).
 
 ### Calendar
 

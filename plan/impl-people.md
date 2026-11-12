@@ -5640,6 +5640,150 @@ CustomerServiceCases and PurchasingRequests (61 of 61) passed after it.
     anyone (as built). For the user: the instance administrator's tools and the `allNotifications` subscription (the first two
     findings) need a framework decision. Gate 3 is the lead's to mark.
 
+**Follow-up Nov 12 (follow-up 1).** After gate 3: the user's calls of Nov 12 (§4) on P21's review findings F347 and F348 and the
+calendar follow-up's R3, and the calendar review's F358 and F359. mr-moqui 03f1b5d0, mr-mantle d13c2e1b and mr-boss (this commit),
+branch `ppl/fix1`.
+- Checked first (the code over the plan): the framework's `NotificationMessage::direct_only` (crates/moqui-core/src/notify/message.rs:
+  `resolve_users` adds the `allNotifications` subscribers unless it is set; only moqui-report's business alerts set it) and the JS
+  builder (script/host/notification.rs), which had no member for it; every `makeNotificationMessage` of People (eight senders) and the
+  topics they use; Recruiting.js `tellAttendees` (a failing `send#EventInvitations` marks the interview's transaction rollback-only
+  however the errors are taken back, docs/logic/Services.md) and the tx-commit pattern of P17's offer letter (PeopleRecruiting.secas.xml);
+  Leave.js `project` (WetTimeOff written by entity-auto CRUD, owned by the employee, with no EventManager) and the production run's
+  guard (BOSS `get#EventAccessInfo` only: a run is a WetEvent of purpose WepProductionRun owned by its organization, in no calendar, written
+  by Manufacturing's own services, which call no event service).
+- mr-moqui: `ec.makeNotificationMessage().directOnly(flag)` (no argument is true), documented in JS-Core-API and typed in
+  `moqui-host.d.ts` and its golden (which also gain the documented `reason`, `record`, `actorUserId` and `appName` members they had left
+  out); Attack-Surface's topic note names it, and its Tools note records the user's call on F347 (the instance administrator's own data
+  tools read a confidential record whole: privileged by design). Spec EcApi (a direct-only notice to its named user alone; without it
+  and with `directOnly(false)` the subscriber is told).
+- Direct-only, decided per topic by whether its notice concerns a confidential record: PeopleCaseUpdate (`PeopleCases.js tell`, so the
+  record notices of a case's notes too); every approval topic (`Approvals.js notify`: PeoplePositionApproval,
+  PeopleEmploymentChangeApproval, PeopleLeaveApproval, PeopleAttendanceApproval, PeopleExpenseApproval, PeopleAdvanceApproval,
+  PeopleOfferApproval, PeopleTrainingApproval, each to the step's deciders); PeopleLeaveDecision and PeopleTrainingDecision (the
+  person's own decision); QualificationExpiring (the person's own document or permit); PeopleTaskAssigned (a protected checklist step,
+  a separation's before it is announced, or a case's task). Left open: PeopleShiftChange (a roster the team sees), the shared
+  EventInvitation, EventInvitationResponse and WorkEffortReminder topics (an interview's title names the opening, never the applicant; a
+  leave reminder says "Out of office"), and the generic record notices of other People records (below).
+- F358: schedule, change and cancel#Interview send nothing in their own transaction. Three tx-commit rules (PeopleRecruiting.secas.xml)
+  run `RecruitingServices.send#InterviewInvitations` (new, not remote) once they commit, as the recruiter on a service worker: it sends
+  `send#EventInvitations` as the system in a transaction of its own, so a failure is logged and answered (`invitationsSent` false,
+  `invitationProblem`) and adds no error; another event is not sent. The three services lose `invitationsSent` and
+  `invitationProblem`; ApplicantDetail says "the invitations are on their way" and "the attendees are being told".
+- F359: the EventManager `PeopleLeave` (LeaveRequestSegment, its `workEffortId` now indexed `LEAVE_SEG_EVENT`; "its leave request in
+  People") keeps approved leave's "Out of office" from update, cancel and restore#EventOccurrence, `add#CalendarEvent` and CalDAV for
+  its employee and everyone; Leave.js writes and cancels it directly, as before. Production runs have the same gap closed by the
+  EventManager `ProductionRun` (`mantle.work.effort.WorkEffort` of purpose WepProductionRun, seeded beside ProductionRunLine; "its
+  production run in Manufacturing"): no user had a path to edit one (its organizer is the organization and runs are in no calendar),
+  so it is defensive, for every caller of Mantle's event services rather than BOSS's alone.
+- §4 records the user's three calls: CalDAV's delete of a view-only invitation (204, the event unchanged; as the calendar review built
+  it), the admin tools reading a case whole (accepted), and case and other confidential notices direct-only (this follow-up).
+  design-people §5's interview note and design-drawers-commons's editor rule say what was built.
+- Specs (each new check fails on the code before): mr-moqui EcApi (the direct-only feature 0.00 s); Mantle Recruiting (F358: the
+  change read inside its own transaction has sent nothing, the attendee is told after the commit, a send of no interview answers so
+  with no error; 0.36 s), LeaveRequests (Ana refused the move and cancel of her approved afternoon, managed by PeopleLeave, HR's cancel
+  still cancels it; in the cancellation feature, 0.98 s), CalendarServices (a run's organizer refused its move and cancel; 0.15 s),
+  PeopleCases (ADMIN subscribed to every PeopleCaseUpdate message is not told of a filing; in the filing feature, 0.83 s).
+- Tests run (the Debug build of mr-moqui `ppl/fix1`, `--debug --nobuild`, this runtime; the shared release binary has no
+  `directOnly`): framework EcApi 7 of 7; `cargo test -p moqui-devkit typegen` 8 of 8; Mantle Recruiting and PeopleCases 17 of 17,
+  LeaveRequests, LeaveLedger, CalendarServices, CalendarChanges, Dav, Training, Offers, PeopleApprovals, ExpenseClaims,
+  Qualifications, PeopleChecklists, ShiftRoster, CommonsToday, Attendance, PeopleEmployment, ManufacturingServices,
+  ProductionShopFloor, WarehouseProduction, ProductionDowntime 143 of 143; BOSS PeopleRecruiting, PeopleLeave, Calendar, EventDetail,
+  PeopleAccess, PeopleApprovals, PeopleExpenses, PeopleTraining, PeopleSkills, PeopleLifecycle, PeopleSelfService,
+  ManufacturingAccess, ManufacturingPlanning, TodayPanel, Notifications, PeopleTime, PeopleRoster 130 of 130 (PeopleAccess named over
+  15 s in Debug, 15.12 s; unchanged here). `moqui lint --screens`: 136 flagged sites as before, none in ApplicantDetail. Prettier
+  clean on the changed JavaScript but CalendarServices.spec, which was not Prettier-formatted before (left in its style). Not run:
+  test-apps, test-framework, the acceptance suite.
+- Findings (provisional, numbered by the lead):
+  - The generic record notices still reach a subscriber to every message of their topic: `notify#RecordMention` (ChatterMention) and
+    `notify#RecordFollowers` (RecordFollow) carry the record's name and the start of the note's text for an employment's,
+    qualification's or applicant's notes (P2, P18, P16); only a case's notes go direct-only (PeopleCaseUpdate). Making them direct-only
+    for People's records (or for every record) is a Mantle change for the user to decide.
+  - Tools' TopicDetail calls a private topic (`isPrivate` Y) "only those a notification is sent to receive it", but the resolution
+    adds `allNotifications` subscribers to a private topic's messages too (as Attack-Surface says, and as Java does); every People topic
+    above is private, so the screen's word was wrong for them until now and still is for a private topic sent without `directOnly`.
+  - A failed after-commit interview invitation is logged only: the recruiter is not told and there is no "send again" (the old message
+    pointed at one that was never built); `send#EventInvitations` sends again whoever was not told at the next change. F358's spec
+    reaches the failure path only through an event that is not an interview (a real send failure cannot be made from a spec).
+  - get#ManagedEvents now reads LeaveRequestSegment (an indexed `in` query) and, for events of purpose WepProductionRun, WorkEffort on
+    every page of calendar data and every event write.
+  - PeopleAccess's spec time is at the 15 s cap in a Debug run (15.12 s; not measured on a release binary here, which has no
+    `directOnly` until the framework merges).
+- For the lead:
+  - budget share: mr-mantle about +0.6 s (Recruiting's new feature 0.36 s, CalendarServices' 0.15 s, the checks added to LeaveRequests'
+    and PeopleCases' features); mr-moqui server about +0.0 s; mr-boss none;
+  - merge hot spots (P20, reviews and goals, is built beside this): mr-mantle `humanres/Approvals.js` (`notify`: one line and its
+    comment; a review or goal approval kind added there is direct-only with the rest), `PeopleServices.xml` (`notify#PeopleTaskAssigned`),
+    `Leave.js`, `Training.js`, `Development.js` (one line each), `Recruiting.js`, `RecruitingServices.xml`, `PeopleRecruiting.secas.xml`,
+    `entity/PeopleLeaveEntities.xml`, `entity/ProductionEntities.xml`, `request/PeopleCases.js`, the specs Recruiting, LeaveRequests,
+    CalendarServices and PeopleCases; mr-boss `screen/People/Staffing/ApplicantDetail.xml`, design-people §5, design-drawers-commons,
+    usl-inventory (the RecruitingServices rows), impl-people (§4's last rows, this note); mr-moqui `script/host/notification.rs`, `moqui-host.d.ts` and its golden, JS-Core-API,
+    Attack-Surface, EcApi.spec. P20's own notices (a review's, a goal's) concern confidential records and want `directOnly()` too;
+  - the follow-up needs a framework merge with the apps: Mantle's People code calls `directOnly()`, which the release binary before
+    mr-moqui 03f1b5d0 does not have (every People notice would fail, logged, and the change stay);
+  - for the user's call: the generic record notices of People records (the first finding).
+
+**Review Nov 12 (follow-up 1).** The fresh review of `ppl/fix1` (master had not moved in the three repositories; no rebase):
+mr-moqui d623c7ab, mr-mantle 0e9267ea and mr-boss (this commit).
+- Checked and found sound: `directOnly()` (script/host/notification.rs; no argument and any non-boolean are true, as
+  `persistOnSend`) reaches `NotificationMessage::direct_only`, and every delivery path takes the one list `resolve_users` makes,
+  which leaves out the `allNotifications` subscribers of a direct-only message: the persisted `NotificationMessageUser` rows (the
+  tray, the inbox and `send#NotificationDigests`, which reads those rows only), the cluster topic's `userIds` that `/notws` and the
+  TUI route by, the immediate email (`send_emails` over the resolved users) and Web Push; no other reader adds a topic's
+  subscribers. The eight People senders call it after `userIds`, inside their try, so a failure is still logged and the change
+  stays. F358: the tx-commit rules fire only on commit, so a failed or rolled-back schedule, change or cancel sends nothing; the
+  send runs `send#EventInvitations` as the system with `requireNewTransaction`, its messages absorbed (`as_system`) and popped, so a
+  failure marks nothing of the rule's own transaction; schedule, change and cancel#Interview are called only from ApplicantDetail.
+  F359: no Leave, Manufacturing or BOSS code calls Mantle's event services on a leave event or a run (Leave.js and the
+  production services write the WorkEffort directly), so the EventManager rows refuse only the calendar, Commons and CalDAV paths;
+  `get#ManagedEvents`' added reads are by the page's own ids (`LeaveRequestSegment.workEffortId in`, indexed `LEAVE_SEG_EVENT`; the
+  purpose map was already read for PeopleTrainingSession), bounded by its caller's list (a calendar page's events, a CalDAV write's).
+- Fixed:
+  - R1 (medium, mr-moqui): Tools' TopicDetail said a private topic reaches "only those a notification is sent to"; the resolution
+    adds the `allNotifications` subscribers to a private topic's messages unless direct-only (the follow-up's second finding).
+    The Kind row now says so.
+  - R2 (the user's call, below; mr-mantle): `notify#RecordMention` and `notify#RecordFollowers` send direct-only for a record whose
+    type is registered in the new `mantle.party.communication.ConfidentialRecordType` (`check#ConfidentialRecordType`: the full
+    entity name, or the full name of a short one; `disabled` Y leaves it out), seeded beside People's hosts in
+    HumanResourcesEntities: Employment, EmploymentApplication, PartyQualification. A case's notes already go to PeopleCaseUpdate
+    (`isCase`, before the registration is read); P20's review host joins with a row. Other apps' notes are unchanged (the
+    follow-up's first finding).
+  - R3 (medium, mr-mantle and mr-boss): a failed after-commit invitation send was logged only (the follow-up's third finding).
+    `send#InterviewInvitations` records its outcome on `ApplicationInterview` (`invitationSendStatus` failed, `invitationSendDate`,
+    `invitationSendError`: an error, or an attendee `send#EventInvitations` skipped, by name and reason; a later send that tells
+    everyone marks it sent, and nothing is written while none has failed); `get#Application` gives the application's recruiters
+    alone `invitationsFailed` and `invitationProblemText`; ApplicantDetail shows the line under the interview's time with Send again
+    (the `sendInterviewInvitations` transition; a cancelled interview's failed cancel too, where Change and Cancel are not shown).
+    The service now checks its caller, a recruiter (PEOPLE_RECRUIT_EDIT) of the employer, since Send again reaches it from a screen
+    (the rules run as the one who made the change, who passed the same check); another caller and an event that is not an
+    interview are both RECORD_UNAVAILABLE (it had answered "Not an interview" without an error, which named what an id is).
+    An attendee told already is not told again (the digest), so Send again tells only who was missed.
+  - R4 (low, mr-mantle): `get#ManagedEvents` no longer reads WorkEffort a second time for a manager of a purpose whose entity is
+    WorkEffort itself (ProductionRun): the purpose read is the row.
+- The user's call (§4, Nov 12): People's confidential record notes notified direct-only (R2).
+- Provisional findings (for the lead to number):
+  - F358's real failure path was reached in a spec only now, through a skipped attendee (the recruiter has no address to email the
+    candidate from); a whole-send error (an exception in `send#EventInvitations`) is still reached by no spec.
+  - `EventInvitation` (an interview's invitation to the panel: its title names the opening and links the event), the reminder
+    topics and PeopleShiftChange still reach an `allNotifications` subscriber, as the follow-up left them; a decision for the user
+    if an instance administrator's subscription to those topics should not see interviews.
+- Tests (the Debug build of mr-moqui `ppl/fix1`, `--debug --nobuild`, this runtime): framework AdminJobs and EcApi 11 of 11; Mantle
+  Recruiting, CalendarServices, LeaveRequests, PeopleCases, RecordNotes, RecordLinks, Dav, CalendarChanges, CommonsToday,
+  Qualifications, PeopleEmployment, ManufacturingServices 124 of 124 (RecordNotes' new feature 0.02 s, failing with the check
+  answering false; Recruiting's F358 feature 0.71 s, was 0.36 s); BOSS PeopleRecruiting, Chatter, Calendar, EventDetail,
+  ProjectsAccess, PeopleEmployees, PeopleSkills, PeopleLeave, ManufacturingPlanning 92 of 92 (PeopleRecruiting's change feature
+  0.18 s, now posting Send again). `moqui lint --screens`: the same flagged sites before and after. Prettier clean on Recruiting.js
+  and Recruiting.spec (RecordNotes.spec was not Prettier-formatted before; left in its style). Not run: test-apps, test-framework,
+  the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +0.4 s over the follow-up's (Recruiting +0.35 s, RecordNotes +0.02 s); mr-boss and mr-moqui about 0;
+  - merge order: mr-moqui (d623c7ab and the follow-up's 03f1b5d0) before or with mr-mantle, whose People code calls `directOnly()`;
+  - merge hot spots beside P20: mr-mantle `entity/PartyEntities.xml` (ConfidentialRecordType after RecordFollower),
+    `HumanResourcesEntities.xml` (three seed rows), `PeopleRecruitingEntities.xml` (ApplicationInterview's fields),
+    `CommunicationServices.xml` (the two notify services and the new check), `Recruiting.js` (`sendInterviewInvitations`,
+    `interviewRows`), `EventServices.xml` (`get#ManagedEvents`), the specs Recruiting and RecordNotes; mr-boss ApplicantDetail
+    (the transition and the Interviews row), PeopleRecruiting.spec, design-people §5, usl-inventory, impl-people (§4's last row, this
+    note); mr-moqui TopicDetail. P20's review (and goal, if confidential) host wants a ConfidentialRecordType row beside its entity.
+
 ### P22 — Pay components, structures and groups
 
 Design §8.1, §8.4 (the legacy disposition), PayComponents, PayComponentDetail, PayStructures, PayStructureDetail,
@@ -5954,6 +6098,10 @@ the owner's design.
 | Nov 12, 2026 | An employer's confidential case intake handlers are named by its `PartySetting` `PeopleCaseIntake` (as built in P21); an employer with none refuses a filing with a clear message (`NO_CASE_HANDLER`: "Your employer has nobody to take confidential cases yet; ask HR who handles them"); P29's Settings gives the setting a screen | The user's call on P21's question (as built; P29's section names the screen) |
 | Nov 12, 2026 | When a case's last handler leaves the employer (a separation), the case goes back to the employer's intake handlers, who are told on `PeopleCaseUpdate` with a title naming nothing; Admin's lifecycle lists the leaver's open cases as an owned resource of People's lifecycle participant, without their content | The user's call on P21's question (built in P21's review: `PeopleCases.js rerouteCases` from the separation's apply and the daily job, the leaver taken off every open case of the employer; `ownedCases` in `find#OwnedApprovals`, "Confidential case", not transferable; spec PeopleCases) |
 | Nov 12, 2026 | Confidential cases reach no palette, search, record-lookup or Assist for anyone, their people included; people open them from Grievances | The user's call on P21's question (as built) |
+| Nov 12, 2026 | A phone's CalDAV delete of an invitation the attendee's calendar only shows (`viewOnly`) takes it out of that calendar (204) and never changes the event; a kept event's delete is still 403, and the organizer's delete cancels the event | The user's call on the calendar follow-up's review question (as built: its R3, `delete#DavObject`; Dav spec) |
+| Nov 12, 2026 | The instance administrator's own data tools reading a confidential case whole (Tools' Data and SQL, System's Resource and Audit, Mantle's REST) is accepted: the admin tools are privileged by design; no framework restriction of `PeopleCase` or of `peoplecase/` is added | The user's call on P21's review finding F347 (mr-moqui docs/security/Attack-Surface.md, Tools and System, says so) |
+| Nov 12, 2026 | People's confidential notices go to their named recipients only: a subscription to every message of a topic (`NotificationTopicUser.allNotifications`, set in Tools) receives none. The framework exposes it to scripts as `directOnly()` on `ec.makeNotificationMessage()`; People sends direct-only on PeopleCaseUpdate, every approval topic (Approvals.js `notify`: positions, employment changes, leave, attendance, expenses, advances, offers, training), PeopleLeaveDecision, PeopleTrainingDecision, QualificationExpiring and PeopleTaskAssigned | The user's call on P21's review finding F348 (built in People follow-up 1); PeopleShiftChange and the shared EventInvitation and reminder topics stay open (follow-up 1's note) |
+| Nov 12, 2026 | The notes and messages on People's confidential records are told to their named users alone: `notify#RecordMention` (ChatterMention) and `notify#RecordFollowers` (RecordFollow) send direct-only for a record type registered in `mantle.party.communication.ConfidentialRecordType`, which People's hosts join with a seed row (employment, application, qualification; a case through PeopleCaseUpdate; P20's review once built); other apps' notes are unchanged | The user's call on People follow-up 1's first finding (built in its review, R2; spec RecordNotes) |
 
 ## 5. Open questions
 
