@@ -374,7 +374,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | — |
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
-| P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built Nov 12, for review |
+| P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
@@ -2415,7 +2415,7 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
 - Inventories: usl-inventory's `get#AssetMaintenanceNeeded` (not used, F11) and `get#NextBusinessDay` rows and an Added table for
   MaintenancePlanServices; ss-inventory's ProductMaintenanceList and a P13 line (AddPlannedMaintenance stays P14's).
 - Design edits: design-maintenance's header, §1.2, §5.1, Plans and PlanDetail and §13.2 as built.
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F177 to F185 in order:
   - Design §5.1 has generation make an ad hoc root when no procedure is configured; this phase's text and the lead's brief have activation need a
     qualifying procedure, which is built (PROCEDURE_REQUIRED, PROCEDURE_NOT_QUALIFIED). A plan without a procedure stays a draft.
   - The first due date is kept as the local date and time in the target's zone (`firstDueLocal`, text), not a timestamp: a timestamp read in the
@@ -2506,7 +2506,7 @@ index 5 between Procedures and Equipment, Scheduling at 8); mr-moqui unchanged (
     one `meterUnit` for the due, the terms and the baseline row. MaintenancePlans (the stale plan's terms and due).
   - R10 (low, efficiency): `find#MaintenanceDue` projected each plan twice (the row and the due); once now.
   Each new check fails with its fix taken out (six mutation runs of MaintenanceDue, one per fix; R4 seen failing in the first).
-- Findings (for the lead to number):
+- Findings, numbered by the lead F186 to F194 in order:
   - The projection reads every obligation with the term in effect at the as-of time: after a change of the interval, the obligations
     before the change (and the overdue count) follow the new interval. Records are untouched, but P14's occurrences should fix past
     obligations under the term they fell in (recommended there, not changed here).
@@ -3039,6 +3039,12 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | A reporter sees the assignee's name on their report; design §3 says so | The user's call (P4) |
 | Nov 12, 2026 | Every Maintenance group holds `MAINTENANCE_REQUEST` and `MAINTENANCE_REQUEST_VIEW_OWN` and Report a problem (`BOSS_MNT_REPORT_PROBLEM`), in their bundles too | The user's call (P4): every Maintenance user reports a problem and follows their own report |
 | Nov 12, 2026 | An approved procedure that is edited returns to Draft: new work waits for its next approval; existing work keeps what it was made from | The user's call (P6) |
+| Nov 12, 2026 | P7: a voice note is transcribed only when the organization's MaintenancePolicy turns transcription on (off by default); the audio is kept either way | The user's call (P7) |
+| Nov 12, 2026 | P7: an amendment may add or remove not-yet-started steps of an open execution, with the invalidations previewed | The user's call (P7) |
+| Nov 12, 2026 | P9: MaintenanceCostPolicy's purpose is the maintenance kind (corrective or preventive) with an any-kind fallback | The user's call (P9), as built |
+| Nov 12, 2026 | P9: a supplies part issued to managed maintenance work is routed to the cost policy's expense account; supplies elsewhere post as today | The user's call (P9) |
+| Nov 12, 2026 | P13: a procedure is optional on a plan; one named (or the model default's) must qualify; with none P14 generates an ad hoc work order with the term's estimate; activation needs a time zone. A draft's terms change in place until activation, dated rows from it | The user's calls (P13); the estimate optional and the model default inherited, as the review recommended |
+| Nov 12, 2026 | P16: an approver sees a meeting's title only when it is shared with them; Commons' own Rooms and equipment are unchanged (blackouts shown later, in a Commons change) | The lead's acceptance of the worker's recommendations (P16) |
 
 ## 5. Open questions
 
@@ -3240,6 +3246,24 @@ paths under `mr-boss/`.
 | F174 | P15 review: Manufacturing's schedulers see a blackout's description as the offline reason | None |
 | F175 | P15 review: the recurrence recheck runs over every resource of an event once one is managed | None |
 | F176 | P15 review: (F170) a release note for the seed | P20's Remaining-Work and README |
+| F177 | P13: design §5.1 allows an ad hoc root with no procedure | §4 (the user's call); P13 review R1 |
+| F178 | P13: the first due date is local text (`firstDueLocal`) in the target's zone | Sound (review R5 tightened the format) |
+| F179 | P13: a completion counts through `MaintenanceWorkOrder.maintenanceScheduleId` (extend-entity) | P14 sets it |
+| F180 | P13: a draft's terms change in place | §4 |
+| F181 | P13: `get#NextBusinessDay` reads People's holidays through the calendar the term names | None |
+| F182 | P13: meter units are Uom abbreviations | Review R9 for count meters |
+| F183 | P13: a three-level area's record render needs `lastStandalone: "-3"` in qvt specs | P14's PlanDetail specs |
+| F184 | P13: the stale demo plan needed a second counting meter | None |
+| F185 | P13: Equipment's next-PM column not built | P14 or later |
+| F186 | P13 review: the projection reads past obligations under the term in effect now | P14's occurrences fix each obligation under its own term |
+| F187 | P13 review: a completion with no meter reading leaves the baseline silently | P14's completion credit |
+| F188 | P13 review: a planned AssetMaintenance completed by the baseline's screens turns its synthetic threshold into a reading | Later |
+| F189 | P13 review: an in-place lower correction counts later usage from the lower value | Later |
+| F190 | P13 review: no "no procedure" over a model default | §4 (inherits) |
+| F191 | P13 review: a draft's term keeps its creation time as fromDate after activation | None |
+| F192 | P13 review: caps of 500 plans in `find#MaintenanceDue` and 1000 assets in the model filter | P14 or later |
+| F193 | P13 review: P13's JS formatted by Prettier in the review | None |
+| F194 | P13 review: MaintenancePlansWalk feature 4 rewritten, not run | P20 / the final acceptance run |
 
 
 ## 7. Later
