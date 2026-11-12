@@ -440,8 +440,8 @@ along with this software (see the LICENSE.md file). If not, see
             sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-outages" requiredPermission="INSIGHTS_DATASET_EDIT"
             providerKey="insights.dataset.boss-maintenance-outages"/>
     <!-- Maintenance's reports in Insights' catalog (owner contract, impl-insights §7; design-insights §6.1), read through Maintenance's
-        get#ReportCatalogue (a maintenance reader's: work status and PM compliance; the cost report the cost reader's,
-        MAINTENANCE_COST_VIEW, added with impl-maintenance P11's report) -->
+        get#ReportCatalogue (a maintenance reader's: work status and PM compliance; the cost report, impl-maintenance P11's, the cost
+        reader's alone, MAINTENANCE_COST_VIEW, as its screen's BOSS_MNT_COSTS is) -->
     <ironstone.insights.ReportCatalogEntry entryId="Maintenance.WorkStatus" version="1" ownerApp="Maintenance" title="Work status"
             description="Maintenance work orders opened, completed and cancelled in a period, and the backlog, overdue and unassigned at its end, by state, team, resource or source."
             purpose="Maintenance" basis="Opened, first completed and cancelled in the period; backlog as of a time"
@@ -458,6 +458,13 @@ along with this software (see the LICENSE.md file). If not, see
             metricIds="Maintenance.OverduePm,Maintenance.OnTimePm"
             catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue"
             catalogueKey="Maintenance.PreventiveCompliance" exportFormats="CSV" sequenceNum="620"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Maintenance.Cost" version="1" ownerApp="Maintenance" title="Maintenance costs"
+            description="Parts, labor at the costing rate and outside service of maintenance work, each source once, by currency; unapproved and unpriced hours apart."
+            purpose="Maintenance" basis="Source date in the period" routePath="Maintenance/Reports/MaintenanceCostReport"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceCosts"
+            catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue" catalogueKey="Maintenance.Cost"
+            exportFormats="CSV" sequenceNum="630"/>
     <!-- Maintenance's measures (owner contract, design-insights §6.2): the backlog, overdue PM and on-time PM -->
     <ironstone.insights.MetricRegistration metricId="Maintenance.Backlog" version="1" ownerApp="Maintenance" title="Maintenance backlog"
             description="Maintenance work orders open at a moment (in planning, approved, in progress or on hold)."

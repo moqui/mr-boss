@@ -1,8 +1,8 @@
 // Maintenance's reports catalogue (impl-maintenance P17; design-maintenance §8 Reports, design-insights §6.1): the reports Maintenance
 // owns that the user may read, in Insights' catalog contract (entry id, the owner app, title, description, route, export), for
 // Insights' catalog (ReportCatalogEntry.catalogueService) and Maintenance's Reports landing alike. Work status and PM compliance
-// are a maintenance reader's (MAINTENANCE_VIEW); the cost report the cost reader's (MAINTENANCE_COST_VIEW), added with
-// impl-maintenance P11's report. A user who reads no maintenance work is refused (PERMISSION_DENIED), which Insights takes as a
+// are a maintenance reader's (MAINTENANCE_VIEW); the cost report (impl-maintenance P11) the cost reader's alone
+// (MAINTENANCE_COST_VIEW), as its screen is (BOSS_MNT_COSTS) and Mantle's get#MaintenanceCosts. A user who reads no maintenance work is refused (PERMISSION_DENIED), which Insights takes as a
 // user without the app and hides its entries. Mantle's report services check the permission and the scope again.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
@@ -24,6 +24,14 @@ const entries = [
         description: "Preventive obligations due in a period, each on time, late, outstanding, skipped or unknown.",
         path: "Reports/PreventiveComplianceReport",
         read: can => can.view,
+        exports: true
+    },
+    {
+        entryId: "Maintenance.Cost",
+        title: "Maintenance costs",
+        description: "Parts, labor and outside service of the work orders, each source once, by currency; unpriced hours apart.",
+        path: "Reports/MaintenanceCostReport",
+        read: can => can.view && can.costView,
         exports: true
     }
 ]

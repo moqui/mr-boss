@@ -1268,6 +1268,9 @@ feature(
             !r.plannerAreas.includes("MaintenanceCostReport")
             r.plannerTab != ""
             r.plannerReport != ""
+        }
+    }
+)
 
 // P17: the work status report and the reports catalogue are a maintenance reader's (MAINTENANCE_VIEW), not a technician's; Retail's
 // planner asking for Services' organization is refused

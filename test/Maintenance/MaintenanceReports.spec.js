@@ -1,10 +1,10 @@
-// Maintenance reports in BOSS (impl-maintenance P17; design-maintenance §8 Reports and WorkStatusReport, §1.4 Shipped reports; Insights'
-// registries, impl-insights §7): Maintenance's catalogue lists its reports to a maintenance reader and refuses a technician and
-// another app's user, and Insights' catalog shows the same entries; the registrations name existing services and screens; the shipped
-// datasets' documents carry no amount, cost or rate and every shipped definition loads; Work status's and the Reports landing's one qvt
-// render each (the supervisor's: the demo's open work by team, its rows opening WorkOrderDetail, the CSV and Print offered; the
-// landing's cards and report links). The counting rules are Mantle's MaintenanceReports; the access rule is MaintenanceAccess'; the
-// "usable when" is the acceptance MaintenanceReportsWalk.
+// Maintenance reports in BOSS (impl-maintenance P17; design-maintenance §8 Reports and WorkStatusReport, §1.4 Shipped reports;
+// Insights' registries, impl-insights §7): Maintenance's catalogue lists its reports to a maintenance reader, the cost report
+// (P11's) to the cost reader alone, and refuses a technician and another app's user, and Insights' catalog shows the same entries;
+// the registrations name existing services and screens; the shipped datasets' documents carry no amount, cost or rate and every
+// shipped definition loads; Work status's and the Reports landing's one qvt render each (the supervisor's: the demo's open work by
+// team, its rows opening WorkOrderDetail, the CSV and Print offered; the landing's cards and report links). The counting rules are
+// Mantle's MaintenanceReports; the access rule is MaintenanceAccess'; the "usable when" is the acceptance MaintenanceReportsWalk.
 // Run: ./moq test mr-boss --spec MaintenanceReports
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib
@@ -74,6 +74,7 @@ feature(
             return {
                 reader: entryIdsOf(users.reader),
                 supervisor: entryIdsOf(users.supervisor),
+                cost: entryIdsOf(users.cost),
                 tech: asUser(users.tech, () => refusal(catalogue, {appRoot: "Maintenance"})),
                 otherApp: asUser(users.otherApp, () => refusal(catalogue, {appRoot: "Maintenance"})),
                 insightsEntries,
@@ -82,13 +83,15 @@ feature(
                 loaded
             }
         },
-        then({reader, supervisor, tech, otherApp, insightsEntries, registered, problems, loaded}) {
+        then({reader, supervisor, cost, tech, otherApp, insightsEntries, registered, problems, loaded}) {
             reader == ["Maintenance.WorkStatus", "Maintenance.PreventiveCompliance"]
             supervisor == reader
+            // the cost entry is the cost reader's alone (P11's report)
+            cost == ["Maintenance.WorkStatus", "Maintenance.PreventiveCompliance", "Maintenance.Cost"]
             tech.includes("PERMISSION_DENIED")
             otherApp != ""
             // the system administrator, who reads maintenance work, sees the same entries in Insights' catalog
-            insightsEntries.sort() == ["Maintenance.PreventiveCompliance", "Maintenance.WorkStatus"]
+            insightsEntries.sort() == ["Maintenance.Cost", "Maintenance.PreventiveCompliance", "Maintenance.WorkStatus"]
             registered.metrics.map(row => row.metricId).sort() ==
                 ["Maintenance.Backlog", "Maintenance.OnTimePm", "Maintenance.OverduePm"]
             registered.providers.length == 3
