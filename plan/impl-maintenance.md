@@ -368,7 +368,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | built and reviewed Nov 12, merged |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
 | P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
-| P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
+| P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | built and reviewed Nov 12, merged |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | — |
@@ -2256,7 +2256,7 @@ completed checklist); MT-04.
   store#TimeEntry, update#WorkEffortContent and record#MaintenanceMeter; ss-inventory's P7 line (no baseline form maps to the checklist).
 - Design edits: design-maintenance's header, §3 WorkOrderDetail (the Procedure tab and follow-up tasks), the WorkItemDetail mount row,
   §4.3 and §12's completed checklist, as built.
-- Findings (provisional, for the lead to number):
+- Findings, numbered by the lead F208 to F216 in order:
   - A step's moves (planned to in progress, complete or cancelled; complete back to in progress for an invalidation) are all rows of
     the Default status flow, which steps follow (instantiation sets no flow); no flow row is added.
   - `store#TimeEntry`'s guard is for a new entry and an entry moved onto managed work; an entry already on it keeps its timesheet
@@ -2364,7 +2364,7 @@ collection, Commons' `get#TaskAccess`, the timer and time services, the Rust `ec
     `waive#ProcessStep` now refuses DEPENDENCY_OPEN as a response does, and `canWaive` waits for them. In ProcessChecks' amendment feature.
   - R5 (failure tolerance, low): a stored checklist that failed after a service error left the error in the close's messages, failing the
     close the comment says stands. `storeChecklist` makes the PDF first and isolates its messages (pushErrors, clear, pop).
-- Findings (for the lead to number):
+- Findings, numbered by the lead F217 to F223 in order:
   - `find#FollowUpTasks` (the Overview's box) lists the names of the tasks linked to a work order without checking the reader may see each
     task in Commons; WorkItemDetail itself does (Commons' visibility). Linking needs a writer who sees both, so the exposure is small.
   - A supervisor may amend a step's `waiverAllowed` to Y and then waive it; both are the supervisor's, each with its reason on record.
@@ -3750,6 +3750,22 @@ paths under `mr-boss/`.
 | F205 | P9 review: `maintenanceFacilities` reads the distinct facilities of the organizations' stock on every Maintenance catalog context | P9's Review note |
 | F206 | P9 review: The demo's cost policy (613200000 for ORG_ZIZI_SERVICES) is exercised only by the acceptance MaintenancePartsWalk (not run) | P9's Review note |
 | F207 | P9 review: P7's `check#ManagedWork` guard (on master after P7) | P9's Review note |
+| F208 | P7: A step's moves (planned to in progress, complete or cancelled | P7's Built note |
+| F209 | P7: `store#TimeEntry`'s guard is for a new entry and an entry moved onto managed work | P7's Built note |
+| F210 | P7: The owner's way through is `asManagedOwner`, in the execution context's user map | P7's Built note |
+| F211 | P7: Evidence uploaded with a response is stored on the work order's root, named for the step, so Files shows it and RecordFiles protects it there | P7's Built note |
+| F212 | P7: The `.fancy` templates take JavaScript expressions | P7's Built note |
+| F213 | P7: StepResponse's "expected update time" is not taken | P7's Built note |
+| F214 | P7: The amendment changes a step's policy fields and dependencies | P7's Built note |
+| F215 | P7: WorkOrderDetail's Overview tab had no render in the regression suite | P7's Built note |
+| F216 | P7: No execution of the AC-200 service is seeded | P7's Built note |
+| F217 | P7 review: `find#FollowUpTasks` (the Overview's box) lists the names of the tasks linked to a work order without checking the reader may see each task in Commons | P7's Review note |
+| F218 | P7 review: A supervisor may amend a step's `waiverAllowed` to Y and then waive it | P7's Review note |
+| F219 | P7 review: `issue#AssetToWorkEffort` and entity-auto WorkEffortProduct writes are not guarded by F159 (P9's path relies on this). | P7's Review note |
+| F220 | P7 review: The evidence guard runs on every WorkEffortContent write | P7's Review note |
+| F221 | P7 review: A service failure inside the close's transaction may still mark it rollback-only | P7's Review note |
+| F222 | P7 review: Correction to the Built note | P7's Review note |
+| F223 | P7 review: Prettier 3.10.1 was run on ProcessChecks.js, WorkProcesses.js, WorkOrders.js and the three changed specs (ProcessChecks.js and the specs were not prettier-clean before | P7's Review note |
 
 
 ## 7. Later
