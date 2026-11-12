@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InvoiceDetail's People context (design-people §13 InvoiceDetail; crosscut §3.16 People row; impl-people P15, F19),
+    section-included by Shared/InvoiceDetail when appRoot is People (mounted at People/Payroll/InvoiceDetail): an expense claim's
+    invoice for a payroll reader of the employer (mantle.humanres.ExpenseServices.get#Claim, its payroll access; another invoice, or a
+    reader without it, is not available), read and reconcile only: the header, the claim's lines, the settlement (the route and its
+    reservation, applied and unpaid, the payments applied: an advance or a reimbursement) and the claim it belongs to. Financial
+    edits and approval stay Accounting's. Payroll-origin invoices join with P27. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PeopleInvoice" condition="peopleRoot">
+            <widgets>
+                <section name="PeopleInvoiceMissing" condition="!peopleClaim">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Invoice ${invoiceId} is not available: it is no expense claim of an employer whose payroll you read."/>
+                                <link url="${sharedLinks['Payroll/Rates']}" url-type="plain" link-type="anchor" text="Back to payroll"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="PeopleInvoiceFound" condition="peopleClaim">
+                    <widgets>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="Expense claim invoice ${invoiceId}" type="h5"/>
+                                    <label type="p" style="text-caption m-muted q-mb-none"
+                                            text="${peopleClaim.claim.personName} · ${peopleClaim.claim.organizationName} · ${peopleClaim.claim.invoiceDateText}"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${peopleClaim.claim.stageText}" type="span"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-sm m-record-actions">
+                                <link url="${sharedLinks['Expenses/ExpenseClaimDetail']}" url-type="plain" text="Open the claim"
+                                        link-type="anchor-button" icon="sym_o_receipt_long" parameter-map="{invoiceId:invoiceId}"/>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Settlement"/>
+                            <box-body>
+                                <label type="p" text="${peopleClaim.claim.financeStatusText}"/>
+                                <label type="p" style="text-caption m-muted"
+                                        text="Settled through ${peopleClaim.claim.reservedRouteText || peopleClaim.claim.routeText}."/>
+                                <dashboard min-width="120">
+                                    <number-card title="Total" value="${peopleClaim.claim.totalText}" icon="sym_o_receipt_long" size="sm"/>
+                                    <number-card title="Applied" value="${peopleClaim.claim.appliedText}" icon="sym_o_payments" size="sm"/>
+                                    <number-card title="Unpaid" value="${peopleClaim.claim.unpaidText}" icon="sym_o_pending" size="sm"/>
+                                </dashboard>
+                                <form-list name="PeopleInvoicePayments" list="peopleClaim.payments" skip-form="true" paginate="false"
+                                        condition="peopleClaim.payments.length">
+                                    <field name="kindText"><default-field title="Applied"><display/></default-field></field>
+                                    <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Lines"/>
+                            <box-body-nopad>
+                                <form-list name="PeopleInvoiceLines" list="peopleClaim.lines" skip-form="true" paginate="false">
+                                    <field name="invoiceItemSeqId"><default-field title="Line"><display/></default-field></field>
+                                    <field name="itemTypeText"><default-field title="Type"><display/></default-field></field>
+                                    <field name="description"><default-field title="Description"><display/></default-field></field>
+                                    <field name="itemDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="lineTotalText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/><field-ref name="itemDateText"/></column>
+                                        <column><field-ref name="lineTotalText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

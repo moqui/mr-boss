@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Expense claims (design-people §9 ExpenseClaims; style-guide §3.2 List; impl-people P15): the claims the user reads
+    (mantle.humanres.ExpenseServices.find#Claims): their own, those they decide now (To decide), and a manager's reports' and an HR or
+    payroll reader's employers' (All); by state; each opening ExpenseClaimDetail, with its stage (draft, waiting, returned, approved
+    and with finance, finance approved, paid, refused, cancelled), never its lines. New claim is the primary action (the quick create
+    New claim opens it): the claimant's own, under their current employment (the employer when they have several), an optional project
+    they work on, the day and the purpose, made by mantle.account.InvoiceServices.create#ProjectExpenseInvoice with expenseClaim; an HR
+    editor chooses an employer and an employee to claim for. The claim opens to add its expenses. Every People user's and a
+    self-service employee's (the expenses area's own grant, BOSS_PPL_EXPENSES); what each reads and may make is Mantle's check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Expense claims" default-menu-index="1" menu-image="sym_o_receipt_long" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="statusEnumId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="newClaim"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the claim made: the claimant's own (their employment), or an HR editor's for an employee; Mantle checks who and where -->
+    <transition name="createClaim">
+        <actions>
+            <script><![CDATA[
+                claimant = people?.partyId || null
+                claimEmploymentId = ncEmploymentId || null
+                if (ncHrEmploymentId) {
+                    claimEmploymentId = ncHrEmploymentId
+                    claimant = ec.entity.find('mantle.party.PartyRelationship').condition('partyRelationshipId', ncHrEmploymentId)
+                        .selectField('fromPartyId').disableAuthz().one()?.fromPartyId || null
+                }
+            ]]></script>
+            <service-call name="mantle.account.InvoiceServices.create#ProjectExpenseInvoice" out-map="made"
+                    in-map="{expenseClaim:true, fromPartyId:(claimant || ''), partyRelationshipId:claimEmploymentId,
+                        workEffortId:(ncWorkEffortId || null), invoiceDate:(ncInvoiceDate || null), purpose:(ncPurpose || null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; made?.invoiceId">
+                <message type="success">Claim ${made.invoiceId} made: add your expenses</message>
+                <set field="invoiceId" from="made.invoiceId"/>
+            </if>
+        </actions>
+        <conditional-response url="../ExpenseClaimDetail" condition="invoiceId"><parameter name="invoiceId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."><parameter name="newClaim" value="Y"/></error-response>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="canDecide" from="ec.user.hasPermission('PEOPLE_REQUEST_APPROVE')"/>
+        <set field="seesOthers" from="!!(caps.team || caps.hrView || caps.payrollView)"/>
+        <set field="hrEditor" from="!!(caps.hrView &amp;&amp; caps.hrEdit)"/>
+        <set field="showing" from="['mine', 'decide', 'all'].includes(show) ? show : (canDecide ? 'decide' : (seesOthers ? 'all' : 'mine'))"/>
+        <service-call name="mantle.humanres.ExpenseServices.find#Claims" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{mine:(showing == 'mine'), toDecide:(showing == 'decide'), statusEnumId:(statusEnumId || null),
+                    pageIndex:(pageIndex || 0)}"/>
+        <script>ec.message.clearErrors()</script>
+        <service-call name="mantle.humanres.ExpenseServices.get#ClaimOptions" out-map="options" transaction="force-new" ignore-error="true"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            claims = Array.from(found?.claims || [])
+            claimsCount = found?.claimsCount || 0
+            claimsPageIndex = found?.claimsPageIndex || 0
+            claimsPageSize = found?.claimsPageSize || 20
+            claimsPageMaxIndex = found?.claimsPageMaxIndex || 0
+            claimsPageRangeLow = found?.claimsPageRangeLow || 0
+            claimsPageRangeHigh = found?.claimsPageRangeHigh || 0
+            employmentOptions = Array.from(options?.employments || []).map(row => ({key: row.partyRelationshipId, text: row.organizationName}))
+            projectOptions = Array.from(options?.projects || []).map(row => ({key: row.workEffortId, text: row.projectName}))
+            canClaim = employmentOptions.length > 0 || hrEditor
+            findValues = {show: showing, statusEnumId: statusEnumId || null}
+            newValues = {ncEmploymentId: employmentOptions[0]?.key || null, ncInvoiceDate: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'),
+                operationKey: 'EC' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8)}
+            advancesUrl = sharedLinks?.['Expenses/EmployeeAdvances'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Expense claims" type="h5"/>
+                <label text="Claim what you spent for work, with its receipts, and follow it to payment." type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="." text="New claim" icon="sym_o_add" link-type="anchor-button" btn-type="primary" parameter-map="{newClaim:'Y'}"
+                        condition="newClaim != 'Y' &amp;&amp; canClaim"/>
+                <link url="${advancesUrl}" url-type="plain" text="Advances" icon="sym_o_payments" link-type="anchor-button"
+                        condition="advancesUrl"/>
+            </container>
+        </container>
+
+        <!-- NewClaim: the employer (or HR's employee), an optional project, the day and the purpose -->
+        <section name="NewClaim" condition="newClaim == 'Y' &amp;&amp; canClaim">
+            <widgets>
+                <container-box>
+                    <box-header title="New claim"/>
+                    <box-toolbar><link url="." text="Close" icon="sym_o_close" link-type="anchor"/></box-toolbar>
+                    <box-body>
+                        <form-single name="NewClaim" transition="createClaim" map="newValues">
+                            <field name="ncOrganizationPartyId" hide="!hrEditor">
+                                <default-field title="Employer" tooltip="HR: the employer of the employee you claim for">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'employers', selected:ncOrganizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="ncHrEmploymentId" hide="!hrEditor">
+                                <default-field title="Employee" tooltip="Empty: yourself">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                parameter-map="{choice:'employments', selected:ncHrEmploymentId}">
+                                            <depends-on field="ncOrganizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="ncEmploymentId">
+                                <conditional-field condition="employmentOptions.length &gt; 1" title="Employer">
+                                    <drop-down><list-options list="employmentOptions" key="${key}" text="${text}"/></drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="ncWorkEffortId">
+                                <conditional-field condition="projectOptions.length" title="Project" tooltip="Optional: the project the expenses were for">
+                                    <drop-down allow-empty="true"><list-options list="projectOptions" key="${key}" text="${text}"/></drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="ncInvoiceDate"><default-field title="Dated"><date-time type="date"/></default-field></field>
+                            <field name="ncPurpose">
+                                <default-field title="Purpose" tooltip="What the expenses were for, such as a customer visit or a trade fair">
+                                    <text-line size="50"/></default-field>
+                            </field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="submitButton"><default-field title="Make the claim"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="ncOrganizationPartyId"/><field-ref name="ncHrEmploymentId"/></field-row>
+                                <field-row><field-ref name="ncEmploymentId"/><field-ref name="ncWorkEffortId"/></field-row>
+                                <field-row><field-ref name="ncInvoiceDate"/><field-ref name="ncPurpose"/></field-row>
+                                <field-ref name="operationKey"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <form-single name="FindClaims" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio>
+                        <option key="mine" text="Mine"/>
+                        <option key="decide" text="To decide"/>
+                        <option key="all" text="All I see"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="statusEnumId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="EcsDraft" text="Draft"/>
+                        <option key="EcsSubmitted" text="Waiting for approval"/>
+                        <option key="EcsReturned" text="Returned for correction"/>
+                        <option key="EcsApproved" text="Approved"/>
+                        <option key="EcsRefused" text="Refused"/>
+                        <option key="EcsCancelled" text="Cancelled"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="statusEnumId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ClaimList" list="claims" skip-form="true" paginate="true" condition="claims.length">
+                    <field name="invoiceId">
+                        <default-field title="Claim">
+                            <link url="../ExpenseClaimDetail" text="${invoiceId}${purpose ? ' · ' + purpose : ''}" link-type="anchor"
+                                    parameter-map="{invoiceId:invoiceId}"/>
+                        </default-field>
+                    </field>
+                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                    <field name="projectName"><default-field title="Project"><display/></default-field></field>
+                    <field name="invoiceDateText"><default-field title="Dated"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                    <field name="stageText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColor}">${
+                                    WebUtilities.encodeHtml(stageText)}</q-chip>${toDecide ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">' +
+                                    WebUtilities.encodeHtml(ec.l10n.localize('To decide')) + '</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (toDecide ? " · to decide" : "")})}]]></text>
+                                <text type="html">${stageText}${toDecide ? ' · to decide' : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="invoiceId"/><field-ref name="personName"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="stageText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!claims.length &amp;&amp; showing == 'decide'" text="No claim waits for your decision."/>
+                <label type="p" style="q-pa-md m-muted" condition="!claims.length &amp;&amp; showing != 'decide'"
+                        text="No expense claim yet: New claim starts one, then add each expense with its receipt."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

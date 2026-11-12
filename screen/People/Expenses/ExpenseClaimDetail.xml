@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Expense claim (design-people §9 ExpenseClaimDetail, §15 the claim's PDF and evidence; style-guide §3.3 Detail;
+    impl-people P15): one claim, from mantle.humanres.ExpenseServices.get#Claim, for the claimant, their manager at the employer, HR
+    and payroll of the employer and its approvers (another is told it is not available). The record header (the claim, the claimant,
+    the purpose, the employer, project and total, the stage); ClaimHeader (purpose, project, day) while it is a draft or returned;
+    ClaimItems: each expense with its type, day, amount, the tax included, merchant and receipt (a photo, PDF or text file, opened
+    from here), Add expense and each line's Edit and Remove while the claim is changeable, and "Read receipt", which proposes the
+    day, amount, merchant, tax and description from the receipt's text (AiTaskServices.run#Extract through read#Receipt) into the
+    line's form to review before it is saved; a line from mail or chat is marked to review. SubmitOrDecide: Submit (the claimant or
+    HR, the primary while it is changeable; lines without a receipt are counted), Approve (the primary for an approver of the step
+    waiting), Return for correction and Refuse with a reason, Withdraw (the claimant or who made it, while it waits) and Cancel (a draft
+    or returned claim). FinanceAndSettlement: the invoice's state for finance (business approval leaves it received; finance codes and
+    approves it in Accounting's Expense posting), the route, applied and unpaid, the payments applied (an advance or a
+    reimbursement), the claimant's advances outstanding, and for a payroll reader the claim's invoice under People's Payroll. Print
+    and Download PDF (ExpenseClaimPrint) and the evidence bundle (the PDF and the receipts in a zip) for every reader. Every People
+    user's and a self-service employee's by the expenses area's grant; decide#Claim and the other services check again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Expense claim" default-menu-include="false">
+    <parameter name="invoiceId"/>
+    <!-- a proposal read from a receipt, carried to the line's form to review (rpSeq: the line, or new) -->
+    <parameter name="rpSeq"/>
+    <parameter name="rpDate"/>
+    <parameter name="rpAmount"/>
+    <parameter name="rpTax"/>
+    <parameter name="rpMerchant"/>
+    <parameter name="rpDescription"/>
+    <transition name="saveHeader">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.store#Claim"
+                    in-map="{invoiceId:invoiceId, purpose:(purpose ?? ''), workEffortId:(workEffortId ?? null),
+                        invoiceDate:(invoiceDate || null), revision:(revision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Claim saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <transition name="saveLine">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.store#ClaimItem"
+                    in-map="{invoiceId:invoiceId, invoiceItemSeqId:(invoiceItemSeqId || null), itemTypeEnumId:(itemTypeEnumId || null),
+                        description:(description || null), itemDate:(itemDate || null), quantity:(quantity || null), amount:(amount || null),
+                        taxAmount:(taxAmount || null), merchantName:(merchantName ?? null), receiptFile:(receiptFile || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Expense saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <transition name="removeLine">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.store#ClaimItem"
+                    in-map="{invoiceId:invoiceId, invoiceItemSeqId:invoiceItemSeqId, remove:true}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Expense removed</message></if>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <!-- Read receipt: the proposal comes back to the line's form, nothing saved; the claimant checks it and saves the line -->
+    <transition name="readReceipt">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.read#Receipt" out-map="read"
+                    in-map="{invoiceId:invoiceId, invoiceItemSeqId:(invoiceItemSeqId || null), receiptText:(receiptText || null)}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError() && read) {
+                    const proposal = read.proposal || {}
+                    ec.message.addMessage(read.message, read.available ? 'info' : 'warning')
+                    rpSeq = invoiceItemSeqId || 'new'
+                    rpDate = proposal.itemDate || null
+                    rpAmount = proposal.amount || null
+                    rpTax = proposal.taxAmount || null
+                    rpMerchant = proposal.merchantName || null
+                    rpDescription = proposal.description || null
+                    _openDialog = read.available ? (invoiceItemSeqId ? 'EditLine_' + invoiceItemSeqId : 'AddLineDialog') : null
+                }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="invoiceId"/><parameter name="rpSeq"/><parameter name="rpDate"/><parameter name="rpAmount"/>
+            <parameter name="rpTax"/><parameter name="rpMerchant"/><parameter name="rpDescription"/><parameter name="_openDialog"/>
+        </default-response>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <transition name="submitClaim">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.submit#Claim" out-map="submitted" in-map="{invoiceId:invoiceId}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; submitted">
+                <message type="success">${submitted.repeated ? 'Already waiting for approval' : 'Submitted: it waits for approval'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <!-- a decision, return, refusal, withdrawal or cancellation: Mantle checks who decides and the revision again -->
+    <transition name="decide">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.decide#Claim" out-map="decided"
+                    in-map="{invoiceId:invoiceId, decision:(decision || null), reason:(reason || null), sourceRevision:(sourceRevision || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; decided">
+                <message type="success">${decided.repeated ? 'Already done' : decided.statusText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <!-- a receipt, sent to a reader of the claim (get#ClaimReceipt checks) -->
+    <transition name="receipt" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.get#ClaimReceipt" out-map="receiptFile"
+                    in-map="{invoiceId:invoiceId, invoiceContentId:invoiceContentId}"/>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(receiptFile.location, true, receiptFile.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <!-- the evidence bundle (design §15): the claim's PDF and its receipts in a zip, for a reader of the claim -->
+    <transition name="evidence" read-only="true">
+        <actions>
+            <set field="bundle" from="ec.resource.script('component://mr-boss/service/ironstone/people/Expenses.js').evidence(invoiceId)"/>
+            <script>if (!ec.message.hasError() &amp;&amp; bundle) ec.web.sendResourceResponse(bundle.location, false, bundle.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="invoiceId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.ExpenseServices.get#Claim" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{invoiceId:(invoiceId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="claim" from="found?.claim || null"/>
+        <set field="recordFound" from="!!claim"/>
+        <service-call name="mantle.humanres.ExpenseServices.get#ClaimOptions" out-map="options" transaction="force-new" ignore-error="true"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const proposed = seq => rpSeq && rpSeq === seq
+            typeOptions = Array.from(options?.expenseTypes || []).map(row => ({key: row.itemTypeEnumId, text: row.description}))
+            projectOptions = Array.from(options?.projects || []).map(row => ({key: row.workEffortId, text: row.projectName}))
+            if (claim?.workEffortId && !projectOptions.some(row => row.key === claim.workEffortId))
+                projectOptions.push({key: claim.workEffortId, text: claim.projectName})
+            lineRows = Array.from(found?.lines || []).map(line => Object.assign({}, line, {
+                eItemTypeEnumId: line.itemTypeEnumId,
+                eDescription: proposed(line.invoiceItemSeqId) && rpDescription ? rpDescription : line.description,
+                eItemDate: proposed(line.invoiceItemSeqId) && rpDate ? rpDate : line.itemDateText,
+                eAmount: proposed(line.invoiceItemSeqId) && rpAmount ? rpAmount : (Number(String(line.amount)) ? String(line.amount) : ''),
+                eTax: proposed(line.invoiceItemSeqId) && rpTax ? rpTax : (line.taxAmount != null ? String(line.taxAmount) : ''),
+                eMerchant: proposed(line.invoiceItemSeqId) && rpMerchant ? rpMerchant : line.merchantName
+            }))
+            addValues = {invoiceId: claim?.invoiceId, itemTypeEnumId: typeOptions[0]?.key || null,
+                itemDate: proposed('new') && rpDate ? rpDate : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'),
+                description: proposed('new') ? rpDescription : null, amount: proposed('new') ? rpAmount : null,
+                taxAmount: proposed('new') ? rpTax : null, merchantName: proposed('new') ? rpMerchant : null}
+            headerValues = claim ? {invoiceId: claim.invoiceId, purpose: claim.purpose, workEffortId: claim.workEffortId,
+                invoiceDate: claim.invoiceDateText, revision: claim.revision} : {}
+            approval = found?.approval || null
+            stepRows = Array.from(approval?.steps || [])
+            decisionRows = Array.from(approval?.decisions || [])
+            paymentRows = Array.from(found?.payments || [])
+            advanceRows = Array.from(found?.advances || [])
+            decideValues = claim ? {invoiceId: claim.invoiceId, sourceRevision: approval?.sourceRevision || null} : {}
+            canEdit = !!found?.canEdit
+            canSubmit = !!found?.canSubmit
+            canDecide = !!found?.canDecide
+            payrollReader = Array.from(found?.access || []).includes('payroll')
+            headerCaption = claim ? [claim.personName, claim.organizationName, claim.projectName, claim.totalText].filter(Boolean).join(' · ') : ''
+            claimsUrl = sharedLinks?.['Expenses/ExpenseClaims'] || null
+            invoiceUrl = payrollReader ? sharedLinks?.['Payroll/InvoiceDetail'] || null : null
+            printUrl = claim ? '/apps/People/Expenses/ExpenseClaimPrint?renderMode=html-print&invoiceId=' + encodeURIComponent(claim.invoiceId) : null
+            pdfUrl = claim ? '/fop/apps/People/Expenses/ExpenseClaimPrint?invoiceId=' + encodeURIComponent(claim.invoiceId)
+                + '&filename=Claim-' + encodeURIComponent(claim.invoiceId) + '.pdf' : null
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="ClaimMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This expense claim is not available to you."/>
+                        <link url="${claimsUrl}" url-type="plain" text="Back to expense claims" link-type="anchor" condition="claimsUrl"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ClaimRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Claim ${claim.invoiceId}${claim.purpose ? ': ' + claim.purpose : ''}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${claim.stageColor}">${
+                                    WebUtilities.encodeHtml(claim.stageText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: claim.stageText})}]]></text>
+                                <text type="html">${claim.stageText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${claimsUrl}" url-type="plain" text="Expense claims" link-type="anchor" icon="sym_o_arrow_back"
+                                    condition="claimsUrl"/>
+                            <label text="Submitted ${claim.submittedDateText}" type="span" style="text-caption" condition="claim.submittedDateText"/>
+                            <label text="${claim.statusText}: ${claim.decisionReason}" type="span" style="text-caption text-warning"
+                                    condition="claim.decisionReason"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="submitClaim" text="Submit" icon="sym_o_send" link-type="hidden-form" btn-type="primary"
+                                    parameter-map="{invoiceId:claim.invoiceId}" condition="canSubmit"
+                                    confirmation="Submit claim ${claim.invoiceId} for ${claim.totalText}?${found.receiptsMissing ? ' ' + found.receiptsMissing + ' expenses have no receipt.' : ''}"/>
+                            <container-dialog id="ApproveDialog" button-text="Approve" icon="sym_o_check" type="primary" width="520"
+                                    title="Approve ${claim.personName}'s claim" condition="canDecide">
+                                <label type="p" text="Your approval is the claim's business approval; finance then checks and approves it for payment."/>
+                                <form-single name="ApproveClaim" transition="decide" map="decideValues">
+                                    <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ReturnDialog" button-text="Return" icon="sym_o_undo" width="520"
+                                    title="Return the claim for correction" condition="canDecide">
+                                <form-single name="ReturnClaim" transition="decide" map="decideValues">
+                                    <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="return"/></default-field></field>
+                                    <field name="reason"><default-field title="What to correct" tooltip="The claimant reads it"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Return"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <container-dialog id="RefuseDialog" button-text="Refuse" icon="sym_o_block" type="danger" width="520"
+                                        title="Refuse ${claim.personName}'s claim" condition="canDecide">
+                                    <label type="p" text="A refused claim is closed and its invoice cancelled; Return lets the claimant correct it."/>
+                                    <form-single name="RefuseClaim" transition="decide" map="decideValues">
+                                        <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                        <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                        <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                        <field name="reason"><default-field title="Why" tooltip="The claimant reads it"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Refuse"><submit type="danger" confirmation="Refuse claim ${claim.invoiceId}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="found.canWithdraw"
+                                        parameter-map="{invoiceId:claim.invoiceId, decision:'withdraw'}"
+                                        confirmation="Withdraw claim ${claim.invoiceId}? It becomes a draft again."/>
+                                <link url="decide" text="Cancel claim" icon="sym_o_delete" link-type="hidden-form" btn-type="danger"
+                                        condition="found.canCancel" parameter-map="{invoiceId:claim.invoiceId, decision:'cancel'}"
+                                        confirmation="Cancel claim ${claim.invoiceId}? It is closed and not paid."/>
+                                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank"/>
+                                <link url="${pdfUrl}" url-type="plain" text="Download PDF" icon="sym_o_picture_as_pdf" target-window="_blank"/>
+                                <link url="evidence" text="Evidence bundle" icon="sym_o_folder_zip" parameter-map="{invoiceId:claim.invoiceId}"
+                                        target-window="_blank"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- ClaimHeader: a draft's or returned claim's purpose, project and day -->
+                <section name="ClaimHeader" condition="canEdit">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Claim"/>
+                            <box-body>
+                                <form-single name="ClaimHeader" transition="saveHeader" map="headerValues">
+                                    <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                    <field name="revision"><default-field><hidden/></default-field></field>
+                                    <field name="purpose"><default-field title="Purpose"><text-line size="50"/></default-field></field>
+                                    <field name="workEffortId">
+                                        <conditional-field condition="projectOptions.length" title="Project">
+                                            <drop-down allow-empty="true"><list-options list="projectOptions" key="${key}" text="${text}"/></drop-down>
+                                        </conditional-field>
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="invoiceDate"><default-field title="Dated"><date-time type="date"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="purpose"/><field-ref name="workEffortId"/></field-row>
+                                        <field-row><field-ref name="invoiceDate"/><field-ref name="submitButton"/></field-row>
+                                        <field-ref name="invoiceId"/>
+                                        <field-ref name="revision"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- ClaimItems: the expenses, each with its receipt -->
+                <container-box>
+                    <box-header title="Expenses"/>
+                    <box-toolbar>
+                        <container-dialog id="ReadNewReceiptDialog" button-text="Read receipt" icon="sym_o_document_scanner" width="560"
+                                title="Read a receipt" condition="canEdit">
+                            <label type="p" text="Type or paste what the receipt says: the day, the merchant, the total and the tax are proposed for a new expense, for you to check before you save it."/>
+                            <form-single name="ReadNewReceipt" transition="readReceipt" map="{invoiceId:claim.invoiceId}">
+                                <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                <field name="receiptText"><default-field title="Receipt text"><text-area rows="6"/></default-field></field>
+                                <field name="submitButton"><default-field title="Read receipt"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="AddLineDialog" button-text="Add expense" icon="sym_o_add" width="640" title="Add an expense"
+                                condition="canEdit">
+                            <form-single name="AddLine" transition="saveLine" map="addValues">
+                                <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                <field name="itemTypeEnumId">
+                                    <default-field title="Type"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                </field>
+                                <field name="itemDate"><default-field title="Day"><date-time type="date"/></default-field></field>
+                                <field name="description"><default-field title="Description"><text-line size="40"/></default-field></field>
+                                <field name="merchantName"><default-field title="Merchant"><text-line size="30"/></default-field></field>
+                                <field name="amount"><default-field title="Amount (${claim.currencyUomId || ''})"><text-line size="12" input-type="number"/></default-field></field>
+                                <field name="taxAmount"><default-field title="Tax included" tooltip="Optional, as the receipt shows it"><text-line size="12" input-type="number"/></default-field></field>
+                                <field name="receiptFile"><default-field title="Receipt" tooltip="A photo, a PDF or a text file"><file accept="image/*,application/pdf,text/plain"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="itemTypeEnumId"/><field-ref name="itemDate"/></field-row>
+                                    <field-row><field-ref name="description"/><field-ref name="merchantName"/></field-row>
+                                    <field-row><field-ref name="amount"/><field-ref name="taxAmount"/></field-row>
+                                    <field-ref name="receiptFile"/>
+                                    <field-ref name="invoiceId"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label type="p" style="q-px-md q-pt-sm text-warning" condition="found.linesToReview"
+                                text="${found.linesToReview} expenses from mail or chat wait for your review: open each, check it and save it."/>
+                        <form-list name="ClaimLines" list="lineRows" skip-form="true" paginate="false" condition="lineRows.length">
+                            <field name="itemDateText"><default-field title="Day"><display/></default-field></field>
+                            <field name="description">
+                                <default-field title="Expense">
+                                    <display text="${itemTypeText}: ${description}${merchantName ? ' · ' + merchantName : ''}${reviewNeeded ? ' (to review)' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="taxText" align="right"><default-field title="Tax"><display/></default-field></field>
+                            <field name="lineTotalText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <field name="receiptName">
+                                <default-field title="Receipt">
+                                    <link url="receipt" text="${receiptName}" link-type="anchor" target-window="_blank" condition="receiptContentId"
+                                            parameter-map="{invoiceId:claim.invoiceId, invoiceContentId:receiptContentId}"/>
+                                    <label text="None" style="m-muted" condition="!receiptContentId"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <conditional-field condition="canEdit" title="">
+                                    <container-dialog id="EditLine_${invoiceItemSeqId}" button-text="Edit" icon="sym_o_edit" width="640"
+                                            title="Edit the expense">
+                                        <form-single name="EditLine_${invoiceItemSeqId}" transition="saveLine">
+                                            <field name="invoiceId" from="claim.invoiceId"><default-field><hidden/></default-field></field>
+                                            <field name="invoiceItemSeqId" from="invoiceItemSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="itemTypeEnumId" from="eItemTypeEnumId">
+                                                <default-field title="Type"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                            </field>
+                                            <field name="itemDate" from="eItemDate"><default-field title="Day"><date-time type="date"/></default-field></field>
+                                            <field name="description" from="eDescription"><default-field title="Description"><text-line size="40"/></default-field></field>
+                                            <field name="merchantName" from="eMerchant"><default-field title="Merchant"><text-line size="30"/></default-field></field>
+                                            <field name="amount" from="eAmount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
+                                            <field name="taxAmount" from="eTax"><default-field title="Tax included"><text-line size="12" input-type="number"/></default-field></field>
+                                            <field name="receiptFile"><default-field title="Receipt" tooltip="A new file replaces the line's receipt"><file accept="image/*,application/pdf,text/plain"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="ReadReceipt_${invoiceItemSeqId}" button-text="Read receipt" icon="sym_o_document_scanner"
+                                            width="560" title="Read the receipt">
+                                        <label type="p" text="The receipt's text (a PDF's or a text file's, or what you type here) proposes the expense's values, for you to check before you save."/>
+                                        <form-single name="ReadReceipt_${invoiceItemSeqId}" transition="readReceipt">
+                                            <field name="invoiceId" from="claim.invoiceId"><default-field><hidden/></default-field></field>
+                                            <field name="invoiceItemSeqId" from="invoiceItemSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="receiptText"><default-field title="Receipt text" tooltip="Empty: the receipt file's text"><text-area rows="5"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Read receipt"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="removeLine" text="Remove" icon="sym_o_delete" link-type="hidden-form" btn-type="danger"
+                                            parameter-map="{invoiceId:claim.invoiceId, invoiceItemSeqId:invoiceItemSeqId}"
+                                            confirmation="Remove ${description}?"/>
+                                </conditional-field>
+                                <default-field title=""><display text=""/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="itemDateText"/></column>
+                                <column><field-ref name="lineTotalText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!lineRows.length"
+                                text="No expense yet: Add expense, with a photo of its receipt."/>
+                        <label type="p" style="q-px-md q-pb-sm text-caption m-muted" condition="lineRows.length &amp;&amp; found.receiptsMissing"
+                                text="${found.receiptsMissing} of ${lineRows.length} expenses have no receipt."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- FinanceAndSettlement -->
+                <container-box>
+                    <box-header title="Finance and settlement"/>
+                    <box-body>
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-6">
+                                <label type="p" text="${claim.financeStatusText}"/>
+                                <label type="p" style="text-caption m-muted" text="Settled through ${claim.reservedRouteText || claim.routeText}."
+                                        condition="claim.routeText"/>
+                                <link url="${invoiceUrl}" url-type="plain" text="Open the claim's invoice" link-type="anchor"
+                                        parameter-map="{invoiceId:claim.invoiceId}" condition="invoiceUrl"/>
+                            </container>
+                            <container style="col-12 col-md-6">
+                                <dashboard min-width="120">
+                                    <number-card title="Total" value="${claim.totalText}" icon="sym_o_receipt_long" size="sm"/>
+                                    <number-card title="Applied" value="${claim.appliedText}" icon="sym_o_payments" size="sm"/>
+                                    <number-card title="Unpaid" value="${claim.unpaidText}" icon="sym_o_pending" size="sm"/>
+                                </dashboard>
+                            </container>
+                        </container>
+                        <form-list name="ClaimPayments" list="paymentRows" skip-form="true" paginate="false" condition="paymentRows.length">
+                            <field name="kindText"><default-field title="Applied"><display/></default-field></field>
+                            <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                        </form-list>
+                        <form-list name="OpenAdvances" list="advanceRows" skip-form="true" paginate="false" condition="advanceRows.length">
+                            <field name="employeeAdvanceId"><default-field title="Advance outstanding"><display/></default-field></field>
+                            <field name="outstandingText" align="right"><default-field title="Outstanding"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Approval"/>
+                    <box-body-nopad>
+                        <label type="p" style="q-px-md q-pt-sm" text="${approval.waitingText}" condition="approval?.waitingText"/>
+                        <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
+                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                        </form-list>
+                        <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
+                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!approval" text="Not submitted for approval yet."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

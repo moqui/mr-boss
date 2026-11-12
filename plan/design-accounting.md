@@ -1,5 +1,6 @@
 # IronStone BOSS — Accounting design
 
+Nov 12, 2026 — impl-people P15 as built (owner contract): ExpensePosting lists an employee's expense claim once its business approval is done, finance's approval refuses one before it or reserved for payroll, and the Employee advances tab pays and applies advances (§5 ExpensePosting).
 Nov 11, 2026 — the decisions of the People, Maintenance and Sales plans written in: People builds AC-23 (impl-people P27), with external payroll processing gated on it, and Maintenance builds AC-24 (impl-maintenance P9); `RaprCost` is the one labor costing purpose; a seller's SalesPolicy approval setting stops the automatic approval of its sales orders, and the credit warning stays as built and blocks auto-approval, as every pre-approval warning does (§1.4, OrderDetail, §19; impl-sales §4); the invoiced revenue metric is the registered `Accounting.InvoicedRevenue` (AC-12, §19)
 
 Oct 28, 2026 — draft; reviewed against research-accounting.md, the reference apps and the other core designs ([review-core-apps.md](review-core-apps.md)); names the Mantle SECAs it keeps or conditions (§1.4) and adds bill intake and holds, match and costing policies, credit holds, budget commitments, base-currency posting (AC-19), the production posting rule and the external pages; brought in line with [impl-accounting.md](impl-accounting.md) §4 (the root and organization filters, the Mantle rule flags, the posting guard by source, effective-dated policies, payment terms, the pack invoice finalized at ship, and the customer and supplier pages as PASS apps in mr-pass); Nov 1, 2026 — consistency pass (built services and records named as built, the as-built screens and mounts)
@@ -816,6 +817,17 @@ invoice/payment/GL detail and outputs require the added confidentiality checks i
 These are proposed extensions to native Mantle services, not implementation claims or new BOSS writer services.
 The queue lists only invoices whose People `ExpenseClaim` is business-approved; Accounting mounts no
 ExpenseClaimDetail, and the claim opens in People.
+
+**As built (impl-people P15, owner contract; Nov 12, 2026).** The expenses queue (`mantle.account.InvoiceServices.find#Payables`
+with `queue` expenses, over `InvoiceFinance`, which joins the claim's business state, route and reservation) lists an employee's
+expense claim once its business approval is done and its route is accounts payable; a person's other bills (a contractor's, a
+worker's time) as before. `approve#Payable` (and every approval through `change#InvoiceState`) refuses a claim before its business
+approval (`CLAIM_NOT_APPROVED`) and one reserved for payroll (`CLAIM_RESERVED`), and reserves an approved one for accounts payable
+(`mantle.humanres.ExpenseServices` Expense.js `financeApproval`); a claim reserved for one route is refused by the other
+(`reserve#ClaimSettlement`, the payroll route's, impl-people P27). The tab Employee advances lists the organization's approved
+employee advances (`ExpenseServices.find#Advances` with finance, a finance reader of it): Pay records an advance's prepayment
+(`pay#Advance`, a `PtPrePayment` from the organization to the employee, delivered) and Apply applies it to the employee's claim
+approved for payment (`apply#Advance`, through `apply#InvoicePayment`), each with PAYMENT_EDIT in the organization.
 
 **Payroll-origin projection (Nov 1, 2026; review Y7, R-PPL-07; AC-23).** Accounting owns the
 retrofit of its built screens so that payroll-origin documents are seen only with a payroll-finance

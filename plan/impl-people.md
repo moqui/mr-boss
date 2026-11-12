@@ -3888,6 +3888,148 @@ Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDeta
   ExpensePosting; an approved advance is paid by Accounting and applied to the claim, and People shows what is
   outstanding.
 
+**Built Nov 12 (P15).** mr-mantle 88af970a, mr-boss (branch `ppl/p15`).
+- Checked first (the code over the plan): P5's approval kinds and `record#Decision` (a kind with its topic and `describe`, the
+  request at the source's revision, the topic's approve and refuse services, `waitingFor` for To decide), P12's and P13's decide
+  pattern (answered as missing before `record#Decision`, under the source's lock), P8's self-service grants and P13's Commons quick
+  create with its `condition-service`; F21 (`create#ProjectExpenseInvoice`: no check; its callers Mantle's
+  `WorkPlanToCashBasicFlow` and Marble's MyAccount/Expense, no BOSS caller), F65 (`run#EmailRules` calls the action's service with
+  the five parameters, authorization off), F19 (InvoiceDetail's per-app branches); Accounting's ExpensePosting (`find#Payables`'
+  expenses queue: a person's incoming or received bills, over the `InvoiceFinance` view), `approve#Payable` and `change#InvoiceState`
+  (InvoiceWorkflow.js `issue`), `apply#InvoicePayment` (a payable applied only once approved), `create#Payment` (delivered posts
+  through the SECA; `PtPrePayment` maps to prepaid expenses in DefaultSettings); `run#Extract` (text only, wrapped as untrusted;
+  refused in a transaction unless `allowInTransaction`), `ec.resource.extractText` (a PDF's or text file's text), `writeZip`,
+  `xslFoTransform`; the chat's create-from hook (every provider of a mutation is called, so a new kind goes through BOSS's
+  `create#FromChat`, as Customer Service's case does) and `ChatAttachment`. No expense permission exists.
+- Mantle:
+  - `entity/PeopleExpenseEntities.xml`: `ExpenseClaim` (keyed by `invoiceId`: employment, claimant, employer, department, project,
+    purpose, `ExpenseClaimStatus` draft, waiting, returned, approved, refused, cancelled, audit-logged; `ExpenseClaimRoute` accounts
+    payable or payroll, the route reserved with its reference, date and user; the decider's reason; who made it; an operation key),
+    `ExpenseClaimItem` (a line's merchant, the tax it includes, its receipt `InvoiceContent`, `ExpenseLineSource` entered, mail or
+    chat with a unique source key, to review), `EmployeeAdvance` (employment, purpose, amount and currency, needed by, settled by,
+    `EmployeeAdvanceStatus`, the payment finance made); `PakExpenseClaim` and `PakAdvance` (seeded with the entities);
+    `InvoiceFinance` joins the claim's state, route and reservation;
+  - `create#ProjectExpenseInvoice` gains `expenseClaim` (F21): the claimant's own (PEOPLE_SELF_SERVICE), or an HR editor's of the
+    employer for them, recorded (another reader `PERMISSION_DENIED` before anything of the person is read); the employer of the
+    claimant's current employment (named, else the one with `toPartyId`, else the only one: `EMPLOYMENT_REQUIRED`, `NOT_EMPLOYED`);
+    a project only one the claimant works on (`PROJECT_UNAVAILABLE`); the invoice and the claim written; an operation key's retry
+    answers the first. Without it, unchanged;
+  - `ExpenseServices` over `Expense.js`: `find#Claims`, `get#Claim` (the claimant, a manager's live reports, HR and payroll readers
+    of the employer, the approvers; the lines with receipts, the approval, the finance state and settlement, payments applied, the
+    claimant's advances outstanding, what the caller may do), `store#Claim`, `store#ClaimItem` (an ItemExpense-family type, a
+    positive amount to the currency, the tax within the line, a receipt file of at most 10 MB, a photo, PDF or text; saving is the
+    line's review), `read#Receipt` (`run#Extract` over the text given, else the receipt file's; nothing saved; unavailable said
+    so), `submit#Claim` (lines, none to review, each with an amount; the invoice received; `PakExpenseClaim`), `decide#Claim`
+    (approve: the last approval is the business approval and leaves InvoiceReceived; return for correction; refuse, the invoice
+    cancelled; withdraw; cancel) with `approve#Claim` and `refuse#Claim`, `get#ClaimReceipt`, `get#ClaimEvidence`,
+    `get#ClaimOptions`, `get#ClaimOffer`, `reserve#ClaimSettlement`, `find#Advances` (and, with finance, an organization's approved
+    advances for a finance reader), `request#Advance`, `decide#Advance` with `approve#Advance` and `refuse#Advance`, `pay#Advance`
+    (PAYMENT_EDIT: a `PtPrePayment` from the employer, delivered), `apply#Advance` (to the employee's claim approved for payment,
+    through `apply#InvoicePayment`, at most the outstanding and the unpaid), `create#ClaimLineFromEmail` and
+    `create#ClaimLineFromChat`;
+  - `data/PeopleExpenseSetupData.xml`: the two topics (titles naming the claim or advance, the person and employer, never an
+    amount) and `ErActCreateExpenseLine`;
+  - Accounting's owner contract: the expenses queue lists a claim once approved, on the accounts payable route; `issue` refuses a
+    claim before its business approval (`CLAIM_NOT_APPROVED`) or reserved for payroll (`CLAIM_RESERVED`) and reserves an approved one
+    for accounts payable (`Expense.js financeApproval`); Approvals.js's two kinds.
+- BOSS:
+  - `People/Expenses` (menu 11, key `g x`): Expense claims (the default; New claim the primary, the claimant's own or HR's for an
+    employee), `ExpenseClaimDetail` (ClaimHeader, ClaimItems with receipts, Read receipt into the line's form, Submit, Approve,
+    Return, Refuse, Withdraw, Cancel claim, FinanceAndSettlement, Print, Download PDF and Evidence bundle), `ExpenseClaimPrint`
+    (html-print and its PDF) and Advances (Request advance, Approve and Refuse in the row, Withdraw); `Expenses.js` (the printed page
+    and the evidence zip); `BOSS_PPL_EXPENSES` (the area's inheritable ALLOW for self-service, as Time's);
+  - `People/Payroll/InvoiceDetail`: the shared InvoiceDetail's People branch (`template/PeopleInvoiceDetail.xml`, F19), a claim's
+    invoice for a payroll reader;
+  - Accounting's ExpensePosting (owner contract): the Employee advances tab (`template/AccountingAdvances.xml`: Pay, Apply);
+  - the quick create New claim on Commons' root (`peopleNewClaim`, its condition `get#ClaimOffer`); "Add to my claim" (screen-extend
+    Chat.xml, `create#FromChat` kind `claimLine`); the two topics on People's root and Approvals, their links (BossSetupData);
+    SelfService's My expenses and My advances; People.js: the link paths, the self-service links, `decisionUrl`.
+- Specs: Mantle `test/humanres/ExpenseClaims` (6 features, stepwise, 2.6 s: 0.41, 0.56, 0.56, 0.43, 0.52, 0.21: a claimant's own claim,
+  its retry, another employee refused for the permission, HR's for her recorded and cancelled, Services' HR refused, a project not
+  worked on and an employer not hers refused; a mail line made once from the work address, a stranger's adding nothing, submit refused
+  with no line and with a line to review, a tax above the line refused, Services' HR refused the claim, the claim locked once
+  submitted, the manager reading it; finance refused before business approval, her own decision `SELF_APPROVAL`, an outsider as
+  missing, the manager's To decide, the approval leaving InvoiceReceived, the queue listing it only then, finance approving and
+  reserving accounts payable, a return with its reason, the stages; a payroll reservation refused to a payroll reader, then
+  refusing finance's approval and an accounts payable reservation, the finance-approved claim refused to payroll, the queue without
+  it; an advance asked and retried, asked for another refused, paid only once approved and by finance, outstanding 40, applied to the
+  100 claim, 60 unpaid and the advance settled; a chat message of her own a line once, another's `NOT_YOURS`, a non-member's room
+  `RECORD_UNAVAILABLE`). BOSS `test/People/PeopleExpenses` (4 features, stepwise, 1.3 s: ExpenseClaimDetail's one qvt render as the
+  manager, the notice naming no amount, approved from it through the tray's service, the invoice received; Expense claims' one html
+  render as the employee with the new claim's form and his claim with finance, Advances' one html render as the manager with the
+  advance to decide; Payroll's InvoiceDetail's one html render as the payroll operator, the print as the employee, the evidence zip
+  as the manager; New claim offered to the employee from Commons and not to the reader). PeopleAccess gains one feature (0.34 s:
+  Expense claims opened to the employee by the area's grant and refused another app's user; a claim read by its claimant and manager
+  and refused to the reader with the same parameters; HR's claim for Retail's employee accepted and Services' refused; Payroll's
+  InvoiceDetail refused to HR) and its context feature the employee's three expenses links; PeopleSpecLib's menus (Expenses) and keys
+  (`g x`). Acceptance, written and not run: `acceptance/People/PeopleExpensesUsable` (3 features: Tomas asks an advance on his phone,
+  Hannah approves it from her notice, finance pays it in Expense posting; he makes a claim, adds a hotel with its receipt and a taxi
+  after Read receipt, submits; Hannah approves from her notice, finance sees it in Expense posting, approves it for payment and applies
+  the advance, People shows 60 left and the advance settled).
+- Tests run (release binary, `--nobuild`, this phase's runtime): Mantle ExpenseClaims, WorkPlanToCashBasicFlow, AccountingPayables,
+  AccountingMatching, AccountingBudgets, PeopleApprovals, Attendance, LeaveRequests and HumanResServices with their fixtures (13 specs,
+  128 of 128), then ExpenseClaims, AccountingReceivables and WorkPlanToCashBasicFlow after formatting (94 of 94, mr-mantle 8.7 s); BOSS
+  PeopleExpenses, PeopleAccess (19 of 19), PeopleSelfService, PeopleApprovals, PeopleAttendance, PeopleLeave, AccountingPayables,
+  AccountingAccess, PurchasingBills, Billing, CustomerServiceOrders, WarehouseShipping, Chat, QuickCreate, TodayPanel and
+  ProjectsAccess (135 of 135, in two runs), then PeopleExpenses, PeopleAccess, AccountingReceivables and PeopleSelfService after formatting (40 of
+  40, mr-boss 13.1 s). `moqui lint --screens`: 135 flagged sites as before, none in the screens P15 touched, no TUI worklist entry.
+  Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: ss-inventory's five MyAccount/Expense claim rows and the P15 note; usl-inventory's `create#ProjectExpenseInvoice` and
+  the People Added rows (the ExpenseServices).
+- Design edits: design-people (header; §1.2 Expenses; §1.4 Quick create, Comms hooks, Mail intake; §3 SelfService; §9 ExpenseClaims,
+  ExpenseClaimDetail and EmployeeAdvances as built; §13 InvoiceDetail as built); design-accounting (header; §5 ExpensePosting as
+  built); design-drawers-commons (header; §1.5 the New claim quick create).
+- Findings (provisional, numbered by the lead):
+  - Read receipt reads text only: `run#Extract` takes a text, and the server reads no photo (no OCR or image input), so a PDF's or text
+    file's receipt is read from the file and a photo's needs its text typed or pasted; a vision or OCR input is a framework ask;
+  - there is no expense permission: "HR expense authority" (acting for an employee) is PEOPLE_HR_VIEW with PEOPLE_HR_EDIT of the
+    employer, and "finance by grant" in People is a payroll reader (PAYROLL_VIEW) of the employer; Accounting's finance acts through its
+    own permissions in Expense posting and BillDetail;
+  - a decider returns a claim for correction (the claimant edits and submits again) or refuses it (closed, its invoice cancelled); the
+    tray's Refuse is the final refusal;
+  - the approval notices name the claim or advance, the person and the employer, never an amount or the purpose;
+  - every claim's route is accounts payable in this build: finance's approval reserves it; `reserve#ClaimSettlement` is built for P27's
+    payroll route (a payroll editor, while the invoice is received; released while not approved for payment). A claim reserved for
+    payroll never reaches InvoiceApproved through accounts payable, so PaymentRuns.js is unchanged; P27 keeps a payroll-reserved claim
+    out of payment runs when it approves one;
+  - finance pays and applies advances in Accounting's Expense posting (an Employee advances tab, owner contract) with PAYMENT_EDIT: the
+    payment is a `PtPrePayment` created delivered at once, outside payment runs and payment authorization; an employee's repayment is
+    counted when Accounting applies it to the advance's payment, with no People action; recovery by payroll deduction waits on P24 and
+    a localization;
+  - mail intake takes the claimant from a current EmailWork address of exactly one person employed now (the rule's value names the
+    employer of one employed by several) and checks nothing of the rule's owner or account: any rule with the action adds at most a
+    draft line to the sender's own claim; the message's files, else its text, are the receipts, and the line's amount is empty until
+    reviewed;
+  - "Add to my claim" takes only the user's own message; like the other chat message actions it is shown to every chat user and
+    refused to one without an employment;
+  - Read receipt brings its proposal to the line's form through the page's parameters (the day, amount, tax, merchant and description of
+    the user's own expense), as Leave requests carries its terms;
+  - the evidence bundle and its PDF are written under `runtime://tmp/people-claims` on each request and not cleaned up (the claim's PDF
+    is the html page when the server has no PDF engine); a printed claim is rendered, not issued and stored (design §15's issued
+    documents are not built for claims);
+  - a line without a receipt is counted on submit, not refused (no receipt policy); receipts are read by the claim's readers in People and
+    by finance as any bill's content in Accounting;
+  - a claim's currency is the employer's (create#Invoice's default), changed only while it has no line; an advance's defaults to the
+    employer's accounting currency (its parent's when it has none);
+  - the expenses queue keeps a person's other bills (a contractor's, a worker's time) as before.
+- For the lead:
+  - budget share: mr-mantle about 2.6 s (ExpenseClaims); mr-boss about 1.7 s (PeopleExpenses 1.3 s, PeopleAccess's new feature 0.34 s);
+    the client walk unchanged;
+  - merge hot spots (P14 is merged first; the reviewer rebases): mr-mantle `Approvals.js` (the two constants and kinds after
+    `PakAttendance`), `InvoiceServices.xml` (`create#ProjectExpenseInvoice`), `InvoiceWorkflow.js` (`issue`), `Payables.js` (the
+    expenses queue), `InvoiceWorkflowEntities.xml` (`InvoiceFinance`); mr-boss `data/BossSetupData.xml` (the P15 block appended at the
+    end, after P14's), `screen/People.xml` (the header, the key `g x`, the two topics), `screen/Commons.xml` (the quick create),
+    `screen/People/Approvals.xml`, `screen/People/Payroll.xml`, `screen/Shared/InvoiceDetail.xml`, `screen/Shared/PeopleSelfService.xml`,
+    `People.js` (`linkPaths`, the self-service links, `decisionUrl`, `expensesAreaOpens`, `selfServiceContext`), `ContextServices.xml`,
+    `ChatServices.xml`, screen-extend `Chat.xml`, Accounting's `ExpensePosting.xml` (its queue box moved under a section),
+    `test/People/PeopleSpecLib.js` (the menus with Expenses after Time or Payroll, the keys with `g x` last), `PeopleAccess.spec.js`
+    (the context's links, the appended feature), the inventories, design-people (header, §1.2, §1.4, §3, §9, §13),
+    design-accounting (header, §5), design-drawers-commons (header, §1.5);
+  - acceptance to run with the full suites: PeopleExpensesUsable (new);
+  - for the user's call: whether expenses need a permission of their own (an expense approver or expense HR authority) rather than
+    PEOPLE_HR_EDIT and PAYROLL_VIEW; whether finance pays advances in Expense posting at once (built) or through payment runs and
+    payment authorization; whether Read receipt should read photos (a framework ask); whether a notice may name the claim's total.
+
 ### P16 — Openings and applicants
 
 Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar and Forms; PE-04, PE-24

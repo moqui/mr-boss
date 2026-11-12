@@ -5408,4 +5408,25 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="PeopleShiftChange" linkTemplate="/qapps/People/Time/TeamCalendar?date=${firstDay}"/>
+    <!-- impl-people P15 (design-people §9 ExpenseClaims, ExpenseClaimDetail and EmployeeAdvances, §13 InvoiceDetail, §1.4 Quick
+        create; design-accounting §5 ExpensePosting): Expenses (People/Expenses: Expense claims, a claim's detail and print, Advances)
+        is every People user's through the root, and a self-service employee's without the launcher by this inheritable ALLOW on the
+        area (as the time area's, BOSS_PPL_TIME), to claim their own expenses and ask their own advances; what each user reads,
+        changes and decides is Mantle's ExpenseServices' check (the claimant, their manager, an approver of the step waiting, HR and
+        payroll of the employer), so the grant opens nothing else of People. Payroll's InvoiceDetail (an expense claim's invoice for
+        a payroll reader) is under Payroll's grant as it stands (BOSS_PPL_PAYROLL). An expense claim to approve (Mantle's
+        PeopleExpenseApproval topic) opens the claim, an advance to approve (PeopleAdvanceApproval) the advances to decide; each is
+        decided there, from People's Approvals or from the notification tray. Accounting's Expense posting lists a claim once its
+        business approval is done and pays and applies advances under its own grants (PAYMENT_EDIT, which Mantle checks). -->
+    <artifactGroups artifactGroupId="BOSS_PPL_EXPENSES" description="People expense claims and advances, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Expenses.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_EXPENSES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleExpenseApproval"
+            linkTemplate="/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=${invoiceId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleAdvanceApproval"
+            linkTemplate="/qapps/People/Expenses/EmployeeAdvances?show=decide"/>
 </entity-facade-xml>

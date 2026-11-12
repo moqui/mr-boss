@@ -275,6 +275,9 @@ along with this software (see the LICENSE.md file). If not, see
                 them)</description></parameter>
             <parameter name="teamCalendarUrl"><description>P14: the team calendar with the user's published shifts (People's time
                 area, when it opens to them)</description></parameter>
+            <parameter name="expenseClaimsUrl"><description>P15: the user's own expense claims (People's expenses area, when it opens
+                to them)</description></parameter>
+            <parameter name="advancesUrl"><description>P15: the user's own advances (the same area)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -286,6 +289,8 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="leaveRequestsUrl" from="found.leaveRequestsUrl"/>
             <set field="attendanceUrl" from="found.attendanceUrl"/>
             <set field="teamCalendarUrl" from="found.teamCalendarUrl"/>
+            <set field="expenseClaimsUrl" from="found.expenseClaimsUrl"/>
+            <set field="advancesUrl" from="found.advancesUrl"/>
         </actions>
     </service>
 </services>

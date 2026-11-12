@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The expense claim (design-people §15 "Expense claim and receipts"; style-guide §8 Print documents; impl-people P15),
+    ExpenseClaimDetail's Print and Download PDF: with renderMode=html-print (and its PDF at /fop/apps/People/Expenses/...) a printed
+    page of the claim: the claimant, employer, purpose, state, finance state and route, the totals, each expense with its receipt's
+    name, the approval's decisions and the payments applied (mantle.humanres.ExpenseServices.get#Claim, for its readers alone;
+    Expenses.js printHtml, every value escaped). A sibling of ExpenseClaimDetail, out of the menu; in another render mode it links to
+    the printed page. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Expense claim print" default-menu-include="false">
+    <parameter name="invoiceId" required="true"/>
+    <actions><script><![CDATA[
+        ec.message.pushErrors()
+        let found = null
+        try {
+            found = ec.service.sync().name('mantle.humanres.ExpenseServices.get#Claim').parameters({invoiceId: invoiceId || ''})
+                .requireNewTransaction(true).call() || null
+            if (ec.message.hasError()) found = null
+        } finally {
+            ec.message.clearErrors()
+            ec.message.popErrors()
+        }
+        printHtml = ec.resource.script('component://mr-boss/service/ironstone/people/Expenses.js').printHtml(found)
+        printUrl = '/apps/People/Expenses/ExpenseClaimPrint?renderMode=html-print&invoiceId=' + encodeURIComponent(invoiceId || '')
+    ]]></script></actions>
+    <widgets>
+        <render-mode>
+            <text type="html-print"><![CDATA[${printHtml}]]></text>
+            <text type="html"><![CDATA[${printHtml}]]></text>
+            <text type="qvt"><![CDATA[<p><a href="${WebUtilities.encodeHtml(printUrl)}" target="_blank">${ec.l10n.localize('Open the printable claim')}</a></p>]]></text>
+            <text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "ExpenseClaimPrint", text: ec.l10n.localize("Open the printable claim"), url: printUrl})}]]></text>
+        </render-mode>
+    </widgets>
+</screen>

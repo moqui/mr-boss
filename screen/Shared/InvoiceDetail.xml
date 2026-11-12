@@ -45,6 +45,11 @@ along with this software (see the LICENSE.md file). If not, see
     investigates and asks for a hold's release, a match operator opens the shared InvoiceMatch, Accounting's landed costs
     for a GL poster. Its widgets and transition are template/PurchasingInvoiceDetail.xml's.
 
+    People (design-people §13 InvoiceDetail; crosscut §3.16 People row; impl-people P15, F19; mounted at People/Payroll/InvoiceDetail):
+    an expense claim's invoice for a payroll reader of the employer (mantle.humanres.ExpenseServices.get#Claim), read and reconcile
+    only: the header, the settlement (route, applied, unpaid, the payments applied), the lines and the claim. Its widgets are
+    template/PeopleInvoiceDetail.xml's; payroll-origin invoices join with P27.
+
     Customer Service (crosscut §3.16 Customer Service row; impl-customer-service P3, F53; mounted at
     CustomerService/Orders/InvoiceDetail): a sales invoice of a customer the user serves
     (ironstone.customerservice.OrderServices.get#InvoiceDetail), customer-safe: its header, lines, payment status, orders and
@@ -103,6 +108,22 @@ along with this software (see the LICENSE.md file). If not, see
         warehouseRoot = typeof appRoot !== 'undefined' && appRoot === 'Warehouse'
         purchasingRoot = typeof appRoot !== 'undefined' && appRoot === 'Purchasing'
         serviceRoot = typeof appRoot !== 'undefined' && appRoot === 'CustomerService'
+        peopleRoot = typeof appRoot !== 'undefined' && appRoot === 'People'
+        if (peopleRoot) {
+            ec.message.pushErrors()
+            try {
+                const read = ec.service.sync().name('mantle.humanres.ExpenseServices.get#Claim').parameters({invoiceId: invoiceId || ''})
+                    .requireNewTransaction(true).call() || {}
+                peopleClaim = !ec.message.hasError() && read.claim && Array.from(read.access || []).includes('payroll') ? read : null
+            } catch (error) {
+                peopleClaim = null
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+            recordFound = false
+            return
+        }
         if (serviceRoot) {
             ec.message.pushErrors()
             try {
@@ -167,7 +188,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseInvoice" location="component://mr-boss/template/WarehouseInvoiceDetail.xml"/>
         <section-include name="PurchasingInvoice" location="component://mr-boss/template/PurchasingInvoiceDetail.xml"/>
         <section-include name="CustomerServiceInvoice" location="component://mr-boss/template/CustomerServiceInvoiceDetail.xml"/>
-        <section name="InvoiceNotFound" condition="!recordFound &amp;&amp; !warehouseRoot &amp;&amp; !purchasingRoot &amp;&amp; !serviceRoot"><widgets>
+        <section-include name="PeopleInvoice" location="component://mr-boss/template/PeopleInvoiceDetail.xml"/>
+        <section name="InvoiceNotFound" condition="!recordFound &amp;&amp; !warehouseRoot &amp;&amp; !purchasingRoot &amp;&amp; !serviceRoot &amp;&amp; !peopleRoot"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Invoice ${invoiceId} is not available: it does not exist, it is not of a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>

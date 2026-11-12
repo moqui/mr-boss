@@ -39,7 +39,10 @@ along with this software (see the LICENSE.md file). If not, see
     and the prompt "Explain my balance"; P13 Attendance under Time & leave (every People user's and a self-service employee's, by the
     area's grant) with HR's Time import (BOSS_PPL_TIME_IMPORT) and the Clock in screen (the quick create, declared on Commons' root),
     the attendance topic and the key g d; P14 the Shift roster under Time & leave (HR's and the managers', BOSS_PPL_SCHEDULES), the
-    worker's shift topic and the key g h. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
+    worker's shift topic and the key g h; P15 Expenses (Expense claims, with ExpenseClaimDetail and its print, and Advances; every
+    People user's and a self-service employee's, by the area's grant BOSS_PPL_EXPENSES), Payroll's InvoiceDetail (an expense claim's
+    invoice for payroll), the expense and advance topics, the key g x and the quick create New claim (declared on Commons' root).
+    The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
     grant opens no other record's panel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -101,6 +104,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g d" label="Attendance" screen="People/Time/Attendance"/>
             <!-- P14: the shift roster -->
             <key keys="g h" label="Shift roster" screen="People/Time/ShiftRoster"/>
+            <!-- P15: expense claims -->
+            <key keys="g x" label="Expense claims" screen="People/Expenses/ExpenseClaims"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
@@ -135,6 +140,10 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="PeopleAttendanceApproval"/>
         <!-- P14: a worker's shifts published, changed or removed (PeopleShiftChange) -->
         <notification-topic topic="PeopleShiftChange"/>
+        <!-- P15: an expense claim and an employee advance to approve (PeopleExpenseApproval, PeopleAdvanceApproval); the quick create
+            New claim is declared on Commons' root, which a self-service employee opens too -->
+        <notification-topic topic="PeopleExpenseApproval"/>
+        <notification-topic topic="PeopleAdvanceApproval"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

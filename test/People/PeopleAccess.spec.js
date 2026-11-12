@@ -42,6 +42,9 @@
 // through get#MyShifts by its own grant (BOSS_PPL_SHIFTS_SELF); PEOPLE_ROSTER_EDIT (the user's call of Nov 12, 2026): the manager
 // without it (a spec-local account of Hannah's) reads the roster but saves and publishes nothing, with the parameters she is
 // accepted with.
+// P15: Expense claims opened to the self-service employee by the expenses area's own grant (another app's user refused); a claim read
+// by its claimant and manager and refused to the reader with the same parameters; HR claims for Retail's employee and is refused
+// Services'; Payroll's InvoiceDetail (an expense claim's invoice) refused to HR.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -143,13 +146,14 @@ feature(
             const otherRoot = asUser(users.hr, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
-            // P12, P13: and their own time, leave, attendance and clock links)
+            // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
                 Object.keys(employee.sharedLinks || {}).join() !==
-                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock" ||
+                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
+                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -1123,6 +1127,49 @@ feature(
                     employeeShifts: "accepted",
                     holder: "1 true accepted",
                     nonHolder: "1 false false PERMISSION_DENIED PERMISSION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "expenses: the employee opens Expense claims by the area's own grant, another app's user does not; a claim read by its claimant and manager and refused to the reader with the same parameters; HR claims for Retail's employee, not Services'; Payroll's InvoiceDetail refused to HR",
+    {
+        when() {
+            const E = "mantle.humanres.ExpenseServices."
+            const NEW_CLAIM = "mantle.account.InvoiceServices.create#ProjectExpenseInvoice"
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            const claim = asUser(users.employee, () =>
+                system(() => invoke(NEW_CLAIM, {expenseClaim: true, fromPartyId: ids.employeePartyId, purpose: "Access spec"}))
+            ).invoiceId
+            const read = user => code(asUser(user, () => system(() => refusal(E + "get#Claim", {invoiceId: claim}))))
+            const forEmployee = partyId =>
+                code(asUser(users.hr, () => system(() => refusal(NEW_CLAIM, {expenseClaim: true, fromPartyId: partyId}))))
+            const codes = {
+                employeeRead: read(users.employee),
+                managerRead: read(users.manager),
+                readerRead: read(users.reader),
+                hrRetail: forEmployee(ids.employeePartyId),
+                hrServices: forEmployee(ids.otherEmployeePartyId)
+            }
+            const opened = screenRefusal(users.employee, "Expenses/ExpenseClaims", {show: "mine"})
+            if (opened) problems.push(`the employee's Expense claims: ${opened}`)
+            const otherApp = screenRefusal(users.otherApp, "Expenses/ExpenseClaims")
+            if (!unauthorized(otherApp)) problems.push(`another app's user opens Expense claims: ${otherApp || "opened"}`)
+            const invoice = screenRefusal(users.hr, "Payroll/InvoiceDetail", {invoiceId: claim})
+            if (!unauthorized(invoice)) problems.push(`the HR officer opens Payroll's InvoiceDetail: ${invoice || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    employeeRead: "accepted",
+                    managerRead: "accepted",
+                    readerRead: "RECORD_UNAVAILABLE",
+                    hrRetail: "accepted",
+                    hrServices: "PERMISSION_DENIED"
                 }
             problems.join("\n") == ""
         }
