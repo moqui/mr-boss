@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     org.moqui.admin.AccessServices holds the registry, the projections and every rule; this builds the review's list over
     get#GrantReview with the members of the organizations the user administers. It refuses a user without Admin and
     without ADMIN_ACCESS_VIEW; the framework service checks again. The Capabilities matrix (get#MatrixContext,
-    apply#MatrixChanges) is the framework's, org.moqui.admin.AccessServices (mr-moqui plans/Admin-Screens-Down.md). -->
+    apply#MatrixChanges) is the framework's, org.moqui.admin.AccessServices (mr-moqui plans/archive/Admin-Screens-Down.md). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="AccessReview" allow-remote="false">
         <description>The access and grant review as one list for print and CSV, over

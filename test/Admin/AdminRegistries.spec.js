@@ -1,5 +1,5 @@
 // Admin over the framework's registries (impl-admin P2; design-admin §3, §7 SettingsHome, §10 Health, §14; mr-moqui
-// plans/Admin-Screens-Down.md A6). The registries' own rules (a failing provider named, one not readable or naming no service
+// plans/archive/Admin-Screens-Down.md A6). The registries' own rules (a failing provider named, one not readable or naming no service
 // left out, a refresh's permission, a settings entry's screen, the support summary's redaction) are the framework's
 // AdminReadiness spec. Here is what is Admin's: its contract service over the owners that keep their own shapes (Accounting's
 // setup for a holder of ACCOUNTING_VIEW, an instance administrator among them; a Commerce store's summary for an

@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- ServerConfiguration (design-admin §9 ServerConfiguration; mr-moqui plans/Admin-Screens-Down.md): the framework's
+<!-- ServerConfiguration (design-admin §9 ServerConfiguration; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's
     System › Mail and protocols server configuration at this location (BOSS_ADM_PROTOCOLS_OPS), with its one transition:
     runCheck, through org.moqui.admin.ConfigurationServices.test#Protocol, which checks ADMIN_CONNECTION_MANAGE. The
     readiness and support summary (Operations › SupportSummary, P19) is linked by the mount's routes (Admin.js

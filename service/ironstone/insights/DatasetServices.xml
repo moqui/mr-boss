@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Datasets.js): each dataset's readiness provider and index refresh. Each calls the framework's business dataset services as
     the viewer, so the engine checks the dataset's own artifact. The report builder's dataset screens are the framework's
     Dashboards screens under Insights' mount and read through org.moqui.report.ReportServices (mr-moqui
-    plans/Admin-Screens-Down.md, Track I). -->
+    plans/archive/Admin-Screens-Down.md, Track I). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="check" noun="DatasetReadiness" allow-remote="false">
         <description>The readiness contract of a dataset's provider (moqui.server.ReadinessProvider insights.dataset.(id)): admitted with

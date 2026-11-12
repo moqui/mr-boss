@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Access" default-menu-index="3" menu-image="sym_o_group" menu-image-type="icon">
     <subscreens default-item="Groups" always-use-full-path="true">
-        <!-- the framework's System › Access screens (mr-moqui plans/Admin-Screens-Down.md): Capabilities and RowRules by
+        <!-- the framework's System › Access screens (mr-moqui plans/archive/Admin-Screens-Down.md): Capabilities and RowRules by
             location, since no grant names them, they have no instance administrator's transition and Admin adds nothing;
             Groups is included in a screen at its own location here, for the one transition it takes in (the System screen
             has an instance administrator's part); GroupDetail and AccessReview are Admin's own screens around the

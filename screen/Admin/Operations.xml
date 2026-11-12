@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         <conditional-default condition="ec.user.userId &amp;&amp; !ec.user.hasPermission('ADMIN_OVERVIEW_VIEW') &amp;&amp; !ec.user.hasPermission('ADMIN_OPERATION_VIEW') &amp;&amp; ec.user.hasPermission('ADMIN_SETTINGS_VIEW')"
                 item="Topics"/>
         <subscreens-item name="Health" location="component://mr-boss/screen/Admin/Operations/Health.xml" menu-title="Health" menu-index="1"/>
-        <!-- the framework's System › Operations screens (mr-moqui plans/Admin-Screens-Down.md): Jobs, JobRuns and JobRunDetail
+        <!-- the framework's System › Operations screens (mr-moqui plans/archive/Admin-Screens-Down.md): Jobs, JobRuns and JobRunDetail
             by location, since no grant names them, they have no instance administrator's transition and Admin adds nothing;
             JobDetail, Topics and TopicDetail are included in screens at their own locations here (JobDetail for the
             transitions it takes in, the topics for BOSS_ADM_OPERATIONS_TOPICS) -->

@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Data area of IronStone Admin (design-admin §1.2, §11; impl-admin P15, P16; mr-moqui plans/Admin-Screens-Down.md A5):
+<!-- The Data area of IronStone Admin (design-admin §1.2, §11; impl-admin P15, P16; mr-moqui plans/archive/Admin-Screens-Down.md A5):
     the framework's System › Data screens under this root, with what Admin adds. Imports, the runs of every registered
     import target (the default), and ImportDetail, one import's summary and results with the retry of failed rows, are
     Admin's own screens around the System screens' parts: the organization as a filter, and the import read with the

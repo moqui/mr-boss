@@ -3,7 +3,7 @@
 // only); a launcher granted through the screen's transition implying no view or change, with its registered row rules, while
 // a privileged group of mr-boss's is refused and named; RowRules' one render with a rule's source; and the access review's
 // print (html-print) leaving sealed grants out and members outside the user's organizations unnamed. Capabilities and
-// RowRules are the framework's System › Access screens, shown here by location (mr-moqui plans/Admin-Screens-Down.md): the
+// RowRules are the framework's System › Access screens, shown here by location (mr-moqui plans/archive/Admin-Screens-Down.md): the
 // matrix's own rules (its list twin, a proposal's controls and effect, a refused group named while the others apply, the
 // bounds, the permissions) are the framework's AdminAccessCapabilities, as its grant rules (registered grants and row
 // rules, sealed and privileged refusals, revisions) are AdminAccessServices'; the "usable when" is the acceptance

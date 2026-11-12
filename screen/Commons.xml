@@ -74,6 +74,12 @@ along with this software (see the LICENSE.md file). If not, see
             it is declared here; the + menu offers it to a holder of its screen's grant only (BOSS_MNT_REPORT_PROBLEM) -->
         <quick-create kind="maintenanceReportProblem" label="Report a problem" icon="sym_o_report_problem"
                 screen="Commons/ReportProblem" sequence="55"/>
+        <!-- People's Clock in (owner contract, impl-people P13, as F64's Today source): declared here, since a self-service employee
+            opens no People root; it opens People's Clock screen (the time area's grant: every People user and a self-service
+            employee) and is offered only to someone who clocks for a current employment of their own (its condition-service,
+            Mantle's get#ClockOffer: the employment's clocking, else its employer's default) -->
+        <quick-create kind="peopleClockIn" label="Clock in" icon="sym_o_timer" screen="People/Time/Clock" sequence="97"
+                condition-service="mantle.humanres.AttendanceServices.get#ClockOffer"/>
 
         <palette-type doc-type="MantleParty"/>
         <palette-type doc-type="MantleTask"/>

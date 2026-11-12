@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- ProtocolsHome (design-admin §9 ProtocolsHome, §15.3 "Protocol readiness"; style-guide §3.1 Landing; impl-admin P12;
-    mr-moqui plans/Admin-Screens-Down.md): the framework's System › Mail and protocols home, as Admin's own screen for what
+    mr-moqui plans/archive/Admin-Screens-Down.md): the framework's System › Mail and protocols home, as Admin's own screen for what
     Admin adds around it. The protocols are read here from org.moqui.admin.ConfigurationServices.get#ProtocolReadiness; the
     display values, the heading and the protocol list are the System screen's (ProtocolsPrepare, ProtocolsHeader,
     ProtocolSection), whose rows link a mail account's and the phone system's own screens by the mount's routes: Comms' mail

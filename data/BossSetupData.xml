@@ -2428,7 +2428,7 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.restore#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <!-- the groups a saver may share a definition with, by name (their own, and those their own grant lets them name):
-            what the framework's share dialogs ask (mr-moqui plans/Admin-Screens-Down.md, Track I, I4) -->
+            what the framework's share dialogs ask (mr-moqui plans/archive/Admin-Screens-Down.md, Track I, I4) -->
         <artifacts artifactName="org.moqui.report.ReportServices.find#ShareGroups" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
@@ -2482,7 +2482,7 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Admin P2 (impl-admin P2, §4, F9, F16, F21, F22, F44, F46; design-admin §3, §7, §10, §14, §14.2): the registries are the
         framework's (moqui.server ReadinessProvider, RefreshOperation and SettingsEntry, read by
-        org.moqui.admin.ReadinessServices; mr-moqui plans/Admin-Screens-Down.md A6), which seeds their kinds, the instance's
+        org.moqui.admin.ReadinessServices; mr-moqui plans/archive/Admin-Screens-Down.md A6), which seeds their kinds, the instance's
         own checks (mail, backup, report delivery, administrator factors, job runs, cluster, telemetry, protocols, the
         instance's Constitution) and the settings entries of its System screens. Here: the scopes and the settings group that
         are BOSS's, the settings index's grant to every BOSS user and the readiness exposure. Each owner's registrations
@@ -3277,7 +3277,7 @@ along with this software (see the LICENSE.md file). If not, see
     <artifactGroups artifactGroupId="BOSS_INS_DATASET_READ" description="Insights: listing business datasets">
         <artifacts artifactName="org.moqui.report.ReportServices.find#BusinessDatasets" artifactTypeEnumId="AT_SERVICE"/>
         <!-- what the framework's dataset screens read beside it, shown under Insights' mount (mr-moqui
-            plans/Admin-Screens-Down.md, Track I): one dataset the viewer reads or stewards, its document's fields and
+            plans/archive/Admin-Screens-Down.md, Track I): one dataset the viewer reads or stewards, its document's fields and
             conditions for its steward only, and what a dataset form offers, the sources for one who may create only -->
         <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDatasetOptions" artifactTypeEnumId="AT_SERVICE"/>
@@ -4304,7 +4304,7 @@ along with this software (see the LICENSE.md file). If not, see
         open (Received is every reader's): the group's last pattern row is reloaded as a plain name, which no screen location
         equals, so it denies nothing (as F65's rows), on a fresh load and an existing instance alike. No screen grant is added:
         the root's ALLOW opens Scheduled reports and Management digest. Scheduled reports' three screens are the framework's
-        Dashboards screens, mounted by location (mr-moqui plans/Admin-Screens-Down.md, Track I): no row names them or a
+        Dashboards screens, mounted by location (mr-moqui plans/archive/Admin-Screens-Down.md, Track I): no row names them or a
         transition of theirs, each transition reaches the report engine's operations as the viewer, and those stay denied
         (BOSS_INS_REPORT_ENGINE) but for the grants below, which are therefore who may schedule, deliver to others and read
         deliveries. Management digest's transitions reach ironstone.insights DeliveryServices, which checks the INSIGHTS_*
@@ -4465,7 +4465,7 @@ along with this software (see the LICENSE.md file). If not, see
             viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="112"/>
     <!-- Insights P8 (impl-insights P8; design-insights §8, §1.1; INS-07): business alerts. No screen grant is added: the root's
         ALLOW opens Business alerts (the list and AlertDetail, the framework's alert screens included at Insights' own
-        locations: mr-moqui plans/Admin-Screens-Down.md, Track I), each transition they take in is refused unless Insights'
+        locations: mr-moqui plans/archive/Admin-Screens-Down.md, Track I), each transition they take in is refused unless Insights'
         policy lets the caller set an alert (INSIGHTS_AUTHOR or INSIGHTS_DISTRIBUTE; reading one's own state and deliveries
         is every reader's), and the report engine's operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below.
         A rule is saved through the engine's save#Definition, the author's (BOSS_INS_REPORT_AUTHOR) and the distributor's
@@ -5140,7 +5140,7 @@ along with this software (see the LICENSE.md file). If not, see
             screenLocation="component://mr-boss/screen/People/Settings.xml" viewPermission="PEOPLE_CONFIGURE"
             configuredBy="People administrator" providerKey="people.setup" sequenceNum="85"/>
     <!-- The provider's service for Admin's users, as a direct call (the framework's registry calls a registered service as
-        the viewer, and its own grant is not inheritable: mr-moqui plans/Admin-Screens-Down.md A6): Mantle's get#Readiness
+        the viewer, and its own grant is not inheritable: mr-moqui plans/archive/Admin-Screens-Down.md A6): Mantle's get#Readiness
         checks PEOPLE_CONFIGURE and the employer's scope itself. Under People its screens' grant covers it. -->
     <artifactGroups artifactGroupId="BOSS_ADMIN" description="IronStone Admin App (via root screen)">
         <artifacts artifactName="mantle.humanres.PeopleServices.get#Readiness" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
@@ -5359,4 +5359,37 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/People/Time/LeaveRequestDetail?leaveRequestId=${leaveRequestId}"/>
     <moqui.security.user.NotificationTopic topic="PeopleLeaveDecision"
             linkTemplate="/qapps/People/Time/LeaveRequestDetail?leaveRequestId=${leaveRequestId}"/>
+    <!-- impl-people P13 (design-people §6 Attendance and TimeImport, §3 SelfService's Clock, §1.4 Quick create): Attendance and the
+        Clock in screen are under Time & leave, so they open by its grants as they stand (every People user through the root; a
+        self-service employee by BOSS_PPL_TIME's inheritable ALLOW), with no group of their own: what each user reads, corrects,
+        decides and clocks is Mantle's AttendanceServices' check (the person, their manager, an approver of the step waiting, HR of
+        the employer). Time import is HR's own (BOSS_PPL_TIME_IMPORT): denied to the root user group and to self-service, opened to the
+        HR officers (ALWAYS) and to the People administrator and ADMIN through their ALWAYS on the root; Mantle checks PEOPLE_IMPORT,
+        PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer again. An attendance correction to approve (Mantle's PeopleAttendanceApproval
+        topic) opens the day on Attendance, decided there, from People's Approvals or from the notification tray. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TIME_IMPORT" description="People time and attendance import">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/TimeImport.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_IMPORT_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_IMPORT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_IMPORT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P13: an employee's own clock on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is non-inheritable, so its
+        clock transition and the services it calls need their own): get#MyClock and record#Punch take no party and answer the caller's
+        own employments alone (PEOPLE_SELF_SERVICE) -->
+    <artifactGroups artifactGroupId="BOSS_PPL_CLOCK_SELF" description="People own clock">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/clock" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(get#MyClock|record#Punch)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_CLOCK_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleAttendanceApproval"
+            linkTemplate="/qapps/People/Time/Attendance?attendanceDayId=${attendanceDayId}"/>
 </entity-facade-xml>

@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Connections (design-admin §8.1, §8 Connections; style-guide §3.2 List; impl-admin P11; mr-moqui
-    plans/Admin-Screens-Down.md): the framework's System › Integrations connections list, as Admin's own screen for what
+    plans/archive/Admin-Screens-Down.md): the framework's System › Integrations connections list, as Admin's own screen for what
     Admin adds: the organizations a payment gateway is permitted for, as a filter (the organizations the administrator
     administers, ironstone.admin.ContextServices.get#Choices) and a column. The connections are read here from
     org.moqui.admin.ConfigurationServices.find#Connections with the organization; the display values, the heading with

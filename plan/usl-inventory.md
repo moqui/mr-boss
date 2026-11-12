@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P12, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P13, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -596,6 +596,14 @@ the screens that call it.
 | LeaveServices | approve#Request, refuse#Request | People/Approvals | People/Approvals (the PeopleLeaveApproval topic's approve and refuse, through Commons' Notifications) (People P12) |
 | LeaveServices | get#TeamAbsences | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui; People/MyTeam (Who is out); People's Today source (leave starting for my team) (People P12) |
 | LeaveServices | get#AbsenceProjection | — (CX-SYNC) | the Team absence projected CalDAV collection (mantle.work.CalendarDavServices, CalendarProjection PeopleTeamAbsence) (People P12) |
+| AttendanceServices | record#Punch, get#MyClock | Shared/PeopleSelfService (Clock) | Shared/PeopleSelfService and People/Time/Clock (template/PeopleClock.xml: the user's own clock; the quick create Clock in on Commons' root) (People P13) |
+| AttendanceServices | get#ClockOffer | — (the shell) | Commons' quick create Clock in, its condition-service (People P13 review) |
+| AttendanceServices | store#Clocking, find#Clocking | — | People/Time/Attendance (Who clocks: Turn clocking on, Turn off, Follow the employer; the employer's default, PartySetting PeopleClocking, is People Settings', P29) (People P13) |
+| AttendanceServices | find#Attendance, get#Day | People/Time/Attendance | People/Time/Attendance (AttendanceDays: mine, to decide, all I see, missing punches only, the CSV export; the day open with its punches and corrections) (People P13) |
+| AttendanceServices | request#Correction, decide#Correction | People/Time/Attendance | People/Time/Attendance (CorrectAttendance, Correct a missed day, AttendanceDecision: Approve, Refuse, Withdraw, Approve selected) (People P13) |
+| AttendanceServices | approve#Correction, refuse#Correction | People/Approvals | People/Approvals (the PeopleAttendanceApproval topic's approve and refuse, through Commons' Notifications) (People P13) |
+| AttendanceServices | preview#Import, import#Records, get#Import | People/Time/TimeImport | People/Time/TimeImport (FileAndMapping, ImportResults) (People P13) |
+| AttendanceServices | find#ImportRuns | — (Admin's Imports) | the time-and-attendance transfer target's findService (TransferTarget timeAndAttendance), Admin's Imports opening People/Time/TimeImport (People P13) |
 
 ## Ledger (81 services)
 
@@ -1531,7 +1539,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | set#TaskSprint |  | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail; People/Tasks/WorkItemDetail (a checklist task, on the Commons rule; refuses managed work, MANAGED_WORK) (People P7) |
 | TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
-| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
+| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source; People/Time/TimeEntries (People P10, Projects' screen mounted under People; People's TimeImport reads clock events only, and project time keeps this importer, People P13) |
 | TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the work order's supervisor; with it sync#ProductionLaborCost writes the labor cost events, Manufacturing P10); People/Time/MyTime; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
 | TimesheetServices | find#Timesheets | People/Time/Timesheets | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets; People/Time/Timesheets (People P10, Projects' screen mounted under People) |
 | TimesheetServices | get#PartyTimesheet | People/Time/MyTime | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry; People/Time/MyTime (People P10, Projects' screen mounted under People) |

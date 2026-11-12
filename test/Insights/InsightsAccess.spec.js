@@ -353,7 +353,7 @@ feature("the dataset screens and the editors are refused to the ordinary groups;
                 problems.push(`the reader opens ${path}: ${message || "opened"}`)
         }
         // F74: the administrator reads no dataset, so Explore says so instead of Tools' log dataset and its refusal. Explore
-        // is the framework's screen, mounted by location (mr-moqui plans/Admin-Screens-Down.md, I0): the sentence is its own,
+        // is the framework's screen, mounted by location (mr-moqui plans/archive/Admin-Screens-Down.md, I0): the sentence is its own,
         // and nothing of the search is shown or asked
         const explore = asUser(users.admin, () => lib.page("ReportBuilder/Explore", {}, "html"))
         if (

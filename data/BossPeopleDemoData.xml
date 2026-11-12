@@ -535,4 +535,9 @@ along with this software (see the LICENSE.md file). If not, see
             amount="1.75" capAmount="30" carryLimit="5" roundingIncrement="0.25" fromDate="2026-01-01 00:00:00"/>
     <mantle.humanres.leave.LeaveAccrualRule leaveAccrualRuleId="BOSS_PPL_LP_ANNUAL_2" leavePolicyId="BOSS_PPL_LP_ANNUAL" serviceMonthsFrom="60"
             amount="2" capAmount="30" carryLimit="5" roundingIncrement="0.25" fromDate="2026-01-01 00:00:00"/>
+
+    <!-- impl-people P13 (design-people §6 Attendance, §3 SelfService's Clock): Tomas (people.employee) clocks in and out on the shop
+        floor, so his self-service shows the clock; HR turns clocking on for others from Attendance's Who clocks. No punch is seeded:
+        his days start when he clocks in or a door file is imported. -->
+    <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_TOMAS_EMP" clockingEnabled="Y"/>
 </entity-facade-xml>
