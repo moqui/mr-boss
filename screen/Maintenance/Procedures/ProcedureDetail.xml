@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Procedures › ProcedureDetail (design-maintenance §4 ProcedureDetail; style-guide §3.3 Detail; impl-maintenance P6):
+    one procedure the user may read (check#Record procedure: a reader of its organization's procedures, or a technician assigned to
+    work made of it, read only; else "not available"). The record header: its id and name, organization, maintenance type,
+    applicability, effective dates and its state (Draft, Approved, Retired); the primary action by state and authority (Request
+    approval for a draft, Approve for an approver who did not change it last, Use procedure for a planner on an approved one in
+    effect), and More (Retire for an approver, Copy as a new draft for an author, the stored PDF of the approved definition). The
+    tabs, by menu index: Overview (1: ProcessHeader with Edit, the findings that block publication), Steps (2: StepTree with the up
+    and down actions, StepRequirements and Dependencies in the step dialog), Resources (3: ProcessResources), Instructions (4),
+    Approval (5: request, approve, refuse, retire and the history) and Usage (6: ProcessUsage). Each write is
+    mantle.work.ProcessServices' after the record check; an author's change of an approved procedure takes it back to Draft. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Procedure" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <always-actions>
+        <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="procedureCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'procedure', recordId:workEffortId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!procedureCheck?.recordId"/>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="requestApproval" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="approveProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="retireProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition name="publishedPdf" read-only="true">
+        <actions>
+            <service-call name="mantle.work.ProcessServices.get#WorkProcess" out-map="pdfDetail" in-map="{workEffortId:workEffortId}"/>
+            <set field="contentId" from="pdfDetail?.procedure?.publishedContentId"/>
+            <set field="content" from="contentId ? ec.entity.find('mantle.work.effort.WorkEffortContent').condition('workEffortContentId', contentId).disableAuthz().one() : null"/>
+            <if condition="content == null || content.workEffortId != workEffortId"><return error="true" message="No approved definition is stored"/></if>
+            <script>ec.web.sendResourceResponse(content.contentLocation, true)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <subscreens default-item="Overview"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProcessServices.get#WorkProcess" out-map="procedureDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="recordFound &amp;&amp; !!procedureDetail?.procedure"/>
+        <set field="procedure" from="procedureDetail?.procedure || {}"/>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="statusColor" from="{WeInPlanning:'grey-8', WeApproved:'positive', WeClosed:'grey-6'}[procedure.statusId] || 'grey-8'"/>
+        <set field="captionText" from="[procedure.organizationName, procedure.maintenanceTypeText, procedure.applicabilityText,
+                procedure.effectiveText].filter(Boolean).join(' · ')"/>
+    </actions>
+    <widgets>
+        <section name="ProcedureNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Procedure ${workEffortId} is not available: it does not exist, it is not one of your organizations', or no work of yours was made of it."
+                                type="p"/>
+                        <link url="${sharedLinks['Procedures/Find']}" text="Back to the procedures" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ProcedureFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}"
+                        title="Procedure ${workEffortId} · ${procedure.workEffortName || ''}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${workEffortId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${procedure.workEffortName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="Read only: the procedure of work assigned to you" type="div" style="text-caption m-muted"
+                                    condition="procedure.assignedRead"/>
+                            <label text="Waiting for approval" type="div" style="text-caption text-warning" condition="procedure.pendingApprovalId"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(procedure.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: procedure.statusText})}]]></text>
+                                <text type="html">${procedure.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <container-dialog id="RequestApprovalDialog" button-text="Request approval" type="primary" icon="sym_o_send"
+                                    title="Request approval of ${procedure.workEffortName}" width="560" condition="procedureDetail.canRequest">
+                                <label text="The definition is checked first; the organization's approvers are told." type="p" style="text-caption m-muted"/>
+                                <form-single name="RequestApproval" transition="requestApproval">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="comments"><default-field title="Note to the approver"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Request approval"><submit type="primary"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ApproveDialog" button-text="Approve" type="primary" icon="sym_o_verified"
+                                    title="Approve ${procedure.workEffortName}" width="560" condition="procedureDetail.canApprove">
+                                <label text="New work is made of the definition as approved from its effective time; work made earlier keeps its own."
+                                        type="p" style="text-caption m-muted"/>
+                                <form-single name="ApproveProcedure" transition="approveProcedure">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="effectiveDate"><default-field title="Effective from" tooltip="Now when empty"><date-time/></default-field></field>
+                                    <field name="comments"><default-field title="Findings or note"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit type="primary"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${sharedLinks['WorkOrders/NewWorkOrder']}" text="Use procedure" link-type="anchor-button" btn-type="primary"
+                                    icon="sym_o_handyman" parameter-map="{templateWorkEffortId:workEffortId}" condition="procedureDetail.canUse"/>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="retireProcedure" text="Retire" icon="sym_o_archive" parameter-map="{workEffortId:workEffortId}"
+                                        link-type="hidden-form-link" condition="procedureDetail.canRetire"
+                                        confirmation="Retire this procedure? No new work is made of it; its work and history stay."/>
+                                <link url="storeProcedure" text="Copy as a new draft" icon="sym_o_content_copy" link-type="hidden-form-link"
+                                        parameter-map="{sourceWorkEffortId:workEffortId, organizationPartyId:procedure.organizationPartyId,
+                                            workEffortName:'Copy of ' + procedure.workEffortName}" condition="!procedure.readOnly"/>
+                                <link url="publishedPdf" text="Approved definition (PDF)" icon="sym_o_picture_as_pdf" target-window="_blank"
+                                        parameter-map="{workEffortId:workEffortId}" condition="procedure.publishedContentId"/>
+                                <link url="${sharedLinks['Procedures/Find']}" text="All procedures" icon="sym_o_list"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <subscreens-panel id="ProcedureTabs" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

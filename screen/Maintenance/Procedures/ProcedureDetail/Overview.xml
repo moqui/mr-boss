@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProcedureDetail's Overview tab (design-maintenance §4 ProcessHeader; impl-maintenance P6): the procedure's definition (name,
+    description, organization, maintenance type, applicability, estimated hours, effective dates, approval and last change) with Edit
+    for an author (store#WorkProcess: an approved procedure goes back to Draft), and the findings that block publication (a group
+    with a response, a reading without its measurement or with a unit of another kind, a dependency in a loop), each naming its step. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview" default-menu-index="1">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <actions>
+        <!-- ProcedureDetail's actions read the procedure when it renders with the tab; alone (a reloaded tab, the terminal) it reads
+            it here -->
+        <if condition="procedureDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.ProcessServices.get#WorkProcess" out-map="procedureDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="procedure" from="procedureDetail?.procedure || null"/>
+        <set field="factRows" from="procedure ? [['Organization', procedure.organizationName], ['Maintenance type', procedure.maintenanceTypeText],
+                ['Applies to', procedure.applicabilityText], ['Estimated hours', procedure.estimatedWorkTime != null ? String(procedure.estimatedWorkTime) : ''],
+                ['Effective', procedure.effectiveText], ['Approval', procedure.approvedText], ['Changed', procedure.lastAuthorText],
+                ['Copied from', procedure.sourceWorkEffortId], ['Description', procedure.description]]
+                .filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])})) : []"/>
+        <set field="findingList" from="procedureDetail?.findingList || []"/>
+        <set field="headerValues" from="procedure ? {workEffortId: workEffortId, workEffortName: procedure.workEffortName,
+                description: procedure.description, estimatedWorkTime: procedure.estimatedWorkTime,
+                maintenanceTypeEnumId: procedure.maintenanceTypeEnumId, applicableProductId: procedure.applicableProductId,
+                applicableAssetClassEnumId: procedure.applicableAssetClassEnumId,
+                applicableFacilityTypeEnumId: procedure.applicableFacilityTypeEnumId} : {}"/>
+    </actions>
+    <widgets>
+        <section name="OverviewFound" condition="procedure">
+            <widgets>
+                <container-box>
+                    <box-header title="Definition"/>
+                    <box-toolbar>
+                        <container-dialog id="EditProcedure" button-text="Edit" icon="sym_o_edit" title="Edit procedure ${workEffortId}"
+                                width="640" condition="procedureDetail.canEdit">
+                            <label text="An approved procedure goes back to Draft when it is changed; work made earlier keeps its own."
+                                    type="p" style="text-caption m-muted" condition="procedure.statusId == 'WeApproved'"/>
+                            <form-single name="ProcessHeaderEdit" transition="storeProcedure" map="headerValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="workEffortName"><default-field title="Name"><text-line size="60"/></default-field></field>
+                                <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                                <field name="estimatedWorkTime">
+                                    <default-field title="Estimated hours" tooltip="With steps, the steps' estimates add up instead">
+                                        <text-line size="6" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="maintenanceTypeEnumId">
+                                    <default-field title="Maintenance type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedureTypes', selected:headerValues.maintenanceTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="applicableProductId">
+                                    <default-field title="For equipment model" tooltip="Empty: any">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedureModels', selected:headerValues.applicableProductId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="applicableAssetClassEnumId">
+                                    <default-field title="For equipment class" tooltip="Empty: any">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedureClasses', selected:headerValues.applicableAssetClassEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="applicableFacilityTypeEnumId">
+                                    <default-field title="For facility type" tooltip="Empty: any">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedureFacilityTypes', selected:headerValues.applicableFacilityTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <section-iterate name="Facts" list="factRows" entry="fact">
+                            <widgets>
+                                <container style="row q-py-xs">
+                                    <label text="${fact.label}" type="div" style="col-4 col-sm-3 text-caption m-muted"/>
+                                    <label text="${fact.value}" type="div" style="col"/>
+                                </container>
+                            </widgets>
+                        </section-iterate>
+                    </box-body>
+                </container-box>
+                <section name="FindingsSection" condition="findingList.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="To resolve before approval"/>
+                            <box-body>
+                                <section-iterate name="Findings" list="findingList" entry="finding">
+                                    <widgets><label text="${finding.message}" type="p" style="q-my-xs"/></widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

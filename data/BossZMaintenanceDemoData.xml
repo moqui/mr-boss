@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance demo's links to People's and Purchasing's demo records (impl-maintenance P2), in a file that loads after
     theirs (BossMaintenanceDemoData.xml loads before them): the custodians of Services' compressor and multimeter, Kenji and Sofia,
     Services' technicians in People's demo, and the supplier warranty's warrantor of the compressor and the air handler; P3's team
-    and work orders. -->
+    and work orders; P6's procedures. -->
 <entity-facade-xml type="demo">
     <mantle.product.asset.AssetPartyAssignment assetId="BOSS_MNT_COMPRESSOR" partyId="BOSS_PPL_KENJI" roleTypeId="Custodian"
             fromDate="2026-01-05 08:00:00"/>
@@ -176,6 +176,85 @@ along with this software (see the LICENSE.md file). If not, see
             createdByUserId="BOSS_MNT_TECH" createdDate="2026-10-20 07:35:00" endedByUserId="BOSS_MNT_SUPERVISOR"
             endedDate="2026-10-20 11:05:00" dispositionEnumId="MdispAvailable" endComments="New belt tensioned; ran 30 minutes under load"/>
     <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_COMP_BELT" resourceUnavailabilityId="BOSS_MNT_OUT_COMP_BELT"/>
+    <!-- P6 (design-maintenance §4): Services' procedures (maint.author's, approved by maint.approver): the AC-200 compressor service
+        (approved; for the AC-200 model; a Prepare group with two steps, the oil change waiting for it, the filter with its part and
+        skill, and a discharge pressure reading of 7 to 9 bar a supervisor may waive), the room inspection (approved, for rooms; two
+        pass or fail checks and a temperature reading), the van's pre-trip check (a draft) and the old compressor checklist
+        (retired). The AC-200 model's maintenance default names the compressor service (Product360's owner contract). No instruction
+        text is seeded: an instruction is a stored file (WectInstruction, impl-maintenance F68), written by approval. -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeApproved"
+            statusFlowId="WorkEffortProcedure" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" workEffortName="Air compressor AC-200 service"
+            description="Quarterly service of an AC-200 air compressor"/>
+    <mantle.work.effort.WorkEffortProcessPolicy workEffortId="BOSS_MNT_PROC_COMP" fromDate="2026-01-02 08:00:00" processPolicyEnumId="WppMaintenanceProcedure"
+            guardsExecution="Y" lastAuthorUserId="BOSS_MNT_AUTHOR" lastAuthoredDate="2026-01-04 08:00:00" effectiveFromDate="2026-01-05 08:00:00" approvedByUserId="BOSS_MNT_APPROVER" approvedDate="2026-01-05 08:00:00" maintenanceTypeEnumId="MntTpPreventive" applicableProductId="BOSS_MNT_COMP_MODEL"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP_PREP" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_COMP" rootWorkEffortId="BOSS_MNT_PROC_COMP" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="10"
+            workEffortName="Prepare"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP_LOCK" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_COMP_PREP" rootWorkEffortId="BOSS_MNT_PROC_COMP" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="10"
+            workEffortName="Isolate and lock out the compressor" estimatedWorkTime="0.25"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_COMP_LOCK" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrCheckOff" evidenceRequired="N" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP_DRAIN" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_COMP_PREP" rootWorkEffortId="BOSS_MNT_PROC_COMP" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="20"
+            workEffortName="Drain the receiver" estimatedWorkTime="0.25"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_COMP_DRAIN" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrCheckOff" evidenceRequired="N" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP_OIL" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_COMP" rootWorkEffortId="BOSS_MNT_PROC_COMP" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="20"
+            workEffortName="Change the oil" estimatedWorkTime="1"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_COMP_OIL" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrCheckOff" evidenceRequired="Y" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP_FILTER" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_COMP" rootWorkEffortId="BOSS_MNT_PROC_COMP" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="30"
+            workEffortName="Replace the intake filter" estimatedWorkTime="0.5"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_COMP_FILTER" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrCheckOff" evidenceRequired="N" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_COMP_PRESS" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_COMP" rootWorkEffortId="BOSS_MNT_PROC_COMP" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="40"
+            workEffortName="Read the discharge pressure" estimatedWorkTime="0.25"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_COMP_PRESS" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrReading" measurementTypeId="AtmosphericPressure" measurementUomId="PRES_bar" minimumValue="7" maximumValue="9" evidenceRequired="N" commentRequired="Y" waiverAllowed="Y"/>
+    <mantle.work.effort.WorkEffortAssoc workEffortId="BOSS_MNT_PROC_COMP_OIL" toWorkEffortId="BOSS_MNT_PROC_COMP_PREP" workEffortAssocTypeEnumId="WeatDependsOn" fromDate="2026-01-02 08:00:00"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_PROC_COMP_FILTER" productId="BOSS_MNT_PART_FILTER" fromDate="2026-01-02 08:00:00"
+            typeEnumId="WeptConsume" estimatedQuantity="1"/>
+    <mantle.work.effort.WorkEffortApproval workEffortApprovalId="BOSS_MNT_PROC_COMP_A1" workEffortId="BOSS_MNT_PROC_COMP" statusId="WeaApproved"
+            requestedByUserId="BOSS_MNT_AUTHOR" requestedDate="2026-01-04 08:00:00" decidedByUserId="BOSS_MNT_APPROVER" decidedDate="2026-01-05 08:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_ROOM" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeApproved"
+            statusFlowId="WorkEffortProcedure" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" workEffortName="Room inspection"
+            description="Monthly inspection of a meeting or mechanical room"/>
+    <mantle.work.effort.WorkEffortProcessPolicy workEffortId="BOSS_MNT_PROC_ROOM" fromDate="2026-01-02 08:00:00" processPolicyEnumId="WppMaintenanceProcedure"
+            guardsExecution="Y" lastAuthorUserId="BOSS_MNT_AUTHOR" lastAuthoredDate="2026-01-04 08:00:00" effectiveFromDate="2026-01-05 08:00:00" approvedByUserId="BOSS_MNT_APPROVER" approvedDate="2026-01-05 08:00:00" maintenanceTypeEnumId="MntTpInspection" applicableFacilityTypeEnumId="FcTpRoom"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_ROOM_CEIL" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_ROOM" rootWorkEffortId="BOSS_MNT_PROC_ROOM" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="10"
+            workEffortName="Ceiling, lights and projector" estimatedWorkTime="0.25"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_ROOM_CEIL" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrPassFail" evidenceRequired="N" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_ROOM_EXIT" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_ROOM" rootWorkEffortId="BOSS_MNT_PROC_ROOM" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="20"
+            workEffortName="Fire exit clear and signed" estimatedWorkTime="0.1"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_ROOM_EXIT" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrPassFail" evidenceRequired="Y" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_ROOM_TEMP" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_ROOM" rootWorkEffortId="BOSS_MNT_PROC_ROOM" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="30"
+            workEffortName="Room temperature" estimatedWorkTime="0.1"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_ROOM_TEMP" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrReading" measurementTypeId="Temperature" measurementUomId="TEMP_C" minimumValue="18" maximumValue="24" evidenceRequired="N" commentRequired="N" waiverAllowed="Y"/>
+    <mantle.work.effort.WorkEffortApproval workEffortApprovalId="BOSS_MNT_PROC_ROOM_A1" workEffortId="BOSS_MNT_PROC_ROOM" statusId="WeaApproved"
+            requestedByUserId="BOSS_MNT_AUTHOR" requestedDate="2026-01-04 08:00:00" decidedByUserId="BOSS_MNT_APPROVER" decidedDate="2026-01-05 08:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_VAN" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            statusFlowId="WorkEffortProcedure" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" workEffortName="Van pre-trip check"
+            description="Before each trip in the service van"/>
+    <mantle.work.effort.WorkEffortProcessPolicy workEffortId="BOSS_MNT_PROC_VAN" fromDate="2026-01-02 08:00:00" processPolicyEnumId="WppMaintenanceProcedure"
+            guardsExecution="Y" lastAuthorUserId="BOSS_MNT_AUTHOR" lastAuthoredDate="2026-01-04 08:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_VAN_TYRES" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_VAN" rootWorkEffortId="BOSS_MNT_PROC_VAN" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="10"
+            workEffortName="Tyres and lights" estimatedWorkTime="0.25"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_VAN_TYRES" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrCheckOff" evidenceRequired="N" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_OLD" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeClosed"
+            statusFlowId="WorkEffortProcedure" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" workEffortName="Compressor checklist (old)"
+            description="Replaced by the AC-200 service"/>
+    <mantle.work.effort.WorkEffortProcessPolicy workEffortId="BOSS_MNT_PROC_OLD" fromDate="2026-01-02 08:00:00" processPolicyEnumId="WppMaintenanceProcedure"
+            guardsExecution="Y" lastAuthorUserId="BOSS_MNT_AUTHOR" lastAuthoredDate="2026-01-04 08:00:00" effectiveFromDate="2026-01-05 08:00:00" approvedByUserId="BOSS_MNT_APPROVER" approvedDate="2026-01-05 08:00:00" effectiveThruDate="2026-06-01 08:00:00" maintenanceTypeEnumId="MntTpPreventive" applicableProductId="BOSS_MNT_COMP_MODEL"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_PROC_OLD_CHECK" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" isTemplate="Y" statusId="WeInPlanning"
+            parentWorkEffortId="BOSS_MNT_PROC_OLD" rootWorkEffortId="BOSS_MNT_PROC_OLD" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" sequenceNum="10"
+            workEffortName="Look the compressor over" estimatedWorkTime="0.5"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_MNT_PROC_OLD_CHECK" fromDate="2026-01-02 08:00:00" isRequired="Y" responseKindEnumId="WsrCheckOff" evidenceRequired="N" commentRequired="N" waiverAllowed="N"/>
+    <mantle.work.effort.WorkEffortApproval workEffortApprovalId="BOSS_MNT_PROC_OLD_A1" workEffortId="BOSS_MNT_PROC_OLD" statusId="WeaApproved"
+            requestedByUserId="BOSS_MNT_AUTHOR" requestedDate="2026-01-04 08:00:00" decidedByUserId="BOSS_MNT_APPROVER" decidedDate="2026-01-05 08:00:00"/>
+    <mantle.product.maintenance.ProductMaintenance productMaintenanceId="BOSS_MNT_COMP_SERVICE" templateWorkEffortId="BOSS_MNT_PROC_COMP"/>
 
     <!-- P15 (impl-maintenance; design §7.1, Resources, ResourcePolicyDetail, Blackouts): Room 101 is managed, approved by the resource
         approver (maint.booking) and booked for at most two hours, up to 90 days ahead; Room 103, bookable with no policy, is booked

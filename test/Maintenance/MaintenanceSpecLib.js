@@ -50,14 +50,26 @@ const ids = {
     unmanagedRoomId: "BOSS_MNT_ROOM_103",
     vendorEventId: "BOSS_MNT_EV_VENDOR",
     blackoutId: "BOSS_MNT_BLK_ROOM101",
-    // the menu of design §1.2 built so far: a Maintenance user's who reads work and equipment, and with Settings the Maintenance
-    // administrator's; a user who reads none (a procedure author) has Home alone
-    // (P4: Requests, a planner's or supervisor's)
-    staffMenu: ["Home", "WorkOrders", "Requests", "Equipment", "Facilities"],
+    // P6: the procedures (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
+    // steps, a dependency and a pressure reading), the room inspection (approved, for rooms), the van's pre-trip check (a draft) and
+    // the old compressor checklist (retired)
+    compressorProcedureId: "BOSS_MNT_PROC_COMP",
+    compressorPrepareId: "BOSS_MNT_PROC_COMP_PREP",
+    compressorOilId: "BOSS_MNT_PROC_COMP_OIL",
+    compressorPressureId: "BOSS_MNT_PROC_COMP_PRESS",
+    roomProcedureId: "BOSS_MNT_PROC_ROOM",
+    draftProcedureId: "BOSS_MNT_PROC_VAN",
+    retiredProcedureId: "BOSS_MNT_PROC_OLD",
+    // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
+    // a reader of procedures or a planner or supervisor) and equipment, and with Settings the Maintenance administrator's; a procedure
+    // author reads procedures alone
+    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
-    adminMenu: ["Home", "WorkOrders", "Requests", "Equipment", "Facilities", "Scheduling", "Settings"],
+    authorMenu: ["Home", "Procedures"],
+    bookingMenu: ["Home", "Scheduling"],
+    adminMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Equipment", "Facilities", "Scheduling", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
-    keys: ["g m", "g w", "g r", "g e", "g f"]
+    keys: ["g m", "g w", "g r", "g p", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS

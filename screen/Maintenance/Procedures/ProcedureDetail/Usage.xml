@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProcedureDetail's Usage tab (design-maintenance §4 ProcessUsage; impl-maintenance P6): the work made of the procedure that the
+    user's maintenance scope covers (find#ProcessExecutions, a scoped query, never every organization's): each work order's name,
+    target, when it was made, state and outcome, newest first, each opening WorkOrderDetail (which admits a reader of the work). Read
+    only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Usage" default-menu-index="6">
+    <parameter name="workEffortId"/>
+    <parameter name="pageIndex"/>
+    <actions>
+        <set field="executionList" from="[]"/>
+        <if condition="recordFound &amp;&amp; maintenance.capabilities.processView">
+            <service-call name="mantle.work.ProcessServices.find#ProcessExecutions" out-map="usage" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId, pageIndex:pageIndex}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="executionList" from="usage?.executionList || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Work made of this procedure"/>
+            <box-body-nopad>
+                <form-list name="ExecutionList" list="executionList" skip-form="true">
+                    <field name="workEffortId">
+                        <header-field title="Work order"/>
+                        <default-field>
+                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortName"><header-field title="Name"/><default-field><display/></default-field></field>
+                    <field name="targetName"><header-field title="Equipment or facility"/><default-field><display/></default-field></field>
+                    <field name="createdText"><header-field title="Made"/><default-field><display/></default-field></field>
+                    <field name="statusText"><header-field title="Status"/><default-field><display/></default-field></field>
+                    <field name="outcomeText"><header-field title="Outcome"/><default-field><display/></default-field></field>
+                </form-list>
+                <label text="No work has been made of this procedure." type="p" style="m-muted q-pa-sm" condition="!executionList.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

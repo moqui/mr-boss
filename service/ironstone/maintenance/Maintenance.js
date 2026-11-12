@@ -15,6 +15,7 @@
 // drop-downs) and linkPaths (sharedLinks).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
+const procedures = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceProcedures.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -146,7 +147,10 @@ const linkPaths = [
     // P15: Scheduling's Resources, a resource's policy and Blackouts (design §7)
     "Scheduling/Resources",
     "Scheduling/ResourcePolicyDetail",
-    "Scheduling/Blackouts"
+    "Scheduling/Blackouts",
+    // P6: Procedures and the procedure record (design §4)
+    "Procedures/Find",
+    "Procedures/ProcedureDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -245,6 +249,24 @@ const recordKinds = {
             }
         }
     },
+    // P6: a procedure (its template root), through Mantle's procedure read (a reader of its organization's procedures, or a
+    // technician assigned to work made of it, read only)
+    procedure: {
+        name: "Procedure",
+        icon: "sym_o_checklist",
+        destination: "Procedures/ProcedureDetail",
+        parameter: "workEffortId",
+        read: (userScope, workEffortId) => {
+            const found = procedures().requireProcedure(userScope.mantle, workEffortId, "read")
+            return {
+                organizationPartyId: found.organizationPartyId,
+                label: found.root.workEffortName || workEffortId,
+                detail: organizationName(found.organizationPartyId),
+                readOnly: !!found.readOnly,
+                assignedRead: !!found.assignedRead
+            }
+        }
+    },
     asset: {
         name: "Equipment",
         icon: "sym_o_build",
@@ -281,7 +303,8 @@ function recordOf(userScope, kind, recordId) {
         organizationPartyId: found.organizationPartyId,
         label: found.label,
         detail: found.detail,
-        rootWorkEffortId: found.rootWorkEffortId || null
+        rootWorkEffortId: found.rootWorkEffortId || null,
+        readOnly: !!found.readOnly
     }
 }
 // check#Record: a record a Maintenance screen or mount was given, refused unless the user may see it and, when a capability is
@@ -418,6 +441,20 @@ const resourceChoices = [
     "approvers"
 ]
 // the choices of work orders, answered to a user who reads work (workRead) or keeps the work policy (settingsEdit)
+// P6: the choices of procedures, answered to a reader of procedures or a planner or supervisor choosing one for work
+const procedureChoices = [
+    "procedures",
+    "procedureTypes",
+    "procedureModels",
+    "procedureClasses",
+    "procedureFacilityTypes",
+    "procedureSteps",
+    "responseKinds",
+    "measurementTypes",
+    "measurementUoms",
+    "skillTypes",
+    "parts"
+]
 const workChoices = [
     "maintenanceKinds",
     "maintenanceTypes",
@@ -750,11 +787,120 @@ const choiceSources = {
             },
             facilityName
         )
+    },
+    // P6: procedures. The approved procedures in effect that apply to the work's target (assetId or facilityId), for new work
+    procedures: (userScope, term, selected, p) => {
+        const found = lib.probe("mantle.work.ProcessServices.find#WorkProcesses", {
+            text: term || null,
+            usable: true,
+            assetId: p?.assetId || null,
+            facilityId: p?.assetId ? null : p?.facilityId || null,
+            pageSize: choiceLimit
+        })
+        return Array.from(found.procedureList || []).map(row => ({
+            value: row.workEffortId,
+            label: row.workEffortName + (row.stepCount ? " (" + row.stepCount + " steps)" : "")
+        }))
+    },
+    procedureTypes: (userScope, term, selected) => enumOptions("MaintenanceType", term, selected),
+    procedureClasses: (userScope, term, selected) => enumOptions("AssetClass", term, selected),
+    procedureFacilityTypes: (userScope, term, selected) => enumOptions("FacilityType", term, selected),
+    procedureModels: (userScope, term, selected) => productOptions(term, selected, "AstTpEquipment"),
+    parts: (userScope, term, selected) => productOptions(term, selected, null),
+    skillTypes: (userScope, term, selected) => enumOptions("SkillType", term, selected),
+    responseKinds: (userScope, term, selected) => enumOptions("WorkStepResponseKind", term, selected),
+    measurementTypes: (userScope, term, selected) => {
+        const rows = Array.from(find("mantle.work.measurement.MeasurementType").orderBy("description").list()).filter(
+            row =>
+                row.hasValue !== "N" &&
+                (!term ||
+                    String(row.description || row.measurementTypeId)
+                        .toLowerCase()
+                        .includes(term.toLowerCase()))
+        )
+        return rows
+            .slice(0, choiceLimit)
+            .map(row => ({value: row.measurementTypeId, label: row.description || row.measurementTypeId}))
+    },
+    // the units of a measurement type's kind (measurementTypeId), or every unit that measures something
+    measurementUoms: (userScope, term, selected, p) => {
+        const type = p?.measurementTypeId
+            ? one("mantle.work.measurement.MeasurementType", {measurementTypeId: p.measurementTypeId})
+            : null
+        let query = find("moqui.basic.Uom")
+            .orderBy("description")
+            .limit(choiceLimit * 4)
+        if (type?.uomTypeEnumId) query = query.condition("uomTypeEnumId", type.uomTypeEnumId)
+        else query = query.condition("uomTypeEnumId", "not-in", ["UT_CURRENCY_MEASURE", "UT_TIME_FREQ_MEASURE"])
+        const rows = Array.from(query.list()).filter(
+            row =>
+                !term ||
+                String(row.description || row.uomId)
+                    .toLowerCase()
+                    .includes(term.toLowerCase())
+        )
+        const options = rows
+            .slice(0, choiceLimit)
+            .map(row => ({
+                value: row.uomId,
+                label: (row.description || row.uomId) + (row.abbreviation ? " (" + row.abbreviation + ")" : "")
+            }))
+        return withSelected(
+            options,
+            selected,
+            uomId => !!one("moqui.basic.Uom", {uomId}),
+            uomId => one("moqui.basic.Uom", {uomId})?.description || uomId
+        )
+    },
+    // the steps of a procedure (rootWorkEffortId) a step may wait for, never the step itself (workEffortId)
+    procedureSteps: (userScope, term, selected, p) => {
+        if (!p?.rootWorkEffortId) return []
+        let found
+        try {
+            found = procedures().requireProcedure(userScope.mantle, p.rootWorkEffortId, "read")
+        } catch (error) {
+            return []
+        }
+        return Array.from(
+            find("mantle.work.effort.WorkEffort", {rootWorkEffortId: found.root.workEffortId}).orderBy("sequenceNum").list()
+        )
+            .filter(row => row.workEffortId !== p.workEffortId)
+            .filter(
+                row =>
+                    !term ||
+                    String(row.workEffortName || "")
+                        .toLowerCase()
+                        .includes(term.toLowerCase())
+            )
+            .slice(0, choiceLimit * 2)
+            .map(row => ({value: row.workEffortId, label: row.workEffortName || row.workEffortId}))
     }
+}
+// Products by id or name, of an asset type when one is named (equipment models), with the selected one.
+function productOptions(term, selected, assetTypeEnumId) {
+    const factory = ec.entity.conditionFactory
+    let query = find("mantle.product.Product").orderBy("productName").limit(choiceLimit)
+    if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["productId", "productName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const options = Array.from(query.list()).map(row => ({value: row.productId, label: row.productName || row.productId}))
+    return withSelected(
+        options,
+        selected,
+        productId => !!one("mantle.product.Product", {productId}),
+        productId => one("mantle.product.Product", {productId})?.productName || productId
+    )
 }
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Maintenance choice " + p.choice)
+    const caps = userScope.capabilities
+    if (procedureChoices.includes(p.choice) && !caps.processView && !caps.plan && !caps.supervise) return {options: []}
     if (resourceChoices.includes(p.choice) && !userScope.capabilities.resourceRead) return {options: []}
     if (workChoices.includes(p.choice) && !userScope.capabilities.workRead && !userScope.capabilities.settingsEdit)
         return {options: []}
@@ -763,11 +909,27 @@ function choices(p) {
 
 // ===== palette =====
 // The palette's Maintenance records, each opening its Maintenance screen, with recordEntity and recordId for Assist's search:
-// equipment and facilities (P2), through Mantle's scoped finds (a user who reads no equipment finds none); work orders join in
-// P3, procedures in P6.
+// equipment and facilities (P2), through Mantle's scoped finds (a user who reads no equipment finds none); work orders (P3) and
+// procedures (P6).
 const recordUrl = (kind, recordId) =>
     "/qapps/Maintenance/" + recordKinds[kind].destination + "?" + recordKinds[kind].parameter + "=" + encodeURIComponent(recordId)
 const searchFinds = [
+    // P6: procedures, through Mantle's scoped find (a reader of procedures)
+    {
+        kind: "procedure",
+        rows: (userScope, text, limit) => {
+            if (!userScope.mantle.capabilities.processView) return []
+            const found = lib.probe("mantle.work.ProcessServices.find#WorkProcesses", {text, pageSize: limit})
+            return Array.from(found.procedureList || []).map(row => ({
+                title: row.workEffortName,
+                subtitle: ["Procedure " + row.workEffortId, row.statusText, row.applicabilityText].filter(Boolean).join(" · "),
+                icon: recordKinds.procedure.icon,
+                recordEntity: "mantle.work.effort.WorkEffort",
+                recordId: row.workEffortId,
+                url: recordUrl("procedure", row.workEffortId)
+            }))
+        }
+    },
     // P3: work orders, through Mantle's scoped list (a technician with the assigned view finds their own)
     {
         kind: "workOrder",

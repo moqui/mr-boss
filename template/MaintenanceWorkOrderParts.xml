@@ -35,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
                         maintenanceTypeEnumId:maintenanceTypeEnumId, severityEnumId:severityEnumId, priority:priority,
                         estimatedWorkTime:estimatedWorkTime, estimatedStartDate:estimatedStartDate,
                         estimatedCompletionDate:estimatedCompletionDate, teamPartyId:teamPartyId, operationKey:operationKey,
-                        offlineIntent:offlineIntent}"/>
+                        offlineIntent:offlineIntent, templateWorkEffortId:(templateWorkEffortId || null)}"/>
             <if condition="!ec.message.hasError()">
                 <set field="workEffortId" from="created.workEffortId"/>
                 <message type="success">${created.repeated ? 'Work order ' + created.workEffortId + ' was created already' : (created.approved ? 'Work order ' + created.workEffortId + ' created and approved' : 'Work order ' + created.workEffortId + ' created; it waits for a supervisor\'s approval')}</message>

@@ -367,7 +367,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | built and reviewed Nov 12, merged |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | built and reviewed Nov 12, merged |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
-| P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | — |
+| P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | — |
@@ -1899,6 +1899,230 @@ Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedu
   author builds the compressor service, an approver publishes it from the approvals inbox, a planner creates two
   work orders from it, and editing the procedure afterwards changes neither.
 
+**Built Nov 12 (P6).** mr-mantle 625a52f3, mr-boss 6d65180d (branch `mnt/p6`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F58 (WorkProcesses.js' `policies`, `requirePolicy`, `storeStep` and `instantiate`, People's
+  Checklists.js calling them directly), F59 and P3's `managedIds`, F68 (`guardInstruction`, `store#OperationInstruction`, the EECA), F44
+  (WorkEffortApproval and Projects' reads of it, by work effort or approver), F75 (no `minimumSkillLevel`), F4 and F5, F107, F110
+  (the project-model writers, `clone#WorkEffort` and `add#TaskTime` on the `/mantle` REST API), F111 (`import#TimeEntryCsv`'s
+  `itemOf`), F113 (WorkOrders.js `openAssignments` and the transfer), the framework's `approve#NotificationMessage` (the topic's
+  service called as the user with the record and message), Budgets.js' stored PDF (`xslFoTransform`), Product360's maintenance
+  default (Mantle CatalogRecords.js), the status flows over WeInPlanning, WeApproved and WeClosed (F65), and §4 and P3's notes.
+- Mantle:
+  - Records (`entity/WorkProcessEntities.xml`, extended, not replaced): WorkEffortProcessPolicy gains `effectiveFromDate`,
+    `effectiveThruDate`, `approvedByUserId`, `approvedDate`, `lastAuthorUserId`, `lastAuthoredDate`, the applicability
+    (`maintenanceTypeEnumId`, `applicableProductId`, `applicableAssetClassEnumId`, `applicableFacilityTypeEnumId`),
+    `sourceWorkEffortId` and `publishedContentId`; WorkEffortStepPolicy `responseKindEnumId` (the new WorkStepResponseKind: check off,
+    pass or fail, reading), `measurementTypeId`, `measurementUomId`, `minimumValue`, `maximumValue`, `evidenceRequired`,
+    `commentRequired`, `waiverAllowed`, `changeReason`; the policy `WppMaintenanceProcedure`; the content types `WectProcedureDraft`
+    and `WectPublishedProcedure`. MaintenanceWorkOrder gains `procedureWorkEffortId` and `procedureDate`, MaintenancePolicy
+    `procedureSelfApproval`. `isTemplate`'s description made general (F4). `data/MaintenanceProcedureData.xml`: the
+    `WorkEffortProcedure` flow (Approve, Amend with WORK_PROCESS_EDIT, Retire; see the findings) and the `WorkProcessApproval` topic
+    (approve and refuse services, a refusal's reason required) with its `TopicRegistration` (audience WORK_PROCESS_APPROVE).
+  - WorkProcesses.js (People's module): the `policies` table gains WppMaintenanceProcedure with its edit permission, its instantiation
+    permissions and its checked path; `store#ProcessStep` and `instantiate#WorkProcess` run a policy's checked path when it has one,
+    else People's as before; `storeStep` carries the step fields (`stepFields`; a change starts the next row) and `instantiate` copies
+    them, empty for People's checklists. People's `test/work/WorkProcess` passes unchanged.
+  - `mantle/work/MaintenanceProcedures.js` (the checked path, design §4.1, §4.2) over ProcessServices' new services: `find#WorkProcesses`
+    (the scope's procedures in every state; `usable`: approved, in effect and applicable to a target, also for a planner),
+    `get#WorkProcess` (header, steps in order with depth and group flag, requirements, instructions, the WorkEffortApproval history, the
+    findings, what the caller may do; a technician assigned to work made of it reads it read only), `store#WorkProcess` (a draft of the
+    organization, or a copy of another's tree with new ids and no approval), `store#ProcessStep`'s checked path (the response policy
+    checked, VALUE_INVALID), `move#ProcessStep`, `store#ProcessDependency` (People's same-tree and cycle check), `store#ProcessRequirements`
+    (WorkEffortProduct consumed and dated, WorkEffortAssetNeeded, WorkEffortSkillStandard with no level, F75), `store#ProcessInstruction`
+    (a draft), `find#ProcessInstructions` (an execution node's through its WeatBasedOn link, the instruction in effect when it was made),
+    `request#WorkProcessApproval` (the findings first, PUBLICATION_INVALID; the organization's approvers told, not the last author),
+    `approve#WorkProcess` (WORK_PROCESS_APPROVE in the organization; SELF_APPROVAL unless the policy allows it; APPROVAL_NOT_REQUESTED;
+    an effective time now or later; the drafts published as WectInstruction rows in the rule's shape, F68; the definition as a PDF,
+    template/work/Procedure.print.html.fancy, logged and the approval kept when it cannot be made), `refuse#WorkProcess` (a reason),
+    `retire#WorkProcess`, `find#ProcessExecutions` and `check#ProcessApplicability`. An author's change of an approved procedure takes
+    it back to Draft and cancels the request waiting. Instantiation: the caller's MAINTENANCE_PLAN or _SUPERVISE in the organization,
+    Approved (PROCESS_NOT_APPROVED, PROCESS_RETIRED), in effect (PROCESS_NOT_EFFECTIVE), applicable (PROCESS_NOT_APPLICABLE), then People's
+    `instantiate`, then each template node's requirements copied to its new node (F58).
+  - MaintenanceWork.js: `create#MaintenanceWorkOrder` takes `templateWorkEffortId` and `roleParties` (the organization's people) and makes
+    the root and steps through the checked path in its transaction, the procedure of the work's organization; its work is never approved
+    on create as corrective work is; the threshold reads the steps' estimates (F107, `treeHours`; see the findings);
+    `schedule#MaintenanceWorkOrder` takes `replacePartyId` and `withPartyId` (the root and each step of its tree, F113); `get#` names the
+    procedure and the steps' estimate; the policy's `procedureSelfApproval`; the create's request hash fixed (a finding).
+  - The generic paths (F110, F111): `clone#WorkEffort` (also on `/mantle`), `add#TaskTime` (on `/mantle`), `add#` and
+    `remove#TaskDependency` call `check#ManagedWork`; `import#TimeEntryCsv` names a managed item not available. The plan items, labels,
+    ranks, `move#TaskSubtreeProject` and task comments stay unguarded: Projects reaches them only over tasks `get#TaskAccess` admits, a
+    managed one not, and none is on the REST API (P3 review's note). Products (owner contract): CatalogRecords.js' maintenance default
+    takes only a work template `check#ProcessApplicability` admits for the model; ProductsCatalog passes unchanged.
+- BOSS:
+  - Services: Maintenance.js's `procedure` record kind (check#Record through Mantle's read), the palette's procedures, the procedure
+    choices (`procedures`, types, models, classes, facility types, steps, response kinds, measurement types and units, skills, parts;
+    get#Choices' new parameters), the link paths; WorkOrders.js' participant counts a step's assignee as its work order and moves a
+    leaver through `replacePartyId` (F113).
+  - Screens: the root (Procedures at index 4 for a reader of procedures or a planner or supervisor, `g p`, the WorkProcessApproval topic),
+    Procedures/Find (New procedure, Use procedure), Procedures/ProcedureDetail (header: Request approval, Approve, Use procedure, More:
+    Retire, Copy as a new draft, the approved PDF) with Overview, Steps (Up and Down, Edit with the response policy, Waits for, Remove),
+    Resources, Instructions, Approval and Usage, and `template/MaintenanceProcedureParts.xml`; NewWorkOrder's procedure; Work policy's
+    procedure self-approval; WorkOrderDetail's Overview facts (no new tab; its indexes untouched). `data/BossSetupMaintenanceData.xml`
+    holds the topic's link (F118; see For the lead).
+  - Demo (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved; a Prepare group of two steps, the oil change waiting
+    for it, the filter with its part, a pressure reading 7–9 bar a supervisor may waive), the room inspection (approved, for rooms), the
+    van's pre-trip check (a draft), the old compressor checklist (retired), and the AC-200 model's maintenance default naming the
+    service. No instruction is seeded (a WectInstruction is a stored file written by approval).
+- Specs:
+  - Mantle `test/work/MaintenanceProcesses` (6 features, 4.2 s): a procedure with a nested group, a dependency and a reading; a cycle,
+    a bad response kind and a group's response refused (the last at the request); a reader refused authoring, another organization
+    refused; a request answered once; a planner refused a draft; the approver approves (an instruction published, the PDF stored);
+    self-approval refused and then allowed by the policy; two work orders with distinct trees, the step policies and requirements
+    carried, one source link a node, the dependency remapped, waiting for a supervisor by the steps' hours; a retry answering the first
+    and changed input refused; another model and another organization refused; a change back to Draft, new work refused, the earlier
+    work's instruction kept after re-approval; draft, retired, not yet effective and inapplicable refused; usable list and usage; the
+    template refused update#Task, time, add#TaskTime, clone#WorkEffort, add#TaskDependency, the Tasks collection and the time import;
+    a technician reading the procedure of their work only; a People checklist task completed by set#TaskStatus.
+  - BOSS `test/Maintenance/MaintenanceProcedures` (4 features, about 2.0 s): ProcedureDetail's one qvt render as the technician of work
+    made of it (read only, no author or approver action), Find, Steps, Resources, Instructions, Approval and Usage each rendered once;
+    the approval card through `approve#NotificationMessage` (the approver told and the author not; the author refused); a step's
+    assignee counted by Admin's participant and replaced on the step; Product360's default (an applicable procedure, a room's, a
+    retired one and a work order). `MaintenanceAccess` gains the procedure rule (author, approver and planner read; resource
+    administrator, an unassigned technician and Retail refused; a work order no procedure; an author's change, a planner's and
+    Retail's refused) and the P6 menus and key; `MaintenanceWorkOrders`' Work policy render checks the new field.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceProceduresWalk` (4 features: build on ProcedureDetail, publish
+    from Commons' approvals inbox, two work orders from NewWorkOrder with a resubmit, a later edit changing neither).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle WorkProcess, PeopleChecklists, MaintenanceWorkOrders,
+  MaintenanceManagedWork, MaintenanceProcesses, WorkTimeEntries, MethodTemplates, ProductionShopFloor, WorkPlanToCashBasicFlow,
+  WorkProjectFoundation, WorkProjectHub, WorkProjectItems, WorkProjectPlan, WorkProjectServices, ProductCatalogImport, Dav, TimeImports,
+  MaintenanceScope and MaintenanceResources: 187 of 187 (24 specs, 38.7 s feature time); after the last changes MaintenanceProcesses,
+  WorkProcess, PeopleChecklists, MaintenanceWorkOrders, MaintenanceManagedWork, WorkTimeEntries and ProductCatalogImport 43 of 43.
+  mr-boss MaintenanceProcedures, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment, ProductsCatalog, ProductsAccess,
+  ManufacturingMethods, AdminLifecycle, Notifications, TimeEntries, Tasks, PeopleLifecycle and AdminRegistries: 98 features, 94 passed;
+  two failures: MaintenanceProcedures' author refusal (the message is "not addressed to you"; the assertion fixed, then 4 of 4), and
+  MaintenanceAccess' registry feature, which fails on this branch before P6 (it calls `ironstone.admin.RegistryServices.find#Settings`,
+  gone with Admin Screens Down; master's copy of the spec calls `org.moqui.admin.ReadinessServices.find#Settings`, F116). Client
+  MaintenanceWorkOrdersWalk 1 of 1 (8.3 s). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before; the new screens
+  appear only in the information list of unnamed containers; the release symlink intact. Prettier clean on the new JavaScript and on
+  Maintenance.js; MaintenanceWork.js and MaintenanceWorkOrders.spec.js were not prettier-clean before P6 and are left so (P5 edits the
+  first). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's ProcessServices and MaintenanceServices rows, check#ManagedWork's new callers, and an Added table for
+  ProcessServices' P6 services; ss-inventory's CreateProductMaintenance and a P6 line (no baseline form maps to Procedures).
+- Design edits: design-maintenance's header, §1.2, §4.1, §4.2, Procedures, ProcedureDetail and §9 as built; design-drawers-commons'
+  WorkProcessApproval row.
+- Findings, numbered by the lead F150 to F157 in order:
+  - The threshold double-counted: Mantle's WorkEffortUpdateProject EECA rolls every task's estimate up onto its root
+    (`update#ProjectTimeFromTask`), so a procedure's root already holds its steps' sum. `treeHours` reads the steps' sum when a step has
+    an estimate, else the root's own; a root's own estimate entered on a procedure's work is overwritten by the rollup at the next step
+    write.
+  - P3's `requestHash` hashed every text field as `NaN` (`String(ms(text) ?? text)`, Date.parse of a name), so changed input under an
+    operation key went unseen except for numbers and dates; fixed (P6's spec failed without it).
+  - The `WorkEffortProcedure` flow's Amend (WeApproved → WeInPlanning) is held otherwise only by Manufacturing's production flow, so its
+    row needs WORK_PROCESS_EDIT; a holder of WORK_PROCESS_EDIT can now make that move on other work through a raw `update#WorkEffort`
+    where they have that path (none of the BOSS groups does), as P3's review noted for its flow rows.
+  - An approved procedure's change goes back to Draft (amended) rather than a dated amendment of the approved definition: new work
+    waits for the next approval; work made earlier keeps its rows and resolves its instructions as made. The design's "approved content
+    is amended by a new effective change" is met for instructions (dated WectInstruction rows) and step policies (dated rows), not for
+    the WorkEffort fields (names, descriptions, order), which have no history beyond the audit log.
+  - Commons' `approve#NotificationMessage` calls the topic's service as the user under the calling screen's grant; outside a screen
+    (a spec, an API) the user needs the service's artifact grant, so the spec runs it with the artifact check aside and the decision
+    is approve#WorkProcess' own permission and scope check.
+  - The project-model writers stay unguarded (F110): plan items, labels, ranks, `move#TaskSubtreeProject`, comments; guarding them would
+    change no reachable path today.
+  - Demo instructions are not seeded: a `WectInstruction` row needs its file in the resource store with a checksum (the EECA rule).
+  - Not on the forms yet: a step's role and due offset, the change reason, and a retirement dated later (Retire is from now).
+- For the lead:
+  - budget share: mr-mantle MaintenanceProcesses about 4.2 s; mr-boss server MaintenanceProcedures about 2.0 s and MaintenanceAccess
+    +0.4 s; client unchanged (MaintenanceWorkOrdersWalk 8.3 s); budgets not changed.
+  - merge hot spots: mr-mantle `entity/MaintenanceEntities.xml` (MaintenanceWorkOrder's and MaintenancePolicy's fields, P5 extends
+    them too), `MaintenanceWork.js` (create, schedule, approve, get, the hash), `MaintenanceServices.xml`, `MaintenanceSettingsServices.xml`,
+    `WorkProcesses.js`, `TaskServices.xml`, `WorkEffortServices.xml`, `TimeServices.xml`, `CatalogRecords.js`; mr-boss
+    `data/BossSetupMaintenanceData.xml` (created here, add/add with master's F118 file: keep master's and append P6's one row, the
+    topic's link), `data/BossZMaintenanceDemoData.xml` (appended), `screen/Maintenance.xml` (subscreens, topics, keys beside P4's
+    Requests), `Maintenance.js` (linkPaths, recordKinds, choices, palette; prettier-formatted), `ContextServices.xml`,
+    `template/MaintenanceParts.xml` (the choices transition), `MaintenanceWorkOrderParts.xml`, `NewWorkOrder.xml`, `WorkPolicy.xml`,
+    `WorkOrderDetail/Overview.xml`, `WorkOrders.js`, `test/Maintenance/MaintenanceSpecLib.js` (ids, menus, keys: P4 adds Requests to
+    the same lists), `MaintenanceAccess.spec.js`, `MaintenanceWorkOrders.spec.js`, the inventories and design-maintenance.
+  - the user's calls: whether an approved procedure's change should go back to Draft (built) or keep the approved definition in effect
+    for new work until the change is approved (a versioned definition, which the design rules out beside the WorkEffort tree); built
+    meanwhile: back to Draft.
+
+**Review Nov 12 (P6).** mr-mantle 8b105d3c, mr-boss 3766af0e and this note's commit (branch `mnt/p6`), over the worker's 625a52f3,
+6d65180d and 40f725fe, after "Merge master into mnt/p6" (mr-mantle 44ae143b, mr-boss b78fa5c6; mr-moqui's `mnt/p6` fast-forwarded to
+master 4994093f). Reviewed `git diff master...mnt/p6` in both repos against P6's text, §2, §4, F4, F5, F44, F58, F68, F75, F107,
+F110, F111, F113 and F118, design §4.1, §4.2, Procedures, ProcedureDetail and §12, AGENTS.md and Practices-App-Dev; read People's
+WorkProcesses.js and Checklists.js callers, Manufacturing's `guardInstruction` and its EECA, the framework's
+`decide#NotificationMessage` and Commons' Notifications transitions, Mantle's `update#ProjectTimeFromTask` rollup and `mantle.rest.xml`.
+- The merge: `data/BossSetupMaintenanceData.xml` is master's file with P6's one row (the WorkProcessApproval topic's link) appended (no P6
+  row was at the end of BossSetupData.xml); MaintenanceEntities.xml keeps both indexes (P5's outage, P6's procedure); MaintenanceWork.js
+  requires both modules and `requestHash` is P6's fixed value function with P5's offline flag appended; the root's menu, keys, link paths
+  and record kinds hold P4's Requests (index 3, `g r`) before P6's Procedures (index 4, `g p`); MaintenanceSpecLib's menus and keys are
+  the union (the planner's Home, WorkOrders, Requests, Procedures, Equipment, Facilities); NewWorkOrder's create passes `offlineIntent`
+  and `templateWorkEffortId`; the demo, inventories and design keep both phases' text (P6's design header line first, newest).
+- Checked and found sound:
+  - People unaffected. `store#ProcessStep` and `instantiate#WorkProcess` take the checked path only for a policy with `checkedPath`
+    (WppMaintenanceProcedure); Checklists.js calls `storeStep` and `instantiate` directly on its own ChecklistTemplate rows, and the step
+    fields are copied only when set. `test/work/WorkProcess` and `PeopleChecklists` pass unchanged (no People spec is changed on the branch).
+  - The checked path. Instantiation needs MAINTENANCE_PLAN or _SUPERVISE in the procedure's organization, then refuses Retired
+    (PROCESS_RETIRED), Draft (PROCESS_NOT_APPROVED), not in effect (PROCESS_NOT_EFFECTIVE) and inapplicable (PROCESS_NOT_APPLICABLE);
+    `create#MaintenanceWorkOrder` also refuses another organization's procedure. Approval: WORK_PROCESS_APPROVE in the organization,
+    SELF_APPROVAL for the last author unless MaintenancePolicy allows it; every author's write (step, move, dependency, requirement,
+    instruction, header) goes through `touch`, which takes an approved procedure back to Draft, cancels the waiting request and names the
+    caller the last author, so an approver cannot approve a change they made. The user's call (back to Draft; existing work keeps what it
+    was made from) is built: executions copy the tree, and an execution resolves its instruction through its WeatBasedOn link at the time
+    it was made.
+  - Instantiation: distinct ids per work order, the step policies with P6's fields, one `WeatBasedOn` per node, the dependency remapped,
+    the requirements copied after People's clone (F58), the policy's guard on the execution; the operation key answers the first root and
+    changed input is OPERATION_KEY_CONFLICT (the `requestHash` NaN fix holds after the merge with P5's flag).
+  - The threshold: Mantle's rollup writes the sum of every task of a root (groups included, no per-group rollup) onto the root, so
+    `treeHours` taking the steps' sum when any step has an estimate, else the root's, counts nothing twice; the planner's approve and the
+    create agree.
+  - The managed guard (F110, F111): `clone#WorkEffort`, `add#TaskTime` and `add#`/`remove#TaskDependency` call `check#ManagedWork`;
+    the time import names a managed item not available. The unguarded writers are acceptable: none is called by a BOSS screen over a
+    managed task, and the `/mantle` REST API is granted to ADMIN alone (MantleSetupData MANTLE_API). Correction to the Built note: some
+    are on that API (`add#TaskComment`, `set#TaskMilestone`, `add#WorkEffortProduct`, `store#WorkEffortPartyTime`, `store#TimeEntry`,
+    `create#TimeEntryClockIn`); see the findings.
+  - Instructions in Manufacturing's shape: a WectInstruction row under `dbresource://mantle/content/workEffort/`, its sha256 and from date,
+    the one before ended by thruDate only; `guardInstruction`, its EECA and OperationTemplates.js are unchanged on the branch;
+    MethodTemplates (mr-mantle) and ManufacturingMethods (mr-boss) pass.
+  - The stored PDF: `Procedure.print.html.fancy` is HTML-escaped (a `.html.fancy`), no cost; a PDF that cannot be made is logged and the
+    approval kept (failure tolerance); the spec finds the WectPublishedProcedure row.
+  - Product360 (owner contract): CatalogRecords.js' maintenance default calls `check#ProcessApplicability` (a data check, allow-remote
+    false) and refuses a non-procedure, a retired one or another model's; ProductsCatalog passes.
+  - The approval card. A real click from Commons' Notifications screen, with artifact authorization on, approves under the screen's grant
+    (the topic's service is called inside the transition); a recipient who holds no WORK_PROCESS_APPROVE is refused by
+    `approve#WorkProcess` and `refuse#WorkProcess` (PERMISSION_DENIED) and the procedure stays a draft (R1 makes this the spec).
+  - Admin's participant: a step's current assignee counts as its open work order (the root's), and the transfer calls
+    `schedule#MaintenanceWorkOrder` with `replacePartyId`/`withPartyId`, which ends only the leaver's Assignee rows on the root and its steps
+    and adds the successor where not already assigned; the other assignees are untouched.
+  - Access: list, read, choices and palette are scoped by `maintenanceAccess.covers`; a technician reads only a procedure of work assigned
+    to them, read only; ProcessServices are allow-remote false and no BOSS group is granted them directly.
+- Fixes:
+  - R1 (tests, medium): the approval card feature ran `approve#NotificationMessage` with the artifact check off, so the screen grant the
+    finding relies on was never exercised and a non-approver's refusal by Mantle was untested (the author's refusal is the framework's "not
+    addressed to you"). MaintenanceProcedures now posts Commons' `Notifications/approve` and `refuse` as each user with authorization on:
+    the author refused, a planner made a recipient refused (PERMISSION_DENIED, still a draft), the approver's click approves.
+  - R2 (correctness, medium): an approval effective before an instruction an earlier approval published for later (approve effective in two
+    days, change, approve now) published the new text from now while the older WectInstruction stayed open from its later start, so the
+    older approved text took over then; with an earlier instruction ended at that later date, Manufacturing's guard ("ended stays ended")
+    failed the approval instead. `approve#WorkProcess` now refuses DATE_INVALID when a node's instruction starts after the requested
+    effective time; a later date ends the earlier one at its start. MaintenanceProcesses gains the case (it fails without the fix:
+    the early approval succeeded).
+- Findings, numbered by the lead F158 to F161 in order:
+  - `instantiate#WorkProcess` called directly for a procedure (outside `create#MaintenanceWorkOrder`) makes a guarded execution tree with
+    no work order, and with no target its applicability is not checked. No screen or grant reaches it (allow-remote false, no BOSS grant);
+    a later phase that calls it should go through the work order, or the checked path could refuse a call without one.
+  - The `/mantle` REST writers left unguarded (above) include `add#WorkEffortProduct`, which would change a procedure step's parts with
+    no `touch` (no return to Draft, no new author). ADMIN only; recorded for a consistent rule (guard every REST writer of a task, or rely
+    on the grant, as P3 did).
+  - A completed step's assignee still counts its open work order in Admin's participant and is replaced on that step; P7, which completes
+    steps, should end or skip those rows.
+  - Prettier was not run by this review (no local prettier); the changed JavaScript was kept to its 130 columns by hand.
+- Tests (release binary 03:39, `--nobuild`, this worktree, after the merge and the fixes): mr-mantle MaintenanceProcesses, WorkProcess,
+  PeopleChecklists, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceScope,
+  WorkTimeEntries, TimeImports, ProductCatalogImport, MethodTemplates: 71 of 71 (12 specs, 19.8 s feature time; MaintenanceProcesses
+  7 features, about 4.7 s). mr-boss MaintenanceProcedures, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment,
+  MaintenanceRequests, MaintenanceDowntime, ProductsCatalog, ManufacturingMethods, AdminLifecycle, Notifications, Tasks, PeopleLifecycle:
+  86 of 86 (12 specs, 19.5 s feature time; MaintenanceProcedures 4 features, about 1.7 s). Before the fixes, the merged branch passed
+  70 of 70 and 86 of 86. Lint not re-run (no screen changed by the review). Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle MaintenanceProcesses +0.5 s for R2's case; mr-boss unchanged (R1 swaps calls for renders of a transition).
+  - Merge hot spots: mr-mantle MaintenanceProcedures.js (approve), MaintenanceProcesses.spec.js (appended feature); mr-boss
+    MaintenanceProcedures.spec.js, and this plan.
+  - The user's calls: none open from P6 (the Nov 12 call is built). For a decision: whether the `/mantle` REST task writers should refuse
+    managed work like `add#TaskTime` (recommended for `add#WorkEffortProduct` and `store#TimeEntry`, which change a procedure or take time
+    on one; the grant is ADMIN's alone today).
+
 ### P7 — Execution checklists and evidence
 
 Design §4.3, §3 ProcedureSteps, StepResponse and ExecutionAmendment, the WorkItemDetail mount row, §12 (the
@@ -2777,6 +3001,18 @@ paths under `mr-boss/`.
 | F147 | P4 review: the untriaged filter drops linked rows after paging | Harmless while triage links few |
 | F148 | P4 review: P4's artifact groups moved to BossSetupMaintenanceData.xml at the merge (F118) | Done |
 | F149 | P4 review: MaintenanceFoundationWalk's refusals hold by artifact groups | None |
+| F150 | P6: Mantle's rollup writes the steps' estimates onto the root, so adding them counted twice | The threshold reads the rolled-up sum |
+| F151 | P6: P3's `requestHash` hashed text fields as NaN | Fixed in P6 |
+| F152 | P6: the procedure flow's Amend move is held otherwise only by Manufacturing's flow | It needs `WORK_PROCESS_EDIT` |
+| F153 | P6: an approved procedure's change goes back to Draft | §4 (the user's call) |
+| F154 | P6: `approve#NotificationMessage` runs under the calling screen's grant | P6 review R1 tests it through Commons' screen |
+| F155 | P6: the project-model task writers stay unguarded | No BOSS screen reaches them on managed work; REST is ADMIN's (F159) |
+| F156 | P6: demo instructions not seeded (a `WectInstruction` needs a stored file) | Later |
+| F157 | P6: a step's role and due offset, the change reason and a later retirement are not on the forms | Later |
+| F158 | P6 review: `instantiate#WorkProcess` called directly makes an execution with no work order or applicability check | Not reachable today (no remote call, no grant) |
+| F159 | P6 review: the `/mantle` REST task writers (`add#WorkEffortProduct`, `store#TimeEntry`, `create#TimeEntryClockIn`, `add#TaskComment`, `set#TaskMilestone`, `store#WorkEffortPartyTime`) do not refuse managed work; REST is ADMIN's | P7 guards `add#WorkEffortProduct`, `store#TimeEntry` and `create#TimeEntryClockIn` with `check#ManagedWork` (the managed-work rule of §4) |
+| F160 | P6 review: a completed step's assignee still counts in Admin's participant | P7 |
+| F161 | P6 review: Prettier not installed in the review's environment | Lead runs it before the end |
 
 
 ## 7. Later

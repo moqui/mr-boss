@@ -8,9 +8,9 @@
 // the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
 // Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
-// panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P15's booking policy and blackout (the
-// resource administrator's, the planner refused, Retail's facility refused; a booking approver reads the policy of the room they
-// approve only),
+// panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P6's procedure record (a reader of its
+// organization's procedures; an author's change), P15's booking policy and blackout (the resource administrator's, the planner
+// refused, Retail's facility refused; a booking approver reads the policy of the room they approve only),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -160,9 +160,12 @@ feature("the Maintenance menu, keys and palette follow the groups; the launcher 
             problems.push(`the administrator's Settings tabs: ${settings.status} ${settings.names}`)
         for (const user of [users.requester, users.otherApp])
             if (shell(user).apps.includes("Maintenance")) problems.push(`${user} has Maintenance`)
-        // P2: a user who reads no equipment (the procedure author) has Home alone
+        // P2: a user who reads no equipment (the procedure author) has no Equipment or Work orders; P6: the author has Procedures
         const author = shell(users.author, true).names
-        if (JSON.stringify(author) !== JSON.stringify(ids.homeOnlyMenu)) problems.push(`the author's menu: ${author}`)
+        if (JSON.stringify(author) !== JSON.stringify(ids.authorMenu)) problems.push(`the author's menu: ${author}`)
+        // the booking approver reads neither work, procedures nor equipment: Home and Scheduling (P15, the rooms they approve)
+        const booking = shell(users.booking, true).names
+        if (JSON.stringify(booking) !== JSON.stringify(ids.bookingMenu)) problems.push(`the booking approver's menu: ${booking}`)
         // the palette finds the scope's equipment and facilities (P2), Retail's planner none of Services', and a user who reads no
         // equipment none
         const rows = (user, text) => asUser(user, () => invoke(contextServices + "search#Records", {text}).rows || [])
@@ -688,6 +691,51 @@ feature("Home shows the planner their organization and the counters not configur
         unauthorized(readerSettings)
     }
 })
+
+feature(
+    "a procedure is read by a reader of its organization's procedures, not a resource administrator, a technician with no work of it or Retail; it is changed by an author only (P6)",
+    {
+        when() {
+            const check = (user, workEffortId = ids.compressorProcedureId) =>
+                asUser(user, () =>
+                    refusal(checkRecord, {appRoot: "Maintenance", recordType: "procedure", recordId: workEffortId})
+                )
+            // a change as each user (the Mantle service's own check, the root's grant aside)
+            const change = user =>
+                asUser(user, () =>
+                    system(() =>
+                        refusal("mantle.work.ProcessServices.store#WorkProcess", {
+                            workEffortId: ids.draftProcedureId,
+                            description: "Before each trip"
+                        })
+                    )
+                )
+            return {
+                author: check(users.author),
+                approver: check(users.approver),
+                planner: check(users.planner),
+                resources: check(users.resources),
+                tech: check(users.tech),
+                retail: check(users.retailPlanner),
+                workOrder: check(users.author, ids.inProgressOrderId),
+                authorChanges: change(users.author),
+                plannerChanges: change(users.planner),
+                retailChanges: change(users.retailPlanner)
+            }
+        },
+        then(out) {
+            out.author == "" && out.approver == "" && out.planner == ""
+            out.resources.includes("RECORD_UNAVAILABLE")
+            out.tech.includes("RECORD_UNAVAILABLE")
+            out.retail.includes("RECORD_UNAVAILABLE")
+            // a work order is no procedure
+            out.workOrder.includes("RECORD_UNAVAILABLE")
+            out.authorChanges == ""
+            out.plannerChanges.includes("PERMISSION_DENIED")
+            out.retailChanges.includes("PERMISSION_DENIED") || out.retailChanges.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
 
 feature(
     "Admin's registries hold each Maintenance bundle with exactly its group's grants, and show the settings entry to the administrator only",
