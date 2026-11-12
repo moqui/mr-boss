@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A person's emergency contacts (design-people §4 PersonalInfo; impl-people P8, the user's call on F80), shared by
+    Shared/Employee360 (Personal information: the person and HR of their employer) and Shared/PeopleSelfService (the person's own).
+    Each contact is a Person of its own with its phone, linked from the person by a dated relationship; it is private contact data,
+    which mantle.humanres.PeopleServices.store#EmergencyContact checks (the person and an HR editor of their employer, the contact's
+    revision read) and which no directory, contact list, palette or search shows. A screen includes the transition by name
+    (transition-include) and the section (section-include) with, in its context:
+    - contactOwnerPartyId: the person whose contacts these are; contactOwnerName: their name, for the dialogs' titles;
+    - contactRows: mantle.humanres's emergencyContacts (contactPartyId, name, firstName, lastName, relationshipName, phone,
+      fromDateText, revision);
+    - canEditContacts: whether the user may add, change and end them (Mantle checks again). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storeEmergencyContact">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.store#EmergencyContact" out-map="stored"
+                    in-map="{partyId:partyId, contactPartyId:(contactPartyId || null), expectedRevision:(expectedRevision || null),
+                        firstName:firstName, lastName:lastName, relationshipName:relationshipName, phone:phone, end:(end == 'true')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stored.ended ? 'Emergency contact ended' : 'Emergency contact saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+
+    <widgets>
+        <section name="EmergencyContacts">
+            <widgets>
+                <container-box>
+                    <box-header title="Emergency contacts"/>
+                    <box-toolbar>
+                        <container-dialog id="AddEmergencyContact" button-text="Add contact" icon="sym_o_person_add" width="560"
+                                title="Add an emergency contact for ${contactOwnerName}" condition="canEditContacts &amp;&amp; contactRows.length &lt; 5">
+                            <form-single name="AddEmergencyContactForm" transition="storeEmergencyContact"
+                                    map="{partyId:contactOwnerPartyId, partyRelationshipId:(contactOpenedEmploymentId || null)}">
+                                <field name="partyId"><default-field><hidden/></default-field></field>
+                                <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                <field name="firstName"><default-field title="First name"><text-line size="20"/></default-field></field>
+                                <field name="lastName"><default-field title="Last name"><text-line size="20"/></default-field></field>
+                                <field name="relationshipName">
+                                    <default-field title="Relation" tooltip="Such as spouse, parent or friend"><text-line size="20"/></default-field>
+                                </field>
+                                <field name="phone"><default-field title="Phone"><text-line size="20"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="firstName"/><field-ref name="lastName"/></field-row>
+                                    <field-row><field-ref name="relationshipName"/><field-ref name="phone"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="EmergencyContactRows" list="contactRows" skip-form="true" paginate="false" condition="contactRows.length">
+                            <field name="name"><default-field title="Name"><display/></default-field></field>
+                            <field name="relationshipName"><default-field title="Relation"><display/></default-field></field>
+                            <field name="phone"><default-field title="Phone"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditEmergencyContact_${contactPartyId}" button-text="Edit" icon="sym_o_edit"
+                                            width="560" title="Edit the emergency contact ${name}" condition="canEditContacts">
+                                        <form-single name="EditEmergencyContact" transition="storeEmergencyContact"
+                                                map="{partyId:contactOwnerPartyId, partyRelationshipId:(contactOpenedEmploymentId || null),
+                                                    contactPartyId:contactPartyId, expectedRevision:revision, firstName:firstName, lastName:lastName,
+                                                    relationshipName:relationshipName, phone:phone}">
+                                            <field name="partyId"><default-field><hidden/></default-field></field>
+                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                            <field name="contactPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="firstName"><default-field title="First name"><text-line size="20"/></default-field></field>
+                                            <field name="lastName"><default-field title="Last name"><text-line size="20"/></default-field></field>
+                                            <field name="relationshipName">
+                                                <default-field title="Relation" tooltip="Such as spouse, parent or friend"><text-line size="20"/></default-field>
+                                            </field>
+                                            <field name="phone"><default-field title="Phone"><text-line size="20"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-row><field-ref name="firstName"/><field-ref name="lastName"/></field-row>
+                                                <field-row><field-ref name="relationshipName"/><field-ref name="phone"/></field-row>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndEmergencyContact_${contactPartyId}" button-text="End" icon="sym_o_person_remove"
+                                            type="danger" width="480" title="End the emergency contact ${name}" condition="canEditContacts">
+                                        <label type="p" text="${name} is no longer an emergency contact of ${contactOwnerName} from now; the record is kept."/>
+                                        <form-single name="EndEmergencyContact" transition="storeEmergencyContact"
+                                                map="{partyId:contactOwnerPartyId, partyRelationshipId:(contactOpenedEmploymentId || null),
+                                                    contactPartyId:contactPartyId, expectedRevision:revision, end:'true'}">
+                                            <field name="partyId"><default-field><hidden/></default-field></field>
+                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                            <field name="contactPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End">
+                                                    <submit type="danger" confirmation="End the emergency contact ${name}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="name"/><field-ref name="relationshipName"/></column>
+                                <column><field-ref name="phone"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No emergency contact is recorded." type="p" style="m-muted q-pa-md" condition="!contactRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -22,7 +22,9 @@
 // parameters, Services' employer and employment refused to Retail's HR). P7: the HR officer's Checklists and Employee import in
 // Employees, HR's area (the user's call, Nov 11; Settings stays the People administrator's), a checklist template and a person's equipment HR's of the employer (the
 // directory reader refused with the same parameters, Services' template and holder refused to Retail's HR), the employee import's
-// mount HR's.
+// mount HR's. P8: the self-service employee's context their own (no People capability but self-service) and their self-service
+// opened under People by its own grant while every other People screen is refused them; My team the managers' (the directory
+// reader refused it), and the managers' menu.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -105,7 +107,17 @@ feature(
                 problems.push(`the manager's scope: ${manager.organizationPartyIds} ${JSON.stringify(manager.employments)}`)
             const otherRoot = asUser(users.hr, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
-            for (const user of [users.employee, users.otherApp, users.client, users.pass]) {
+            // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer
+            const employee = asUser(users.employee, () => invoke(context, {}))
+            if (
+                employee.capabilities?.read !== false ||
+                employee.capabilities?.self !== true ||
+                Object.keys(employee.sharedLinks || {}).join() !== "SelfService" ||
+                employee.organizationPartyIds?.length ||
+                employee.employments?.[0]?.organizationPartyId !== ids.organizationId
+            )
+                problems.push(`the employee's context: ${JSON.stringify(employee)}`)
+            for (const user of [users.otherApp, users.client, users.pass]) {
                 const message = asUser(user, () => refusal(context, {}))
                 if (!refused(message)) problems.push(`${user} gets the context: ${message || "accepted"}`)
             }
@@ -151,6 +163,9 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.adminMenu)) problems.push(`${user}'s menu: ${names}`)
         }
+        // P8: My team is the manager's
+        const manager = shell(users.manager, true).names
+        if (JSON.stringify(manager) !== JSON.stringify(ids.managerMenu)) problems.push(`the manager's menu: ${manager}`)
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
@@ -671,6 +686,31 @@ feature(
                     readerEquipment: "RECORD_UNAVAILABLE",
                     hrOtherEquipment: "RECORD_UNAVAILABLE"
                 }
+        }
+    }
+)
+
+feature(
+    "the self-service employee opens their self-service under People by its own grant and no other People screen; My team is the manager's, the directory reader refused it",
+    {
+        when() {
+            const problems = []
+            // the employee's self-service under People (its one html render), every other People screen refused
+            const self = screenRefusal(users.employee, "SelfService")
+            if (self) problems.push(`the employee is refused SelfService: ${self}`)
+            for (const path of ["Employees", "MyTeam", "Approvals"]) {
+                const refused = screenRefusal(users.employee, path)
+                if (!unauthorized(refused)) problems.push(`the employee opens ${path}: ${refused || "opened"}`)
+            }
+            // My team: the manager's (its one html render), not the directory reader's
+            const manager = screenRefusal(users.manager, "MyTeam")
+            if (manager) problems.push(`the manager is refused My team: ${manager}`)
+            const reader = screenRefusal(users.reader, "MyTeam")
+            if (!unauthorized(reader)) problems.push(`the reader opens My team: ${reader || "opened"}`)
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
         }
     }
 )

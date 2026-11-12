@@ -7,7 +7,9 @@
 // Opening People needs the root grant of one of the user's groups (BOSS_PEOPLE, the root user group, or BOSS_PEOPLE_ADMIN), read
 // directly so an inherited or disabled authorization cannot widen it (impl-admin F35, as Insights.js); the root grant opens
 // navigation only. A system administrator (ADMIN) opens everything. A Projects client contact (PROJECT_CLIENT) never opens
-// People, a PASS public account holds no BOSS group, and BOSS_PEOPLE_SELF has no root grant (self-service is Commons', P8).
+// People, a PASS public account holds no BOSS group, and BOSS_PEOPLE_SELF has no root grant: a self-service employee opens their
+// self-service alone, under Commons or People (P8: a non-inheritable grant on it and its context, as Admin's settings index), and
+// gets a context of their own and nothing else of People.
 //
 // Later phases extend the tables below rather than the functions: areas (menu areas whose authorization is a capability),
 // recordKinds (a kind of record: its read and, once built, its screen), searchFinds (the palette), choiceSources (the
@@ -25,8 +27,13 @@ const organizationOptionLimit = 100
 // administrator's (P1); P6: the hire and employment change wizards (BOSS_PPL_EMPLOYMENT), HR's. Home is every People user's.
 const areas = {
     settings: "Settings",
-    employment: "Employees/HireEmployee"
+    employment: "Employees/HireEmployee",
+    // P8: My team, the managers' (BOSS_PPL_TEAM; the capability team is PEOPLE_TEAM_VIEW's)
+    myTeam: "MyTeam"
 }
+// P8: the self-service screen (Shared/PeopleSelfService.xml, mounted at People/SelfService and Commons/People/SelfService), whose
+// own grant opens it to a self-service employee without People (BOSS_PPL_SELF)
+const selfServiceLocation = "component://mr-boss/screen/Shared/PeopleSelfService.xml"
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Insights.js and Commerce.js): screenAuthz reads the groups' rows once, and
@@ -78,6 +85,18 @@ function scope() {
     const capabilities = Object.assign({read: grants.read}, people?.capabilities || {})
     for (const [name, area] of Object.entries(areas)) capabilities[name] = areaGrant(grants, area)
     return {read: grants.read, people: people || {}, capabilities}
+}
+// P8: a self-service employee without People: their own grant on the self-service screen (BOSS_PPL_SELF), and nothing else.
+function selfServiceOnly(grants = rootGrants()) {
+    if (
+        grants.read ||
+        !ec.user.userId ||
+        ec.user.hasPermission("PROJECT_CLIENT") ||
+        !ec.user.hasPermission("PEOPLE_SELF_SERVICE")
+    )
+        return false
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(selfServiceLocation, screenAuthz(groupIds)).allowed.length > 0
 }
 function required(userScope = scope()) {
     if (!userScope.read) denied("PEOPLE_UNAVAILABLE", "People is not available")
@@ -144,10 +163,32 @@ const linkPaths = [
     "Employees/ChecklistTemplates",
     "Employees/EmployeeImport",
     "Tasks/WorkItemDetail",
-    "Employees/EquipmentDetail"
+    "Employees/EquipmentDetail",
+    // P8: the manager's team and the user's own self-service (design §3)
+    "MyTeam",
+    "SelfService"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
+    const grants = rootGrants()
+    // P8: a self-service employee without People: no capability but their self-service, their own employments and its link
+    if (selfServiceOnly(grants)) {
+        const own = call("mantle.humanres.PeopleServices.get#Scope")
+        return {
+            capabilities: {read: false, self: true},
+            organizationPartyIds: [],
+            activeOrganizationPartyId: null,
+            allOrganizations: false,
+            organizationOptions: [],
+            unitPartyIds: [],
+            partyId: own.partyId || null,
+            employments: Array.from(own.employments || []),
+            appRoot: "People",
+            linkBase: "//People",
+            webBase: "/qapps/People",
+            sharedLinks: {SelfService: "//People/SelfService"}
+        }
+    }
     const userScope = required()
     const people = userScope.people
     return {
@@ -853,9 +894,77 @@ function changeParameters(partyRelationshipId, changeKind, draft) {
     return out
 }
 
-const operations = {sharedContext, checkRecord, choices, search, employee360, employee360Link, lookup}
+// ===== self-service, the team and Today (P8; design §3, §1.4) =====
+// Where a People decision waiting is decided: a position's activation on PositionDetail, an employment change on the person's
+// Employee360 (People's mount; the approver's notice opens the same).
+function decisionUrl(row) {
+    if (row.approvalKindEnumId === "PakPosition")
+        return "/qapps/People/Staffing/PositionDetail?emplPositionId=" + encodeURIComponent(row.sourceId)
+    if (row.approvalKindEnumId === "PakEmploymentChange" && row.partyId)
+        return "/qapps/People/Employees/Employee360?partyId=" + encodeURIComponent(row.partyId)
+    return "/qapps/People/Approvals"
+}
+// get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
+// People root, and the shell gathers sources from the roots a user may open, F64; Home and the panel take each service once):
+// the People decisions waiting on the user (find#DueWork's decision, PEOPLE_REQUEST_APPROVE), each opening where it is decided.
+// A user without PEOPLE_REQUEST_APPROVE, and another user's Today, get none of them; the self-service items of later phases
+// (leave starting, a qualification expiring), each answering nothing without PEOPLE_SELF_SERVICE, join here.
+function today(p) {
+    const label = "People"
+    if (!ec.user.userId || (p.userId && p.userId !== ec.user.userId)) return {items: [], label}
+    // the decisions are a decider's (PEOPLE_REQUEST_APPROVE), with a party to decide as
+    if (!ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") || !ec.user.userAccount?.partyId) return {items: [], label}
+    const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
+    return {
+        label,
+        items: Array.from(found.dueWork || []).map(row => ({
+            kind: "approval",
+            workEffortId: null,
+            requestId: null,
+            title: row.title,
+            dueDate: null,
+            startDate: null,
+            endDate: null,
+            allDay: false,
+            priority: null,
+            statusId: null,
+            assignees: [],
+            canUpdate: false,
+            hasCallLink: false,
+            url: decisionUrl(row),
+            record: null
+        }))
+    }
+}
+// get#SelfServiceContext: the links of Shared/PeopleSelfService under the app that mounts it (People or Commons): the user's own
+// employee record (People's mount for a People user, else Commons'), and under People the approvals and Home. Another root is
+// refused (PEOPLE_CONTEXT). It grants nothing: get#SelfService checks the user.
+function selfServiceContext(p) {
+    if (!["People", "Commons"].includes(p.appRoot)) denied("PEOPLE_CONTEXT", "Self-service is not available here")
+    const partyId = ec.user.userAccount?.partyId || null
+    const record = partyId ? employee360Link({partyId}) : {url: null}
+    const peopleUser = rootGrants().read
+    return {
+        appRoot: p.appRoot,
+        employee360Url: record.url || null,
+        approvalsUrl: peopleUser ? "/qapps/People/Approvals" : null,
+        peopleHomeUrl: peopleUser ? "/qapps/People/Home" : null
+    }
+}
+
+const operations = {
+    sharedContext,
+    checkRecord,
+    choices,
+    search,
+    employee360,
+    employee360Link,
+    lookup,
+    today,
+    selfServiceContext
+}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown People operation " + op)
     return operations[op](p || {})
 }
-;({execute: run, employmentLink, changeParameters})
+;({execute: run, employmentLink, changeParameters, decisionUrl})

@@ -16,12 +16,15 @@ along with this software (see the LICENSE.md file). If not, see
     IronStone People for every BOSS user, out of the Commons menu and reached from links (Projects' PersonDetail, Admin's
     UserDetail, a person's own record). P2 mounts Employee360 with Commons' context (ironstone.people's employee360Apps): the
     public work card of a person the user's People scope admits, and for the user's own record their personal information with
-    the corrections they may make themselves. SelfService joins in P8. Nothing here needs the People root grant: what shows is
-    what mantle.humanres.PeopleServices admits. -->
+    the corrections they may make themselves. P8 mounts SelfService (Shared/PeopleSelfService.xml: the user's own employment,
+    requests, People tasks and emergency contacts), linked from Commons Home's People card and Today. Nothing here needs the People
+    root grant: what shows is what mantle.humanres.PeopleServices admits. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" default-menu-include="false" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="Employee360">
         <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>
+        <!-- P8: the user's own self-service (design §3 SelfService), the definition People mounts at People/SelfService -->
+        <subscreens-item name="SelfService" location="component://mr-boss/screen/Shared/PeopleSelfService.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-active/>

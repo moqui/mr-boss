@@ -30,7 +30,9 @@ along with this software (see the LICENSE.md file). If not, see
     Refuse, decide#EmploymentChange). P7, under People: AssignedEquipment (mantle.humanres.PeopleServices.get#AssignedEquipment, the
     person's and HR's: each piece held, its EquipmentDetail and its open return task), and in Employment changes Withdraw for a
     change set for a later date (withdraw#EmploymentChange, HR's) and Request access again when a hire's or separation's access
-    request failed (ironstone.admin.LifecycleServices, keyed by the change). Compensation (P23), TimeAndLeave (P12) and
+    request failed (ironstone.admin.LifecycleServices, keyed by the change). P8: the emergency contacts beside Personal information
+    (template/PeopleEmergencyContacts.xml: the person and HR read them; the person and an HR editor add, change and end them,
+    wherever they may change the personal information: People's mount, and Commons' for their own record). Compensation (P23), TimeAndLeave (P12) and
     SkillsAndReviews (P18, P20) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
@@ -46,6 +48,9 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
     </transition>
+
+    <!-- P8: an emergency contact added, changed or ended (the person and an HR editor of their employer; Mantle checks) -->
+    <transition-include name="storeEmergencyContact" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
 
     <!-- P6: an employment change's step decided by its approver: Mantle rechecks the approver and the change's revision; the last
         approval applies the change -->
@@ -142,6 +147,12 @@ along with this software (see the LICENSE.md file). If not, see
             changeEmploymentId = record.partyRelationshipId || null
             identificationRows = Array.from(personal.identifications || [])
             canEdit = editable.length > 0
+            // P8: the emergency contacts, in Personal information: changed by whom may change the personal information there
+            contactOwnerPartyId = partyId
+            contactOwnerName = overview.personName
+            contactOpenedEmploymentId = record.partyRelationshipId || null
+            contactRows = Array.from(personal.emergencyContacts || [])
+            canEditContacts = canEdit
             canEditHr = editable.includes('firstName')
             personalValues = Object.assign({}, personal, personal.homeAddressFields || {}, {partyId, partyRelationshipId:
                 record.partyRelationshipId || null, expectedRevision: personal.revision || null})
@@ -498,6 +509,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="canEditHr"/>
                             </box-body>
                         </container-box>
+                        <!-- P8: the emergency contacts, private contact data of the person -->
+                        <section-include name="EmergencyContacts" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
                     </widgets>
                 </section>
 

@@ -17,7 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     preference), the Today strip (the TodayPanel's items, ironstone.commons.CommonsServices.get#TodayView), five counters in a
     dashboard (Tasks today, Overdue tasks, Events today, Unread notifications, Requests assigned), the lists of my work (tasks this
     week, requests assigned, events of the next 7 days) and the shortcuts, which open the shell's quick create, and the recent pages
-    (M9) and files (M8). -->
+    (M9) and files (M8). People's card (owner contract, impl-people P8, F64; Home has no card registry): for a user with People
+    self-service, their employment and the counts of their open People requests and tasks over
+    mantle.humanres.PeopleServices.get#SelfService, opening Commons/People/SelfService, which stays out of the menu. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
 
@@ -122,6 +124,18 @@ along with this software (see the LICENSE.md file). If not, see
                     .map((event) => ({workEffortId: event.workEffortId, title: event.title, allDay: !!event.allDay,
                         whenText: event.allDay ? fmt(Number(event.startMillis), 'EEE MMM d') + ' · ' + ec.l10n.localize('All day') :
                             fmt(Number(event.startMillis), 'EEE MMM d h:mm a') + (event.endMillis ? ' – ' + fmt(Number(event.endMillis), 'h:mm a') : '')}))
+        }]]></script>
+        <!-- People's card (impl-people P8): the user's own self-service summary, none without PEOPLE_SELF_SERVICE (checkOnly) -->
+        <service-call name="mantle.humanres.PeopleServices.get#SelfService" out-map="peopleSelf" transaction="force-new"
+                ignore-error="true" in-map="{checkOnly:true}"/>
+        <script><![CDATA[{
+            ec.message.clearErrors()
+            peopleCard = peopleSelf?.available ? {
+                employmentText: Array.from(peopleSelf.employments || []).map((row) => [row.jobTitle, row.organizationName].filter((part) => part).join(', ')).join(' · ')
+                    || ec.l10n.localize('No current employment'),
+                countText: (peopleSelf.openRequestCount || 0) + ' ' + ec.l10n.localize('open requests') + ' · '
+                    + (peopleSelf.openTaskCount || 0) + ' ' + ec.l10n.localize('People tasks')
+            } : null
         }]]></script>
         <!-- M9: the pages the user opened or changed lately (ironstone.commons.KnowledgeServices.get#RecentPages, which leaves out what the user
             may no longer read); one that cannot be read leaves the card empty -->
@@ -276,6 +290,15 @@ along with this software (see the LICENSE.md file). If not, see
                 </box-body-nopad></container-box>
             </row-col>
             <row-col md="4">
+                <!-- People (impl-people P8): the user's self-service, for an employee with it -->
+                <section name="PeopleCard" condition="peopleCard"><widgets>
+                    <container-box><box-header title="My employment"/><box-toolbar>
+                        <link url="../People/SelfService" link-type="anchor" text="Self-service"/>
+                    </box-toolbar><box-body>
+                        <label type="p" text="${peopleCard.employmentText}" style="q-mb-xs"/>
+                        <label type="p" text="${peopleCard.countText}" style="text-caption m-muted q-mb-none"/>
+                    </box-body></container-box>
+                </widgets></section>
                 <!-- shortcuts: the shell's quick-create kinds -->
                 <container-box><box-header title="Shortcuts"/><box-body>
                     <render-mode><text type="qvt"><![CDATA[<div class="column q-gutter-sm items-start">
