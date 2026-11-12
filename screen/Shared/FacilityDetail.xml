@@ -193,6 +193,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 facility.bookableText].filter(Boolean).join(' · ')}"
                                     type="p"
                                     style="q-mb-none"/>
+                            <!-- Maintenance (impl-maintenance P5): its current state, from its one open outage -->
+                            <link url="${sharedLinks['Equipment/Downtime']}" text="${facility.outage?.text}" link-type="anchor"
+                                    style="text-negative" condition="appRoot == 'Maintenance' &amp;&amp; facility.outage"
+                                    parameter-map="{resourceUnavailabilityId:facility.outage?.resourceUnavailabilityId}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <!-- Maintenance (impl-maintenance P2): Move under another facility, its effect shown before it is made -->

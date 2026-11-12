@@ -106,6 +106,8 @@ const outOfService = assetId =>
         .condition("assetId", assetId)
         .condition("unavailabilityKindEnumId", "RukActual")
         .condition("thruDate", "is-null", null)
+        // a corrected row is history (impl-maintenance P5)
+        .condition("supersededByUnavailabilityId", "is-null", null)
         .count() > 0
 function availabilityOf(asset, assignments) {
     if (hasLeft(asset)) return {availabilityText: "Left the facility", availabilityColor: "grey-8", blocked: true}

@@ -632,7 +632,8 @@ feature(
                     problems.push(`MAINTENANCE_ALL_ORGANIZATIONS's bundles: ${holders("MAINTENANCE_ALL_ORGANIZATIONS")}`)
             })
             const settingsKeys = user =>
-                Array.from(asUser(user, () => invoke(registry + "find#Settings", {})).entries || []).map(
+                // the settings index is the framework's since Admin Screens Down (impl-maintenance F116)
+                Array.from(asUser(user, () => invoke("org.moqui.admin.ReadinessServices.find#Settings", {})).entries || []).map(
                     entry => entry.settingsKey
                 )
             if (!settingsKeys(users.admin).includes("maintenance.settings"))
@@ -642,6 +643,50 @@ feature(
         },
         then({problems}) {
             problems.join("\n") == ""
+        }
+    }
+)
+
+// P5: recording an outage is a supervisor's, a resource administrator's or an assigned technician's (Mantle's
+// record#ResourceUnavailability): the supervisor links Room 201's open outage, the planner is refused, and Retail's forklift is
+// refused to the supervisor as a missing one; restoring is the supervisor's, not the technician's
+feature(
+    "recording and restoring an outage is the supervisor's: the planner is refused, and Retail's forklift is refused to both",
+    {
+        when() {
+            const record = "mantle.work.ResourceBookingServices.record#ResourceUnavailability"
+            const write = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const room = {facilityId: ids.roomOutageFacilityId, unavailabilityReasonEnumId: "RurSafety"}
+            return {
+                supervisor: write(users.supervisor, record, room),
+                planner: write(users.planner, record, room),
+                otherAsset: write(users.supervisor, record, {
+                    assetId: ids.otherAssetId,
+                    unavailabilityReasonEnumId: "RurEquipmentFault"
+                }),
+                techRestores: write(users.tech, "mantle.work.ResourceBookingServices.end#ResourceUnavailability", {
+                    resourceUnavailabilityId: ids.roomOutageId,
+                    expectedRevision: 1,
+                    dispositionEnumId: "MdispAvailable"
+                }),
+                rows: system(() =>
+                    ec.entity
+                        .find("mantle.work.effort.ResourceUnavailability")
+                        .condition("facilityId", ids.roomOutageFacilityId)
+                        .count()
+                )
+            }
+        },
+        then({supervisor, planner, otherAsset, techRestores, rows}) {
+            supervisor == ""
+            rows == 1
+            planner.includes("PERMISSION_DENIED")
+            otherAsset.includes("RECORD_UNAVAILABLE")
+            techRestores.includes("PERMISSION_DENIED")
         }
     }
 )

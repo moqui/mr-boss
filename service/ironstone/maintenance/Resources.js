@@ -9,6 +9,7 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
 const resources = ec.resource.script("component://mr-mantle/service/mantle/product/MaintenanceResources.js")
+const outages = ec.resource.script("component://mr-mantle/service/mantle/work/ResourceOutages.js")
 const {find, one, call, ms} = lib
 
 const ASSET = "mantle.product.asset.Asset"
@@ -52,6 +53,8 @@ function equipment(p) {
     const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
     const warrantyExpired = !!warrantyThru && warrantyThru < day
     const left = ["AstDelivered", "AstDeactivated"].includes(asset.statusId)
+    // P5: out of service while its one open outage is in force (the record was checked above)
+    const down = left ? null : outageState({assetId: asset.assetId})
     return {
         asset: {
             assetId: asset.assetId,
@@ -66,8 +69,9 @@ function equipment(p) {
             softIdentifier: asset.softIdentifier || "",
             comments: asset.comments || "",
             statusText: statusText(asset.statusId),
-            stateText: left ? statusText(asset.statusId) : "In service",
-            stateColor: left ? "grey-8" : "positive",
+            stateText: left ? statusText(asset.statusId) : down ? "Out of service" : "In service",
+            stateColor: left ? "grey-8" : down ? "negative" : "positive",
+            outage: down,
             ownerName: asset.ownerPartyId ? names[asset.ownerPartyId] || asset.ownerPartyId : "",
             organizationPartyId,
             facilityId: facilityShown ? asset.facilityId : null,
@@ -334,6 +338,9 @@ function facilityDetail(p) {
         pageSize: 100
     })
     const self = facilityRow(facility)
+    // P5: out of service while its one open outage is in force
+    const down = outageState({facilityId: facility.facilityId})
+    if (down) Object.assign(self, {stateText: "Out of service", stateColor: "negative"})
     const contact = call("mantle.facility.FacilityServices.get#Facility", {facilityId: facility.facilityId})
     const address = [contact.address1, contact.address2, contact.city, contact.postalCode].filter(Boolean).join(", ")
     const phone = [contact.countryCode, contact.areaCode, contact.contactNumber].filter(Boolean).join(" ")
@@ -374,7 +381,8 @@ function facilityDetail(p) {
             storedTimeZone: facility.timeZone || null,
             capacity: facility.capacity,
             bookableFlag: facility.bookable || null,
-            locationCount: null
+            locationCount: null,
+            outage: down
         }),
         contact: {
             address1: contact.address1 || "",
@@ -405,6 +413,19 @@ function facilityRow(facility) {
     })
     const row = Array.from(found.facilityList || []).find(item => item.facilityId === facility.facilityId) || {}
     return Object.assign({}, row, {ownerName: row.organizationName || ""})
+}
+
+// A resource's open outage in force, for its header (P5): since when and why, and the outage's id for Downtime.
+function outageState(resource) {
+    const row = outages.openOutage(resource)
+    if (!row) return null
+    return {
+        resourceUnavailabilityId: row.resourceUnavailabilityId,
+        text:
+            "Out of service since " +
+            dateText(row.fromDate) +
+            (row.unavailabilityReasonEnumId ? " (" + enumText(row.unavailabilityReasonEnumId).toLowerCase() + ")" : "")
+    }
 }
 
 const operations = {equipment, assignedEquipment, facilityDetail}
