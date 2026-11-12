@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Team calendar (design-people §13 TeamCalendar, Context passed; design-drawers-commons §7 Calendar; impl-people P12): the
+    Commons Calendar component (screen/Commons/Calendar.qvue) in its resource mode, read only, with the transitions it calls answered
+    by mantle.humanres.LeaveServices.get#TeamAbsences: who is out among the people the user sees in People (their own leave and their
+    colleagues', the people sharing a department, team or manager with them, a manager's reports', an HR reader's employers'), each approved absence as "{person} · Out" (a morning or an afternoon said so),
+    never its leave type, its reason or a refused request; one the user reads opens LeaveRequestDetail. Nothing moves or is edited
+    here: changes are the request's. The same absences are the Team absence CalDAV collection (read only, CX-SYNC). Shifts join with
+    P14. The terminal: an agenda of the next two weeks (TeamCalendarTui). Every People user's and a self-service employee's (the time
+    area's own grant). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Team calendar" default-menu-index="6" menu-image="sym_o_calendar_month" menu-image-type="icon"
+        render-modes="vue,qvue,tui" server-static="vue,qvue">
+
+    <parameter name="view"/>
+    <parameter name="date"/>
+
+    <transition name="calendarSetup" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarSetup').call() || {}
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse({calendarList: [], defaultCalendarId: null, defaults: out.defaults || {}, timeZone: out.timeZone,
+                todayText: out.todayText, nowText: out.nowText, me: out.me, roomOptions: [], failedSources: [],
+                resource: {title: ec.l10n.localize('Who is out'), readOnly: true}})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="calendarEvents" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('mantle.humanres.LeaveServices.get#TeamAbsences').parameters({start: start || '', end: end || ''}).call() || {}
+            const failed = ec.message.hasError()
+            ec.message.clearErrors()
+            const detail = '/qapps/People/Time/LeaveRequestDetail?leaveRequestId='
+            ec.web.sendJsonResponse(failed ? {eventList: [], failedSources: ['absences'], skippedCalendarIdList: []} : {
+                eventList: Array.from(out.eventList || []).map(event => Object.assign({}, event,
+                    {url: event.openable ? detail + encodeURIComponent(event.leaveRequestId) : null})),
+                failedSources: [], skippedCalendarIdList: []})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- no item here is an event with a popover; an answer keeps the component from failing on a stray click -->
+    <transition name="eventSummary" method="get" read-only="true">
+        <actions><script>ec.web.sendJsonResponse({visible: false})</script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commons/Calendar.qvue" template="false"/>
+            <!-- the terminal: TeamCalendarTui, the plain screen beside this one, an agenda of the next two weeks -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "TeamCalendarTui",
+                url: sri.buildUrl("../TeamCalendarTui").addParameters({date: date || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">The team calendar is a .qvue screen: open it under /qapps.</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

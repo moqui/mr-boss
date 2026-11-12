@@ -43,6 +43,10 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
+legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own
+record (`LeaveRequest`).
+
 **People P7 (Nov 11, 2026):** no baseline form is mapped to the lifecycle checklists (ChecklistTemplates is new), the equipment custody of People's EquipmentDetail (crosscut §3.10's People row) or the employees import (EmployeeImport, the shared DataImport); their Implemented in is in usl-inventory's People rows.
 
 **People P2 (Nov 11, 2026):** **Implemented in** of the directory and Employee360 rows ([impl-people P2](impl-people.md#p2--employees-and-employee360)): FindParty's search and list forms name `People/Employees/List`; EditParty's person, identification (read, masked, no tax types), phone and postal purpose, note and content forms name `People/Employees/Employee360` and the region that carries each. AddIdentificationForm is not built (identifications are read only in P2), and the email, web and other purpose forms are not People's: a person's work contacts are kept in Commons.

@@ -543,7 +543,14 @@ Contracts:
   the owner's service with the owner's checks, a proposed calendar kind in Mantle
   `get#DavCollections`: team absence and shifts, my work orders and due PM, the campaign calendar,
   interviews. A projected CardDAV book works the same way (Sales "My accounts"). No rows are copied
-  into a personal calendar or book.
+  into a personal calendar or book. As built (impl-people P12): the projected calendar kind is a
+  `mantle.work.calendar.CalendarProjection` row (projectionId, title, ownerServiceName) the owner's
+  component seeds; `CalendarDavServices.get#DavCollections` lists `projected-{projectionId}` (VEVENT,
+  read only) for a user its owner admits and `get#DavObjects` answers its owner's event maps
+  (`define#ProjectionOwner`: admitted, eventList), reading no record of the owner itself; put and
+  delete refuse it (403), after the DAV server's own read-only refusal. People's Team absence
+  (`LeaveServices.get#AbsenceProjection`) is the first; shifts, interviews, Maintenance's and
+  Marketing's register the same way.
 - **CX-MAIL-INTAKE (L3).** Business mail intake is an `EmailRuleAction` enumeration whose
   `optionValue` names the owner's service, reached by a plus-tag intake address, as Projects'
   `createRequest` and `createWorkItem` already are. Proposed actions: `createApplication`,

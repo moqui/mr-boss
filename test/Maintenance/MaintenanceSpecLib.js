@@ -40,6 +40,10 @@ const ids = {
     triagedRequestId: "BOSS_MNT_REQ_AHU",
     otherReportId: "BOSS_MNT_REQ_AHU2",
     openRequestId: "BOSS_MNT_REQ_COMP",
+    // P5: Room 201 out of service (a safety stop linked to its work order) and the compressor's restored belt failure
+    roomOutageId: "BOSS_MNT_OUT_ROOM201",
+    roomOutageFacilityId: "BOSS_MNT_ROOM_201",
+    restoredOutageId: "BOSS_MNT_OUT_COMP_BELT",
     // the menu of design §1.2 built so far: a Maintenance user's who reads work and equipment, and with Settings the Maintenance
     // administrator's; a user who reads none (a procedure author) has Home alone
     // (P4: Requests, a planner's or supervisor's)

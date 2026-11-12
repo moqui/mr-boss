@@ -56,10 +56,11 @@ function options(p) {
     return generic.choicesOf(sources(p.datasetId || null))
 }
 // The engine's query of the typed choices (the framework's queryOf, with Insights' reason codes): every field one of the
-// dataset's own. A time grain's buckets follow the display zone and week start of the organization in scope where it set
-// them (Insights Settings, P10), else the viewer's.
-function queryOf(p, found, organizationPartyId) {
-    return generic.queryOf(p, found, organizationPartyId ? insights.calendarParameters(organizationPartyId, p.timeGrain) : {}, denied)
+// dataset's own. A time grain's buckets follow the calendar of Insights' policy for the context (reportPolicy.calendar: the
+// display zone and week start of the organization in scope where it set them, Insights Settings, P10), else the viewer's,
+// through the framework's calendarParameters, as Tools' Analysis reads the root's policy.
+function queryOf(p, found, context) {
+    return generic.queryOf(p, found, generic.calendarParameters(context.reportPolicy.calendar, p.timeGrain), denied)
 }
 // get#AnalysisResult: the choices run as the viewer. A guard's refusal is the answer's reason, with its code.
 function result(p) {
@@ -73,7 +74,7 @@ function run(p) {
     const context = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     const found = sources(p.datasetId)
     if (!found.dataset) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
-    const query = queryOf(p, found, context.organizationPartyId)
+    const query = queryOf(p, found, context)
     // one organization asked for by name (Assist): the dataset narrowed to it on the field its row filter scopes by, under
     // the row filter, which still decides what the viewer reads
     if (p.narrowOrganization && p.organizationPartyId && found.dataset.organizationField)
@@ -111,11 +112,7 @@ function store(p) {
     if (!visualizations.includes(visualization)) denied("VALUE_INVALID", "Choose how the analysis is shown")
     const found = sources(p.datasetId)
     if (!found.dataset) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
-    const query = queryOf(
-        p,
-        found,
-        insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null}).organizationPartyId
-    )
+    const query = queryOf(p, found, insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null}))
     // refused now, as it would be on every render (an amount across currencies, a ratio averaged)
     const checked = result(p)
     if (!checked.available) denied(checked.refusedCode, checked.reason)

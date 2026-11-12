@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     (the root group alone) is told what Home holds. P3: the work order counters (open, unassigned, high priority, overdue), each
     opening the filtered list, the others still not configured; My work, the user's open work orders; Team work, each team's open,
     active, unscheduled, blocked and overdue work, for a broad reader only (a technician sees no team totals); and New work order
-    for a planner or supervisor (mantle.work.MaintenanceReportServices.get#MaintenanceHome). -->
+    for a planner or supervisor (mantle.work.MaintenanceReportServices.get#MaintenanceHome). P5: Unavailable resources, the equipment
+    and facilities out of service now (their open outages), opening Downtime. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -63,7 +64,8 @@ along with this software (see the LICENSE.md file). If not, see
                 {counter: 'Overdue work orders', source: 'Work orders', count: counters.overdueCount, saved: 'overdue'},
                 {counter: 'Overdue preventive maintenance', source: 'Preventive plans', count: null},
                 {counter: 'Unknown meter readings', source: 'Equipment meters', count: null},
-                {counter: 'Unavailable resources', source: 'Downtime', count: null}
+                {counter: 'Unavailable resources', source: 'Downtime', count: counters.downResourceCount ?? null,
+                    linkUrl: sharedLinks['Equipment/Downtime'], linkParameters: Object.assign({open: 'true'}, scopeParameters)}
             ].map(row =&gt; Object.assign(row, {state: row.count == null ? 'Not configured' : String(row.count)}))"/>
         <set field="myWorkList" from="home?.myWorkList || []"/>
         <set field="teamWorkList" from="home?.teamWorkList || []"/>
@@ -113,13 +115,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Counters"/>
                     <box-body>
-                        <label text="Each count opens its work orders. Preventive plans, meters and downtime are counted once they are set up; until then they are not configured, never zero."
+                        <label text="Each count opens its list. Preventive plans and meters are counted once they are set up; until then they are not configured, never zero."
                                 type="p" style="text-caption m-muted"/>
                         <form-list name="CounterRows" list="counterRows" skip-form="true" paginate="false">
                             <field name="counter">
                                 <default-field title="Counter">
-                                    <link url="${listLink}" url-type="plain" text="${counter}" link-type="anchor" condition="count != null"
-                                            parameter-map="Object.assign({savedFind: saved}, scopeParameters)"/>
+                                    <link url="${linkUrl || listLink}" url-type="plain" text="${counter}" link-type="anchor" condition="count != null"
+                                            parameter-map="linkParameters || Object.assign({savedFind: saved}, scopeParameters)"/>
                                     <label text="${counter}" type="span" condition="count == null"/>
                                 </default-field>
                             </field>

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- WorkOrderDetail's Conversation tab (design-maintenance §3 WorkConversationFiles; impl-maintenance P3, F69, F82): the work order's
     messages and activity log (chatter on its root WorkEffort, served under Maintenance for a work order its check admits). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Conversation" default-menu-index="4">
+        default-menu-title="Conversation" default-menu-index="80">
     <parameter name="workEffortId"/>
     <widgets>
         <section name="WorkOrderConversation" condition="recordFound">

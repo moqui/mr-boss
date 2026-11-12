@@ -8,5 +8,6 @@
     "integration": ["channel", "marketplace", "connector"],
     "retry": ["resend", "reprocess", "try again"],
     "metric": ["kpi", "measure"],
-    "dashboard": ["scorecard", "overview"]
+    "dashboard": ["scorecard", "overview"],
+    "leave": ["time off", "vacation", "holiday", "pto", "day off"]
 }

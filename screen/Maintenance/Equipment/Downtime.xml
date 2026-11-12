@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Equipment › Downtime (design-maintenance §6 Downtime; style-guide §3.2 List; impl-maintenance P5): the actual
+    outages of the user's maintenance scope (mantle.work.ResourceBookingServices.find#ResourceUnavailability), the one availability
+    fact Manufacturing's equipment-fault stops and Maintenance both record, so a stop shows here once with its production context.
+    DowntimeFind (the list's header filters: equipment, facility with those inside it, reason, planned or unplanned, open or ended,
+    source); DowntimeRows (resource, state with its restoration and disposition, interval and elapsed time, reason and
+    classification, the production stop or the work orders, who recorded and corrected it, the bookings it affects and the work
+    orders on it still open); RecordDowntime (Record outage, a supervisor's, resource administrator's or technician's: Mantle admits a
+    technician only from their assigned work, which WorkOrderDetail's Downtime tab gives); RestoreResource (Restore, a supervisor's
+    or resource administrator's, the only restoration: linked work orders still open are listed and stay open, and it then asks
+    why); and Correct (a correction in force over
+    the outage kept). With resourceUnavailabilityId its correction history shows. Open to a work or resource reader; Mantle checks
+    every action again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Downtime" default-menu-index="3">
+    <parameter name="assetId"/>
+    <parameter name="facilityId"/>
+    <parameter name="unavailabilityReasonEnumId"/>
+    <parameter name="planned"/>
+    <parameter name="open"/>
+    <parameter name="source"/>
+    <parameter name="resourceUnavailabilityId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="recordDowntime" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+    <transition-include name="restoreResource" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+    <transition-include name="correctDowntime" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+    <actions>
+        <set field="outageList" from="null"/>
+        <set field="history" from="null"/>
+        <service-call name="mantle.work.ResourceBookingServices.find#ResourceUnavailability" out-map="context"
+                transaction="force-new" ignore-error="true"
+                in-map="{resourceUnavailabilityId:resourceUnavailabilityId || null, assetId:assetId || null, facilityId:facilityId || null,
+                    unavailabilityReasonEnumId:unavailabilityReasonEnumId || null, planned:planned || null, open:open || null,
+                    source:source || null, includeCorrected:(resourceUnavailabilityId ? 'true' : null), pageIndex:pageIndex || 0}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="outageAvailable" from="outageList != null"/>
+        <set field="outageList" from="outageList || []"/>
+        <set field="historyRows" from="history || []"/>
+        <set field="canRestoreAny" from="!!canRestore"/>
+        <set field="outageTab" from="false"/>
+        <set field="recordFixed" from="false"/>
+        <set field="recordValues" from="{assetId:assetId, facilityId:(assetId ? null : facilityId)}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-x-md q-mb-sm">
+            <container style="col-12 col-md">
+                <label text="Downtime" type="h5"/>
+                <label text="Equipment and facilities out of service, from a production stop, a work order or a report. Completing work does not restore a resource; Restore does."
+                        type="p" style="text-caption m-muted"/>
+            </container>
+            <container style="col-12 col-md-auto">
+                <container-dialog id="RecordDowntimeDialog" condition="canRecord" type="primary" button-text="Record outage"
+                        icon="sym_o_report" title="Record an outage" width="640">
+                    <section-include name="RecordDowntimeForm" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <label text="Downtime is not available to you." type="p" condition="!outageAvailable"/>
+        <section name="OutageHistory" condition="resourceUnavailabilityId &amp;&amp; historyRows.length &gt; 1">
+            <widgets>
+                <container-box>
+                    <box-header title="Correction history of outage ${resourceUnavailabilityId}"/>
+                    <box-body-nopad>
+                        <form-list name="OutageHistoryList" list="historyRows" skip-form="true" paginate="false">
+                            <field name="resourceUnavailabilityId"><default-field title="Outage"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="createdByName"><default-field title="Recorded by"><display/></default-field></field>
+                            <field name="correctedByName"><default-field title="Corrected by"><display/></default-field></field>
+                            <field name="changeReason"><default-field title="Why"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="resourceUnavailabilityId"/><field-ref name="fromText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="correctedByName"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Outages" condition="outageAvailable">
+            <widgets>
+                <form-single name="DowntimeFind" transition="." map="{assetId:assetId, facilityId:facilityId,
+                        unavailabilityReasonEnumId:unavailabilityReasonEnumId, planned:planned, open:open, source:source}">
+                    <field name="assetId">
+                        <default-field title="Equipment">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'equipment', selected:assetId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="With the facilities inside it and the equipment there">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="unavailabilityReasonEnumId">
+                        <default-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'downtimeReasons', selected:unavailabilityReasonEnumId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="planned">
+                        <default-field title="Planned">
+                            <drop-down allow-empty="true"><option key="N" text="Unplanned"/><option key="Y" text="Planned"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="open">
+                        <default-field title="Show">
+                            <drop-down allow-empty="true"><option key="true" text="Out of service now"/><option key="false" text="Restored"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="source">
+                        <default-field title="Source">
+                            <drop-down allow-empty="true"><option key="production" text="Production stops"/><option key="work" text="Work orders"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="assetId"/><field-ref name="facilityId"/></field-row>
+                        <field-row><field-ref name="unavailabilityReasonEnumId"/><field-ref name="planned"/></field-row>
+                        <field-row><field-ref name="open"/><field-ref name="source"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <section-include name="DowntimeRows" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
+                <label text="No outage matches. Record one when equipment or a facility is out of service." type="p" style="m-muted"
+                        condition="!outageList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

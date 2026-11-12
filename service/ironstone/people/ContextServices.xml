@@ -128,7 +128,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="search" noun="Records" allow-remote="false">
         <description>The palette's People records, each opening its People screen: the directory (P2), the people
             mantle.humanres.PeopleServices.find#Employees reaches for the user and the text, each once, as their public work
-            identity, opening Employee360, with recordEntity and recordId. No rows for a user without People.</description>
+            identity, opening Employee360, with recordEntity and recordId; P12: the user's own leave requests whose days, leave type
+            or state hold the text (or any for "leave"), opening LeaveRequestDetail. No rows for a user without People.</description>
         <in-parameters>
             <parameter name="text"/>
             <parameter name="limit" type="Integer"/>
@@ -212,6 +213,8 @@ along with this software (see the LICENSE.md file). If not, see
             Person over the directory projection. search: the people find#Employees reaches for text, as optionList of
             {value: mantle.party.Party|id, label}; info and card: a person the user's People scope admits, as their public work
             identity, with their Employee360 link (a person it does not admit is left out, so another provider answers for them);
+            P12: a leave request (mantle.humanres.leave.LeaveRequest) the user reads, as its person, days, what it charges and state
+            (never its type or reason), opening LeaveRequestDetail;
             links: the people a message's Employee360 links name, up to five.</description>
         <out-parameters>
             <parameter name="recordList" type="List"/>
@@ -235,8 +238,9 @@ along with this software (see the LICENSE.md file). If not, see
             person's Employee360); and P10 the user's own weeks to submit (my week not submitted:
             mantle.work.TimesheetServices.find#WeeksToSubmit, kind timesheet), for one who keeps time under People (a People user or
             a self-service employee by the time area's grant) and does not open Projects, whose own source answers them there,
-            each opening the week in People's My time. Another user's Today gets none. Declared on both roots, it is taken
-            once.</description>
+            each opening the week in People's My time; and P12 the leave starting today or tomorrow of a manager's live reports
+            (kind leave, PEOPLE_TEAM_VIEW: who is out, never why; not a colleague's day the team calendar shows), each opening the
+            request. Another user's Today gets none. Declared on both roots, it is taken once.</description>
         <in-parameters>
             <parameter name="userId"/>
             <parameter name="partyId"/>
@@ -265,6 +269,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="approvalsUrl"/>
             <parameter name="peopleHomeUrl"/>
             <parameter name="myTimeUrl"/>
+            <parameter name="leaveRequestsUrl"><description>P12: the user's leave requests (People's time area, when it opens to
+                them)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -273,6 +279,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="approvalsUrl" from="found.approvalsUrl"/>
             <set field="peopleHomeUrl" from="found.peopleHomeUrl"/>
             <set field="myTimeUrl" from="found.myTimeUrl"/>
+            <set field="leaveRequestsUrl" from="found.leaveRequestsUrl"/>
         </actions>
     </service>
 </services>
