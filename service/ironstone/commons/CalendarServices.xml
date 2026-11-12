@@ -404,7 +404,8 @@ along with this software (see the LICENSE.md file). If not, see
             is in, visible to all users), else the record visibility rule of get#RecordLinkInfo with checkOnly (IronStone R5,
             R28: its parties and organizations; ADMIN sees all); and what the user may do with it (canEdit as organizer or editor
             of a calendar that holds it for its editors, never an event an application keeps: managedBy says where that one is
-            changed; Commons calendar editors, Nov 12, 2026). need view adds "not available" when the user may not see it, edit
+            changed; Commons calendar editors, Nov 12, 2026; canBook as check#EventAccess: canEdit, or the organizer of an event an
+            application keeps, who books its rooms and equipment, impl-maintenance F356). need view adds "not available" when the user may not see it, edit
             also when the user may not change it; check answers without an error. A production run is not found
             (impl-manufacturing F39).</description>
         <in-parameters>
@@ -415,13 +416,14 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="found" type="Boolean"/>
             <parameter name="visible" type="Boolean"/>
             <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canBook" type="Boolean"/>
             <parameter name="isOrganizer" type="Boolean"/>
             <parameter name="isAttendee" type="Boolean"/>
             <parameter name="managedBy"><description>Where the event is changed, when an application keeps it (check#EventAccess)</description></parameter>
             <parameter name="workEffort" type="Map"/>
         </out-parameters>
         <actions><script><![CDATA[
-            found = false; visible = false; canEdit = false; isOrganizer = false; isAttendee = false; workEffort = null; managedBy = null
+            found = false; visible = false; canEdit = false; canBook = false; isOrganizer = false; isAttendee = false; workEffort = null; managedBy = null
             const notAvailable = () => ec.resource.expand('Event ${workEffortId} is not available', '', {workEffortId: workEffortId})
             const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
             // a production run (WepProductionRun, a WetEvent) is no event: Manufacturing's services change and copy it, so
@@ -435,6 +437,7 @@ along with this software (see the LICENSE.md file). If not, see
             const access = ec.service.sync().name('mantle.work.EventServices.check#EventAccess').parameters({workEffortId: workEffortId, permission: 'check'}).call()
             if (ec.message.hasError()) return
             canEdit = !!access?.canEdit
+            canBook = !!access?.canBook
             isOrganizer = !!access?.isOrganizer
             isAttendee = !!access?.isAttendee
             managedBy = access?.managedBy || null
