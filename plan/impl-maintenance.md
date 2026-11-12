@@ -2292,6 +2292,112 @@ completed checklist); MT-04.
     setting (`transcribe#Audio` leaves consent to its caller; built meanwhile: transcribed when a model is bound, the audio kept either
     way); whether an amendment should add or remove an open execution's steps (built meanwhile: policy fields and dependencies only).
 
+**Review Nov 12 (P7).** mr-mantle 25d1c7b8, mr-boss e8f31e1a and this note's commit (branch `mnt/p7`), over the worker's 54eaa9e3,
+389626d0 and f8e7d89a, after "Merge master into mnt/p7" (mr-mantle 167aa3e6, mr-boss 9508b5d9; mr-moqui's `mnt/p7` already at master
+4994093f). Reviewed `git diff master...mnt/p7` in both repos against P7's text, §2, §4, F26, F38, F43, F69, F94, F113, F159 and F160,
+design §3 (ProcedureSteps, StepResponse, ExecutionAmendment, the WorkItemDetail row), §4.3, §9 and §12, AGENTS.md and Practices-App-Dev;
+read the generic content services (`create#`, `update#`, `save#WorkEffortContentFile`), Manufacturing's instruction EECA, RecordFiles'
+`get#ContentType`, `get#RecordFile`, `remove#RecordFile` and `check#RecordDrivePath`, TaskServices' guarded writers, CalDAV's task
+collection, Commons' `get#TaskAccess`, the timer and time services, the Rust `ec.user.context` (moqui-core `context/factory.rs`,
+`script/host/user.rs`), and P9's `MaintenanceMaterials.js` on `mnt/p9`.
+- The merge: master's P15 came in. mr-mantle merged clean. mr-boss: `BossZMaintenanceDemoData.xml` keeps P7's follow-up task and then
+  P15's room policy and blackout; design-maintenance's header has P7's line above P15's; `MaintenanceAccess.spec.js` names both phases in
+  its header and keeps P15's feature, then P7's.
+- Checked and found sound:
+  - The step guard. A step's status moves only through `record#ProcessStep` (start, respond, skip with a reason), `waive#ProcessStep` and
+    the root's close or cancel (`closeExecution`): `set#TaskStatus`, `update#Task`, `move#Task`, `delete#WorkEffort` and the party writers
+    call `check#ManagedWork` (MANAGED_WORK, the spec's `set#TaskStatus` case); CalDAV leaves a managed step out of the collection and
+    lists the root read only; Commons' `get#TaskAccess` answers a managed record MANAGED_WORK; WorkItemDetail's Maintenance context shows a
+    step as not available, with its work order's link and no Complete.
+  - Gates. A blocked step (its own or a group's dependency) is refused by `record#ProcessStep` (DEPENDENCY_OPEN) and by `set#TaskStatus`;
+    independent leaves are in progress together; a group takes no response and follows its children (`rollUp`); Complete is refused while a
+    required leaf is open (STEPS_OPEN, and the blockers list); Close closes complete nodes and cancels open ones.
+  - `asManagedOwner`. `ec.user.context` is a map of the execution context (`ContextState.user_context`, made empty per context, never filled
+    from request parameters, a screen field or the session); a service called inside the body shares it (the intended call and its own
+    nested calls), an async call or job gets a new context; the value is restored or removed in `finally`. Only `managedReason` reads it;
+    the time entry points wrap exactly the one time call after their own checks; `start#Timer`/`stop#Timer`/`store#TimeEntry` change no
+    status inside it (the `TimeEntryUpdateTask` EECA writes actuals only).
+  - F159's guards. `add#WorkEffortProduct` and `create#TimeEntryClockIn` refuse managed work; `store#TimeEntry` refuses a new entry and an
+    entry moved onto managed work, an entry already there keeping its rules (so a timer stops). Projects' and Commons' time specs pass
+    (WorkTimeEntries, TimeImports, WorkTimesheets, WorkProject*, TimeEntries, PeopleTime, Billing). P9: `MaintenanceMaterials.js` writes
+    planned parts with entity-auto `create#`/`update#WorkEffortProduct` and issues through `issue#AssetToWorkEffort`, neither guarded, so
+    its path survives; were it to call `add#WorkEffortProduct` it would need `asManagedOwner` (see For the lead).
+  - Waivers. MAINTENANCE_SUPERVISE in the work order's organization only (a technician PERMISSION_DENIED, another organization
+    RECORD_UNAVAILABLE), the step's execution policy (WAIVER_NOT_ALLOWED), a reason; the failed checks stay Unresolved beside the waiver.
+  - The checklist PDF: `Checklist.print.html.fancy` is HTML-escaped, no cost; stored at Close as the root's WectCompletedChecklist under
+    `dbresource://mantle/content/workEffort/`, served by `printChecklist` for a reader (check#Record, then `get#ProcessChecklist`'s scope).
+  - WorkItemDetail (owner contract): every Maintenance branch is behind `mntTask` (`appRoot === 'Maintenance'`); Manufacturing's,
+    Projects', People's and Customer Service's sections and conditions are unchanged; WorkItemDetail, Tasks and ManufacturingShopFloor pass.
+  - The participant (F160): `openAssignments` counts a step's assignee only while the step is open; `schedule`'s replacement leaves a done
+    step's assignee; AdminLifecycle, PeopleLifecycle and the spec's participant feature pass.
+  - Access: the Procedure tab's transitions call `check#Record` and then Mantle, which checks permission, scope and assignment again;
+    ProcessServices are allow-remote false with no BOSS grant; `get#EvidencePolicy` is a data check read by RecordFiles only after its own
+    record check.
+- Fixes:
+  - R1 (the user's call, Nov 12; feature): a voice note is transcribed only when the organization turns transcription on.
+    `MaintenancePolicy.voiceNoteTranscription` (off by default) through `get#`/`store#MaintenancePolicy` and Settings' Work policy ("Transcribe
+    technicians' voice notes"); `transcribe#CheckVoiceNote` answers TRANSCRIPTION_OFF and sends nothing when it is off; the audio stays
+    the check's evidence either way, and the response says the organization does not transcribe. ProcessChecks' voice note feature (off by
+    default: TRANSCRIPTION_OFF; turned on, the speech model is asked; the audio row kept); MaintenanceWorkOrders' Work policy render
+    checks the setting.
+  - R2 (the user's call, Nov 12; feature): an amendment adds or removes steps of an open execution. `amend#ProcessExecution` takes an action
+    per change: add (under the root or a group, GROUP_REQUIRED under a step; a complete group it joins reopens and is named among the
+    invalidations) and remove (a step, or a group with its steps, not started and with no check; STEP_STARTED otherwise; cancelled and
+    named in the amendment's `removedList`, the dependencies on and of it ended, so what waited for it no longer does, a finding of the
+    preview). The gate leaves a cancelled leaf out (a required step is never skipped, so only a removed one is cancelled before close);
+    the tab and print say "Removed"; the amendment's summary lists what was added and removed. The Procedure tab's Amend dialog takes
+    Change, Add a step (name, under, response) or Remove a step not started; WorkOrders.js `amendmentChange` builds each. ProcessChecks'
+    amendment feature (a started step, a completed step and a started group refused; a technician refused; a step under a leaf refused;
+    the preview naming the reopened group and the removed step and writing nothing; applied: the group reopened, the new step planned in
+    the tree, the removed step cancelled, the gate with the new step and without the removed one; the new step answered completes the
+    group) and MaintenanceChecklists' dialog feature (the form's add and remove reaching the preview; a started group refused).
+  - R3 (security, high): the evidence guard was only in `update#WorkEffortContent` and RecordFiles: entity-auto `delete#` and `update#`
+    (the entity REST, any server path) removed or changed a check's evidence and the stored checklist, `save#WorkEffortContentFile` wrote new
+    bytes over evidence, `check#EvidenceChange` did not cover the stored checklist, a check's evidence link could be deleted to unprotect
+    the file, a closed or cancelled work order took new files through `create#WorkEffortContent`, and anyone could store a
+    WectCompletedChecklist. Now an entity guard (Work.eecas.xml `WorkEffortEvidenceProtected`, run before, on Manufacturing's pattern)
+    refuses the update or delete of evidence and a stored checklist (EVIDENCE_PROTECTED) and a new file on closed or cancelled managed work
+    (WORK_CLOSED), and admits a completed checklist only under the close's `asManagedOwner`; `WorkEffortEvidenceLinkKept` refuses changing
+    or deleting a WorkEffortCheckEvidence row; `save#WorkEffortContentFile` calls `check#EvidenceChange`. ProcessChecks' evidence feature
+    (each path refused; an ordinary task's file still deleted). RecordFiles (11 features) passes unchanged.
+  - R4 (correctness, medium): a waiver completed a step whose dependencies were open, so a step could be complete before its predecessor.
+    `waive#ProcessStep` now refuses DEPENDENCY_OPEN as a response does, and `canWaive` waits for them. In ProcessChecks' amendment feature.
+  - R5 (failure tolerance, low): a stored checklist that failed after a service error left the error in the close's messages, failing the
+    close the comment says stands. `storeChecklist` makes the PDF first and isolates its messages (pushErrors, clear, pop).
+- Findings (for the lead to number):
+  - `find#FollowUpTasks` (the Overview's box) lists the names of the tasks linked to a work order without checking the reader may see each
+    task in Commons; WorkItemDetail itself does (Commons' visibility). Linking needs a writer who sees both, so the exposure is small.
+  - A supervisor may amend a step's `waiverAllowed` to Y and then waive it; both are the supervisor's, each with its reason on record.
+  - `issue#AssetToWorkEffort` and entity-auto WorkEffortProduct writes are not guarded by F159 (P9's path relies on this).
+  - The evidence guard runs on every WorkEffortContent write: one root read on create, one evidence-link count on update or delete.
+  - A service failure inside the close's transaction may still mark it rollback-only; with R5 the likely failure (the PDF) happens before
+    any service call.
+  - Correction to the Built note: adding and removing an open execution's steps is now built (R2).
+  - Prettier 3.10.1 was run on ProcessChecks.js, WorkProcesses.js, WorkOrders.js and the three changed specs (ProcessChecks.js and the
+    specs were not prettier-clean before; the diff includes that reformatting).
+- Tests (release binary 03:39, `--nobuild`, this worktree, after the merge and the fixes): mr-mantle ProcessChecks, MaintenanceProcesses,
+  WorkProcess, PeopleChecklists, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceScope,
+  MaintenanceResources, WorkTimeEntries, TimeImports, WorkTimesheets, WorkProjectServices, WorkProjectBilling, WorkProjectMilestones,
+  WorkProjectReports, ProductionShopFloor, AccountingProjectCost, MethodTemplates, ProductCatalogImport, Dav, ResourceBookingPolicy:
+  156 of 156 (23 specs, 46.0 s feature time; ProcessChecks 8 features, about 4.0 s). mr-boss MaintenanceChecklists, MaintenanceAccess,
+  MaintenanceWorkOrders, RecordFiles, WorkItemDetail, MaintenanceProcedures, MaintenanceDowntime, MaintenanceRequests, MaintenanceEquipment,
+  Tasks, TimeEntries, AdminLifecycle, PeopleLifecycle, ManufacturingDowntime, ManufacturingShopFloor, PeopleTime, Billing, ProjectsAccess,
+  Chatter, AccountingIssuedFiles, AccountingPaymentFiles: 159 of 159 (21 specs, 50.8 s feature time; MaintenanceChecklists 5 features, about
+  1.3 s); MaintenanceScheduling 3 of 3. Before the fixes, the merged branch passed ProcessChecks 5 of 5 and MaintenanceChecklists,
+  MaintenanceAccess and RecordFiles 30 of 30. `./moq run --debug --nobuild lint --screens`: 136 flagged sites, the baseline, none in the
+  changed screens; the release symlink intact. Not run: ./moq test-apps, the acceptance suite (MaintenanceChecklistWalk not changed).
+- For the lead:
+  - Budget share: mr-mantle ProcessChecks +1.6 s (three features); mr-boss MaintenanceChecklists +0.1 s; budgets not changed.
+  - Merge hot spots: mr-mantle `entity/Work.eecas.xml` (two EECAs appended), `entity/MaintenanceEntities.xml` (a MaintenancePolicy field),
+    `MaintenanceWork.js` (the policy's default, read and store), `MaintenanceSettingsServices.xml`, `WorkEffortServices.xml`
+    (`save#WorkEffortContentFile`), `ProcessChecks.js`, `ProcessServices.xml`, `WorkProcesses.js` (one export); mr-boss
+    `Settings/WorkPolicy.xml` (P13 or P18 may add settings beside it), `Procedure.xml`, `MaintenanceChecklistParts.xml`, `WorkOrders.js`,
+    the design header and §9, usl-inventory.
+  - P9's merge: its planned parts and issues survive F159's guard (entity-auto writes, `issue#AssetToWorkEffort`); a planned part added
+    through `add#WorkEffortProduct` would be refused MANAGED_WORK unless wrapped in `asManagedOwner`. A part file on closed work would be
+    refused by R3's guard (WORK_CLOSED).
+  - The user's calls: both of Nov 12 are built (R1, R2). None open from P7.
+
 ### P8 — Dispatch: teams, skills and qualifications
 
 Design §3 AssignSchedule and BulkWork, §9 Teams, review Y4 and Y8; MT-01, MT-02. People's services are used as
