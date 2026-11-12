@@ -324,7 +324,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | built and reviewed Nov 11, merged |
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | built and reviewed Nov 11, merged |
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | built and reviewed Nov 11, merged |
-| P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | — |
+| P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | built and reviewed Nov 11, merged |
 | P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | — |
 | P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | — |
 | P18 Skills and qualifications | Mantle, BOSS | SkillsMatrix, Qualifications | — |
@@ -3979,7 +3979,7 @@ Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDeta
 - Design edits: design-people (header; §1.2 Expenses; §1.4 Quick create, Comms hooks, Mail intake; §3 SelfService; §9 ExpenseClaims,
   ExpenseClaimDetail and EmployeeAdvances as built; §13 InvoiceDetail as built); design-accounting (header; §5 ExpensePosting as
   built); design-drawers-commons (header; §1.5 the New claim quick create).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F253 to F263 in order:
   - Read receipt reads text only: `run#Extract` takes a text, and the server reads no photo (no OCR or image input), so a PDF's or text
     file's receipt is read from the file and a photo's needs its text typed or pasted; a vision or OCR input is a framework ask;
   - there is no expense permission: "HR expense authority" (acting for an employee) is PEOPLE_HR_VIEW with PEOPLE_HR_EDIT of the
@@ -4096,7 +4096,7 @@ both sides; ExpenseClaims, PeopleExpenses, PeopleAccess and PeopleRoster passed 
   - **R6 (low).** The evidence bundle was written under `runtime://tmp/people-claims/<invoice>-<millis>` on each request and never
     cleaned up; each bundle now has a folder of a random name, its printed page is deleted once zipped, and a bundle older than an
     hour is deleted when the next is made. `runtime://tmp` is served by no URL.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F264 to F271 in order:
   - a forged From that matches an employee's work address still adds a zero-amount draft line (and a draft claim when there is
     none) with photo, PDF or text receipts; it blocks that claim's submit until the employee reviews or removes it, and reads
     nothing back; `EmailMessage` carries no sender authentication (SPF/DKIM) to check, which would be a framework ask;
@@ -4582,7 +4582,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
