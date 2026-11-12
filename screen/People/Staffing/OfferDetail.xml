@@ -22,7 +22,10 @@ along with this software (see the LICENSE.md file). If not, see
     (a draft, waiting or approved offer: changed terms make it a draft again), Set pay (payroll's), the letter's preview or the
     issued letter, and Withdraw. The boxes: Terms (the pay only for a payroll reader, others told payroll sets it), the candidate's
     answer, the letter and the approval (the route, who decides each step and the decisions). Every People user opens it (the
-    Staffing area); change#OfferState and the other services check again. -->
+    Staffing area); change#OfferState and the other services check again. P17 review (the user's call of Nov 12, 2026): the issued
+    letter is emailed to the applicant once the issue commits (Mantle's send#OfferLetter); the Letter box says whether it went, to
+    which address and why not, without the letter's content, and Send the letter again follows a failure. The candidate's signed
+    copy of a letter holding pay is payroll's, as the letter, and downloads as a file. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Offer" default-menu-include="false">
     <parameter name="employmentOfferId"/>
@@ -74,12 +77,24 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
         <error-response url="."><parameter name="employmentOfferId"/></error-response>
     </transition>
-    <!-- the candidate's signed acceptance kept with the offer -->
+    <!-- P17 review: the issued letter emailed to the applicant again after a failed send (Mantle checks the editor and sends it once) -->
+    <transition name="sendLetter">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.send#OfferLetter" out-map="sent"
+                    in-map="{employmentOfferId:employmentOfferId}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; sent.letterSendStatus == 'failed'">
+                <then><message type="warning">${sent.letterSendText}</message></then>
+                <else-if condition="!ec.message.hasError()"><message type="success">${sent.letterSendText}</message></else-if></if>
+        </actions>
+        <default-response url="."><parameter name="employmentOfferId"/></default-response>
+        <error-response url="."><parameter name="employmentOfferId"/></error-response>
+    </transition>
+    <!-- the candidate's signed acceptance kept with the offer, a file the user uploaded: downloaded, never shown inline (P17 review) -->
     <transition name="evidence" read-only="true">
         <actions>
             <service-call name="mantle.humanres.RecruitingServices.get#OfferEvidence" out-map="evidenceFound"
                     in-map="{employmentOfferId:employmentOfferId}"/>
-            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(evidenceFound.location, true, evidenceFound.fileName)</script>
+            <script>if (!ec.message.hasError()) ec.web.sendResourceResponse(evidenceFound.location, false, evidenceFound.fileName)</script>
         </actions>
         <default-response type="none"/>
         <error-response url="."><parameter name="employmentOfferId"/></error-response>
@@ -116,6 +131,9 @@ along with this software (see the LICENSE.md file). If not, see
             backUrl = sharedLinks?.['Staffing/ApplicantPipeline'] || null
             hireUrl = offer?.canHire ? (sharedLinks?.['Employees/HireEmployee'] || null) : null
             employeeUrl = offer?.hiredPartyRelationshipId ? sharedLinks?.['Employees/Employee360'] || null : null
+            sendRows = offer?.letterSendStatus ? [['Emailed', offer.letterSendText + (offer.letterSendDateText ? ', ' + offer.letterSendDateText : '')],
+                ['To', offer.letterSentTo], ['Why', offer.letterSendStatus == 'failed' ? offer.letterSendError : '']]
+                .filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             printUrl = offer && !offer.letterIssued ? '/apps/People/Staffing/OfferLetter?renderMode=html-print&employmentOfferId='
                 + encodeURIComponent(offer.employmentOfferId) : null
         ]]></script>
@@ -322,6 +340,9 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="printUrl"/>
                                 <link url="letter" text="The issued letter" icon="sym_o_picture_as_pdf" target-window="_blank"
                                         parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.letterIssued &amp;&amp; !offer.letterRestricted"/>
+                                <link url="sendLetter" text="Send the letter again" icon="sym_o_forward_to_inbox" link-type="hidden-form"
+                                        parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.canSendLetter"
+                                        confirmation="Email the issued letter to ${offer.applicantName} again?"/>
                                 <container-dialog id="WithdrawOfferDialog" button-text="Withdraw" icon="sym_o_cancel" type="danger" width="520"
                                         title="Withdraw the offer to ${offer.applicantName}" condition="offer.canWithdraw">
                                     <label type="p" text="A withdrawn offer is closed: it is not issued, answered or hired from."/>
@@ -361,8 +382,11 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
                                             <field name="value"><default-field title=""><display/></default-field></field>
                                         </form-list>
-                                        <link url="evidence" text="The signed letter" link-type="anchor" target-window="_blank" style="q-ma-md"
-                                                parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.hasEvidence"/>
+                                        <link url="evidence" text="The signed letter" link-type="anchor" style="q-ma-md"
+                                                parameter-map="{employmentOfferId:offer.employmentOfferId}"
+                                                condition="offer.hasEvidence &amp;&amp; !offer.evidenceRestricted"/>
+                                        <label type="p" style="m-muted q-ma-md" condition="offer.hasEvidence &amp;&amp; offer.evidenceRestricted"
+                                                text="The signed letter holds the pay terms: payroll reads it."/>
                                     </box-body-nopad>
                                 </container-box>
                             </widgets>
@@ -377,6 +401,12 @@ along with this software (see the LICENSE.md file). If not, see
                                         text="The issued letter holds the pay terms: payroll reads it."/>
                                 <link url="letter" text="Open the issued letter" link-type="anchor" target-window="_blank"
                                         parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.letterIssued &amp;&amp; !offer.letterRestricted"/>
+                                <!-- P17 review: the letter's email to the applicant: whether it went, where and why not -->
+                                <form-list name="LetterSendRows" list="sendRows" skip-form="true" skip-header="true" paginate="false"
+                                        condition="sendRows.length">
+                                    <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                </form-list>
                                 <label type="p" style="m-muted" condition="!offer.letterIssued"
                                         text="The letter is stored when the offer is issued, once approved."/>
                                 <link url="${printUrl}" url-type="plain" text="Preview the letter" link-type="anchor" target-window="_blank"

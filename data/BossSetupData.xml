@@ -5220,9 +5220,13 @@ along with this software (see the LICENSE.md file). If not, see
                 inheritAuthz="N"/>
         <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/storeEmergencyContact"
                 artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <!-- P17 review (the user's call of Nov 12, 2026): My letters, the user's own issued lifecycle letters (find#MyLetters and
+            get#MyLetter take the caller's own party alone) -->
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/myLetter"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
         <artifacts artifactName="ironstone\.people\.ContextServices\.get#(SharedContext|SelfServiceContext)" artifactTypeEnumId="AT_SERVICE"
                 nameIsPattern="Y" inheritAuthz="N"/>
-        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact)"
+        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact|find#MyLetters|get#MyLetter)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">

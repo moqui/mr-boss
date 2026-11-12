@@ -4593,6 +4593,102 @@ Design §5 OfferDetail, §15 (the offer letter); PE-04, PE-02.
     offers (built) or pay goes in by another path; who delivers an issued letter holding pay (built: payroll, no mail delivery);
     whether employees read their own lifecycle letters in self-service (not built).
 
+**Review Nov 12 (P17).** A fresh review of `git diff master...ppl/p17` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §5 OfferDetail and ApplicantDetail, §4 HireEmployee, §12's `PeopleOfferApproval` and §15 the letters; the user's four calls of
+Nov 12 built and recorded in §4; fixes committed apart per repository ("People P17 review: …"; mr-mantle beef6ee5). Both branches were
+first rebased onto master after P18 and P15's follow-up merged: mr-mantle cleanly (HumanResourcesEntities' EmplPositionClassSkill key,
+Approvals.js, Employment.js, Recruiting.js and PeopleServices.xml merged without a conflict); mr-boss with BossSetupData (P18's
+Development grants and P17's topic and EmploymentLetter member), People.xml's notification topics, People.js linkPaths, Employee360's
+header, PeopleAccess's header and a P17 feature apart from P18's, design-people's header and §4's resume row (P17's built version
+beside P18's three rows), each keeping both sides; Offers, Recruiting, PeopleEmployment (18 of 18) and PeopleOffers, PeopleAccess,
+PeopleHire, PeopleSkills (31 of 31) passed after it.
+- Checked and found sound:
+  - pay terms: `offerRow` (get#Offer and find#Offers), the letter's preview, the stored letter (PERMISSION_DENIED without
+    PAYROLL_VIEW), the approval's notice, title and summary (position, opening, names; never pay), `hireTerms` and the hire (no
+    salary row) carry pay only for a payroll reader of the employer; offers are in no palette, export, Chatter or record panel
+    (`EmploymentOffer` is no People record host), and the raw entity stays refused (PeopleAccess's mantle.humanres paths);
+  - an accepted offer hires once: `offerForHire` locks the offer, `hireProblem` refuses OFFER_USED, OFFER_NOT_ACCEPTED, OFFER_PERSON,
+    OFFER_EMPLOYER and OFFER_APPLICATION_CLOSED, `consumeOffer` marks it Hired with the hire's employment; hire#Employee is still
+    `editorScope("Hiring")`'s (a recruiter is refused); P6's rules and specs hold (PeopleEmployment, PeopleHire pass; the hire's
+    working schedule an `EckSchedule` beside it);
+  - changed terms (pay included) make a waiting or approved offer a draft and `sourceChanged` supersedes the approval, and
+    `record#Decision` refuses a decision on a superseded or earlier revision; the decision is taken under the offer's lock;
+  - a recruiter's offer grants no account or payroll right: no account is asked but by HR's own Request an account, no
+    `EmploymentSalary`; a recruiter sets no pay (PERMISSION_DENIED) and reads none;
+  - the issued letter is rendered once under the offer's (or the change's) lock and read from storage after (the spec's digest
+    unchanged after the opening and person change);
+  - the hire's person search (P6's call of Nov 11: names only for people related to the employer, exact email otherwise): the change
+    adds the applicants of the employer's own applications (`EmploymentApplication.organizationPartyId`, P16), who are applicants to
+    it as P6's position applicants were; nobody outside the employer is found by name, and a person chosen by id is admitted by
+    the same rule or as the offer's applicant;
+  - with no rule a `PakOffer` request goes to the employer's HR officers (`defaultRole`, basis "No rule: HR decides"); other
+    kinds' defaults are unchanged.
+- Fixes:
+  - **R1 (the user's call of Nov 12; medium).** No delivery of an issued letter was built: a recruiter without PAYROLL_VIEW issued a
+    letter holding pay and could not hand it over. Issuing now emails the stored letter to the applicant's address as an attachment
+    once the issue commits: `RecruitingServices.send#OfferLetter`, run by the tx-commit rule `PeopleOfferLetterEmail`
+    (`service/PeopleRecruiting.secas.xml`) as the issuer, who need not read it; template `PEOPLE_OFFER_LETTER` from the employer's
+    address (EmailPrimary, else EmailWork), the message naming the position and expiry, never pay; once (a letter sent or waiting
+    in the mail queue answers repeated; the offer locked while sending). The outcome is on the offer (`letterSendStatus` sent,
+    queued or failed, `letterSendDate`, `letterSentTo`, `letterEmailMessageId`, `letterSendError`) and on OfferDetail's Letter box
+    without the content (the address for recruiters and HR); a failure (no applicant address, no sender, a failed send) is
+    recorded and logged, never undoing the issue, and Send the letter again (an offer editor's) retries it. Spec: Offers (the
+    send failing without the employer's address with the offer still issued, the reader refused, the recruiter's send queued and
+    a second answered repeated, the message's address and subject and no pay in its body).
+  - **R2 (the user's call of Nov 12; medium).** Employees did not see their own letters. SelfService's My letters (both mounts):
+    `PeopleServices.find#MyLetters` (no party: the caller's own issued lifecycle letters) and `get#MyLetter` (the stored file,
+    whole, pay included; another person's or an offer's letter RECORD_UNAVAILABLE), the transition `myLetter` and both services in
+    `BOSS_PPL_SELF` (F28's non-inheritable pattern). Specs: Offers (the hired person's one letter listed and read, the offer's
+    letter and another employee's view refused), PeopleAccess (Tomas's letter by the services and the Commons transition with
+    artifact authorization on, Ines's refused to him, the reader refused his).
+  - **R3 (high, confidentiality).** `get#OfferEvidence` gave the candidate's signed letter (a copy of the letter holding pay) to
+    every reader of the offer: the recruiter, HR and the approver read the pay that `get#OfferLetter` refused them. It is now
+    PAYROLL_VIEW's when the offer holds pay (`evidenceRestricted`; OfferDetail says payroll reads it), and the file downloads as an
+    attachment rather than inline (an uploaded HTML file was served inline in the app's origin); a name loses leading dots. Spec:
+    Offers (the recruiter refused, payroll read).
+  - **R4 (medium, no self-approval).** Only who submitted an offer and the applicant were kept from deciding it: an HR officer who
+    drafted an offer that a recruiter submitted approved their own. Approvals.js takes a kind's `selfPartyIds` (PakOffer: the
+    offer's creator) into the route's exclusions and `record#Decision`'s SELF_APPROVAL. Spec: Offers (HR's draft submitted by the
+    recruiter, HR's approval SELF_APPROVAL).
+  - **R5 (medium, P16's, found here).** A self-service panel member could not download a file shared with the panel:
+    MyInterview's `sharedFile` sent the file with authorization on, and the non-inheritable `BOSS_PPL_INTERVIEW_SELF` does not reach
+    `moqui.resource.DbResource` (a 500). It and My letters send the file Mantle admitted with authorization off. Spec:
+    PeopleRecruiting (the shared file downloaded as the employee under Commons; a 500 on the phase's code).
+  - **R6 (low).** A Hire sent twice at once from an accepted offer: the second waited on the offer and answered OFFER_USED, not the
+    first hire, since its operation key was checked before the lock. hire#Employee locks the offer first.
+  - **R7 (low).** `get#EmploymentLetter` read a lifecycle letter holding pay without PAYROLL_VIEW (none holds pay today); it now
+    refuses one as `get#OfferLetter` does.
+- Provisional findings (for the lead to number):
+  - the email goes from the employer's EmailPrimary (else EmailWork) address; an employer with neither, as the demo employers may
+    be, records "no email address to send from" and the recruiter sends it again once one is added; a reply goes to that address;
+  - Send the letter again follows a failure only: a letter sent or queued is not sent again (a candidate who lost it is sent a copy
+    by payroll, or a new offer);
+  - My letters lists the lifecycle letters alone; a hired person's offer letter (addressed to them as an applicant) is not in it;
+  - an HR officer reads an employment's lifecycle letters under Employee360 and the employee in self-service; the letter is
+    never on the person's Party record or files;
+  - R5's pattern: a screen under a non-inheritable self-service grant that sends a stored file needs the file sent with
+    authorization off after its service's check; the P15 and P18 self-service files go through inheritable grants and are not
+    affected.
+- Tests (release binary from the main checkout, `--nobuild`, this phase's runtime): after the rebase Offers, Recruiting,
+  PeopleEmployment 18 of 18 and PeopleOffers, PeopleAccess, PeopleHire, PeopleSkills 31 of 31; after the fixes Offers, Recruiting,
+  PeopleEmployment, PeopleApprovals, ExpenseClaims 32 of 32 (Offers 4.3 s: 0.73, 0.66, 2.07, 0.81) and PeopleOffers, PeopleAccess,
+  PeopleHire, PeopleSkills, PeopleRecruiting, PeopleSelfService, PeopleApprovals 43 of 43 (PeopleAccess's new feature 0.26 s).
+  `moqui lint --screens` (release binary): none flagged in the People screens. Prettier clean on the changed JavaScript. Not run:
+  `./moq test-apps`, the acceptance suite (PeopleOffersUsable unchanged; its issue now sends the letter, which it does not assert)
+  and the client walk PeopleHireWalk (Identity's Accepted offers box shows only with an accepted offer).
+- For the lead:
+  - budget share beside the Built note's: mr-mantle about +0.6 s (Offers' new checks and the issue's worker wait); mr-boss about
+    +0.3 s (PeopleAccess's my-letters feature 0.26 s, PeopleRecruiting's download);
+  - merge hot spots beside the Built note's (P19 runs beside): mr-mantle `Approvals.js` (`requestOf`, `selfOfSource`, `resolve`'s
+    self, `recordDecision`), `Offers.js`, `Letters.js`, `Recruiting.js`'s exports, `PeopleServices.xml` (two services appended),
+    `RecruitingServices.xml` (send#OfferLetter appended), `PeopleRecruitingEntities.xml`, `PeopleRecruitingSetupData.xml`, the new
+    `service/PeopleRecruiting.secas.xml`; mr-boss `BossSetupData.xml` (`BOSS_PPL_SELF`'s artifacts), `Shared/PeopleSelfService.xml`
+    (header, a transition, the actions' end, a section before the emergency contacts), `Shared/PeopleMyInterview.xml`,
+    `Staffing/OfferDetail.xml`, PeopleAccess (header, an appended feature), PeopleRecruiting, design-people §3, §5, §15,
+    usl-inventory and §4 here;
+  - the user's calls of Nov 12 (§4): with no rule HR decides an offer and payroll readers read offers (as built); the letter
+    emailed to the applicant (R1); employees' own letters in self-service (R2).
+
 ### P18 — Skills and qualifications
 
 Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels), Employee360's SkillsAndReviews
@@ -5225,6 +5321,10 @@ the owner's design.
 | Nov 12, 2026 | A manager with a live reporting line evaluates that report's skills without `PEOPLE_DEVELOP_EDIT`: `store#Skill` records it as the manager's evaluation (`SkillSource` `SksManagerEvaluated`, the manager its assessor), which sets the accepted level and meets a requirement as an evaluation does; the matrix, its terminal twin and Employee360 offer it on the manager's reports. Certificate verification stays the development and HR verifiers' (`verify#Qualification` unchanged) | The user's call on P18's question (built in P18's review, R2; design-people §10 SkillsMatrix; Qualifications and PeopleAccess check a manager evaluating their report and refused another's) |
 | Nov 12, 2026 | A job requirement keeps its dated history: `EmplPositionClassSkill`'s primary key gains `fromDate` (a Mantle entity change), so each period is its own row and readers take the row in effect at their date; removing ends the row, a change ends the period in effect and starts a new one (a period not started yet is changed in place), and requiring the skill again starts a new row, never before the last one ended | The user's call on P18's question (built in P18's review, R3: Positions.js `store#JobRequirement`, `get#JobClass`, `classRows`; Development.js `classRequirements`; BossPeopleDemoData's requirement rows; design-people §5 JobClassDetail). No other reader or writer exists: Marble's HumanRes screens and the data files hold none beyond BOSS's demo |
 | Nov 12, 2026 | A staff reader of the employer sees whether a person's identity document or work permit is valid, expiring or expired, with its dates; only its number and file are the person's and HR's (as P18 built it) | The user's call, on P18's review finding |
+| Nov 12, 2026 | With no approval rule, the employer's HR officers decide an offer (a kind's own default route, `PakOffer`'s `ParHr`); an employer's rules for the kind still route it; never the recruiter who submitted or drafted it, nor the applicant | The user's call on P17's question (as built; the drafter excluded in P17's review, R4) |
+| Nov 12, 2026 | Payroll readers (PAYROLL_VIEW) of the employer read its offers, the applicant's name and terms with the pay, to set the pay on OfferDetail | The user's call on P17's question (as built) |
+| Nov 12, 2026 | Issuing an offer emails its stored letter to the applicant's address as an attachment; the issuer need not be able to open it; the send is recorded on the offer, its outcome visible to recruiters without the letter's content; sent by Mantle's mail (an EmailTemplate), failure tolerant: a failed send is recorded and can be sent again, never undoing the issue | The user's call on P17's question (built in P17's review, R1: `send#OfferLetter`, template `PEOPLE_OFFER_LETTER`, the issue's tx-commit rule; design-people §5 OfferDetail, §15) |
+| Nov 12, 2026 | Employees see their own issued lifecycle letters (hire, transfer, manager change, leave, return, separation) in SelfService's My letters under both self-service mounts (People and Commons), whole, pay included since the letter is theirs; another person's letter is refused; grants on F28's non-inheritable pattern | The user's call on P17's question (built in P17's review, R2: `find#MyLetters`, `get#MyLetter`, `BOSS_PPL_SELF`; design-people §3 SelfService, §15) |
 
 ## 5. Open questions
 
