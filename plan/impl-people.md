@@ -317,7 +317,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | built and reviewed Nov 11, merged |
 | P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | built and reviewed Nov 11, merged |
 | P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | built and reviewed Nov 11, merged |
-| P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | — |
+| P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | built and reviewed Nov 11, merged |
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | — |
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | — |
 | P14 Shift roster | Mantle, BOSS | ShiftRoster | — |
@@ -2961,7 +2961,7 @@ Design §7 (the model), LeavePolicies, LeavePolicyDetail, LeaveAllocations, Leav
   screens; Marble's HumanRes has no leave form).
 - Design edits: design-people (header; §1.2 Time & leave; §1.4 Assist's tool; §2 the three paths under Time and the Settings
   sentence; §3 SelfService; §7 the model as built, LeaveBalances, LeaveAllocations, LeavePolicies and LeavePolicyDetail as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F194 to F201 in order:
   - a leave type is an HR vocabulary (`PeopleLeaveType`, Lookups), not a LeaveType record: the unit, paid meaning and evidence are the
     policy's (design §7 put them on the type); an employment's balance of a type is kept in one unit (`UNIT_MISMATCH`), so a type's
     policies at one employer should share it;
@@ -3066,7 +3066,7 @@ first; the user's and the lead's calls of Nov 11 recorded in §4; fixes committe
     the editor's employers' policies in the query.
   - LeaveLedger's fifth feature also passes another person's employment and party to `get#MyBalances` and still reads Ana's
     balance alone.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F202 to F205 in order:
   - `find#Ledger` shows the person HR's adjustment and grant reasons in each movement's "From" (an allocation's `reason`); no BOSS
     path gives a self-service employee their movements today (`BOSS_PPL_LEAVE_SELF` covers `get#MyBalances` alone), so this
     decides nothing yet; P12, if the employee reads their movements, should say whether HR's reasons are theirs to read;
@@ -3630,7 +3630,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
