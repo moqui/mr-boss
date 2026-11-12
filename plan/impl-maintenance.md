@@ -4359,6 +4359,89 @@ Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exp
     beside Insights: built for supervisors and administrators, as Customer Service's managers and administrators read its clocks
     (planners could be added).
 
+**Review Nov 12 (P17).** mr-mantle 7514103f (merge of master: P19) and 7d44fd79, mr-boss 2fbbd1d1 (merge of master: P19, People
+P14–P18, the framework's tx-commit outbox), 1882a13c and this note's commit (branch `mnt/p17`), over the worker's 77f29bb3, e6819042,
+992fdf70, 2729aadb, 68264403 and ff98b747; mr-moqui unchanged (its `mnt/p17` already at master), no Rust built.
+- Merge: mr-mantle merged cleanly; mr-boss conflicted in design-maintenance's header (both lines kept, P19's first) and
+  BossSetupMaintenanceData.xml (P17's registrations and P19's three list export targets both kept; the Reports target moved to
+  sequence 68, `maintenanceDueList` holding 67). Admin.js `mountRoutes` merged with `maintenanceReports` beside P19's keys.
+  MaintenanceAccess checked against P11's review version (99e0e21f) and master: P11's cost feature is whole (only its paths moved to
+  Reports, as master has them), every P19 feature is in, and P17's adds only its header line and its feature.
+- Checked and found sound:
+  - Report rules: execution roots only (templates by `isTemplate`, steps having no MaintenanceWorkOrder row; the spec's template root
+    with a work order row and step are left out); the status at a moment from the WorkEffort status audit, ties at one stamp put in
+    the order their values chain; overdue is backlog past `estimatedCompletionDate`, never unscheduled work; unassigned is no
+    Assignee in force at the as-of time; another organization's roots are out by the scope query and ORGANIZATION_DENIED by name; a
+    technician's assigned view is PERMISSION_DENIED. Demo data with no audit (the loaded orders) stands as it is now and counts no
+    opening; a completed one with no history counts by its `actualCompletionDate` (the CSV probe showed the demo's completed orders
+    counted and the open ones backlog). The candidate query (open now or `lastUpdatedStamp` since the period's start, WorkEffort's
+    stamp in the view) misses no root a measure can count.
+  - No amount: the three documents' fields hold no amount, cost, price or rate (spec), each carries `organizationPartyId` (the work
+    order's from its root's owner, an obligation's from its plan, an outage's own; checked on the demo's documents), and the three
+    datasets name Mantle's `get#OrganizationRowFilter` on it; the report rows, dashboard and alert templates carry none either.
+  - The cost entry: Insights shows a `catalogueService` entry only when the owner's answer names it, and `get#ReportCatalogue` names
+    `Maintenance.Cost` only for MAINTENANCE_VIEW with MAINTENANCE_COST_VIEW (reader and supervisor two entries, the cost reader three,
+    a technician and another app's user refused, which Insights hides quietly); the answer is the entries' titles, descriptions and
+    routes, nothing else.
+  - Metrics and attention providers: the three providers count through `get#MaintenanceHome`, which reads the caller's own scope (a
+    technician's own work) and returns no cost; OverduePm's count is null for a non-reader; Registry asks a count only once the
+    route opens to the viewer. The metrics name only Mantle's scoped report services.
+  - The flow map: `templateVersion` 2 with the Maintenance step's target, count provider and entry; InsightsFlowMaps passes unchanged,
+    InsightsHome changed by the three provider keys only.
+  - Access: Mantle checks MAINTENANCE_VIEW and the scope; BOSS's catalogue checks the capability (no group name, `appRoot` only
+    refused when another); MaintenanceAccess's P17 case has the holder, the non-holder and another organization.
+- Fixes:
+  - R1 (medium, correctness): a completion counted by the root's first completion ever, so an order completed, reopened before the
+    period began and completed again in it counted in no period. Now a root complete at the as-of time counts when the completion in
+    force (its last at or before the as-of time) falls in the period, once however often it completed in it, and a cancellation by
+    the one in force. Mantle MaintenanceReports' third feature (fails with the first completion). The service description, the
+    catalog entry's basis and design §8 as built say so.
+  - R2 (medium, export): the csv render writes every form-list of the page, so Work status's CSV began with its Measures and group
+    totals (with a blank label where a count is 0) and PM compliance's with its summary, and ComplianceRows' Outcome (a render-mode
+    cell with no csv text) was empty on every row. Both screens leave their totals out of a csv or xlsx render (`exporting`), and the
+    outcome is a display in an export. BOSS MaintenanceReports' CSV feature (both fail before).
+  - R3 (low, test): nothing tested the datasets' organization scope. BOSS MaintenanceReports' dataset feature indexes the air
+    handler's document and a spec-local Retail work order document (deleted at the end): Retail's Insights reader reads its own and
+    none of Services', even asking for Services by name; Services' reader the air handler's. It fails with the filter on another
+    field.
+  - MaintenanceAccess: each user's shell data rendered once in the spec (the purchases feature rendered the supervisor's twice).
+- Findings:
+  - The report options are not in the CSV: the CSV is the form-list's own (F72), whose rows carry their state and measures; the
+    options are in the print and in the page. Putting them in the export needs an export of the report's own (as Commerce's and
+    Purchasing's reports have) or a framework form-list option; left as built.
+  - Maintenance's supervisors' and administrators' dataset grant (BOSS_MNT_DATASETS and the documents' rows) opens the rows only to
+    one who also reads datasets through Insights (the report engine's `query#Documents` is the Insights groups'): the supervisor alone
+    is refused the engine, as Customer Service's managers are for its clocks. The user's call (3) holds as "supervisors and
+    administrators who use Insights"; a Maintenance screen of its own over the datasets would need the engine's read for them.
+  - A completion reopened across periods and completed again counts in each period whose end saw it complete (rework), by R1's
+    rule; one completed, reopened and completed in one period counts once. The design's "distinct roots first completed in the
+    period" read so.
+  - The Overview's Downtime card shows to every reader; Equipment's Downtime list may not open for a reader without a resource
+    read (it opens from the card and refuses as its screen does).
+  - Upgrade (for P20's release notes): an existing database loads `data/BossMaintenanceReportData.xml` (seed-initial: the three
+    DataDocuments and the BossMaintenanceReports feed) and the P17 block of BossSetupMaintenanceData.xml (the dataset grants and
+    admission, DatasetClass, readiness and refresh rows, the catalog entries, metrics, attention providers, flow target and the
+    `maintenanceReports` export target), then rebuilds each of the three datasets' indexes (Admin's readiness offers the refresh) so
+    the existing work orders, obligations and outages are indexed. The internal flow map template is version 2; an organization's
+    copy of version 1 keeps its information-only Maintenance step until copied again.
+- Tests (release binary, `--nobuild`, this worktree after the merge): mr-mantle MaintenanceReports (3 features, 1.3 s),
+  MaintenanceCosts, MaintenanceGeneration, MaintenanceDue, MaintenanceStack: 27 of 27 (5 specs); mr-boss MaintenanceReports (4
+  features, 0.6 s), MaintenanceAccess (25 features after the merge: 8.4 s alone, 9.8 s in the 13-spec run), MaintenanceCosts,
+  MaintenancePlans, MaintenanceStack, InsightsCatalog, InsightsFlowMaps, InsightsHome, InsightsDatasets, InsightsAccess,
+  InsightsSettings, AdminExports, AdminRegistries: 84 of 84 (13 specs). Mutations: R1's case fails with the first completion, R3's
+  with the row filter on `facilityId`; R2's fails on the pre-fix screens (probed). `./moq run --debug --nobuild lint --screens`: 137
+  flagged sites (master's count; none in Maintenance/Reports), the release symlink intact. Prettier clean on the changed specs and
+  MaintenanceReports.js; MaintenanceAccess's hunk matches Prettier's output. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle MaintenanceReports +0.1 s (1.3 s); mr-boss MaintenanceReports +0.2 s (two CSV renders and one dataset
+    query, 0.6 s); MaintenanceAccess unchanged in cases (25 features, 8.4 s: no duplicated setup worth cutting beyond the shell
+    data; its slowest feature, P4's requests at 1.1 s, renders eleven users' shell data, each a case); budgets not changed. The two
+    CSV renders are exports, not a second page mode of the screens.
+  - Merge hot spots: as the Built note, plus BossSetupMaintenanceData.xml's export targets (sequence 65 to 68) and design §8's
+    as-built sentence.
+  - The user's calls: the three accepted calls are built; (3) reads as above (supervisors and administrators who use Insights) —
+    recommended as is; giving them the report engine's read outside Insights would be a new grant, not asked.
+
 ### P18 — Settings, lookups, readiness and import
 
 (F117: the readiness provider is a `moqui.server.ReadinessProvider` with `fixRoute`, its service answering `subject`, `scope` and `fixRoute` as People's `get#Readiness`; the import's owner route is a `mountRoutes` key in Admin.js; Data.js and DataImport.js no longer hold owner routes.)
