@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     of the Maintenance administrator's settings, by organization (those of their maintenance scope), naming what is configured here
     as each part is built: the work policy (P3), teams and their dispatch defaults (P8), lookups and the setup readiness (P18), each
     a form or tab its phase adds. A user without MAINTENANCE_SETTINGS_EDIT who opens it (ADMIN's areas pass every grant) is told the
-    settings are the administrator's. -->
+    settings are the administrator's. P18: Lookups and Readiness are tabs; the settings other apps keep for Maintenance (the expense
+    mapping and labor costing rates in Accounting, booking rules and approvers in Scheduling) are listed with where they are kept. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="1">
     <parameter name="organizationPartyId"/>
@@ -31,11 +32,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
         <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
         <set field="settingRows" from="[
-                {setting: 'Work policy', configures: 'Default work type and team, the planned-work approval threshold and the closure policy'},
-                {setting: 'Teams', configures: 'Dispatch defaults and the intake address of each maintenance team'},
-                {setting: 'Lookups', configures: 'Maintenance kinds, sources, severities, reasons and failure modes'},
-                {setting: 'Setup readiness', configures: 'What Maintenance still needs before work is planned'}
-            ].map(row =&gt; Object.assign(row, {state: row.setting === 'Work policy' ? 'Work policy tab' : 'Not yet available'}))"/>
+                {setting: 'Work policy', configures: 'Default work type and team, the planned-work approval threshold, the closure policy and procedure self-approval, from a date', state: 'Work policy tab'},
+                {setting: 'Teams', configures: 'Dispatch defaults and the intake address of each maintenance team', state: 'Not yet available'},
+                {setting: 'Lookups', configures: 'Work types, severities, reasons, outcomes and failure modes with where they apply', state: 'Lookups tab'},
+                {setting: 'Setup readiness', configures: 'What Maintenance still needs before work is planned', state: 'Readiness tab'},
+                {setting: 'Maintenance expense', configures: 'The expense account parts issued to maintenance work post to', state: 'Accounting: Posting defaults'},
+                {setting: 'Labor costing rates', configures: 'The cost of a technician hour', state: 'Accounting: Costing policies'},
+                {setting: 'Booking rules and approvers', configures: 'Which rooms and equipment are booked with approval, and by whom', state: 'Scheduling: Resources'}
+            ]"/>
     </actions>
     <widgets>
         <label text="Maintenance settings" type="h5"/>

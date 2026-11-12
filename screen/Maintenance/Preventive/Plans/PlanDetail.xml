@@ -18,10 +18,12 @@ along with this software (see the LICENSE.md file). If not, see
     Ended); the primary action by state and authority (Activate for a planner or supervisor on a draft that nothing keeps from
     activation, PlanAction), and More (End, with a reason). What keeps a draft from activation (no time zone, a named
     procedure that does not qualify, an incomplete trigger; a procedure is optional, the user's call of Nov 12) is named above the tabs. The tabs, by menu index: Schedule (1: DueExplanation and
-    ScheduleTerms with Edit, and the terms' history). Due history and Generated work join with P14. Each write is
-    mantle.work.MaintenancePlanServices.store#MaintenanceSchedule's after the record check. P19: More's Add next due to calendar
-    (.ics of an active calendar plan's next due, Mantle's get#MaintenanceCalendarFile; DueMaintenance's rows, P14, take the same
-    transition). -->
+    ScheduleTerms with Edit, and the terms' history), Due history (2, P14: the obligations acted on, with the decisions on
+    missed ones and the correction of a counted completion) and Generated work (3, P14: the work orders made for the plan). P14: an
+    active plan's Generate work, for a planner or supervisor, the same generation as Due maintenance's, its preview in the
+    confirmation. Each write is Mantle's (store#MaintenanceSchedule, generate#MaintenanceWorkOrders, reconcile#MaintenanceSchedule)
+    after the record check. P19: More's Add next due to calendar (.ics of an active calendar plan's next due, Mantle's
+    get#MaintenanceCalendarFile); DueMaintenance's rows take the same transition. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Plan" default-menu-include="false">
     <parameter name="maintenanceScheduleId" required="true"/>
@@ -32,21 +34,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!planCheck?.recordId"/>
     </always-actions>
     <transition-include name="planAction" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
-    <!-- P19: the plan's next calendar due as a calendar file -->
-    <transition name="dueCalendarFile" read-only="true">
-        <actions>
-            <service-call name="ironstone.maintenance.AccessServices.check#Record"
-                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
-            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceCalendarFile" out-map="calendar"
-                    in-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
-            <if condition="ec.message.hasError()"><return/></if>
-            <script>ec.web.sendTextResponse(calendar.text, 'text/calendar', calendar.fileName)</script>
-        </actions>
-        <default-response type="none"/>
-        <error-response url="."><parameter name="maintenanceScheduleId"/></error-response>
-    </transition>
+    <transition-include name="generateDue" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
+    <transition-include name="dueCalendarFile" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
     <subscreens default-item="Schedule">
         <subscreens-item name="Schedule" location="component://mr-boss/screen/Maintenance/Preventive/Plans/PlanDetail/Schedule.xml" menu-index="1"/>
+        <subscreens-item name="DueHistory" location="component://mr-boss/screen/Maintenance/Preventive/Plans/PlanDetail/DueHistory.xml" menu-index="2"/>
+        <subscreens-item name="GeneratedWork" location="component://mr-boss/screen/Maintenance/Preventive/Plans/PlanDetail/GeneratedWork.xml" menu-index="3"/>
     </subscreens>
     <actions>
         <if condition="recordFound">
@@ -61,6 +54,13 @@ along with this software (see the LICENSE.md file). If not, see
                 plan.timeZoneText ? 'Time zone ' + plan.timeZoneText : 'No time zone', plan.fromText ? 'Active from ' + plan.fromText : '',
                 plan.thruText ? 'Ended ' + plan.thruText : ''].filter(Boolean).join(' · ')"/>
         <set field="targetLink" from="plan.assetId ? sharedLinks['Equipment/EquipmentDetail'] : sharedLinks['Facilities/FacilityDetail']"/>
+        <!-- P14: what generation would do now, for a planner or supervisor of an active plan (the confirmation's text) -->
+        <if condition="recordFound &amp;&amp; planDetail.canEdit &amp;&amp; plan.statusId == 'MschActive'">
+            <service-call name="mantle.work.MaintenancePlanServices.generate#MaintenanceWorkOrders" out-map="generatePreview"
+                    transaction="force-new" ignore-error="true" in-map="{maintenanceScheduleId:maintenanceScheduleId, preview:true}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="previewRow" from="generatePreview?.results?.[0] || null"/>
     </actions>
     <widgets>
         <section name="PlanNotFound" condition="!recordFound">
@@ -104,6 +104,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     parameter-map="{maintenanceScheduleId:maintenanceScheduleId, expectedRevision:plan.revision, planAction:'activate'}"
                                     condition="planDetail.canActivate"
                                     confirmation="Activate ${plan.scheduleName}? Its due dates count from now on."/>
+                            <link url="generateDue" text="Generate work" icon="sym_o_playlist_add" link-type="hidden-form-link"
+                                    parameter-map="{maintenanceScheduleIds:maintenanceScheduleId, operationKey:'plan-' + maintenanceScheduleId + '-' + ec.user.randomString(10)}"
+                                    condition="previewRow?.outcome == 'ready'" confirmation="${previewRow?.message || ''}?"/>
+                            <label text="${previewRow.message}" type="span" style="text-caption m-muted" condition="previewRow &amp;&amp; previewRow.outcome != 'ready'"/>
                             <button-menu text="More" icon="more_horiz">
                                 <container-dialog id="EndPlanDialog" button-text="End plan" icon="sym_o_stop_circle" title="End ${plan.scheduleName}"
                                         width="520" condition="planDetail.canEnd">

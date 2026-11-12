@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PlanDetail's Due history tab (design-maintenance §5 PlanDetail OccurrenceHistory and PlanAction's correction; impl-maintenance
+    P14): the plan's obligations acted on (Mantle's find#MaintenanceOccurrences, a maintenance reader of its organization), latest
+    first: the due date in the target's zone or the meter's threshold, its state (work made, completed, skipped, coalesced, open
+    again; the catch-up named), its work order, when it was satisfied and whether on time, the catch-up it was coalesced into, who
+    made its work (a planner, or the job) and a decision's reason and who. For a planner or supervisor of an active plan: the missed
+    due dates not yet acted on, coalesced into one catch-up or the next skipped, with a reason; and Correct on a completed one (the
+    obligation open again, its work order kept and named not counted), with a reason (reconcile#MaintenanceSchedule). Reads the
+    plan itself, so it renders alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Due history" default-menu-index="2">
+    <parameter name="maintenanceScheduleId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="resolveDue" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenancePlanServices.find#MaintenanceOccurrences" out-map="history" transaction="force-new"
+                    ignore-error="true" in-map="{maintenanceScheduleId:maintenanceScheduleId, pageIndex:pageIndex}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="occurrenceList" from="history?.occurrenceList || []"/>
+        <set field="occurrenceListCount" from="history?.occurrenceListCount"/>
+        <set field="occurrenceListPageIndex" from="history?.occurrenceListPageIndex"/>
+        <set field="occurrenceListPageSize" from="history?.occurrenceListPageSize"/>
+        <set field="occurrenceListPageMaxIndex" from="history?.occurrenceListPageMaxIndex"/>
+        <set field="occurrenceListPageRangeLow" from="history?.occurrenceListPageRangeLow"/>
+        <set field="occurrenceListPageRangeHigh" from="history?.occurrenceListPageRangeHigh"/>
+        <set field="missedList" from="history?.missedList || []"/>
+        <set field="missedText" from="missedList.map(row =&gt; row.dueText).join(', ')"/>
+        <set field="canReconcile" from="!!history?.canReconcile"/>
+    </actions>
+    <widgets>
+        <section name="DueHistoryFound" condition="history">
+            <widgets>
+                <section name="MissedDue" condition="missedList.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="${missedList.length} due date(s) missed"/>
+                            <box-toolbar>
+                                <container-dialog id="DecideMissedDialog" button-text="Decide" icon="sym_o_rule" title="Missed due dates" width="560"
+                                        condition="canReconcile">
+                                    <label text="Coalesce them into one catch-up (its completion counts for each, late) or skip the next one. Either keeps its reason."
+                                            type="p" style="text-caption"/>
+                                    <form-single name="DecideMissed" transition="resolveDue"
+                                            map="{maintenanceScheduleId:maintenanceScheduleId, decision:(missedList.length &gt; 1 ? 'coalesce' : 'skip')}">
+                                        <field name="maintenanceScheduleId"><default-field><hidden/></default-field></field>
+                                        <field name="decision">
+                                            <default-field title="Decision">
+                                                <radio><option key="coalesce" text="Coalesce into one catch-up"/><option key="skip" text="Skip the next due date"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Decide"><submit type="primary"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${missedText}" type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Due history"/>
+                    <box-body-nopad>
+                        <form-list name="OccurrenceHistory" list="occurrenceList" skip-form="true" paginate="true">
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="workEffortId">
+                                <default-field title="Work order">
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId}" condition="workEffortId"/>
+                                    <label text="Not counted: ${uncountedWorkEffortId}" type="div" style="text-caption m-muted" condition="uncountedWorkEffortId"/>
+                                </default-field>
+                            </field>
+                            <field name="satisfiedText"><default-field title="Satisfied"><display/></default-field></field>
+                            <field name="timelinessText"><default-field title="On time"><display/></default-field></field>
+                            <field name="coveredByText"><default-field title="Catch-up of"><display/></default-field></field>
+                            <field name="generatedText"><default-field title="Work made"><display/></default-field></field>
+                            <field name="decisionReason">
+                                <default-field title="Decision">
+                                    <label text="${decisionReason}" type="div" condition="decisionReason"/>
+                                    <label text="${decidedText}" type="div" style="text-caption m-muted" condition="decidedText"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="Correct_${maintenanceOccurrenceId}" button-text="Correct" icon="sym_o_undo"
+                                            title="Correct the completion of ${dueText}" width="520" condition="canCorrect">
+                                        <label text="The due date is open again and its work order is kept, no longer counted for the plan; work made since is named for review."
+                                                type="p" style="text-caption"/>
+                                        <form-single name="CorrectCompletion" transition="resolveDue"
+                                                map="{maintenanceScheduleId:maintenanceScheduleId, maintenanceOccurrenceId:maintenanceOccurrenceId, decision:'correct'}">
+                                            <field name="maintenanceScheduleId"><default-field><hidden/></default-field></field>
+                                            <field name="maintenanceOccurrenceId"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden/></default-field></field>
+                                            <field name="changeReason"><default-field title="Why it does not count"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Correct"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="dueText"/><field-ref name="workEffortId"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="timelinessText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No due date of this plan has been acted on yet: its work is made from Due maintenance or by the job."
+                                type="p" style="m-muted q-pa-sm" condition="!occurrenceList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

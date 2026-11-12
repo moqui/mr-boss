@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Reports area of IronStone Maintenance (design-maintenance §8, §1.2; impl-maintenance P14): PM compliance
+    (PreventiveComplianceReport) first, shown to a reader of maintenance work (the root's menu condition, MAINTENANCE_VIEW); Mantle's
+    MaintenanceReportServices check again. P11 the cost report (MaintenanceCostReport, the cost
+    reader's alone: BOSS_MNT_COSTS). P17 adds the landing (ReportLinks) and work status. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_analytics" menu-image-type="icon">
+    <subscreens default-item="PreventiveComplianceReport" always-use-full-path="true">
+        <subscreens-item name="PreventiveComplianceReport" location="component://mr-boss/screen/Maintenance/Reports/PreventiveComplianceReport.xml"
+                menu-index="2"/>
+        <!-- P11: the cost reader's (BOSS_MNT_COSTS keeps it out of every other user's menu) -->
+        <subscreens-item name="MaintenanceCostReport" location="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml"
+                menu-index="3"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenanceReportsPanel" type="tab"/>
+    </widgets>
+</screen>

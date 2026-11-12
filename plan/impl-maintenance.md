@@ -373,15 +373,15 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | built and reviewed Nov 12, merged |
 | P10 Purchasing and outside service | Mantle, BOSS | WorkOrderDetail's Purchasing, OrderDetail; Purchasing's RequestDetail line | built and reviewed Nov 12, merged |
-| P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
+| P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | built and reviewed Nov 12, merged |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
-| P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
+| P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built and reviewed Nov 12, merged |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
-| P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | — |
-| P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built Nov 12, in review |
+| P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
+| P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12 |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -2949,6 +2949,229 @@ Design §3 WorkCosts, §8 MaintenanceCostReport, review Y2, "Charging a project"
   service with their sources and no pay rate; the planner's WorkOrderDetail has no Costs tab; the project shows the
   repair.
 
+**Built Nov 12 (P11).** mr-mantle 10cc61af, mr-boss 74682534 and this note's commit (branch `mnt/p11`); mr-moqui unchanged, no Rust
+built.
+- Checked first (the code over the plan): People P10's `get#CostingRate` (CostingRates.js: a class or the person's position class at the
+  date, the work type, the employer's rows first, `organizationPartyId` given or the person's PrtEmployee employers, priced false with
+  no row; it reads no pay and checks no permission) and its review's organization rows (R4); `store#TimeEntry` (it puts the entry on its
+  week's timesheet and sets the person's class) and approval as the timesheet's `TmshApproved` (ProjectCosts.js reads it so); P3's
+  threshold (`withinThreshold`, makeOrder and refusalOf's approve, MaintenanceWork.js) and P6's `treeHours` (F150: the steps' sum when
+  any step has an estimate, else the root's); P9's issuances and returns (AssetIssuance with its cost centre and project, the return
+  naming its issuance at the asset's `acquireCost`), `get#MaintenanceMaterials`' value rule and `WorkEffortProduct` lines;
+  `get#ApprovedStandardCost` (Costs.js `approved`: CostPolicy.scope first, so it refuses a caller without product-cost access, then
+  `effective`); P10's line rule (MaintenancePurchases.js `lineKeysOf`: AssetMaintenanceOrderItem, or sourced from the work's purchase
+  requests), ServiceAcceptance and OrderItemBilling; Projects' `get#ProjectMoneySummary` and `get#ProjectMoney`; F118 and F128; the
+  Admin and Insights paths of the brief (no registration needed: Insights' `Maintenance.Cost` entry is P17's).
+- Mantle:
+  - `MaintenancePolicy` gains `approvalThresholdCost` (currency-amount) and `approvalThresholdCurrencyUomId`, unset by default.
+  - `MaintenanceCosts.js` (new): `mantle.work.MaintenanceReportServices.get#MaintenanceCosts` (MAINTENANCE_COST_VIEW with a work read,
+    PERMISSION_DENIED otherwise; one work order with its estimate, or the scope's work orders of any status by organization, facility,
+    equipment, team, project and kind, at most 2000; sources dated in the period, by component and currency): each issuance at its
+    asset's cost and each return naming it, less; each finished time entry once, approved hours at `get#CostingRate` (the entry's class
+    else the technician's, its work type, the work's organization), shown with the class and its rate, never `vendorHourRate`, with
+    unapproved and unpriced hours apart; each outside-service line of the work once, from its bill (OrderItemBilling of an invoice not
+    cancelled), what was accepted beyond the bills at the order price, what is only ordered pending; goods lines are counted when
+    issued. Totals by currency, never added across; priced amounts by project (an issuance's own, a time entry's and a line's of its work
+    order); the posting state of each source. `MaintenanceSettingsServices.store#MaintenanceCostThreshold` (MAINTENANCE_SETTINGS_EDIT,
+    the organization in scope; an empty amount unsets it; the row in effect ends and the next copies its other fields).
+    `projectCosts` for Projects.
+  - The threshold's cost half (MaintenanceWork.js, grouped edits): `withinThresholds` (the hours, then the cost where the policy sets
+    one) in create and the Approve gate; `estimateOf` computes the estimate when asked and stores nothing: each open planned part of the
+    root and its steps at its estimated quantity times the approved standard cost (Costs.js `effective`, the rule of
+    `get#ApprovedStandardCost`, without its product-cost permission), plus the hours as `treeHours` reads them at `get#CostingRate` for
+    the node's work type and its assignees' class (the highest; a step with none takes the root's). A part with no approved cost or in
+    another unit, hours with no one assigned or no rate, or another currency leave it unknown, and unknown is over. The refusal names
+    no amount (`APPROVAL_REQUIRED`, as P3's). `get#MaintenancePolicy` answers the cost threshold to a settings editor or cost reader
+    only; `store#MaintenancePolicy` keeps it. MaintenanceWork.js exports `scopedQuery` and `treeHours` for the report.
+  - Projects (owner contract): `ProjectServices.get#ProjectMoneySummary` adds `maintenanceList` and `maintenanceTotalList` (the work
+    orders charged to the project, or with an issuance carrying it, each with its parts, labor and outside service by currency and the
+    hours not priced), in a try that logs and leaves it out on a failure.
+- BOSS:
+  - Screens: WorkOrderDetail's Costs tab (`WorkOrderDetail/Costs.xml`, index 100, F128: cost by currency, the hours apart, the estimate
+    or why it is not priced, the project, the sources with their posting state, a link to the report); `WorkOrders/MaintenanceCostReport`
+    (CostOptions, CostTotals, the cost by project, CostSources linking each work order's Costs tab; Export CSV with the options and the
+    same sources, a formula-looking cell quoted; Print as the screen's html-print, every value escaped), under **Work orders** (a tab
+    beside Find) since no Reports area exists yet: P17 moves it to Maintenance/Reports. Both are the artifact group `BOSS_MNT_COSTS`
+    (BossSetupMaintenanceData.xml: denied to BOSS_MAINTENANCE, ALWAYS for BOSS_MAINTENANCE_COST, whose bundle carries it), so they are in
+    no other user's menu. Settings' Work policy gains a **Cost threshold** field group of its own (its transition `storeCostThreshold`,
+    a separate form below the work policy's, for P18's rework). Maintenance.js' linkPath `WorkOrders/MaintenanceCostReport`.
+  - Projects (owner contract): `ironstone.projects.BillingServices.get#ProjectMoney` maps the list (`maintenanceRows`,
+    `maintenanceTotalText`) and `ProjectDetail/Money.xml` shows a **Maintenance** box when there is one; the other boxes unchanged.
+  - Demo (BossZMaintenanceDemoData.xml, appended): Services' RaprCost row for its service technicians (`BOSS_PPL_JC_TECH`, 48 USD an
+    hour, Services' own) and maint.tech's approved timesheet of the belt's week with the belt's entry of that class, so maint.cost reads
+    the belt's two hours priced (96 USD), the air handler's and Room 102's hours not approved, the air handler's gaskets at cost and
+    the motor's rewind pending.
+- Specs:
+  - Mantle `test/work/MaintenanceCosts` (3 features, 1.7 s): labor at the class's rate (40 USD) with root and step time once (1 h and
+    2 h, 120), a vendor rate written on an entry not read, an approved entry of a technician with no class unpriced and an entry off its
+    timesheet unapproved; parts issued less returned (40), a rewind accepted and billed counted once from its bill in euros (320),
+    the two currencies apart, the planner answered PERMISSION_DENIED and another organization ORGANIZATION_DENIED; with an hours
+    threshold of 10 and a cost threshold of 500 USD, zero-hour work approved on create, unassigned work with hours held (unknown), work
+    of 120 approved by the planner once assigned and planned, work of 680 held (the refusal names no amount) and approved by the
+    supervisor, a part with no approved cost held, the planner's policy read without the threshold, the work policy's save keeping it,
+    and an unset threshold not compared.
+  - BOSS `test/Maintenance/MaintenanceCosts` (3 features, 0.9 s): the Costs tab's one qvt render (maint.cost: the belt's 96.00 at
+    48.00/h · Service technician, the estimate, the source and its approval); the report's one qvt render (USD, the hours apart, the air
+    handler's gaskets, the rewind pending), its CSV (the options, the belt's entry, the rewind) and its html-print; Projects' money with
+    the belt charged to SUPP (the summary's one work order at 96, the Money tab's Maintenance box), the charge removed after.
+    `MaintenanceAccess` gains the cost rule (maint.cost reads; the planner and the supervisor PERMISSION_DENIED; Retail
+    ORGANIZATION_DENIED; Costs and the report in the cost reader's tabs only, both refused to the planner; 0.39 s). WorkOrders' Work
+    policy render checks the cost threshold's field (MaintenanceWorkOrders, one line).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceCostWalk` (4 features: the held motor resumed, both technicians
+    assigned, charged to SUPP and started; a belt issued by maint.tech, maint.tech2's two hours approved, the rewind accepted by the
+    supervisor; maint.cost's Costs tab, report and CSV with the belt at 42.00, labor 96.00 at the class's rate, the rewind 480.00 and
+    no person's rate; the planner without the tab and refused it and the report; the support project's money showing the repair at
+    618.00).
+- Tests run (release binary, `--nobuild`, `--db snapshot`, this worktree): mr-mantle MaintenanceCosts, MaintenanceWorkOrders,
+  MaintenanceProcesses, MaintenanceIntake, ProcessChecks, MaintenanceMaterials, MaintenancePurchases, MaintenanceManagedWork,
+  WorkProjectMilestones, LaborCostingRate, ProductionDowntime, ProductionPolicy, ProductionQuantities: 80 of 80 (13 specs, 28.7 s feature
+  time); MaintenanceCosts again after Prettier 3 of 3. mr-boss MaintenanceCosts 3 of 3 (0.9 s); MaintenanceAccess 20 of 20 (7.9 s);
+  MaintenanceWorkOrders, MaintenanceParts, MaintenancePurchasing, MaintenanceEquipment, MaintenanceProcedures, MaintenanceChecklists,
+  MaintenanceRequests, MaintenanceDowntime, MaintenancePlans, MaintenanceScheduling, ProjectsAccess, PeopleTime, ManufacturingShopFloor:
+  58 of 58 (13 specs, 18.5 s); Projects' and Accounting's money owners ClientBilling, NewProject, Billing, Projects, TimeEntries,
+  AccountingReceivables: 43 of 43 (6 specs, 11.9 s); after Prettier MaintenanceCosts, MaintenanceAccess and MaintenanceWorkOrders 29 of
+  29. Client MaintenanceWorkOrdersWalk 1 of 1 (8.26 s). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before, none
+  in the new or changed screens (a first run flagged the CSV script's "as of" text, reworded); both symlinked binaries unchanged.
+  Prettier (`npx prettier` with the repo's `.prettierrc.json`, from each component) clean on MaintenanceCosts.js, both MaintenanceCosts
+  specs and the walk; the changed lines of MaintenanceWork.js, Maintenance.js, MaintenanceSpecLib.js, MaintenanceWorkOrders.spec.js and
+  MaintenanceAccess.spec.js are clean (the files are not clean on master and were not reformatted whole). Not run: ./moq test-apps, the
+  acceptance suite.
+- Inventories: usl-inventory's get#CostingRate and get#ProjectMoneySummary rows and an Added table for get#MaintenanceCosts and
+  store#MaintenanceCostThreshold; ss-inventory's P11 line (no baseline form maps to the costs).
+- Design edits: design-maintenance's header, "Charging a project" (labor read, not posted), a Costs (WorkCosts) as-built paragraph, §8
+  MaintenanceCostReport (its path under Work orders until P17), §9 Settings' cost threshold and MT-08 as built; design-projects'
+  header and ProjectMoney's as-built (the Maintenance box); impl-projects' log.
+- Findings, numbered by the lead F278 to F286 in order:
+  - `get#ApprovedStandardCost` runs CostPolicy.scope before reading, so it refuses a planner (no product-cost access); the estimate reads
+    `Costs.js` `effective`, the same rule, and shows no cost to the planner.
+  - "Approved hours" is the entry's timesheet in `TmshApproved` (Mantle has no per-entry approval); `store#TimeEntry` puts every entry on
+    its week's timesheet and sets the person's class on it, so a class change later does not reprice old time.
+  - Maintenance labor is read at the costing rate, never posted: AC-24 routes parts only, and Accounting's project cost posting
+    (ProjectCosts.js `projectOf`) follows the work effort tree, so a repair's time charged to a project is not posted to the project.
+    Posting maintenance labor is Accounting's to design (as AC-24 was).
+  - With a cost threshold set, ad hoc planned work with hours is held on create (no one is assigned yet, so its labor cannot be priced);
+    the planner assigns it and then approves it within the threshold. Work from a procedure with its roles named is estimated on create.
+  - Several technicians on one node: the estimate takes the highest of their rates (an unpriced one makes it unknown); a step with no
+    assignee of its own takes the root's.
+  - Projects' money readers (TIME_ENTRY_RATE) see a repair's totals charged to their project without MAINTENANCE_COST_VIEW, as
+    "Charging a project" has it (totals by currency only; no source, rate or person).
+  - Outside service bills are read from OrderItemBilling (quantity times amount, the invoice's currency); a bill of a line without an
+    OrderItemBilling (an expense invoice not matched to the order) is not seen. The demo has no supplier bill; the bill path is the Mantle
+    spec's.
+  - The cost reader's bundle carries `BOSS_MNT_COSTS`; P4's Requests area (`BOSS_MNT_REQUESTS`) is carried by no bundle, so a group given
+    the planner bundle in Admin lacks Requests.
+  - The report reads each order line's acceptances and bills in a query each; at the 2000 work orders the report allows, a bulk read
+    would scale better.
+- For the lead:
+  - Budget share: mr-mantle +1.7 s (MaintenanceCosts); mr-boss server +1.3 s (MaintenanceCosts 0.9 s, MaintenanceAccess' cost case
+    0.4 s); client unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js` (header comment, a require, defaultPolicy and policyOf's two fields, withinThresholds
+    after withinThreshold, getPolicy, storePolicy's create, makeOrder's approval line, refusalOf's approve, the export list: P14 and P18
+    may touch the policy and create), `MaintenanceEntities.xml` (MaintenancePolicy's two fields and description), MaintenanceSettingsServices.xml
+    (descriptions, an appended service), MaintenanceReportServices.xml (appended), ProjectServices.xml (get#ProjectMoneySummary); mr-boss
+    `screen/Maintenance/Settings/WorkPolicy.xml` (P18's: the header comment, a transition before the actions, one set, a box appended to
+    the form section), `BossSetupMaintenanceData.xml` and `BossZMaintenanceDemoData.xml` (appended), `Maintenance.js` (linkPaths' end),
+    `WorkOrders.xml` and `WorkOrderDetail.xml` (comments), `MaintenanceSpecLib.js` (ids after P10's), `MaintenanceAccess.spec.js`
+    (appended feature), `MaintenanceWorkOrders.spec.js` (one line), Projects' `BillingServices.xml` and `Money.xml`, the inventories,
+    design-maintenance's header and §3/§8/§9, design-projects and impl-projects' headers. `screen/Maintenance.xml` is unchanged (the report
+    sits under Work orders).
+  - The user's calls: none blocking. For a decision: whether Projects' money readers may see a repair's cost totals without the
+    maintenance cost permission (built: yes, as the design's "Charging a project" says); and whether create should estimate ad hoc
+    planned work with the default team's technicians (built: no one assigned is unknown, so such work waits for a supervisor or the
+    planner's approval after assigning).
+
+**Review Nov 11 (P11).** mr-mantle 860c4559, mr-boss 99e0e21f and this note's commit (branch `mnt/p11`; master not merged, as the
+lead asked: P18 and P14 merge first). Reviewed `git diff master...mnt/p11` of mr-mantle (10cc61af) and mr-boss (74682534, 23ee1289)
+against the phase's text, §2, §4, design §3 WorkCosts, "Charging a project", §8 MaintenanceCostReport and §9, design-projects
+ProjectMoney, design-accounting's labor costing rates and AC-24, AGENTS.md and Practices-App-Dev.
+- Checked and found sound:
+  - Restricted values: `get#MaintenanceCosts` is the only answer with an amount, and it checks MAINTENANCE_COST_VIEW with a work read
+    in Mantle (no group name, no appRoot), the one work order through `requireWork`, the report through `scopedQuery`, an organization
+    given through `requireOrganization`. The Costs tab, the report, its CSV and its print all read it; the screens are `BOSS_MNT_COSTS`
+    (denied to the root group, ALWAYS for the cost reader, carried by the cost reader's bundle), so they are in no other menu; the
+    shell context gains only the report's link path. No Home counter, palette source, notification, Assist answer, Insights dataset or
+    shell context gains a value. Labor is priced at `get#CostingRate` (class, work type, the work's organization), never
+    `vendorHourRate` or a person's rate; the rate text is the class's. `get#MaintenancePolicy` hides the cost threshold from anyone but a
+    settings editor or cost reader; the Approve refusal names no amount (the spec checks it), and `withinThresholds` compares the cost
+    only after the hours pass.
+  - `get#ApprovedStandardCost` and the planner: the estimate reads `Costs.js` `effective` (the same row `approved` answers, after
+    `CostPolicy.scope`), and the planner gets only a yes or no from it (approved on create or by the planner, else APPROVAL_REQUIRED);
+    nothing widens a product-cost answer the planner sees. The cost reader does see the estimate's parts at the approved standard cost
+    on the Costs tab without PRODUCT_COST_VIEW: design §3 WorkCosts lists the estimated cost, and the reader sees the issued cost of the
+    same parts anyway (a finding below, for the record).
+  - The arithmetic: each TimeEntry, issuance, return and order line is one source (time on the root and on a step are separate rows,
+    never a rolled-up `actualWorkTime`); totals are kept per currency, unpriced rows have none; an outside line counts its bills (of
+    invoices not cancelled) and only what was accepted beyond the billed quantity, at the order price, and what is ordered beyond both is
+    pending, outside the total; returns name their issuance and are negative at the returned asset's cost; unapproved hours (a timesheet
+    not `TmshApproved`, or none) and approved hours with no rate are summed apart. The estimate takes the steps' hours when any step has
+    one (as `treeHours`, F150), the highest rate of a node's assignees (any unpriced one makes it unknown), the root's assignees for a
+    step with none; another currency, another unit, a missing approved cost, no one assigned or no rate are unknown, and unknown is over.
+  - The planner's view of the threshold: the outcome (approved or held) is the only signal; a planner who varies assignees or planned
+    quantities learns only whether an unseen estimate is under an unseen threshold, as any threshold gate tells. No amount, rate or
+    comparison of two technicians' rates is answered.
+  - Projects (owner contract): `get#ProjectMoneySummary` adds two lists in a try that logs and leaves them out; the other fields and
+    boxes are unchanged; the Money tab's box shows only when there is a repair. Projects' specs pass unchanged. The accepted call holds:
+    a money reader sees each work order's total by currency and its hours not priced, with no source, rate, part price or person
+    (made strict in the Mantle answer by R3).
+  - Labor and the ledger: nothing posts maintenance labor, and neither the phase nor §4 asks it (P11's labor is a read at the costing
+    rate; AC-24 routes parts; Accounting's `post#WorkEffortCost` follows the project tree). The design's "Charging a project" says so.
+  - Settings: `store#MaintenanceCostThreshold` checks MAINTENANCE_SETTINGS_EDIT and the organization in Mantle, ends the row in effect
+    and copies its other fields; `store#MaintenancePolicy` keeps the threshold. The screen's transition checks the record first.
+  - Tests: one qvt render each of the Costs tab, the report and Projects' Money (Money had only a refusal render before); no sweep; the
+    acceptance walk written and not run.
+- Fixes:
+  - R1 (Moderate, security): the report's CSV quoted a leading `=`, `+` or `@` only; a name or description starting with `-`, a tab or
+    a return was exported as a formula. It now quotes those too, unless the cell is a plain number (a return's negative amount stays
+    a number), as Commerce's, Purchasing's and Customer Service's exports do. Spec: MaintenanceCosts' CSV with the belt renamed
+    `-2+3 belt` (fails without the fix).
+  - R2 (Minor, access; P4's finding): `BOSS_MNT_REQUESTS` was carried by no bundle, so a group given the planner or supervisor bundle in
+    Admin lacked Requests. Two CapabilityBundleArtifact rows (BossSetupMaintenanceData.xml). Spec: MaintenanceAccess' registry feature
+    now checks that every ALWAYS grant of a Maintenance bundle's group (but the administrator's, whose root grant opens all) is carried
+    by its bundle (fails without the rows, naming both).
+  - R3 (Minor, restricted values): `projectCosts` answered each work order's parts, labor and outside service apart to Projects' money
+    readers (a work order's labor alone being one technician's hours at their class's rate), though the box showed only totals. It now
+    answers each currency's total alone, per work order and overall; the box lists two currencies with a comma, not a plus. design-
+    maintenance's "Charging a project" and design-projects' ProjectMoney as-built say so. Spec: MaintenanceCosts' Projects feature
+    (no labor or parts in the summary).
+  - R4 (Minor, tests): the highest of several technicians' rates and an estimate against a threshold in another currency were not
+    tested. Mantle MaintenanceCosts' third feature: the second technician given a 60 USD class, both on 2 h and two bearings, estimated
+    160 (labor 120) and approved by the planner under 500 USD; against 500 EUR the estimate is unknown ("is in USD") and the planner is
+    refused.
+- Findings, numbered by the lead F287 to F290 in order:
+  - The cost reader sees the estimate's parts at the products' approved standard cost without PRODUCT_COST_VIEW (design §3 WorkCosts
+    shows the estimated cost; with one planned part it is the part's standard cost). If standard costs should stay Products' readers',
+    the estimate could show parts only to a holder of a product-cost read.
+  - The report reads each order line's bills and acceptances, and `projectCosts` each issuance's node, a query apiece (the worker's
+    finding); fine at the demo's size.
+  - The pending outside service is dated by the order's entry date, so a period filter can drop an open line ordered before it.
+  - Settings' cost threshold currency is a text line (Mantle checks it is a currency); P18's `policyFields` rework can make it a choice.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceCosts 3 of 3 (0.28 s, 0.22 s, 1.47 s); with
+  MaintenanceWorkOrders, WorkProjectMilestones, MaintenanceMaterials, MaintenancePurchases, LaborCostingRate: 30 of 30 (6 specs).
+  mr-boss MaintenanceCosts 3 of 3 (0.08 s, 0.19 s, 0.22 s) and MaintenanceAccess 20 of 20 (the cost case 0.38 s, the registry 0.09
+  s); with MaintenanceWorkOrders, MaintenanceRequests, ProjectsAccess, ClientBilling, NewProject, Billing, Projects, TimeEntries: 73 of
+  73 (10 specs, 21.6 s feature time). R1's and R2's checks fail with the fixes reverted (21 of 23). `./moq run --debug --nobuild lint
+  --screens`: 136 flagged, as before, none in the changed screens; both symlinked binaries unchanged. Prettier clean on the changed
+  specs' new lines and MaintenanceCosts.js. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle +0.3 s over the Built note (MaintenanceCosts' third feature); mr-boss unchanged within noise.
+  - Merge hot spots (with P18 and P14): `MaintenanceWork.js` (policyOf's and defaultPolicy's two fields, storePolicy's kept threshold,
+    getPolicy's hiding, makeOrder's and refusalOf's `withinThresholds`), `Settings/WorkPolicy.xml` (the Cost threshold box and its
+    transition become a `policyFields` row and P18's field group), BossSetupMaintenanceData.xml (R2's two rows before "Report a
+    problem"; P11's group appended), MaintenanceAccess.spec.js (R2's lines in the registry feature).
+  - The user's calls: none open from the review. The lead's two accepted calls stand (Projects' readers see totals only, now in the
+    answer too; ad hoc work with hours is held until someone is assigned). For a decision if wanted: whether the cost reader's estimate
+    may show parts at the standard cost without a product-cost read (built: yes, as WorkCosts designs).
+- Merge of master (P18, P14; Nov 12): the cost threshold and its currency are two rows of P18's `policyFields` (MaintenanceWork.js),
+  stored by `store#MaintenancePolicy` (a field not sent is kept) from Work policy's one form, the currency a choice of currencies;
+  `store#MaintenanceCostThreshold` is gone. `get#MaintenancePolicy` hides the threshold from all but a settings editor or cost
+  reader in the policy and in planned and ended too (the Mantle spec checks ended). MaintenanceCostReport is at
+  Maintenance/Reports/MaintenanceCostReport beside PM compliance, still `BOSS_MNT_COSTS` (its artifact row, the link path and the
+  Costs tab's link moved). P14's job makes its work through `makeOrder`, so `withinThresholds` holds there as for a planner (the
+  job's scope plans and does not supervise). Specs: mr-mantle MaintenanceCosts, MaintenanceWorkOrders, MaintenanceGeneration,
+  WorkProjectMilestones 30 of 30; mr-boss MaintenanceCosts, MaintenanceSettings, MaintenanceWorkOrders, MaintenanceAccess,
+  MaintenancePlans and Projects' money specs (ProjectsAccess, ClientBilling, NewProject, Billing, Projects, TimeEntries) 78 of 78;
+  lint 136 flagged, as before.
+
 ### P12 — Customer repair
 
 Design §3 (the customer repair context, the consent recheck), §12 (the intervention report), crosscut §4.6
@@ -3247,6 +3470,216 @@ PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
   work"): the planner generates this month's work for the three plans and sees the stale-meter plan blocked with
   "request a reading"; after two missed months on the room plan she coalesces them into one catch-up, and the
   compliance report shows two late obligations, not one compliant order. **Gate 4.**
+
+**Built Nov 12 (P14).** mr-mantle bfc5cf16, mr-boss d99f00ac and this note's commit (branch `mnt/p14`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P13's `MaintenancePlans.js` (the projection read every obligation with the term in effect now, F186;
+  `firstDueLocal` text; `maintenanceScheduleId` on `MaintenanceWorkOrder`, written by no service; the term's `estimatedWorkTime`); P6's
+  instantiation inside `create#MaintenanceWorkOrder` (`makeOrder` calls `instantiateProcedure`, which resolves the caller's scope again,
+  so a job with no user could not use it); the lifecycle has no reopen action (a reopened order exists only through a baseline path);
+  `store#WorkEffortReminders` sets the caller's own reminders only; Admin's `moqui.server` JobRegistration, JobParameterDefinition,
+  RecoveryDescriptor and TopicRegistration (framework data/AdminConfigurationData.xml is the pattern, F52, F117) and Admin.js
+  `mountRoutes`; the RecurringInvoices job (`authenticate="false"`, each item on its own) as the job pattern; F118 (the topic's link in
+  BossSetupMaintenanceData.xml); no Reports area existed (P17's).
+- Mantle:
+  - Records (`entity/MaintenancePlanEntities.xml`): `MaintenanceOccurrence` (plan, `obligationKey` with a unique index on the two, F52/F112:
+    a real unique key; due date and local text or threshold, the term it fell under, status MocOpen/MocGenerated/MocCompleted/MocSkipped/
+    MocCoalesced with its transitions, the work order and the corrected one (`uncountedWorkEffortId`), catch-up flag and the catch-up it was
+    coalesced into, generated and decided by and when, reason, operation key, revision; status and work audit-logged);
+    `MaintenancePolicy.pmLeadDays` by `extend-entity`.
+  - `MaintenancePlans.js` (P13's module, its sections added): the fixed cadence's obligations walked per term from its start (F186) with
+    each obligation's coverage by its occurrence or by a completion no occurrence carries (P13's rule kept); `generate#MaintenanceWorkOrders`
+    (a planner's or supervisor's, the plans named or the scope's active ones, preview, operation key), `run#MaintenanceGeneration` (the job:
+    no user, a system scope of every organization as a planner who is no supervisor, batches of `batchSize` by id, 5000 plans a run, capped;
+    a signed-in caller needs MAINTENANCE_SETTINGS_EDIT), `reconcile#MaintenanceSchedule` (coalesce, skip, correct; reason; a meter plan
+    refused), `find#MaintenanceOccurrences` (with the missed due dates and the plan's work orders), `get#MaintenanceDueJob`;
+    `MaintenanceReportServices.get#MaintenanceCompliance`; `find#MaintenanceDue` rows gain the generation preview, dates for the calendar and
+    `dueListCapped` (F192); the lead days fall back to the organization's `pmLeadDays`. Each plan's generation runs in
+    `ec.transaction.runRequireNew` with the plan locked; the work order through `MaintenanceWork.js` `createForPlan` (the one path that sets
+    `maintenanceScheduleId`, F179), the procedure through `MaintenanceProcedures.js` `instantiateWith(userScope, ...)` (the checked path for
+    a resolved scope; `instantiateProcedure` calls it). MaintenanceDue is told to the organization's planners (not the one who made it).
+  - `MaintenanceWork.js` (small hunks): `createForPlan`; `makeOrder` instantiates with the scope it has and writes the plan from its
+    options only; transition's complete asks a meter plan's work for its reading (F187: `meterValue`, recorded through
+    `record#MaintenanceMeter` in the work, READING_REQUIRED otherwise) and every transition credits the plan (`creditCompletion`:
+    complete or close once, cancel opens again with a catch-up's coalesced ones); `actionsFor` names the meter on Complete; Home's
+    `overduePmCount` and `unknownMeterCount` (a reader of work's, 200 plans); `pmLeadDays` in the policy.
+  - Data: `data/MaintenancePlanSetupData.xml` (seed-initial: the ServiceJob `generate_MaintenanceWorkOrders`, paused, 05:30 daily) and
+    `data/MaintenancePlanData.xml` (seed: the MaintenanceDue topic and its TopicRegistration, audience MAINTENANCE_PLAN; the job's
+    JobRegistration with MAINTENANCE_SETTINGS_EDIT as its manage and recipient permission, its `batchSize` JobParameterDefinition and the
+    ServiceJob RecoveryDescriptor `maintenanceGenerationJob`, retry native, both `ownerRoute="maintenanceDue"`).
+- BOSS:
+  - Services: Admin.js `mountRoutes.maintenanceDue` (`/qapps/Maintenance/Preventive/DueMaintenance`, F117); Maintenance.js link paths
+    `Preventive/DueMaintenance` and `Reports/PreventiveComplianceReport`.
+  - Screens: `Preventive/DueMaintenance.xml` (DueRows with header filters, views list and calendar, GenerateWork with the page's preview,
+    Generate on a row and the selection, ResolveDue: coalesce or skip with a reason, or a meter's reading); PlanDetail's Generate work (its
+    preview in the confirmation) and two tabs, `DueHistory` (OccurrenceHistory, the missed due dates' decision, Correct) and `GeneratedWork`;
+    `Reports.xml` (a new area, menu index 9, MAINTENANCE_VIEW) with `Reports/PreventiveComplianceReport.xml`; Home's two preventive counters
+    open Due maintenance filtered; Settings' Work policy gains the lead days and the job's state; the Complete form a meter reading
+    (`template/MaintenanceWorkOrderParts.xml`); `template/MaintenancePlanParts.xml` gains generateDue and resolveDue; the root's
+    `notification-topic MaintenanceDue`. BossSetupMaintenanceData.xml: the topic's link (WorkOrderDetail).
+  - Demo (BossZMaintenanceDemoData.xml, appended): the air handler's monthly filter change, active, ad hoc, a week ahead: August done a day
+    early (the job's), September four days late, October skipped, November 14 due now.
+- Specs:
+  - Mantle `test/work/MaintenanceGeneration` (7 features, about 2.7 s): the job (no user) and a planner make one occurrence and one ad hoc
+    order (its name, estimate, kind, source, the plan, awaiting approval; the planner told on MaintenanceDue), preview changes nothing, a
+    second occurrence row of an obligation refused by the database, a retry under the operation key answers the first; a batch with a
+    retired procedure (blocked, PROCEDURE_NOT_QUALIFIED), a stock target (failed, named) and a procedure's plan (generated); a cancelled
+    order opens its obligation again, made again on the same row, outstanding in compliance; four missed due dates coalesced (reason
+    required) into one catch-up, outstanding until done, then four late and none on time, the plan no longer overdue; a reopened and
+    completed-again order credits nothing twice and makes no second next order; a meter plan's work refused without its reading, then
+    its reading the new baseline (next threshold 660), a stale meter blocked with "Request a reading", a meter skip refused; a correction
+    (open again, the order kept and not counted), a skip with its reason, the history's catch-up "Late"; a reader PERMISSION_DENIED and
+    another organization RECORD_UNAVAILABLE. Mutation: with the counted-once guard taken out, the reopen feature fails.
+  - BOSS `MaintenancePlans` gains a feature (about 0.4 s): Due maintenance's, the filter plan's PlanDetail level (`lastStandalone -3`,
+    F183), its DueHistory and GeneratedWork tabs', PM compliance's (33.3% on time) and Work policy's (lead days, the job Paused) one
+    render each. `MaintenanceAccess` gains the P14 rule (a planner generates, a reader PERMISSION_DENIED, Retail RECORD_UNAVAILABLE;
+    compliance a reader's, not a technician's, Retail's none) and the Reports menu; its Home render now checks the preventive counters
+    configured (no "Not configured" left for a reader of work).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePreventiveWalk` (2 features: the planner activates the demo plans
+    still drafts and generates this month's work through Due maintenance's transition (the filter change made, the start counter blocked
+    with "Request a reading", none failed, a second generation making nothing; a reader may not generate); a Room 102 plan two months
+    behind, coalesced with a reason into one catch-up, approved, started and completed by the supervisor through WorkOrderDetail, and PM
+    compliance showing two late, none on time, "0% on time").
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceGeneration, MaintenanceDue, MaintenanceWorkOrders,
+  MaintenanceProcesses, MaintenanceScope, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceResources, WorkProcess:
+  57 of 57 (10 specs, 21.2 s feature time). mr-boss MaintenancePlans, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment,
+  MaintenanceScheduling, MaintenanceProcedures, MaintenanceDowntime, MaintenanceRequests and Admin's AdminJobRuns, AdminSystemMessages,
+  AdminAccess, AdminRegistries, AdminImports, AdminExports, AdminSettings: all passed (61 features across the runs). Framework AdminJobs and
+  AdminRecovery: 7 of 7. Client MaintenanceWorkOrdersWalk 1 of 1 (8.0 s). `./moq run --debug --nobuild lint --screens`: 136 flagged
+  sites, as before; the new screens appear only in the information list of unnamed containers; the release symlink intact. Prettier
+  (`npx prettier`, the repository's config, from each component) on MaintenancePlans.js, MaintenanceProcedures.js, MaintenanceGeneration,
+  Admin.js, MaintenancePlans, MaintenancePreventiveWalk; MaintenanceWork.js, Maintenance.js, MaintenanceSpecLib.js and
+  MaintenanceAccess.spec.js were not prettier-clean before (F161), so only P14's hunks are in its style (checked against Prettier's
+  output). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's find#MaintenanceDue, transition#, store#MaintenancePolicy and get#MaintenanceHome rows and an Added table
+  for P14's services; ss-inventory's AddPlannedMaintenance and a P14 line.
+- Design edits: design-maintenance's header, §1.2, §3 Home, §5.1, PlanDetail, DueMaintenance, §8 PreventiveComplianceReport, §9 Settings
+  and §13.2 as built.
+- Findings, numbered by the lead F262 to F272 in order:
+  - F186 fixed in the projection itself, not only in the occurrences: every fixed-cadence obligation is walked under the term it falls in
+    (a term's own first due date, from its start to the next term), so the overdue count, the due list and compliance agree; P13's
+    specs pass unchanged.
+  - The job runs with no user (the scheduler's authorization-off path, no run-as identity), so Maintenance's scope is resolved for it
+    (`systemScope`: every organization, plan and the reads, no supervise) and passed down; `instantiateProcedure` resolved the caller's
+    scope itself, so `instantiateWith(userScope, ...)` was split out. Its work waits for a supervisor (approval threshold 0 by default).
+  - Due reminders for assigned PM work (design §5.1) are not set: `store#WorkEffortReminders` sets only the caller's own reminders, and
+    generated work assigns the plan's team, no person. A reminder for the assignee belongs to `schedule#MaintenanceWorkOrder` (P8) or a
+    reminder service that sets another user's (later).
+  - There is no reopen action on a work order (§3's lifecycle); "a reopened order" is tested through a baseline path (the status set
+    back), and its second completion credits nothing.
+  - Meter obligations are keyed by their threshold ("meter 350"); a meter plan is neither skipped nor coalesced (it advances only after a
+    completion with its reading). A meter's compliance compares the completion's reading with the threshold; with no reading it is
+    unknown.
+  - The completion cadence (MscCompletion) has no fixed obligations: its compliance rows are its occurrences and the current due when
+    overdue; a skip passes over a due date.
+  - PreventiveComplianceReport is the first screen of a Reports area (menu index 9, MAINTENANCE_VIEW) that P17 completes (the landing,
+    work status); the design's schedule, type and team options are not built.
+  - Generation of a plan whose target became stock fails with RECORD_UNAVAILABLE (P13's `targetOf`), named per plan; a plan whose target
+    moved is blocked (TARGET_MOVED).
+  - Equipment's next-PM column (F185) is not built: EquipmentRows come from Mantle's equipment find, and a due per row would add a plan
+    read per row; left for P17 or later.
+  - F192: `find#MaintenanceDue` now says when it stops (`dueListCapped`); `find#MaintenanceSchedules`' model filter still reads at most
+    1000 assets with no flag.
+  - An existing database needs `MaintenancePlanSetupData.xml` (the job) and `MaintenancePlanData.xml` loaded on upgrade (as F170).
+- For the lead:
+  - Budget share: mr-mantle MaintenanceGeneration about 2.7 s; mr-boss server MaintenancePlans +0.4 s and MaintenanceAccess +0.2 s; client
+    unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js` (the plans module line; defaultPolicy, policyOf and storePolicy's pmLeadDays;
+    makeOrder's instantiation line and the order's maintenanceScheduleId; the complete case's reading line; transition's statusAfter and
+    credit; actionsFor's readingMeterName; home's counters; the exports), `MaintenanceProcedures.js` (instantiateWith), the service XMLs
+    (MaintenanceServices transition's meterValue, MaintenanceSettingsServices pmLeadDays, MaintenanceReportServices), `MaintenancePlans.js`
+    (prettier-formatted whole); mr-boss `screen/Maintenance.xml` (Reports item after Scheduling, the MaintenanceDue topic), `Maintenance.js`
+    (two link paths at linkPaths' end), `Admin.js` mountRoutes (one key after peopleTimeImport), PlanDetail (header and tabs),
+    `template/MaintenanceWorkOrderParts.xml` (the Complete form's meterValue, P7's Complete gate is beside it), Home's counter rows,
+    Settings/WorkPolicy, BossSetupMaintenanceData.xml and BossZMaintenanceDemoData.xml (appended at the end), `MaintenanceSpecLib.js` (ids
+    after stalePlanId; staffMenu and adminMenu with Reports), `MaintenanceAccess.spec.js` (header, Home feature, appended feature), the
+    inventories, design-maintenance and this plan. P11 and P17 also add to `Reports.xml` if they make one.
+  - The user's calls: (1) whether the generation job, seeded paused, should be resumed in the demo or left for an operations manager
+    (built: paused, as the design's "PM job off"); (2) whether preventive work made by the job should wait for a supervisor's approval
+    (built: yes under the default zero threshold, as a planner's; a policy threshold in hours admits it).
+
+**Review Nov 11 (P14).** mr-mantle f9593d6e (merge) and cabb4489, mr-boss 5a64e6d6 (merge) and this note's commit (branch `mnt/p14`);
+mr-moqui fast-forwarded to master, no Rust built. Master (P7, P9, P10, P16) merged into mnt/p14 first and resolved keeping both sides:
+`MaintenanceWork.js` (defaultPolicy, policyOf and storePolicy carry voiceNoteTranscription and pmLeadDays; actionsFor carries the
+reading meter and P10's service lines), `MaintenanceProcedures.js` exports (instantiateWith beside executionInstruction and
+responseText), the transition and policy service descriptions, BOSS `Maintenance.xml` topics, `Maintenance.js` link paths,
+Settings/WorkPolicy (both fields), the Complete form (meterValue then P10's service line), the demo and setup data (appended both),
+`MaintenanceSpecLib.js`, `MaintenanceAccess.spec.js` (header and both features) and the plan's inventories and design. At Complete the
+order is P7's steps gate (refusalOf), P14's reading (the complete case), P10's acceptance (after the update), then the obligation's
+credit (after the status is read back). Reviewed `git diff master...mnt/p14` of both repos against this phase, §2, §4, F117, F186,
+F187, F192, design §5.1, DueMaintenance, PlanDetail, §8 and §9, the framework's Admin job and recovery code (OperationJobs.js,
+OperationRecovery.js) and the job runner (crates/moqui-core/src/service/jobs.rs).
+- Checked and found sound:
+  - Generation: each plan in `runRequireNew` with the plan row locked (`forUpdate`), occurrences synced, one unresolved execution
+    (`openOccurrence`), the obligation's unique index (`MNT_OCC_KEY`) as the backstop; reconcile locks the plan too. A failing plan is
+    caught, logged by id and named (`failed` with its code) and the batch goes on; notices are sent after the plan's commit.
+  - Credit: complete or close credits a `MocGenerated` row once (a later close or a second completion of a reopened order changes
+    nothing, and no second next order is made: `openOccurrence` reads only generated rows); cancel opens it again and a catch-up's
+    coalesced ones with it; a correction keeps the order and leaves its completion out of `completionsOf`. A coalesced catch-up
+    records each covered obligation and counts them late.
+  - F186: obligations are walked per term from the term's start (the first projectable term from its first due date) to the next,
+    deduplicated by key; P13's MaintenanceDue cases pass unchanged. Its term-change case was a meter plan's only; a calendar one is
+    added (R3).
+  - Compliance: obligations are the denominator (on time, late, outstanding, skipped), unknown and not yet due named as left out; a
+    coalesced one is outstanding until its catch-up is done; the scope (`listScope(readScope())`) leaves another organization's plans
+    out, a plan id of another organization included (Retail's planner reads 0).
+  - Admin's registrations: JobRegistration (MAINTENANCE_SETTINGS_EDIT manages), the `batchSize` JobParameterDefinition, the ServiceJob
+    RecoveryDescriptor `maintenanceGenerationJob` (retry native) and the TopicRegistration, each field one of the `moqui.server`
+    entities'; `ownerRoute="maintenanceDue"` is in Admin.js `mountRoutes`. Admin's Run now (OperationJobs.js) marks the job due and the
+    scheduler runs it with no user, "not as you": the job runs as the job. Its PAUSED hold keeps it from running while seeded paused.
+  - `instantiateWith(userScope, ...)` and `createForPlan` are module exports, not services or operations: no caller's parameters reach
+    them, and `maintenanceScheduleId` is set on a work order by generation alone. generate# and run# are `allow-remote="false"`.
+  - F187: `readingNeeded` asks only a work order with a plan (`maintenanceScheduleId`, which only generation sets) whose term is a
+    meter's; corrective and other work on metered equipment completes without a reading (its follow-up carries no plan).
+  - The Reports area (menu index 9, MAINTENANCE_VIEW, after Scheduling at 8); P11 and P17 add to it.
+- Fixes:
+  - R1 (high, access): `run#MaintenanceGeneration` gave the job's scope of every organization to any signed-in caller holding
+    MAINTENANCE_SETTINGS_EDIT, which is an organization's administrator's permission: Tools' JobDetail Run now (`ec.service.job().run()`,
+    run as the clicking user) or any server-side call let one organization's administrator generate every organization's work (the
+    mutation run: another organization's administrator generated A's work, 10 plans read). Now the job's scope is the job's alone:
+    with no user (the scheduler, which Admin's Run now asks) or for a system administrator; a person who runs it otherwise generates as
+    a planner or supervisor of their own organizations, the plans read in that scope (PERMISSION_DENIED without MAINTENANCE_PLAN or
+    MAINTENANCE_SUPERVISE). Spec: MaintenanceGeneration "a person who runs the generation job generates in their own scope, never the
+    job's" (fails on the old check).
+  - R2 (medium, correctness): a meter plan's Complete recorded its reading through `record#MaintenanceMeter` under the caller's own
+    permission, which in work admitted only the assigned technician, so a supervisor (who may complete any work of their organization,
+    and BOSS's holds no MAINTENANCE_RESOURCE_EDIT) was refused completing meter PM work. The spec's supervisor held resource edit and
+    hid it. `record#MaintenanceMeter` in work now admits MAINTENANCE_SUPERVISE in the work's organization (the scope check unchanged);
+    the spec's supervisor holds no resource edit, so the meter feature fails without the fix.
+  - R3 (low, test): a calendar plan's interval change (F186) had no case: monthly from about three months ago changed to weekly from a
+    minute ahead, four days later the four monthly due dates (under the first term) and the weekly one (under the second) are the
+    missed five, not fourteen; compliance counts five.
+  - R4 (medium, gap built): due reminders for assigned PM work. `schedule#MaintenanceWorkOrder` writes a WorkEffortReminder for each
+    person it assigns to a plan's work (a day before its due date, the root's planned finish; notification), unless they have one, and
+    removes the reminders of a person it takes off (a replacement included); Mantle writes the assignee's row, as People's leave does.
+    Spec: MaintenanceGeneration "a plan's work reminds its assignee of its due date; taken off it, they have none".
+- Findings, numbered by the lead F273 to F276 in order:
+  - "The job and a planner at once" is tested in turn (the job, then the planner's WORK_OPEN), not in two threads; the plan lock and the
+    unique key carry the concurrent case.
+  - A plan's work moved by a path other than the lifecycle (a baseline status change) is credited only when a generation or a decision
+    of the plan syncs its occurrences; until then compliance and Due history read it as work made (outstanding once due).
+  - The reminder's offset is fixed at a day (1440 minutes); a policy field could set it with P18's settings.
+  - Tools' raw JobDetail Run now runs a job as the clicking user (framework behaviour); with R1 that is the user's own scope for this
+    job, and the system administrator's (the raw mount's) the job's.
+- Tests (release binary, `--nobuild`, this worktree, after the merge and the fixes): mr-mantle MaintenanceGeneration (10 features,
+  2.9 s), MaintenanceDue, MaintenanceWorkOrders, MaintenanceResources, ProcessChecks, MaintenanceScope, MaintenanceManagedWork,
+  MaintenanceProcesses, MaintenancePurchases, MaintenanceMaterials, MaintenanceOutages, MaintenanceIntake, WorkProcess: 74 of 74
+  (13 specs, 25.6 s feature time). Mutations: R1's old check and R2's old rule each fail their feature. mr-boss MaintenancePlans,
+  MaintenanceAccess, MaintenanceWorkOrders, MaintenanceChecklists, MaintenancePurchasing, MaintenanceParts, MaintenanceEquipment,
+  MaintenanceScheduling, AdminJobRuns, AdminRegistries, AdminSettings, AdminSystemMessages: 63 of 63 (12 specs, 16.8 s). Framework
+  AdminJobs and AdminRecovery (the lead's ask): 7 of 7. Client MaintenanceWorkOrdersWalk 1 of 1 (8.1 s). `./moq run --debug --nobuild
+  lint --screens`: 136 flagged sites, as before; the release symlink intact. Prettier on MaintenanceGeneration.spec.js; the hunks in
+  MaintenanceWork.js and MaintenanceResources.js (not prettier-clean before, F161) match Prettier's output. Not run: ./moq test-apps,
+  the acceptance suite.
+- For the lead:
+  - Budget share: mr-mantle MaintenanceGeneration +0.2 s (2.9 s); mr-boss unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js` (the REMINDER and dueReminderMinutes constants, scheduleWorkOrder's end and
+    `remindAssignees` after it: P8's dispatch reworks assignment there), `MaintenanceResources.js` recordMeter's permission block,
+    `MaintenancePlans.js` runJob; mr-boss the design's header and §5.1, usl-inventory's record#MaintenanceMeter, schedule# and run# rows.
+    P18 (`policyFields`) meets the merged pmLeadDays and voiceNoteTranscription in defaultPolicy, policyOf, storePolicy and WorkPolicy.
+  - The user's calls: the two of the Built note stand as the lead accepted them (the job seeded paused; job-made work waits for a
+    supervisor under the zero threshold). New: (1) the run-as rule of R1 (built: the job's scope only with no user or for a system
+    administrator; recommended, since Admin's Run now already runs it as the scheduler); (2) the reminder's offset and channel (built: a
+    day before, a notification; recommended to keep, with a policy field when P18 lands if wanted).
 
 ### P15 — Resource policy and blackouts
 
@@ -3842,6 +4275,209 @@ Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outco
   equipment with starting meters, one row refused and downloadable, and Admin's Imports lists the run for a data
   operator who also holds the resource view permission.
 
+**Built Nov 12 (P18).** mr-mantle 1a954fe0, mr-boss 61ab716f and this note's commit (branch `mnt/p18`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): the framework's readiness contract (`org.moqui.admin.ReadinessServices`, Readiness.js `present`:
+  a check's own `fixRoute`, `fixId` and `fixParameters`, the provider's `fixRoute` for a check that names none, a refusal by reason code
+  leaving the provider out for that caller) and People's `get#Readiness` (mr-mantle 2aa6d82e); Admin.js `settingsRoutes` and
+  `mountRoutes` and the framework's keys (tools `template/AdminMount.js`: `adminJob` with `jobName`); the `rows` target contract
+  (DataTransferServices validate#, apply#TargetRow and find#TargetScopes; DataTransferBatch.js `keyFields` for a repeat in a file and
+  `refusedColumns` by substring) and People's employees target and EmployeeImport mount (PeopleLifecycleSetupData.xml, PeopleImport.js,
+  DataImport.js); P2's `store#MaintenanceEquipment` (its change path writes identity only, never the location) and
+  `record#MaintenanceMeter` (READING_DECREASING, READING_EXISTS); P3's `MaintenancePolicy` and its `store#` (every field written from
+  the call, so a form that did not post a field reset it); People's lookups (`Enumeration.thruDate`, Lookups.js); P9's
+  `MaintenanceCostPolicy` and the kinds `MkCorrective`, `MkPreventive`; P15's `ResourceBookingPolicy` (RbamApprovers) and the
+  `BookingApprover` rows; People P10's `get#CostingRate` (a row with a work type prices only that work type); P13's
+  `MaintenanceSchedule` statuses; P14's job name, `generate_MaintenanceWorkOrders` (MaintenancePlans.js on mnt/p14, read only). P7's
+  `voiceNoteTranscription` was not on master when this phase started: room is left for it (below).
+- Mantle:
+  - `MaintenanceWork.js`: the policy is one table of fields (`policyFields`: the default, the read, the checked store); `store#MaintenancePolicy`
+    takes `fromDate` (now or later, DATE_INVALID before), ends the row in effect then, withdraws a later plan (ended at its own start, kept)
+    and changes one planned for that very time in place, and keeps each field not given from the policy in effect at the start;
+    `get#MaintenancePolicy` adds `planned` and `ended` (ten each). `policyOf` takes the time as before.
+  - `MaintenanceSettings.js` and `MaintenanceSettingsServices.xml`: `find#MaintenanceLookups` and `store#MaintenanceLookup` over a whitelist of
+    families: vocabularies (MaintenanceType, Severity, HoldReason, CancelReason, Outcome, FailureMode) added and ended now or from a date;
+    fixed kinds (MaintenanceKind, Source, Disposition) renamed and reordered only (FAMILY_FIXED); each value's use counted; a failure mode's
+    applicability rows (`MaintenanceLookupApplicability`, new, `entity/MaintenanceSettingsEntities.xml`: an asset class or a model, dated;
+    APPLICABILITY_INVALID, APPLICABILITY_EXISTS) and `applicableFailureModes` for the choice. `check#MaintenanceReadiness` for
+    MAINTENANCE_SETTINGS_EDIT (PERMISSION_DENIED; ORGANIZATION_DENIED): for the organization asked, or each one of the scope that uses
+    Maintenance (a policy, a maintenance work effort or a plan), six checks with subject and scope: `maintenance.templates` (an approved
+    procedure; NO_PROCEDURE, maintenanceProcedures), `maintenance.approvers` (a current approver for each RbamApprovers policy;
+    APPROVER_MISSING, maintenanceResources), `maintenance.stockGrants` (a technician, a member holding MAINTENANCE_EXECUTE through a group
+    other than ADMIN, who holds STOCK_ISSUE; NO_TECHNICIAN, NO_STOCK_GRANT, adminGroups), `maintenance.costPolicy` (a MaintenanceCostPolicy in
+    effect for both kinds; MAINTENANCE_COST_UNMAPPED, accountingPostingDefaults), `maintenance.costingRates` (each technician priced by
+    `get#CostingRate` with no work type; RATE_MISSING, accountingCostingPolicies) and `maintenance.generationJob` (ready with no active plan;
+    JOB_NOT_CONFIGURED with no ServiceJob of that name, JOB_PAUSED, JOB_NOT_RUN, JOB_FAILED at adminJob with the job's name, or its last
+    run). A check that throws is unavailable by name (CHECK_FAILED) and the others go on.
+  - `mantle.product.MaintenanceImportServices` (`MaintenanceImport.js`): the row services of the `equipment` target, as described in design
+    §6 as built; `data/MaintenanceSettingsData.xml` (seed): the AssetIdentificationType `AitMntSourceKey`, the TransferTarget (16 columns,
+    keyFields source and key, cost and posting columns refused, MAINTENANCE_IMPORT and MAINTENANCE_RESOURCE_EDIT to import,
+    MAINTENANCE_RESOURCE_VIEW to view, owner route `maintenanceEquipmentImport`) and an ALL_USERS grant of the three row services and
+    `check#MaintenanceReadiness` (each checks permission and organization itself), so Admin's Health, System's Health, Admin's Imports and
+    an apply carried on after the request reach them as the user.
+- BOSS:
+  - Admin.js `mountRoutes`: `maintenanceEquipmentImport`, `maintenanceProcedures`, `maintenanceResources`, `accountingPostingDefaults`,
+    `accountingCostingPolicies`, `adminGroups`. DataImport.js: Maintenance's mount (the equipment target whatever the request names; an
+    equipment reader reads, MAINTENANCE_IMPORT with MAINTENANCE_RESOURCE_EDIT runs) and every mount's `runRefusal`, which Shared/DataImport's
+    four transitions throw in place of their People-or-Admin text. BossSetupMaintenanceData.xml: the ReadinessProvider `maintenance.readiness`
+    (MAINTENANCE_SETTINGS_EDIT, scope organizationPartyId, fixRoute maintenanceSettings) and the settings entry's `providerKey` (its
+    description no longer names Teams, which P8 builds).
+  - Maintenance.js: the links Settings/Lookups, Settings/Readiness, Equipment/EquipmentImport; `enumOptions` leaves out an ended value but
+    the selected one (every enumeration choice of Maintenance); `failureModes` narrowed to the work's equipment (`choiceAssetId`, which
+    WorkOrderDetail's Overview now passes).
+  - Screens: Settings/WorkPolicy (Starts; PolicyDates, its own section); Settings/Lookups (new: Add value, Edit, End with a date, Applies to,
+    Kept by their owners); Settings/Readiness (new: the checks with their places resolved, Maintenance's by its links, the others' plain);
+    SettingsHome's rows (each with where it is kept); Equipment/EquipmentImport (new, the shared wizard); Equipment/Find's Import.
+  - Demo: none needed (the demo's technicians have no maintenance costing rate, which Readiness shows).
+- Specs:
+  - Mantle `test/product/MaintenanceImport` (3 features, 0.35 s): a holder of MAINTENANCE_RESOURCE_EDIT without MAINTENANCE_IMPORT refused at
+    stage, the importer's scopes their own organization, another organization refused; another organization's equipment by ID and by its
+    source key and its location refused while two rows apply (partial), one asset and one reading each; the same file twice makes one asset
+    and one reading; a lower starting reading refused at validation.
+  - BOSS `test/Maintenance/MaintenanceSettings` (4 features, 1.8 s): the dated policy (from next month: the row in effect ends then, the plan
+    keeps self-approval it did not name; a past start and a reader refused; a change from now withdraws the plan); the lookups (a severity
+    added, offered, ended, not offered; a kind not added or ended, renamed; a reader refused; a failure mode of the compressor's model offered
+    for its work, not the van's) with Lookups' one qvt render; the readiness (a spec organization's NO_PROCEDURE, MAINTENANCE_COST_UNMAPPED and
+    the job "not configured" or, after P14, paused or not run; Services' RATE_MISSING at accountingCostingPolicies; every place a key Admin's
+    mount gives; the reader refused; Admin's `get#Readiness` showing the provider to maint.admin and not maint.reader) with Readiness' one qvt
+    render; Admin's Imports (`find#ImportRuns`) listing maint.resources' run for a data operator of Services with MAINTENANCE_RESOURCE_VIEW, not
+    for one without it.
+  - BOSS `MaintenanceAccess` (+1 feature, 0.3 s): the import mount (maint.resources runs; the planner reads and runs none; the requester
+    refused), the import scopes (Retail's planner gets no Services), the readiness (the administrator's; the resource administrator refused).
+    `MaintenanceSpecLib.settingsMenu` gains Lookups and Readiness; `MaintenanceWorkOrders`' Work policy render checks Starts.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceSetupWalk` (3 features: maint.admin's threshold from next month and
+    Readiness' costing rate; maint.resources' twelve rows, one refused and in the error file; Admin's Imports for a data operator with the
+    resource view).
+- Tests run (release binary, `--nobuild`): mr-mantle MaintenanceImport, MaintenanceWorkOrders, MaintenanceProcesses, MaintenanceIntake,
+  MaintenanceResources, MaintenanceScope, MaintenanceManagedWork, MaintenanceMaterials, MaintenanceDue, StaffInvitationImport: 48 of 48
+  (10 specs, 16.7 s feature time). mr-boss MaintenanceAccess, MaintenanceSettings, MaintenanceWorkOrders, MaintenanceEquipment,
+  MaintenancePlans, MaintenanceProcedures, MaintenanceRequests, MaintenanceScheduling, MaintenanceDowntime, MaintenanceParts,
+  AdminRegistries, AdminSettings, AdminImports, AdminAccess, AdminExports, AdminJobRuns, PeopleLifecycle, ProductsImport, ProductsAccess:
+  92 of 92 after the access case's fix (19 specs, 28.4 s feature time). `./moq run --debug --nobuild lint --screens`: 136 flagged sites,
+  as before, none in the screens changed; the binary is still the symlink. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory (create#Equipment's import, store#MaintenancePolicy's dates, a table for the six services). ss-inventory has no
+  baseline form for Maintenance's settings, lookups or import: unchanged.
+- Design edits: §9 Settings and Lookups and §6 EquipmentImport "As built (P18)".
+- Findings, numbered by the lead F251 to F256 in order:
+  - P3's `store#MaintenancePolicy` wrote every field from the call, so a form that did not post a later phase's field reset it (a settings
+    section of P14's own would have turned self-approval off). Fixed by keeping each field not given; P7's `voiceNoteTranscription` and
+    P14's `pmLeadDays` become rows of `policyFields`.
+  - Lookups are the instance's, not an organization's (Enumeration has no owner), as People's are: a Maintenance administrator of one
+    organization renames a value for all. Ended values only leave Maintenance's choices; a service given an ended value still takes it.
+  - Design §9's time zone and calendar defaults are not built: a resource's zone is its facility's (§5 Q9 recommends no default), and People
+    keeps holiday calendars by working schedule, not organization (P13's note); a plan term names its calendar. A user's call if a default
+    calendar per organization is wanted.
+  - The readiness checks are an organization's; the generation job is the instance's, so its check repeats for each organization with an
+    active plan. A technician is a member of the organization holding MAINTENANCE_EXECUTE through a group other than ADMIN (the system
+    administrator holds every permission); a technician is priced with no work type, as P11 has not chosen one (a maintenance work type would
+    need its own rates).
+  - An existing piece of equipment at another location is refused by the import (move it in Maintenance): `store#MaintenanceEquipment`'s change
+    path does not move, and `move#MaintenanceEquipment` needs STOCK_MOVE, which the import's permissions do not name.
+  - Shared/DataImport's four transitions named People's and Admin's refusals by app; each mount now answers its own (`runRefusal`).
+- For the lead:
+  - Budget share: mr-mantle MaintenanceImport about 0.4 s; mr-boss server MaintenanceSettings about 1.8 s and MaintenanceAccess +0.3 s; no
+    client spec.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js`'s policy block (P14 adds `pmLeadDays` to `defaultPolicy`, `policyOf` and `storePolicy` in
+    the old shape: at the merge it becomes one row of `policyFields`, its range check in `store`; P7's `voiceNoteTranscription` the same,
+    with its read in `policyValues` coming from the row); `MaintenanceSettingsServices.xml` (P14 and P7 add their parameters to
+    store#MaintenancePolicy). mr-boss `Settings/WorkPolicy.xml` (P7's and P14's fields: their own sections may post only their fields now),
+    `Maintenance.js` (`linkPaths` and `choiceSources`), `MaintenanceSpecLib.js` (`settingsMenu`; P14 adds no Settings tab), `MaintenanceAccess.spec.js`
+    (appended feature), `BossSetupMaintenanceData.xml` (the settings entry's block), Admin.js `mountRoutes` (P14's job and recovery keys).
+  - After P14 merges, MaintenanceSettings' job case accepts JOB_PAUSED or JOB_NOT_RUN; nothing to change.
+  - The user's calls: (1) a default holiday calendar per organization in MaintenancePolicy (not built, above); (2) whether a lookup value
+    ended should also be refused by the services that store it, beyond the choices (built: choices only, as People's).
+
+**Review Nov 12 (P18).** mr-mantle 151aec09 and R4's commit, mr-boss b397aae4, R4's commit and this note's commits (branch `mnt/p18`), over the worker's 1a954fe0,
+61ab716f and 1800923e, after merging master (Maintenance P7, P10, P16) in both repos: mr-moqui's `mnt/p18` fast-forwarded to master
+729e1ffb; mr-mantle 5ed75159 (MaintenanceWork.js' policy block and store#MaintenancePolicy's description: P7's `voiceNoteTranscription`
+is one `policyFields` row, a flag, read and kept like the others), mr-boss df1c218a (WorkPolicy's transition and form: the voice note
+field beside Starts, the success message P18's; `linkPaths` P10's and P18's; MaintenanceAccess' header and appended features;
+MaintenanceWorkOrders' Work policy render checks both fields; usl-inventory's P10 and P18 tables, each keeping both sides). Reviewed
+`git diff master...mnt/p18` in both repos against P18's text, §2, §4, F117, design §6 EquipmentImport and §9, AGENTS.md,
+Practices-App-Dev and the Admin path reference; read the framework's DataTransferBatch.js (access, runsOf, the row's own
+transaction), DataTransferImports.js (find#ImportRuns), Readiness.js (ownerCall, present, readiness) and AdminMount.js, Admin.js'
+route tables and MaintenanceAccess.js' scope.
+- Checked and found sound:
+  - The ALL_USERS grants: `validate#` and `apply#EquipmentImportRow` check MAINTENANCE_IMPORT with MAINTENANCE_RESOURCE_EDIT and the
+    organization first (PERMISSION_DENIED, ORGANIZATION_DENIED) before any read; `find#EquipmentImportScopes` answers none without a
+    resource read and only the caller's own organizations with it; `check#MaintenanceReadiness` refuses a caller without
+    MAINTENANCE_SETTINGS_EDIT, an organization asked outside their scope, and with none asked covers only their own organizations (none
+    for a caller with no maintenance read, whose scope is empty). A user with no maintenance permission gets no organization and no row
+    checked (now in MaintenanceImport); counts, names of technicians, resources and mappings are never answered, only counts per
+    check of the caller's own organizations.
+  - The `equipment` TransferTarget names MAINTENANCE_IMPORT and MAINTENANCE_RESOURCE_EDIT and no ADMIN_*; the framework holds every
+    one (F51) at stage, edit and apply, so the resource editor without MAINTENANCE_IMPORT is refused at stage; each row is applied in
+    its own transaction (DataTransferBatch `apply#TransferItem`); `keyFields` refuses a repeat in one file; Admin's Imports lists a
+    run for a holder of MAINTENANCE_RESOURCE_VIEW whose scopes (the row service's, as them) include the run's organization (spec).
+  - `store#MaintenancePolicy`: a start before now (a minute's grace) refused; the row in effect at the start ends there; a later plan
+    (since R4, only when the call withdraws it) is withdrawn by its end at its own start and left out of `planned`, `ended` and `policyOf`; a field not given is kept from the
+    policy in effect at the start (a plan that the new start falls inside is truncated, not withdrawn, and its values are the ones
+    kept). A plan changed in place for the same start never took effect (no `policyOf` read it), as P13's draft terms change in place
+    until activation (the user's call of Nov 12): §2's "never overwritten" holds for every row that was ever in effect.
+  - The readiness provider: `moqui.server.ReadinessProvider` `maintenance.readiness` (requiredPermission, scopeParameters
+    organizationPartyId, fixRoute `maintenanceSettings`), the settings entry's `providerKey`; each check answers checkKey, title,
+    state, reasonCode, message, subject and scope, and a fixRoute only when not ready; every key it names is in Admin.js `mountRoutes`
+    (`maintenanceProcedures`, `maintenanceResources`, `adminGroups`, `accountingPostingDefaults`, `accountingCostingPolicies`,
+    `maintenanceSettings` through `settingsRoutes`) or the framework's (`adminJob`), and each page exists; Admin's `get#Readiness`
+    shows it to maint.admin and not maint.reader (MaintenanceSettings).
+  - DataImport.js' `runRefusal`: Admin's and People's texts are word for word the ones the four transitions threw; Products' catalog
+    mount runs always (canRun true), so its text is never thrown. PeopleLifecycle, PeopleAccess, ProductsImport, ProductsAccess and
+    AdminImports pass unchanged.
+  - Ended lookup values: `enumOptions` leaves out a value whose `thruDate` has passed (every enumeration choice of Maintenance, the
+    owners' FacilityType, AssetClass and SkillType too, consistently) and keeps the selected one; services still take it (the lead's
+    acceptance).
+- Fixes:
+  - **R1 (medium, isolation and correctness).** The import found a source key among every organization's equipment: a second
+    organization importing the same source and key (two sites' own CMMS numbering) was refused for every such row, and the refusal
+    told the importer that key was another organization's equipment. A key is now found among the organization's own equipment only
+    (`keyedOf`), and a row naming equipment already keyed by another source key is refused, so one key is one asset and one asset one
+    key in an organization. MaintenanceImport: B's key makes A's own pump with B's untouched; a re-keyed row refused. (Failed without
+    the fix: validCount 2 for 3.)
+  - **R2 (low, failure tolerance).** `check#MaintenanceReadiness` ran each check in the provider's error frame: a check whose call left
+    an error message (EntityLib's `call` throws without clearing it) made every later check fail and the framework's `ownerCall` mark
+    the whole provider failed. Each check now runs in its own frame, its messages cleared. No data makes a check fail, so no spec.
+  - **R3 (low, choice).** The failure mode choice filtered the applicable modes after the query's limit (twice the 30 offered), so with
+    more than 60 current failure modes one that applies to the work's equipment could be missing; the applicable ids now narrow the
+    query (`enumOptions`' `onlyIds`). No spec (it would add 60 instance-wide failure modes).
+  - **R4 (medium, the user's call of Nov 12).** A change from now withdrew every later plan without saying so: a section saving one
+    field (P7's voice notes, P14's lead days) "from now" silently dropped a threshold change planned for next month.
+    `store#MaintenancePolicy` now refuses a start before a planned policy with PLAN_PENDING, naming the plan's date, unless the call
+    says `withdrawPlanned` (then the plan is withdrawn as before); a start inside a plan's own span still truncates it and one at the
+    plan's start still changes it in place. Work policy offers "Withdraw the policy planned from ..." while a policy is planned (No by
+    default). MaintenanceSettings' dated policy feature: the change from now refused naming the plan's date, the policy in effect and
+    the plan unchanged, then withdrawn with `withdrawPlanned` (failed without the fix: PLAN_PENDING not answered).
+- Findings, numbered by the lead F257 to F261 in order:
+  - A field given as null is given: it resets to its default (a radio's empty, a drop-down's none clears the default type or team, which
+    is wanted). So a later section keeps the others only by its own transition naming its own fields; WorkPolicy's transition names
+    them all.
+  - Readiness' checks share the provider's one transaction: on the entity cluster a failed statement aborts it, and the checks after
+    it would all answer CHECK_FAILED. Separate transactions would need a service per check.
+  - `adminGroups` is `../../Access/Groups` under both Admin and System, so by AdminMount.js' rule it belongs in the framework's
+    `frameworkRoutes` (System's Health then links it too); left in Admin.js (an mr-moqui change). Maintenance's Readiness links Admin's
+    Groups and JobDetail plainly to an administrator who may not open Admin.
+  - Two files applied at the same time for one new key in one organization can register two assets (`keyFields` covers one file);
+    the key's next row is then refused ("names more than one"). Rare; a lock on the key would close it.
+  - Re-planning a withdrawn plan at its very start revives that row with the new values: the withdrawn values, never in effect, are
+    not kept.
+- Tests (release binary, `--nobuild`): mr-mantle MaintenanceImport (4 features, 0.6 s), MaintenanceWorkOrders, MaintenanceProcesses,
+  MaintenanceIntake, ProcessChecks, StaffInvitationImport: 36 of 36 (6 specs, 13.4 s feature time). mr-boss MaintenanceSettings,
+  MaintenanceAccess, MaintenanceWorkOrders, MaintenanceChecklists, PeopleLifecycle, PeopleAccess, ProductsImport, ProductsAccess,
+  AdminImports, AdminRegistries, AdminSettings: 82 of 82 (11 specs, 25.2 s feature time). `./moq run --debug --nobuild lint --screens`:
+  no flagged site in Maintenance's screens; the binary still the symlink. Prettier on the changed scripts and spec. Not run:
+  ./moq test-apps, the acceptance suite.
+- For the lead:
+  - Budget: mr-mantle MaintenanceImport +1 feature (about +0.2 s, 0.6 s in all); mr-boss unchanged.
+  - Merge hot spots: as the Built note's; P14's `pmLeadDays` and P11's cost threshold become `policyFields` rows (their range checks
+    in `store`), their parameters in store#MaintenancePolicy and their fields in WorkPolicy's form and transition.
+  - The user's calls of Nov 12, decided:
+    1. Lookup writes stay as built: any holder of MAINTENANCE_SETTINGS_EDIT changes Maintenance's instance-wide lookups (and a failure
+       mode's applicability) for every organization, as People's are; no instance-level permission (design §9 says so).
+    2. A change that would withdraw a plan is refused unless it withdraws it explicitly: built as R4.
+    3. Accepted by the lead from the Built note: no default holiday calendar per organization; an ended lookup value leaves the
+       choices only.
+  - R4's tests: mr-boss MaintenanceSettings, MaintenanceAccess, MaintenanceWorkOrders 30 of 30 (9.9 s feature time); mr-mantle
+    MaintenanceWorkOrders, MaintenanceProcesses, MaintenanceIntake, ProcessChecks 30 of 30 (12.8 s). The acceptance
+    MaintenanceSetupWalk plans from the first of next month only (no change before it), unchanged and not run.
+
 ### P19 — Assist, Comms, sync and outputs
 
 (F117: export targets' `ownerRoute` are route keys in Admin.js `mountRoutes`.)
@@ -4102,8 +4738,14 @@ Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `Provide
   - Budget share: mr-boss server +0.3 s (the R1 feature, the R2 posts); mr-mantle unchanged.
   - Merge hot spots: as the Built note's, plus `screen/Maintenance/SendMessage.xml` (the transition) and
     `MaintenanceAccess.spec.js`'s end (one feature after the stack providers' case) and header.
-  - When P14 is merged: the PM list export (`maintenanceDueList`, a `wizard` target with ownerRoute `maintenanceDue` added to
-    mountRoutes) and DueMaintenance's .ics link, the seam the Built note names (the reviewer adds them at the lead's word).
+  - Merged master (P14, P18, P11) at the lead's word, keeping both sides; then the seam: `maintenanceDueList`, a `wizard` export
+    target at P14's `maintenanceDue` route (Due maintenance's list now `show-csv-button`), and a dated row's .ics link on Due
+    maintenance, through `dueCalendarFile`, moved from PlanDetail into `template/MaintenancePlanParts.xml` so both include it.
+    WorkOrderDetail's header comment keeps P11's Costs tab ("No cost outside the Costs tab").
+    After the merge: mr-mantle MaintenanceStack, MaintenanceGeneration and MaintenanceCosts 18 of 18; mr-boss MaintenanceStack,
+    MaintenanceAccess, MaintenanceWorkOrders, MaintenancePlans, MaintenanceSettings, MaintenanceCosts and AdminExports 47 of 47
+    (25.1 s feature time). The first, cold run flagged a spec over 15 seconds; the rerun did not, and MaintenanceAccess alone is
+    8.7 s of features: watch it as it grows.
   - The user's call on an internal colleague's call context is decided (Nov 12) and built as R4.
 
 ### P20 — Finish
@@ -4178,6 +4820,9 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P16: an approver sees a meeting's title only when it is shared with them; Commons' own Rooms and equipment are unchanged (blackouts shown later, in a Commons change) | The lead's acceptance of the worker's recommendations (P16) |
 | Nov 12, 2026 | P16: resource administrators and supervisors read BookingRequests read only; Commons' approvals inbox opens an approval topic's own link first, so a ResourceBooking card opens BookingRequests | The user's calls (P16) |
 | Nov 12, 2026 | P10: accepting outside service stays under Purchasing's own check (`accept#ServiceItem`); the demo supervisor holds `STOCK_RECEIVE` through a Warehouse capability group that opens no Warehouse screen | The lead's decision, by the phase's text |
+| Nov 12, 2026 | P18: lookup values are instance-wide and any Maintenance settings editor changes them; a start earlier than a planned policy is refused (`PLAN_PENDING`) unless the change withdraws it; no default holiday calendar per organization; an ended lookup value leaves the choices only | The user's calls (P18; the last two the lead's acceptance of the worker's) |
+| Nov 12, 2026 | P14: the generation job's every-organization scope is the job's own (no user) or a system administrator's; anyone else generates in their own scope; reminders for assigned PM work a day before the due date; the job seeded paused; job-made work waits for a supervisor under the default zero threshold | The lead's acceptance of the reviewer's and worker's recommendations, by the plan's text |
+| Nov 12, 2026 | P11: Projects' money readers see a repair's cost total per work order; no estimate before anyone is assigned. P19: the due-PM calendar is for MAINTENANCE_VIEW holders | The lead's acceptance of the workers' recommendations |
 
 ## 5. Open questions
 
@@ -4453,6 +5098,46 @@ paths under `mr-boss/`.
 | F248 | P10 review: `get#MaintenanceOrder` reads each work in a try/catch that takes any error for "not readable" | P10's Review note |
 | F249 | P10 review: The ECA's failure path is reviewed, not tested | P10's Review note |
 | F250 | P10 review: Prices follow Manufacturing's subcontract rule (ACCOUNTING_VIEW and the supplier price permissions beside PURCHASE_ORDER_EDIT and MAINTENANCE_COST_VIEW) | P10's Review note |
+| F251 | P18: P3's `store#MaintenancePolicy` wrote every field from the call, so a form that did not post a later phase's field reset it (a settings section of P14's own would have turned self-approval off). | P18's Built note |
+| F252 | P18: Lookups are the instance's, not an organization's (Enumeration has no owner), as People's are | P18's Built note |
+| F253 | P18: Design §9's time zone and calendar defaults are not built | P18's Built note |
+| F254 | P18: The readiness checks are an organization's | P18's Built note |
+| F255 | P18: An existing piece of equipment at another location is refused by the import (move it in Maintenance) | P18's Built note |
+| F256 | P18: Shared/DataImport's four transitions named People's and Admin's refusals by app | P18's Built note |
+| F257 | P18 review: A field given as null is given | P18's Review note |
+| F258 | P18 review: Readiness' checks share the provider's one transaction | P18's Review note |
+| F259 | P18 review: `adminGroups` is `../../Access/Groups` under both Admin and System, so by AdminMount.js' rule it belongs in the framework's `frameworkRoutes` (System's Health then links it too) | P18's Review note |
+| F260 | P18 review: Two files applied at the same time for one new key in one organization can register two assets (`keyFields` covers one file) | P18's Review note |
+| F261 | P18 review: Re-planning a withdrawn plan at its very start revives that row with the new values | P18's Review note |
+| F262 | P14: F186 fixed in the projection itself, not only in the occurrences | P14's Built note |
+| F263 | P14: The job runs with no user (the scheduler's authorization-off path, no run-as identity), so Maintenance's scope is resolved for it (`systemScope` | P14's Built note |
+| F264 | P14: Due reminders for assigned PM work (design §5.1) are not set | P14's Built note |
+| F265 | P14: There is no reopen action on a work order (§3's lifecycle) | P14's Built note |
+| F266 | P14: Meter obligations are keyed by their threshold ("meter 350") | P14's Built note |
+| F267 | P14: The completion cadence (MscCompletion) has no fixed obligations | P14's Built note |
+| F268 | P14: PreventiveComplianceReport is the first screen of a Reports area (menu index 9, MAINTENANCE_VIEW) that P17 completes (the landing, work status) | P14's Built note |
+| F269 | P14: Generation of a plan whose target became stock fails with RECORD_UNAVAILABLE (P13's `targetOf`), named per plan | P14's Built note |
+| F270 | P14: Equipment's next-PM column (F185) is not built | P14's Built note |
+| F271 | P14: F192 | P14's Built note |
+| F272 | P14: An existing database needs `MaintenancePlanSetupData.xml` (the job) and `MaintenancePlanData.xml` loaded on upgrade (as F170). | P14's Built note |
+| F273 | P14 review: "The job and a planner at once" is tested in turn (the job, then the planner's WORK_OPEN), not in two threads | P14's Review note |
+| F274 | P14 review: A plan's work moved by a path other than the lifecycle (a baseline status change) is credited only when a generation or a decision of the plan syncs its occurrences | P14's Review note |
+| F275 | P14 review: The reminder's offset is fixed at a day (1440 minutes) | P14's Review note |
+| F276 | P14 review: Tools' raw JobDetail Run now runs a job as the clicking user (framework behaviour) | P14's Review note |
+| F277 | P14 merge: MaintenanceAccess (one spec of every phase's access case) took 8.5 s alone and 20.7 s at load average 20 | The full suites' measure decides; split it or move cases to acceptance if it nears 15 s |
+| F278 | P11: `get#ApprovedStandardCost` runs CostPolicy.scope before reading, so it refuses a planner (no product-cost access) | P11's Built note |
+| F279 | P11: "Approved hours" is the entry's timesheet in `TmshApproved` (Mantle has no per-entry approval) | P11's Built note |
+| F280 | P11: Maintenance labor is read at the costing rate, never posted | P11's Built note |
+| F281 | P11: With a cost threshold set, ad hoc planned work with hours is held on create (no one is assigned yet, so its labor cannot be priced) | P11's Built note |
+| F282 | P11: Several technicians on one node | P11's Built note |
+| F283 | P11: Projects' money readers (TIME_ENTRY_RATE) see a repair's totals charged to their project without MAINTENANCE_COST_VIEW, as "Charging a project" has it (totals by currency only | P11's Built note |
+| F284 | P11: Outside service bills are read from OrderItemBilling (quantity times amount, the invoice's currency) | P11's Built note |
+| F285 | P11: The cost reader's bundle carries `BOSS_MNT_COSTS` | P11's Built note |
+| F286 | P11: The report reads each order line's acceptances and bills in a query each | P11's Built note |
+| F287 | P11 review: The cost reader sees the estimate's parts at the products' approved standard cost without PRODUCT_COST_VIEW (design §3 WorkCosts shows the estimated cost | P11's Review note |
+| F288 | P11 review: The report reads each order line's bills and acceptances, and `projectCosts` each issuance's node, a query apiece (the worker's finding) | P11's Review note |
+| F289 | P11 review: The pending outside service is dated by the order's entry date, so a period filter can drop an open line ordered before it. | P11's Review note |
+| F290 | P11 review: Settings' cost threshold currency is a text line (Mantle checks it is a currency) | P11's Review note |
 
 
 ## 7. Later

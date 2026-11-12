@@ -25,11 +25,11 @@ along with this software (see the LICENSE.md file). If not, see
     broad reader), Downtime (60, P5: the outages the work recorded or linked, Record outage, Restore), Files (70), Conversation (80)
     and History (90). The other tabs of design §3 join with their phases at their gaps: Parts (40, P9: built, the planned parts and the parts used),
     Purchasing (50, P10: the work's purchase requests and order lines, Request a purchase, Accept outside service, whose service line
-    Complete also offers to accept) and Costs (100, P11). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
+    Complete also offers to accept) and Costs (100, P11: built, the cost reader's only, BOSS_MNT_COSTS). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
     and the header says when the target is out of service. P19 (design §1.4 Meetings, §12): More offers Print work order (the
     Instructions print, with the QR of the work order's link), Add to calendar (.ics of its planned window) and, for a planner,
     supervisor or its assigned technician, Add video call (a Commons event with a call link, the vendor's expert and the
-    technicians invited; add#MaintenanceVideoCall). No cost. -->
+    technicians invited; add#MaintenanceVideoCall). No cost outside the Costs tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work order" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>

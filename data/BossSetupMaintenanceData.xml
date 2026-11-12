@@ -227,12 +227,20 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
     <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
-        administrator's settings of each organization; its readiness provider (check#MaintenanceReadiness) is set in P18. -->
+        administrator's settings of each organization, with its readiness provider (P18, F117): the framework's
+        moqui.server.ReadinessProvider over Mantle's check#MaintenanceReadiness, called as the viewer organization by organization,
+        which checks MAINTENANCE_SETTINGS_EDIT and the organization itself and answers each check's place as a route key
+        (Admin.js mountRoutes). Its service is every user's to call (Mantle's MaintenanceSettingsData.xml), so Admin's Health, the
+        System app's and Maintenance's own Readiness reach it alike. -->
+    <moqui.server.ReadinessProvider providerKey="maintenance.readiness" version="1" ownerApp="Maintenance" title="Maintenance setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.work.MaintenanceSettingsServices.check#MaintenanceReadiness" scopeParameters="organizationPartyId"
+            requiredPermission="MAINTENANCE_SETTINGS_EDIT" fixRoute="maintenanceSettings" sequenceNum="160"/>
     <moqui.server.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"
-            description="Work policy, teams, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
+            description="Work policy, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
             scopeEnumId="AdmScOrganization" destinationRoute="maintenanceSettings"
             screenLocation="component://mr-boss/screen/Maintenance/Settings.xml" viewPermission="MAINTENANCE_SETTINGS_EDIT"
-            configuredBy="Maintenance administrator" sequenceNum="75"/>
+            configuredBy="Maintenance administrator" providerKey="maintenance.readiness" sequenceNum="75"/>
     <!-- impl-maintenance P3: the MaintenanceWork topic opens the work order (Mantle seeds the topic and its registration) -->
     <moqui.security.user.NotificationTopic topic="MaintenanceWork" linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
     <!-- impl-maintenance P3 (owner contract, design-admin §14; F56): Maintenance's lifecycle participant, a leaver's open work order
@@ -315,6 +323,9 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- P11 review (R2): the planner's and the supervisor's bundles carry the Requests area, so a group given either in Admin opens it -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests (triage)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests (triage)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <!-- Report a problem in every Maintenance bundle (the user's call, Nov 12, P4 review), so a group given a bundle in Admin has it -->
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_READ" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_REQUEST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
@@ -332,6 +343,10 @@ along with this software (see the LICENSE.md file). If not, see
         refuse#WorkProcess, as the user deciding) or from ProcedureDetail -->
     <moqui.security.user.NotificationTopic topic="WorkProcessApproval"
             linkTemplate="/qapps/Maintenance/Procedures/ProcedureDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P14: preventive work made from a plan (Mantle's MaintenanceDue topic and its registration, told to the
+        organization's planners) opens its work order under Maintenance -->
+    <moqui.security.user.NotificationTopic topic="MaintenanceDue"
+            linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
     <!-- impl-maintenance P16: a booking waiting for approval (Mantle's ResourceBooking topic and its registration) opens BookingRequests
         for its resource; it is approved or denied from Commons' approvals inbox (approve#ResourceBooking and refuse#ResourceBooking, as
         the user deciding) or from BookingRequests. What became of a booking (ResourceBookingNotice) opens its event in Commons. -->
@@ -339,14 +354,31 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Maintenance/Scheduling/BookingRequests?${facilityId ? 'facilityId=' + facilityId : 'assetId=' + assetId}"/>
     <moqui.security.user.NotificationTopic topic="ResourceBookingNotice"
             linkTemplate="/qapps/Commons/Calendar/EventDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P11: the cost screens (WorkOrderDetail's Costs tab and MaintenanceCostReport), the cost reader's: denied to the
+        root user group, as Requests are, and always for the cost reader group, so the tab and the report are in no other user's menu;
+        BOSS_MAINTENANCE_ADMIN and ADMIN open them through their ALWAYS on the root. Mantle's get#MaintenanceCosts checks
+        MAINTENANCE_COST_VIEW again. The cost reader's bundle carries the grant, so a group given it in Admin opens them. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail/Costs.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_COSTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_COSTS_COST" userGroupId="BOSS_MAINTENANCE_COST" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs (the Costs tab and the cost report)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <!-- impl-maintenance P19 (F53, F117): the list exports Maintenance makes in its own lists (CSV with the current filters and the
         columns shown, no hidden column), listed in Admin's Exports as wizard export targets with their owner route (a mountRoutes key
-        in service/ironstone/admin/Admin.js), nothing dispatched, as Projects' work item list is. The PM export joins with
-        DueMaintenance (P14): maintenanceDueList, route maintenanceDue. -->
+        in service/ironstone/admin/Admin.js), nothing dispatched, as Projects' work item list is. -->
     <moqui.server.TransferTarget targetId="maintenanceWorkOrderList" direction="export" targetMode="wizard" title="Maintenance work orders"
             description="The work orders of a list as CSV, from Work orders in Maintenance"
             ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceWorkOrders" sequenceNum="65"/>
     <moqui.server.TransferTarget targetId="maintenanceBookingList" direction="export" targetMode="wizard" title="Booking requests"
             description="The booking requests of a list as CSV, from Booking requests in Maintenance"
             ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceBookingRequests" sequenceNum="66"/>
+    <moqui.server.TransferTarget targetId="maintenanceDueList" direction="export" targetMode="wizard" title="Due maintenance"
+            description="The preventive maintenance due of a list as CSV, from Due maintenance in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceDue" sequenceNum="67"/>
 </entity-facade-xml>

@@ -409,6 +409,9 @@ const mountRoutes = {
     projectsWorkItemImport: {url: "/qapps/Projects/WorkItems/Import", plain: true},
     peopleEmployeeImport: {url: "/qapps/People/Employees/EmployeeImport", plain: true},
     peopleTimeImport: {url: "/qapps/People/Time/TimeImport", plain: true},
+    maintenanceEquipmentImport: {url: "/qapps/Maintenance/Equipment/EquipmentImport", plain: true},
+    // Maintenance's due list: the preventive generation job's and its recovery's owner place (impl-maintenance P14, F117)
+    maintenanceDue: {url: "/qapps/Maintenance/Preventive/DueMaintenance", plain: true},
     commonsContacts: {url: "/qapps/Commons/Contacts/List", plain: true},
     insightsDatasets: {url: "/qapps/Insights/ReportBuilder/Datasets", plain: true},
     insightsReports: {url: "/qapps/Insights/Reports", plain: true},
@@ -436,6 +439,13 @@ const mountRoutes = {
     productsCatalogChecks: {url: "/qapps/Products/CatalogChecks", plain: true},
     commerceStore: {url: "/qapps/Commerce/Stores/StoreDetail", idParameter: "productStoreId", plain: true},
     insightsDataset: {url: "/qapps/Insights/ReportBuilder/DatasetDetail", idParameter: "datasetId", plain: true},
+    // Maintenance's setup readiness (impl-maintenance P18): its checks' places, its own and the owners' (Accounting's posting
+    // defaults and costing policies, Admin's groups for a stock grant; a job is the framework's adminJob)
+    maintenanceProcedures: {url: "/qapps/Maintenance/Procedures/Find", plain: true},
+    maintenanceResources: {url: "/qapps/Maintenance/Scheduling/Resources", plain: true},
+    accountingPostingDefaults: {url: "/qapps/Accounting/Settings/PostingDefaults", plain: true},
+    accountingCostingPolicies: {url: "/qapps/Accounting/Settings/CostingPolicies", plain: true},
+    adminGroups: {url: "../../Access/Groups"},
     ...settingsRoutes
 }
 function sharedContext(p) {
