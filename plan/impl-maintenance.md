@@ -1941,6 +1941,125 @@ the availability read).
   `maint.resources` makes the room managed with an approver, plans a blackout and reviews the two bookings it
   touches; a Commons user booking the down compressor is refused with "out of service" and no other detail.
 
+**Built Nov 12 (P15).** mr-mantle 193f1559, mr-boss 3d8ffbbd (branch `mnt/p15`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P5's ResourceOutages.js and its four services, the correction chain and every reader of the
+  row in force (F119); EventServices' `book#Resource`, `check#ResourceBookings`, `update#EventOccurrence`, `create#Event` (equipment
+  assigned at once with no check), `get#FreeBusy`, `get#FullCalendarData` (a resource's events carry their titles whoever asks; Commons'
+  ScheduleServices masks them itself) and `check#EventAccess`; CalendarDavServices' event PUT (a check-only `check#ResourceBookings`, a
+  conflict answering 409); ProductionSchedule.js `store#WorkCenterOffline` (a direct create of the RukPlanned row, then each move in a
+  transaction of its own) and its withdraw, ProductionCalendar's `offlineOf`; the seeded `RESOURCE_*` permissions and groups, the
+  BookingApprover role and rows (Commons' demo), Maintenance's lifecycle participant (WorkOrders.js), and Commons' `book#ResourceSlot`.
+- Mantle:
+  - Record (`entity/ResourceBookingEntities.xml`): `ResourceBookingPolicy`, dated, one resource (asset or facility), with bookable,
+    `approvalModeEnumId` (RbamAutomatic, RbamApprovers), `bookingHorizonDays`, `maximumDurationMinutes`, `timeZone`,
+    `softConflictOverride`, the change reason, a revision and who; audit-logged. Seeds `data/MaintenanceWorkResourceData.xml` (the
+    approval modes and the planned reasons RurClosure and RurOffline, after the P5 file whose type they are of) and
+    `RESOURCE_BOOKING_OVERRIDE` in MaintenanceSetupData (to ADMIN).
+  - `mantle.work.ResourceBookingServices` over the new `ResourcePolicy.js`: `find#BookableResources` (bookable equipment and open
+    facilities of the scope, an approver only theirs, paged before the per-row reads), `get#`, `store#` (from a date never past, the one
+    in force ended then, a later one withdrawn, the expected revision and a reason for a change, or `endPolicy`) and
+    `preview#ResourceBookingPolicy` (the bookings of 180 days the rules no longer allow, kept, with safe labels), `store#ResourceApprover`
+    (add, or end with a hand-over person or the reason, APPROVER_PENDING) and `get#ResourceAvailability` (assigned, requested, planned
+    and actual intervals, safe labels, a facility's blocks with those above it). Writers need RESOURCE_POLICY_EDIT in the resource's
+    organization; readers a policy or resource read there, or a current approver with RESOURCE_BOOKING_VIEW_ASSIGNED.
+  - The guard (`ResourcePolicy.js guard`), called with the resource row locked by `book#Resource` (which now locks it itself before its
+    conflict read), `check#ResourceBookings` (locks unless check-only; a refusal is a hard conflict in check-only, so the CalDAV PUT
+    answers 409) and `create#Event`'s equipment (a managed asset goes through `book#Resource`, any other is refused only by a block):
+    an outage or planned block over the booking refuses it for every resource whatever allowConflicts ("… is out of service then",
+    "… is not available then (closed (blackout))"); a managed resource refuses not bookable, over the maximum, past the horizon, a
+    recurring range past the horizon (365 days when unset) or self-overlapping, approval with no approver; allowConflicts books over a
+    conflict only with the policy's override, RESOURCE_BOOKING_OVERRIDE and `overrideReason` (kept as "Override: …" in the booking's
+    comments; `book#`, `check#` and `update#EventOccurrence` take it); approval follows the mode. A conflict with an event the user may
+    not see is "Busy" with no id, for every resource. `get#FreeBusy` adds blocks (status down, blocked); `get#FullCalendarData` answers
+    them apart as `unavailableList`.
+  - Planned blocks (`ResourceOutages.js`): `record#` with kind RukPlanned (an end required, a future start allowed, at most a year),
+    Maintenance's entry a resource administrator (RESOURCE_POLICY_EDIT) or supervisor of the scope, Manufacturing's a scheduler or method
+    engineer of a work center of their organization, by data; Maintenance's locks the resource, Manufacturing's does not (its moves run
+    in their own transactions after it and waited on the lock: the ProductionSchedule spec's apply hung 60 s until this). `correct#`
+    supersedes a block by either entry point and `end#` ends it now or withdraws it (its end at its start). find# with kind RukPlanned
+    gives each block's state (planned, in effect, ended, withdrawn, corrected), source and the bookings it covers until it ends;
+    `affectedBookings` counts a facility's and those inside it.
+  - Owner contracts: `store#WorkCenterOffline` writes its block through `record#` (reason RurOffline) and its withdraw ends the row in
+    force; R3's KIND_INVALID is replaced (MaintenanceOutages' case now expects the correction); ProductionCalendar's offline time
+    includes a block or outage of a facility above the center. ProductionSchedule and the Calendar, Dav and Production specs pass
+    unchanged.
+- BOSS:
+  - Screens: the Scheduling area (menu index 8, for RESOURCE_POLICY_VIEW, RESOURCE_BOOKING_VIEW_ASSIGNED, MAINTENANCE_SUPERVISE or
+    MAINTENANCE_RESOURCE_VIEW): Resources (ResourceFind, ResourceRows, Bookability), ResourcePolicyDetail at
+    `Scheduling/ResourcePolicyDetail` (not under Resources; BookingPolicy, BookingApprovers, PolicyImpact as the rules in force's
+    preview, availability, history) and Blackouts (BlockFind, BlockRows with `view-calendar` and no drag transition, StoreBlock, Correct,
+    End), over `template/MaintenanceSchedulingParts.xml`; EquipmentDetail's Schedule tab (index 10) and FacilityDetail's Schedules tab's
+    Maintenance branch (after check#Record), both the `ResourceSchedule` section.
+  - Maintenance.js: the three links, the choices `blockReasons`, `approvalModes` and `approvers` (the people of the scope, as a work
+    order's). WorkOrders.js and LifecycleServices: the participant's third kind `bookingApprovals` (current BookingApprover rows), moved by
+    a RESOURCE_POLICY_EDIT holder through `store#ResourceApprover` with the new person as hand-over.
+  - Setup (BossSetupMaintenanceData.xml, F118): RESOURCE_BOOKING_OVERRIDE to BOSS_MAINTENANCE_RESOURCE_ADMIN and BOSS_MAINTENANCE_ADMIN,
+    in their bundles.
+  - Demo (BossZMaintenanceDemoData.xml, appended): Room 101 managed (approval by maint.booking, two hours, 90 days), Room 103 Focus new
+    and not managed, the planner's vendor walkthrough in Room 101 on Nov 17 approved, and the carpet replacement's blackout over it
+    that morning.
+- Specs:
+  - Mantle `test/work/ResourceBookingPolicy` (8 features, 2.2 s): the policy set by its editor and refused to others; adjacent bookings
+    accepted, three hours and 40 days ahead refused, an unbounded daily series refused and a three-day one accepted; a hidden event Busy
+    in the conflict and the availability read, allowConflicts refused, the override with permission and reason accepted; a booking and
+    `create#Event` over an outage refused with allowConflicts, no description, FreeBusy "down"; approval with no approver blocked, an
+    approver makes it requested, ending them with it waiting refused, the hand-over accepted; an unmanaged room as before; a building's
+    blackout flags the rooms' bookings, cancels nothing and refuses a booking under it; Manufacturing's offline time through `record#`,
+    corrected by a supervisor and withdrawn as the row in force.
+  - BOSS `test/Maintenance/MaintenanceScheduling` (3 features, about 0.4 s): Resources', ResourcePolicyDetail's and Blackouts' one qvt
+    render each, EquipmentDetail/Schedule's and FacilityDetail/Schedules' under Maintenance, the participant's booking approvals and their
+    hand-over. `MaintenanceAccess` gains the policy and blackout case (the resource administrator's preview, the planner refused,
+    Retail's facility refused, an approver reading only the room they approve; 0.26 s) and `adminMenu` gains Scheduling.
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceResourcePolicyWalk` (4 features).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingPolicy, MaintenanceOutages, CalendarServices,
+  CalendarChanges, Dav, CommonsToday, ProductionSchedule, ProductionDowntime, ProductionShopFloor, ProductionOrders, ProductionReports,
+  ProductionPolicy, ManufacturingServices, WorkCenters, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceScope,
+  MaintenanceResources and WorkProcess 150 of 150 (69.4 s); after prettier ResourceBookingPolicy, MaintenanceOutages, ProductionSchedule
+  and CalendarServices 40 of 40; mr-boss MaintenanceAccess, MaintenanceDowntime, MaintenanceWorkOrders, MaintenanceEquipment,
+  MaintenanceScheduling, Schedules, EventDetail, Calendar, QuickCreate, PublishedCalendar, WarehouseFacilities, ManufacturingWorkCenters,
+  ManufacturingDowntime, ManufacturingSchedule, AdminLifecycle, PeopleLifecycle and PeopleSchedules 149 of 149 (47.6 s), then
+  MaintenanceScheduling and MaintenanceAccess 15 of 15 after prettier. `./moq run --debug --nobuild lint --screens`: 136 flagged sites,
+  as before; none in the new or changed screens. Prettier clean on the new and changed JavaScript. Not run: ./moq test-apps, the
+  acceptance suite.
+- Inventories: usl-inventory's P5 rows name P15's uses, and a new Added table for find#BookableResources, get#, store#, preview#
+  ResourceBookingPolicy, store#ResourceApprover and get#ResourceAvailability; ss-inventory has no baseline form for a policy or a
+  blackout (no row).
+- Design edits: design-maintenance's header, §1.2, §2 (ResourcePolicyDetail's path), §7.1, Resources, ResourcePolicyDetail and Blackouts
+  as built; impl-manufacturing's log (the owner contract).
+- Findings (provisional):
+  - `get#FullCalendarData` returns a resource's events with their titles to anyone who asks by facility or asset; Commons'
+    ScheduleServices masks them, the Mantle read does not. P15 masks them in the guard's conflicts and the availability read only; the
+    eventList is unchanged, so Commons' specs pass.
+  - `create#Event` assigned equipment at once with no check at all; it now goes through `book#Resource` for a managed asset, and is
+    refused by a block for any other.
+  - Manufacturing's offline time locked nothing before; locking the work center in `record#` deadlocked its moves (their own transactions
+    after it), so Manufacturing's entry does not lock. A Maintenance blackout does.
+  - An unmanaged resource's recurring booking is still checked on its first instance only (as before); only a managed one is checked
+    over its range.
+  - Allowed hours, a booking calendar and people capacity against attendees are not built (the policy keeps a time zone for them).
+  - `affectedBookings` reads estimated dates only: a recurring booking's later instances under a block are not counted.
+  - A facility block covers its descendants; equipment located in a blacked-out room is not blocked (design §7.1: an explicit
+    relationship would be needed).
+  - MaintenanceFoundationWalk (acceptance) expects the staff menu for every group user, though since P2 the author, approver and booking
+    approver have Home alone; with Scheduling the supervisor, resource administrator and booking approver now also differ. Not changed
+    here (not run).
+  - An existing database needs `MaintenanceWorkResourceData.xml` loaded before Manufacturing's offline change works (RurOffline), as
+    F129 for P5's file.
+- For the lead:
+  - budget share: mr-mantle +2.2 s (ResourceBookingPolicy); mr-boss server about +0.7 s (MaintenanceScheduling 0.4 s, MaintenanceAccess
+    +0.26 s); mr-boss client unchanged; budgets not changed.
+  - merge hot spots: mr-mantle `EventServices.xml` (book#, check#, update#EventOccurrence, create#Event, get#FreeBusy, get#FullCalendarData),
+    `ResourceOutages.js` (header, record's dispatch, affectedBookings, correct and end's dispatch, the planned-block section, displayRows,
+    findOutages' canRecord, exports), `ResourceBookingServices.xml`, `ResourceBookingEntities.xml`, `ProductionSchedule.js`,
+    `ProductionCalendar.js`, `ProductionPlanningServices.xml`, `MaintenanceSetupData.xml`, `test/work/MaintenanceOutages.spec.js`; mr-boss
+    `screen/Maintenance.xml` (one subscreens item), `Maintenance.js` (linkPaths, resourceChoices, choiceSources), `WorkOrders.js` and
+    `LifecycleServices.xml`, `Shared/EquipmentDetail.xml` (a subscreen and equipmentTabs), `Shared/FacilityDetail.xml` (facilityTabs),
+    `Shared/FacilityDetail/Schedules.xml`, `BossSetupMaintenanceData.xml` (appended before the settings row), `BossZMaintenanceDemoData.xml`
+    (appended), `MaintenanceSpecLib.js` (ids, adminMenu), `MaintenanceAccess.spec.js` (appended), design-maintenance, usl-inventory and
+    impl-manufacturing's log. No change to BossSetupData.xml or P4's and P6's files.
+  - the user's calls: none needed; built as the plan has it. Open to the user if they want them: whether an unmanaged resource's
+    recurring booking should also be checked over its range, and who besides the resource administrator holds the override.
+
 ### P16 — Booking requests and the resource calendar
 
 Design BookingRequests, the ResourceCalendar mount row, §7.1 (approval), design-drawers-commons' `ResourceBooking`
