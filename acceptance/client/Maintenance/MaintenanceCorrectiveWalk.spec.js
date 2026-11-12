@@ -3,9 +3,10 @@
 // compressor and one on Room 102, which has no equipment, and assigns the technician; Manufacturing's equipment page shows the
 // compressor available while its order is only planned; the technician starts the compressor's order on a phone (390 px),
 // records their time and completes it with an explicit finish, and Commons' Today lists it with no Mark done; the supervisor
-// closes it; offboarding the technician in Admin lists their open work orders under Maintenance's participant for
-// reassignment. The rules are mr-mantle's MaintenanceWorkOrders and MaintenanceManagedWork and mr-boss's MaintenanceWorkOrders;
-// the golden path is test/client's MaintenanceWorkOrdersWalk.
+// closes it; offboarding the technician in Admin lists their open work orders under Maintenance's participant for reassignment
+// (as the administrator: the Retail identity operator does not see a Services user). The rules are mr-mantle's
+// MaintenanceWorkOrders and MaintenanceManagedWork and mr-boss's MaintenanceWorkOrders; the golden path is test/client's
+// MaintenanceWorkOrdersWalk.
 let pages = {}
 const run = String(Date.now()).slice(-6)
 const compressorWork = "Walk: compressor knocks " + run
@@ -17,7 +18,7 @@ spec({
             ["maint.tech", 390],
             ["maint.supervisor", 1280],
             ["manufacturing.services", 1280],
-            ["admin.identity", 1280]
+            ["admin.admin", 1280]
         ]) {
             const page = browser.newPage({user, viewport: {width, height: width < 600 ? 844 : 1000}, timeout: 30})
             page.allowProblems(/userPhoto\?userId=/)
@@ -40,22 +41,16 @@ function choose(page, scope, label, typed, option) {
     page.getByRole("option", {name: option}).first().click()
     page.keyboard.press("Tab")
 }
+// a day and time some hours before now (after it when negative) in the user's zone, as a date-time field takes it
 function hoursAgo(page, hours) {
-    return page.evaluate(hours => {
-        const at = new Date(Date.now() - hours * 3600000)
-        const two = n => String(n).padStart(2, "0")
-        return (
-            at.getFullYear() +
-            "-" +
-            two(at.getMonth() + 1) +
-            "-" +
-            two(at.getDate()) +
-            " " +
-            two(at.getHours()) +
-            ":" +
-            two(at.getMinutes())
-        )
-    }, hours)
+    return page.evaluate(
+        hours => window.moqui.l10n.formatTimestamp(new Date(Date.now() - hours * 3600000), "yyyy-MM-dd HH:mm"),
+        hours
+    )
+}
+// the last minute of the user's day: Maintenance's Today lists dated work only (F106)
+function endOfToday(page) {
+    return page.evaluate(() => window.moqui.l10n.formatTimestamp(new Date(), "yyyy-MM-dd") + " 23:59")
 }
 const ids = {}
 const detail = workEffortId => "/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=" + workEffortId
@@ -79,7 +74,9 @@ feature("a planner creates corrective work on the compressor and on a room with 
         planner.text().includes("Compressor C-1")
         planner.getByRole("button", {name: "Assign and schedule", exact: true}).click()
         const dialog = planner.getByRole("dialog")
-        choose(planner, dialog, "Technicians", "Techn", /^Maintenance Technician$/)
+        // the due day first: the technicians are ranked again for a changed window
+        dialog.locator("input[name=estimatedCompletionDate]").fill(endOfToday(planner))
+        choose(planner, dialog, "Technicians", "Techn", /^Maintenance Technician( ·|$)/)
         dialog.getByRole("button", {name: "Save", exact: true}).click()
         waitForText(planner, "Maintenance Technician")
         ids.room = create(planner, "facilityId=BOSS_MNT_ROOM_102", roomWork)
@@ -113,7 +110,8 @@ feature("the technician starts the compressor's work on a phone, records time, a
         time.getByLabel("Hours", {exact: true}).fill("0.5")
         time.getByLabel("What was done", {exact: true}).fill("Tightened the motor mounts")
         time.getByRole("button", {name: "Record", exact: true}).click()
-        waitForText(tech, "Tightened the motor mounts")
+        // a phone's time list has no What was done column: the technician's total shows the entry
+        waitForText(tech, "Your time: 0.5 h")
         // Commons' Today: the work order is there, opening its work order, with no Mark done
         tech.goto("/qapps/Commons/Panel/Today").status == 200
         waitForText(tech, compressorWork)
@@ -132,7 +130,8 @@ feature("the technician completes the work with an explicit finish and the super
         const complete = tech.getByRole("dialog")
         choose(tech, complete, "Outcome", "Rep", /^Repaired$/)
         choose(tech, complete, "Equipment after the work", "Avail", /^Available for use$/)
-        complete.locator("input[name=actualCompletionDate]").fill(hoursAgo(tech, 0))
+        // the finish in the minute after now: the work started seconds ago, and a field's minute before it is refused
+        complete.locator("input[name=actualCompletionDate]").fill(hoursAgo(tech, -1 / 60))
         complete.getByRole("button", {name: "Complete", exact: true}).click()
         confirmAction(tech)
         waitForStatus(tech, "Complete")
@@ -148,7 +147,7 @@ feature("the technician completes the work with an explicit finish and the super
 
 feature("offboarding the technician in Admin lists their open work orders under Maintenance for reassignment", {
     expect() {
-        const admin = pages["admin.identity"]
+        const admin = pages["admin.admin"]
         admin.goto("/qapps/Admin/Users/UserDetail?userId=BOSS_MNT_TECH").status == 200
         waitForText(admin, "Lifecycle")
         admin.getByRole("button", {name: "Disable", exact: true}).click()

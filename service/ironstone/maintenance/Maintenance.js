@@ -27,6 +27,8 @@ const rootLocation = "component://mr-boss/screen/Maintenance.xml"
 const areaLocation = area => "component://mr-boss/screen/Maintenance/" + area + ".xml"
 const choiceLimit = 30
 const organizationOptionLimit = 100
+// the technicians a typed name is looked for among: Mantle's find#MaintenanceCandidates ranks at most 200
+const candidateSearchLimit = 200
 
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_MNT_<Area>): Settings the Maintenance
 // administrator's (P1). Home is every Maintenance user's. Each also needs its Mantle capability (the user's call of Nov 12 on
@@ -628,11 +630,14 @@ function workPeopleOptions(userScope, term, selected, p) {
 function technicianOptions(userScope, term, selected, p) {
     const caps = userScope.capabilities
     if (!p?.workEffortId || !(caps.plan || caps.supervise)) return workPeopleOptions(userScope, term, selected, p)
+    const lower = String(term || "").toLowerCase()
     let found
     try {
         found = lib.probe("mantle.work.MaintenanceServices.find#MaintenanceCandidates", {
             workEffortId: p.workEffortId,
             teamPartyId: p.teamPartyId ?? null,
+            // a typed name looks among every ranked candidate (Mantle's cap), not only the first page of the ranking
+            limit: lower ? candidateSearchLimit : null,
             // a date-time field's empty mask ("____-__-__ __:__") or a partial entry is no window
             windowFrom: /^\d{4}-\d{2}-\d{2}/.test(String(p.windowFrom || "")) ? p.windowFrom : null,
             windowThru: /^\d{4}-\d{2}-\d{2}/.test(String(p.windowThru || "")) ? p.windowThru : null
@@ -640,9 +645,9 @@ function technicianOptions(userScope, term, selected, p) {
     } catch (error) {
         return []
     }
-    const lower = String(term || "").toLowerCase()
     const options = Array.from(found.candidateList || [])
         .filter(row => !lower || String(row.name).toLowerCase().includes(lower))
+        .slice(0, choiceLimit)
         .map(row => ({value: row.partyId, label: row.label}))
     return withSelected(options, selected, () => false, partyLabel)
 }

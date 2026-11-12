@@ -254,15 +254,24 @@ feature("Assign and schedule ranks the team's technicians for the work's window:
         return {
             // the field team chosen in the dialog: its members first, each ranked for the window
             planner: choices(users.planner, {workEffortId: ids.plannedOrderId, teamPartyId: ids.fieldTeamId}),
-            technician: choices(users.tech, {workEffortId: ids.plannedOrderId})
+            technician: choices(users.tech, {workEffortId: ids.plannedOrderId}),
+            // a typed name is looked for among every ranked candidate, not the first page of the ranking only
+            typed: choices(users.planner, {
+                workEffortId: ids.plannedOrderId,
+                teamPartyId: ids.fieldTeamId,
+                term: "Maintenance Tech"
+            })
         }
     },
-    then({planner, technician}) {
+    then({planner, technician, typed}) {
         const at = partyId => planner.findIndex(option => option.value == partyId)
         at(ids.qualifiedTechId) == 0 && at(ids.awayTechId) == 2
         planner[at(ids.awayTechId)].label.includes("0 h free")
         planner[at(ids.qualifiedTechId)].label.includes("h free")
         technician.some(option => option.value == ids.qualifiedTechId)
         !technician.some(option => String(option.label).includes("h free"))
+        typed.some(option => option.value == ids.techPartyId) &&
+            typed.every(option => String(option.label).startsWith("Maintenance"))
+        planner.length <= 30
     }
 })
