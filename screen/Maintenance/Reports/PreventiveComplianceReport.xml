@@ -34,12 +34,13 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageNoLimit"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <actions>
-        <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" out-map="report" transaction="force-new"
-                ignore-error="true" in-map="{fromDate:fromDate, thruDate:thruDate, organizationPartyId:organizationPartyId, assetId:assetId,
-                    facilityId:facilityId, outcome:outcome, pageIndex:pageIndex, pageSize:pageSize,
-                    pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true}"/>
-        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- read through AdminCalls (a service-call with ignore-error clears the message), so a refusal shows its own reason -->
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.work.MaintenanceReportServices.get#MaintenanceCompliance',
+                {fromDate:fromDate, thruDate:thruDate, organizationPartyId:organizationPartyId, assetId:assetId, facilityId:facilityId,
+                    outcome:outcome, pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true},
+                'This report is not available to you.')"/>
+        <set field="report" from="called.out"/>
+        <set field="reportError" from="called.failure"/>
         <set field="summary" from="report?.summary || {}"/>
         <set field="complianceList" from="report?.complianceList || []"/>
         <set field="complianceListCount" from="report?.complianceListCount"/>

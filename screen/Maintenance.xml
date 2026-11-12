@@ -50,10 +50,13 @@ along with this software (see the LICENSE.md file). If not, see
                 work order, and a work effort that is no work order is refused); P4: a maintenance request (a Request), a planner's or
                 supervisor's of its organization. A panel request with no record (a person search, an
                 avatar) names none. -->
+            <!-- the check is a service-call of the read-only check#Record rather than a script's ec.service call, so the root's
+                always-actions stay what a server-static tab under it (FacilityDetail's Files and Conversation) may repeat -->
             <script><![CDATA[
                 const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
                 const panelName = pathNames[pathNames.indexOf('Maintenance') + 1]
                 const wanted = ec.context.recordEntity
+                panelRecordType = null
                 if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
                     let entityName = String(wanted)
                     try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
@@ -61,21 +64,14 @@ along with this software (see the LICENSE.md file). If not, see
                         'mantle.work.effort.WorkEffort': 'workOrder', 'mantle.request.Request': 'request'}
                     if (!Object.hasOwn(panelHosts, entityName))
                         throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
-                    let admitted = false
-                    ec.message.pushErrors()
-                    try {
-                        admitted = !!ec.service.sync().name('ironstone.maintenance.AccessServices.check#Record')
-                            .parameters({appRoot: 'Maintenance', recordType: panelHosts[entityName], recordId: ec.context.recordId || ''})
-                            .call()?.recordId && !ec.message.hasError()
-                    } catch (error) {
-                        admitted = false
-                    } finally {
-                        ec.message.clearErrors()
-                        ec.message.popErrors()
-                    }
-                    if (!admitted) throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are not available')
+                    panelRecordType = panelHosts[entityName]
                 }
             ]]></script>
+            <if condition="panelRecordType">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="panelRecord" ignore-error="true"
+                        in-map="{appRoot:'Maintenance', recordType:panelRecordType, recordId:ec.context.recordId || ''}"/>
+                <script>if (!ec.context.panelRecord?.recordId) throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are not available')</script>
+            </if>
         </else></if>
         <set field="sharedLinks" from="maintenance.sharedLinks"/>
     </always-actions>

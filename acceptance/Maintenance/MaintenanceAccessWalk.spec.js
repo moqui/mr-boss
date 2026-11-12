@@ -94,6 +94,9 @@ const sides = {
     }
 }
 const pattern = s => new RegExp(`${s.workName}|${s.reportName}|${s.serial}`)
+// a list's search text: the secret without its "P20 " head (a serial without its first character), so the list's own echo of the
+// query (its find field, its saved finds' links) is not taken for a row, while a row showing the record still has the whole secret
+const query = secret => secret.replace(/^P20 /, "")
 
 // a Maintenance (or another root's) screen as the user, in a render mode: its status, output and errors
 function render(user, path, parameters = {}, mode = "html", root = "Maintenance") {
@@ -173,17 +176,17 @@ function routes(s) {
         ),
         ["WorkOrders/WorkOrderDetail/Instructions", Object.assign({lastStandalone: "true"}, work), "html-print"],
         ["WorkOrders/MaterialIssueReceipt", work],
-        ["WorkOrders/Find", {text: s.workName}],
-        ["WorkOrders/Find", {text: s.workName, pageNoLimit: "true", lastStandalone: "true"}, "csv"],
+        ["WorkOrders/Find", {text: query(s.workName)}],
+        ["WorkOrders/Find", {text: query(s.workName), pageNoLimit: "true", lastStandalone: "true"}, "csv"],
         ["Requests/RequestDetail", {requestId: s.requestId}],
-        ["Requests/Find", {text: s.reportName}],
+        ["Requests/Find", {text: query(s.reportName)}],
         ["Equipment/EquipmentDetail", asset],
         ...tabs(
             "Equipment/EquipmentDetail",
             ["Identity", "Hierarchy", "Assignments", "Meters", "Maintenance", "Files", "Schedule"],
             asset
         ),
-        ["Equipment/Find", {text: s.serial}],
+        ["Equipment/Find", {text: s.serial.substring(1)}],
         ["Equipment/AssetTags", {assetIds: s.assetId, lastStandalone: "true"}, "html-print"],
         ["Equipment/Downtime", asset],
         ["Facilities/FacilityDetail", {facilityId: s.facilityId}],
@@ -543,7 +546,8 @@ feature("a booking of Room 101 is Busy with no title to all but its organizer, i
             const events = Array.from(as(user, "mantle.work.EventServices.get#FullCalendarData", window).eventList || [])
             const seen = events.map(event => String(event.title))
             for (const [organizer, title] of Object.entries(titles)) {
-                const shown = seen.includes(title)
+                // the organizer's event is titled with its id after the name ("HVAC vendor walkthrough [BOSS_MNT_EV_VENDOR]")
+                const shown = seen.some(seenTitle => seenTitle.startsWith(title))
                 if (organizer === user && !shown) problems.push(`${user}, its organizer, does not see ${title}: ${seen}`)
                 if (organizer !== user && shown) problems.push(`${user} sees ${title}`)
             }
@@ -664,7 +668,7 @@ feature("a customer repair shows to no Maintenance user of Services or Retail; i
             ["WorkOrders/InterventionReport", work, "html"],
             ["WorkOrders/InterventionReport", Object.assign({lastStandalone: "true"}, work), "html-print"],
             ["Equipment/EquipmentDetail", {assetId: repair.assetId}, "html"],
-            ["WorkOrders/Find", {text: "Repair spec customer P20WALK"}, "html"]
+            ["WorkOrders/Find", {text: "spec customer P20WALK"}, "html"]
         ]
         for (const viewer of servicesUsers.concat([users.retailPlanner])) {
             for (const [path, parameters, mode] of repairRoutes)

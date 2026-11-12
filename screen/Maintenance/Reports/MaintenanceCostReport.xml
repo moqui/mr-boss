@@ -72,10 +72,11 @@ along with this software (see the LICENSE.md file). If not, see
                 component:component || null, currencyUomId:currencyUomId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
     </always-actions>
     <actions>
-        <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCosts" out-map="found" in-map="options"
-                transaction="force-new" ignore-error="true"/>
-        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
-        <script>ec.message.clearErrors()</script>
+        <!-- read through AdminCalls (a service-call with ignore-error clears the message), so a refusal shows its own reason -->
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.work.MaintenanceReportServices.get#MaintenanceCosts',
+                options, 'The costs are not available to you.')"/>
+        <set field="found" from="called.out"/>
+        <set field="reportError" from="called.failure"/>
         <set field="costs" from="found?.costs || null"/>
         <set field="totalRows" from="costs?.totalList || []"/>
         <set field="projectRows" from="costs?.projectList || []"/>

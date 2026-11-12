@@ -4,9 +4,10 @@
 // are as many as the count; a technician gets no report. Insights' catalog (as the instance administrator, who reads both apps)
 // lists Maintenance's work status entry and opens the same route with the same parameters, whose report answers the same numbers.
 // The overdue preventive maintenance template, copied in Insights › Business alerts and activated, tells its owner once when an
-// obligation of the air handler's filter plan is past due, and not again at the next check. The occurrence's due date is moved
-// here and put back at the end, and the copied rule is deleted, so the demo data is left as it was. The rules are Mantle's
-// MaintenanceReports and BOSS's MaintenanceReports and MaintenanceAccess. Written with P17, not run as part of it.
+// obligation of the air handler's filter plan is past due, and not again at the next check. The occurrence's due date (and, when
+// the plan has none open, October's skipped one's status) is moved here and put back at the end, and the copied rule is deleted,
+// so the demo data is left as it was. The rules are Mantle's MaintenanceReports and BOSS's MaintenanceReports and
+// MaintenanceAccess. Written with P17, not run as part of it.
 // Run: ./moq accept mr-boss --spec MaintenanceReportsWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -93,6 +94,7 @@ spec({
                     .one()
                 if (row) {
                     row.dueDate = state.dueBefore
+                    if (state.statusBefore) row.statusId = state.statusBefore
                     row.update()
                 }
             }
@@ -176,18 +178,22 @@ feature("Insights' catalog lists work status and opens the same report with the 
 
 feature("an overdue PM alert copied from the template tells its owner once", {
     when() {
-        // an obligation of the filter plan, generated and not done, moved two days past due and indexed
+        // an obligation of the filter plan, generated and not done, moved two days past due and indexed; the demo's filter plan
+        // has none open (its October obligation was skipped), so with none the walk opens October's and puts it back at the end
         system(() => {
-            const row = Array.from(
+            const occurrences = () =>
                 ec.entity
                     .find("mantle.work.maintenance.MaintenanceOccurrence")
                     .condition("maintenanceScheduleId", ids.filterPlanId)
-                    .condition("statusId", "in", ["MocOpen", "MocGenerated"])
-                    .orderBy("-dueDate")
-                    .limit(1)
-                    .list()
+            let row = Array.from(
+                occurrences().condition("statusId", "in", ["MocOpen", "MocGenerated"]).orderBy("-dueDate").limit(1).list()
             )[0]
-            if (!row) return
+            if (!row) {
+                row = occurrences().condition("maintenanceOccurrenceId", "BOSS_MNT_OCC_FLT_OCT").one()
+                if (!row) return
+                state.statusBefore = row.statusId
+                row.statusId = "MocOpen"
+            }
             state.occurrenceId = String(row.maintenanceOccurrenceId)
             state.dueBefore = row.dueDate
             row.dueDate = new Date(Date.now() - 2 * 86400000)
