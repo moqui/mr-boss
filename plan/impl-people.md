@@ -4186,7 +4186,7 @@ Design §5 Openings, ApplicantPipeline, ApplicantDetail, §13 InterviewsCalendar
   application by mail with its resume, schedules a video interview, and two panel members score it without seeing
   each other's scorecards or another opening's candidates.
 
-**Built Nov 12 (P16).** mr-mantle, mr-boss (branch `ppl/p16`).
+**Built Nov 12 (P16).** mr-mantle f0c6605d, mr-boss (branch `ppl/p16`).
 - Checked first (the code over the plan): F9 and F11 (EmploymentApplication's position, status, referral fields and approver, its
   status type with no item; no Applicant role); F51 and F62 against the four shared screens (each branching on
   `appRoot == 'CustomerService'` for its services, links, words and access rows) and CaseTemplates.js (the builder: `formAt`,
