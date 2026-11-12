@@ -3268,6 +3268,96 @@ Design §7 LeaveRequests, LeaveRequestDetail, §13 TeamCalendar, Employee360's T
   - for the user's call: F202 decided as above (HR's allocation reasons not shown to the employee); whether an employee should see
     their colleagues' absences on the team calendar (built: only a manager's reports and HR's employers').
 
+**Review Nov 11 (P12).** A fresh review of `git diff master...ppl/p12` in mr-moqui (the framework part, PE-21), mr-mantle and mr-boss
+against the phase's text, §2, §4, design §7 LeaveRequests and LeaveRequestDetail, §13 TeamCalendar, PE-21 and PE-24, with the
+reason's confidentiality on every path, the opt-out's reach, the decide service's lock, consumption and reversal, and scope first;
+the user's two calls of Nov 11 built or recorded in §4; fixes committed apart per repository ("People P12 review: …").
+- Rebased first: master had moved in all three repositories (mr-moqui: Admin screens down's System and Dashboards screens, the Assist
+  evaluation rounds, Terminal fixes; mr-boss and mr-mantle: Admin and Insights onto the framework's screens and registries). `ppl/p12`
+  rebased onto master cleanly in each, with no conflict (the framework's P12 commit is 6773098c, the Built note's 798fe1fd; mr-mantle
+  d9c2034e; mr-boss 00bd36d5), and the goldens needed nothing (the cargo tests pass on the rebased tree). The opt-out over the moved
+  screens: System's and Dashboards' screens an agent reads render through the same tui agent render (`RenderOrigin::Agent`,
+  `ScreenTui.js`), so a field, section or screen they mark is covered as any other; none is marked today. Master's agent changes (the
+  data tool's whole-value hint and date spans, the screen session's closed-find and row opening) add no path around it: a find field
+  of an opted-out column is still left out of the agent's render, and a row is found by the text the render shows.
+- Checked and found sound:
+  - The framework part is generic: the attribute, `agent_render()` (any agent frame on the render stack, so a render an agent's
+    render starts is covered), the tui branches, the data tool's `aiOff` refusal and entity reads, `propose#AiFieldValue`'s refusal
+    and the approval snapshot name no People record; the person's own tui render is unchanged (`$isAgent()` false) and their qvt
+    render only gains the markers and a `display: contents` wrapper (WebrootVue.qvt passes); goldens reviewed (node literals with
+    the attribute, the new branches).
+  - The reason: `LeaveRequest.reason` is `ai-opt-out`; `get#Request` gives it to the person, who asked, HR of the employer and the
+    approvers alone; no list (`find#Requests`), calendar, projection, CalDAV object, notice title or message, approval label, palette
+    row, record-lookup card, Today item, MyTeam row or skill has it; LeaveRequestDetail's section and field are opted out; the
+    agent render of PeopleLeave shows the placeholder.
+  - Decide: every decision locks the employment first; the last approval recounts, checks overlaps and the balance with the other
+    reservations and posts `leave:<id>` once (a refused check rolls the decision back with it); a cancellation reverses
+    `leave-reversal:<id>` once and cancels the projection; Approvals' route excludes the person and the requester (no self-approval,
+    an HR editor who asked for someone is not their approver); a blocked day is refused at submit and again at the last approval.
+  - The projected calendar kind is generic: `CalendarProjection` names an owner service, `get#ProjectionObjects` calls it as the user
+    and reads no owner record; put and delete answer 403 (after the DAV server's own read-only refusal).
+  - Scope: `find#Requests` and the calendar reach the user's own, a manager's live reports at the line's employers and an HR
+    reader's employers; a supplied person or employer only narrows; another employer's HR gets `RECORD_UNAVAILABLE`.
+- Fixes:
+  - **R1 (medium, AI opt-out).** An agent's screen session could read an opted-out column through the list's Text export: an export
+    is the session's raw request (`lookups.raw`), rendered as the agent in the mode its URL names, and the text and csv macros have
+    no opt-out branch; the tui session shows a text export's body as a dialog. An agent's render of a list with an `ai-opt-out` field
+    now offers no export but Show all (`ScreenTui.js`); a navigation is always rendered in tui, so no other agent path asks another
+    mode. Spec: AiOptOut's first feature (the agent's list has no exports, the person's has CSV and Text; failed on the code as
+    rebased); docs/ai/Assist.md.
+  - **R2 (medium, no self-approval).** An HR editor cancelled their own approved leave at once (their `hrEdit` kind on their own
+    request), giving the days back with no one else deciding. HR cancels another person's leave at once, never their own, which
+    they ask to cancel as anyone does (`canCancel` false). Spec: LeaveRequests' fourth feature (HR's own leave, approved by Max,
+    refused `NOT_YOURS`).
+  - **R3 (low, record).** HR's cancellation at once required a reason and kept none, and the person's decision notice then named the
+    earlier approval's decider and date as who cancelled it. The request records who and why (`cancelledByUserId`, `cancelReason`)
+    and the notice shows them. Spec: LeaveRequests' fourth feature (the notice names Leave HR and "Shop closed").
+  - **R4 (low, scope).** `decide#Request`'s approve and refuse went to `record#Decision` with no read check, which told one who reads
+    nothing of a request that it exists (`PERMISSION_DENIED`, `NOT_APPROVER`, `NOT_PENDING` against `RECORD_UNAVAILABLE` for a
+    missing one). It is answered as missing first. Spec: LeaveRequests' second feature (an outsider on a real and a missing id).
+  - **R5 (low, operations).** `submit#Request` looked its operation key up only before the employment's lock, so a retry waiting on
+    the lock made a second request; it looks again under the lock (as `allocate#Leave` does). No spec: a race of two
+    transactions.
+  - The user's call 1 built: `get#TeamAbsences` and `get#AbsenceProjection` add an employee's colleagues (`colleaguesOf`: a current
+    `PrtMember` of the same department or team, or a live line of the same manager, at an employer of both), their approved days
+    alone, never openable; MyTeam's Who is out and Today's leave starting for my team keep to what they open (the reports, an HR
+    reader's employers'), so a manager's own peers stay on the calendar only. Spec: LeaveRequests' third feature (Col by the manager
+    and Tea by a team see Ana's approved morning, not her waiting afternoon, the type or the reason, and do not open it; Out sees
+    nothing). The user's call 2 recorded, with LeaveLedger's fifth feature checking it (HR reads "First quarter", the person does
+    not).
+  - PeopleAccess timed on quiet runs (load 3 to 4): 9.5 s and 8.2 s of features with the Debug binary, under 15 s, so it is not
+    split; the Built note's 33.8 s was the load.
+- Provisional findings (for the lead to number):
+  - the opt-out's remaining gaps beside docs/ai/Assist.md's: a dynamic drop-down's options and a dialog body the agent's session
+    looks up run as the agent but answer whatever their transition writes (a transition that names an opted-out field's text is not
+    marked), and the canvas read proxy's transition reads answer service results as they are;
+  - Approvals' `record#Decision` answers an outsider `NOT_APPROVER` or `NOT_PENDING` for every kind (P5's), telling them a request
+    exists; R4 closes it for leave only;
+  - a blocked interval added after a request was made refuses that request's last approval (`BLOCKED_DAY`), with no override
+    (`store#BlockedInterval` lists it for review); HR withdraws or the person does;
+  - HR's cancellation reason is told to the person (as a refusal's is); a manager also sees their own colleagues' days on the
+    team calendar, as an employee;
+  - the worker's findings stand otherwise.
+- Tests (this worktree's Debug binary, `--debug --nobuild`, this phase's runtime): cargo tests of moqui-core (1761), moqui-llm (344),
+  moqui-db, moqui-entity, moqui-tools and moqui-devkit, all passing, no golden changed; framework AiOptOut 4 of 4 (0.2 s; its new
+  check failed on the code as rebased); WebrootAssist and WebrootVue.qvt 94 of 94 (offline, 15.2 s); Mantle LeaveRequests,
+  LeaveLedger, PeopleApprovals, PeopleSchedules, PeopleChecklists, WorkResources and Dav 40 of 40 (LeaveRequests 2.6 s, LeaveLedger
+  2.8 s); BOSS PeopleLeave, PeopleAccess, PeopleSelfService, PeopleApprovals, PeopleTime, PeopleSchedules and PeopleEmployees 40 of
+  40 (15.3 s then 13.0 s of features; PeopleAccess 8.2 s). The new checks fail on the code as rebased (each run against the phase's
+  Leave.js: R2's on HR's own cancel, R3's on the notice naming Leave MAX, R4's on `PERMISSION_DENIED`, F202's on the person reading
+  the reason, the colleague's on an empty calendar). `moqui lint --screens`: 135 flagged sites as
+  before, none in People. Prettier clean on the changed Mantle and BOSS JavaScript. Not run: `./moq test-apps`,
+  `./moq test-framework`, the acceptance suite.
+- For the lead:
+  - budget share: framework unchanged (AiOptOut 0.2 s); mr-mantle about +0.6 s over the Built note (LeaveRequests 2.6 s with the
+    colleagues and HR's own leave, LeaveLedger's F202 check); mr-boss unchanged;
+  - the rebase rewrote the phase commits (mr-moqui 6773098c, mr-mantle d9c2034e, mr-boss 00bd36d5); the review commits are mr-moqui
+    ea6b53ee, mr-mantle b057d0df, mr-boss 0da5fad4;
+  - merge hot spots beside the Built note's: mr-moqui `ScreenTui.js` (`exportsOff` in the form-list's exports block); mr-mantle
+    `Leave.js` (`colleaguesOf` before `absences`, `submitRequest`, `getRequest`'s notice, `decideRequest`, `cancelTaken`),
+    `PeopleLeaveEntities.xml` (LeaveRequest's two fields); mr-boss `People.js` (`today`), `MyTeam.xml`;
+  - the user's two calls of Nov 11 are in §4 (the colleagues' days built, F202 as built); nothing waits on the user.
+
 ### P13 — Attendance and time import
 
 Design §6 (attendance), Attendance, TimeImport, SelfService's Clock; PE-05 (without the kiosk), PE-19.
@@ -3752,6 +3842,8 @@ the owner's design.
 | Nov 11, 2026 | `RateAmount` gains an optional `organizationPartyId`, used for `RaprCost` rows: `get#CostingRate` prefers the employer's row, then a shared one; `store#`/`end#CostingRate` and Accounting's Labor costing box are scoped by organization (a shared row needs an all-organizations grant to change, as pay grades do); Projects' rate rows unchanged | The user's call on P10's finding (built in P10's review, R4, with LaborCostingRate's spec; design-accounting §15, design-people PE-23) |
 | Nov 11, 2026 | A shared (no-organization) costing rate is changed by an Accounting administrator working with no active organization chosen, or by ADMIN, as P10's review built it; there is no `ACCOUNTING_ALL_ORGANIZATIONS` permission | The user's call on P10's first finding (F190): kept as built (design-accounting §15) |
 | Nov 11, 2026 | Leave policies (with LeavePolicyDetail) and Allocations stay under Time & leave as HR's own screens (`People/Time/LeavePolicies`, `LeavePolicyDetail`, `LeaveAllocations`, `BOSS_PPL_LEAVE`), not under People Settings as design §7 placed them, as Holidays | The lead's call, following the user's call of Nov 11 that moved HR's editors out of Settings (P7's review); as built in P11 (design-people §2, §7) |
+| Nov 11, 2026 | The team calendar (and its Team absence CalDAV collection) shows an employee their own team's absences: the approved leave of the people who share their department, one of their teams or their manager, at an employer of both, as the days alone ("{person} · Out", a morning or an afternoon said so), never the leave type, the reason or a waiting request, and never opening the request; managers and HR see what P12 built (their reports', their employers'). MyTeam's Who is out and Today's leave starting for my team stay a manager's reports' | The user's call on P12's finding (built in P12's review: `Leave.js colleaguesOf`, LeaveRequests checks a colleague by manager and by team; design-people §13 TeamCalendar, §3, §1.4) |
+| Nov 11, 2026 | A leave ledger allocation's or adjustment's reason is HR's working note, shown only to HR of the employer (`find#Ledger`), as P12 built it (F202) | The user's call on F202, as built; LeaveLedger checks the person does not read it and HR does (P12's review) |
 
 ## 5. Open questions
 
