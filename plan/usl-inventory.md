@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
-**Added** (People P1 to P4, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P5, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -522,11 +522,23 @@ the screens that call it.
 | PositionServices | store#JobClass | People/Staffing/JobClasses; People/Staffing/JobClassDetail | People/Staffing/JobClasses (NewJobClass); People/Staffing/JobClassDetail (EditJobClass, End job class) (People P4) |
 | PositionServices | store#JobRequirement | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (AddSkill, Remove) (People P4) |
 | PositionServices | find#Positions | People/Staffing/Positions | People/Staffing/Positions (FindPositions, PositionList as list and board) (People P4) |
-| PositionServices | get#Position | People/Staffing/PositionDetail | People/Staffing/PositionDetail (the header, Terms, Holders) (People P4) |
+| PositionServices | get#Position | People/Staffing/PositionDetail | People/Staffing/PositionDetail (the header, Terms, Holders; P5: Approval, the latest activation request) (People P4, P5) |
 | PositionServices | store#Position | People/Staffing/Positions; People/Staffing/PositionDetail | People/Staffing/Positions (NewPosition); People/Staffing/PositionDetail (EditPosition, EndPosition) (People P4) |
 | PositionServices | store#PositionHolder | People/Employees/HireEmployee; People/Employees/EmploymentChange | — (no screen yet: a seat is filled by P6's hire and employment change) (People P4) |
 | PayrollSetupServices | find#PayGrades | People/Staffing/PayGrades | People/Staffing/PayGrades (FindPayGrades, Grades, GradeBands; the amounts for PAYROLL_VIEW only) (People P4) |
 | PayrollSetupServices | store#PayGrade | People/Staffing/PayGrades | People/Staffing/PayGrades (NewPayGrade, NewBand) (People P4) |
+| PositionServices | request#PositionApproval | People/Staffing/PositionDetail | People/Staffing/PositionDetail (RequestActivation, the Requisition) (People P5) |
+| PositionServices | decide#PositionApproval | People/Staffing/PositionDetail; People/Approvals | People/Staffing/PositionDetail (ApproveActivation, RefuseActivation) (People P5) |
+| PositionServices | approve#PositionApproval | People/Approvals | People/Approvals and Commons' Notifications and tray (the PeoplePositionApproval topic's approve service, through org.moqui.ui.NotificationServices.approve#NotificationMessage) (People P5) |
+| PositionServices | refuse#PositionApproval | People/Approvals | People/Approvals and Commons' Notifications and tray (the topic's refuse service, through refuse#NotificationMessage) (People P5) |
+| PeopleApprovalServices | find#Policies | People/Settings/ApprovalPolicies | People/Settings/ApprovalPolicies (FindPolicies, Policies) (People P5) |
+| PeopleApprovalServices | store#Policy | People/Settings/ApprovalPolicies | People/Settings/ApprovalPolicies (NewRule, ChangeRule, EndRule) (People P5) |
+| PeopleApprovalServices | resolve#Approvers | People/Settings/ApprovalPolicies | People/Settings/ApprovalPolicies (ResolvePreview) (People P5) |
+| PeopleApprovalServices | record#Decision | People/Approvals | — (no screen: the domain decision services call it, decide#PositionApproval) (People P5) |
+| PeopleApprovalServices | find#OwnedApprovals | Admin/Users/LifecycleDetail | Admin/Users/UserDetail and LifecycleDetail (the people.approvals participant's lookup, through ironstone.admin.LifecycleServices) (People P5) |
+| PeopleApprovalServices | transfer#ApprovalOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership of the people.approvals participant's rule rows) (People P5) |
+| PeopleServices | find#Lookups | People/Settings/Lookups | People/Settings/Lookups (FindLookups, LookupValues) (People P5) |
+| PeopleServices | store#Lookup | People/Settings/Lookups | People/Settings/Lookups (AddValue, EditValue, EndValue) (People P5) |
 
 ## Ledger (81 services)
 

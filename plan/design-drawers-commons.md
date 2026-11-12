@@ -627,7 +627,7 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
 | `PeopleAttendanceApproval` | People | attendance correction | proposed `mantle.humanres.AttendanceServices.decide#Correction` |
 | `PeopleExpenseApproval` | People | expense claim | proposed `mantle.humanres.ExpenseServices.decide#Claim` |
 | `PeopleAdvanceApproval` | People | expense advance | proposed `mantle.humanres.ExpenseServices.decide#Advance` |
-| `PeoplePositionApproval` | People | planned position (`EmplPosition`) | proposed `mantle.humanres.PositionServices.decide#PositionApproval` |
+| `PeoplePositionApproval` | People | planned position (`EmplPosition`) | `mantle.humanres.PositionServices.approve#PositionApproval` and `refuse#PositionApproval`, each calling the decision service `decide#PositionApproval` with the action (as built, impl-people P5: the framework passes no action to a topic's service, so each topic names an approve and a refuse handler, as the purchase topics do) |
 | `PeopleOfferApproval` | People | employment offer | proposed `mantle.humanres.RecruitingServices.change#OfferState` |
 | `PeopleEmploymentChangeApproval` | People | transfer, pay change or separation | proposed `mantle.humanres.PeopleServices.decide#EmploymentChange` |
 | `PeoplePayAdjustmentApproval` | People | payroll input adjustment | proposed `mantle.humanres.PayrollInputServices.decide#Adjustment` |

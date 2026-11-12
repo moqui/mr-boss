@@ -17,8 +17,12 @@ along with this software (see the LICENSE.md file). If not, see
     vacancy), PositionTerms (employer, department, job class, pay grade by name, dates, hours a week and the employment flags) and
     Holders (every dated holding, read only: a seat is filled by hiring into it, P6). An HR editor (PEOPLE_HR_EDIT) changes the
     terms (Edit terms, store#Position at the revision read, with a reason the audit log keeps for the department, class and grade)
-    and ends the seat (End position, refused before a holder's last day). The Requisition (an activation or backfill approval) is
-    P5's. A position outside the reader's reach shows "Not available", whether or not it exists. No pay amount is part of it. -->
+    and ends the seat (End position, refused before a holder's last day). P5: the Requisition: an HR editor asks for a planned
+    seat's activation (Request activation, the primary while the seat is planned and nothing waits: request#PositionApproval at the
+    revision read, with the effective date and why), and the Approval box shows the latest request, its route step by step (who
+    decides, and why) and the decisions; an approver of the step waiting decides it here (Approve, the primary, or Refuse with a
+    reason, decide#PositionApproval) as from Approvals. New terms supersede a request waiting. A position outside the reader's
+    reach shows "Not available", whether or not it exists. No pay amount is part of it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Position" default-menu-include="false">
     <parameter name="emplPositionId"/>
@@ -35,6 +39,28 @@ along with this software (see the LICENSE.md file). If not, see
                         salaryFlag:(salaryFlag == 'Y' ? 'Y' : 'N'), overtimeFlag:(overtimeFlag == 'Y' ? 'Y' : 'N'),
                         changeReason:(changeReason || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Position saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="emplPositionId"/></default-response>
+        <error-response url="."><parameter name="emplPositionId"/></error-response>
+    </transition>
+    <!-- P5: a planned seat's activation asked for, at the revision read; Mantle checks the editor, the seat and its route -->
+    <transition name="requestApproval">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.request#PositionApproval" out-map="requested"
+                    in-map="{emplPositionId:emplPositionId, expectedRevision:(expectedRevision || null), effectiveDate:(effectiveDate || null),
+                        justification:(justification || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${requested.unresolved ? 'Activation asked for; no one may decide it yet, so it waits' : 'Activation asked for'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="emplPositionId"/></default-response>
+        <error-response url="."><parameter name="emplPositionId"/></error-response>
+    </transition>
+    <!-- P5: the step waiting decided by its approver; Mantle rechecks the approver and the seat's revision -->
+    <transition name="decideApproval">
+        <actions>
+            <service-call name="mantle.humanres.PositionServices.decide#PositionApproval" out-map="decided"
+                    in-map="{emplPositionId:emplPositionId, peopleApprovalId:(peopleApprovalId || null), decision:(decision || 'approve'),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decided.activated ? 'Approved; the position is active' : decision == 'refuse' ? 'Refused' : 'Approved'}</message></if>
         </actions>
         <default-response url="."><parameter name="emplPositionId"/></default-response>
         <error-response url="."><parameter name="emplPositionId"/></error-response>
@@ -57,11 +83,22 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="position" from="found?.position || null"/>
         <set field="recordFound" from="!!position"/>
         <set field="holders" from="found?.holders || []"/>
+        <set field="approval" from="found?.approval || null"/>
         <script><![CDATA[
             stateColors = {planned: 'primary', active: 'positive', inactive: 'grey-8', future: 'primary', ended: 'grey-8', current: 'positive'}
             vacancyColors = {vacant: 'warning', filled: 'positive'}
             canEdit = !!position?.canEdit
             canEnd = canEdit && position.state !== 'ended'
+            // P5: one primary by state: deciding the step waiting, else asking for a planned seat's activation, else Edit terms
+            canDecide = !!approval?.canDecide
+            canRequest = !!position?.canRequestApproval
+            editType = canDecide || canRequest ? 'default' : 'primary'
+            approvalColors = {PapPending: 'warning', PapApproved: 'positive', PapRefused: 'negative', PapSuperseded: 'grey-8'}
+            approvalFacts = approval ? [['Asked by', approval.requestedByName + (approval.requestedDateText ? ' on ' + approval.requestedDateText : '')],
+                ['Effective', approval.effectiveDateText], ['Why', approval.justification], ['Closed', approval.closedDateText]]
+                .filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+            approvalSteps = approval ? approval.steps : []
+            approvalDecisions = approval ? approval.decisions : []
             captionText = position ? [position.classTitle, position.departmentName, position.organizationName].filter(Boolean).join(' · ') : ''
             const flagText = value => value === 'Y' ? 'Yes' : value === 'N' ? 'No' : ''
             termRows = position ? [['Employer', position.organizationName], ['Department', position.departmentName || 'None'],
@@ -112,7 +149,38 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="${sharedLinks['Staffing/Positions']}" text="Positions" link-type="anchor" icon="sym_o_arrow_back"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
-                            <container-dialog id="EditPositionDialog" button-text="Edit terms" icon="sym_o_edit" type="primary" width="720"
+                            <container-dialog id="ApproveActivationDialog" button-text="Approve" icon="sym_o_check" type="primary" width="560"
+                                    title="Approve the activation of ${position.positionName}" condition="canDecide">
+                                <label type="p" text="${approval.waitingText}. Asked by ${approval.requestedByName}: ${approval.justification}"/>
+                                <form-single name="ApproveActivation" transition="decideApproval"
+                                        map="{emplPositionId:position.emplPositionId, peopleApprovalId:approval.peopleApprovalId, decision:'approve'}">
+                                    <field name="emplPositionId"><default-field><hidden/></default-field></field>
+                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Approve">
+                                            <submit confirmation="Approve the activation of ${position.positionName}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RequestActivationDialog" button-text="Request activation" icon="sym_o_approval" type="primary"
+                                    width="600" title="Request the activation of ${position.positionName}" condition="canRequest">
+                                <label type="p" text="The request goes to the approvers of ${position.organizationName}'s rules for this department; you may not approve it yourself. A change of terms before it is decided asks again."/>
+                                <form-single name="RequestActivation" transition="requestApproval"
+                                        map="{emplPositionId:position.emplPositionId, expectedRevision:position.revision}">
+                                    <field name="emplPositionId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="effectiveDate"><default-field title="Effective from" tooltip="When the seat is needed"><date-time type="date"/></default-field></field>
+                                    <field name="justification"><default-field title="Why it is needed"><text-area rows="4" cols="60"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Request activation">
+                                            <submit confirmation="Ask for the activation of ${position.positionName}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="EditPositionDialog" button-text="Edit terms" icon="sym_o_edit" type="${editType}" width="720"
                                     title="Edit ${position.positionName}" condition="canEdit &amp;&amp; position.state !== 'ended'">
                                 <label type="p" text="A change of department, job class or pay grade is kept in the position's history with its reason."/>
                                 <form-single name="EditPosition" transition="storePosition" map="editValues">
@@ -168,9 +236,25 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field-layout>
                                 </form-single>
                             </container-dialog>
-                            <button-menu text="More" icon="more_horiz" condition="canEnd">
+                            <button-menu text="More" icon="more_horiz" condition="canEnd || canDecide">
+                                <container-dialog id="RefuseActivationDialog" button-text="Refuse" icon="sym_o_block" type="danger" width="560"
+                                        title="Refuse the activation of ${position.positionName}" condition="canDecide">
+                                    <label type="p" text="The position stays planned; the reason goes to the record of the request."/>
+                                    <form-single name="RefuseActivation" transition="decideApproval"
+                                            map="{emplPositionId:position.emplPositionId, peopleApprovalId:approval.peopleApprovalId, decision:'refuse'}">
+                                        <field name="emplPositionId"><default-field><hidden/></default-field></field>
+                                        <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                        <field name="decision"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Refuse">
+                                                <submit type="danger" confirmation="Refuse the activation of ${position.positionName}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
                                 <container-dialog id="EndPositionDialog" button-text="End position" icon="sym_o_event_busy" type="danger" width="520"
-                                        title="End ${position.positionName}">
+                                        title="End ${position.positionName}" condition="canEnd">
                                     <label type="p" text="The position ends on the date given and stays on record; it cannot end before its holder's last day."/>
                                     <form-single name="EndPosition" transition="endPosition"
                                             map="{emplPositionId:position.emplPositionId, expectedRevision:position.revision}">
@@ -201,6 +285,50 @@ along with this software (see the LICENSE.md file). If not, see
                                 parameter-map="{emplPositionClassId:position.emplPositionClassId}" condition="position.emplPositionClassId"/>
                     </box-body>
                 </container-box>
+
+                <!-- P5: the latest activation request: its state, who asked and why, the route step by step and the decisions -->
+                <section name="ApprovalBox" condition="approval">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body>
+                                <container style="row items-center q-gutter-sm q-mb-sm">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${approvalColors[approval.statusId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(approval.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: approval.statusText})}]]></text>
+                                        <text type="html">${approval.statusText}</text>
+                                    </render-mode>
+                                    <label text="${approval.waitingText}" type="span" style="m-muted" condition="approval.waitingText"/>
+                                </container>
+                                <form-list name="ApprovalFacts" list="approvalFacts" skip-form="true" paginate="false" condition="approvalFacts.length">
+                                    <field name="label"><default-field title="Request"><display/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                </form-list>
+                                <form-list name="ApprovalSteps" list="approvalSteps" skip-form="true" paginate="false" condition="approval.waiting">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides, and why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="ApprovalDecisions" list="approvalDecisions" skip-form="true" paginate="false" condition="approvalDecisions.length">
+                                    <field name="decidedByName"><default-field title="Decided by"><display/></default-field></field>
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decidedByName"/><field-ref name="decisionDateText"/></column>
+                                        <column><field-ref name="decisionText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <container-box>
                     <box-header title="Holders"/>
