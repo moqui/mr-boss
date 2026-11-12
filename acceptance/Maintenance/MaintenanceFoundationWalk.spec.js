@@ -1,30 +1,47 @@
-// Maintenance P1's "usable when" (impl-maintenance P1), as an acceptance walk with artifact authorization on: the menu renders for
-// each group with only its areas, each entry of it opening and the others refused; maint.requester has no Maintenance launcher and
-// is refused the root and every ironstone.maintenance service, as a Projects client and a PASS public account are; Admin's
-// Capabilities shows the Maintenance bundles and an access administrator grants the planner bundle (its permissions and the
-// launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities; Admin's settings index lists
-// Maintenance settings for maint.admin and not for maint.reader. The rules themselves are MaintenanceAccess's and Mantle's
-// MaintenanceScope.
+// Maintenance P1's "usable when" (impl-maintenance P1), as an acceptance walk with artifact authorization on, brought to the app
+// as built (P20, F169): the menu renders for each group with only its areas (each root entry's menu-include and the Requests, Costs
+// and Settings grants), each entry of it opening and the others refused; maint.requester has no Maintenance launcher and is refused
+// the root and every ironstone.maintenance service, as a Projects client and a PASS public account are; Admin's Capabilities shows
+// the Maintenance bundles and an access administrator grants the planner bundle (its permissions, its artifact grants and the
+// launcher) to a custom group, whose member then opens Maintenance with the planner's capabilities and menu (Settings for its Teams tab alone);
+// Admin's settings index lists Maintenance settings for maint.admin and not for maint.reader. The rules themselves are
+// MaintenanceAccess's and Mantle's MaintenanceScope; the review walk of every group is MaintenanceAccessWalk.
 // Run: ./moq accept mr-boss --spec MaintenanceFoundationWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page} = lib
 const admin = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
-const capability = "ironstone.admin.CapabilityServices."
+const capability = "org.moqui.admin.AccessServices."
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
-// each group's menu (design §1.2 as built): Work orders for a work reader, Requests for a planner or supervisor (P4), Equipment and
-// Facilities for a reader of them; a procedure author, approver or booking approver has Home alone; the administrator Settings too
-const workMenu = ["Home", "WorkOrders", "Equipment", "Facilities"]
+// each group's menu (design §1.2 as built, Maintenance.xml's menu-include): Work orders, Preventive and Reports for a work reader
+// (an assigned technician Work orders alone), Requests for a planner or supervisor (BOSS_MNT_REQUESTS), Procedures for a reader of
+// procedures or a planner or supervisor, Equipment and Facilities for a reader of them, Scheduling for a resource administrator,
+// a booking approver and a supervisor; Settings the administrator's (BOSS_MNT_SETTINGS), and for its Teams tab alone a planner's
+// and a supervisor's (BOSS_MNT_TEAMS, P8)
+const readerMenu = ["Home", "WorkOrders", "Procedures", "Preventive", "Equipment", "Facilities", "Reports"]
+const techMenu = ["Home", "WorkOrders", "Equipment", "Facilities"]
+const supervisorMenu = [
+    "Home",
+    "WorkOrders",
+    "Requests",
+    "Procedures",
+    "Preventive",
+    "Equipment",
+    "Facilities",
+    "Scheduling",
+    "Reports",
+    "Settings"
+]
 const menus = {
-    [users.reader]: workMenu,
+    [users.reader]: readerMenu,
     [users.planner]: ids.staffMenu,
-    [users.tech]: workMenu,
-    [users.tech2]: workMenu,
-    [users.supervisor]: ids.staffMenu,
-    [users.author]: ids.homeOnlyMenu,
-    [users.approver]: ids.homeOnlyMenu,
-    [users.booking]: ids.homeOnlyMenu,
-    [users.resources]: ["Home", "Equipment", "Facilities"],
-    [users.cost]: workMenu,
+    [users.tech]: techMenu,
+    [users.tech2]: techMenu,
+    [users.supervisor]: supervisorMenu,
+    [users.author]: ids.authorMenu,
+    [users.approver]: ids.authorMenu,
+    [users.booking]: ids.bookingMenu,
+    [users.resources]: ["Home", "Equipment", "Facilities", "Scheduling"],
+    [users.cost]: ["Home", "WorkOrders", "Preventive", "Equipment", "Facilities", "Reports"],
     [users.retailPlanner]: ids.staffMenu,
     [users.admin]: ids.adminMenu,
     [users.system]: ids.adminMenu
@@ -155,8 +172,14 @@ feature("Capabilities shows the Maintenance bundles, and an access administrator
                     .list()
             ).map(row => row.userPermissionId)
         )
+        const plannerArtifacts = system(() =>
+            Array.from(
+                ec.entity.find("moqui.security.CapabilityBundleArtifact").condition("userGroupId", "BOSS_MAINTENANCE_PLAN").list()
+            ).map(row => row.artifactGroupId)
+        )
         const changes = plannerPermissions
             .map(permission => teamId + "~a~p:" + permission)
+            .concat(plannerArtifacts.map(artifactGroupId => teamId + "~a~a:" + artifactGroupId))
             .concat([teamId + "~a~a:BOSS_MAINTENANCE"])
             .join(",")
         const taken = asUser(admin.users.access, () => {
@@ -173,9 +196,14 @@ feature("Capabilities shows the Maintenance bundles, and an access administrator
             "maint.accept.team",
             () => invoke("ironstone.maintenance.AccessServices.get#Capabilities", {}).capabilities
         )
-        return Object.assign(taken, {plannerPermissions, teamCapabilities, menu: shell("maint.accept.team")})
+        return Object.assign(taken, {
+            plannerPermissions,
+            teamCapabilities,
+            menu: shell("maint.accept.team"),
+            teamSettings: shell("maint.accept.team", true, "Settings", "Settings").names
+        })
     },
-    then({matrix, proposal, plannerPermissions, teamCapabilities, menu}) {
+    then({matrix, proposal, plannerPermissions, teamCapabilities, menu, teamSettings}) {
         JSON.stringify(matrix).includes("Maintenance planner")
         JSON.stringify(matrix).includes("Maintenance app users")
         proposal.proposal.canApply == true
@@ -185,14 +213,17 @@ feature("Capabilities shows the Maintenance bundles, and an access administrator
         teamCapabilities.view == true
         teamCapabilities.supervise == false
         menu.apps.includes("Maintenance")
-        menu.names == ["Home"]
+        // the planner's menu, Settings for its Teams tab (the bundle carries BOSS_MNT_TEAMS); its other tabs stay the
+        // administrator's though the team is no member of BOSS_MAINTENANCE, whose deny rows keep them from the planners
+        menu.names == ids.staffMenu
+        teamSettings == ["Teams"]
     }
 })
 
 feature("the settings index lists Maintenance settings for maint.admin and not for maint.reader", {
     when() {
         const keys = user =>
-            Array.from(asUser(user, () => invoke("ironstone.admin.RegistryServices.find#Settings", {})).entries || []).map(
+            Array.from(asUser(user, () => invoke("org.moqui.admin.ReadinessServices.find#Settings", {})).entries || []).map(
                 entry => entry.settingsKey
             )
         const adminIndex = asUser(users.admin, () => admin.page("Settings/SettingsHome", {}, "html"))

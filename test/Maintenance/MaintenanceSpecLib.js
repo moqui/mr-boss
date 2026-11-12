@@ -409,4 +409,93 @@ function customerRepair(key, link = true) {
     return made
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell, customerRepair})
+// P20, the screen sweeps (acceptance MaintenanceTui and MaintenanceServerStatic): the shared screens Maintenance mounts, as [path
+// under the root, location], read from each Maintenance screen file's subscreens-items (walkChildTree follows files, not mounts)
+function mountedScreens() {
+    const files = []
+    ec.resource.getLocationReference("component://mr-boss/screen/Maintenance.xml").walkChildTree(files, null)
+    const found = []
+    for (const file of files) {
+        if (!file.location.endsWith(".xml")) continue
+        const parent = file.path === "Maintenance" ? "" : file.path.substring("Maintenance/".length) + "/"
+        const text = String(ec.resource.getLocationReference(file.location).getText())
+        const item = /<subscreens-item name="([^"]+)" location="(component:\/\/mr-boss\/screen\/Shared\/[^"]+\.xml)"/g
+        for (let match = item.exec(text); match; match = item.exec(text)) found.push([parent + match[1], match[2]])
+    }
+    return found
+}
+// The tabs of a mounted screen that the current user's menu shows under Maintenance (a shared screen's tabs of another app's
+// context are not offered there), as paths under the root; none when its menu names none
+function mountTabs(path, parameters = {}) {
+    const name = path.substring(path.lastIndexOf("/") + 1)
+    const query = Object.entries(parameters)
+        .map(([key, value]) => key + "=" + encodeURIComponent(value))
+        .join("&")
+    const menu = ec.screen
+        .makeTest()
+        .rootScreen("component://webroot/screen/webroot.xml")
+        .render("menuData/apps/Maintenance/" + path + (query ? "?" + query : ""), {}, null)
+    ec.message.clearErrors()
+    if (menu.status != 200) return []
+    // the deepest level of that name (the menu lists each level of the path; a leaf has no subscreens)
+    const level = JSON.parse(menu.output)
+        .filter(level => level.name === name)
+        .pop()
+    return (level?.subscreens || []).filter(item => item.menuInclude).map(item => path + "/" + item.name)
+}
+// The demo record a swept screen opens on: the entry of the screen or its nearest parent (a tab takes its record's)
+const workRecord = {recordEntity: "mantle.work.effort.WorkEffort", recordId: ids.inProgressOrderId}
+const sweepRecords = {
+    Home: {organizationPartyId: ids.organizationId},
+    Chatter: workRecord,
+    RecordFiles: workRecord,
+    LogNote: {entityName: workRecord.recordEntity, recordId: ids.inProgressOrderId},
+    SendMessage: {entityName: workRecord.recordEntity, recordId: ids.inProgressOrderId},
+    "WorkOrders/NewWorkOrder": {assetId: ids.compressorId},
+    "WorkOrders/WorkOrderDetail": {workEffortId: ids.inProgressOrderId},
+    "WorkOrders/WorkOrderDetail/Purchasing": {workEffortId: ids.heldOrderId},
+    "WorkOrders/WorkOrderDetail/Costs": {workEffortId: ids.beltOrderId},
+    "WorkOrders/WorkItemDetail": {workEffortId: ids.followUpTaskId},
+    "WorkOrders/MaterialIssueReceipt": {workEffortId: ids.inProgressOrderId},
+    "WorkOrders/InventoryAvailability": {productId: ids.gasketId},
+    "WorkOrders/OrderDetail": {orderId: ids.rewindOrderId},
+    "Requests/RequestDetail": {requestId: ids.triagedRequestId},
+    "Procedures/ProcedureDetail": {workEffortId: ids.compressorProcedureId},
+    "Preventive/Plans/PlanDetail": {maintenanceScheduleId: ids.filterPlanId},
+    "Equipment/EquipmentDetail": {assetId: ids.compressorId},
+    "Equipment/AssetTags": {assetIds: ids.compressorId},
+    "Equipment/Product360": {productId: ids.modelId},
+    "Equipment/Employee360": {partyId: ids.custodianId},
+    "Facilities/FacilityDetail": {facilityId: ids.buildingId},
+    "Scheduling/ResourcePolicyDetail": {facilityId: ids.managedRoomId},
+    "Scheduling/ResourceCalendar": {date: "2026-11-17"},
+    "Scheduling/ResourceCalendarTui": {date: "2026-11-17"},
+    "Scheduling/BookingRequests": {fromDate: "2026-11-12"},
+    Settings: {organizationPartyId: ids.organizationId},
+    "Settings/Teams": {organizationPartyId: ids.organizationId, teamPartyId: ids.fieldTeamId}
+}
+// (WorkOrders/InterventionReport needs a customer repair, which no demo record is: the sweeps pass customerRepair's as repair)
+function sweepParameters(path, repair = null) {
+    if (path === "WorkOrders/InterventionReport") return {workEffortId: repair?.workEffortId || ""}
+    const key = Object.keys(sweepRecords)
+        .filter(key => path === key || path.startsWith(key + "/"))
+        .sort((a, b) => b.length - a.length)[0]
+    return key ? sweepRecords[key] : {}
+}
+
+;({
+    ids,
+    users,
+    asUser,
+    system,
+    refusal,
+    invoke,
+    page,
+    screenRefusal,
+    hit,
+    shell,
+    customerRepair,
+    mountedScreens,
+    mountTabs,
+    sweepParameters
+})

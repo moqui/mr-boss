@@ -438,7 +438,10 @@ BOSS app administration and `AgentAdmin`.
 
 Maintenance's groups grant permissions, as in [Maintenance §1.1](design-maintenance.md#11-root-authority-and-presentation).
 Shared screens and Mantle services check those permissions and resource/organization/assignment scope, not literal
-group names. Its existing BOSS_MAINTENANCE_ADMIN root authorization is not an exemption from domain checks.
+group names. Its existing BOSS_MAINTENANCE_ADMIN root authorization is not an exemption from domain checks. Built Nov 11–12,
+2026 (impl-maintenance P1, P4): the groups below and the launcher group BOSS_MAINTENANCE, each with its
+capability bundle; every group also holds MAINTENANCE_REQUEST and MAINTENANCE_REQUEST_VIEW_OWN, and
+BOSS_MAINTENANCE_ADMIN alone MAINTENANCE_ALL_ORGANIZATIONS (impl-maintenance §4).
 
 | Group | Grants | App terms that map to it |
 | --- | --- | --- |
@@ -499,7 +502,7 @@ build on existing framework capabilities with per-app work only (Commons designs
 | App | Assist: skills, prompts, exposures | Comms hooks and actions | Sync | Mail intake action | Shipped reports | Devices |
 | --- | --- | --- | --- | --- | --- | --- |
 | People | leave-balance, payslip-explain and hire skills; `exposeMcp` N for pay, HR and grievance services | create-from application and expense receipt; call links on interviews; no captions or transcripts without `speech-local` | projected: team absence, shifts, interviews | `createApplication`, `createExpenseLine` | headcount dataset; payroll-exception alert | ClockingKiosk on a device session |
-| Maintenance | report-problem, close-work-order and equipment-history skills | Report a problem from chat or voicemail; `call-context` open work orders | projected: my work orders, due PM; managed roots and steps read only | `createMaintenanceRequest` | work-status dataset; overdue-PM alert | handheld screens; TechnicianKiosk on the same device session; offline drafts later |
+| Maintenance (built, impl-maintenance P4, P17, P19) | `maintenance-report-problem`, `maintenance-close-work-order` and `maintenance-equipment-history` skills | Report a problem from a chat message, voicemail or mail (a Comms screen action that prefills Commons' form); `call-context` the caller's open work and equipment under repair | projected: my work orders, due PM; managed roots and steps read only | `createMaintenanceRequest` | work-status, PM-compliance and outages datasets with an operations dashboard; overdue-PM, resource-down and generation-failed alerts | handheld screens; TechnicianKiosk on the same device session and offline drafts later |
 | Sales | qualify-lead, issue-quote, follow-up and log-call skills | create lead from mail, chat or voicemail; `call-context` open opportunities and quotes; `contact-card` consumer once Comms reads it (the element is in `xml-screen-3.xsd`; impl-sales F28) | a read-only projected CardDAV address book of account contacts ("My accounts"); activities are events in the user's own calendar | `createLead`, `createQuoteRequest` | pipeline dataset and dashboard; quote-expiring and stalled-deal alerts | — |
 | Marketing | campaign-summary, prepare-send and audience-check skills | call links on webinars | projected campaign calendar | none; bounce, complaint and unsubscribe mail use email ECAs | delivery dataset; bounce alert | CheckIn on a device session |
 | Commerce and Shop | inline text actions for product copy | `call-context` open store orders | — | none; support mail goes to Customer Service | store dataset; checkout-failure alert | POS later |
@@ -3684,6 +3687,10 @@ implemented services.
 and Accounting; MT-13 extends CX-QUALITY. MT-03/MT-04 use the same WorkEffort foundation as
 People's checklists. Existing widgets, timers, bookings, content and asset books are reused, not
 separate needs.
+
+Built Nov 11–12, 2026 by impl-maintenance P1–P19: MT-01 to MT-12, MT-15 and MT-16, except
+MT-03's skill level and qualification check and MT-10's customer repair adapter (P8 and P12, in
+review). MT-13 and MT-14 are later.
 
 | Need | Kind | Owner | Shared contract |
 | --- | --- | --- | --- |

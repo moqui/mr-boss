@@ -382,7 +382,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | built and reviewed Nov 12, merged |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12, merged |
-| P20 Finish | all | the sweeps and the review walk (acceptance) | — |
+| P20 Finish | all | the sweeps and the review walk (acceptance) | built Nov 12 (acceptance tests written, not run; the acceptance run is the lead's) |
 
 ### P0 — Checks
 
@@ -5407,6 +5407,109 @@ Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `Provide
   and P18 were checked in P0 (F73, F74).
 - The inventories' **Implemented in** columns, the design's Impl column and status line, crosscut's rows that this
   build changed, Remaining-Work, and the mr-boss README's Maintenance line.
+
+**Built Nov 12 (P20).** mr-boss, mr-mantle and mr-moqui commits on branch `mnt/p20` (hashes in the lead's reply); no Rust built.
+Written while P8 and P12 were in review, then extended after master was merged with both (the last part of this note).
+- Checked first (the code over the plan): how the earlier sweeps enumerate (InsightsTui walks the root's files with
+  `walkChildTree` and adds its mounts by hand: the walk follows files, not `subscreens-item` locations; ServerStaticLib leaves
+  `.qvue` screens and placeholders out); Maintenance's mounts (twelve: Chatter, RecordFiles, EquipmentDetail, Product360,
+  Employee360, the import's DataImport, FacilityDetail, RequestDetail, WorkItemDetail, MaterialIssueReceipt,
+  InventoryAvailability, OrderDetail); the shell's `menuData` levels (a leaf level has no `subscreens`; a tab named like an app,
+  EquipmentDetail's Maintenance, repeats a level's name); CustomerServiceAccessWalk's pattern; every service the Maintenance
+  acceptance specs name against the code (only FoundationWalk's `ironstone.admin.RegistryServices` and
+  `ironstone.admin.CapabilityServices` are gone); the menus per group from Maintenance.xml's `menu-include` and the Requests,
+  Costs and Settings grants.
+- Acceptance tests (written, not run, as the lead asked):
+  - `acceptance/Maintenance/MaintenanceTui.spec.js`: every screen file under the root, every shared mount and each tab of a
+    mount its menu shows (as john.doe), rendered in tui with no error node on the demo's records.
+  - `acceptance/Maintenance/MaintenanceServerStatic.spec.js`: ServerStaticLib's full check of the same set (plain XML only);
+    the marked screens clean, no `error` verdict.
+  - Both read MaintenanceSpecLib's new `mountedScreens()` (each Maintenance file's `subscreens-item` of a Shared location),
+    `mountTabs(path, parameters)` (the mount's tabs from `menuData`) and `sweepParameters(path)` (the demo record of a screen or
+    its nearest parent: the air handler's work order, the compressor, the Service Center, the filter plan, the AC-200 procedure
+    and so on). A screen P8 or P12 adds under the root, or a tab they add to a mount, is swept with no change; a new record
+    screen needs its entry in `sweepRecords` if it takes an id.
+  - `acceptance/Maintenance/MaintenanceAccessWalk.spec.js` (seven features): each group's user opens Maintenance and none of
+    thirteen other roots (john.doe opens them all, the control); each side's work order and report (Services' on the compressor,
+    assigned to maint.tech for tomorrow; Retail's on the forklift, by maint.retail) never show to the other side on 36 routes
+    (WorkOrderDetail and ten tabs, its print, MaterialIssueReceipt, the lists and their CSV, RequestDetail, EquipmentDetail and
+    seven tabs, the asset tags print, Downtime, FacilityDetail and three tabs, Home, work status and its CSV, due maintenance,
+    Log as note and Send as message), with its own planner seeing it on WorkOrderDetail, RequestDetail and Identity; within
+    Services a work order shows to its readers only; the palette, six drop-downs (searched and as the selected value), both
+    record panels of the work order, request and asset, Assist's two actions (posted, nothing linked) and the projected CalDAV
+    collections give nothing of the other side; eleven Mantle and BOSS service calls, the two lists and three transitions are
+    refused and the records' statuses are unchanged; costs are the cost reader's (the tab, the report and
+    `get#MaintenanceCosts` refused to every other group, no $48.00 or $96.00 on the belt repair's Overview and Time), and no one
+    sees the belt time entry's `vendorHourRate` (77.77, set by the walk and restored); Room 101's bookings are Busy with no title
+    to all but their organizers in `get#FullCalendarData` and in ResourceCalendarTui; procedure authoring (store and step
+    services, approve and retire for all but the approver, ProcedureDetail's two transitions) is refused to every group but the
+    author, the draft unchanged.
+  - `acceptance/client/Maintenance/MaintenancePhoneWalk.spec.js` at 390 px: maint.tech's WorkOrderDetail and its Procedure,
+    Time and Parts tabs; maint.requester's Report a problem, filed; maint.resources' van odometer reading from Meters; and
+    maint.booking's approval in BookingRequests of a booking the planner asked for at 1280 (four weeks ahead, 09:00). Each page
+    is checked not to scroll sideways.
+  - Stale tests fixed (F169): MaintenanceFoundationWalk's menus are the app's as built (reader, technician, supervisor,
+    author and approver, booking approver, resource administrator and cost reader each their own), the capability services are
+    `org.moqui.admin.AccessServices`, the settings index `org.moqui.admin.ReadinessServices.find#Settings`, and the custom team
+    is granted the planner bundle's artifact grants too, so its menu is the planner's (and not Settings). Every other Maintenance
+    acceptance spec's services, screen paths and other roots' paths exist in the code; nothing else was plainly stale.
+- Checks P0 left (F73, F74), redone on the built Admin P17 and P18: unchanged. Audit: `moqui.server.AuditProjection` (framework
+  entity/ServerEntities.xml:816) and `find#OwnedChanges` (AuditServices.xml:31) are as P0 read them; Maintenance registers no
+  projection (only Party's account fields are registered, mr-mantle PartyAuditData.xml), and its histories are read from
+  EntityAuditLog by its own services in its scope (MaintenanceWork.js, MaintenanceReports.js); whether they join AuditChanges
+  stays impl-admin F257 (§7). Route groups: `moqui.security.DeviceRouteGroup` (SecurityEntities.xml:472) is as P0 read it; only
+  Insights' INSIGHTS_PLAYLISTS is registered; Maintenance's root gives a device's request no context and refuses its record
+  panels (P1), which MaintenanceAccess's shared-device feature tests (passing). Nothing built blocks TechnicianKiosk (§7).
+  People's pieces of F64 and F75 are all in the code now (`minimumSkillLevel`, `check#Qualifications`, `get#CostingRate`,
+  capacity, the projected collection kind), taken by P11, P13, P19 and P8.
+- Documents (uncommitted edits reviewed, committed with this note): the inventories' Implemented in for every Maintenance row
+  (usl-inventory: eight blank cells filled and fourteen rows given their Maintenance part; ss-inventory: fourteen rows; P8's rows
+  say "in review"), each with a header bullet; design-maintenance's status line and §2 Impl column (the phase that built each
+  row; P8's and P12's in review); design-crosscut §1.4 (as built), §1.5's Maintenance row and §7.6 (MT rows built, MT-13 and
+  MT-14 later); mr-boss README's Maintenance paragraph; mr-moqui `plans/Remaining-Work.md`'s Maintenance row (it had none); and
+  mr-mantle `docs/Upgrading.md` "Maintenance (November 2026)", where the other apps keep their upgrade notes: the nine seed
+  files (`load types=seed`), the four initial files by location in order, the client deny pattern, the three datasets'
+  refresh, the paused job and the flow map's version 2 (F129, F170, F272, F313, F318).
+- Tests run (release binary, `--nobuild`, this worktree): mr-boss MaintenanceAccess and MaintenanceStack, 29 of 29 features (2
+  specs, 29.2 s), after MaintenanceSpecLib's additions; a throwaway probe of `mountedScreens` and `mountTabs` (deleted). No screen
+  changed, so no lint. Prettier 3 (`npx prettier`, the repo's `.prettierrc.json`) on the six JavaScript files changed. Not run:
+  `./moq test-apps`, the acceptance suite (the new and changed acceptance specs included).
+- Findings (provisional):
+  - A custom group given Maintenance's root artifact group in Admin is no member of `BOSS_MAINTENANCE`, whose deny rows keep
+    Settings, Requests and Costs from the ordinary groups; MaintenanceFoundationWalk now expects the team's Settings to show Teams
+    alone (P8's BOSS_MNT_TEAMS, which the planner bundle carries), and the run tells whether the deny reaches it (if not, the
+    bundles need a deny of their own, or the deny rows another holder).
+  - ProcedureDetail/Steps.xml's comment says Waits are written through `store#ProcessDependency`; they go through
+    `store#ProcessStep`'s `dependsOnIds`, and `store#ProcessDependency` has no screen caller.
+  - Maintenance's record panels serve no AssetMaintenance host; EquipmentDetail/Files lists older AssetMaintenanceContent read
+    only, and nothing under Maintenance writes it. `update#FacilityCertification` has no writer under Maintenance (Certifications'
+    comment leaves it to a phase that did not build it).
+  - The mr-mantle README's line on Upgrading.md names key changes only; the file now holds seed notes too.
+- For the lead:
+  - Budget share: none (no regression spec added; MaintenanceSpecLib's helpers run only in the acceptance sweeps).
+  - Merge hot spots: `test/Maintenance/MaintenanceSpecLib.js` (the helpers at its end, before the export line; P8 and P12 may add
+    ids above), `plan/impl-maintenance.md` (the phase table's P20 row and this note), `plan/design-maintenance.md` (status line and
+    §2 rows beside P8's and P12's), the inventories' Maintenance rows, README's Maintenance paragraph and Remaining-Work's row.
+  - The user's call: none.
+- After P8 and P12 (master merged into `mnt/p20` in all three repos): the conflicts were MaintenanceSpecLib.js (P12's
+  `customerRepair` and P20's sweep helpers both kept, one export), design-maintenance (P8's and P12's header lines and P20's
+  kept; §2 takes master's rows with P20's Impl cells, Teams and the repair context now built P8 and P12) and usl-inventory
+  (master's P8 cells). Then:
+  - MaintenanceFoundationWalk: the supervisor's menu gains Settings (the planner's and Retail planner's through `ids.staffMenu`),
+    and the custom team's Settings shows Teams alone.
+  - The sweeps: `sweepRecords` has Settings/Teams (Services and its field team); WorkOrders/InterventionReport opens on a
+    `customerRepair("SWEEP")` each sweep makes in its setup (no demo record is a customer repair), and MaintenanceTui checks both
+    are swept. Settings/Teams is a file under the root, so both sweeps found it already.
+  - MaintenanceAccessWalk gains two features: Teams is read by a planner, a supervisor and the administrator only (every group's
+    render), no other group stores a team's defaults, and Retail's planner gets no Services team from the service or the team
+    choice; and a customer repair (`customerRepair("P20WALK")`) shows to no Services or Retail Maintenance user on WorkOrderDetail,
+    Overview, the intervention report (html and print), the customer's unit or the list, nor through four services, while its
+    technician reads the report, which carries no amount (the user's call).
+  - The "in review" text: README's Maintenance paragraph (with the intervention report's no amounts), Remaining-Work's row
+    (P0–P20 built), design-maintenance's status line and §2, and the inventories' header bullets and cells. mr-mantle
+    `docs/Upgrading.md` names the rows P8 and P12 added to `MaintenanceWorkData` and `BossSetupMaintenanceData`.
+  - Tests run after the merge: mr-boss MaintenanceAccess and MaintenanceStack, 31 of 31 features (2 specs, 31.2 s). Prettier on
+    the changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
 
 ## 4. Decisions
 
