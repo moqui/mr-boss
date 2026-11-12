@@ -94,17 +94,26 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" fromDate="0"/>
     <!-- every Maintenance group reports a problem (the user's call, Nov 12, impl-maintenance P4 review): MAINTENANCE_REQUEST, and
-        Commons' Report a problem below (BOSS_MNT_REPORT_PROBLEM); following one's reports in Commons' Maintenance box is
-        MAINTENANCE_REQUEST_VIEW_OWN, the requester's (a planner's or supervisor's own reports are in Requests) -->
+        Commons' Report a problem below (BOSS_MNT_REPORT_PROBLEM), and MAINTENANCE_REQUEST_VIEW_OWN, so a reporter follows their own
+        report in Commons' Maintenance box -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
@@ -191,17 +200,26 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_COST" appName="Maintenance" description="Maintenance cost reader" scopeDependency="organization" sequenceNum="1410"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
-    <!-- every group's bundle carries MAINTENANCE_REQUEST (the user's call, Nov 12, P4 review); Report a problem's screen is in each
+    <!-- every group's bundle carries MAINTENANCE_REQUEST and _VIEW_OWN (the user's call, Nov 12, P4 review); Report a problem's screen is in each
         bundle at the end, after its artifact group -->
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
     <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
         administrator's settings of each organization; its readiness provider (check#MaintenanceReadiness) is set in P18. -->
     <moqui.server.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"

@@ -208,20 +208,20 @@ const capabilityNames = [
     "settings"
 ]
 const reads = ["workRead", "resourceRead", "anyRead"]
-// design §1.1's table; every group also reports a problem (MAINTENANCE_REQUEST, the user's call of Nov 12, P4 review)
+// design §1.1's table; every group also reports a problem and follows it (MAINTENANCE_REQUEST and _VIEW_OWN, the user's call of Nov 12, P4 review)
 const capabilityUsers = [
-    {user: users.reader, granted: ["request", "view", "processView", ...reads]},
-    {user: users.planner, granted: ["request", "view", "plan", "processView", ...reads]},
-    {user: users.tech, granted: ["request", "assignedView", "execute", ...reads]},
-    {user: users.supervisor, granted: ["request", "view", "supervise", "processView", ...reads]},
-    {user: users.author, granted: ["request", "processView", "processEdit", "anyRead"]},
-    {user: users.approver, granted: ["request", "processView", "processApprove", "anyRead"]},
-    {user: users.booking, granted: ["request", "bookingViewAssigned", "bookingApprove", "anyRead"]},
+    {user: users.reader, granted: ["request", "requestViewOwn", "view", "processView", ...reads]},
+    {user: users.planner, granted: ["request", "requestViewOwn", "view", "plan", "processView", ...reads]},
+    {user: users.tech, granted: ["request", "requestViewOwn", "assignedView", "execute", ...reads]},
+    {user: users.supervisor, granted: ["request", "requestViewOwn", "view", "supervise", "processView", ...reads]},
+    {user: users.author, granted: ["request", "requestViewOwn", "processView", "processEdit", "anyRead"]},
+    {user: users.approver, granted: ["request", "requestViewOwn", "processView", "processApprove", "anyRead"]},
+    {user: users.booking, granted: ["request", "requestViewOwn", "bookingViewAssigned", "bookingApprove", "anyRead"]},
     {
         user: users.resources,
-        granted: ["request", "resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
+        granted: ["request", "requestViewOwn", "resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
     },
-    {user: users.cost, granted: ["request", "view", "costView", ...reads]},
+    {user: users.cost, granted: ["request", "requestViewOwn", "view", "costView", ...reads]},
     // the user's call (P1 review): every Maintenance permission, every organization among them, and not FACILITY_EDIT
     {user: users.admin, granted: capabilityNames.filter(name => name !== "facilityEdit")},
     {user: "maint.spec.planonly", granted: ["plan"]},
@@ -595,6 +595,23 @@ feature(
                     users.requester
                 ].filter(user => !quickCreates(user).includes("maintenanceReportProblem")),
                 otherQuickCreate: quickCreates(users.otherApp).includes("maintenanceReportProblem"),
+                // a technician reports a problem and follows their own report (the Commons Maintenance box's
+                // find#MaintenanceRequests), not the requester's
+                techFollows: asUser(users.tech, () =>
+                    system(() => {
+                        const reported = invoke("mantle.work.MaintenanceServices.report#MaintenanceProblem", {
+                            assetId: ids.compressorId,
+                            summary: "Compressor guard loose",
+                            operationKey: "spec-mnt-tech-report"
+                        })
+                        const own = id =>
+                            Array.from(
+                                invoke("mantle.work.MaintenanceServices.find#MaintenanceRequests", {requestId: id, statusId: "all"})
+                                    .requestList || []
+                            ).length
+                        return {own: own(reported.requestId), colleague: own(ids.openRequestId)}
+                    })
+                ),
                 otherReport: screenRefusalIn(users.otherApp, "ReportProblem"),
                 // P4 review: the Requests area is the planner's and supervisor's (BOSS_MNT_REQUESTS); the planner's render is
                 // MaintenanceRequests'
@@ -627,6 +644,8 @@ feature(
             out.requesterReport == ""
             out.withoutReport.length == 0
             out.otherQuickCreate == false
+            out.techFollows.own == 1
+            out.techFollows.colleague == 0
             out.otherReport != ""
             out.techRequests != ""
             out.readerRequests != ""

@@ -1598,9 +1598,10 @@ Comms `create-from` hook (Chat's `createFrom`, `ChatServices.create#FromChat`). 
       every Maintenance bundle carries the permission and the screen (CapabilityBundleArtifact), the requester's and the
       administrator's too, so a group given a bundle in Admin has it (closing the finding above for this screen).
       MAINTENANCE_REQUEST_VIEW_OWN stays the requester's: another group's reporter opens their report in Commons as its filer but
-      sees the Maintenance box only as a planner or supervisor (the lead may extend VIEW_OWN too). MaintenanceAccess: each group's
+      sees the Maintenance box only as a planner or supervisor (extended below). MaintenanceAccess: each group's
       capabilities include `request`, every group's user has Report a problem in the + menu, another app's user has neither the
       item nor the screen; MaintenanceRequests no longer expects the planner without it. Design §3.
+    - Then (the lead, Nov 12): MAINTENANCE_REQUEST_VIEW_OWN to every group with MAINTENANCE_REQUEST and in their bundles, so a reporter follows their own report; MaintenanceAccess: the technician reports and finds their own report, not the requester's (MaintenanceAccess and MaintenanceRequests 16 of 16).
 - Merged master into `mnt/p4` (Nov 12, both repos; P5 and F118 among it). mr-mantle merged cleanly. mr-boss: P4's two artifact groups
   (`BOSS_MNT_REPORT_PROBLEM`, `BOSS_MNT_REQUESTS`) moved from the end of BossSetupData.xml into BossSetupMaintenanceData.xml (the
   bundle artifacts after them, so the group exists first); `Maintenance.js` linkPaths, MaintenanceSpecLib's ids, the demo data,
