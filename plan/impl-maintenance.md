@@ -377,7 +377,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | — |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
-| P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built Nov 12 (branch mnt/p16), for review |
+| P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | — |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | — |
@@ -2793,6 +2793,100 @@ approval kind; MT-07 (decisions), MT-01, MT-11.
        shared with you" with the requester's notes (Commons' Book dialog labels the notes "Notes for the approver"). Recommend keeping it.
     2. Should Commons' own Rooms and equipment show blackouts and outages, as Maintenance's ResourceCalendar does? Built: not (Commons
        unchanged); recommend yes in a later Commons change, since a booking under one is refused anyway.
+
+**Review Nov 11 (P16).** mr-mantle and mr-boss review commits on `mnt/p16` (the review's hashes are in the lead's reply); master not merged
+(P7, P9 and P13 merge first). Reviewed `git diff master...mnt/p16` in both repos (mr-moqui unchanged) against the phase, §2, §4, F15,
+F119, F165, F171, F172, design §7.1, BookingRequests and ResourceCalendar, design-drawers-commons' approval kind, AGENTS.md and
+Practices-App-Dev, and the Built note; the framework's approve# and refuse#NotificationMessage, Commons' decorate#Notifications and
+get#RecordLink, ProductionSchedule.js's offline path and the production scripts' row locks.
+- Checked and found sound:
+  - Decision races: decide# locks the resource (lockResource: the work centers above it in id order, then its row) before it reads the
+    booking (locked), the event's span and the assigned bookings, so two approvers of overlapping requests are decided one after the
+    other and the second gets CONFLICT (assignedOnly: a waiting request holds nothing against the one decided). STATE_CHANGED and
+    SPAN_CHANGED refuse a stale state or span, the topic's services passing the notice's own; a move re-requests, re-notifies with the
+    new span, and an approval on the old one is SPAN_CHANGED. Bulk decisions each in its own transaction (lib.probe), failures named.
+  - F171's lock order: every booking write takes WorkCenter rows before Facility or Asset rows (book#Resource, the guard's lock path,
+    decisions); Manufacturing's record# and correct# take its center's (and the centers above it) in the same id order, and its moves,
+    in transactions of their own, lock or write no WorkCenter row (the only other WorkCenter locks are store#WorkCenter and the rate
+    edit, each one row, before any Facility). Maintenance's facility blocks lock Facility rows only, and nothing locks a Facility before a
+    WorkCenter. So no cycle between a booking and an offline block, or between two bookings of rooms under one work center (they meet
+    at the shared center in the same order). Two events booking two unrelated rooms in opposite orders could deadlock as before P15
+    (unchanged). All the Production specs pass.
+  - F172: a stock asset is answered by resourceOf(allowStock), the guard returns at once (no policy, no block, the caller's approver
+    fallback), unavailableOver answers none, create#Event assigns it at once; the only change is P15's Busy masking of a hidden conflict.
+  - F165: one get#EventInstances (from now, at most 365 days and 500 meetings) and one blocks read over the range, matched to each
+    meeting and to the asked time; an unmanaged resource's conflicts stay the caller's first-meeting list; Commons' booking is unchanged.
+  - Notices: ResourceBooking to the resource's current approvers (not the requester), the message with the resource, span, words and
+    requester, no title; ResourceBookingNotice to the organizer alone on a decision or a covering outage or block, with the resource and
+    a safe reason. A superseded notice (a move's, a decision's) is marked viewed for every recipient.
+  - `ResourceBookingNotice`: its NotificationTopic has no approve service (the inbox's approval test is an approve service, so it is
+    an ordinary notification), and its TopicRegistration (Maintenance, no subscriptionPermission: Admin sets no subscription of it)
+    matches the entity's contract; ResourceBooking's names RESOURCE_BOOKING_APPROVE.
+  - BookingRequests: decide# needs RESOURCE_BOOKING_APPROVE and a current BookingApprover of that resource (NOT_APPROVER otherwise, so
+    another organization's room is refused); find# lists an approver's own resources and a policy reader's or supervisor's scope's
+    (covers), canDecide only for an approver holding APPROVE; the purpose only for a shared event, clashes Busy when hidden.
+  - ResourceCalendar: its transitions limit the keys to calendarResources (find#BookableResources' scope), blocked items open a
+    dialog with no event or cancel, and Schedules.qvue has no drag of an existing item (an item stops pointerdown), so no maintenance
+    interval is moved; Commons' Schedules is unchanged but for "Scheduling admin" and the inCommons back link; its specs pass. The
+    terminal twin renders (MaintenanceScheduling).
+  - Commons owner contract: get#ResourceBookings' includeUnavailable defaults false and only ResourceCalendar passes it.
+  - The two calls built as recommended (title only when shared; Commons' own calendar without blackouts) are as described.
+- Fixes:
+  - **R1 (medium, concurrency; "everything under the resource lock").** check#ResourceBookings (a move: update#EventOccurrence,
+    store#EventRecurrence, the CalDAV PUT) read the resource's other bookings before the guard locked it, so a move and a booking of the
+    same time (or two moves) could both pass. It now locks the resource (lockResource) before reading them when it writes. Not covered
+    by a spec (two transactions), as P15's R5.
+  - **R2 (low, notices).** A request whose booking or event was cancelled stayed in the approvers' inboxes as an approval card that
+    could only fail. cancel#ResourceBooking and cancel#EventOccurrence now withdraw its notices (ResourceBookingDecisions.js
+    withdrawn). Spec: ResourceBookingDecisions' "a request withdrawn leaves the approvers' inboxes" (fails without).
+  - **R3 (medium, tests).** MaintenanceScheduling's BookingRequests render and MaintenanceAccess's list read the demo handover (Nov 18,
+    2026 14:00) through find#'s default "not over from now", so both would fail from Nov 18 on. Both pass fromDate 2026-11-12.
+  - **R4 (low, tests).** "Scheduling admin" was untested: Schedules' first feature checks john.doe gets Maintenance's Scheduling and
+    Joe Developer none; MaintenanceAccess checks another organization's facility asked by name lists nothing.
+  - **R5 (low, failure tolerance; AGENTS.md).** The notices caught their exceptions but left a failing call's error in ec.message, which
+    would fail the decision, booking or block that sent them. Each notice now runs in an error frame of its own (quietly).
+  - **R6 (low, style).** The note says prettier was run; ResourceBookingDecisions.js, its spec, ResourceOutages.js and
+    MaintenanceScheduling.spec.js were not formatted (the repository's .prettierrc.json); formatted. Maintenance.js and
+    MaintenanceAccess.spec.js were not clean on master and were left.
+  - **R7 (process).** The phase table row is the lead's: back to "—".
+  - Design: design-maintenance §7.1 (the move's lock) and BookingRequests (a cancelled booking or event leaves the inboxes).
+- Findings (for the lead to number):
+  - The ResourceBooking card's Open in Commons' inbox goes to the event (decorate#Notifications prefers the record's link, WorkEffort ->
+    EventDetail, over the topic's link), which refuses an approver the event is not shared with; the topic's BookingRequests link
+    reaches only email and push. Approving and denying from the card work. A fix is Commons' (prefer an approval topic's own link) or
+    the notice's record; left for the lead.
+  - BookingRequests and find# show a policy reader's or supervisor's scope read only, with the requester's notes; design
+    BookingRequests says "for assigned resources" (an approver). See the calls.
+  - A correction of an actual outage (correct#, not correctBlock) tells no organizer of the bookings it newly covers; a planned block's
+    correction does.
+  - restore#EventOccurrence brings back a requested booking with no notice to its approvers (it waits in BookingRequests).
+  - An unmanaged resource's series extended later (store#EventRecurrence) is not checked against blocks (P15's R4 recheck runs only for
+    a managed one); a booking or move is.
+- Tests (release binary, `--nobuild`, this worktree): mr-mantle ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceOutages,
+  CalendarServices, CalendarChanges, Dav, CommonsToday, ProductionSchedule, ProductionDowntime, ProductionShopFloor, ProductionOrders,
+  ProductionReports, ProductionPolicy, ManufacturingServices, WorkCenters, WorkResources, MaintenanceWorkOrders, MaintenanceManagedWork,
+  MaintenanceScope and MaintenanceIntake 162 of 162 (94.2 s on a loaded machine; the worker's 161 plus R2's); mr-boss MaintenanceAccess,
+  MaintenanceDowntime, MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceScheduling, MaintenanceRequests, MaintenanceProcedures,
+  Schedules, EventDetail, Calendar, QuickCreate, PublishedCalendar, Notifications, WarehouseFacilities, ManufacturingWorkCenters,
+  ManufacturingDowntime, ManufacturingSchedule, AdminLifecycle, PeopleLifecycle and PeopleSchedules 171 of 171 (73.8 s); after R5
+  ResourceBookingDecisions, ResourceBookingPolicy, MaintenanceOutages, CalendarServices, CalendarChanges, Dav, ProductionSchedule and
+  ProductionShopFloor 76 of 76, MaintenanceScheduling, MaintenanceAccess, Notifications, Schedules and EventDetail 48 of 48. R2's case run
+  without its fix failed. No screen changed (no lint run); both binaries still symlinks. Not run: ./moq test-apps, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle +0.3 s over the worker's (R2's feature; ResourceBookingDecisions about 2.0 s); mr-boss unchanged (assertions
+    on existing renders and calls).
+  - merge hot spots (added by the review): mr-mantle `EventServices.xml` (cancel#EventOccurrence's end, cancel#ResourceBooking,
+    check#ResourceBookings' check closure), `ResourceBookingDecisions.js` (prettier, quietly, withdrawn), `ResourceOutages.js` (prettier,
+    three lines), the spec; mr-boss `test/Commons/Schedules.spec.js` (first feature), `MaintenanceAccess.spec.js` and
+    `MaintenanceScheduling.spec.js` (P16's features), design-maintenance §7.1 and BookingRequests, this plan's phase row.
+  - the user's calls:
+    1. and 2. (the worker's): an approver sees the title only when shared; Commons' own calendar shows no blackouts. Built as
+       recommended and accepted by the lead; nothing open.
+    3. Who reads BookingRequests: built for a booking approver (their resources) and, read only, a resource policy reader or supervisor
+       (the scope's, with the requester's notes, the purpose masked). Recommend keeping the read-only view for the resource
+       administrator and supervisor (they handle stuck requests and approvers' absences), or, if requests are the approvers' alone as
+       the design's "for assigned resources" says, dropping the broad branch in find# (a few lines).
+    4. The inbox card's Open (first finding): recommend Commons opening an approval topic's own link, a small owner change.
 
 ### P17 — Reports and Insights
 

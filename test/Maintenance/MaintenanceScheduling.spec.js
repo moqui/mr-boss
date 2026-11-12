@@ -64,32 +64,36 @@ feature("EquipmentDetail's Schedule and FacilityDetail's Schedules show a resour
     }
 })
 
-feature("BookingRequests renders for Room 101's approver with the shift handover waiting; the calendar's terminal twin lists its day", {
-    when() {
-        return asUser(users.booking, () => ({
-            requests: page("Scheduling/BookingRequests"),
-            calendar: page("Scheduling/ResourceCalendarTui", {date: "2026-11-17"})
-        }))
-    },
-    then({requests, calendar}) {
-        requests.errors.length == 0
-        requests.output.includes("Room 101 Huddle")
-        requests.output.includes("Maintenance Technician")
-        requests.output.includes("Six of us, and the screen for the dashboards")
-        requests.output.includes("Approve")
-        requests.output.includes("Decide selected")
-        // the approver may not open the meeting itself: its purpose is not shown
-        requests.output.includes("Not shared with you")
-        !requests.output.includes("Shift handover")
-        calendar.errors.length == 0
-        calendar.output.includes("Room 101 Huddle")
-        calendar.output.includes("Blocked")
-        calendar.output.includes("Not available: closed (blackout)")
-        // the vendor walkthrough the approver may not open is Busy
-        calendar.output.includes("Busy")
-        !calendar.output.includes("HVAC vendor walkthrough")
+feature(
+    "BookingRequests renders for Room 101's approver with the shift handover waiting; the calendar's terminal twin lists its day",
+    {
+        when() {
+            return asUser(users.booking, () => ({
+                // from the demo's week, so the handover (Nov 18, 2026) is listed after its day has passed too
+                requests: page("Scheduling/BookingRequests", {fromDate: "2026-11-12"}),
+                calendar: page("Scheduling/ResourceCalendarTui", {date: "2026-11-17"})
+            }))
+        },
+        then({requests, calendar}) {
+            requests.errors.length == 0
+            requests.output.includes("Room 101 Huddle")
+            requests.output.includes("Maintenance Technician")
+            requests.output.includes("Six of us, and the screen for the dashboards")
+            requests.output.includes("Approve")
+            requests.output.includes("Decide selected")
+            // the approver may not open the meeting itself: its purpose is not shown
+            requests.output.includes("Not shared with you")
+            !requests.output.includes("Shift handover")
+            calendar.errors.length == 0
+            calendar.output.includes("Room 101 Huddle")
+            calendar.output.includes("Blocked")
+            calendar.output.includes("Not available: closed (blackout)")
+            // the vendor walkthrough the approver may not open is Busy
+            calendar.output.includes("Busy")
+            !calendar.output.includes("HVAC vendor walkthrough")
+        }
     }
-})
+)
 
 feature("Admin's lifecycle participant lists the rooms a leaver approves; the resource administrator hands them over", {
     when() {
