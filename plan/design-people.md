@@ -672,6 +672,15 @@ the screen says they are on their way, and a failed send (an error, or an attend
 recruiters with Send again, which tells only who was missed (follow-up 1's review). Approved leave's "Out of office" is People's the same way (`EventManager` PeopleLeave): it
 changes only with its request, never by its employee on the calendar or a phone.
 
+**As built (impl-maintenance F356, F360; owner contracts, Nov 12, 2026).** The organizer of an interview or a training session
+books its rooms and equipment through Commons' booking services (a kept event's organizer books, `check#EventAccess` `canBook`);
+an attendee cannot. `change#Interview` and `store#Training` that move the event recheck its bookings (Mantle's
+`ResourceBookingDecisions.js` `keptEventMoved`, as the system: a clash with another booking, an outage or a block refuses the
+change, an approved booking needing approval is asked again and its approvers told); `cancel#Interview`, a session's cancel and
+a leave request's cancel withdraw the event's requested and assigned bookings with their approval notices (`keptEventCancelled`).
+Training.js answers `sessionHours` (a person's hours in sessions they are enrolled in or train, not cancelled, overlaps once),
+which Maintenance's technician picker takes off the free hours of the work's days.
+
 
 
 **Source:** research §5

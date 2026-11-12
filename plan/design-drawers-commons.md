@@ -943,6 +943,21 @@ delegates, CalDAV), and an event an app keeps (`EventManager`: People's training
 Manufacturing's production runs) changes only in that app; EventDetail shows it read-only, saying where, and CalDAV refuses its
 writes (403).
 
+**Who books for an event (Nov 12, 2026; impl-maintenance F356, F357).** A booking changes no event, so the rooms and equipment of
+an event are booked, cancelled and rechecked by whoever may change it and, for a meeting an app keeps (People's interview or training session; not leave or a production
+run, which stay with their apps), by its organizer
+(`check#EventAccess` `canBook`; `book#Resource`, `cancel#ResourceBooking` and `check#ResourceBookings` ask permission `book`),
+with every booking rule (policy, blocks and outages, approval, the resource lock, Busy). An attendee is refused. The app moves and
+cancels its own events and keeps their bookings right through Mantle's `ResourceBookingDecisions.js` `keptEventMoved` (the
+bookings rechecked as the system: a clash refuses the move, an approved booking needing approval is asked again) and
+`keptEventCancelled` (the requested and assigned bookings withdrawn, the approvers' notices cleared). Schedules offers Cancel
+booking exactly where `cancel#MyBooking` succeeds: the organizer, also of a kept event, or an editor of a calendar that holds
+an event no app keeps (`get#ResourceBookings` reads the managed state and calendars once over the listed events); never a
+recurring booking from one meeting's cell, and an item it offers Cancel on shows its title (never Cancel under Busy). EventDetail
+shows its Book a room and Book equipment forms and each booking's Cancel to whoever may book (`canBook`), so the organizer of an
+interview or a training session books there; its place, details, attendees and the other edits stay with `canEdit` (the
+follow-ups' review, R1 and R2).
+
 ### Calendar
 
 - **Layout:** calendar archetype as `.qvue` until `view-calendar` exists. A left rail (mini

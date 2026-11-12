@@ -5,7 +5,7 @@
 // manufacturing equipment; the bookings of a week with their status; a booking made at once, one waiting for approval, a clash
 // refused with no event left behind, a booking cancelled with the event made for it; ResourceDetail with its policy, the user's
 // bookings and Book. Joe Developer may not cancel john.doe's booking. "Scheduling admin" is john.doe's, not Joe's (impl-maintenance
-// P16).
+// P16). An event in a calendar john.doe edits shows its title with Cancel; in one he only sees, Busy and no Cancel (F357 review R2).
 // Run: ./moq test mr-boss --spec Schedules
 const webroot = "component://webroot/screen/webroot.xml"
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -117,6 +117,29 @@ feature("the bookings of the week: the sync, the planning and Bob's interview (b
         board[0].statusColor == "warning"
         board[0].canCancel
         projector[0].bookingStatusId == "WeaaAssigned"
+    },
+})
+
+// impl-maintenance F357 review R2: Cancel is offered where cancel#MyBooking succeeds, and never on an item titled Busy
+feature("Bob's interview in a calendar john.doe edits shows its title with Cancel; put there only to be seen it stays Busy with none", {
+    when() {
+        const link = { calendarId: "BOSS_DEMO_CAL_JD", workEffortId: "BOSS_DEMO_EV_INTERVIEW" }
+        const interview = () => of(get("bookings", { start: D, end: day(6), keys }), "room|BOSS_DEMO_ROOM_MAPLE")
+            .find((booking) => booking.workEffortId === "BOSS_DEMO_EV_INTERVIEW")
+        sys(() => ec.entity.makeValue("mantle.work.calendar.CalendarWorkEffort").setAll(Object.assign({ viewOnly: "Y" }, link)).create())
+        const seenOnly = interview()
+        sys(() => ec.entity.find("mantle.work.calendar.CalendarWorkEffort").condition(link).one().set("viewOnly", "N").update())
+        const editable = interview()
+        sys(() => ec.entity.find("mantle.work.calendar.CalendarWorkEffort").condition(link).deleteAll())
+        return { seenOnly, editable }
+    },
+    then({ seenOnly, editable }) {
+        seenOnly.title == "Busy"
+        !seenOnly.canCancel
+        editable.canCancel
+        editable.title != "Busy"
+        editable.organizerName != null
+        editable.url == "/qapps/Commons/Calendar/EventDetail?workEffortId=BOSS_DEMO_EV_INTERVIEW"
     },
 })
 

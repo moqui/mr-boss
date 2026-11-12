@@ -48,6 +48,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="linkedRecordList" type="List"/>
             <parameter name="pendingInvites" type="Integer"/>
             <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canBook" type="Boolean"><description>May book and cancel its rooms and equipment: canEdit, or the
+                organizer of an event an application keeps (impl-maintenance F356)</description></parameter>
             <parameter name="managedBy"><description>Where the event is changed, when an application keeps it (People's training
                 session or interview): EventDetail shows it read-only with that note</description></parameter>
             <parameter name="isOrganizer" type="Boolean"/>
@@ -84,6 +86,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const pattern = 'yyyy-MM-dd HH:mm:ss.SSS'
                 event = facts.event
                 canEdit = !!access.canEdit
+                canBook = !!access.canBook
                 managedBy = access.managedBy || null
                 isOrganizer = !!access.isOrganizer
                 isAttendee = !!access.isAttendee
@@ -581,7 +584,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="book" noun="EventResource">
         <description>Books a meeting room (facilityId) or equipment (assetId) for an event at its time (mantle.work.EventServices.book#Resource,
-            edit access): booked at once, or requested when the resource has a booking policy (approvers). A clash with another
+            book access: an editor, or the organizer of an event an application keeps): booked at once, or requested when the resource has a booking policy (approvers). A clash with another
             booking is refused with the events it clashes with.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
@@ -601,7 +604,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="cancel" noun="EventResource">
         <description>Cancels the booking of a meeting room or equipment of an event (mantle.work.EventServices.cancel#ResourceBooking,
-            edit access).</description>
+            book access, as book#EventResource).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="facilityId"/>

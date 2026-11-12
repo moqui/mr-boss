@@ -6882,7 +6882,13 @@ Designed, not in this build:
     impl-maintenance P2 (`change#MaintenanceCustody`, the date now or earlier, `replace#AssetPartyAssignment`'s optional
     `effectiveDate`, People's return#Equipment unchanged);
   - its labor cost on P10's `RateServices.get#CostingRate`, which it only reads (its P11; §4);
-  - its two projected calendars, registered on P12's projected kind (its P19).
+  - its two projected calendars, registered on P12's projected kind (its P19);
+  - owner contracts of impl-maintenance's follow-ups (Nov 12, 2026, F356 and F360; People's specs unchanged): Recruiting.js
+    `change#Interview` and `cancel#Interview`, Training.js `store#Training` (a move or a cancel) and Leave.js's cancel call
+    Mantle's `ResourceBookingDecisions.js` `keptEventMoved` (only when the start or end changed) and `keptEventCancelled`, so a
+    kept event's room and equipment bookings are rechecked or withdrawn with their notices (its organizer books them through
+    Commons' booking services: `check#EventAccess` `canBook`); Training.js exports `sessionHours`, which Maintenance's
+    `find#MaintenanceCandidates` takes off a technician's free hours (`get#PartyCapacity` unchanged).
 
   TechnicianKiosk, on P30's kiosk identity and Admin P18, is later in Maintenance's plan too (its §7).
 - **Links to Sales, built by impl-sales:**

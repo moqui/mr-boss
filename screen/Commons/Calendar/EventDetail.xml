@@ -245,6 +245,8 @@ along with this software (see the LICENSE.md file). If not, see
             edit = detail.edit
             recurrence = detail.recurrence || {}
             canEdit = !!detail.canEdit
+            // the rooms and equipment: an editor, or the organizer of an event an application keeps (impl-maintenance F356)
+            canBook = !!detail.canBook
             managedBy = detail.managedBy || ''
             canRsvp = !!detail.canRsvp
             canSetReminders = !!detail.canSetReminders
@@ -522,7 +524,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <form-list name="EventRooms" list="roomRows" skip-form="true" skip-header="true" paginate="false">
                                             <field name="name"><default-field><label text="${name}" type="span"/></default-field></field>
                                             <field name="statusHtml"><default-field><render-mode><text type="qvt"><![CDATA[${statusHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusHtml ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()})}]]></text></render-mode></default-field></field>
-                                            <field name="cancel" align="right"><conditional-field condition="canEdit" title="">
+                                            <field name="cancel" align="right"><conditional-field condition="canBook" title="">
                                                 <link url="cancelBooking" link-type="hidden-form-link" icon="sym_o_close" text="" tooltip="Cancel the booking" style="m-btn-flat"
                                                         confirmation="Cancel the booking of ${name}?" parameter-map="{workEffortId:workEffortId, instanceStart:instanceStart, facilityId:facilityId}"/>
                                             </conditional-field><default-field title=""><label text="" type="span"/></default-field></field>
@@ -530,7 +532,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <form-list name="EventEquipment" list="equipmentRows" skip-form="true" skip-header="true" paginate="false">
                                             <field name="name"><default-field><label text="${name}" type="span"/></default-field></field>
                                             <field name="statusHtml"><default-field><render-mode><text type="qvt"><![CDATA[${statusHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusHtml ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()})}]]></text></render-mode></default-field></field>
-                                            <field name="cancel" align="right"><conditional-field condition="canEdit" title="">
+                                            <field name="cancel" align="right"><conditional-field condition="canBook" title="">
                                                 <link url="cancelBooking" link-type="hidden-form-link" icon="sym_o_close" text="" tooltip="Cancel the booking" style="m-btn-flat"
                                                         confirmation="Cancel the booking of ${name}?" parameter-map="{workEffortId:workEffortId, instanceStart:instanceStart, assetId:assetId}"/>
                                             </conditional-field><default-field title=""><label text="" type="span"/></default-field></field>
@@ -546,6 +548,8 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="infoUrl"><default-field title="Video call link" tooltip="https:// address of the meeting"><text-line size="40"/></default-field></field>
                                             <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
                                         </form-single>
+                                    </widgets></section>
+                                    <section name="WhereBook" condition="canBook &amp;&amp; !event.cancelled"><widgets>
                                         <form-single name="EventBookRoom" transition="bookResource">
                                             <field name="workEffortId"><default-field><hidden/></default-field></field>
                                             <field name="instanceStart"><default-field><hidden/></default-field></field>
