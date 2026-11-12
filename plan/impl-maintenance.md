@@ -382,7 +382,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | built and reviewed Nov 12, merged |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12, merged |
-| P20 Finish | all | the sweeps and the review walk (acceptance) | built Nov 12 (acceptance tests written, not run; the acceptance run is the lead's) |
+| P20 Finish | all | the sweeps and the review walk (acceptance) | built and reviewed Nov 12, merged |
 
 ### P0 — Checks
 
@@ -5474,7 +5474,7 @@ Written while P8 and P12 were in review, then extended after master was merged w
   specs, 29.2 s), after MaintenanceSpecLib's additions; a throwaway probe of `mountedScreens` and `mountTabs` (deleted). No screen
   changed, so no lint. Prettier 3 (`npx prettier`, the repo's `.prettierrc.json`) on the six JavaScript files changed. Not run:
   `./moq test-apps`, the acceptance suite (the new and changed acceptance specs included).
-- Findings (provisional):
+- Findings, numbered by the lead F346 to F349 in order:
   - A custom group given Maintenance's root artifact group in Admin is no member of `BOSS_MAINTENANCE`, whose deny rows keep
     Settings, Requests and Costs from the ordinary groups; MaintenanceFoundationWalk now expects the team's Settings to show Teams
     alone (P8's BOSS_MNT_TEAMS, which the planner bundle carries), and the run tells whether the deny reaches it (if not, the
@@ -5947,6 +5947,10 @@ paths under `mr-boss/`.
 | F343 | P12 review: A repair linked before the policy was turned on is adopted by `link#WarrantyWork` with its id (the agent | P12's Review note |
 | F344 | P12 review: `check#WarrantyRepair` returns the first blocker of every claim linking the repair, open claims first | P12's Review note |
 | F345 | P12 review: WorkOrderDetail's repair header and Equipment condition and Overview's CustomerRepair box have no regression render with a repair (the one WorkOrderDetail render is Services' work) | P12's Review note |
+| F346 | P20: A custom group given Maintenance's root artifact group in Admin is no member of `BOSS_MAINTENANCE`, whose deny rows keep Settings, Requests and Costs from the ordinary groups | P20's Built note |
+| F347 | P20: ProcedureDetail/Steps.xml's comment says Waits are written through `store#ProcessDependency` | P20's Built note |
+| F348 | P20: Maintenance's record panels serve no AssetMaintenance host | P20's Built note |
+| F349 | P20: The mr-mantle README's line on Upgrading.md names key changes only | P20's Built note |
 
 
 ## 7. Later
