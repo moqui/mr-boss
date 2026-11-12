@@ -116,6 +116,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Book" location="component://mr-boss/screen/Shared/EquipmentDetail/Book.xml" menu-index="7"/>
         <subscreens-item name="Files" location="component://mr-boss/screen/Shared/EquipmentDetail/Files.xml" menu-index="8"/>
         <subscreens-item name="Conversation" location="component://mr-boss/screen/Shared/EquipmentDetail/Conversation.xml" menu-index="9"/>
+        <!-- P15: its booking policy and availability (the Schedule pane) -->
+        <subscreens-item name="Schedule" location="component://mr-boss/screen/Shared/EquipmentDetail/Schedule.xml" menu-index="10"/>
     </subscreens>
     <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
@@ -163,7 +165,7 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- its tabs, in menu order (a menu lists every subscreen, so the tab bar draws these): the Book only when Accounting's
                 get#AssetBook admitted the user -->
             <set field="equipmentTabs" from="['Identity', 'Hierarchy', 'Assignments', 'Meters', 'Registrations', 'Maintenance', 'Book', 'Files',
-                    'Conversation'].filter(tab =&gt; tab !== 'Book' || maintenanceEquipment?.book)"/>
+                    'Conversation', 'Schedule'].filter(tab =&gt; tab !== 'Book' || maintenanceEquipment?.book)"/>
             <set field="equipmentTabItems" from="Array.from(sri.getMenuItems() || []).filter(item =&gt; equipmentTabs.includes(item.name))"/>
         </if>
         <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset || !!peopleEquipment?.asset

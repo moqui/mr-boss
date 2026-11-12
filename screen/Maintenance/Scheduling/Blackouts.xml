@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Scheduling › Blackouts (design-maintenance §7 Blackouts; style-guide §3.2 List, §3.7; impl-maintenance P15): the
+    planned blocks of the user's maintenance scope (mantle.work.ResourceBookingServices.find#ResourceUnavailability, kind RukPlanned):
+    Maintenance's blackouts and Manufacturing's offline time of a work center, one record. BlockFind (the list's header filters:
+    equipment, facility with those inside it, reason, current or all); BlockRows (resource, state, interval, reason and source, who
+    planned or corrected it, the bookings it covers, kept for review) as a list and a calendar, where nothing is moved by dragging;
+    StoreBlock (Plan a blackout, a resource administrator's or supervisor's: record#ResourceUnavailability RukPlanned, an end
+    required) and each row's Correct (correct#, a new row in force over the one kept) and End (end#: ended now, or withdrawn when not
+    begun). Actual outages are Downtime's, linked from here. Open to a work or resource reader; Mantle checks every action again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Blackouts" default-menu-index="3">
+    <parameter name="assetId"/>
+    <parameter name="facilityId"/>
+    <parameter name="unavailabilityReasonEnumId"/>
+    <parameter name="show"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="recordBlock" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+    <transition-include name="correctBlock" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+    <transition-include name="endBlock" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+    <actions>
+        <set field="outageList" from="null"/>
+        <!-- current (the default): the blocks not over yet; all: every one, newest first -->
+        <service-call name="mantle.work.ResourceBookingServices.find#ResourceUnavailability" out-map="context"
+                transaction="force-new" ignore-error="true"
+                in-map="{unavailabilityKindEnumId:'RukPlanned', assetId:assetId || null, facilityId:facilityId || null,
+                    unavailabilityReasonEnumId:unavailabilityReasonEnumId || null,
+                    fromDate:(show == 'all' ? null : ec.user.nowTimestamp), pageIndex:pageIndex || 0}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="blocksAvailable" from="outageList != null"/>
+        <set field="blockList" from="outageList || []"/>
+        <script>for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['blockList' + key] = context['outageList' + key]</script>
+        <set field="canPlan" from="!!canRecord"/>
+        <set field="blockFixed" from="false"/>
+        <set field="blockValues" from="{blockAssetId:assetId, blockFacilityId:(assetId ? null : facilityId)}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-x-md q-mb-sm">
+            <container style="col-12 col-md">
+                <label text="Blackouts" type="h5"/>
+                <label text="Planned times a room, building or piece of equipment cannot be booked or used. Bookings over a blackout are kept and flagged; nothing is cancelled. Outages are recorded in Downtime."
+                        type="p" style="text-caption m-muted"/>
+            </container>
+            <container style="col-12 col-md-auto">
+                <link url="${sharedLinks['Equipment/Downtime']}" text="Outages in Downtime" link-type="anchor"/>
+                <container-dialog id="PlanBlackoutDialog" condition="canPlan" type="primary" button-text="Plan blackout"
+                        icon="sym_o_event_busy" title="Plan a blackout" width="640">
+                    <section-include name="StoreBlockForm" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <label text="Blackouts are not available to you." type="p" condition="!blocksAvailable"/>
+        <section name="Blocks" condition="blocksAvailable">
+            <widgets>
+                <form-single name="BlockFind" transition="." map="{assetId:assetId, facilityId:facilityId,
+                        unavailabilityReasonEnumId:unavailabilityReasonEnumId, show:show}">
+                    <field name="assetId">
+                        <default-field title="Equipment">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'equipment', selected:assetId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="With the facilities inside it and the equipment there">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="unavailabilityReasonEnumId">
+                        <default-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'blockReasons', selected:unavailabilityReasonEnumId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="show">
+                        <default-field title="Show">
+                            <drop-down allow-empty="true"><option key="all" text="All, ended and withdrawn too"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="assetId"/><field-ref name="facilityId"/></field-row>
+                        <field-row><field-ref name="unavailabilityReasonEnumId"/><field-ref name="show"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <section-include name="BlockRows" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+                <label text="No blackout matches." type="p" style="m-muted" condition="!blockList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
