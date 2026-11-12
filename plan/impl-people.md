@@ -1,5 +1,8 @@
 # IronStone BOSS — People implementation
 
+Nov 12, 2026 — gate 3 built: P15–P19 and P21 (stage 3), expenses, recruiting, development and cases, each phase reviewed by
+a fresh agent and merged on its focused specs, with the Commons calendar follow-up (view-only attendee links, app-managed
+events). Next: P20 beside P22, then P23, and stage 4.
 Nov 12, 2026 — gate 2 built: P9–P14 (stage 2), time and leave, each phase reviewed by a fresh agent and merged on its
 focused specs, P12 and P13 with their framework parts (the per-field AI opt-out, a quick create's condition service). Next:
 stage 3 (P15 beside P16, then P17 beside P18, P19 beside P21, P20 beside P22, P23).
@@ -5276,7 +5279,7 @@ generally. mr-mantle b936d768 and mr-boss (this commit), branch `ppl/cal`.
   --screens`: 136 flagged sites as before, none in ApplicantDetail or EventDetail. Prettier clean on Recruiting.js, Recruiting.spec
   and PeopleRecruiting.spec (CalendarServices, Dav and Calendar specs were not Prettier-formatted before; left in their style). Not
   run: test-apps, the acceptance suite.
-- Findings:
+- Findings, numbered by the lead F354 to F357 in order:
   - an attendee's link made before this fix has no viewOnly and still makes its calendar's editors the event's; no data upgrade
     marks them (a personal calendar of an attendee who is not the organizer is the likely set);
   - a phone's change of an event made in the app (no `universalId`; served as `mantle-{id}`) is stored as a new event beside it,
@@ -5316,7 +5319,7 @@ routes, `create#ApplicationFromEmail`) pass no request-chosen event to an event 
   with no way to drop it there (before the follow-up the delete took it out of that calendar); it now takes it out of that
   calendar and leaves the event as it was. A kept event's delete is still 403. Spec: Dav (204, the calendar empty, the event
   unchanged; the organizer's delete still cancels it).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F358 to F362 in order:
   - `tellAttendees` (schedule, change and cancel#Interview) catches a failing `send#EventInvitations`, but the failure has
     already marked the transaction rollback-only (docs/logic/Services.md), so the interview change rolls back while the screen
     says it was made and the attendees were not told; the invitations want to go after commit (pre-existing in schedule since P16);
@@ -5969,7 +5972,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
