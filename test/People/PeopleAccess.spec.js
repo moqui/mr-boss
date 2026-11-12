@@ -30,6 +30,10 @@
 // render (the HR officer's), the capability schedules. P10: Time & leave opened to the self-service employee by its own grant
 // (Payroll and Employees still refused them), Payroll the payroll groups' (the HR officer refused Rates; the Payroll capability;
 // the payroll operator's menu and the Time group), and the employee's context linking their own My time.
+// P11: Leave policies and Allocations HR's, Leave balances HR's and the managers' (the manager refused Leave policies, the
+// self-service employee refused all three); a leave policy changed by an HR editor of the employer (the directory reader refused
+// with the same parameters and the screen, Services' policy refused to Retail's HR), LeavePolicyDetail's one html render (the HR
+// officer's), the employee's own balances through get#MyBalances alone (get#Balances not theirs), and the two leave choices.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -844,6 +848,84 @@ feature(
             return {problems}
         },
         then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "leave policies are HR's of the employer: Retail's annual leave changed by Retail's HR officer, the directory reader refused with the same parameters and the screen, Services' policy refused to Retail's HR; Leave balances HR's and the managers'; the employee's own balances alone",
+    {
+        when() {
+            const L = "mantle.humanres.LeaveServices."
+            const as = (user, service, parameters) => asUser(user, () => system(() => refusal(L + service, parameters)))
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const revision = leavePolicyId => system(() => invoke(L + "get#Policy", {leavePolicyId})).policy.revision
+            // a Services policy, for Retail's HR to be refused
+            const other = system(() =>
+                invoke(L + "store#Policy", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    policyName: "Services access spec leave",
+                    leaveTypeEnumId: "PltAnnual"
+                })
+            ).leavePolicyId
+            const same = {
+                leavePolicyId: ids.leavePolicyId,
+                expectedRevision: revision(ids.leavePolicyId),
+                policyName: "Annual leave"
+            }
+            const codes = {
+                reader: code(as(users.reader, "store#Policy", same)),
+                hr: code(as(users.hr, "store#Policy", same)),
+                hrOther: code(
+                    as(users.hr, "store#Policy", {
+                        leavePolicyId: other,
+                        expectedRevision: revision(other),
+                        policyName: "Not mine"
+                    })
+                ),
+                // the employee's own balances through get#MyBalances (its own grant); get#Balances is not theirs to call
+                employeeOwn: code(asUser(users.employee, () => refusal(L + "get#MyBalances", {}))),
+                employeeStaff: /RECORD_UNAVAILABLE|is not authorized/.test(
+                    asUser(users.employee, () => refusal(L + "get#Balances", {partyRelationshipId: ids.otherEmploymentId}))
+                )
+            }
+            const problems = []
+            // the HR officer's one html render of LeavePolicyDetail: the demo policy's steps and the primary
+            const detail = asUser(users.hr, () => page("Time/LeavePolicyDetail", {leavePolicyId: ids.leavePolicyId}, "html"))
+            if (
+                detail.status != 200 ||
+                detail.errors.length ||
+                !detail.output.includes("Accrual and carry-over") ||
+                !detail.output.includes("1.75 days a month") ||
+                !detail.output.includes("Assign")
+            )
+                problems.push(`the HR officer's LeavePolicyDetail: ${detail.status} ${detail.errors}`)
+            for (const user of [users.reader, users.manager, users.employee]) {
+                const refused = screenRefusal(user, "Time/LeavePolicies")
+                if (!unauthorized(refused)) problems.push(`${user} opens LeavePolicies: ${refused || "opened"}`)
+            }
+            const balances = screenRefusal(users.manager, "Time/LeaveBalances")
+            if (balances) problems.push(`the manager's LeaveBalances: ${balances}`)
+            // the two leave choices, each with a selected value off the page
+            const options = (choice, selected) =>
+                asUser(users.hr, () => invoke(choices, {choice, term: "zzz", selected})).options.map(option => option.value)
+            if (!options("leavePolicies", ids.leavePolicyId).includes(ids.leavePolicyId))
+                problems.push("leavePolicies: no selected")
+            if (!options("leaveTypes", "PltUnpaid").includes("PltUnpaid")) problems.push("leaveTypes: no selected")
+            if (asUser(users.hr, () => invoke(choices, {choice: "leavePolicies"})).options.some(option => option.value === other))
+                problems.push("the HR officer is offered Services' policy")
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    reader: "PERMISSION_DENIED",
+                    hr: "accepted",
+                    hrOther: "RECORD_UNAVAILABLE",
+                    employeeOwn: "accepted",
+                    employeeStaff: true
+                }
             problems.join("\n") == ""
         }
     }

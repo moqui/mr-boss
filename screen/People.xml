@@ -32,7 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
     under People/Time: Timesheets, My time, Time entries, every People user's and a self-service employee's by the area's own grant,
     BOSS_PPL_TIME), Payroll (Projects' Rates
     under People/Payroll, the payroll groups', BOSS_PPL_PAYROLL), the keys g t and g r, the timesheet topics and Today's weeks to
-    submit. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
+    submit; P11 Leave balances (HR's and the managers') and HR's Leave policies and Allocations under Time & leave
+    (BOSS_PPL_LEAVE_BALANCES, BOSS_PPL_LEAVE) and the key g b. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
     grant opens no other record's panel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -69,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="SelfService" location="component://mr-boss/screen/Shared/PeopleSelfService.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
+    <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
         record-lookup over the directory projection (design §1.4). Quick create and Today (design §1.4) come with their records. -->
     <shell-providers>
         <palette-source group="Employees" label="Employee directory" icon="sym_o_badge"
@@ -83,10 +84,11 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g s" label="Positions" screen="People/Staffing/Positions"/>
             <key keys="g a" label="Approvals" screen="People/Approvals"/>
             <key keys="g m" label="My team" screen="People/MyTeam"/>
-            <!-- P9: the working schedules; P10: the timesheets and payroll's rates -->
+            <!-- P9: the working schedules; P10: the timesheets and payroll's rates; P11: the leave balances -->
             <key keys="g w" label="Working schedules" screen="People/Time/WorkingSchedules"/>
             <key keys="g t" label="Timesheets" screen="People/Time/Timesheets"/>
             <key keys="g r" label="Rates" screen="People/Payroll/Rates"/>
+            <key keys="g b" label="Leave balances" screen="People/Time/LeaveBalances"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>

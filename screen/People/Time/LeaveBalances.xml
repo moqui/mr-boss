@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Leave balances (design-people §7 LeaveBalances; style-guide §3.7 Report; impl-people P11): balances as of a date, from
+    mantle.humanres.LeaveServices.get#Balances: an HR reader's employers' employees and a manager's live reports, by employer,
+    department, person and leave type, each with its policy, the movements by kind (opening, granted, accrued, taken, expired,
+    adjusted), the balance, what is pending (leave requests, later) and what is available. An HR reader opens an employee's movements
+    (find#Ledger: each with its date, kind, amount, the balance after it and what it came from, an allocation opening its
+    allocation's reason; the CSV export is the same rows) and their historical leave recorded before People (read only, outside the
+    balance, no reason); a manager reads the balances alone. HR's and the managers' (BOSS_PPL_LEAVE_BALANCES); an employee reads
+    their own on SelfService. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Leave balances" default-menu-index="7" menu-image="sym_o_beach_access" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="departmentPartyId"/>
+    <parameter name="partyId"/>
+    <parameter name="leaveTypeEnumId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="partyRelationshipId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <actions>
+        <service-call name="mantle.humanres.LeaveServices.get#Balances" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), departmentPartyId:(departmentPartyId || null), partyId:(partyId || null),
+                    leaveTypeEnumId:(leaveTypeEnumId || null), asOfDate:(asOfDate || null), partyRelationshipId:(partyRelationshipId || null),
+                    pageIndex:(partyRelationshipId ? 0 : (pageIndex || 0)), pageSize:(pageSize || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="balancesFound" from="!!found?.balances"/>
+        <set field="balances" from="found?.balances || []"/>
+        <set field="balancesCount" from="found?.balancesCount || 0"/>
+        <set field="balancesPageIndex" from="found?.balancesPageIndex || 0"/>
+        <set field="balancesPageSize" from="found?.balancesPageSize || 20"/>
+        <set field="balancesPageMaxIndex" from="found?.balancesPageMaxIndex || 0"/>
+        <set field="balancesPageRangeLow" from="found?.balancesPageRangeLow || 0"/>
+        <set field="balancesPageRangeHigh" from="found?.balancesPageRangeHigh || 0"/>
+        <if condition="partyRelationshipId &amp;&amp; balances.some(row => row.canSeeLedger)">
+            <service-call name="mantle.humanres.LeaveServices.find#Ledger" out-map="ledger" transaction="force-new" ignore-error="true"
+                    in-map="{partyRelationshipId:partyRelationshipId, leaveTypeEnumId:(leaveTypeEnumId || null), asOfDate:(asOfDate || null),
+                        pageIndex:(pageIndex || 0), pageSize:(pageSize || null), pageNoLimit:(pageNoLimit || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            ledgerShown = !!ledger?.partyRelationshipId
+            entries = Array.from(ledger?.entries || [])
+            entriesCount = ledger?.entriesCount || 0
+            entriesPageIndex = ledger?.entriesPageIndex || 0
+            entriesPageSize = ledger?.entriesPageSize || 20
+            entriesPageMaxIndex = ledger?.entriesPageMaxIndex || 0
+            entriesPageRangeLow = ledger?.entriesPageRangeLow || 0
+            entriesPageRangeHigh = ledger?.entriesPageRangeHigh || 0
+            historical = Array.from(ledger?.historical || [])
+            filtered = !!(organizationPartyId || departmentPartyId || partyId || leaveTypeEnumId)
+            findValues = {organizationPartyId: organizationPartyId || null, departmentPartyId: departmentPartyId || null, partyId: partyId || null,
+                leaveTypeEnumId: leaveTypeEnumId || null, asOfDate: asOfDate || null}
+            asOfText = found?.asOfText || ''
+            entryColors = {LletGrant: 'primary', LletAccrual: 'positive', LletOpening: 'primary', LletConsumption: 'warning',
+                LletExpiry: 'negative', LletAdjustment: 'grey-8', LletReversal: 'grey-8'}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Leave balances" type="h5"/>
+                <label text="As of ${asOfText}" type="p" style="text-caption m-muted q-mb-none" condition="asOfText"/>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!balancesFound">
+            <widgets>
+                <label text="Leave balances are open to HR, and to managers for their teams. Yours are on your self-service page." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="BalanceRows" condition="balancesFound">
+            <widgets>
+                <form-single name="FindBalances" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="departmentPartyId">
+                        <default-field title="Department">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'departments', selected:departmentPartyId}">
+                                    <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="partyId">
+                        <default-field title="Person">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'people', selected:partyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="leaveTypeEnumId">
+                        <default-field title="Leave type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'leaveTypes', selected:leaveTypeEnumId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate"><default-field title="As of" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="departmentPartyId"/>
+                            <field-ref name="partyId"/>
+                            <field-ref name="leaveTypeEnumId"/>
+                            <field-ref name="asOfDate"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="BalanceList" list="balances" skip-form="true" paginate="true" select-columns="true" condition="balances.length">
+                            <field name="personName">
+                                <conditional-field condition="canSeeLedger" title="Employee">
+                                    <link url="." text="${personName}" link-type="anchor"
+                                            parameter-map="{partyRelationshipId:partyRelationshipId, leaveTypeEnumId:leaveTypeEnumId, asOfDate:(asOfDate || null)}"/>
+                                </conditional-field>
+                                <default-field title="Employee"><display/></default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                            <field name="policyName"><default-field title="Policy"><display/></default-field></field>
+                            <field name="opening" align="right"><default-field title="Opening"><display format="#,##0.##"/></default-field></field>
+                            <field name="granted" align="right"><default-field title="Granted"><display format="#,##0.##"/></default-field></field>
+                            <field name="accrued" align="right"><default-field title="Accrued"><display format="#,##0.##"/></default-field></field>
+                            <field name="consumed" align="right"><default-field title="Taken"><display format="#,##0.##"/></default-field></field>
+                            <field name="expired" align="right"><default-field title="Expired"><display format="#,##0.##"/></default-field></field>
+                            <field name="adjusted" align="right"><default-field title="Adjusted"><display format="#,##0.##"/></default-field></field>
+                            <field name="balance" align="right"><default-field title="Balance"><display format="#,##0.##"/></default-field></field>
+                            <field name="pending" align="right"><default-field title="Pending"><display format="#,##0.##"/></default-field></field>
+                            <field name="available" align="right">
+                                <default-field title="Available"><display text="${available} ${unitText.toLowerCase()}"/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="leaveTypeText"/></column>
+                                <column><field-ref name="available"/><field-ref name="policyName"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!balances.length &amp;&amp; filtered" text="No balance matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!balances.length &amp;&amp; !filtered"
+                                text="No balance yet: balances start when a leave policy is assigned or leave is allocated."/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="Movements" condition="ledgerShown">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Movements of ${ledger.personName}"/>
+                            <box-toolbar>
+                                <link url="." text="All balances" icon="sym_o_close" link-type="anchor" parameter-map="{asOfDate:(asOfDate || null)}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="Movements" list="entries" skip-form="true" paginate="true" show-csv-button="true"
+                                        condition="entries.length">
+                                    <field name="effectiveDateText"><default-field title="Date"><display/></default-field></field>
+                                    <field name="entryTypeText">
+                                        <default-field title="Movement">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${entryColors[entryTypeEnumId] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(entryTypeText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: entryTypeText})}]]></text>
+                                                <text type="html">${entryTypeText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                                    <field name="amount" align="right"><default-field title="Amount"><display format="#,##0.##"/></default-field></field>
+                                    <field name="balanceAfter" align="right"><default-field title="Balance after"><display format="#,##0.##"/></default-field></field>
+                                    <field name="unitText"><default-field title="Unit"><display/></default-field></field>
+                                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                                    <field name="postedDateText"><default-field title="Posted"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="effectiveDateText"/><field-ref name="sourceText"/></column>
+                                        <column><field-ref name="amount"/><field-ref name="entryTypeText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!entries.length" text="No movement by this date."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="HistoricalLeave" condition="historical.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Historical leave"/>
+                                    <box-body-nopad>
+                                        <label type="p" style="q-px-md q-pt-sm text-caption m-muted"
+                                                text="Recorded before People: read only, and not counted in any balance."/>
+                                        <form-list name="Historical" list="historical" skip-form="true" paginate="false">
+                                            <field name="fromDay"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDay"><default-field title="Through"><display/></default-field></field>
+                                            <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                                            <field name="approvedText"><default-field title="Approval"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fromDay"/><field-ref name="leaveTypeText"/></column>
+                                                <column><field-ref name="approvedText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

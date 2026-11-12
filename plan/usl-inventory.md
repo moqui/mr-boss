@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P10, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P11, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -580,6 +580,16 @@ the screens that call it.
 | RateServices | migrate#ProductionCostRates | (a data update) | data/ProductionShopFloorData.xml: Manufacturing's RaprProductionCost rows moved to RaprCost on a load (People P10) |
 | TimesheetServices | find#WeeksToSubmit | Today's "my week not submitted"; SelfService's missing-week card | mantle.work.ProjectServices.get#ProjectTodayItems (Projects' Today); ironstone.people.ContextServices.get#TodayItems (People's Today, People and Commons roots); PeopleServices.get#SelfService's weeksToSubmit (Shared/PeopleSelfService) (People P10) |
 | TimesheetServices | get#LineReports | People/Time/Timesheets (Missing); People/Time/MyTime and TimeEntries (the person pickers) | find#Timesheets' missing list (People/MyTeam's last week, People/Home's Weeks not submitted, Timesheets' Missing: the reports who keep time, keeperIdList, P10's review); People/MyTeam (keeperIdList: last week only for those who keep time); ironstone.projects.TimeServices.get#TimePeople (People P10) |
+| LeaveServices | find#Policies | People/Time/LeavePolicies (designed under People/Settings) | People/Time/LeavePolicies (Policies) (People P11) |
+| LeaveServices | get#Policy | People/Time/LeavePolicyDetail (designed under People/Settings) | People/Time/LeavePolicyDetail (the header, Policy terms, Accrual and carry-over, Assignments, Blocked days); People/Time/LeaveAllocations (the policy chosen) (People P11) |
+| LeaveServices | store#Policy | People/Time/LeavePolicies; People/Time/LeavePolicyDetail | People/Time/LeavePolicies (NewPolicy); People/Time/LeavePolicyDetail (Edit terms, Close policy) (People P11) |
+| LeaveServices | store#AccrualRule | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Accrual and carry-over: Add step, Change, End) (People P11) |
+| LeaveServices | assign#Policy | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Assign: an employee, a department's or the employer's; End for an employee) (People P11) |
+| LeaveServices | store#BlockedInterval | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Blocked days: Add blocked days, Cancel) (People P11) |
+| LeaveServices | preview#Allocation, allocate#Leave | People/Time/LeaveAllocations (designed under People/Settings) | People/Time/LeaveAllocations (AllocationPreview, the results, Allocate) (People P11) |
+| LeaveServices | get#Balances, find#Ledger | People/Time/LeaveBalances | People/Time/LeaveBalances (BalancesAndLedger: the balances, an employee's movements with the CSV export and their historical leave) (People P11) |
+| LeaveServices | get#MyBalances | People/SelfService | Shared/PeopleSelfService (My leave balances); the Assistant's people_my_leave_balances tool (People P11) |
+| LeaveServices | run#Accrual, run#AccrualJob, accrue#Assignment | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Run accrual); the run_LeaveAccrual ServiceJob (People P11) |
 
 ## Ledger (81 services)
 

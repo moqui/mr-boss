@@ -5300,4 +5300,49 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_PAYROLL_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- impl-people P11 (design-people §7 LeavePolicies, LeavePolicyDetail, LeaveAllocations and LeaveBalances, §1.2, §1.4): HR's
+        leave editors (policies, a policy's detail and allocations) under Time & leave rather than Settings, as Holidays (the user's
+        call of Nov 11 put HR's own editors out of Settings): denied to the root user group, opened to the HR officers (ALWAYS) and to
+        the People administrator and ADMIN through their ALWAYS on the root. Leave balances are HR's and the managers' (an HR
+        reader's employers' employees, a manager's live reports, balances alone). Mantle's LeaveServices check PEOPLE_HR_VIEW,
+        PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and PEOPLE_SELF_SERVICE and the employer or line again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE" description="People leave policies and allocations">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(LeavePolicies|LeavePolicyDetail|LeaveAllocations)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- a self-service employee is not in the root user group; denied here too, so a grant of the Time area to them (their own
+            time and leave) never opens HR's editors -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_BALANCES" description="People leave balances">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/LeaveBalances.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P11: an employee's own leave balances, on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is
+        non-inheritable, so the service it calls needs its own) and as the Assistant's tool: get#MyBalances, which takes no party and
+        answers the caller's own employments alone (PEOPLE_SELF_SERVICE) -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_SELF" description="People own leave balances">
+        <artifacts artifactName="mantle.humanres.LeaveServices.get#MyBalances" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P11 (design-people §1.4 Assist: a self-scope read no screen of the Assistant's covers; exposeMcp N, as no HR service is
+        offered to MCP): the user's own leave balances. The tool is get#MyBalances, the self-scope form of get#Balances, since a tool's
+        parameters are the model's to fill and get#Balances answers an HR officer's or a manager's question about other people. -->
+    <moqui.agent.AgentToolExposure toolName="people_my_leave_balances" serviceName="mantle.humanres.LeaveServices.get#MyBalances"
+            title="My leave balances"
+            description="get#MyBalances: the signed-in user's own leave balances (never anyone else's), for each of their employments and leave types: the policy, what was granted, accrued, taken, expired and adjusted, the balance, what is pending and what is available, in days or hours; narrow by leaveTypeEnumId or give asOfDate for a past or future date. No leave reason is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
 </entity-facade-xml>
