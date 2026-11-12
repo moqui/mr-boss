@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     person and a day of the week. Each row: the person, the week, the status chip, hours, billable, working hours, the difference,
     when submitted and the approvers; it opens TimesheetDetail (a missing week opens the person's week in MyTime). The bulk
     decisions on the selected rows (TimesheetBulk: Approve, Return with a reason; RemindMissing: Remind), each on its own. The
-    tray's Approvals group decides the same weeks through the TimesheetApproval topic (design §8 Context passed). -->
+    tray's Approvals group decides the same weeks through the TimesheetApproval topic (design §8 Context passed). Mounted under People
+    too (People/Time/Timesheets, impl-people P10): the rows' links follow the mount (appRoot). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Timesheets" default-menu-index="2" menu-image="sym_o_assignment" menu-image-type="icon">
 
@@ -43,7 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const out = ec.service.sync().name('ironstone.projects.TimeServices.find#TimesheetRows').parameters({list: list || null, partyId: partyId || null,
+            const out = ec.service.sync().name('ironstone.projects.TimeServices.find#TimesheetRows').parameters({list: list || null, partyId: partyId || null, appRoot: appRoot || null,
                 weekDate: weekDate || null}).call() || {}
             ec.message.clearErrors()
             list = out.list || 'mine'

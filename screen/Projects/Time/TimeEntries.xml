@@ -90,7 +90,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
-    <transition name="import"><default-response url="//Projects/Time/Import"/></transition>
+    <transition name="import"><default-response url="//${appRoot == 'People' ? 'People' : 'Projects'}/Time/Import"/></transition>
 
     <actions>
         <script><![CDATA[
@@ -114,7 +114,8 @@ along with this software (see the LICENSE.md file). If not, see
                 clientInvoiced: clientInvoiced || null, workerInvoiced: workerInvoiced || null, sheetStatus: sheetStatus || null, text: text || null,
                 dateFrom: dateFrom, dateThru: dateThru}
             const out = ec.service.sync().name('ironstone.projects.TimeServices.find#TimeEntryRows').parameters(Object.assign({}, findParameters, {rootWorkEffortId: fixedProjectId,
-                orderByField: orderByField || null, pageIndex: Number(pageIndex || 0) || 0, pageSize: 50, pageNoLimit: ec.web?.parameters?.pageNoLimit === 'true'})).call() || {}
+                orderByField: orderByField || null, pageIndex: Number(pageIndex || 0) || 0, pageSize: 50, pageNoLimit: ec.web?.parameters?.pageNoLimit === 'true',
+                appRoot: appRoot || null})).call() || {}
             ec.message.clearErrors()
             list = out.list || list
             entryRows = Array.from(out.rowList || [])
@@ -137,7 +138,7 @@ along with this software (see the LICENSE.md file). If not, see
             const printDates = {}
             if (dateFrom != null) printDates.entryDate_from = ec.l10n.format(dateFrom, 'yyyy-MM-dd')
             if (dateThru != null) printDates.entryDate_thru = ec.l10n.format(new Date((dateThru instanceof Date ? dateThru.getTime() : Number(String(dateThru))) - 1), 'yyyy-MM-dd')
-            teamPrintUrl = '/apps/Projects/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(Object.assign({list: list}, find, printDates, projectFixed ? {workEffortId: fixedProjectId} : {}))
+            teamPrintUrl = '/apps/' + (appRoot === 'People' ? 'People' : 'Projects') + '/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(Object.assign({list: list}, find, printDates, projectFixed ? {workEffortId: fixedProjectId} : {}))
                     .filter(([key, value]) => value != null && value !== '' && key !== 'orderByField' && !key.startsWith('entryDate_p'))
                     .map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label), icon: icon, on: key === list,
@@ -151,7 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
             offeredTypeOptions = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').call()?.offeredList || [])
                     .map((type) => ({key: type.enumId, text: type.label}))
             canDelete = entryRows.some((row) => row.canEdit)
-            isMoneyManager = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
+            isMoneyManager = ec.user.hasPermission('TIME_ENTRY_RATE')
             newEntryParams = projectFixed ? {workEffortId: fixedProjectId, itemId: fixedProjectId} : {}
             const empty = {thisWeek: 'No time this week', lastWeek: 'No time last week', thisMonth: 'No time this month', unbilled: 'No unbilled time',
                 noItem: 'No time off the work items', all: 'No time entries'}

@@ -516,4 +516,23 @@ along with this software (see the LICENSE.md file). If not, see
             startTime="09:00" endTime="17:30" breakMinutes="30" fromDate="2026-01-01 00:00:00"/>
     <mantle.humanres.schedule.WorkingScheduleLine workingScheduleLineId="BOSS_PPL_WS_STORE_6" workingScheduleId="BOSS_PPL_WS_STORE" isoDay="6"
             startTime="10:00" endTime="14:00" breakMinutes="0" fromDate="2026-01-01 00:00:00"/>
+    <!-- People P10 (impl-people P10, F57; design-people §13 Timesheets): Retail's timesheet policy is line, so a line manager approves
+        a report's week (Hannah Tomas's) under People's Timesheets without Projects. Services keeps the default project policy:
+        Projects' demo keeps time there (Joe and Bob Developer, Ana Designer under john.doe's projects), and its specs read that a
+        week's approvers are the managers of the projects its time is on (Joe has a line manager, Bob), so line there would change
+        Projects' behavior. A deployment chooses its policy in Projects' settings. Retail's policy also says every employee keeps a
+        weekly timesheet (rq; the user's call of Nov 11, 2026), so a Retail manager's My team shows each report's last week. -->
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="ProjTimesheetPolicy"
+            settingValue="{&quot;ap&quot;:&quot;line&quot;,&quot;rq&quot;:&quot;Y&quot;}"/>
+
+    <!-- impl-people P11 (design-people §7): Retail's annual leave policy in days, accruing 1.75 days a month (2 from five years of
+        service) up to 30, with 5 days carried into a new year. Nobody is under it in the demo, so no balance exists until HR assigns
+        it from LeavePolicyDetail (the acceptance PeopleLeavePoliciesUsable makes its own policy). -->
+    <mantle.humanres.leave.LeavePolicy leavePolicyId="BOSS_PPL_LP_ANNUAL" policyName="Annual leave" organizationPartyId="ORG_ZIZI_RETAIL"
+            leaveTypeEnumId="PltAnnual" unitEnumId="LuDays" isPaid="Y" allocationRequired="Y" negativeLimit="0" evidenceRequired="N"
+            accrualFrequencyEnumId="LafMonthly" fromDate="2026-01-01 00:00:00" description="Paid annual leave of Retail's employees"/>
+    <mantle.humanres.leave.LeaveAccrualRule leaveAccrualRuleId="BOSS_PPL_LP_ANNUAL_1" leavePolicyId="BOSS_PPL_LP_ANNUAL" serviceMonthsFrom="0"
+            amount="1.75" capAmount="30" carryLimit="5" roundingIncrement="0.25" fromDate="2026-01-01 00:00:00"/>
+    <mantle.humanres.leave.LeaveAccrualRule leaveAccrualRuleId="BOSS_PPL_LP_ANNUAL_2" leavePolicyId="BOSS_PPL_LP_ANNUAL" serviceMonthsFrom="60"
+            amount="2" capAmount="30" carryLimit="5" roundingIncrement="0.25" fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>

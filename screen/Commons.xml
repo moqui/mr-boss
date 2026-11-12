@@ -17,6 +17,27 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Commons" menu-image="sym_o_hub" menu-image-type="icon">
 
+    <!-- The record-link resolver of the notification links (impl-people P10, the user's call of Nov 11, 2026: the timesheet topics):
+        a record (recordEntityName or docType, and id) opens where ironstone.commons.PaletteServices.get#RecordLink sends this user,
+        People's or Projects' screen for whichever they may open, as the tray does; with no screen for them, the Notifications
+        center. A notification's link is its /apps path (a browser's GET there runs the transition and redirects to the /qapps
+        screen); the tray resolves the same link itself (CommonsServices.decorate#Notifications). Every BOSS user opens Commons;
+        the screen it goes to checks the user again. -->
+    <transition name="openRecord" method="get" read-only="true">
+        <parameter name="docType"/>
+        <parameter name="recordEntityName"/>
+        <parameter name="id"/>
+        <actions>
+            <set field="recordUrl" from="null"/>
+            <if condition="id">
+                <service-call name="ironstone.commons.PaletteServices.get#RecordLink" out-map="recordLink" ignore-error="true"
+                        in-map="{docType:(docType || null), recordEntityName:(recordEntityName || null), id:id}"/>
+                <script>ec.message.clearErrors(); recordUrl = recordLink?.url || null</script>
+            </if>
+        </actions>
+        <default-response url="${recordUrl || '/qapps/Commons/Notifications'}" url-type="plain"/>
+    </transition>
+
     <always-actions>
         <set field="appRoot" value="Commons"/>
 

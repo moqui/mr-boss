@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="partyId"/>
     <parameter name="weekDate"/>
 
-    <transition name="workItemDetail"><default-response url="../../WorkItems/WorkItemDetail"/></transition>
+    <transition name="workItemDetail"><default-response url="//Projects/WorkItems/WorkItemDetail"/></transition>
     <!-- Reuse the entry dialog and retain this week's context on its fixed MyTime return. -->
     <transition name="editEntry"><default-response url="../TimeEntries/EditEntry">
         <parameter name="timeEntryId"/><parameter name="myTimeWeek"/><parameter name="myTimePartyId"/>
@@ -87,7 +87,7 @@ along with this software (see the LICENSE.md file). If not, see
     <actions><script><![CDATA[
         weekFound = false; dayList = []
         const L = (text) => ec.l10n.localize(text)
-        const out = ec.service.sync().name('ironstone.projects.TimeServices.get#MyWeek').parameters({partyId: partyId || null, weekDate: weekDate || null}).call() || {}
+        const out = ec.service.sync().name('ironstone.projects.TimeServices.get#MyWeek').parameters({partyId: partyId || null, weekDate: weekDate || null, appRoot: appRoot || null}).call() || {}
         ec.message.clearErrors()
         const week = out.myWeek
         if (!week) return

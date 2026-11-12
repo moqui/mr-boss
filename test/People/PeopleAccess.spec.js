@@ -24,10 +24,16 @@
 // directory reader refused with the same parameters, Services' template and holder refused to Retail's HR), the employee import's
 // mount HR's. P8: the self-service employee's context their own (no People capability but self-service) and their self-service
 // opened under People by its own grant while every other People screen is refused them; My team the managers' (the directory
-// reader refused it), and the managers' menu. P9: Time & leave HR's and the managers' (the reader's menu without it), its Holidays HR's
-// (the manager refused it); a working schedule changed by an HR editor of the employer (the directory reader refused with the same
-// parameters, Services' schedule refused to Retail's HR), WorkingSchedules' one html render (the HR officer's), the capability
-// schedules.
+// reader refused it), and the managers' menu. P9: Time & leave's working schedules HR's and the managers' (the reader's Time
+// group without them), its Holidays HR's (the manager refused it); a working schedule changed by an HR editor of the employer
+// (the directory reader refused with the same parameters, Services' schedule refused to Retail's HR), WorkingSchedules' one html
+// render (the HR officer's), the capability schedules. P10: Time & leave opened to the self-service employee by its own grant
+// (Payroll and Employees still refused them), Payroll the payroll groups' (the HR officer refused Rates; the Payroll capability;
+// the payroll operator's menu and the Time group), and the employee's context linking their own My time.
+// P11: Leave policies and Allocations HR's, Leave balances HR's and the managers' (the manager refused Leave policies, the
+// self-service employee refused all three); a leave policy changed by an HR editor of the employer (the directory reader refused
+// with the same parameters and the screen, Services' policy refused to Retail's HR), LeavePolicyDetail's one html render (the HR
+// officer's), the employee's own balances through get#MyBalances alone (get#Balances not theirs), and the two leave choices.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -115,7 +121,7 @@ feature(
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
-                Object.keys(employee.sharedLinks || {}).join() !== "SelfService" ||
+                Object.keys(employee.sharedLinks || {}).join() !== "SelfService,Time/MyTime" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -169,15 +175,21 @@ feature("the People menu and keys follow the groups; the launcher shows People t
         // P8: My team is the manager's
         const manager = shell(users.manager, true).names
         if (JSON.stringify(manager) !== JSON.stringify(ids.managerMenu)) problems.push(`the manager's menu: ${manager}`)
-        // P9: Time & leave is HR's and the managers', its Holidays HR's alone; not the directory reader's
+        // P9 and P10: Time & leave is every People user's, its time screens Projects' mounted; its working schedules HR's and the
+        // managers', its Holidays HR's alone; Payroll is the payroll groups'
         const readerMenu = shell(users.reader, true).names
         if (JSON.stringify(readerMenu) !== JSON.stringify(ids.staffMenu)) problems.push(`the reader's menu: ${readerMenu}`)
-        const time = shell(users.hr, true, "Time/WorkingSchedules", "Time")
-        if (JSON.stringify(time.names) !== JSON.stringify(ids.hrTimeMenu))
-            problems.push(`the HR officer's Time group: ${time.status} ${time.names}`)
-        const managerTime = shell(users.manager, true, "Time/WorkingSchedules", "Time")
-        if (JSON.stringify(managerTime.names) !== JSON.stringify(ids.managerTimeMenu))
-            problems.push(`the manager's Time group: ${managerTime.status} ${managerTime.names}`)
+        const payroll = shell(users.payroll, true).names
+        if (JSON.stringify(payroll) !== JSON.stringify(ids.payrollMenu)) problems.push(`the payroll operator's menu: ${payroll}`)
+        for (const [user, menu, label] of [
+            [users.hr, ids.hrTimeMenu, "the HR officer's"],
+            [users.manager, ids.managerTimeMenu, "the manager's"],
+            [users.reader, ids.timeMenu, "the reader's"]
+        ]) {
+            const time = shell(user, true, "Time/Timesheets", "Time")
+            if (JSON.stringify(time.names) !== JSON.stringify(menu))
+                problems.push(`${label} Time group: ${time.status} ${time.names}`)
+        }
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
@@ -216,8 +228,10 @@ const capabilityNames = [
     "settings",
     // P6: the hire and employment change wizards, the HR officer's
     "employment",
-    // P9: Time & leave (working schedules), the HR officers' and the managers'
-    "schedules"
+    // P9: Time & leave's working schedules, the HR officers' and the managers'
+    "schedules",
+    // P10: the Payroll area (Rates), the payroll groups'
+    "payroll"
 ]
 // design §1.1's table
 const capabilityUsers = [
@@ -227,13 +241,23 @@ const capabilityUsers = [
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
     {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment", "schedules"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
-    {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff"]},
-    {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff"]},
+    {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff", "payroll"]},
+    {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff", "payroll"]},
     {user: users.develop, granted: ["developView", "developEdit", "staff"]},
     {user: users.caseHandler, granted: ["caseHandle", "staff"]},
     {
         user: users.admin,
-        granted: ["configure", "payrollView", "payrollEdit", "allOrganizations", "staff", "settings", "employment", "schedules"]
+        granted: [
+            "configure",
+            "payrollView",
+            "payrollEdit",
+            "allOrganizations",
+            "staff",
+            "settings",
+            "employment",
+            "schedules",
+            "payroll"
+        ]
     },
     {user: "people.spec.editonly", granted: ["hrEdit"]},
     {user: users.system, granted: capabilityNames}
@@ -803,6 +827,114 @@ feature(
         },
         then({codes, problems}) {
             codes == {reader: "PERMISSION_DENIED", hr: "accepted", hrOther: "RECORD_UNAVAILABLE"}
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "Time & leave opens to the self-service employee by its own grant and nothing else of People; Payroll is the payroll groups', the HR officer refused it",
+    {
+        when() {
+            const problems = []
+            // P10: the employee keeps their own week under People (My time's one html render); Payroll, Employees and Time & leave's
+            // working schedules and Holidays (P9's, HR's and the managers') stay refused
+            const myTime = screenRefusal(users.employee, "Time/MyTime")
+            if (myTime) problems.push(`the employee is refused My time: ${myTime}`)
+            for (const path of ["Payroll/Rates", "Employees", "Time/WorkingSchedules", "Time/HolidayCalendars"]) {
+                const refused = screenRefusal(users.employee, path)
+                if (!unauthorized(refused)) problems.push(`the employee opens ${path}: ${refused || "opened"}`)
+            }
+            // Payroll's Rates: the payroll operator's, the HR officer refused with the same parameters (PeopleTime renders it)
+            const hrRates = screenRefusal(users.hr, "Payroll/Rates", {purpose: "RaprVendor"})
+            if (!unauthorized(hrRates)) problems.push(`the HR officer opens Rates: ${hrRates || "opened"}`)
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "leave policies are HR's of the employer: Retail's annual leave changed by Retail's HR officer, the directory reader refused with the same parameters and the screen, Services' policy refused to Retail's HR; Leave balances HR's and the managers'; the employee's own balances alone",
+    {
+        when() {
+            const L = "mantle.humanres.LeaveServices."
+            const as = (user, service, parameters) => asUser(user, () => system(() => refusal(L + service, parameters)))
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const revision = leavePolicyId => system(() => invoke(L + "get#Policy", {leavePolicyId})).policy.revision
+            // a Services policy, for Retail's HR to be refused
+            const other = system(() =>
+                invoke(L + "store#Policy", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    policyName: "Services access spec leave",
+                    leaveTypeEnumId: "PltAnnual"
+                })
+            ).leavePolicyId
+            const same = {
+                leavePolicyId: ids.leavePolicyId,
+                expectedRevision: revision(ids.leavePolicyId),
+                policyName: "Annual leave"
+            }
+            const codes = {
+                reader: code(as(users.reader, "store#Policy", same)),
+                hr: code(as(users.hr, "store#Policy", same)),
+                hrOther: code(
+                    as(users.hr, "store#Policy", {
+                        leavePolicyId: other,
+                        expectedRevision: revision(other),
+                        policyName: "Not mine"
+                    })
+                ),
+                // the employee's own balances through get#MyBalances (its own grant); get#Balances is not theirs to call
+                employeeOwn: code(asUser(users.employee, () => refusal(L + "get#MyBalances", {}))),
+                employeeStaff: /RECORD_UNAVAILABLE|is not authorized/.test(
+                    asUser(users.employee, () => refusal(L + "get#Balances", {partyRelationshipId: ids.otherEmploymentId}))
+                )
+            }
+            const problems = []
+            // the HR officer's one html render of LeavePolicyDetail: the demo policy's steps and the primary
+            const detail = asUser(users.hr, () => page("Time/LeavePolicyDetail", {leavePolicyId: ids.leavePolicyId}, "html"))
+            if (
+                detail.status != 200 ||
+                detail.errors.length ||
+                !detail.output.includes("Accrual and carry-over") ||
+                !detail.output.includes("1.75 days a month") ||
+                !detail.output.includes("Assign")
+            )
+                problems.push(`the HR officer's LeavePolicyDetail: ${detail.status} ${detail.errors}`)
+            for (const user of [users.reader, users.manager, users.employee]) {
+                const refused = screenRefusal(user, "Time/LeavePolicies")
+                if (!unauthorized(refused)) problems.push(`${user} opens LeavePolicies: ${refused || "opened"}`)
+            }
+            // the self-service employee opens Time & leave by its own grant (P10): HR's allocations and Leave balances stay refused
+            // to them (their own balances are SelfService's)
+            for (const path of ["Time/LeaveAllocations", "Time/LeaveBalances"]) {
+                const refused = screenRefusal(users.employee, path)
+                if (!unauthorized(refused)) problems.push(`the employee opens ${path}: ${refused || "opened"}`)
+            }
+            const balances = screenRefusal(users.manager, "Time/LeaveBalances")
+            if (balances) problems.push(`the manager's LeaveBalances: ${balances}`)
+            // the two leave choices, each with a selected value off the page
+            const options = (choice, selected) =>
+                asUser(users.hr, () => invoke(choices, {choice, term: "zzz", selected})).options.map(option => option.value)
+            if (!options("leavePolicies", ids.leavePolicyId).includes(ids.leavePolicyId))
+                problems.push("leavePolicies: no selected")
+            if (!options("leaveTypes", "PltUnpaid").includes("PltUnpaid")) problems.push("leaveTypes: no selected")
+            if (asUser(users.hr, () => invoke(choices, {choice: "leavePolicies"})).options.some(option => option.value === other))
+                problems.push("the HR officer is offered Services' policy")
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    reader: "PERMISSION_DENIED",
+                    hr: "accepted",
+                    hrOther: "RECORD_UNAVAILABLE",
+                    employeeOwn: "accepted",
+                    employeeStaff: true
+                }
             problems.join("\n") == ""
         }
     }

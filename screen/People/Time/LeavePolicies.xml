@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Leave policies (design-people §7 LeavePolicies; style-guide §3.2 List; impl-people P11): the leave policies of the
+    employers an HR officer reads, from mantle.humanres.LeaveServices.find#Policies: each with its employer, leave type, unit, how it
+    accrues, dates, how many employees it has now or to come and its state; each opens LeavePolicyDetail. An HR editor
+    (PEOPLE_HR_EDIT) starts a dated policy (New policy, the one primary: name, employer, leave type, unit, accrual frequency, start);
+    its terms, accrual steps, assignments and blocked days are set on the policy. A closed policy takes no new assignment and keeps
+    what was posted. HR's (BOSS_PPL_LEAVE), under Time rather than Settings, as Holidays. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Leave policies" default-menu-index="10" menu-image="sym_o_policy" menu-image-type="icon">
+    <parameter name="term"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="leaveTypeEnumId"/>
+    <parameter name="includeEnded"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new policy: Mantle checks the HR editor, the employer, the leave type, the unit and the frequency -->
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.store#Policy" out-map="stored"
+                    in-map="{organizationPartyId:(organizationPartyId || null), policyName:(policyName || null), leaveTypeEnumId:(leaveTypeEnumId || null),
+                        unitEnumId:(unitEnumId || null), accrualFrequencyEnumId:(accrualFrequencyEnumId || null), isPaid:(isPaid || 'N'),
+                        allocationRequired:(allocationRequired || 'N'), fromDate:(fromDate || null), description:(description || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Leave policy created</message></if>
+        </actions>
+        <default-response url="../LeavePolicyDetail"><parameter name="leavePolicyId" from="stored?.leavePolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.hrView &amp;&amp; can.hrEdit)"/>
+        <service-call name="mantle.humanres.LeaveServices.find#Policies" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), organizationPartyId:(organizationPartyId || null), leaveTypeEnumId:(leaveTypeEnumId || null),
+                    includeEnded:(includeEnded == 'Y'), pageIndex:(pageIndex || 0), pageSize:(pageSize || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="policiesFound" from="!!found?.policies"/>
+        <set field="policies" from="found?.policies || []"/>
+        <set field="policiesCount" from="found?.policiesCount || 0"/>
+        <set field="policiesPageIndex" from="found?.policiesPageIndex || 0"/>
+        <set field="policiesPageSize" from="found?.policiesPageSize || 20"/>
+        <set field="policiesPageMaxIndex" from="found?.policiesPageMaxIndex || 0"/>
+        <set field="policiesPageRangeLow" from="found?.policiesPageRangeLow || 0"/>
+        <set field="policiesPageRangeHigh" from="found?.policiesPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(term || organizationPartyId || leaveTypeEnumId || includeEnded == 'Y')"/>
+        <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null, leaveTypeEnumId: leaveTypeEnumId || null,
+                includeEnded: includeEnded || null}"/>
+        <set field="newPolicy" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+                unitEnumId: 'LuDays', isPaid: 'Y', allocationRequired: 'Y'}"/>
+        <set field="stateColors" from="{current: 'positive', future: 'primary', ended: 'grey-8'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Leave policies" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewPolicyDialog" button-text="New policy" icon="sym_o_add" type="primary" width="720"
+                        title="Start a leave policy" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                    <label type="p" text="A policy is an employer's rules for one kind of leave. Add how it accrues on the policy, then assign it to employees from a date."/>
+                    <form-single name="NewPolicy" transition="storePolicy" map="newPolicy">
+                        <field name="policyName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'employers', selected:newPolicy.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="leaveTypeEnumId">
+                            <default-field title="Leave type">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'leaveTypes'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="unitEnumId">
+                            <default-field title="Unit" tooltip="Every balance of the leave type is kept in it">
+                                <radio><option key="LuDays" text="Days"/><option key="LuHours" text="Hours"/></radio>
+                            </default-field>
+                        </field>
+                        <field name="accrualFrequencyEnumId">
+                            <default-field title="Accrues" tooltip="Empty: by allocations only">
+                                <drop-down allow-empty="true">
+                                    <option key="LafMonthly" text="Monthly"/>
+                                    <option key="LafQuarterly" text="Quarterly"/>
+                                    <option key="LafYearly" text="Yearly"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="isPaid"><default-field title="Paid leave"><check><option key="Y" text=" "/></check></default-field></field>
+                        <field name="allocationRequired">
+                            <default-field title="Needs an entitlement" tooltip="A request without one is blocked, not taken at no cost">
+                                <check><option key="Y" text=" "/></check></default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                        <field name="description"><default-field title="Description"><text-line size="50"/></default-field></field>
+                        <field name="submitButton"><default-field title="Create policy"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="policyName"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-row><field-ref name="leaveTypeEnumId"/><field-ref name="unitEnumId"/></field-row>
+                            <field-row><field-ref name="accrualFrequencyEnumId"/><field-ref name="fromDate"/></field-row>
+                            <field-row><field-ref name="isPaid"/><field-ref name="allocationRequired"/></field-row>
+                            <field-ref name="description"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!policiesFound">
+            <widgets>
+                <label text="Leave policies are open to HR. They are not open to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="PolicyRows" condition="policiesFound">
+            <widgets>
+                <form-single name="FindPolicies" transition="." map="findValues">
+                    <field name="term"><default-field title="Name"><text-find size="20" hide-options="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="leaveTypeEnumId">
+                        <default-field title="Leave type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'leaveTypes', selected:leaveTypeEnumId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeEnded"><default-field title="Closed too"><check><option key="Y" text=" "/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="term"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="leaveTypeEnumId"/>
+                            <field-ref name="includeEnded"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="PolicyList" list="policies" skip-form="true" paginate="true" select-columns="true" condition="policies.length">
+                            <field name="policyName">
+                                <default-field title="Policy">
+                                    <link url="${sharedLinks['Time/LeavePolicyDetail']}" text="${policyName}" link-type="anchor"
+                                            parameter-map="{leavePolicyId:leavePolicyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                            <field name="unitText"><default-field title="Unit"><display/></default-field></field>
+                            <field name="accrualText"><default-field title="Accrual"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="assignedCount" align="right"><default-field title="Employees"><display format="#,##0"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="policyName"/><field-ref name="leaveTypeText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="assignedCount"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!policies.length &amp;&amp; filtered" text="No policy matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!policies.length &amp;&amp; !filtered"
+                                text="No leave policy is defined yet.${canEdit ? ' Start one with New policy.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     screen's (GroupPrepare, GroupMissing, GroupHeader, GroupProfileBox, GroupCapabilitiesBox and GroupPreferencesBox, with
     AddMember and GroupMembers extended here), and grantItems, storeGroup, applyGrants and storePreference are taken in
     from it. The System screen's part for the instance administrator (the group's records changed directly) is not here:
-    its transitions do not exist on this route. Every change the framework refuses (an unregistered bundle, a sealed
+    its transitions do not exist on this route; a group that is neither a registered bundle nor a custom group has the
+    System screen's "Open in System" link in its header, to that page. Every change the framework refuses (an unregistered bundle, a sealed
     permission the user does not hold, a privileged group the user is not in, a stale revision, the last administration
     path) is shown as its reason, never written. For the access administrator and the administrator (BOSS_ADM_ACCESS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"

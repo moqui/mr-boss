@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Leave policy (design-people §7 LeavePolicyDetail; style-guide §3.3 Detail and §3.9 Settings; impl-people P11): one
+    policy, from mantle.humanres.LeaveServices.get#Policy: the record header (name, employer, leave type, unit, accrual, state),
+    Policy terms (paid, entitlement needed, negative limit, evidence, frequency), Accrual and carry-over (its dated steps: months of
+    service, amount a period, cap, carry-over limit, rounding), Assignments (the employees under it, from when, their opening
+    balance) and Blocked days (blocked or mandatory days of the employer, a department or a leave type, whether an approver may
+    override, why). An HR editor of the employer assigns it from a date (Assign, the one primary, assign#Policy: named employees, a
+    department's or the employer's, each refusal named), changes its terms (audited, never rewriting posted entries), adds, changes
+    and ends steps from a date (store#AccrualRule: a posted period keeps its entry), adds and cancels blocked days
+    (store#BlockedInterval: approved leave is not cancelled), runs the accrual (run#Accrual: what is due posts once, a second run
+    posts nothing), opens Allocations for it and closes it (no new assignment from then; posted entries kept). Each write names the
+    revision read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Leave policy" default-menu-include="false">
+    <parameter name="leavePolicyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the policy's terms, or its close: Mantle checks the HR editor, the revision read and what was posted -->
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.store#Policy"
+                    in-map="{leavePolicyId:leavePolicyId, expectedRevision:(expectedRevision || null), policyName:(policyName ?? null),
+                        description:(description ?? null), isPaid:(terms == 'true' ? (isPaid || 'N') : null),
+                        allocationRequired:(terms == 'true' ? (allocationRequired || 'N') : null),
+                        evidenceRequired:(terms == 'true' ? (evidenceRequired || 'N') : null), negativeLimit:(negativeLimit ?? null),
+                        accrualFrequencyEnumId:(accrualFrequencyEnumId ?? null), unitEnumId:(unitEnumId || null), end:(end == 'true'),
+                        thruDate:(thruDate || null), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${end == 'true' ? 'Policy closed' : 'Policy saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="leavePolicyId"/></default-response>
+        <error-response url="."><parameter name="leavePolicyId"/></error-response>
+    </transition>
+    <!-- an accrual step added, changed or ended from a date -->
+    <transition name="storeRule">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.store#AccrualRule"
+                    in-map="{leavePolicyId:leavePolicyId, expectedRevision:(expectedRevision || null), leaveAccrualRuleId:(leaveAccrualRuleId || null),
+                        serviceMonthsFrom:(serviceMonthsFrom ?? null), amount:(amount ?? null), capAmount:(capAmount ?? null),
+                        carryLimit:(carryLimit ?? null), roundingIncrement:(roundingIncrement ?? null), fromDate:(fromDate || null),
+                        end:(end == 'true'), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${end == 'true' ? 'Accrual step ended' : (leaveAccrualRuleId ? 'Accrual step changed' : 'Accrual step added')}</message></if>
+        </actions>
+        <default-response url="."><parameter name="leavePolicyId"/></default-response>
+        <error-response url="."><parameter name="leavePolicyId"/></error-response>
+    </transition>
+    <!-- employees put under the policy from a date (one, a department's or the employer's), or one assignment ended -->
+    <transition name="assignPolicy">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.assign#Policy" out-map="assigned"
+                    in-map="{leavePolicyId:leavePolicyId, partyRelationshipId:(partyRelationshipId || null), departmentPartyId:(departmentPartyId || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), openingAmount:(openingAmount || null), reason:(reason || null),
+                        leavePolicyAssignmentId:(leavePolicyAssignmentId || null), expectedRevision:(expectedRevision || null), end:(end == 'true')}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError() && assigned) {
+                    if (assigned.ended) ec.message.addMessage('Assignment ended', 'success')
+                    else {
+                        ec.message.addMessage('Assigned to ' + assigned.assignedCount + ' employee' + (assigned.assignedCount == 1 ? '' : 's'), 'success')
+                        const refused = Array.from(assigned.rows || []).filter(row => row.outcome === 'refused')
+                        if (refused.length) ec.message.addMessage('Not assigned: ' + refused.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                    }
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="leavePolicyId"/></default-response>
+        <error-response url="."><parameter name="leavePolicyId"/></error-response>
+    </transition>
+    <!-- blocked or mandatory days added, or cancelled -->
+    <transition name="storeBlock">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.store#BlockedInterval"
+                    in-map="{leavePolicyId:leavePolicyId, leaveBlockedIntervalId:(leaveBlockedIntervalId || null), expectedRevision:(expectedRevision || null),
+                        blockKindEnumId:(blockKindEnumId || null), departmentPartyId:(departmentPartyId ?? null), leaveTypeEnumId:(leaveTypeEnumId ?? null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), overrideAllowed:(overrideAllowed || 'N'), reason:(reason || null),
+                        cancel:(cancel == 'true')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${cancel == 'true' ? 'Blocked days cancelled' : 'Blocked days added'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="leavePolicyId"/></default-response>
+        <error-response url="."><parameter name="leavePolicyId"/></error-response>
+    </transition>
+    <!-- the accrual due by now, posted once -->
+    <transition name="runAccrual">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.run#Accrual" out-map="accrued" in-map="{leavePolicyId:leavePolicyId}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError() && accrued) {
+                    ec.message.addMessage(accrued.posted ? accrued.posted + ' entr' + (accrued.posted == 1 ? 'y' : 'ies') + ' posted' : 'Nothing was due', 'success')
+                    if (accrued.failed) ec.message.addMessage(accrued.failed + ' employee' + (accrued.failed == 1 ? '' : 's') + ' could not be accrued; the error log names them', 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="leavePolicyId"/></default-response>
+        <error-response url="."><parameter name="leavePolicyId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.LeaveServices.get#Policy" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{leavePolicyId:(leavePolicyId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="policy" from="found?.policy || null"/>
+        <set field="recordFound" from="!!policy"/>
+        <script><![CDATA[
+            rules = Array.from(found?.rules || [])
+            assignments = Array.from(found?.assignments || [])
+            blocks = Array.from(found?.blockedIntervals || [])
+            canEdit = !!policy?.canEdit && policy.state !== 'ended'
+            canAssign = !!policy?.canAssign
+            stateColors = {current: 'positive', future: 'primary', ended: 'grey-8', cancelled: 'grey-8'}
+            unitWord = policy ? String(policy.unitText || '').toLowerCase() : ''
+            termRows = policy ? [
+                {term: 'Leave type', value: policy.leaveTypeText},
+                {term: 'Unit', value: policy.unitText},
+                {term: 'Paid leave', value: policy.isPaid ? 'Yes' : 'No'},
+                {term: 'Needs an entitlement', value: policy.allocationRequired ? 'Yes: a request without one is blocked' : 'No'},
+                {term: 'Below zero', value: policy.negativeLimit ? 'Up to ' + policy.negativeLimit + ' ' + unitWord : 'Not allowed'},
+                {term: 'Evidence', value: policy.evidenceRequired ? 'Required with a request' : 'Not required'},
+                {term: 'Accrues', value: policy.frequencyText},
+                {term: 'Description', value: policy.description || ''}
+            ] : []
+            editValues = policy ? {leavePolicyId: policy.leavePolicyId, expectedRevision: policy.revision, terms: 'true', policyName: policy.policyName,
+                description: policy.description, isPaid: policy.isPaid ? 'Y' : 'N', allocationRequired: policy.allocationRequired ? 'Y' : 'N',
+                evidenceRequired: policy.evidenceRequired ? 'Y' : 'N', negativeLimit: policy.negativeLimit,
+                accrualFrequencyEnumId: policy.accrualFrequencyEnumId || '', unitEnumId: policy.unitEnumId} : {}
+            ruleValues = policy ? {leavePolicyId: policy.leavePolicyId, expectedRevision: policy.revision, serviceMonthsFrom: 0} : {}
+            assignValues = policy ? {leavePolicyId: policy.leavePolicyId} : {}
+            blockValues = policy ? {leavePolicyId: policy.leavePolicyId, blockKindEnumId: 'LbkBlocked', leaveTypeEnumId: policy.leaveTypeEnumId} : {}
+            headerCaption = policy ? [policy.organizationName, policy.leaveTypeText, policy.unitText, policy.accrualText].join(' · ') : ''
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="PolicyMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This leave policy is not available to you."/>
+                        <link url="${sharedLinks['Time/LeavePolicies']}" text="Back to leave policies" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="PolicyRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${policy.policyName}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[policy.state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(policy.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: policy.stateText})}]]></text>
+                                <text type="html">${policy.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${sharedLinks['Time/LeavePolicies']}" text="Leave policies" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <label text="From ${policy.fromDateText}${policy.thruDateText ? ' through ' + policy.thruDateText : ''}" type="span" style="text-caption"/>
+                            <label text="${policy.assignedCount} employee${policy.assignedCount == 1 ? '' : 's'}" type="span" style="text-caption"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="AssignPolicyDialog" button-text="Assign" icon="sym_o_person_add" type="primary" width="640"
+                                    title="Assign ${policy.policyName}" condition="canAssign">
+                                <label type="p" text="Choose an employee, or a department, or neither for every current employee of ${policy.organizationName}. Someone under another ${policy.leaveTypeText} policy then is named and left out."/>
+                                <form-single name="AssignPolicy" transition="assignPolicy" map="assignValues">
+                                    <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="partyRelationshipId">
+                                        <default-field title="Employee">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'employments', choiceOrganizationPartyId:policy.organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="departmentPartyId">
+                                        <default-field title="Department">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'departments', choiceOrganizationPartyId:policy.organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                    <field name="openingAmount">
+                                        <default-field title="Opening balance" tooltip="Optional: carried in from before, in ${unitWord}">
+                                            <text-line size="6" input-type="number"/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Assign policy">
+                                            <submit confirmation="Assign ${policy.policyName} to the employees chosen?"/></default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row><field-ref name="partyRelationshipId"/><field-ref name="departmentPartyId"/></field-row>
+                                        <field-row><field-ref name="fromDate"/><field-ref name="openingAmount"/></field-row>
+                                        <field-ref name="reason"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit">
+                                <link url="${sharedLinks['Time/LeaveAllocations']}" text="Allocate leave" icon="sym_o_playlist_add"
+                                        parameter-map="{leavePolicyId:policy.leavePolicyId}"/>
+                                <container-dialog id="RunAccrualDialog" button-text="Run accrual" icon="sym_o_update" width="520"
+                                        title="Run the accrual of ${policy.policyName}">
+                                    <label type="p" text="Posts what each employee under the policy has due by now: each ended period once, the carry-over at a year's end and what expired. A period already posted is not posted again. The daily job does the same."/>
+                                    <form-single name="RunAccrual" transition="runAccrual" map="{leavePolicyId:policy.leavePolicyId}">
+                                        <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Run accrual"><submit confirmation="Post the accruals due under ${policy.policyName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EditTermsDialog" button-text="Edit terms" icon="sym_o_edit" width="720"
+                                        title="Edit ${policy.policyName}">
+                                    <label type="p" text="A change applies from now and never rewrites what was posted."/>
+                                    <form-single name="EditTerms" transition="storePolicy" map="editValues">
+                                        <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="terms"><default-field><hidden/></default-field></field>
+                                        <field name="policyName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="unitEnumId">
+                                            <conditional-field condition="!policy.postedCount" title="Unit">
+                                                <radio><option key="LuDays" text="Days"/><option key="LuHours" text="Hours"/></radio>
+                                            </conditional-field>
+                                            <default-field title="Unit" tooltip="Entries were posted: start another policy for another unit">
+                                                <display text="${policy.unitText}"/></default-field>
+                                        </field>
+                                        <field name="accrualFrequencyEnumId">
+                                            <default-field title="Accrues" tooltip="Empty: by allocations only. Fixed once an accrual is posted">
+                                                <drop-down allow-empty="true">
+                                                    <option key="LafMonthly" text="Monthly"/>
+                                                    <option key="LafQuarterly" text="Quarterly"/>
+                                                    <option key="LafYearly" text="Yearly"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="negativeLimit">
+                                            <default-field title="Below zero up to" tooltip="In ${unitWord}; zero: not below zero">
+                                                <text-line size="6" input-type="number"/></default-field>
+                                        </field>
+                                        <field name="isPaid"><default-field title="Paid leave"><check><option key="Y" text=" "/></check></default-field></field>
+                                        <field name="allocationRequired">
+                                            <default-field title="Needs an entitlement"><check><option key="Y" text=" "/></check></default-field>
+                                        </field>
+                                        <field name="evidenceRequired">
+                                            <default-field title="Evidence required"><check><option key="Y" text=" "/></check></default-field>
+                                        </field>
+                                        <field name="description"><default-field title="Description"><text-line size="50"/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="policyName"/><field-ref name="unitEnumId"/></field-row>
+                                            <field-row><field-ref name="accrualFrequencyEnumId"/><field-ref name="negativeLimit"/></field-row>
+                                            <field-row><field-ref name="isPaid"/><field-ref name="allocationRequired"/></field-row>
+                                            <field-row><field-ref name="evidenceRequired"/><field-ref name="description"/></field-row>
+                                            <field-ref name="changeReason"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ClosePolicyDialog" button-text="Close policy" icon="sym_o_event_busy" width="520"
+                                        title="Close ${policy.policyName}">
+                                    <label type="p" text="No one is assigned to the policy and nothing accrues under it from the date. What was posted stays."/>
+                                    <form-single name="ClosePolicy" transition="storePolicy"
+                                            map="{leavePolicyId:policy.leavePolicyId, expectedRevision:policy.revision, end:'true'}">
+                                        <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="end"><default-field><hidden/></default-field></field>
+                                        <field name="thruDate"><default-field title="Closes on" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Close policy">
+                                                <submit type="danger" confirmation="Close ${policy.policyName} on the date given?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Policy terms"/>
+                    <box-body-nopad>
+                        <form-list name="Terms" list="termRows" skip-form="true" paginate="false">
+                            <field name="term"><default-field title="Term"><display/></default-field></field>
+                            <field name="value"><default-field title="Value"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Accrual and carry-over"/>
+                    <box-toolbar>
+                        <container-dialog id="AddRuleDialog" button-text="Add step" icon="sym_o_add" type="default" width="640"
+                                title="Add an accrual step to ${policy.policyName}" condition="canEdit &amp;&amp; policy.accrualFrequencyEnumId">
+                            <label type="p" text="What accrues each ${policy.frequencyText.toLowerCase()} period, after it ends. The step with the most months of service a person has reached applies; a part period accrues in proportion to its days."/>
+                            <form-single name="AddRule" transition="storeRule" map="ruleValues">
+                                <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="serviceMonthsFrom"><default-field title="From months of service"><text-line size="4" input-type="number"/></default-field></field>
+                                <field name="amount"><default-field title="Amount a period" tooltip="In ${unitWord}"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="capAmount"><default-field title="Cap" tooltip="Optional: no accrual takes the balance above it"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="carryLimit"><default-field title="Carried into a new year" tooltip="Optional: the balance above it expires at a year's end"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="roundingIncrement"><default-field title="Round to" tooltip="Optional: such as 0.5; 0.01 when empty"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="fromDate"><default-field title="From" tooltip="Today, or the policy's start when later, when empty"><date-time type="date"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add step"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="serviceMonthsFrom"/><field-ref name="amount"/></field-row>
+                                    <field-row><field-ref name="capAmount"/><field-ref name="carryLimit"/></field-row>
+                                    <field-row><field-ref name="roundingIncrement"/><field-ref name="fromDate"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Rules" list="rules" skip-form="true" paginate="false" condition="rules.length">
+                            <field name="serviceMonthsFrom" align="right"><default-field title="From months of service"><display/></default-field></field>
+                            <field name="amount" align="right"><default-field title="A period"><display format="#,##0.##"/></default-field></field>
+                            <field name="capAmount" align="right"><default-field title="Cap"><display format="#,##0.##"/></default-field></field>
+                            <field name="carryLimit" align="right"><default-field title="Carried over"><display format="#,##0.##"/></default-field></field>
+                            <field name="roundingIncrement" align="right"><default-field title="Round to"><display format="#,##0.##"/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="canEdit &amp;&amp; state != 'ended'" title="">
+                                    <container-dialog id="ChangeRule_${leaveAccrualRuleId}" button-text="Change" icon="sym_o_edit" type="default"
+                                            width="640" title="Change the step from ${serviceMonthsFrom} months">
+                                        <label type="p" text="From a date: the periods before it keep their entries."/>
+                                        <form-single name="ChangeRule" transition="storeRule"
+                                                map="{leavePolicyId:policy.leavePolicyId, expectedRevision:policy.revision, leaveAccrualRuleId:leaveAccrualRuleId,
+                                                    amount:amount, capAmount:capAmount, carryLimit:carryLimit, roundingIncrement:roundingIncrement}">
+                                            <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="leaveAccrualRuleId"><default-field><hidden/></default-field></field>
+                                            <field name="amount"><default-field title="Amount a period"><text-line size="6" input-type="number"/></default-field></field>
+                                            <field name="capAmount"><default-field title="Cap"><text-line size="6" input-type="number"/></default-field></field>
+                                            <field name="carryLimit"><default-field title="Carried into a new year"><text-line size="6" input-type="number"/></default-field></field>
+                                            <field name="roundingIncrement"><default-field title="Round to"><text-line size="6" input-type="number"/></default-field></field>
+                                            <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Change step"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndRule_${leaveAccrualRuleId}" button-text="End" icon="sym_o_event_busy" type="default"
+                                            width="520" title="End the step from ${serviceMonthsFrom} months">
+                                        <form-single name="EndRule" transition="storeRule"
+                                                map="{leavePolicyId:policy.leavePolicyId, expectedRevision:policy.revision, leaveAccrualRuleId:leaveAccrualRuleId, end:'true'}">
+                                            <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="leaveAccrualRuleId"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="fromDate"><default-field title="Ends on" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End step">
+                                                    <submit type="danger" confirmation="End the step from ${serviceMonthsFrom} months of service?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="serviceMonthsFrom"/><field-ref name="fromDateText"/></column>
+                                <column><field-ref name="amount"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!rules.length &amp;&amp; policy.accrualFrequencyEnumId"
+                                text="Nothing accrues yet: add a step with what accrues each period."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!policy.accrualFrequencyEnumId"
+                                text="This policy does not accrue: its leave is granted by allocations. Set how often it accrues in Edit terms to add steps."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Assignments"/>
+                    <box-body-nopad>
+                        <form-list name="Assignments" list="assignments" skip-form="true" paginate="false" condition="assignments.length">
+                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="openingAmount" align="right"><default-field title="Opening balance"><display format="#,##0.##"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="canEdit &amp;&amp; state != 'ended'" title="">
+                                    <container-dialog id="EndAssignment_${leavePolicyAssignmentId}" button-text="End" icon="sym_o_person_remove"
+                                            type="default" width="520" title="End ${personName}'s assignment">
+                                        <label type="p" text="Nothing accrues for them under this policy after the date; what was posted stays."/>
+                                        <form-single name="EndAssignment" transition="assignPolicy"
+                                                map="{leavePolicyId:policy.leavePolicyId, leavePolicyAssignmentId:leavePolicyAssignmentId, expectedRevision:revision, end:'true'}">
+                                            <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="leavePolicyAssignmentId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="thruDate"><default-field title="Ends on" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End assignment">
+                                                    <submit type="danger" confirmation="End ${personName}'s assignment to ${policy.policyName}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="fromDateText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!assignments.length"
+                                text="No employee is under this policy yet.${canAssign ? ' Assign it to employees from a date.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Blocked days"/>
+                    <box-toolbar>
+                        <container-dialog id="AddBlockDialog" button-text="Add blocked days" icon="sym_o_add" type="default" width="640"
+                                title="Block or require days of ${policy.organizationName}" condition="canEdit">
+                            <label type="p" text="Blocked days refuse leave, or let an approver override; mandatory days are taken by everyone. Leave already approved is not cancelled."/>
+                            <form-single name="AddBlock" transition="storeBlock" map="blockValues">
+                                <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                <field name="blockKindEnumId">
+                                    <default-field title="Kind">
+                                        <radio><option key="LbkBlocked" text="Leave blocked"/><option key="LbkMandatory" text="Mandatory leave"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="First day"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Last day"><date-time type="date"/></default-field></field>
+                                <field name="departmentPartyId">
+                                    <default-field title="Department" tooltip="Empty: the whole employer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'departments', choiceOrganizationPartyId:policy.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="leaveTypeEnumId">
+                                    <default-field title="Leave type" tooltip="Empty: every leave type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'leaveTypes', selected:policy.leaveTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="overrideAllowed">
+                                    <default-field title="An approver may override"><check><option key="Y" text=" "/></check></default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add days"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-ref name="blockKindEnumId"/>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-row><field-ref name="departmentPartyId"/><field-ref name="leaveTypeEnumId"/></field-row>
+                                    <field-row><field-ref name="overrideAllowed"/><field-ref name="reason"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Blocks" list="blocks" skip-form="true" paginate="false" condition="blocks.length">
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="fromDay"><default-field title="First day"><display/></default-field></field>
+                            <field name="thruDay"><default-field title="Last day"><display/></default-field></field>
+                            <field name="scopeText"><default-field title="For"><display/></default-field></field>
+                            <field name="overrideAllowed"><default-field title="Override"><display text="${overrideAllowed ? 'Allowed' : 'No'}"/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="canEdit &amp;&amp; state != 'cancelled'" title="">
+                                    <container-dialog id="CancelBlock_${leaveBlockedIntervalId}" button-text="Cancel" icon="sym_o_block" type="default"
+                                            width="520" title="Cancel the days from ${fromDay} to ${thruDay}">
+                                        <form-single name="CancelBlock" transition="storeBlock"
+                                                map="{leavePolicyId:policy.leavePolicyId, leaveBlockedIntervalId:leaveBlockedIntervalId, expectedRevision:revision, cancel:'true'}">
+                                            <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="leaveBlockedIntervalId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="cancel"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Cancel these days">
+                                                    <submit type="danger" confirmation="Cancel the days from ${fromDay} to ${thruDay}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="kindText"/><field-ref name="scopeText"/></column>
+                                <column><field-ref name="fromDay"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!blocks.length" text="No day is blocked or mandatory."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

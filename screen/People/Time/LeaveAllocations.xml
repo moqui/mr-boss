@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Allocations (design-people §7 LeaveAllocations; style-guide §3.6 Task; impl-people P11): an HR editor grants leave in a
+    controlled batch. Choose a policy, then who (an employee, a department and the units under it, or every current employee of the
+    policy's employer) and the grant (an amount for an entitlement period, with an optional expiry day) or a reasoned adjustment;
+    Preview (mantle.humanres.LeaveServices.preview#Allocation, nothing written) lists each employee with their balance now and
+    whether they are granted or refused and why (not under the policy in the period, a grant for the period already, below the
+    negative limit), with the count and total; Allocate (the one primary, allocate#Leave) posts it once under the preview's
+    operation key, each employee in their own transaction, the refusals named. A balance is never overwritten: a correction is a
+    reasoned adjustment. HR's (BOSS_PPL_LEAVE), under Time rather than Settings, as Holidays. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Allocations" default-menu-index="11" menu-image="sym_o_playlist_add" menu-image-type="icon">
+    <parameter name="leavePolicyId"/>
+    <parameter name="partyRelationshipId"/>
+    <parameter name="departmentPartyId"/>
+    <parameter name="amount"/>
+    <parameter name="periodFromDate"/>
+    <parameter name="periodThruDate"/>
+    <parameter name="expiryDate"/>
+    <parameter name="adjustment"/>
+    <parameter name="reason"/>
+    <parameter name="preview"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the previewed grant or adjustment posted once under its operation key; each refusal named -->
+    <transition name="allocate">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.allocate#Leave" out-map="allocated"
+                    in-map="{leavePolicyId:(leavePolicyId || ''), partyRelationshipIds:(partyRelationshipId ? [partyRelationshipId] : null),
+                        departmentPartyId:(departmentPartyId || null), amount:(amount || null), periodFromDate:(periodFromDate || null),
+                        periodThruDate:(periodThruDate || null), expiryDate:(expiryDate || null), adjustment:(adjustment == 'Y'),
+                        reason:(reason || null), operationKey:(operationKey || null)}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError() && allocated) {
+                    const done = allocated.allocatedCount + allocated.repeatedCount
+                    ec.message.addMessage('Allocated to ' + done + ' employee' + (done == 1 ? '' : 's') +
+                        (allocated.repeatedCount ? ' (' + allocated.repeatedCount + ' already done)' : ''), 'success')
+                    const refused = Array.from(allocated.rows || []).filter(row => row.outcome === 'refused')
+                    if (refused.length) ec.message.addMessage('Not allocated: ' + refused.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="leavePolicyId"/></default-response>
+        <error-response url=".">
+            <parameter name="leavePolicyId"/><parameter name="partyRelationshipId"/><parameter name="departmentPartyId"/>
+            <parameter name="amount"/><parameter name="periodFromDate"/><parameter name="periodThruDate"/><parameter name="expiryDate"/>
+            <parameter name="adjustment"/><parameter name="reason"/>
+        </error-response>
+    </transition>
+    <actions>
+        <if condition="leavePolicyId">
+            <service-call name="mantle.humanres.LeaveServices.get#Policy" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{leavePolicyId:leavePolicyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="policy" from="found?.policy || null"/>
+        <set field="canAllocate" from="!!policy?.canEdit"/>
+        <set field="terms" from="{leavePolicyId: leavePolicyId || null, partyRelationshipIds: partyRelationshipId ? [partyRelationshipId] : null,
+                departmentPartyId: departmentPartyId || null, amount: amount || null, periodFromDate: periodFromDate || null,
+                periodThruDate: periodThruDate || null, expiryDate: expiryDate || null, adjustment: adjustment == 'Y', reason: reason || null}"/>
+        <if condition="canAllocate &amp;&amp; preview == 'Y'">
+            <service-call name="mantle.humanres.LeaveServices.preview#Allocation" out-map="previewed" transaction="force-new" ignore-error="true"
+                    in-map="terms"/>
+        </if>
+        <script><![CDATA[
+            previewRows = Array.from(previewed?.rows || [])
+            previewShown = !!previewed?.operationKey
+            outcomeColors = {ready: 'positive', refused: 'negative', repeated: 'grey-8', done: 'positive'}
+            unitWord = policy ? String(policy.unitText || '').toLowerCase() : ''
+            confirmText = previewShown ? 'Allocate ' + (adjustment == 'Y' ? 'an adjustment of ' : '') + amount + ' ' + unitWord + ' to ' +
+                previewed.readyCount + ' employee' + (previewed.readyCount == 1 ? '' : 's') + ', ' + previewed.total + ' ' + unitWord + ' in all?' : ''
+            confirmValues = {leavePolicyId: leavePolicyId, partyRelationshipId: partyRelationshipId || null, departmentPartyId: departmentPartyId || null,
+                amount: amount || null, periodFromDate: periodFromDate || null, periodThruDate: periodThruDate || null, expiryDate: expiryDate || null,
+                adjustment: adjustment || null, reason: reason || null, operationKey: previewed?.operationKey || null}
+            termValues = {leavePolicyId: leavePolicyId, partyRelationshipId: partyRelationshipId || null, departmentPartyId: departmentPartyId || null,
+                amount: amount || null, periodFromDate: periodFromDate || null, periodThruDate: periodThruDate || null, expiryDate: expiryDate || null,
+                adjustment: adjustment || null, reason: reason || null, preview: 'Y'}
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Allocations" type="h5"/>
+                <label text="Grant leave for an entitlement period, or adjust balances with a reason, in a batch you preview first." type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="ChoosePolicy" transition="." map="{leavePolicyId:leavePolicyId}">
+            <field name="leavePolicyId">
+                <default-field title="Policy">
+                    <drop-down>
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'leavePolicies', selected:leavePolicyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Choose"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="leavePolicyId"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+        <section name="NoPolicy" condition="!policy">
+            <widgets>
+                <label type="p" style="m-muted" condition="!leavePolicyId" text="Choose the policy to allocate under."/>
+                <label type="p" style="m-muted" condition="leavePolicyId" text="This leave policy is not available to you."/>
+            </widgets>
+        </section>
+        <section name="Allocation" condition="policy">
+            <widgets>
+                <container-box>
+                    <box-header title="${policy.policyName}"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" text="${policy.organizationName} · ${policy.leaveTypeText} · ${policy.unitText} · ${policy.accrualText}"/>
+                        <link url="${sharedLinks['Time/LeavePolicyDetail']}" text="Open the policy" link-type="anchor" parameter-map="{leavePolicyId:policy.leavePolicyId}"/>
+                        <form-single name="AllocationPreview" transition="." map="termValues">
+                            <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                            <field name="preview"><default-field><hidden/></default-field></field>
+                            <field name="partyRelationshipId">
+                                <default-field title="Employee" tooltip="Empty: a department's, or every employee of the employer">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'employments', choiceOrganizationPartyId:policy.organizationPartyId, selected:partyRelationshipId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="departmentPartyId">
+                                <default-field title="Department" tooltip="With the teams under it">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'departments', choiceOrganizationPartyId:policy.organizationPartyId, selected:departmentPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="amount"><default-field title="Amount" tooltip="In ${unitWord}"><text-line size="6" input-type="number"/></default-field></field>
+                            <field name="adjustment">
+                                <default-field title="An adjustment" tooltip="A correction more or less than zero, with its reason, rather than a grant for a period">
+                                    <check><option key="Y" text=" "/></check></default-field>
+                            </field>
+                            <field name="periodFromDate"><default-field title="Period from"><date-time type="date"/></default-field></field>
+                            <field name="periodThruDate"><default-field title="Period through"><date-time type="date"/></default-field></field>
+                            <field name="expiryDate">
+                                <default-field title="Expires after" tooltip="Optional: what is left of the grant expires after this day">
+                                    <date-time type="date"/></default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="partyRelationshipId"/><field-ref name="departmentPartyId"/></field-row>
+                                <field-row><field-ref name="amount"/><field-ref name="adjustment"/></field-row>
+                                <field-row><field-ref name="periodFromDate"/><field-ref name="periodThruDate"/></field-row>
+                                <field-row><field-ref name="expiryDate"/><field-ref name="reason"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <section name="PreviewResults" condition="previewShown">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Preview: ${previewed.readyCount} to allocate, ${previewed.refusedCount} refused"/>
+                            <box-toolbar>
+                                <container-dialog id="ConfirmAllocationDialog" button-text="Allocate" icon="sym_o_playlist_add_check" type="primary"
+                                        width="520" title="Allocate ${policy.policyName}" condition="previewed.readyCount">
+                                    <label type="p" text="${confirmText} The refused employees are left out and named again."/>
+                                    <form-single name="ConfirmAllocation" transition="allocate" map="confirmValues">
+                                        <field name="leavePolicyId"><default-field><hidden/></default-field></field>
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="departmentPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="amount"><default-field><hidden/></default-field></field>
+                                        <field name="periodFromDate"><default-field><hidden/></default-field></field>
+                                        <field name="periodThruDate"><default-field><hidden/></default-field></field>
+                                        <field name="expiryDate"><default-field><hidden/></default-field></field>
+                                        <field name="adjustment"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Allocate"><submit confirmation="${confirmText}"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PreviewRows" list="previewRows" skip-form="true" paginate="false" condition="previewRows.length">
+                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                    <field name="priorBalance" align="right"><default-field title="Balance now"><display format="#,##0.##"/></default-field></field>
+                                    <field name="amount" align="right"><default-field title="Amount"><display format="#,##0.##"/></default-field></field>
+                                    <field name="outcomeText">
+                                        <default-field title="Outcome">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
+                                                <text type="html">${outcomeText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="message"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="message"/></column>
+                                        <column><field-ref name="outcomeText"/><field-ref name="priorBalance"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!previewRows.length" text="Nobody is employed there now."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
