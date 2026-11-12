@@ -33,7 +33,7 @@ establish live review outcomes.
   [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
   [drawers, Commons and Comms review](ui-review-drawers-commons.md),
   [framework UI review guide](../../../../docs/dev/UI-Review.md) and
-  [framework review](../../../../plans/UI-Refinement.md).
+  [framework review](../../../../plans/archive/UI-Refinement.md).
 - [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md), and the current Warehouse, Accounting, Products, Purchasing, Commerce,
   Projects, Commons and PASS contracts at the bounded handoffs below. Sales is not built (its plan,

@@ -31,7 +31,7 @@ results and existing tests are starting points; they do not establish review out
   [Products review](ui-review-products.md), [Projects review](ui-review-projects.md),
   [drawers, Commons and Comms review](ui-review-drawers-commons.md),
   [framework UI review guide](../../../../docs/dev/UI-Review.md) and
-  [framework review](../../../../plans/UI-Refinement.md).
+  [framework review](../../../../plans/archive/UI-Refinement.md).
 - [Application practices](../../../../docs/dev/Practices-App-Dev.md), [style guide](style-guide.md),
   [crosscut design](design-crosscut.md), and current Products, Warehouse, Purchasing, Accounting, Projects and
   [Maintenance](impl-maintenance.md) contracts where they supply methods, physical movements, service purchase orders,

@@ -24,7 +24,7 @@ the coverage ledger and batch record below distinguish current observations from
 
 ### Inputs and reference patterns
 
-- [Framework UI refinement](../../../../plans/UI-Refinement.md): the earlier activity-based review, coverage ledger,
+- [Framework UI refinement](../../../../plans/archive/UI-Refinement.md): the earlier activity-based review, coverage ledger,
   findings and lessons. Its historical environments, delegation arrangements and execution permissions do not carry
   over to this review.
 - [Reusable UI review guide](../../../../docs/dev/UI-Review.md): environment, activity/evidence method and established
