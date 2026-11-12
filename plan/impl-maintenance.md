@@ -375,7 +375,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 Costs | Mantle, BOSS | WorkOrderDetail's Costs, MaintenanceCostReport | — |
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | built and reviewed Nov 12, merged |
-| P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
+| P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | built Nov 12 |
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
@@ -2574,6 +2574,132 @@ PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
   work"): the planner generates this month's work for the three plans and sees the stale-meter plan blocked with
   "request a reading"; after two missed months on the room plan she coalesces them into one catch-up, and the
   compliance report shows two late obligations, not one compliant order. **Gate 4.**
+
+**Built Nov 12 (P14).** mr-mantle bfc5cf16, mr-boss d99f00ac and this note's commit (branch `mnt/p14`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P13's `MaintenancePlans.js` (the projection read every obligation with the term in effect now, F186;
+  `firstDueLocal` text; `maintenanceScheduleId` on `MaintenanceWorkOrder`, written by no service; the term's `estimatedWorkTime`); P6's
+  instantiation inside `create#MaintenanceWorkOrder` (`makeOrder` calls `instantiateProcedure`, which resolves the caller's scope again,
+  so a job with no user could not use it); the lifecycle has no reopen action (a reopened order exists only through a baseline path);
+  `store#WorkEffortReminders` sets the caller's own reminders only; Admin's `moqui.server` JobRegistration, JobParameterDefinition,
+  RecoveryDescriptor and TopicRegistration (framework data/AdminConfigurationData.xml is the pattern, F52, F117) and Admin.js
+  `mountRoutes`; the RecurringInvoices job (`authenticate="false"`, each item on its own) as the job pattern; F118 (the topic's link in
+  BossSetupMaintenanceData.xml); no Reports area existed (P17's).
+- Mantle:
+  - Records (`entity/MaintenancePlanEntities.xml`): `MaintenanceOccurrence` (plan, `obligationKey` with a unique index on the two, F52/F112:
+    a real unique key; due date and local text or threshold, the term it fell under, status MocOpen/MocGenerated/MocCompleted/MocSkipped/
+    MocCoalesced with its transitions, the work order and the corrected one (`uncountedWorkEffortId`), catch-up flag and the catch-up it was
+    coalesced into, generated and decided by and when, reason, operation key, revision; status and work audit-logged);
+    `MaintenancePolicy.pmLeadDays` by `extend-entity`.
+  - `MaintenancePlans.js` (P13's module, its sections added): the fixed cadence's obligations walked per term from its start (F186) with
+    each obligation's coverage by its occurrence or by a completion no occurrence carries (P13's rule kept); `generate#MaintenanceWorkOrders`
+    (a planner's or supervisor's, the plans named or the scope's active ones, preview, operation key), `run#MaintenanceGeneration` (the job:
+    no user, a system scope of every organization as a planner who is no supervisor, batches of `batchSize` by id, 5000 plans a run, capped;
+    a signed-in caller needs MAINTENANCE_SETTINGS_EDIT), `reconcile#MaintenanceSchedule` (coalesce, skip, correct; reason; a meter plan
+    refused), `find#MaintenanceOccurrences` (with the missed due dates and the plan's work orders), `get#MaintenanceDueJob`;
+    `MaintenanceReportServices.get#MaintenanceCompliance`; `find#MaintenanceDue` rows gain the generation preview, dates for the calendar and
+    `dueListCapped` (F192); the lead days fall back to the organization's `pmLeadDays`. Each plan's generation runs in
+    `ec.transaction.runRequireNew` with the plan locked; the work order through `MaintenanceWork.js` `createForPlan` (the one path that sets
+    `maintenanceScheduleId`, F179), the procedure through `MaintenanceProcedures.js` `instantiateWith(userScope, ...)` (the checked path for
+    a resolved scope; `instantiateProcedure` calls it). MaintenanceDue is told to the organization's planners (not the one who made it).
+  - `MaintenanceWork.js` (small hunks): `createForPlan`; `makeOrder` instantiates with the scope it has and writes the plan from its
+    options only; transition's complete asks a meter plan's work for its reading (F187: `meterValue`, recorded through
+    `record#MaintenanceMeter` in the work, READING_REQUIRED otherwise) and every transition credits the plan (`creditCompletion`:
+    complete or close once, cancel opens again with a catch-up's coalesced ones); `actionsFor` names the meter on Complete; Home's
+    `overduePmCount` and `unknownMeterCount` (a reader of work's, 200 plans); `pmLeadDays` in the policy.
+  - Data: `data/MaintenancePlanSetupData.xml` (seed-initial: the ServiceJob `generate_MaintenanceWorkOrders`, paused, 05:30 daily) and
+    `data/MaintenancePlanData.xml` (seed: the MaintenanceDue topic and its TopicRegistration, audience MAINTENANCE_PLAN; the job's
+    JobRegistration with MAINTENANCE_SETTINGS_EDIT as its manage and recipient permission, its `batchSize` JobParameterDefinition and the
+    ServiceJob RecoveryDescriptor `maintenanceGenerationJob`, retry native, both `ownerRoute="maintenanceDue"`).
+- BOSS:
+  - Services: Admin.js `mountRoutes.maintenanceDue` (`/qapps/Maintenance/Preventive/DueMaintenance`, F117); Maintenance.js link paths
+    `Preventive/DueMaintenance` and `Reports/PreventiveComplianceReport`.
+  - Screens: `Preventive/DueMaintenance.xml` (DueRows with header filters, views list and calendar, GenerateWork with the page's preview,
+    Generate on a row and the selection, ResolveDue: coalesce or skip with a reason, or a meter's reading); PlanDetail's Generate work (its
+    preview in the confirmation) and two tabs, `DueHistory` (OccurrenceHistory, the missed due dates' decision, Correct) and `GeneratedWork`;
+    `Reports.xml` (a new area, menu index 9, MAINTENANCE_VIEW) with `Reports/PreventiveComplianceReport.xml`; Home's two preventive counters
+    open Due maintenance filtered; Settings' Work policy gains the lead days and the job's state; the Complete form a meter reading
+    (`template/MaintenanceWorkOrderParts.xml`); `template/MaintenancePlanParts.xml` gains generateDue and resolveDue; the root's
+    `notification-topic MaintenanceDue`. BossSetupMaintenanceData.xml: the topic's link (WorkOrderDetail).
+  - Demo (BossZMaintenanceDemoData.xml, appended): the air handler's monthly filter change, active, ad hoc, a week ahead: August done a day
+    early (the job's), September four days late, October skipped, November 14 due now.
+- Specs:
+  - Mantle `test/work/MaintenanceGeneration` (7 features, about 2.7 s): the job (no user) and a planner make one occurrence and one ad hoc
+    order (its name, estimate, kind, source, the plan, awaiting approval; the planner told on MaintenanceDue), preview changes nothing, a
+    second occurrence row of an obligation refused by the database, a retry under the operation key answers the first; a batch with a
+    retired procedure (blocked, PROCEDURE_NOT_QUALIFIED), a stock target (failed, named) and a procedure's plan (generated); a cancelled
+    order opens its obligation again, made again on the same row, outstanding in compliance; four missed due dates coalesced (reason
+    required) into one catch-up, outstanding until done, then four late and none on time, the plan no longer overdue; a reopened and
+    completed-again order credits nothing twice and makes no second next order; a meter plan's work refused without its reading, then
+    its reading the new baseline (next threshold 660), a stale meter blocked with "Request a reading", a meter skip refused; a correction
+    (open again, the order kept and not counted), a skip with its reason, the history's catch-up "Late"; a reader PERMISSION_DENIED and
+    another organization RECORD_UNAVAILABLE. Mutation: with the counted-once guard taken out, the reopen feature fails.
+  - BOSS `MaintenancePlans` gains a feature (about 0.4 s): Due maintenance's, the filter plan's PlanDetail level (`lastStandalone -3`,
+    F183), its DueHistory and GeneratedWork tabs', PM compliance's (33.3% on time) and Work policy's (lead days, the job Paused) one
+    render each. `MaintenanceAccess` gains the P14 rule (a planner generates, a reader PERMISSION_DENIED, Retail RECORD_UNAVAILABLE;
+    compliance a reader's, not a technician's, Retail's none) and the Reports menu; its Home render now checks the preventive counters
+    configured (no "Not configured" left for a reader of work).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePreventiveWalk` (2 features: the planner activates the demo plans
+    still drafts and generates this month's work through Due maintenance's transition (the filter change made, the start counter blocked
+    with "Request a reading", none failed, a second generation making nothing; a reader may not generate); a Room 102 plan two months
+    behind, coalesced with a reason into one catch-up, approved, started and completed by the supervisor through WorkOrderDetail, and PM
+    compliance showing two late, none on time, "0% on time").
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceGeneration, MaintenanceDue, MaintenanceWorkOrders,
+  MaintenanceProcesses, MaintenanceScope, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceResources, WorkProcess:
+  57 of 57 (10 specs, 21.2 s feature time). mr-boss MaintenancePlans, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment,
+  MaintenanceScheduling, MaintenanceProcedures, MaintenanceDowntime, MaintenanceRequests and Admin's AdminJobRuns, AdminSystemMessages,
+  AdminAccess, AdminRegistries, AdminImports, AdminExports, AdminSettings: all passed (61 features across the runs). Framework AdminJobs and
+  AdminRecovery: 7 of 7. Client MaintenanceWorkOrdersWalk 1 of 1 (8.0 s). `./moq run --debug --nobuild lint --screens`: 136 flagged
+  sites, as before; the new screens appear only in the information list of unnamed containers; the release symlink intact. Prettier
+  (`npx prettier`, the repository's config, from each component) on MaintenancePlans.js, MaintenanceProcedures.js, MaintenanceGeneration,
+  Admin.js, MaintenancePlans, MaintenancePreventiveWalk; MaintenanceWork.js, Maintenance.js, MaintenanceSpecLib.js and
+  MaintenanceAccess.spec.js were not prettier-clean before (F161), so only P14's hunks are in its style (checked against Prettier's
+  output). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's find#MaintenanceDue, transition#, store#MaintenancePolicy and get#MaintenanceHome rows and an Added table
+  for P14's services; ss-inventory's AddPlannedMaintenance and a P14 line.
+- Design edits: design-maintenance's header, §1.2, §3 Home, §5.1, PlanDetail, DueMaintenance, §8 PreventiveComplianceReport, §9 Settings
+  and §13.2 as built.
+- Findings (provisional, unnumbered):
+  - F186 fixed in the projection itself, not only in the occurrences: every fixed-cadence obligation is walked under the term it falls in
+    (a term's own first due date, from its start to the next term), so the overdue count, the due list and compliance agree; P13's
+    specs pass unchanged.
+  - The job runs with no user (the scheduler's authorization-off path, no run-as identity), so Maintenance's scope is resolved for it
+    (`systemScope`: every organization, plan and the reads, no supervise) and passed down; `instantiateProcedure` resolved the caller's
+    scope itself, so `instantiateWith(userScope, ...)` was split out. Its work waits for a supervisor (approval threshold 0 by default).
+  - Due reminders for assigned PM work (design §5.1) are not set: `store#WorkEffortReminders` sets only the caller's own reminders, and
+    generated work assigns the plan's team, no person. A reminder for the assignee belongs to `schedule#MaintenanceWorkOrder` (P8) or a
+    reminder service that sets another user's (later).
+  - There is no reopen action on a work order (§3's lifecycle); "a reopened order" is tested through a baseline path (the status set
+    back), and its second completion credits nothing.
+  - Meter obligations are keyed by their threshold ("meter 350"); a meter plan is neither skipped nor coalesced (it advances only after a
+    completion with its reading). A meter's compliance compares the completion's reading with the threshold; with no reading it is
+    unknown.
+  - The completion cadence (MscCompletion) has no fixed obligations: its compliance rows are its occurrences and the current due when
+    overdue; a skip passes over a due date.
+  - PreventiveComplianceReport is the first screen of a Reports area (menu index 9, MAINTENANCE_VIEW) that P17 completes (the landing,
+    work status); the design's schedule, type and team options are not built.
+  - Generation of a plan whose target became stock fails with RECORD_UNAVAILABLE (P13's `targetOf`), named per plan; a plan whose target
+    moved is blocked (TARGET_MOVED).
+  - Equipment's next-PM column (F185) is not built: EquipmentRows come from Mantle's equipment find, and a due per row would add a plan
+    read per row; left for P17 or later.
+  - F192: `find#MaintenanceDue` now says when it stops (`dueListCapped`); `find#MaintenanceSchedules`' model filter still reads at most
+    1000 assets with no flag.
+  - An existing database needs `MaintenancePlanSetupData.xml` (the job) and `MaintenancePlanData.xml` loaded on upgrade (as F170).
+- For the lead:
+  - Budget share: mr-mantle MaintenanceGeneration about 2.7 s; mr-boss server MaintenancePlans +0.4 s and MaintenanceAccess +0.2 s; client
+    unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `MaintenanceWork.js` (the plans module line; defaultPolicy, policyOf and storePolicy's pmLeadDays;
+    makeOrder's instantiation line and the order's maintenanceScheduleId; the complete case's reading line; transition's statusAfter and
+    credit; actionsFor's readingMeterName; home's counters; the exports), `MaintenanceProcedures.js` (instantiateWith), the service XMLs
+    (MaintenanceServices transition's meterValue, MaintenanceSettingsServices pmLeadDays, MaintenanceReportServices), `MaintenancePlans.js`
+    (prettier-formatted whole); mr-boss `screen/Maintenance.xml` (Reports item after Scheduling, the MaintenanceDue topic), `Maintenance.js`
+    (two link paths at linkPaths' end), `Admin.js` mountRoutes (one key after peopleTimeImport), PlanDetail (header and tabs),
+    `template/MaintenanceWorkOrderParts.xml` (the Complete form's meterValue, P7's Complete gate is beside it), Home's counter rows,
+    Settings/WorkPolicy, BossSetupMaintenanceData.xml and BossZMaintenanceDemoData.xml (appended at the end), `MaintenanceSpecLib.js` (ids
+    after stalePlanId; staffMenu and adminMenu with Reports), `MaintenanceAccess.spec.js` (header, Home feature, appended feature), the
+    inventories, design-maintenance and this plan. P11 and P17 also add to `Reports.xml` if they make one.
+  - The user's calls: (1) whether the generation job, seeded paused, should be resumed in the demo or left for an operations manager
+    (built: paused, as the design's "PM job off"); (2) whether preventive work made by the job should wait for a supervisor's approval
+    (built: yes under the default zero threshold, as a planner's; a policy threshold in hours admits it).
 
 ### P15 — Resource policy and blackouts
 
