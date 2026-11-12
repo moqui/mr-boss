@@ -1,6 +1,6 @@
 // Insights' scheduled delivery and digests (impl-insights P7; design-insights §7.1, §7.3, ScheduledReports, ScheduledReportDetail,
 // ReportDelivery, ManagementDigest). Scheduled reports' three screens are the framework's Dashboards screens, mounted by
-// location with Insights' policy (mr-moqui plans/Admin-Screens-Down.md, Track I), so the rules are held through Insights'
+// location with Insights' policy (mr-moqui plans/archive/Admin-Screens-Down.md, Track I), so the rules are held through Insights'
 // route, by the transitions a browser posts: a reader schedules a report for themselves and not for others; a distributor's
 // recipients are Insights' readers and groups of their own, checked by the report engine, so the Retail agents pass and the
 // Services reader is refused with the reason; a schedule saved there carries Insights' message and the organization's

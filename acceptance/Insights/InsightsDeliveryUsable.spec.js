@@ -7,7 +7,7 @@
 // distributor has taken it and resumed it; and john.doe's copied scheduled find is still his own, personal, with no group. The
 // distributor who leaves and the one who takes over are made here, so the demo's insights.distributor is left as it is. The
 // screens of Scheduled reports are the framework's Dashboards screens, mounted by location (mr-moqui
-// plans/Admin-Screens-Down.md, Track I), so every step is a transition of theirs through Insights' route. The
+// plans/archive/Admin-Screens-Down.md, Track I), so every step is a transition of theirs through Insights' route. The
 // rules are the framework's ReportAudience and the regression InsightsDelivery; Mantle's sales datasets, which the suite
 // dashboard of the digest reads, are admitted by InsightsDatasetsUsable first. Written with P7, not run as part of it.
 // Run: ./moq accept mr-boss --spec InsightsDeliveryUsable

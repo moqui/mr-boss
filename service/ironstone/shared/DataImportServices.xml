@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The import wizard's projections (design-admin §11.1, DataImport; impl-admin P15, F12): what Shared/DataImport shows
     and posts, and Admin's ImportDetail reads, for any registered import target, generalized from Products' catalog
     import (shared/DataImport.js). Admin's Imports list is the framework's (org.moqui.admin.DataTransferServices.find#ImportRuns;
-    mr-moqui plans/Admin-Screens-Down.md A5). The work is the framework's org.moqui.admin.DataTransferServices, which dispatches by the
+    mr-moqui plans/archive/Admin-Screens-Down.md A5). The work is the framework's org.moqui.admin.DataTransferServices, which dispatches by the
     target's registration and calls its owner as the user; these services call it with authorization as it is and add no
     right. The mount is the app root the wizard is opened under: a catalog app's is the catalog target only; Admin's the
     target named, for a holder of ADMIN_TRANSFER_RUN. No group is authorized to call them but through the screens that do. -->

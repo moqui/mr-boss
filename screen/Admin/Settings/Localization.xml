@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Localization (design-admin §7 Localization; mr-moqui plans/Admin-Screens-Down.md): the framework's System › Settings
+<!-- Localization (design-admin §7 Localization; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's System › Settings
     localization at this location, which BOSS_ADM_ORGANIZATIONS opens to the configuration administrator and the
     administrator, with its two transitions: storeMessage and storeLabel, through org.moqui.admin.ConfigurationServices,
     which check ADMIN_SETTINGS_MANAGE, keep a translation's placeholders and translate only a registered label target.

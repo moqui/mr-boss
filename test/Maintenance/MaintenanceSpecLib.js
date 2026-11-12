@@ -35,6 +35,11 @@ const ids = {
     heldOrderId: "BOSS_MNT_WO_MOTOR",
     techPartyId: "BOSS_MNT_TECH",
     tech2PartyId: "BOSS_MNT_TECH2",
+    // P4: maint.requester's reports (BossZMaintenanceDemoData.xml): the air handler's water triaged into its work order (maint.reader's
+    // report of the same fault linked to it too) and the compressor's oil leak not yet triaged
+    triagedRequestId: "BOSS_MNT_REQ_AHU",
+    otherReportId: "BOSS_MNT_REQ_AHU2",
+    openRequestId: "BOSS_MNT_REQ_COMP",
     // P5: Room 201 out of service (a safety stop linked to its work order) and the compressor's restored belt failure
     roomOutageId: "BOSS_MNT_OUT_ROOM201",
     roomOutageFacilityId: "BOSS_MNT_ROOM_201",
@@ -47,11 +52,12 @@ const ids = {
     blackoutId: "BOSS_MNT_BLK_ROOM101",
     // the menu of design §1.2 built so far: a Maintenance user's who reads work and equipment, and with Settings the Maintenance
     // administrator's; a user who reads none (a procedure author) has Home alone
-    staffMenu: ["Home", "WorkOrders", "Equipment", "Facilities"],
+    // (P4: Requests, a planner's or supervisor's)
+    staffMenu: ["Home", "WorkOrders", "Requests", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
-    adminMenu: ["Home", "WorkOrders", "Equipment", "Facilities", "Scheduling", "Settings"],
+    adminMenu: ["Home", "WorkOrders", "Requests", "Equipment", "Facilities", "Scheduling", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
-    keys: ["g m", "g w", "g e", "g f"]
+    keys: ["g m", "g w", "g r", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS

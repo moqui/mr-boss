@@ -3,7 +3,7 @@
 // access administrator (admin.delegate: ADMIN_ACCESS_MANAGE through a custom group, not in BOSS_ADMIN_ACCESS) changing a member
 // within a registered bundle: a Retail user added from a date through GroupDetail's transition and ended, kept on record; a
 // Services user refused as outside the organizations administered and counted, never named; a privileged group refused with
-// its reason. Groups and GroupDetail are over the framework's System › Access screens (mr-moqui plans/Admin-Screens-Down.md): a
+// its reason. Groups and GroupDetail are over the framework's System › Access screens (mr-moqui plans/archive/Admin-Screens-Down.md): a
 // transition of their instance administrator's part (a group created or changed directly, a permission of any id granted) is
 // not on Admin's route, for the access administrator and for ADMIN. The framework's rules (sealed grants, privileged groups,
 // unregistered bundles, the administration path, revisions) are the framework's AdminAccessServices; the "usable when" walk is

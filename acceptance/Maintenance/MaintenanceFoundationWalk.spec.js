@@ -11,6 +11,24 @@ const {ids, users, asUser, system, refusal, invoke, shell, page} = lib
 const admin = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const capability = "ironstone.admin.CapabilityServices."
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
+// each group's menu (design §1.2 as built): Work orders for a work reader, Requests for a planner or supervisor (P4), Equipment and
+// Facilities for a reader of them; a procedure author, approver or booking approver has Home alone; the administrator Settings too
+const workMenu = ["Home", "WorkOrders", "Equipment", "Facilities"]
+const menus = {
+    [users.reader]: workMenu,
+    [users.planner]: ids.staffMenu,
+    [users.tech]: workMenu,
+    [users.tech2]: workMenu,
+    [users.supervisor]: ids.staffMenu,
+    [users.author]: ids.homeOnlyMenu,
+    [users.approver]: ids.homeOnlyMenu,
+    [users.booking]: ids.homeOnlyMenu,
+    [users.resources]: ["Home", "Equipment", "Facilities"],
+    [users.cost]: workMenu,
+    [users.retailPlanner]: ids.staffMenu,
+    [users.admin]: ids.adminMenu,
+    [users.system]: ids.adminMenu
+}
 const refused = message => /MAINTENANCE_UNAVAILABLE|is not authorized/.test(message)
 // every ironstone.maintenance service a screen calls, with parameters it accepts from a user who has Maintenance
 const maintenanceServices = [
@@ -87,7 +105,7 @@ feature("the menu renders for each group with only its areas; each entry opens a
         const problems = []
         for (const user of groupUsers.concat([users.system])) {
             const found = shell(user, user === users.system)
-            const expected = user === users.admin || user === users.system ? ids.adminMenu : ids.staffMenu
+            const expected = menus[user]
             if (found.status != 200 || JSON.stringify(found.names) !== JSON.stringify(expected))
                 problems.push(`${user}'s menu: ${found.status} ${found.names}`)
             for (const entry of ids.adminMenu) {

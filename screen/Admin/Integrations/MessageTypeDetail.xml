@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- MessageTypeDetail (design-admin §8 MessageTypeDetail, §14; mr-moqui plans/Admin-Screens-Down.md): the framework's
+<!-- MessageTypeDetail (design-admin §8 MessageTypeDetail, §14; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's
     System › Integrations message type screen at this location, with the one transition an integration administrator
     uses: saveType, through org.moqui.admin.ConfigurationServices.store#MessageType, which checks ADMIN_CONNECTION_MANAGE
     and what the type's owner registered. The System screen's own part for the instance administrator (any field of the

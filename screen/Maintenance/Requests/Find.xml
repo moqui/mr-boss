@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Requests (design-maintenance §3 Requests: FindRequests, RequestRows; style-guide §3.2 List; impl-maintenance P4): the
+    maintenance requests of the user's organizations (ironstone.maintenance.RequestServices.find#RequestRows over Mantle's
+    find#MaintenanceRequests, scoped in the query before paging), open ones by default; each opens RequestDetail, where it is
+    triaged. Below them the adoption queue: open maintenance records with no work order (Manufacturing's maintenance requests, the
+    baseline's; Mantle's find#UnmanagedMaintenance), each adopted into a work order, through its request's triage when it has one.
+    Report a problem (Commons' quick create) for a holder of MAINTENANCE_REQUEST. No cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Requests" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="adoptRecord" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <transition-include name="triageRequest" location="component://mr-boss/template/MaintenanceRequestParts.xml"/>
+    <actions>
+        <service-call name="ironstone.maintenance.RequestServices.find#RequestRows" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{text:text, organizationPartyId:organizationPartyId, statusId:statusId, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <service-call name="mantle.work.MaintenanceServices.find#UnmanagedMaintenance" out-map="queue" transaction="force-new"
+                ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="requestList" from="found?.requestList || []"/>
+        <set field="requestListCount" from="found?.requestListCount"/>
+        <set field="requestListPageIndex" from="found?.requestListPageIndex"/>
+        <set field="requestListPageSize" from="found?.requestListPageSize"/>
+        <set field="requestListPageMaxIndex" from="found?.requestListPageMaxIndex"/>
+        <set field="requestListPageRangeLow" from="found?.requestListPageRangeLow"/>
+        <set field="requestListPageRangeHigh" from="found?.requestListPageRangeHigh"/>
+        <set field="maintenanceList" from="queue?.maintenanceList || []"/>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="filtered" from="!!(text || organizationPartyId || statusId)"/>
+        <set field="emptyText" from="filtered ? 'No request matches these filters.' : 'No maintenance request is open.'"/>
+    </actions>
+    <widgets>
+        <context title="Maintenance requests"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Requests" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="/qapps/Commons/ReportProblem" url-type="plain" text="Report a problem" link-type="anchor-button"
+                        icon="sym_o_report_problem" condition="can.request"/>
+                <link url="." text="Untriaged" link-type="anchor-button" icon="sym_o_inbox" parameter-map="{statusId:'untriaged'}"/>
+            </container>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="RequestList" list="requestList" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true" show-csv-button="true">
+                    <field name="text">
+                        <header-field title="Request"><text-line/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="untriaged" text="Not triaged"/>
+                                <option key="ReqReviewed" text="Reviewed"/>
+                                <option key="ReqCancelled" text="Rejected or cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="requestId">
+                        <header-field title="Request"/>
+                        <default-field>
+                            <link url="${requestUrl}" url-type="plain" text="${requestId}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="requestName"><header-field title="Problem"/><default-field><display/></default-field></field>
+                    <field name="targetName">
+                        <header-field title="Equipment or facility"/>
+                        <default-field>
+                            <display text="${targetName || 'Not named'}" style="${targetId ? '' : 'text-warning'}"/>
+                        </default-field>
+                    </field>
+                    <field name="reporterName"><header-field title="Reported by"/><default-field><display/></default-field></field>
+                    <field name="priority" align="right"><header-field title="Priority"/><default-field><display/></default-field></field>
+                    <field name="requestDateText"><header-field title="Reported"/><default-field><display/></default-field></field>
+                    <field name="workText">
+                        <header-field title="Work order"/>
+                        <default-field>
+                            <link url="${workOrderUrl}" url-type="plain" text="${workText}" link-type="anchor" condition="workEffortId"/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="requestId"/><field-ref name="requestName"/><field-ref name="targetName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="workText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoRequests" condition="!requestList.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+        <section name="AdoptionQueue" condition="maintenanceList.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Maintenance records with no work order"/>
+                    <box-body-nopad>
+                        <form-list name="UnmanagedMaintenance" list="maintenanceList" skip-form="true" paginate="false">
+                            <field name="assetName">
+                                <header-field title="Equipment"/>
+                                <default-field>
+                                    <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                            parameter-map="{assetId:assetId}"/>
+                                </default-field>
+                            </field>
+                            <field name="comments"><header-field title="Problem"/><default-field><display/></default-field></field>
+                            <field name="maintenanceDateText"><header-field title="Asked"/><default-field><display/></default-field></field>
+                            <field name="statusText"><header-field title="Status"/><default-field><display/></default-field></field>
+                            <field name="adopt">
+                                <header-field title=""/>
+                                <default-field>
+                                    <link url="triageRequest" text="Make a work order" link-type="hidden-form-link" icon="sym_o_handyman"
+                                            parameter-map="{requestId:requestId, decision:'create'}" condition="requestId"
+                                            confirmation="Make a work order of request ${requestId}?"/>
+                                    <link url="adoptRecord" text="Make a work order" link-type="hidden-form-link" icon="sym_o_handyman"
+                                            parameter-map="{assetMaintenanceId:assetMaintenanceId}" condition="!requestId"
+                                            confirmation="Make a work order of this maintenance record?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="assetName"/><field-ref name="comments"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="adopt"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

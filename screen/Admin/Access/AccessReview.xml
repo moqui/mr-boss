@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- AccessReview (design-admin §16 "Access/grant review"; mr-moqui plans/Admin-Screens-Down.md): the access and grant
+<!-- AccessReview (design-admin §16 "Access/grant review"; mr-moqui plans/archive/Admin-Screens-Down.md): the access and grant
     review of the groups chosen in Capabilities or of one group from GroupDetail, as of a date and time, as Admin's own
     screen for what Admin adds to the framework's System › Access review: the organization scope of its members. One
     projection (ironstone.admin.CapabilityServices get#AccessReview over the framework's get#GrantReview,

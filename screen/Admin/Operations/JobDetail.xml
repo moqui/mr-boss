@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- JobDetail (design-admin §10 JobDetail; mr-moqui plans/Admin-Screens-Down.md): the framework's System › Operations job
+<!-- JobDetail (design-admin §10 JobDetail; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's System › Operations job
     screen at this location, with the two transitions an operations operator uses: saveJob and runJob, each through
     org.moqui.admin.OperationServices, which check ADMIN_OPERATION_MANAGE and what the job's owner registered. The System
     screen's own parts for the instance administrator (any field, any parameter, a direct run) are not shown under a mount

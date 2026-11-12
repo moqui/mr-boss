@@ -271,6 +271,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="myTimeUrl"/>
             <parameter name="leaveRequestsUrl"><description>P12: the user's leave requests (People's time area, when it opens to
                 them)</description></parameter>
+            <parameter name="attendanceUrl"><description>P13: the user's own attendance days (People's time area, when it opens to
+                them)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -280,6 +282,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="peopleHomeUrl" from="found.peopleHomeUrl"/>
             <set field="myTimeUrl" from="found.myTimeUrl"/>
             <set field="leaveRequestsUrl" from="found.leaveRequestsUrl"/>
+            <set field="attendanceUrl" from="found.attendanceUrl"/>
         </actions>
     </service>
 </services>

@@ -131,6 +131,34 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_MOTOR" partyId="BOSS_MNT_TECH2" roleTypeId="Assignee"
             fromDate="2026-11-09 08:00:00" statusId="WeptAssigned"/>
 
+    <!-- P4 (impl-maintenance P4; design-maintenance §3 Requests): maint.requester's two reports, the air handler's water triaged into its
+        work order (with maint.reader's report of the same fault linked to it) and the compressor's oil leak not yet triaged; and the
+        Facilities maintenance team's intake plus tag (maintenance+facilities@...), for the createMaintenanceRequest mail rule -->
+    <mantle.party.PartySetting partyId="BOSS_MNT_TEAM" partySettingTypeId="MntIntakePlusTag" settingValue="facilities"/>
+    <mantle.request.Request requestId="BOSS_MNT_REQ_AHU" requestTypeEnumId="RqtMaintenance" statusId="ReqReviewed" priority="2"
+            requestName="Air handler dripping water" description="Water on the floor under the air handler in the mechanical room"
+            requestDate="2026-11-10 07:30:00" filedByPartyId="BOSS_MNT_REQUESTER" requestResolutionEnumId="RrUnresolved"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_REQ_AHU" partyId="BOSS_MNT_REQUESTER" roleTypeId="Reporter" fromDate="2026-11-10 07:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_REQ_AHU" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal" fromDate="2026-11-10 07:30:00"/>
+    <mantle.request.RequestRecord requestId="BOSS_MNT_REQ_AHU" recordEntityName="mantle.product.asset.Asset" recordId="BOSS_MNT_AIR_HANDLER"
+            linkedDate="2026-11-10 07:30:00"/>
+    <mantle.request.RequestWorkEffort requestId="BOSS_MNT_REQ_AHU" workEffortId="BOSS_MNT_WO_AHU"/>
+    <mantle.request.Request requestId="BOSS_MNT_REQ_AHU2" requestTypeEnumId="RqtMaintenance" statusId="ReqReviewed" priority="5"
+            requestName="Air handler rattles" requestDate="2026-11-10 07:45:00" filedByPartyId="BOSS_MNT_READER"
+            requestResolutionEnumId="RrUnresolved"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_REQ_AHU2" partyId="BOSS_MNT_READER" roleTypeId="Reporter" fromDate="2026-11-10 07:45:00"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_REQ_AHU2" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal" fromDate="2026-11-10 07:45:00"/>
+    <mantle.request.RequestRecord requestId="BOSS_MNT_REQ_AHU2" recordEntityName="mantle.product.asset.Asset" recordId="BOSS_MNT_AIR_HANDLER"
+            linkedDate="2026-11-10 07:45:00"/>
+    <mantle.request.RequestWorkEffort requestId="BOSS_MNT_REQ_AHU2" workEffortId="BOSS_MNT_WO_AHU"/>
+    <mantle.request.Request requestId="BOSS_MNT_REQ_COMP" requestTypeEnumId="RqtMaintenance" statusId="ReqSubmitted" priority="2"
+            requestName="Compressor leaking oil" description="A puddle of oil under the compressor"
+            requestDate="2026-11-11 06:50:00" filedByPartyId="BOSS_MNT_REQUESTER" requestResolutionEnumId="RrUnresolved"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_REQ_COMP" partyId="BOSS_MNT_REQUESTER" roleTypeId="Reporter" fromDate="2026-11-11 06:50:00"/>
+    <mantle.request.RequestParty requestId="BOSS_MNT_REQ_COMP" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal" fromDate="2026-11-11 06:50:00"/>
+    <mantle.request.RequestRecord requestId="BOSS_MNT_REQ_COMP" recordEntityName="mantle.product.asset.Asset" recordId="BOSS_MNT_COMPRESSOR"
+            linkedDate="2026-11-11 06:50:00"/>
+
     <!-- P5 (impl-maintenance; design §6 Downtime): Room 201 out of service since the bracket came loose (a safety stop the supervisor
         recorded, linked to its unassigned work order), and the compressor's belt failure of October, restored by the supervisor
         after the belt work order with the compressor available -->

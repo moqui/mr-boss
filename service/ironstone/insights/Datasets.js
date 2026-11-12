@@ -2,7 +2,7 @@
 // readiness provider and index refresh, over the framework's business dataset services (org.moqui.report.ReportServices
 // find#BusinessDatasets and index#BusinessDataset), each called as the viewer so the engine checks the dataset's own artifact
 // (view to read, update to steward). The report builder's dataset screens (Datasets, DatasetDetail, DatasetFields, DatasetView)
-// are the framework's Dashboards screens, shown under Insights' mount (mr-moqui plans/Admin-Screens-Down.md, Track I): what they
+// are the framework's Dashboards screens, shown under Insights' mount (mr-moqui plans/archive/Admin-Screens-Down.md, Track I): what they
 // read is the framework's (get#BusinessDataset, get#BusinessDatasetOptions; tools template/ReportDatasets.js), and what a
 // dataset created in Insights is named with and the words of its organization field are Insights' reportPolicy (Insights.js).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")

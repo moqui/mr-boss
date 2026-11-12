@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Requests area of IronStone Maintenance (design-maintenance §3 Requests, §1.2; impl-maintenance P4): Find, the maintenance
+    requests of the planner's or supervisor's organizations with the adoption queue of Manufacturing's maintenance records; and
+    RequestDetail, the shared request screen in Maintenance's context (the reported fault and its triage), hidden from the menu.
+    Opened by a planner or supervisor only (the artifact group BOSS_MNT_REQUESTS, denied to the root user group; the root's menu
+    condition); a requester reports from Commons' quick create and follows their
+    reports in Commons (impl-maintenance F78). Every read and decision is Mantle's mantle.work.MaintenanceServices. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Requests" default-menu-index="3" menu-image="sym_o_report_problem" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true">
+        <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenanceRequestsPanel" type="tab"/>
+    </widgets>
+</screen>

@@ -671,7 +671,7 @@ function findList(formLocation) {
     const formName = match[2].replace(/#.*$/, "")
     const own = ec.resource.getLocationReference("component://mr-boss/screen/" + match[1] + ".xml").getText()
     // a screen that shows a framework screen at its own location (the report builder's dataset screens, mr-moqui
-    // plans/Admin-Screens-Down.md): the list is the included screen's
+    // plans/archive/Admin-Screens-Down.md): the list is the included screen's
     const included = Array.from(
         String(own ?? "").matchAll(/<include-screen location="(component:\/\/tools\/screen\/[^"]+\.xml)"/g)
     )

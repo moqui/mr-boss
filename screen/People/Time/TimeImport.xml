@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Time import (design-people §6 TimeImport; style-guide §3.10 Wizard; impl-people P13): an HR officer's device files of
+    clock events, in two steps. FileAndMapping: the employer, the file (a header line; the worker, time and direction columns, an
+    optional event id and device), the device or system it comes from, the zone of its times and how workers are named (People id or
+    work email); previewed by mantle.humanres.AttendanceServices.preview#Import, which keeps each row with its outcome and records
+    nothing. ImportResults: the counts, Import (import#Records: each ready row in its own transaction, events already recorded
+    skipped, a failure named) and the rows, all or only the problems, with their CSV export (the error rows). It approves nothing.
+    The time-and-attendance transfer target (Mantle's TransferTarget timeAndAttendance) lists its imports in Admin's Imports, which
+    opens one here (owner route peopleTimeImport, attendanceImportId). HR's own (BOSS_PPL_TIME_IMPORT, denied to the root user group
+    and to self-service); Mantle checks PEOPLE_IMPORT, PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Time import" default-menu-include="false" menu-image="sym_o_upload_file" menu-image-type="icon">
+    <parameter name="attendanceImportId"/>
+    <parameter name="outcome"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="previewImport">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.preview#Import" out-map="previewed"
+                    in-map="{organizationPartyId:organizationPartyId, importFile:importFile, importText:(importText || null), sourceSystem:sourceSystem, timeZone:timeZone,
+                        workerIdKind:workerIdKind, delimiter:delimiter, workerColumn:workerColumn, timeColumn:timeColumn,
+                        directionColumn:directionColumn, keyColumn:keyColumn, deviceColumn:deviceColumn}"/>
+            <set field="attendanceImportId" from="previewed?.attendanceImportId"/>
+        </actions>
+        <default-response url="."><parameter name="attendanceImportId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="importRecords">
+        <actions>
+            <service-call name="mantle.humanres.AttendanceServices.import#Records" out-map="imported"
+                    in-map="{attendanceImportId:attendanceImportId}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(imported.importedCount + ' imported, ' + imported.skippedCount + ' already recorded or repeated, ' +
+                    imported.errorCount + ' not imported', imported.errorCount ? 'warning' : 'success')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="attendanceImportId"/></default-response>
+        <error-response url="."><parameter name="attendanceImportId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="attendanceImportId">
+            <service-call name="mantle.humanres.AttendanceServices.get#Import" out-map="opened" transaction="force-new" ignore-error="true"
+                    in-map="{attendanceImportId:attendanceImportId, outcome:(outcome || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            batch = opened?.attendanceImport || null
+            resultRows = Array.from(opened?.rows || [])
+            outcomeColors = {ready: 'primary', known: 'grey-8', duplicate: 'grey-8', refused: 'negative', imported: 'positive', failed: 'negative'}
+            fileValues = {timeZone: ec.user.timeZone || null, workerIdKind: 'partyId', delimiter: ',', workerColumn: 'worker',
+                timeColumn: 'time', directionColumn: 'direction', keyColumn: 'id', deviceColumn: 'device'}
+            attendanceUrl = sharedLinks?.['Time/Attendance'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Time import" type="h5"/>
+                <label text="Read a clock's file of in and out events, check each row, then record the new ones as attendance." type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${attendanceUrl}" url-type="plain" text="Attendance" icon="sym_o_fact_check" link-type="anchor-button" condition="attendanceUrl"/>
+            </container>
+        </container>
+
+        <section name="ImportMissing" condition="attendanceImportId &amp;&amp; !batch">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This import is not available to you."/>
+                        <link url="." text="Start an import" link-type="anchor" parameter-map="{attendanceImportId:null}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- FileAndMapping -->
+        <section name="FileAndMapping" condition="!attendanceImportId">
+            <widgets>
+                <container-box>
+                    <box-header title="File and columns"/>
+                    <box-body>
+                        <form-single name="FileAndMapping" transition="previewImport" map="fileValues">
+                            <field name="organizationPartyId">
+                                <default-field title="Employer">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="importFile"><default-field title="File" tooltip="CSV with a header line"><file/></default-field></field>
+                            <field name="importText"><default-field title="Or paste the rows" tooltip="With the header line"><text-area rows="3"/></default-field></field>
+                            <field name="sourceSystem">
+                                <default-field title="Device or system" tooltip="Where the file comes from, such as Front door clock"><text-line size="30"/></default-field>
+                            </field>
+                            <field name="timeZone">
+                                <default-field title="Time zone of its times">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'timeZones', selected:fileValues.timeZone}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="workerIdKind">
+                                <default-field title="Workers are named by">
+                                    <radio>
+                                        <option key="partyId" text="People id"/>
+                                        <option key="workEmail" text="Work email"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="delimiter">
+                                <default-field title="Separator">
+                                    <drop-down>
+                                        <option key="," text="Comma"/>
+                                        <option key=";" text="Semicolon"/>
+                                        <option key="tab" text="Tab"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="workerColumn"><default-field title="Worker column"><text-line size="15"/></default-field></field>
+                            <field name="timeColumn"><default-field title="Time column" tooltip="yyyy-MM-dd HH:mm"><text-line size="15"/></default-field></field>
+                            <field name="directionColumn"><default-field title="In or out column"><text-line size="15"/></default-field></field>
+                            <field name="keyColumn"><default-field title="Event id column" tooltip="Optional: the device's own id of each event"><text-line size="15"/></default-field></field>
+                            <field name="deviceColumn"><default-field title="Device column" tooltip="Optional"><text-line size="15"/></default-field></field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="organizationPartyId"/><field-ref name="sourceSystem"/></field-row>
+                                <field-ref name="importFile"/>
+                                <field-ref name="importText"/>
+                                <field-row><field-ref name="timeZone"/><field-ref name="workerIdKind"/></field-row>
+                                <field-row><field-ref name="workerColumn"/><field-ref name="timeColumn"/></field-row>
+                                <field-row><field-ref name="directionColumn"/><field-ref name="keyColumn"/></field-row>
+                                <field-row><field-ref name="deviceColumn"/><field-ref name="delimiter"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- ImportResults -->
+        <section name="ImportResults" condition="batch">
+            <widgets>
+                <container-box>
+                    <box-header title="${batch.fileName}: ${batch.organizationName}, ${batch.sourceSystem}"/>
+                    <box-toolbar>
+                        <form-single name="ImportRecords" transition="importRecords" map="{attendanceImportId:batch.attendanceImportId}"
+                                condition="batch.canImport">
+                            <field name="attendanceImportId"><default-field><hidden/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="Import">
+                                    <submit icon="sym_o_upload" confirmation="Record ${batch.readyCount} new events as attendance?"/></default-field>
+                            </field>
+                        </form-single>
+                        <link url="." text="Another file" icon="sym_o_add" link-type="anchor" parameter-map="{attendanceImportId:null, outcome:null}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <dashboard min-width="140">
+                            <number-card title="Rows" value="${batch.rowCount}" icon="sym_o_table_rows" size="sm"/>
+                            <number-card title="${batch.statusEnumId == 'AisImported' ? 'Imported' : 'Ready'}"
+                                    value="${batch.statusEnumId == 'AisImported' ? batch.importedCount : batch.readyCount}" icon="sym_o_check_circle" size="sm"/>
+                            <number-card title="Already recorded" value="${batch.skippedCount}" icon="sym_o_content_copy" size="sm"/>
+                            <number-card title="Not imported" value="${batch.errorCount}" icon="sym_o_error" size="sm"/>
+                        </dashboard>
+                        <label type="p" style="text-caption m-muted"
+                                text="${batch.statusText} by ${batch.createdByName} on ${batch.createdDateText}; times read in ${batch.timeZone}."/>
+                        <container style="row q-gutter-sm">
+                            <link url="." text="All rows" link-type="anchor" parameter-map="{attendanceImportId:batch.attendanceImportId, outcome:null}"/>
+                            <link url="." text="Problems only" link-type="anchor" parameter-map="{attendanceImportId:batch.attendanceImportId, outcome:'problems'}"/>
+                        </container>
+                        <form-list name="ImportRows" list="resultRows" skip-form="true" paginate="false" show-csv-button="true" condition="resultRows.length">
+                            <field name="lineNumber" align="right"><default-field title="Line"><display/></default-field></field>
+                            <field name="workerText"><default-field title="Worker"><display text="${personName || workerText}"/></default-field></field>
+                            <field name="timeText"><default-field title="Time"><display/></default-field></field>
+                            <field name="directionText"><default-field title="In or out"><display/></default-field></field>
+                            <field name="externalKey"><default-field title="Event id"><display/></default-field></field>
+                            <field name="outcomeText">
+                                <default-field title="Outcome">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
+                                        <text type="html">${outcomeText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="message"><default-field title="Why"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="workerText"/><field-ref name="timeText"/></column>
+                                <column><field-ref name="outcomeText"/><field-ref name="message"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted" condition="!resultRows.length" text="No row of this kind."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

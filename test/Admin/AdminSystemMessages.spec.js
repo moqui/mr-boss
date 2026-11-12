@@ -9,7 +9,7 @@
 // status left as the transport left it) and never sent; a type is
 // given its registered handler by the integration administrator only. The area opens to the operator for the two message
 // screens only, and to the reader not at all. The four screens are the framework's System › Integrations screens at Admin's
-// locations (mr-moqui plans/Admin-Screens-Down.md): a transition of their instance administrator's part (updateMessage) is
+// locations (mr-moqui plans/archive/Admin-Screens-Down.md): a transition of their instance administrator's part (updateMessage) is
 // not on Admin's route, for the operator and for ADMIN. The framework's rules are the framework's AdminRecovery spec, Commerce's
 // registered retry Mantle's StoreChannels. The HTTP fixtures answer every send: nothing leaves the machine.
 // Run: ./moq test mr-boss --spec AdminSystemMessages

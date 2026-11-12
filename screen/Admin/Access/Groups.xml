@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Groups (design-admin §5 Groups; mr-moqui plans/Admin-Screens-Down.md): the framework's System › Access groups list at
+<!-- Groups (design-admin §5 Groups; mr-moqui plans/archive/Admin-Screens-Down.md): the framework's System › Access groups list at
     this location, with the one transition an access administrator uses: createGroup, through
     org.moqui.admin.AccessServices.create#Group, which checks ADMIN_ACCESS_MANAGE and makes a custom group of a registered
     purpose, never privileged. The System screen's own part for the instance administrator (a group of any id and type

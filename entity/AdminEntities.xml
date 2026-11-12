@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- mr-boss's own records, rare in BOSS, whose data model is Mantle's. Admin's registries of readiness, refresh and settings
-    (impl-admin §4, P2, F32; design-admin §14) are the framework's since mr-moqui plans/Admin-Screens-Down.md A6: moqui.server
+    (impl-admin §4, P2, F32; design-admin §14) are the framework's since mr-moqui plans/archive/Admin-Screens-Down.md A6: moqui.server
     ReadinessProvider, RefreshOperation and SettingsEntry, which each owner seeds in its own setup data and
     org.moqui.admin.ReadinessServices reads. Insights P4 has its records (ReportCatalogEntry, MetricRegistration); Admin P6 the
     lifecycle participants after them. -->
