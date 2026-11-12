@@ -1,6 +1,7 @@
 // Maintenance's stack contributions in BOSS (impl-maintenance P19; design-maintenance §1.4 Comms hooks, §12): the call context of a
-// caller of Services (Kenji's work phone) names its open work orders and its equipment under repair, each opening Maintenance, with no
-// cost, and a technician's only their assigned work; Comms' record cards (info, card, search and links) of a work order, equipment
+// colleague (an employee or agent of Services: Kenji, the requester, maint.tech2) names only the work they reported or are assigned
+// (the user's call of Nov 12, review R4), a contact of Services its open work orders and equipment under repair, each opening
+// Maintenance, with no cost, and a technician's only their assigned work; Comms' record cards (info, card, search and links) of a work order, equipment
 // and a facility open Maintenance, a work order not assigned to the technician is left to the other providers; the work order and
 // technician instructions print's one html-print render (the work order, its team and technicians, its QR, no procedure and the
 // sign-off line, no cost); Assist's Log as note and Send as message (each form's one qvt render) filing on the work order, Retail's
@@ -26,23 +27,64 @@ spec({
     }
 })
 
-feature("the call context names the caller organization's open work and equipment under repair, with no cost", {
+feature("the call context names a colleague's own work and a non-colleague's organization's work, with no cost (R4)", {
     when() {
-        const context = user => asUser(user, () => invoke(S + "get#CallContext", {number: servicesCaller}))
-        return {planner: context(users.planner), tech: context(users.tech)}
+        // spec-local work numbers: the requester (an agent of Services who reported the air handler's leak), maint.tech2 (assigned
+        // the oil service) and a contact of Services who is no employee or agent of it
+        lib.system(() => {
+            const phone = (partyId, contactNumber) =>
+                call("mantle.party.ContactServices.create#TelecomNumber", {
+                    partyId,
+                    countryCode: "1",
+                    areaCode: "801",
+                    contactNumber,
+                    contactMechPurposeId: "PhoneWork"
+                })
+            phone("BOSS_MNT_REQUESTER", "777-0191")
+            phone(ids.tech2PartyId, "777-0192")
+            call("create#mantle.party.Party", {partyId: "MNT_STACK_SPEC_CONTACT", partyTypeEnumId: "PtyPerson"})
+            call("create#mantle.party.Person", {partyId: "MNT_STACK_SPEC_CONTACT", firstName: "Vic", lastName: "Contact"})
+            call("create#mantle.party.PartyRelationship", {
+                relationshipTypeEnumId: "PrtContact",
+                fromPartyId: "MNT_STACK_SPEC_CONTACT",
+                toPartyId: ids.organizationId,
+                fromDate: 0
+            })
+            phone("MNT_STACK_SPEC_CONTACT", "777-0193")
+        })
+        const context = (user, number) => asUser(user, () => invoke(S + "get#CallContext", {number}))
+        return {
+            kenji: context(users.planner, servicesCaller),
+            requester: context(users.planner, "+18017770191"),
+            tech2: context(users.planner, "+18017770192"),
+            contact: context(users.planner, "+18017770193"),
+            techOfContact: context(users.tech, "+18017770193")
+        }
     },
-    then({planner, tech}) {
-        planner.contactList.length == 0
-        planner.recordList.some(row => row.url.includes("WorkOrderDetail?workEffortId=" + ids.inProgressOrderId))
-        planner.recordList.some(row => row.url.includes("WorkOrderDetail?workEffortId=" + ids.plannedOrderId))
-        planner.recordList.some(
+    then({kenji, requester, tech2, contact, techOfContact}) {
+        const has = (out, id) => out.recordList.some(row => row.url.includes("WorkOrderDetail?workEffortId=" + id))
+        // Kenji, an employee who reported nothing and is assigned nothing: none of Services' work
+        !has(kenji, ids.inProgressOrderId)
+        !has(kenji, ids.plannedOrderId)
+        // the requester: the work order of the request they filed, its equipment under repair, nothing else
+        has(requester, ids.inProgressOrderId)
+        !has(requester, ids.plannedOrderId)
+        requester.recordList.some(
             row => row.title == "Equipment under repair: Air handler AHU-2" && row.status == "Work order " + ids.inProgressOrderId
         )
-        planner.recordList.every(row => row.url.startsWith("/qapps/Maintenance/"))
-        !JSON.stringify(planner).includes("$")
-        !JSON.stringify(planner).toLowerCase().includes("cost")
-        tech.recordList.some(row => row.url.includes(ids.inProgressOrderId))
-        !tech.recordList.some(row => row.url.includes(ids.plannedOrderId))
+        // maint.tech2: the work assigned to them
+        has(tech2, ids.plannedOrderId)
+        !has(tech2, ids.inProgressOrderId)
+        // a contact of Services (no colleague): the organization's open work, Maintenance links only, no cost
+        has(contact, ids.inProgressOrderId)
+        has(contact, ids.plannedOrderId)
+        contact.contactList.length == 0
+        contact.recordList.every(row => row.url.startsWith("/qapps/Maintenance/"))
+        !JSON.stringify(contact).includes("$")
+        !JSON.stringify(contact).toLowerCase().includes("cost")
+        // a technician reads only their assigned work of it
+        has(techOfContact, ids.inProgressOrderId)
+        !has(techOfContact, ids.plannedOrderId)
     }
 })
 

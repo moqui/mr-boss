@@ -1104,10 +1104,20 @@ feature(
                         return "refused " + error.message
                     }
                 })
+            // the requester's spec-local work number: a colleague, whose call names the work order of the request they filed (R4)
+            system(() =>
+                call("mantle.party.ContactServices.create#TelecomNumber", {
+                    partyId: "BOSS_MNT_REQUESTER",
+                    countryCode: "1",
+                    areaCode: "801",
+                    contactNumber: "777-0194",
+                    contactMechPurposeId: "PhoneWork"
+                })
+            )
             const callWork = user =>
                 asUser(user, () => {
                     try {
-                        const out = invoke(S + "get#CallContext", {number: "+18015550152"})
+                        const out = invoke(S + "get#CallContext", {number: "+18017770194"})
                         if (ec.message.hasError()) return "refused " + ec.message.getErrorsString()
                         return Array.from(out.recordList || []).some(row => row.url.includes(ids.inProgressOrderId))
                             ? "work"

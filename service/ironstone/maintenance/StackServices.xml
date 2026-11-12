@@ -38,10 +38,12 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="CallContext" allow-remote="false" read-only="true">
         <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
         <description>Maintenance's call-context provider (Maintenance.xml shell-providers, maintenance.work; design §1.4): for the
-            number ringing, the caller organization's open work orders (its own, when it is one of the internal organizations, and
-            those on equipment it owns) and its equipment under repair (the asset of an open work order in progress), as far as
-            the user's Maintenance scope reads them (Mantle's find#MaintenanceWorkOrders as the user), each with its Maintenance
-            link; at most 20. Comms' own provider answers the contacts. No cost and no rate.</description>
+            number ringing, a colleague's own open work (an employee or agent of an internal organization: the work orders they
+            reported or are assigned, the user's call of Nov 12), else the caller organization's open work orders (its own, when it
+            is one of the internal organizations, and those on equipment it owns, for a customer or vendor), and the equipment under
+            repair among them (the asset of an open work order in progress), as far as the user's Maintenance scope reads them
+            (Mantle's find#MaintenanceWorkOrders and get#MaintenanceWorkOrder as the user), each with its Maintenance link; at most
+            20. Comms' own provider answers the contacts. No cost and no rate.</description>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Stack.js').execute('callContext', context)"/>
             <set field="contactList" from="found.contactList"/>

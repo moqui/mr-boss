@@ -6,10 +6,11 @@
 //   record check (Maintenance.js recordOf: Mantle's scope, a technician their assigned work) and opening its Maintenance screen;
 //   a record Maintenance does not admit is left to the other providers. search finds them through the palette's scoped finds,
 //   links the Maintenance links a message names. A card names the record, its organization, target and state: no cost.
-// - call-context (maintenance.work): for a ringing call, the caller organization's open work orders (those it is the service
-//   organization of, for a caller of one of the user's organizations, and those on equipment it owns, for a customer) and its
-//   equipment under repair (an asset of an open work order in progress), only what the user's Maintenance scope reads (Mantle's
-//   find#MaintenanceWorkOrders as the user). No cost: the rows carry none.
+// - call-context (maintenance.work): for a ringing call, a colleague's own open work (an employee or agent of an internal
+//   organization: the work orders they reported or are assigned, the user's call of Nov 12), else the caller organization's open
+//   work orders (those it is the service organization of, and those on equipment it owns, for a customer or vendor), and the
+//   equipment under repair among them (an asset of an open work order in progress), only what the user's Maintenance scope reads
+//   (Mantle's find#MaintenanceWorkOrders and get#MaintenanceWorkOrder as the user). No cost: the rows carry none.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenance = ec.resource.script("component://mr-boss/service/ironstone/maintenance/Maintenance.js")
 const {find, one} = lib
@@ -37,6 +38,7 @@ const linkPatterns = [
 const callRecordLimit = 20
 const callWorkLimit = 10
 const callAssetLimit = 10
+const openStatuses = ["WeInPlanning", "WeApproved", "WeInProgress", "WeOnHold"]
 const L = words => ec.l10n.localize(words)
 
 // A record of a lookup kind Maintenance admits the user to, as {kind, recordId, label, detail, url, status}; null otherwise.
@@ -171,6 +173,49 @@ function partiesOfNumber(number) {
     }
     return Array.from(partyIds)
 }
+const isInternal = partyId => !!one("mantle.party.PartyRole", {partyId, roleTypeId: "OrgInternal"})
+// The caller's parties who are colleagues: a person who is an employee or agent of one of the internal organizations (the user's
+// call of Nov 12, review R4). A colleague's call brings up their own work, not their organization's.
+function colleaguesOf(partyIds) {
+    return partyIds.filter(
+        partyId =>
+            !one("mantle.party.Organization", {partyId}) &&
+            Array.from(
+                find("mantle.party.PartyRelationship", {fromPartyId: partyId})
+                    .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .limit(20)
+                    .list()
+            ).some(row => isInternal(row.toPartyId))
+    )
+}
+// A colleague's own open work: the work orders assigned to them, and those of the requests they filed (RequestWorkEffort), each as
+// the user's Maintenance scope reads it.
+function colleagueWork(partyId) {
+    const rows = workOrders({assigneePartyId: partyId, pageSize: callWorkLimit})
+    const requestIds = Array.from(
+        find("mantle.request.Request", {filedByPartyId: partyId})
+            .orderBy("-requestDate")
+            .selectField("requestId")
+            .limit(20)
+            .list()
+    ).map(row => row.requestId)
+    const workIds = requestIds.length
+        ? Array.from(
+              find("mantle.request.RequestWorkEffort").condition("requestId", "in", requestIds).selectField("workEffortId").list()
+          ).map(row => row.workEffortId)
+        : []
+    for (const workEffortId of Array.from(new Set(workIds)).slice(0, callWorkLimit)) {
+        let workOrder = null
+        try {
+            workOrder = lib.probe("mantle.work.MaintenanceServices.get#MaintenanceWorkOrder", {workEffortId}).workOrder
+        } catch (error) {
+            workOrder = null
+        }
+        if (workOrder && openStatuses.includes(workOrder.statusId)) rows.push(workOrder)
+    }
+    return rows
+}
 // The organizations of the caller's parties: an organization itself, and the organizations a person works for or is a contact of.
 function organizationsOf(partyIds) {
     const found = new Set()
@@ -198,22 +243,28 @@ function callContext(p) {
     if (!ec.user.userId) return empty
     const userScope = maintenance.scope()
     if (!userScope.read || !userScope.mantle.capabilities.workRead) return empty
-    const organizations = organizationsOf(partiesOfNumber(p.number))
-    if (!organizations.length) return empty
+    const callers = partiesOfNumber(p.number)
+    const colleagues = colleaguesOf(callers)
+    const organizations = organizationsOf(callers.filter(partyId => !colleagues.includes(partyId)))
+    if (!organizations.length && !colleagues.length) return empty
     const rows = new Map()
-    // the caller's own organization's work, when it is one Maintenance serves for the user
+    // a colleague's own work: what they reported or are assigned (review R4)
+    for (const partyId of colleagues) for (const row of colleagueWork(partyId)) rows.set(row.workEffortId, row)
+    // the caller organization's work, when it is one Maintenance serves for the user (a caller who is no colleague)
     for (const organizationPartyId of organizations)
-        if (one("mantle.party.PartyRole", {partyId: organizationPartyId, roleTypeId: "OrgInternal"}))
+        if (isInternal(organizationPartyId))
             for (const row of workOrders({organizationPartyId, pageSize: callWorkLimit})) rows.set(row.workEffortId, row)
     // the work on the equipment the caller's organization owns (a customer's)
-    const assetIds = Array.from(
-        find(ASSET)
-            .condition("ownerPartyId", "in", organizations)
-            .condition("assetTypeEnumId", "not-in", ["AstTpInventory", "AstTpSupplies"])
-            .selectField("assetId")
-            .limit(callAssetLimit)
-            .list()
-    ).map(row => row.assetId)
+    const assetIds = !organizations.length
+        ? []
+        : Array.from(
+              find(ASSET)
+                  .condition("ownerPartyId", "in", organizations)
+                  .condition("assetTypeEnumId", "not-in", ["AstTpInventory", "AstTpSupplies"])
+                  .selectField("assetId")
+                  .limit(callAssetLimit)
+                  .list()
+          ).map(row => row.assetId)
     for (const assetId of assetIds) for (const row of workOrders({assetId, pageSize: 5})) rows.set(row.workEffortId, row)
     const recordList = []
     const repaired = new Map()

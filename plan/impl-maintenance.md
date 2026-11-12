@@ -4071,13 +4071,19 @@ Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `Provide
   - R3 (low, access): `add#MaintenanceVideoCall` invited any party by id; Commons' attendees leave out a disabled party and
     another user's personal contact. It now refuses those as ATTENDEE_UNAVAILABLE. Spec: Mantle MaintenanceStack's video call
     feature (the technician's personal contact, to the planner); it fails without the fix. Design §1.4 Meetings says so.
+  - R4 (medium, the user's call of Nov 12, given during the review): the call context of a colleague (a person who is an employee
+    or agent of one of the internal organizations) names only the open work orders they reported (their requests' work orders,
+    RequestWorkEffort) or are assigned, read as the user's Maintenance scope reads them; a customer's or vendor's caller still
+    brings up their organization's open work and the work on its equipment. Stack.js `colleaguesOf`/`colleagueWork`;
+    StackServices and design §1.4 say so. Spec: MaintenanceStack's call context feature (Kenji, who reported and is assigned
+    nothing: none of Services' work; the requester: the air handler's work order and its equipment under repair, not the oil
+    service; maint.tech2: the oil service; a contact of Services: both, no cost; the technician of that call: their own only),
+    with spec-local work numbers; it fails without the fix. MaintenanceAccess's stack providers case calls the requester's
+    spec-local number in place of Kenji's.
 - Findings (provisional, unnumbered):
   - Comms' `send#Compose` filed an internal message on a Services work order for Retail's planner and for an unassigned technician (R2's cases without the check),
     called under Maintenance's root. Its "a record the user may not see is refused" did not hold there: worth a Comms look at
     Compose's record check under another app's inheritable root (not changed here: Comms' owner contract).
-  - The call context's internal-organization branch: any employee, agent or contact of an internal organization calling a
-    planner brings up up to 10 of that organization's open work orders, ordered by priority. Nothing is shown the planner cannot
-    read, but for a colleague calling it is mostly noise. The user's call below.
   - The call context's equipment branch takes the first 10 assets the organization owns, with or without work, then their work:
     a customer with many assets may show none of its open work. A small change (assets of open work first) when it matters.
   - The due projection pages `find#MaintenanceDue` (200) before it keeps the user's teams: a planner's team plans beyond the first
@@ -4098,9 +4104,7 @@ Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `Provide
     `MaintenanceAccess.spec.js`'s end (one feature after the stack providers' case) and header.
   - When P14 is merged: the PM list export (`maintenanceDueList`, a `wizard` target with ownerRoute `maintenanceDue` added to
     mountRoutes) and DueMaintenance's .ics link, the seam the Built note names (the reviewer adds them at the lead's word).
-  - The user's call: should an internal colleague's call bring up their organization's open work (design §1.4 taken literally,
-    as built), or only the work they reported or are assigned, keeping the organization's open work for a customer or vendor
-    caller? Recommendation: the latter; built meanwhile as the design reads.
+  - The user's call on an internal colleague's call context is decided (Nov 12) and built as R4.
 
 ### P20 — Finish
 
