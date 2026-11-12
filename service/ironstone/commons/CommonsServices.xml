@@ -165,7 +165,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="check" noun="TaskUpdate">
         <description>Whether the current user may change a task or activity from Today (Mark done, Reschedule): a WetTask of
             which the user's party is the owner or a current Assignee (not declined or unassigned), as get#UserTodayItems
-            decides canUpdate; never a production run's operation (impl-manufacturing F38). An error otherwise.</description>
+            decides canUpdate; never a production run's operation (impl-manufacturing F38) or managed maintenance work (MANAGED_WORK,
+            impl-maintenance P3). An error otherwise.</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="workEffort" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -178,6 +179,11 @@ along with this software (see the LICENSE.md file). If not, see
                     .condition(cf.makeCondition('statusId', 'not-in', ['WeptDeclined', 'WeptUnassigned'], true)).count() > 0)
             if (!mine || row.workEffortTypeEnumId !== 'WetTask') {
                 ec.message.addError(ec.resource.expand('You may not change task ${workEffortId}', '', {workEffortId: workEffortId}))
+                return
+            }
+            // a maintenance work order and its steps are changed only through their lifecycle in Maintenance (impl-maintenance P3)
+            if (ec.resource.script('component://mr-mantle/service/mantle/work/WorkProcesses.js').managedIds([workEffortId]).length) {
+                ec.message.addError(ec.resource.expand('MANAGED_WORK: Work ${workEffortId} is a maintenance work order\'s: complete it from its work order in Maintenance', '', {workEffortId: workEffortId}))
                 return
             }
             // a production run's operation is changed only through Manufacturing's production services (impl-manufacturing F38)

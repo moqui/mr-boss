@@ -387,6 +387,7 @@ const settingsRoutes = {
     commsConsent: {url: "/qapps/Comms/Consent/List", plain: true},
     insightsSettings: {url: "/qapps/Insights/Settings/AnalyticsSettings", plain: true},
     peopleSettings: {url: "/qapps/People/Settings", plain: true},
+    maintenanceSettings: {url: "/qapps/Maintenance/Settings", plain: true},
     voice: {url: "/qapps/system/Voice", plain: true},
     toolsStatusFlows: {url: "/qapps/tools/StatusFlows", plain: true}
 }

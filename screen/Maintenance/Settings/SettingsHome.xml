@@ -35,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
                 {setting: 'Teams', configures: 'Dispatch defaults and the intake address of each maintenance team'},
                 {setting: 'Lookups', configures: 'Maintenance kinds, sources, severities, reasons and failure modes'},
                 {setting: 'Setup readiness', configures: 'What Maintenance still needs before work is planned'}
-            ].map(row =&gt; Object.assign(row, {state: 'Not yet available'}))"/>
+            ].map(row =&gt; Object.assign(row, {state: row.setting === 'Work policy' ? 'Work policy tab' : 'Not yet available'}))"/>
     </actions>
     <widgets>
         <label text="Maintenance settings" type="h5"/>

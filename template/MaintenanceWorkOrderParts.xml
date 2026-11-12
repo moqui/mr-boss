@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Maintenance work order screens (impl-maintenance P3; design-maintenance §3 WorkOrders and WorkOrderDetail). A screen
+    includes each transition it uses by name (transition-include), so a form here posts to the screen it is on. Each checks the work
+    order through check#Record first (the root's Maintenance check and Mantle's scope), then calls Mantle's
+    mantle.work.MaintenanceServices, which checks the permission, the scope and the assignment again:
+    - createWorkOrder: NewWork (create#MaintenanceWorkOrder, with an operation key so a second submit answers the first); the new
+      work order opens;
+    - adoptRecord: an open maintenance record of equipment made a work order (adopt#MaintenanceRecord), which opens;
+    - lifecycleAction: an action of the lifecycle (transition#MaintenanceWorkOrder) at the revision read, with its reason or the
+      completion's outcome, disposition and finish;
+    - storeWorkOrder: WorkHeader's edit (store#MaintenanceWorkOrder);
+    - scheduleWorkOrder: AssignSchedule (schedule#MaintenanceWorkOrder), the team, the technicians and the planned window;
+    - startTimer, stopTimer, recordTime: the technician's own time (start#, stop#MaintenanceTimer, record#MaintenanceTime);
+    - LifecycleActionRow: one action (actionRow; formPrefix names its form): why it is refused, or its form. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createWorkOrder">
+        <actions>
+            <service-call name="mantle.work.MaintenanceServices.create#MaintenanceWorkOrder" out-map="created"
+                    in-map="{assetId:(targetKind == 'facility' ? null : assetId), facilityId:(targetKind == 'facility' ? facilityId : null),
+                        workEffortName:workEffortName, description:description, maintenanceKindEnumId:maintenanceKindEnumId,
+                        maintenanceTypeEnumId:maintenanceTypeEnumId, severityEnumId:severityEnumId, priority:priority,
+                        estimatedWorkTime:estimatedWorkTime, estimatedStartDate:estimatedStartDate,
+                        estimatedCompletionDate:estimatedCompletionDate, teamPartyId:teamPartyId, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="workEffortId" from="created.workEffortId"/>
+                <message type="success">${created.repeated ? 'Work order ' + created.workEffortId + ' was created already' : (created.approved ? 'Work order ' + created.workEffortId + ' created and approved' : 'Work order ' + created.workEffortId + ' created; it waits for a supervisor\'s approval')}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['WorkOrders/WorkOrderDetail']}">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="adoptRecord">
+        <actions>
+            <service-call name="mantle.work.MaintenanceServices.adopt#MaintenanceRecord" out-map="adopted"
+                    in-map="{assetMaintenanceId:assetMaintenanceId}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="workEffortId" from="adopted.workEffortId"/>
+                <message type="success">${adopted.repeated ? 'The record is work order ' + adopted.workEffortId + ' already' : 'Work order ' + adopted.workEffortId + ' made from the record'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['WorkOrders/WorkOrderDetail']}">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="lifecycleAction">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.transition#MaintenanceWorkOrder" out-map="moved"
+                    in-map="{workEffortId:workEffortId, action:lifecycleAction, expectedRevision:expectedRevision,
+                        holdReasonEnumId:holdReasonEnumId, cancelReasonEnumId:cancelReasonEnumId, outcomeEnumId:outcomeEnumId,
+                        dispositionEnumId:dispositionEnumId, failureModeEnumId:failureModeEnumId,
+                        actualCompletionDate:actualCompletionDate}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const done = {APPROVED: 'approved', STARTED: 'started', HELD: 'held', RESUMED: 'resumed', COMPLETED: 'completed',
+                        CLOSED: 'closed', CANCELLED: 'cancelled'}
+                    ec.message.addMessage('Work order ' + workEffortId + ' ' + (done[moved.resultCode] || moved.resultCode), 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="storeWorkOrder">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.store#MaintenanceWorkOrder"
+                    in-map="{workEffortId:workEffortId, expectedRevision:expectedRevision, workEffortName:workEffortName,
+                        description:description, priority:priority, estimatedWorkTime:estimatedWorkTime,
+                        maintenanceTypeEnumId:maintenanceTypeEnumId, severityEnumId:severityEnumId,
+                        failureModeEnumId:failureModeEnumId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Work order ${workEffortId} saved</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="scheduleWorkOrder">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <set field="assigneeIds" from="assigneePartyIds == null ? null : (Array.isArray(assigneePartyIds) ? assigneePartyIds
+                    : String(assigneePartyIds).split(',')).map(id =&gt; String(id).trim()).filter(Boolean)"/>
+            <service-call name="mantle.work.MaintenanceServices.schedule#MaintenanceWorkOrder" out-map="scheduled"
+                    in-map="{workEffortId:workEffortId, expectedRevision:expectedRevision, teamPartyId:(teamPartyId ?? ''),
+                        assigneePartyIds:(assigneeIds || []), estimatedStartDate:estimatedStartDate,
+                        estimatedCompletionDate:estimatedCompletionDate}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Work order ${workEffortId} assigned and scheduled</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="startTimer">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.start#MaintenanceTimer" in-map="{workEffortId:workEffortId, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Timer started</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="stopTimer">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.stop#MaintenanceTimer" out-map="stopped" in-map="{workEffortId:workEffortId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stopped.discarded ? 'Timer stopped within a minute; nothing recorded' : 'Timer stopped'}</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <transition name="recordTime">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceServices.record#MaintenanceTime"
+                    in-map="{workEffortId:workEffortId, fromDate:fromDate, thruDate:thruDate, hours:hours, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Time recorded</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <widgets>
+        <section name="LifecycleActionRow">
+            <widgets>
+                <container style="q-mb-md">
+                    <label text="${actionRow.label}" type="h6" style="q-my-xs"/>
+                    <label text="${actionRow.message}" type="p" style="text-caption text-negative" condition="!actionRow.allowed"/>
+                    <section name="CompletionBlockers" condition="actionRow.action == 'complete' &amp;&amp; blockerList?.length">
+                        <widgets>
+                            <section-iterate name="Blockers" list="blockerList" entry="blocker">
+                                <widgets><label text="${blocker.blocker}: ${blocker.detail}" type="div" style="text-caption text-warning"/></widgets>
+                            </section-iterate>
+                        </widgets>
+                    </section>
+                    <section name="ActionForm" condition="actionRow.allowed">
+                        <widgets>
+                            <form-single name="LifecycleForm_${formPrefix}_${actionRow.action}" transition="lifecycleAction"
+                                    map="{workEffortId:workEffortId, lifecycleAction:actionRow.action, expectedRevision:workOrder.revision}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="lifecycleAction"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="holdReasonEnumId" hide="!actionRow.needsHoldReason">
+                                    <default-field title="Why it is held">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'holdReasons'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="cancelReasonEnumId" hide="!actionRow.needsCancelReason">
+                                    <default-field title="Why it is cancelled">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'cancelReasons'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="outcomeEnumId" hide="!actionRow.needsCompletion">
+                                    <default-field title="Outcome">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'outcomes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="dispositionEnumId" hide="!actionRow.needsDisposition">
+                                    <default-field title="Equipment after the work">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'dispositions'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="failureModeEnumId" hide="!actionRow.needsCompletion">
+                                    <default-field title="Failure mode">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'failureModes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="actualCompletionDate" hide="!actionRow.needsCompletion">
+                                    <default-field title="Finished" tooltip="Now when empty"><date-time/></default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="${actionRow.label}" type="${actionRow.action == 'cancel' ? 'danger' : 'primary'}"
+                                                confirmation="${actionRow.action == 'cancel' ? 'Cancel work order ' + workEffortId + '? Its time and files are kept.' : (actionRow.action == 'complete' ? 'Complete work order ' + workEffortId + '?' : '')}"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </widgets>
+                    </section>
+                </container>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

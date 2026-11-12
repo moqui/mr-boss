@@ -23,13 +23,25 @@ const ids = {
     airHandlerId: "BOSS_MNT_AIR_HANDLER",
     modelId: "BOSS_MNT_COMP_MODEL",
     custodianId: "BOSS_PPL_KENJI",
-    // the menu of design §1.2 built so far: a Maintenance user's who reads equipment, and with Settings the Maintenance
+    // P3: the team and work orders (BossZMaintenanceDemoData.xml): the air handler's leak in progress, maint.tech's; the compressor's
+    // oil service approved for next week, maint.tech2's; the van's service waiting for a supervisor; Room 201's bracket (facility
+    // work, unassigned); the overdue multimeter check, maint.tech's; the motor's adopted request on hold
+    teamId: "BOSS_MNT_TEAM",
+    inProgressOrderId: "BOSS_MNT_WO_AHU",
+    plannedOrderId: "BOSS_MNT_WO_COMP_OIL",
+    waitingOrderId: "BOSS_MNT_WO_VAN",
+    roomOrderId: "BOSS_MNT_WO_ROOM201",
+    overdueOrderId: "BOSS_MNT_WO_METER",
+    heldOrderId: "BOSS_MNT_WO_MOTOR",
+    techPartyId: "BOSS_MNT_TECH",
+    tech2PartyId: "BOSS_MNT_TECH2",
+    // the menu of design §1.2 built so far: a Maintenance user's who reads work and equipment, and with Settings the Maintenance
     // administrator's; a user who reads none (a procedure author) has Home alone
-    staffMenu: ["Home", "Equipment", "Facilities"],
+    staffMenu: ["Home", "WorkOrders", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
-    adminMenu: ["Home", "Equipment", "Facilities", "Settings"],
-    settingsMenu: ["SettingsHome"],
-    keys: ["g m", "g e", "g f"]
+    adminMenu: ["Home", "WorkOrders", "Equipment", "Facilities", "Settings"],
+    settingsMenu: ["SettingsHome", "WorkPolicy"],
+    keys: ["g m", "g w", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS

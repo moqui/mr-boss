@@ -165,6 +165,18 @@ along with this software (see the LICENSE.md file). If not, see
                     inspection:'sym_o_verified'}[warehouseKind]
                 return
             }
+            // a maintenance work order and its steps (the root has a MaintenanceWorkOrder row) open their work order under
+            // Maintenance for a user Maintenance admits to it, else nowhere: they are no task (impl-maintenance P3)
+            if (recordEntityName === 'mantle.work.effort.WorkEffort' && ec.entity.isEntityDefined('mantle.work.maintenance.MaintenanceWorkOrder')) {
+                const effort = ec.entity.find(recordEntityName).condition('workEffortId', id).disableAuthz().one()
+                const rootId = effort ? (effort.rootWorkEffortId || effort.workEffortId) : null
+                if (rootId && ec.entity.find('mantle.work.maintenance.MaintenanceWorkOrder').condition('workEffortId', rootId).disableAuthz().count() > 0) {
+                    url = ec.resource.script('component://mr-boss/service/ironstone/maintenance/Maintenance.js').execute('recordLink',
+                        {recordType: 'workOrder', recordId: rootId}).url
+                    icon = 'sym_o_handyman'
+                    return
+                }
+            }
             // runs, their operations, methods, routings and work centers open under Manufacturing for a user who may work with
             // them there (ironstone.manufacturing's scope: the root grant and the organizations, impl-manufacturing P1), else as
             // below (a method or routing in Products' method screens)

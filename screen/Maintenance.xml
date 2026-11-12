@@ -46,8 +46,9 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- the record panels serve Maintenance's own record hosts only (the People P2 and Insights P12 mount lesson): this root's
                 inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to a user given
                 Maintenance without Commons. P2: equipment (Asset) and facilities, each checked as Maintenance's check#Record checks
-                the record (the user's maintenance scope); P3 adds the work order and step. A panel request with no record (a person
-                search, an avatar) names none. -->
+                the record (the user's maintenance scope); P3: a work order and its steps (a WorkEffort; a step is checked as its
+                work order, and a work effort that is no work order is refused). A panel request with no record (a person search, an
+                avatar) names none. -->
             <script><![CDATA[
                 const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
                 const panelName = pathNames[pathNames.indexOf('Maintenance') + 1]
@@ -55,7 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
                 if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
                     let entityName = String(wanted)
                     try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
-                    const panelHosts = {'mantle.product.asset.Asset': 'asset', 'mantle.facility.Facility': 'facility'}
+                    const panelHosts = {'mantle.product.asset.Asset': 'asset', 'mantle.facility.Facility': 'facility',
+                        'mantle.work.effort.WorkEffort': 'workOrder'}
                     if (!Object.hasOwn(panelHosts, entityName))
                         throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
                     let admitted = false
@@ -83,6 +85,9 @@ along with this software (see the LICENSE.md file). If not, see
             hosts (a work order, a step, a template, equipment, a facility) join with their phases (P3) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- P3: Work orders (design §3), for a user who reads maintenance work (a view or assigned view permission) -->
+        <subscreens-item name="WorkOrders" location="component://mr-boss/screen/Maintenance/WorkOrders.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW')"/>
         <!-- P2: Equipment and Facilities (design §6), for a user who reads them -->
         <subscreens-item name="Equipment" location="component://mr-boss/screen/Maintenance/Equipment.xml" menu-index="6"
                 menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
@@ -91,13 +96,21 @@ along with this software (see the LICENSE.md file). If not, see
     </subscreens>
 
     <!-- P1: the maintenance keymap and the palette source (design §1.2; its records join with their screens: equipment and
-        facilities P2, work orders P3, procedures P6). P2: g e and g f open Equipment and Facilities. Quick create (Report a problem, New work order), Today and the notification
-        topics (MaintenanceWork, MaintenanceDue, WorkProcessApproval, ResourceBooking) arrive with their records. -->
+        facilities P2, work orders P3, procedures P6). P2: g e and g f open Equipment and Facilities; P3: g w Work orders. Quick create
+        (New work order P3, Report a problem P4), Today (P3) and the notification topics (MaintenanceWork P3, MaintenanceDue,
+        WorkProcessApproval, ResourceBooking) arrive with their records. -->
     <shell-providers>
         <palette-source group="Maintenance" label="Maintenance records" icon="sym_o_build"
                 service="ironstone.maintenance.ContextServices.search#Records" sequence="48"/>
+        <!-- P3: New work order (NewWorkOrder tells a user who may not create work so; Mantle refuses them), the MaintenanceWork topic
+            and the user's due work orders in Today -->
+        <quick-create kind="maintenanceWorkOrder" label="Maintenance work order" icon="sym_o_handyman"
+                screen="Maintenance/WorkOrders/NewWorkOrder" sequence="86"/>
+        <notification-topic topic="MaintenanceWork"/>
+        <today-source service="ironstone.maintenance.HomeServices.get#TodayItems" label="Maintenance"/>
         <keymap scope="maintenance">
             <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>
+            <key keys="g w" label="Work orders" screen="Maintenance/WorkOrders"/>
             <key keys="g e" label="Equipment" screen="Maintenance/Equipment"/>
             <key keys="g f" label="Facilities" screen="Maintenance/Facilities"/>
         </keymap>

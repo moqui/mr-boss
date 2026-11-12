@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's lifecycle participant, maintenance.assignments (owner contract with Admin, design-admin §14; impl-maintenance P3,
+    F56; WorkOrders.js): a leaver's open work order assignments and the equipment they hold, read under ADMIN_IDENTITY_VIEW as
+    Projects' participant reads its own, and moved through Mantle's schedule#MaintenanceWorkOrder and change#MaintenanceCustody,
+    which check the caller's maintenance permissions and the new person themselves. Admin's Projects participant leaves managed
+    work out. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Assignments" allow-remote="false" read-only="true">
+        <description>What userId holds of Maintenance (the user's own, or another's with ADMIN_IDENTITY_VIEW): their open work orders
+            (a current technician assignment) and the equipment they hold (a current custodian or operator), as counts by kind
+            (workOrders, custody), never the work's names. A kind the caller may not move (MAINTENANCE_PLAN or _SUPERVISE for work
+            orders, MAINTENANCE_RESOURCE_EDIT for custody) is listed not transferable, its name saying who moves it in Maintenance:
+            an identity operator hands it off and gets no transfer step (the user's call, Nov 12).</description>
+        <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceLookup"/>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').execute('findAssignments', context)"/>
+            <set field="resourceList" from="answer.resourceList"/>
+        </actions>
+    </service>
+    <service verb="transfer" noun="Assignments" allow-remote="false">
+        <description>One kind (assignmentKind: workOrders or custody) of fromUserId's moved to toUserId (ADMIN_IDENTITY_MANAGE for
+            another's): each work order's technicians with the leaver replaced (schedule#MaintenanceWorkOrder: MAINTENANCE_PLAN or
+            _SUPERVISE in its organization, and the new person of it), each holding to the new person (change#MaintenanceCustody:
+            MAINTENANCE_RESOURCE_EDIT). An error names the first refusal and how many were not moved; the others are moved.</description>
+        <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceTransfer"/>
+        <in-parameters><parameter name="assignmentKind" required="true"/></in-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').execute('transferAssignments', context)"/>
+            <set field="transferred" from="answer.transferred"/>
+        </actions>
+    </service>
+</services>

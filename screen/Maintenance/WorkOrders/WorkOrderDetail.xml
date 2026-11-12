@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Work orders › WorkOrderDetail (design-maintenance §3 WorkOrderDetail; style-guide §3.3 Detail; impl-maintenance P3):
+    one work order the user may read (check#Record: a broad reader of its service organization, or the technician it is assigned to;
+    else "not available"). The record header: its id and name, the equipment or facility, the organization, kind, type, priority and
+    team, the planned window and due, and its status; the primary action by status (Approve, Start, Resume, Complete, Close), the
+    Lifecycle dialog with every action open from the status, each allowed or with why not (the user's authority, a running timer,
+    the threshold), and its input (a hold or cancel reason; for Complete the outcome, the equipment's state after the work, the
+    failure mode and the finish, with the completion blockers), each posting transition#MaintenanceWorkOrder at the revision read.
+    The tabs, by menu index: Overview (1: WorkHeader with Edit, Assignments with Assign and schedule), Time (2: the user's timer and
+    own time; the team's total for a broad reader), Files (3), Conversation (4) and History (5). The other tabs of design §3 join
+    with their phases (Procedure P6/P7, Parts P9, Purchasing P10, Downtime P5, Costs P11). No cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work order" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <!-- the work order is the user's (Maintenance's check and Mantle's scope), for every tab and transition -->
+    <always-actions>
+        <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="workOrderCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!workOrderCheck?.recordId"/>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="lifecycleAction" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <subscreens default-item="Overview"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="recordFound &amp;&amp; !!workOrderDetail?.workOrder"/>
+        <set field="workOrder" from="workOrderDetail?.workOrder || {}"/>
+        <set field="blockerList" from="workOrderDetail?.blockerList || []"/>
+        <set field="actionRows" from="workOrderDetail?.actionList || []"/>
+        <set field="primaryAction" from="['approve', 'start', 'resume', 'complete', 'close'].map(action =&gt; actionRows.find(row =&gt;
+                row.action === action &amp;&amp; row.allowed)).find(row =&gt; row) || null"/>
+        <set field="statusColor" from="{WeInPlanning:'grey-8', WeApproved:'primary', WeInProgress:'positive', WeOnHold:'warning',
+                WeComplete:'teal', WeClosed:'grey-7', WeCancelled:'negative'}[workOrder.statusId] || 'grey-8'"/>
+        <set field="captionText" from="[workOrder.targetName, workOrder.organizationName, [workOrder.kindText, workOrder.typeText].filter(Boolean).join(', '),
+                workOrder.priority != null ? 'priority ' + workOrder.priority : null, workOrder.teamName].filter(Boolean).join(' · ')"/>
+        <set field="windowText" from="[workOrder.estimatedStartText ? 'Planned from ' + workOrder.estimatedStartText : null,
+                workOrder.estimatedCompletionText ? 'due ' + workOrder.estimatedCompletionText + (workOrder.overdue ? ' (overdue)' : '') : null]
+                .filter(Boolean).join(', ')"/>
+    </actions>
+    <widgets>
+        <section name="WorkOrderNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Work order ${workEffortId} is not available: it does not exist, it is not one of your organizations', or it is not assigned to you."
+                                type="p"/>
+                        <link url="${sharedLinks['WorkOrders/Find']}" text="Back to the work orders" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="WorkOrderFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}"
+                        title="Work order ${workEffortId} · ${workOrder.workEffortName || ''}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${workEffortId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${workOrder.workEffortName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="${windowText}" type="div" style="${workOrder.overdue ? 'text-caption text-negative' : 'text-caption m-muted'}"
+                                    condition="windowText"/>
+                            <label text="Held: ${workOrder.holdReasonText}" type="div" style="text-caption text-warning"
+                                    condition="workOrder.statusId == 'WeOnHold'"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(workOrder.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: workOrder.statusText})}]]></text>
+                                <text type="html">${workOrder.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <section name="PrimaryAction" condition="primaryAction">
+                                <widgets>
+                                    <container-dialog id="PrimaryLifecycle" button-text="${primaryAction.label}" type="primary"
+                                            icon="sym_o_play_arrow" title="${primaryAction.label} work order ${workEffortId}" width="640">
+                                        <section name="PrimaryActionRow">
+                                            <actions>
+                                                <set field="actionRow" from="primaryAction"/>
+                                                <set field="formPrefix" value="Primary"/>
+                                            </actions>
+                                            <widgets>
+                                                <section-include name="LifecycleActionRow"
+                                                        location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+                                            </widgets>
+                                        </section>
+                                    </container-dialog>
+                                </widgets>
+                            </section>
+                            <container-dialog id="LifecycleDialog" button-text="Lifecycle" icon="sym_o_conversion_path"
+                                    title="Lifecycle of work order ${workEffortId}" width="720">
+                                <label text="Each action shows its input, or why it cannot be done now." type="p" style="text-caption m-muted"/>
+                                <section name="LifecycleList">
+                                    <actions>
+                                        <set field="formPrefix" value="Dialog"/>
+                                    </actions>
+                                    <widgets>
+                                        <section-iterate name="LifecycleActions" list="actionRows" entry="actionRow">
+                                            <widgets>
+                                                <section-include name="LifecycleActionRow"
+                                                        location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+                                            </widgets>
+                                        </section-iterate>
+                                    </widgets>
+                                </section>
+                                <label text="No action is open while the work order is ${workOrder.statusText}." type="p" style="m-muted"
+                                        condition="!actionRows.length"/>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz">
+                                <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="Equipment" icon="sym_o_build"
+                                        parameter-map="{assetId:workOrder.assetId}" condition="workOrder.assetId"/>
+                                <link url="${sharedLinks['Facilities/FacilityDetail']}" text="Facility" icon="sym_o_domain"
+                                        parameter-map="{facilityId:workOrder.facilityId}" condition="workOrder.facilityId"/>
+                                <link url="${sharedLinks['WorkOrders/Find']}" text="All work orders" icon="sym_o_list"/>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <subscreens-panel id="WorkOrderTabs" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

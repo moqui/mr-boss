@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Maintenance demo's links to People's and Purchasing's demo records (impl-maintenance P2), in a file that loads after
     theirs (BossMaintenanceDemoData.xml loads before them): the custodians of Services' compressor and multimeter, Kenji and Sofia,
-    Services' technicians in People's demo, and the supplier warranty's warrantor of the compressor and the air handler. -->
+    Services' technicians in People's demo, and the supplier warranty's warrantor of the compressor and the air handler; P3's team
+    and work orders. -->
 <entity-facade-xml type="demo">
     <mantle.product.asset.AssetPartyAssignment assetId="BOSS_MNT_COMPRESSOR" partyId="BOSS_PPL_KENJI" roleTypeId="Custodian"
             fromDate="2026-01-05 08:00:00"/>
@@ -22,4 +23,111 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="2026-02-02 08:00:00"/>
     <mantle.product.asset.Asset assetId="BOSS_MNT_COMPRESSOR" warrantyPartyId="BOSS_PUR_SUP_B"/>
     <mantle.product.asset.Asset assetId="BOSS_MNT_AIR_HANDLER" warrantyPartyId="BOSS_PUR_SUP_B"/>
+
+    <!-- P3 (design-maintenance §3): Services' maintenance team, Facilities maintenance, with the two technicians as members, and
+        eight work orders across the states, here because they name the demo users (BossUsersDemoData.xml loads after
+        BossMaintenanceDemoData.xml): the air handler's coil leak in progress with maint.tech's time; the compressor's oil service
+        approved for next week (planned, so the compressor stays available to production); the van's service waiting for a
+        supervisor; Room 201's projector bracket and the overdue multimeter check, both approved, the bracket unassigned; the
+        compressor's belt complete and Room 102's light closed, with time; and the motor's vibration, a production maintenance
+        request adopted as a work order and held for parts. Each equipment work order has its primary AssetMaintenance. -->
+    <mantle.party.Party partyId="BOSS_MNT_TEAM" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_MNT_TEAM" organizationName="Facilities maintenance"/>
+    <mantle.party.PartyRole partyId="BOSS_MNT_TEAM" roleTypeId="OrgTeam"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH_TEAM" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_MNT_TECH" fromRoleTypeId="Assignee" toPartyId="BOSS_MNT_TEAM" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH2_TEAM" relationshipTypeEnumId="PrtMember"
+            fromPartyId="BOSS_MNT_TECH2" fromRoleTypeId="Assignee" toPartyId="BOSS_MNT_TEAM" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_AHU" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeInProgress"
+            workEffortName="Air handler coil leak" description="Water under AHU-2 after the morning start" facilityId="BOSS_MNT_FLOOR2"
+            priority="2" estimatedWorkTime="3" estimatedStartDate="2026-11-11 08:00:00" estimatedCompletionDate="2026-11-14 17:00:00"
+            actualStartDate="2026-11-11 09:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_AHU" assetId="BOSS_MNT_AIR_HANDLER" statusId="AsMntInProcess"
+            maintenanceTypeEnumId="MntTpCorrective" maintenanceDate="2026-11-11 08:00:00" taskWorkEffortId="BOSS_MNT_WO_AHU"
+            comments="Air handler coil leak"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_AHU" assetId="BOSS_MNT_AIR_HANDLER" assetMaintenanceId="BOSS_MNT_AM_AHU"
+            maintenanceKindEnumId="MkCorrective" maintenanceTypeEnumId="MntTpCorrective" sourceEnumId="MsrcReport" severityEnumId="MsevHigh" revision="3"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_AHU" partyId="BOSS_MNT_TECH" roleTypeId="Assignee"
+            fromDate="2026-11-10 16:00:00" statusId="WeptAssigned"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_AHU" partyId="BOSS_MNT_TEAM" roleTypeId="OrgTeam"
+            fromDate="2026-11-10 16:00:00" statusId="WeptAssigned"/>
+    <mantle.work.time.TimeEntry timeEntryId="BOSS_MNT_TE_AHU1" partyId="BOSS_MNT_TECH" workEffortId="BOSS_MNT_WO_AHU"
+            fromDate="2026-11-11 09:00:00" thruDate="2026-11-11 10:30:00" hours="1.5" comments="Traced the leak to the coil header"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_COMP_OIL" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeApproved"
+            workEffortName="Compressor 500-hour oil service" facilityId="BOSS_MNT_ROOM_102" priority="5" estimatedWorkTime="2"
+            estimatedStartDate="2026-11-17 08:00:00" estimatedCompletionDate="2026-11-17 12:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_COMP_OIL" assetId="BOSS_MNT_COMPRESSOR" statusId="AsMntScheduled"
+            maintenanceTypeEnumId="MntTpOilChange" maintenanceDate="2026-11-17 08:00:00" taskWorkEffortId="BOSS_MNT_WO_COMP_OIL"
+            comments="Compressor 500-hour oil service"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_COMP_OIL" assetId="BOSS_MNT_COMPRESSOR" assetMaintenanceId="BOSS_MNT_AM_COMP_OIL"
+            maintenanceKindEnumId="MkPreventive" maintenanceTypeEnumId="MntTpOilChange" sourceEnumId="MsrcPlanned" revision="2"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_COMP_OIL" partyId="BOSS_MNT_TECH2" roleTypeId="Assignee"
+            fromDate="2026-11-10 16:00:00" statusId="WeptAssigned"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_COMP_OIL" partyId="BOSS_MNT_TEAM" roleTypeId="OrgTeam"
+            fromDate="2026-11-10 16:00:00" statusId="WeptAssigned"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_VAN" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeInPlanning"
+            workEffortName="Service van 3 annual service" facilityId="BOSS_MNT_SITE" priority="6" estimatedWorkTime="4"
+            estimatedCompletionDate="2026-12-15 17:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_VAN" assetId="BOSS_MNT_VAN" statusId="AsMntCreated"
+            maintenanceTypeEnumId="MntTpPreventive" maintenanceDate="2026-12-15 08:00:00" taskWorkEffortId="BOSS_MNT_WO_VAN"
+            comments="Service van 3 annual service"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_VAN" assetId="BOSS_MNT_VAN" assetMaintenanceId="BOSS_MNT_AM_VAN"
+            maintenanceKindEnumId="MkPreventive" maintenanceTypeEnumId="MntTpPreventive" sourceEnumId="MsrcPlanned" revision="1"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_ROOM201" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeApproved"
+            workEffortName="Room 201 projector bracket loose" facilityId="BOSS_MNT_ROOM_201" priority="4" estimatedWorkTime="1"
+            estimatedCompletionDate="2026-11-13 17:00:00"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_ROOM201" maintenanceKindEnumId="MkCorrective"
+            maintenanceTypeEnumId="MntTpCorrective" sourceEnumId="MsrcReport" severityEnumId="MsevLow" revision="1"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_METER" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeApproved"
+            workEffortName="Multimeter M-7 reads high" facilityId="BOSS_MNT_ROOM_202" priority="3" estimatedWorkTime="1"
+            estimatedStartDate="2026-11-04 08:00:00" estimatedCompletionDate="2026-11-05 17:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_METER" assetId="BOSS_MNT_MULTIMETER" statusId="AsMntScheduled"
+            maintenanceTypeEnumId="MntTpCorrective" maintenanceDate="2026-11-04 08:00:00" taskWorkEffortId="BOSS_MNT_WO_METER"
+            comments="Multimeter M-7 reads high"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_METER" assetId="BOSS_MNT_MULTIMETER" assetMaintenanceId="BOSS_MNT_AM_METER"
+            maintenanceKindEnumId="MkCorrective" maintenanceTypeEnumId="MntTpCorrective" sourceEnumId="MsrcReport" revision="2"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_METER" partyId="BOSS_MNT_TECH" roleTypeId="Assignee"
+            fromDate="2026-11-03 16:00:00" statusId="WeptAssigned"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_COMP_BELT" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeComplete"
+            workEffortName="Compressor drive belt squeal" facilityId="BOSS_MNT_ROOM_102" priority="4" estimatedWorkTime="2"
+            estimatedStartDate="2026-10-20 08:00:00" estimatedCompletionDate="2026-10-21 17:00:00"
+            actualStartDate="2026-10-20 09:00:00" actualCompletionDate="2026-10-20 11:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_COMP_BELT" assetId="BOSS_MNT_COMPRESSOR" statusId="AsMntCompleted"
+            maintenanceTypeEnumId="MntTpBeltReplace" maintenanceDate="2026-10-20 08:00:00" taskWorkEffortId="BOSS_MNT_WO_COMP_BELT"
+            comments="Compressor drive belt squeal"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_COMP_BELT" assetId="BOSS_MNT_COMPRESSOR" assetMaintenanceId="BOSS_MNT_AM_COMP_BELT"
+            maintenanceKindEnumId="MkCorrective" maintenanceTypeEnumId="MntTpBeltReplace" sourceEnumId="MsrcReport" failureModeEnumId="MfmWear"
+            outcomeEnumId="MoutRepaired" dispositionEnumId="MdispAvailable" revision="4"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_COMP_BELT" partyId="BOSS_MNT_TECH" roleTypeId="Assignee"
+            fromDate="2026-10-19 16:00:00" statusId="WeptAssigned"/>
+    <mantle.work.time.TimeEntry timeEntryId="BOSS_MNT_TE_BELT1" partyId="BOSS_MNT_TECH" workEffortId="BOSS_MNT_WO_COMP_BELT"
+            fromDate="2026-10-20 09:00:00" thruDate="2026-10-20 11:00:00" hours="2" comments="Replaced and tensioned the belt"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_ROOM102" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeClosed"
+            workEffortName="Room 102 light flickers" facilityId="BOSS_MNT_ROOM_102" priority="7" estimatedWorkTime="0.5"
+            actualStartDate="2026-10-02 13:00:00" actualCompletionDate="2026-10-02 13:30:00"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_ROOM102" maintenanceKindEnumId="MkCorrective"
+            maintenanceTypeEnumId="MntTpCorrective" sourceEnumId="MsrcReport" outcomeEnumId="MoutRepaired" revision="5"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_ROOM102" partyId="BOSS_MNT_TECH2" roleTypeId="Assignee"
+            fromDate="2026-10-01 16:00:00" statusId="WeptAssigned"/>
+    <mantle.work.time.TimeEntry timeEntryId="BOSS_MNT_TE_ROOM102" partyId="BOSS_MNT_TECH2" workEffortId="BOSS_MNT_WO_ROOM102"
+            fromDate="2026-10-02 13:00:00" thruDate="2026-10-02 13:30:00" hours="0.5" comments="Replaced the ballast"/>
+
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MNT_WO_MOTOR" workEffortTypeEnumId="WetTask" purposeEnumId="WepMaintenance" statusFlowId="WorkEffortMaintenance" ownerPartyId="ORG_ZIZI_SERVICES" timeUomId="TF_hr" statusId="WeOnHold"
+            workEffortName="Compressor motor vibration" description="Production asked for maintenance after a vibration alarm"
+            facilityId="BOSS_MNT_ROOM_102" priority="3" estimatedStartDate="2026-11-09 08:00:00"/>
+    <mantle.product.maintenance.AssetMaintenance assetMaintenanceId="BOSS_MNT_AM_MOTOR" assetId="BOSS_MNT_MOTOR" statusId="AsMntCreated"
+            maintenanceTypeEnumId="MntTpCorrective" maintenanceDate="2026-11-09 08:00:00" taskWorkEffortId="BOSS_MNT_WO_MOTOR"
+            comments="Compressor motor vibration"/>
+    <mantle.work.maintenance.MaintenanceWorkOrder workEffortId="BOSS_MNT_WO_MOTOR" assetId="BOSS_MNT_MOTOR" assetMaintenanceId="BOSS_MNT_AM_MOTOR"
+            maintenanceKindEnumId="MkCorrective" maintenanceTypeEnumId="MntTpCorrective" sourceEnumId="MsrcProduction"
+            holdReasonEnumId="MhrParts" holdFromStatusId="WeApproved" revision="3"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="BOSS_MNT_WO_MOTOR" partyId="BOSS_MNT_TECH2" roleTypeId="Assignee"
+            fromDate="2026-11-09 08:00:00" statusId="WeptAssigned"/>
 </entity-facade-xml>

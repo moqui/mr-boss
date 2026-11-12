@@ -95,7 +95,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the tabs of the app's context, in menu order: a Moqui Java menu lists every subscreen, so the tab bar draws this
             list; each tab screen's condition admits the same tabs by appRoot -->
         <set field="facilityTabs" from="appRoot == 'Manufacturing' ? ['Overview', 'WorkCenter', 'Files', 'Conversation']
-                : appRoot == 'Maintenance' ? ['Overview', 'Children', 'Rooms', 'Equipment', 'Certifications', 'Files', 'Conversation']
+                : appRoot == 'Maintenance' ? ['Overview', 'Children', 'Rooms', 'Equipment', 'Certifications', 'WorkOrders', 'Files', 'Conversation']
                 : ['Overview', 'Children', 'Locations', 'Products', 'BoxTypes', 'Printers', 'Policies', 'Schedules', 'Files', 'Conversation']"/>
         <set field="recordFound" from="!!detail?.facility"/>
         <!-- Maintenance: what moving it under another facility changes, before Edit facility's store#Facility makes the move -->

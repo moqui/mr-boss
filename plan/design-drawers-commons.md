@@ -1,5 +1,6 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 12, 2026 — impl-maintenance P3 as built (owner contract): a maintenance work order and its steps (managed work) are no task in Commons: `ironstone.commons.TaskServices.get#TaskAccess` answers not found with `MANAGED_WORK` naming the work order to open in Maintenance, Tasks' rows and `CommonsServices.check#TaskUpdate` (Today's Mark done) refuse to change them, Mantle's Today leaves them to Maintenance's today-source (which opens WorkOrderDetail with no Mark done), and the palette's `get#RecordLink` opens them under Maintenance for a user Maintenance admits, else nowhere; Commons' own tasks are unchanged.
 Nov 11, 2026 — impl-people P10 as built (owner contract): People's Today source adds the user's own weeks to submit, opening
 People's My time, which Today's rows keep (a Projects timesheet item still opens Projects' My time); a timesheet's record link
 opens People's TimesheetDetail for a user who has People's time area and not Projects (§5 Home).

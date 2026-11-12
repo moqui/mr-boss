@@ -316,13 +316,13 @@ is unchanged.
 | AssetDetail | ReservationsListForm | Warehouse/Inventory/AssetDetail | Warehouse/Inventory/AssetDetail/Reservations |
 | AssetDetail | AssetDetailList | Warehouse/Inventory/AssetDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail/Ledger |
 | AssetDetail | AssetDepreciationList | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail; Maintenance/Equipment/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail; Accounting/FixedAssets/DepreciationRunDetail |
-| EditAssetMaintenance | UpdateMaintenanceForm | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Equipment/EquipmentDetail |  |
-| EditAssetMaintenance | NewContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
-| EditAssetMaintenance | UpdateContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| EditAssetMaintenance | UpdateMaintenanceForm | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Equipment/EquipmentDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Edit: store#MaintenanceWorkOrder; the AssetMaintenance follows its work order, P3) |
+| EditAssetMaintenance | NewContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Files (the work order's record files, P3) |
+| EditAssetMaintenance | UpdateContentForm | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Files (the work order's record files, P3) |
 | FindAssetMaintenance | AddPlannedMaintenance | Maintenance/Preventive/DueMaintenance; Maintenance/WorkOrders/WorkOrderDetail |  |
-| FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | AddOtherMaintenance | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/NewWorkOrder (NewWork: create#MaintenanceWorkOrder, P3) |
 | FindAssetMaintenance | ProductMaintenanceList | Maintenance/Preventive/Plans; Maintenance/Equipment/EquipmentDetail |  |
-| FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
+| FindAssetMaintenance | MaintenanceListForm | Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/EquipmentDetail/Maintenance (work orders and maintenance records, with Adopt, P3) |
 | AssetMeters | NewMeterForm | Maintenance/Equipment/EquipmentDetail; Maintenance/Preventive/DueMaintenance | Maintenance/Equipment/EquipmentDetail/Meters (Record a reading) |
 | AssetMeters | MeterListForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Meters (Meters, Recent readings) |
 | AssetParties | AddUserForm | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Assignments (Change custodian) |
@@ -522,8 +522,8 @@ is unchanged.
 | EditRun | UpdateNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Notes (chatter on the run, P5a) |
 | EditRun | AddEquipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview (AssignEquipment: store#ProductionEquipment, P5a) |
 | EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkCenters/Equipment (the equipment at the user's facilities with its assigned operation); Manufacturing/WorkOrders/WorkOrderDetail/Overview (RunEquipment, with End, P5a) |
-| EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Overview (AssignPerson: store#ProductionParty, P5a) |
-| EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Overview (RunPeople with Remove, P5a) |
+| EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Overview (AssignPerson: store#ProductionParty, P5a); Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule: schedule#MaintenanceWorkOrder, Maintenance P3) |
+| EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail | Manufacturing/WorkOrders/WorkOrderDetail/Overview (RunPeople with Remove, P5a); Maintenance/WorkOrders/WorkOrderDetail/Overview (Team and technicians, Maintenance P3) |
 | FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder | Manufacturing/WorkOrders/NewWorkOrder (Identity, Method, Review: create#ProductionOrder); Manufacturing/WorkOrders/QuickCreate (P5a) |
 | FindRun | RunList | Manufacturing/WorkOrders; Manufacturing/Home | Manufacturing/WorkOrders/Find (WorkOrderList: find#ProductionOrders, board, calendar, bulk, P5a); Manufacturing/Home (Summary, Queue and Kpis, P5b and P16); Manufacturing/Reports/WorkOrderStatusReport (StatusRows: get#ProductionStatusReport over find#ProductionOrders, with its CSV export, P16) |
 | RunConsumed | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue: issue#ProductionMaterial, P16); Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Issue, and Backflush through issue#ProductionMaterial, Manufacturing P5b) |

@@ -111,9 +111,11 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Assignments" location="component://mr-boss/screen/Shared/EquipmentDetail/Assignments.xml" menu-index="3"/>
         <subscreens-item name="Meters" location="component://mr-boss/screen/Shared/EquipmentDetail/Meters.xml" menu-index="4"/>
         <subscreens-item name="Registrations" location="component://mr-boss/screen/Shared/EquipmentDetail/Registrations.xml" menu-index="5"/>
-        <subscreens-item name="Book" location="component://mr-boss/screen/Shared/EquipmentDetail/Book.xml" menu-index="6"/>
-        <subscreens-item name="Files" location="component://mr-boss/screen/Shared/EquipmentDetail/Files.xml" menu-index="7"/>
-        <subscreens-item name="Conversation" location="component://mr-boss/screen/Shared/EquipmentDetail/Conversation.xml" menu-index="8"/>
+        <!-- P3: its work orders and maintenance records -->
+        <subscreens-item name="Maintenance" location="component://mr-boss/screen/Shared/EquipmentDetail/Maintenance.xml" menu-index="6"/>
+        <subscreens-item name="Book" location="component://mr-boss/screen/Shared/EquipmentDetail/Book.xml" menu-index="7"/>
+        <subscreens-item name="Files" location="component://mr-boss/screen/Shared/EquipmentDetail/Files.xml" menu-index="8"/>
+        <subscreens-item name="Conversation" location="component://mr-boss/screen/Shared/EquipmentDetail/Conversation.xml" menu-index="9"/>
     </subscreens>
     <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
@@ -160,7 +162,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <!-- its tabs, in menu order (a menu lists every subscreen, so the tab bar draws these): the Book only when Accounting's
                 get#AssetBook admitted the user -->
-            <set field="equipmentTabs" from="['Identity', 'Hierarchy', 'Assignments', 'Meters', 'Registrations', 'Book', 'Files',
+            <set field="equipmentTabs" from="['Identity', 'Hierarchy', 'Assignments', 'Meters', 'Registrations', 'Maintenance', 'Book', 'Files',
                     'Conversation'].filter(tab =&gt; tab !== 'Book' || maintenanceEquipment?.book)"/>
             <set field="equipmentTabItems" from="Array.from(sri.getMenuItems() || []).filter(item =&gt; equipmentTabs.includes(item.name))"/>
         </if>

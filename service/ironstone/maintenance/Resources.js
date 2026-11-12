@@ -28,7 +28,9 @@ const factRows = pairs =>
 function readable(recordType, recordId, userScope = maintenanceAccess.scope()) {
     if (!recordId) return false
     return lib.check(() =>
-        recordType === "facility" ? maintenanceAccess.requireFacility(userScope, recordId) : maintenanceAccess.requireAsset(userScope, recordId)
+        recordType === "facility"
+            ? maintenanceAccess.requireFacility(userScope, recordId)
+            : maintenanceAccess.requireAsset(userScope, recordId)
     ).allowed
 }
 
@@ -91,6 +93,7 @@ function equipment(p) {
         readings: readingRows(asset.assetId),
         registrations: registrationRows(asset.assetId),
         maintenanceFiles: maintenanceFileRows(asset.assetId),
+        maintenanceRecords: maintenanceRecordRows(asset.assetId),
         book: bookOf(asset.assetId)
     }
 }
@@ -107,7 +110,9 @@ function childRows(assetId, userScope) {
 }
 // its holders, current first, then the ended ones (the custody history)
 function assignmentRows(assetId) {
-    const rows = Array.from(find("mantle.product.asset.AssetPartyAssignment", {assetId}).orderBy("-fromDate").limit(historyLimit).list())
+    const rows = Array.from(
+        find("mantle.product.asset.AssetPartyAssignment", {assetId}).orderBy("-fromDate").limit(historyLimit).list()
+    )
     const names = lib.partyNames(rows.map(row => row.partyId))
     const now = ms(ec.user.nowTimestamp)
     return rows
@@ -133,7 +138,10 @@ function meterRows(asset) {
         ? Array.from(find("mantle.product.maintenance.ProductMeter", {productId: asset.productId}).list())
         : []
     return models.map(meter => {
-        const latest = find("mantle.product.maintenance.AssetMeter", {assetId: asset.assetId, productMeterId: meter.productMeterId})
+        const latest = find("mantle.product.maintenance.AssetMeter", {
+            assetId: asset.assetId,
+            productMeterId: meter.productMeterId
+        })
             .orderBy("-readingDate")
             .limit(1)
             .one()
@@ -152,18 +160,20 @@ function meterRows(asset) {
 }
 // the recent readings, the newest first
 function readingRows(assetId) {
-    return Array.from(find("mantle.product.maintenance.AssetMeter", {assetId}).orderBy("-readingDate").limit(historyLimit).list()).map(
-        row => ({
-            readingDate: row.readingDate,
-            readingDateText: dateText(row.readingDate),
-            meterText:
-                (row.productMeterId ? one("mantle.product.maintenance.ProductMeter", {productMeterId: row.productMeterId})?.meterName : "") ||
-                one("mantle.product.maintenance.ProductMeterType", {productMeterTypeId: row.productMeterTypeId})?.description ||
-                "",
-            meterValue: row.meterValue != null ? String(row.meterValue) : "",
-            reasonText: enumText(row.readingReasonEnumId)
-        })
-    )
+    return Array.from(
+        find("mantle.product.maintenance.AssetMeter", {assetId}).orderBy("-readingDate").limit(historyLimit).list()
+    ).map(row => ({
+        readingDate: row.readingDate,
+        readingDateText: dateText(row.readingDate),
+        meterText:
+            (row.productMeterId
+                ? one("mantle.product.maintenance.ProductMeter", {productMeterId: row.productMeterId})?.meterName
+                : "") ||
+            one("mantle.product.maintenance.ProductMeterType", {productMeterTypeId: row.productMeterTypeId})?.description ||
+            "",
+        meterValue: row.meterValue != null ? String(row.meterValue) : "",
+        reasonText: enumText(row.readingReasonEnumId)
+    }))
 }
 function registrationRows(assetId) {
     const rows = Array.from(find("mantle.product.maintenance.AssetRegistration", {assetId}).orderBy("-fromDate").list())
@@ -177,17 +187,62 @@ function registrationRows(assetId) {
         thruDateText: dateText(row.thruDate)
     }))
 }
-// the files of its old maintenance records (AssetMaintenanceContent), listed where they are kept, never copied
-function maintenanceFileRows(assetId) {
-    const records = Array.from(find("mantle.product.maintenance.AssetMaintenance", {assetId}).selectField(["assetMaintenanceId"]).limit(200).list()).map(
-        row => row.assetMaintenanceId
+// its maintenance records (P3): each AssetMaintenance, newest first, with its work order when it has one (a managed record follows
+// its work order; an open one with none may be adopted by a planner, design §6); history stays as it was
+function maintenanceRecordRows(assetId) {
+    const records = Array.from(
+        find("mantle.product.maintenance.AssetMaintenance", {assetId}).orderBy("-maintenanceDate").limit(historyLimit).list()
     )
     if (!records.length) return []
+    const orders = new Map(
+        Array.from(
+            find("mantle.work.maintenance.MaintenanceWorkOrder")
+                .condition(
+                    "assetMaintenanceId",
+                    "in",
+                    records.map(row => row.assetMaintenanceId)
+                )
+                .selectField(["workEffortId", "assetMaintenanceId"])
+                .list()
+        ).map(row => [row.assetMaintenanceId, row.workEffortId])
+    )
+    const enumText = enumId => (enumId ? one("moqui.basic.Enumeration", {enumId})?.description || enumId : "")
+    const statusText = statusId => (statusId ? one("moqui.basic.StatusItem", {statusId})?.description || statusId : "")
+    return records.map(row => {
+        const workEffortId = orders.get(row.assetMaintenanceId) || null
+        return {
+            assetMaintenanceId: row.assetMaintenanceId,
+            maintenanceDateText: dateText(row.maintenanceDate),
+            typeText: enumText(row.maintenanceTypeEnumId),
+            statusText: statusText(row.statusId),
+            comments: row.comments || "",
+            workEffortId,
+            adoptable:
+                !workEffortId &&
+                !row.taskWorkEffortId &&
+                !["AsMntCompleted", "AsMntCancelled"].includes(row.statusId) &&
+                row.maintenanceTypeEnumId !== "MntTpWarranty"
+        }
+    })
+}
+// the files of its old maintenance records (AssetMaintenanceContent), listed where they are kept, never copied
+function maintenanceFileRows(assetId) {
+    const records = Array.from(
+        find("mantle.product.maintenance.AssetMaintenance", {assetId}).selectField(["assetMaintenanceId"]).limit(200).list()
+    ).map(row => row.assetMaintenanceId)
+    if (!records.length) return []
     return Array.from(
-        find("mantle.product.maintenance.AssetMaintenanceContent").condition("assetMaintenanceId", "in", records).orderBy("-contentDate").limit(historyLimit).list()
+        find("mantle.product.maintenance.AssetMaintenanceContent")
+            .condition("assetMaintenanceId", "in", records)
+            .orderBy("-contentDate")
+            .limit(historyLimit)
+            .list()
     ).map(row => ({
         assetMaintenanceId: row.assetMaintenanceId,
-        fileName: String(row.contentLocation || "").split("/").pop() || row.assetMaintenanceContentId,
+        fileName:
+            String(row.contentLocation || "")
+                .split("/")
+                .pop() || row.assetMaintenanceContentId,
         contentDateText: dateText(row.contentDate),
         description: row.description || ""
     }))
@@ -198,7 +253,12 @@ function bookOf(assetId) {
     let book
     ec.message.pushErrors()
     try {
-        book = ec.service.sync().name("mantle.ledger.AssetBookServices.get#AssetBook").parameters({assetId}).requireNewTransaction(true).call()
+        book = ec.service
+            .sync()
+            .name("mantle.ledger.AssetBookServices.get#AssetBook")
+            .parameters({assetId})
+            .requireNewTransaction(true)
+            .call()
         if (ec.message.hasError()) book = null
     } catch (error) {
         book = null
@@ -216,7 +276,10 @@ function bookOf(assetId) {
             ["Method", asset.methodText],
             ["Useful life ends", asset.expectedEndOfLifeText],
             ["Acquire cost", asset.acquireCost != null ? ec.l10n.formatCurrency(asset.acquireCost, asset.currencyUomId) : ""],
-            ["Accumulated depreciation", asset.accumulated != null ? ec.l10n.formatCurrency(asset.accumulated, asset.currencyUomId) : ""],
+            [
+                "Accumulated depreciation",
+                asset.accumulated != null ? ec.l10n.formatCurrency(asset.accumulated, asset.currencyUomId) : ""
+            ],
             ["Net book value", asset.netBook != null ? ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId) : ""]
         ])
     }
@@ -258,16 +321,27 @@ function assignedEquipment(p) {
 // holder of FACILITY_EDIT, which store#Facility checks again), the overview's equipment, the children of the scope, the rooms
 // inside it with their capacity, booking and current features, and the certifications. A parent outside the scope is not named.
 function facilityDetail(p) {
-    call("ironstone.maintenance.AccessServices.check#Record", {recordType: "facility", recordId: p.facilityId, appRoot: "Maintenance"})
+    call("ironstone.maintenance.AccessServices.check#Record", {
+        recordType: "facility",
+        recordId: p.facilityId,
+        appRoot: "Maintenance"
+    })
     const userScope = maintenanceAccess.scope()
     const facility = one(FACILITY, {facilityId: p.facilityId})
-    const listed = call("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {parentFacilityId: facility.facilityId, includeClosed: true, pageSize: 100})
+    const listed = call("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {
+        parentFacilityId: facility.facilityId,
+        includeClosed: true,
+        pageSize: 100
+    })
     const self = facilityRow(facility)
     const contact = call("mantle.facility.FacilityServices.get#Facility", {facilityId: facility.facilityId})
     const address = [contact.address1, contact.address2, contact.city, contact.postalCode].filter(Boolean).join(", ")
     const phone = [contact.countryCode, contact.areaCode, contact.contactNumber].filter(Boolean).join(" ")
     const children = Array.from(listed.facilityList || [])
-    const equipment = call("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {facilityId: facility.facilityId, pageSize: 100})
+    const equipment = call("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {
+        facilityId: facility.facilityId,
+        pageSize: 100
+    })
     const features = Array.from(
         find("mantle.facility.FacilityFeature", {facilityId: facility.facilityId}).orderBy("-fromDate").list()
     ).map(row => ({

@@ -91,16 +91,12 @@ function nextServiceOf(assetId) {
             .list()
     )[0]
 }
+// In maintenance: an AssetMaintenance in process, not a planned one or a request not yet started (impl-maintenance §4, F13; an
+// owner contract with Maintenance, as Mantle's store#ProductionEquipment guard reads it); an outage is out of service above.
 function openMaintenanceCount(assetId) {
     return find("mantle.product.maintenance.AssetMaintenance")
         .condition("assetId", assetId)
-        .condition("statusId", "not-in", closedMaintenance)
-        .condition(
-            anyOf([
-                factory().makeCondition("maintenanceDate", "is-null", null),
-                factory().makeCondition("maintenanceDate", "less-equals", ec.user.nowTimestamp)
-            ])
-        )
+        .condition("statusId", "AsMntInProcess")
         .count()
 }
 // An asset's availability for production: left, out of service (an open outage, P11), assigned to work now, in maintenance
