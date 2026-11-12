@@ -881,7 +881,7 @@ dialog of crosscut §3.32 is not built by the framework and is left out (§7).
     FacilitySetup.js, CatalogRecords.js and the entity files;
   - the user's calls: none needed; the facility writers' ownerless rooms (the second finding) may want one later.
 
-**Review Nov 11 (P2).** mr-mantle 9f37ac4f, mr-boss 7d039285 and this note's commit (branch `mnt/p2`), over the worker's
+**Review Nov 11 (P2).** mr-mantle 9f37ac4f and e8127b63 (R7, R8), mr-boss 7d039285 and the note's commits (branch `mnt/p2`), over the worker's
 90b107c2, 4afa75a6, 6801f484 and 97aaa2de. Reviewed `git diff master...mnt/p2` in both repos against P2's text, §2, §4, F16–F23,
 F61, F62, F67, F70, F77, F82 and F83, design §6 and §13.2, AGENTS.md and Practices-App-Dev; read the owners' code each change
 reaches (move#Asset, Warehouse's StockPosting and InventoryCounts, AssetBooks, the return-task EECA, FacilitySetup.js,
@@ -923,7 +923,7 @@ FacilityScope.js, People.js `employers()`, Products' Catalog.js options); lint r
     permission and scope (`scopeWith`, `recordMeter`'s own check), so the inherited grant decides nothing;
   - the owner-less-room finding is right: FacilitySetup.js's `facilityOf` owns a facility by its own `ownerPartyId`, and store#Facility
     requires an owner (`OWNER_REQUIRED`), so only loaded data has ownerless facilities; Maintenance reads them by the nearest owning
-    ancestor and its Edit facility is then refused (`FACILITY_UNAVAILABLE`). `move#MaintenanceEquipment` checks FacilityScope by
+    ancestor and its Edit facility was then refused (`FACILITY_UNAVAILABLE`; R8 builds the user's call). `move#MaintenanceEquipment` checks FacilityScope by
     the nearest owning ancestor too (`facilityOrganization`), where Warehouse's own stock guards use the facility's owner; for owned
     facilities they agree.
 - Fixes:
@@ -958,20 +958,37 @@ FacilityScope.js, People.js `employers()`, Products' Catalog.js options); lint r
     without the change.
   - Design §6 (the move cell said `move#Asset`; the move's equipment-only rule, container and ledger; the anchored lists; the custody
     overlap and drop-downs; replace's refusal of a later date) and the Mantle service descriptions.
+  - R7 (the user's call, Nov 11; access). `change#MaintenanceCustody` accepts as the new holder only one of the scope's internal
+    organizations, a person one of them employs now (PrtEmployee), or the equipment's own owner organization (a customer's
+    equipment in its custody); anything else is `HOLDER_UNAVAILABLE`. MaintenanceResources: an outsider, another internal
+    organization and a customer on the organization's own equipment refused; the organization and the customer on its own
+    equipment accepted (the spec's holders are now the organization's employees); fails without the check.
+  - R8 (the user's call, Nov 11; an owner contract with Warehouse). Mantle's facility checks read a facility that names no owner by
+    its nearest owning ancestor, as Maintenance does: FacilityScope.js gains `facilityOrganization` and `ownsFacility`, and
+    FacilitySetup.js's `facilityOf` (facility, location and room-feature saves) uses it; store#Facility keeps such a facility
+    ownerless when no owner is given, naming the organization it already takes needs no reason, and a new facility still names
+    its owner. Owned facilities are unchanged. `move#MaintenanceEquipment` checks both facilities with `ownsFacility`. The stock
+    guards (StockPosting, Putaway, InventoryCounts, Printing, ShipmentLoads) keep reading the facility's own owner, because their
+    postings name it as the organization: stock at an ownerless facility stays refused there (fails closed). WarehouseFacilities
+    gains the case (the editor renames and adds a location to an ownerless room under its warehouse and owns it without a reason;
+    an ownerless room under another organization's site refused); fails without the change. Written into design-warehouse §1 and
+    impl-warehouse §4's log.
 - Findings (for the lead to number):
-  - `change#MaintenanceCustody` accepts any enabled person or organization as the new holder; R1 narrows only the drop-down. People's
-    `return#Equipment` requires a custodian employed by the employer. Whether Mantle should hold Maintenance's holder to the scope's
-    organizations and their employees (a customer's equipment held by the customer would then need its own rule) is the user's call;
-    recommended: yes, with the asset's owner organization admitted for customer equipment.
-  - The owner-less facility (the worker's finding, confirmed above): recommended that FacilityScope and FacilitySetup's `facilityOf`
-    read a facility's organization by its nearest owning ancestor, as Maintenance does, which changes Warehouse's behaviour for
-    ownerless rows only (an owner contract, the user's call); meanwhile the demo's rooms name their owner.
+  - (The two user's calls, the custody holder Mantle admits and the ownerless facility's organization, are built as R7 and R8.)
+  - With R8, an ownerless facility moved under another organization's facility changes organization with it and no owner-change
+    reason is asked (store#Facility asks one only for a change of the stored owner); Maintenance's
+    `preview#MaintenanceFacilityChange` shows the change first, Warehouse's own edit does not.
   - `record#MaintenanceMeter` in work checks the work is assigned to the caller but not that the equipment is the work's target; P7
     (the technician's reading in a step) should tie them.
   - EquipmentDetail's new `subscreens` (default Identity) apply under every mount, so its URL gains `/Identity` in the other apps; it
     renders nothing there (checked above), but a bookmark or test that compares the path would see it.
   - The equipment and facility lists' rows each read the organization, time zone, child and equipment counts with their own queries
     (a few per row, pages of 20 to 100); acceptable now, a candidate for batching with P3's work-order counts.
+- Tests after R7 and R8: mr-mantle MaintenanceResources and WarehouseFacilities 21 of 21 (3.2 s feature time), then with
+  ContactAndFacilityServices, MaintenanceScope, PeopleChecklists and AssetReservationMisc 90 of 90, and WarehouseOperationPolicy,
+  WarehousePolicy and WarehousePutaway 35 of 35; mr-boss WarehouseFacilities, WarehouseInventory, WarehouseAccess, WarehousePolicies,
+  WarehouseMoves, WarehousePutaway, MaintenanceEquipment and MaintenanceAccess 86 of 86 features. Each new case failed without its
+  change. Prettier clean.
 - Tests (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceResources 5 of 5 (1.6 s feature time; the new move
   feature 0.20 s), then with MaintenanceScope, PeopleChecklists, PeopleScheduledChanges, AssetReservationMisc, WorkProcess and
   WarehouseFacilities 89 of 89 features (12.5 s); mr-boss MaintenanceEquipment 4 of 4 and MaintenanceAccess 9 of 9 (4.4 s alone), then
@@ -982,8 +999,8 @@ FacilityScope.js, People.js `employers()`, Products' Catalog.js options); lint r
 - For the lead: budget share mr-mantle MaintenanceResources 1.6 s (+0.4 s over the Built note), mr-boss unchanged in effect (+0.1 s);
   merge hot spots as the Built note's, plus mr-mantle `MaintenanceResources.js`, `MaintenanceResourceServices.xml` and
   `AssetServices.xml` (replace), mr-boss `Maintenance.js` (choiceSources, resourceChoices), Resources.js, `Assignments.xml` and
-  Equipment/Find.xml (the custodians choice), design §6; the user's calls open: the holder Mantle admits in a custody change (first
-  finding) and the ownerless facility's organization in FacilityScope (second), each with the recommendation above.
+  Equipment/Find.xml (the custodians choice), design §6; with R7 and R8 also mr-mantle FacilityScope.js, FacilitySetup.js and
+  WarehouseFacilities.spec.js (+0.1 s), mr-boss design-warehouse §1 and impl-warehouse §4's log; no user's call left open.
 
 ### P3 — Work orders
 
