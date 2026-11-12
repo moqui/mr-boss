@@ -2302,4 +2302,4 @@ Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`, a
 | work/MaintenanceServices | get#MaintenancePurchases | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (PurchaseLinks) |
 | work/MaintenanceServices | accept#MaintenanceService | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (Accept outside service); transition#MaintenanceWorkOrder's complete (CompleteWork's outside-service line) |
 | work/MaintenanceServices | get#MaintenanceOrder | Maintenance/WorkOrders/OrderDetail | Maintenance/WorkOrders/OrderDetail (Shared/OrderDetail's Maintenance branch, read only) |
-| work/MaintenanceServices | get#PurchaseRequestWork | Purchasing/Requests/RequestDetail | Purchasing/Requests/RequestDetail (the originating work order under the header) |
+| work/MaintenanceServices | get#PurchaseRequestWork | Purchasing/Requests/RequestDetail | Purchasing/Requests/RequestDetail (the originating work order under the header; its name only for a user Maintenance admits) |

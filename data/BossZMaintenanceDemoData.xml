@@ -353,7 +353,11 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- P10 (impl-maintenance; design §3 PurchaseLinks): the motor held for parts needs a rewind, an outside service. maint.planner
         asked for it from the work order (a purchase request of Services linked to the work), Purchasing approved and sourced it to
         Delta Motor Rewinds' purchase order, placed, whose service line is the work's (AssetMaintenanceOrderItem, written before the
-        RequestItemOrder so the sourcing rule finds it); nothing is accepted yet -->
+        RequestItemOrder so the sourcing rule finds it); nothing is accepted yet. maint.supervisor accepts outside service under
+        Purchasing's own check (accept#ServiceItem: PURCHASE_ORDER_EDIT or STOCK_RECEIVE), so is in Warehouse's receiving capability
+        group, which grants STOCK_RECEIVE alone and opens no Warehouse screen (the lead's decision, Nov 12; as P9's maint.tech in
+        BOSS_WAREHOUSE_ISSUE) -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_MNT_SUP_REWIND" pseudoId="DELTAREWIND" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
     <mantle.party.Organization partyId="BOSS_MNT_SUP_REWIND" organizationName="Delta Motor Rewinds"/>
     <mantle.party.PartyRole partyId="BOSS_MNT_SUP_REWIND" roleTypeId="Supplier"/>
@@ -363,7 +367,7 @@ along with this software (see the LICENSE.md file). If not, see
             pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="1" price="480"
             priceUomId="USD"/>
     <mantle.request.Request requestId="BOSS_MNT_PREQ_MOTOR" requestTypeEnumId="RqtPurchase" statusId="ReqInProgress"
-            requestName="Rewind the compressor motor" description="For work order BOSS_MNT_WO_MOTOR: Compressor motor vibration"
+            requestName="Rewind the compressor motor" description="For maintenance work order BOSS_MNT_WO_MOTOR"
             requestDate="2026-11-10 09:00:00" responseRequiredDate="2026-11-20 00:00:00" currencyUomId="USD" filedByPartyId="BOSS_MNT_PLANNER"/>
     <mantle.request.RequestParty requestId="BOSS_MNT_PREQ_MOTOR" partyId="ORG_ZIZI_SERVICES" roleTypeId="OrgInternal" fromDate="2026-11-10 09:00:00"/>
     <mantle.request.RequestItem requestId="BOSS_MNT_PREQ_MOTOR" requestItemSeqId="01" statusId="ReqInProgress" productId="BOSS_MNT_PRD_REWIND"

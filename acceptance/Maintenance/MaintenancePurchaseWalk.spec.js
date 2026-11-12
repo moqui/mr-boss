@@ -3,9 +3,10 @@
 // requests a motor rewind from a work order's Purchasing tab; Purchasing approves it and sources it to a purchase order (a buyer
 // and approver of Ziziwork Services made here, as the demo has none); the work order's Purchasing tab and OrderDetail under
 // Maintenance show the purchase order line, and Purchasing's RequestDetail the originating work order; the technician adds a
-// photo of the rewound motor; at completion the supervisor (made Purchasing's receiver here, as
-// accept#ServiceItem checks) accepts the service with the technician's photo, recorded once; no order line is completed by the
-// work's status. The rules are Mantle's MaintenancePurchases and BOSS's MaintenancePurchasing and MaintenanceAccess.
+// photo of the rewound motor; at completion the supervisor accepts the service with the technician's photo, recorded once, under
+// Purchasing's own check (accept#ServiceItem), which the demo's maint.supervisor passes as a member of Warehouse's receiving group
+// (STOCK_RECEIVE alone, no Warehouse screen: the lead's decision, Nov 12, P10 review R1); no order line is completed by the work's
+// status. The rules are Mantle's MaintenancePurchases and BOSS's MaintenancePurchasing and MaintenanceAccess.
 // Run: ./moq accept mr-boss --spec MaintenancePurchaseWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -68,20 +69,6 @@ spec({
         login("john.doe")
         state.buyer = buyingUser("BUYER", ["PURCHASE_ORDER_EDIT", "SUPPLIER_PRICE_VIEW"])
         state.approver = buyingUser("APPROVER", ["PURCHASE_APPROVE"])
-        // the supervisor receives for Purchasing in this walk (accept#ServiceItem's own check)
-        system(() => {
-            invoke("create#moqui.security.UserGroup", {userGroupId: prefix + "_RECEIVE", description: "Purchase walk receiver"})
-            invoke("create#moqui.security.UserGroupPermission", {
-                userGroupId: prefix + "_RECEIVE",
-                userPermissionId: "STOCK_RECEIVE",
-                fromDate: since
-            })
-            invoke("create#moqui.security.UserGroupMember", {
-                userId: "BOSS_MNT_SUPERVISOR",
-                userGroupId: prefix + "_RECEIVE",
-                fromDate: since
-            })
-        })
         // a corrective work order on the compressor's motor, started by maint.tech
         const created = as(users.planner, "mantle.work.MaintenanceServices.create#MaintenanceWorkOrder", {
             assetId: ids.motorId,
