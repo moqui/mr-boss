@@ -150,8 +150,9 @@ along with this software (see the LICENSE.md file). If not, see
                     'mantle.product.bom.ProductBom': 'Bill of materials', 'mantle.facility.Facility': 'Facility', 'mantle.product.asset.Asset': 'Asset',
                     'mantle.party.communication.CommunicationEvent': 'Message', 'mantle.party.agreement.Agreement': 'Agreement'}
                 let type = types[entityName] || null
+                // a goal is People's (impl-people P20; its readers alone see it), never a task
                 if (entityName === 'mantle.work.effort.WorkEffort') type = {WetEvent: 'Event', WetProject: 'Project', WetSprint: 'Sprint', WetMilestone: 'Milestone',
-                        WetRelease: 'Release'}[record.workEffortTypeEnumId] || 'Task'
+                        WetRelease: 'Release', WetGoal: 'Goal'}[record.workEffortTypeEnumId] || 'Task'
                 typeLabel = type ? L(type) : info.recordTypeName
             }
             if (!title) title = String(recordId)

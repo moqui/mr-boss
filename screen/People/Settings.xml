@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     under Employees, HR's area (the user's call, Nov 11): Settings stays the People administrator's, and HR does not open it.
     P16: Forms and FormDetail, the survey builder's shared screens (Shared/SurveyForms, SurveyFormDetail) with People's
     registration (service/ironstone/shared/SurveyApps.js; design §13 Forms, impl-people F51): People's private purposes, built by
-    the People administrator (PEOPLE_CONFIGURE, checked in mantle.party.FormDefinitionServices). -->
+    the People administrator (PEOPLE_CONFIGURE, checked in mantle.party.FormDefinitionServices). Payroll configuration (P22's pay
+    components, structures and groups) is under Payroll, payroll's area (the P22 review's call of Nov 12, 2026). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="20" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true">

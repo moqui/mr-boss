@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Payroll › Pay structure (design-people §8 PayStructureDetail; style-guide §3.3 Detail; impl-people P22): one structure,
+    from mantle.humanres.PayrollSetupServices.find#Structures (a payroll reader's): the record header (name, employer, currency,
+    pay basis, state), Composition (its components in payslip order, each with its dates, the structure's values of its declared
+    inputs, the term it calculates with and its state; the calculation order its dependencies decide, independent of the payslip
+    order, and what blocks one), and Preview gross to net (preview#Structure: sample values, a date, a pay group whose periods a year
+    it takes, a localization; each component's amount and explanation, the totals, the localization's items and the findings; a
+    statistical value enters no total; nothing is written). A configuration holder (PAYROLL_EDIT and PAYROLL_CONFIGURE, which Mantle
+    checks) adds components as drafts, changes and removes draft lines, ends published ones, copies the structure (a new one with
+    draft lines and no assignments), ends it and publishes it (Publish, the one primary while a line is a draft: a date and a
+    reason; refused with a missing or cyclic dependency, an unpublished component or another currency). Publishing reassigns no
+    employee. Each write names the revision read. -->
+<!-- P22 review (the user's calls of Nov 12, 2026): under Payroll beside Rates, payroll's; Publish asks for a People approval of kind
+    PakPayrollConfig (Mantle's publish#Structure), which takes effect when approved: the Approval box shows the request (who asked, why,
+    who decides it and the decisions), and its approver (a payroll approver who did not draft it, decide#Publication) approves or
+    refuses it here or from the notice. A changed draft supersedes the request. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pay structure" default-menu-include="false">
+    <parameter name="payrollStructureId"/>
+    <parameter name="asOfDate"/>
+    <parameter name="sampleValues"/>
+    <parameter name="payrollGroupId"/>
+    <parameter name="payrollLocalizationId"/>
+    <parameter name="runPreview"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the structure's name, basis or description, or its end -->
+    <transition name="storeStructure">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#Structure"
+                    in-map="{payrollStructureId:payrollStructureId, expectedRevision:(expectedRevision || null), structureName:(structureName ?? null),
+                        payBasisEnumId:(payBasisEnumId || null), description:(description ?? null), end:(end == 'true'), thruDate:(thruDate || null),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${end == 'true' ? 'Structure ended' : 'Structure saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollStructureId"/></default-response>
+        <error-response url="."><parameter name="payrollStructureId"/></error-response>
+    </transition>
+    <!-- a copy: a new structure of the employer with this one's lines as drafts and no assignments -->
+    <transition name="copyStructure">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#Structure" out-map="copied"
+                    in-map="{copyFromStructureId:payrollStructureId, structureName:(structureName || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Structure copied</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollStructureId" from="copied?.payrollStructureId || payrollStructureId"/></default-response>
+        <error-response url="."><parameter name="payrollStructureId"/></error-response>
+    </transition>
+    <!-- a component added as a draft line, a draft line changed or removed, or a published line ended -->
+    <transition name="storeLine">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#StructureComponent"
+                    in-map="{payrollStructureId:payrollStructureId, expectedRevision:(expectedRevision || null),
+                        payrollStructureComponentId:(payrollStructureComponentId || null), payrollComponentId:(payrollComponentId || null),
+                        fromDate:(fromDate ?? null), thruDate:(thruDate ?? null), sequenceNum:(sequenceNum ?? null),
+                        parameterValues:(parameterValues ?? null), remove:(remove == 'true'), end:(end == 'true'), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${remove == 'true' ? 'Component removed' : (end == 'true' ? 'Component ended' : (payrollStructureComponentId ? 'Component changed' : 'Component added'))}</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollStructureId"/></default-response>
+        <error-response url="."><parameter name="payrollStructureId"/></error-response>
+    </transition>
+    <!-- the draft lines published from a date with a reason: Mantle checks the components, currency and dependencies -->
+    <transition name="publishStructure">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.publish#Structure"
+                    in-map="{payrollStructureId:payrollStructureId, expectedRevision:(expectedRevision || null), fromDate:(fromDate || null),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Publishing asked for: the lines take effect once it is approved</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollStructureId"/></default-response>
+        <error-response url="."><parameter name="payrollStructureId"/></error-response>
+    </transition>
+    <!-- the request to publish decided by its approver: approve, or refuse with a reason; the last approval publishes -->
+    <transition name="decidePublication">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.decide#Publication"
+                    in-map="{payrollStructureId:payrollStructureId, decision:(decision || 'approve'), reason:(reason || null), peopleApprovalId:(peopleApprovalId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'refuse' ? 'Publishing refused' : 'Approved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollStructureId"/></default-response>
+        <error-response url="."><parameter name="payrollStructureId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PayrollSetupServices.find#Structures" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{payrollStructureId:(payrollStructureId || '_NA_'), asOfDate:(asOfDate || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="structure" from="found?.structure || null"/>
+        <set field="recordFound" from="!!structure"/>
+        <if condition="recordFound &amp;&amp; runPreview == 'true'">
+            <service-call name="mantle.humanres.PayrollSetupServices.preview#Structure" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{payrollStructureId:payrollStructureId, asOfDate:(asOfDate || null), inputValues:(sampleValues || null),
+                        payrollGroupId:(payrollGroupId || null), payrollLocalizationId:(payrollLocalizationId || null)}"/>
+            <script>previewError = ec.message.errorsString; ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            lines = Array.from(found?.lines || [])
+            findings = Array.from(found?.findings || [])
+            calculationText = Array.from(found?.calculationOrder || []).join(' → ')
+            canEdit = !!structure?.canEdit
+            hasDrafts = !!structure?.draftCount
+            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', waiting: 'warning', ended: 'grey-8', ok: 'positive', error: 'negative'}
+            revisionValues = structure ? {payrollStructureId: structure.payrollStructureId, expectedRevision: structure.revision} : {}
+            editValues = structure ? Object.assign({structureName: structure.structureName, payBasisEnumId: structure.payBasisEnumId,
+                description: structure.description}, revisionValues) : {}
+            headerCaption = structure ? [structure.organizationName, structure.currencyUomId, structure.payBasisText].filter(Boolean).join(' · ') : ''
+            previewValues = structure ? {payrollStructureId: structure.payrollStructureId, runPreview: 'true', sampleValues: sampleValues,
+                asOfDate: asOfDate, payrollGroupId: payrollGroupId, payrollLocalizationId: payrollLocalizationId} : {}
+            results = Array.from(preview?.results || [])
+            localizationItems = Array.from(preview?.localizationItems || [])
+            previewFindings = Array.from(preview?.findings || [])
+            const totals = preview?.totals
+            totalRows = totals ? [
+                {label: 'Gross earnings', amount: totals.gross},
+                {label: 'Deductions', amount: totals.deductions},
+                {label: 'Localization, employee', amount: totals.localizationEmployee},
+                {label: 'Net', amount: totals.net},
+                {label: 'Net payable, rounded to the currency', amount: totals.netPayable},
+                {label: 'Employer contributions', amount: totals.contributions},
+                {label: 'Localization, employer', amount: totals.localizationEmployer},
+                {label: 'Employer cost', amount: totals.employerCost}
+            ] : []
+            previewCurrency = preview?.currencyUomId || structure?.currencyUomId
+            for (const row of totalRows) row.currencyUomId = previewCurrency
+            localizationItems = localizationItems.map(item => Object.assign({}, item, {currencyUomId: previewCurrency}))
+            // P22 review: the request to publish (Mantle's approval summary) and whether the user decides it
+            approval = structure?.approval || null
+            waiting = !!structure?.waitingApproval
+            canDecide = waiting && !!approval?.canDecide
+            approvalText = approval ? approval.statusText + (approval.waitingText ? ': ' + approval.waitingText : '') + ' · asked by ' +
+                approval.requestedByName + ' on ' + approval.requestedDateText + (approval.effectiveDateText ? ', from ' + approval.effectiveDateText : '') +
+                (approval.justification ? ' · ' + approval.justification : '') : ''
+            previewSummary = preview ? (preview.complete ? 'Complete' : 'Incomplete: a finding below blocks a result') + (preview.localizationName ? ' · ' + preview.localizationName : '') : ''
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="StructureMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This pay structure is not available to you."/>
+                        <link url="${sharedLinks['Payroll/PayStructures']}" text="Back to pay structures" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="StructureRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${structure.structureName}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[structure.state] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(structure.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: structure.stateText})}]]></text>
+                                <text type="html">${structure.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${sharedLinks['Payroll/PayStructures']}" text="Pay structures" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <label text="From ${structure.fromDateText}${structure.thruDateText ? ' through ' + structure.thruDateText : ''}" type="span"
+                                    style="text-caption" condition="structure.fromDateText"/>
+                            <label text="${structure.draftCount} draft line${structure.draftCount == 1 ? '' : 's'}" type="span" style="text-caption"
+                                    condition="hasDrafts"/>
+                            <label text="Waiting for approval to publish the draft lines" type="span" style="text-caption" condition="waiting"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="PublishStructureDialog" button-text="Publish" icon="sym_o_publish" type="primary" width="560"
+                                    title="Publish ${structure.structureName}" condition="canEdit &amp;&amp; hasDrafts &amp;&amp; !waiting">
+                                <label type="p" text="Each draft line applies from its own date, or the date given. Every component needs published terms then and on each later change, in ${structure.currencyUomId}, with the components it reads in the structure. Publishing asks for approval: a payroll approver who did not draft it decides, and the lines take effect once approved. No employee is reassigned."/>
+                                <form-single name="PublishStructure" transition="publishStructure" map="revisionValues">
+                                    <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Ask to publish">
+                                            <submit confirmation="Ask to publish ${structure.draftCount} draft line${structure.draftCount == 1 ? '' : 's'} of ${structure.structureName}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ApproveDialog" button-text="Approve" icon="sym_o_check" type="primary" width="480"
+                                    title="Approve publishing ${structure.structureName}" condition="canDecide">
+                                <label type="p" text="${approval.justification ? 'Asked by ' + approval.requestedByName + ': ' + approval.justification + '. ' : ''}Approving publishes it from its date, checked again."/>
+                                <form-single name="ApprovePublication" transition="decidePublication"
+                                        map="{payrollStructureId:structure.payrollStructureId, peopleApprovalId:approval?.peopleApprovalId}">
+                                    <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RefuseDialog" button-text="Refuse" icon="sym_o_block" width="480"
+                                    title="Refuse publishing ${structure.structureName}" condition="canDecide">
+                                <form-single name="RefusePublication" transition="decidePublication"
+                                        map="{payrollStructureId:structure.payrollStructureId, peopleApprovalId:approval?.peopleApprovalId}">
+                                    <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                    <field name="reason"><default-field title="Why" tooltip="Who asked reads it"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit">
+                                <container-dialog id="EditStructureDialog" button-text="Edit" icon="sym_o_edit" width="560" title="Edit ${structure.structureName}">
+                                    <form-single name="EditStructure" transition="storeStructure" map="editValues">
+                                        <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="structureName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="payBasisEnumId">
+                                            <default-field title="Pay basis">
+                                                <drop-down>
+                                                    <option key="PpbSalaried" text="Salaried"/>
+                                                    <option key="PpbHourly" text="Hourly"/>
+                                                    <option key="PpbMixed" text="Salaried and hourly"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="description"><default-field title="Description"><text-area rows="2" cols="60"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CopyStructureDialog" button-text="Copy" icon="sym_o_content_copy" width="520"
+                                        title="Copy ${structure.structureName}">
+                                    <label type="p" text="A new structure of ${structure.organizationName} with this one's components as drafts and no employees assigned."/>
+                                    <form-single name="CopyStructure" transition="copyStructure"
+                                            map="{payrollStructureId:structure.payrollStructureId, structureName:structure.structureName + ' (copy)'}">
+                                        <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                        <field name="structureName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Copy structure"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EndStructureDialog" button-text="End structure" icon="sym_o_block" width="520"
+                                        title="End ${structure.structureName}">
+                                    <label type="p" text="An ended structure is kept and offered for no new assignment."/>
+                                    <form-single name="EndStructure" transition="storeStructure"
+                                            map="{payrollStructureId:structure.payrollStructureId, expectedRevision:structure.revision, end:'true'}">
+                                        <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="end"><default-field><hidden/></default-field></field>
+                                        <field name="thruDate"><default-field title="From" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="End structure"><submit type="danger" confirmation="End ${structure.structureName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <section name="Approval" condition="approval">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body>
+                                <label type="p" text="${approvalText}"/>
+                                <form-list name="ApprovalSteps" list="approval.steps" skip-form="true" paginate="false" condition="approval.waiting">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false" condition="approval.decisions?.length">
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Composition"/>
+                    <box-toolbar>
+                        <container-dialog id="AddComponentDialog" button-text="Add component" icon="sym_o_add" width="640"
+                                title="Add a component to ${structure.structureName}" condition="canEdit">
+                            <label type="p" text="The line is a draft until the structure is published. Values give the component's declared inputs the structure sets, such as a contribution's rate."/>
+                            <form-single name="AddComponent" transition="storeLine" map="revisionValues">
+                                <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="payrollComponentId">
+                                    <default-field title="Component">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'payComponents', choiceOrganizationPartyId:structure.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Payslip order" tooltip="After the others when empty"><text-line size="5" input-type="number"/></default-field>
+                                </field>
+                                <field name="parameterValues">
+                                    <default-field title="Values" tooltip="name = value, separated by commas: pensionRate = 0.05"><text-line size="50"/></default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From" tooltip="The publishing date when empty"><date-time type="date"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add component"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="payrollComponentId"/><field-ref name="sequenceNum"/></field-row>
+                                    <field-row><field-ref name="parameterValues"/><field-ref name="fromDate"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Lines" list="lines" skip-form="true" paginate="false" condition="lines.length">
+                            <field name="sequenceNum" align="right"><default-field title="Order"><display/></default-field></field>
+                            <field name="componentCode">
+                                <default-field title="Component">
+                                    <link url="${sharedLinks['Payroll/PayComponentDetail']}" text="${componentCode} · ${componentName}" link-type="anchor"
+                                            parameter-map="{payrollComponentId:payrollComponentId}"/>
+                                </default-field>
+                            </field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="termText"><default-field title="Calculation"><display/></default-field></field>
+                            <field name="parameterValuesText"><default-field title="Values"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions" hide="!canEdit">
+                                <conditional-field condition="state == 'draft'" title="">
+                                    <container-dialog id="EditLine_${payrollStructureComponentId}" button-text="Edit" icon="sym_o_edit" width="560"
+                                            title="Edit ${componentCode} in the structure">
+                                        <form-single name="EditLine" transition="storeLine"
+                                                map="{payrollStructureId:structure.payrollStructureId, expectedRevision:structure.revision,
+                                                    payrollStructureComponentId:payrollStructureComponentId, sequenceNum:sequenceNum,
+                                                    parameterValues:parameterValuesText}">
+                                            <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="payrollStructureComponentId"><default-field><hidden/></default-field></field>
+                                            <field name="sequenceNum"><default-field title="Payslip order"><text-line size="5" input-type="number"/></default-field></field>
+                                            <field name="parameterValues"><default-field title="Values"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="RemoveLine_${payrollStructureComponentId}" button-text="Remove" icon="sym_o_delete" width="480"
+                                            title="Remove ${componentCode}">
+                                        <form-single name="RemoveLine" transition="storeLine"
+                                                map="{payrollStructureId:structure.payrollStructureId, expectedRevision:structure.revision,
+                                                    payrollStructureComponentId:payrollStructureComponentId, remove:'true'}">
+                                            <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="payrollStructureComponentId"><default-field><hidden/></default-field></field>
+                                            <field name="remove"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Remove"><submit type="danger" confirmation="Remove the draft line of ${componentCode}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                                <conditional-field condition="state == 'current' || state == 'future'" title="">
+                                    <container-dialog id="EndLine_${payrollStructureComponentId}" button-text="End" icon="sym_o_block" width="520"
+                                            title="End ${componentCode} in the structure">
+                                        <form-single name="EndLine" transition="storeLine"
+                                                map="{payrollStructureId:structure.payrollStructureId, expectedRevision:structure.revision,
+                                                    payrollStructureComponentId:payrollStructureComponentId, end:'true'}">
+                                            <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="payrollStructureComponentId"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="thruDate"><default-field title="From" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End"><submit type="danger" confirmation="End ${componentCode} in ${structure.structureName}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                                <default-field title=""><display text=" "/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="componentCode"/><field-ref name="termText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!lines.length"
+                                text="This structure has no component yet.${canEdit ? ' Add one with Add component.' : ''}"/>
+                        <label type="p" style="q-pa-sm text-caption" condition="calculationText" text="Calculated in the order ${calculationText}"/>
+                        <section-iterate name="Findings" list="findings" entry="finding">
+                            <widgets><label type="p" style="q-px-sm text-negative" text="${finding.message}"/></widgets>
+                        </section-iterate>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Preview gross to net"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted"
+                                text="A sample calculation with the values given: nothing is written and no money is created. A pay group gives its periods a year (periodsPerYear) and its localization."/>
+                        <form-single name="PreviewStructure" transition="." map="previewValues">
+                            <field name="payrollStructureId"><default-field><hidden/></default-field></field>
+                            <field name="runPreview"><default-field><hidden/></default-field></field>
+                            <field name="sampleValues">
+                                <default-field title="Sample values" tooltip="name = value, separated by commas: annualSalary = 60000, hours = 10, hourlyRate = 20.50">
+                                    <text-area rows="2" cols="70"/></default-field>
+                            </field>
+                            <field name="asOfDate"><default-field title="On" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                            <field name="payrollGroupId">
+                                <default-field title="Pay group">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'payGroups', choiceOrganizationPartyId:structure.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="payrollLocalizationId">
+                                <default-field title="Localization" tooltip="The group's when empty">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'payrollLocalizations'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-ref name="sampleValues"/>
+                                <field-row><field-ref name="asOfDate"/><field-ref name="payrollGroupId"/></field-row>
+                                <field-row><field-ref name="payrollLocalizationId"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                        <label type="p" style="text-negative" condition="previewError" text="${previewError}"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <section name="PreviewResult" condition="preview">
+                            <widgets>
+                                <label type="p" style="q-pa-sm text-weight-medium" text="${previewSummary}"/>
+                                <form-list name="Results" list="results" skip-form="true" paginate="false" condition="results.length">
+                                    <field name="componentCode"><default-field title="Component"><display text="${componentCode} · ${componentName}"/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display text="${kindText}${inTotals ? '' : ' (no total)'}"/></default-field></field>
+                                    <field name="amount" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Explanation"><display/></default-field></field>
+                                    <field name="state">
+                                        <default-field title="Check">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(state === 'ok' ? 'Computed' : errorCode)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state === 'ok' ? 'Computed' : errorCode})}]]></text>
+                                                <text type="html">${state == 'ok' ? 'Computed' : errorCode}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="componentCode"/><field-ref name="explanation"/></column>
+                                        <column><field-ref name="amount"/><field-ref name="state"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="LocalizationItems" list="localizationItems" skip-form="true" paginate="false" condition="localizationItems.length">
+                                    <field name="itemName"><default-field title="Localization item"><display/></default-field></field>
+                                    <field name="party"><default-field title="From"><display/></default-field></field>
+                                    <field name="amount" align="right"><default-field title="Amount"><display currency-unit-field="currencyUomId"/></default-field></field>
+                                    <field name="explanation"><default-field title="Explanation"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="itemName"/><field-ref name="party"/></column>
+                                        <column><field-ref name="amount"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="Totals" list="totalRows" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Total"><display/></default-field></field>
+                                    <field name="amount" align="right"><default-field title="Amount"><display currency-unit-field="currencyUomId"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="amount"/></column>
+                                    </columns>
+                                </form-list>
+                                <section-iterate name="PreviewFindings" list="previewFindings" entry="finding">
+                                    <widgets>
+                                        <label type="p" style="q-px-sm" text="${finding.message}${finding.blocking ? '' : ' (not blocking)'}"/>
+                                    </widgets>
+                                </section-iterate>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

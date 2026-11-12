@@ -5,7 +5,7 @@
 // year to the Store Operations department through Allocations (previewed first: Rafael, not under the policy, is refused and named,
 // Tomas and Ines are granted), runs the accrual twice (the first posts the three ended months of each, the second nothing), and
 // reads each balance's movements on LeaveBalances (the grant and three accruals, 9.5 days). The rules themselves are Mantle's
-// LeaveLedger and mr-boss's PeopleAccess.
+// LeaveLedger and mr-boss's PeopleAccessLater.
 // Run: ./moq accept mr-boss --spec PeopleLeavePoliciesUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

@@ -939,7 +939,7 @@ along with this software (see the LICENSE.md file). If not, see
                 if (found.orderHeader) add('mantle.order.OrderHeader', found.orderHeader.orderId, 'Order', found.orderHeader.orderName)
                 if (found.request) add('mantle.request.Request', found.request.requestId, 'Request', found.request.requestName)
                 if (found.workEffort) add('mantle.work.effort.WorkEffort', found.workEffort.workEffortId,
-                    found.workEffort.workEffortTypeEnumId === 'WetEvent' ? 'Event' : (found.workEffort.workEffortTypeEnumId === 'WetProject' ? 'Project' : 'Task'),
+                    {WetEvent: 'Event', WetProject: 'Project', WetGoal: 'Goal'}[found.workEffort.workEffortTypeEnumId] || 'Task',
                     found.workEffort.workEffortName)
                 if (found.invoice) add('mantle.account.invoice.Invoice', found.invoice.invoiceId, 'Invoice', found.invoice.description)
                 if (found.shipment) add('mantle.shipment.Shipment', found.shipment.shipmentId, 'Shipment', null)

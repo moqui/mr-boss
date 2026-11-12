@@ -5071,7 +5071,9 @@ along with this software (see the LICENSE.md file). If not, see
         the People administrator PEOPLE_CONFIGURE beside its payroll grants, and PEOPLE_ALL_ORGANIZATIONS, with which Mantle's
         People scope is every internal organization (or the active one), as BOSS_COMMERCE_ADMIN's COMMERCE_ALL_ORGANIZATIONS (the
         user's call, impl-people §4, Nov 11, 2026). P14: PEOPLE_ROSTER_EDIT, saving and publishing shifts, to the manager and the HR
-        officer, each in their own scope (the user's call, impl-people §4, Nov 12, 2026). -->
+        officer, each in their own scope (the user's call, impl-people §4, Nov 12, 2026). P22 review: PAYROLL_CONFIGURE, changing
+        payroll configuration (pay components, structures, groups and localizations) in place of PEOPLE_CONFIGURE there, to the payroll
+        operator and the People administrator (the user's call, impl-people §4, Nov 12, 2026). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" fromDate="0"/>
@@ -5086,12 +5088,14 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_CONFIGURE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_DEVELOP" userPermissionId="PEOPLE_DEVELOP_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_CASE" userPermissionId="PEOPLE_CASE_HANDLE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_CONFIGURE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_ALL_ORGANIZATIONS" fromDate="0"/>
     <!-- People's capability bundles in Admin's registry (owner contract, impl-people F27; design-crosscut §1.4's rows, as the
         built apps' above): each group with the permissions it carries (view, edit or sensitive: private person data, pay and
@@ -5101,6 +5105,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_CONFIGURE" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE" appName="People" description="People app users (the launcher)" scopeDependency="organization, employment" sequenceNum="1110"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PEOPLE" artifactGroupId="BOSS_PEOPLE" description="People launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
@@ -5124,6 +5129,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL" appName="People" description="Payroll operator" scopeDependency="organization, employment" sequenceNum="1170"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_CONFIGURE" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" appName="People" description="Payroll approver" scopeDependency="organization, employment" sequenceNum="1180"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" userPermissionId="PAYROLL_APPROVE" capabilityKindEnumId="CpkEdit"/>
@@ -5592,4 +5598,9 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
     <moqui.security.user.NotificationTopic topic="PeopleReviewUpdate"
             linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
+    <!-- impl-people P22 review (the user's calls of Nov 12, 2026): publishing a pay component or a pay structure to approve (Mantle's
+        PeoplePayrollConfigApproval) opens it under Payroll, where its approver (a payroll approver who did not draft it) decides;
+        the Payroll area is the payroll groups', the approver's included -->
+    <moqui.security.user.NotificationTopic topic="PeoplePayrollConfigApproval"
+            linkTemplate="/qapps/People/Payroll/${payrollStructureId ? 'PayStructureDetail?payrollStructureId=' + payrollStructureId : 'PayComponentDetail?payrollComponentId=' + payrollComponentId}"/>
 </entity-facade-xml>

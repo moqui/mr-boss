@@ -2,7 +2,7 @@
 // recruiter of a drafted offer (the applicant, the position, Submit the one primary, the pay set by payroll and its amount absent),
 // and the hire wizard's ConfirmHire one qvt render as the HR officer, its draft started from the accepted offer (the applicant, the
 // seat and the offer's note that the hire consumes it once; no pay). The offer is drafted on Retail's vacant seat and is not hired
-// from here, so the seat stays vacant for the other specs. The rules are Mantle's Offers; access is PeopleAccess's; the scenario is
+// from here, so the seat stays vacant for the other specs. The rules are Mantle's Offers; access is PeopleAccessLater's; the scenario is
 // the acceptance PeopleOffersUsable.
 // Run: ./moq test mr-boss --spec PeopleOffers
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")

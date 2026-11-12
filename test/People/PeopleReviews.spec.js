@@ -4,11 +4,11 @@
 // off the page; Reviews' one qvt render as Tomas (his self assessment to do); ReviewDetail's one qvt render as Hannah (his self
 // assessment read, Your assessment of him over the review form's own field and the rating, her private note, behind the AI opt-out)
 // and its one agent render (tui) as Hannah (neither the note nor the assessments reach the model), then her assessment posted
-// through its transition with authorization on; Goals' one qvt render as Tomas (his goal, never a task); ReviewRelease's one
-// html-print render as Tomas (the stored review, the assessment and rating, never the note). P20 review: People's Today source (the
+// through its transition with authorization on; Goals' one qvt render as Tomas (his goal, never a task, and in Chatter a goal);
+// ReviewRelease's one html-print render as Tomas (the stored review, the assessment and rating, never the note). P20 review: People's Today source (the
 // review steps due: Tomas's self assessment, Hannah's assessments) and Employee360's reviews (find#Reviews by person: the state and,
 // once released, the result, to the person, the reviewer and development, none to a colleague). MyTeam's Reviews due box is checked
-// on PeopleSelfService's render of MyTeam. The rules are Mantle's Reviews; access is PeopleAccess's.
+// on PeopleSelfService's render of MyTeam. The rules are Mantle's Reviews; access is PeopleAccessLater's (the menu PeopleAccess's).
 // Run: ./moq test mr-boss --spec PeopleReviews
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -186,7 +186,7 @@ feature(
 
 feature("Goals as Tomas: his goal, never a task; ReviewRelease as Tomas: the review as released, never the note", {
     when() {
-        asUser(users.employee, () =>
+        const goal = asUser(users.employee, () =>
             system(() =>
                 invoke(R + "store#Goal", {
                     title: "Spec goal: run a till audit",
@@ -198,6 +198,15 @@ feature("Goals as Tomas: his goal, never a task; ReviewRelease as Tomas: the rev
             )
         )
         const goals = asUser(users.employee, () => page("Performance/Goals", {}))
+        // follow-up 2: a goal's Chatter record is a goal, never a task
+        const chatter = asUser(users.employee, () =>
+            system(() =>
+                invoke("ironstone.shared.ChatterServices.get#RecordInfo", {
+                    recordEntityName: "mantle.work.effort.WorkEffort",
+                    recordId: goal.workEffortId
+                })
+            )
+        )
         asUser(users.manager, () => {
             system(() => invoke(R + "change#ReviewState", {performanceReviewId: state.reviewId, action: "finalize"}))
             system(() => invoke(R + "change#ReviewState", {performanceReviewId: state.reviewId, action: "release"}))
@@ -211,9 +220,10 @@ feature("Goals as Tomas: his goal, never a task; ReviewRelease as Tomas: the rev
                 row => row.performanceReviewId == state.reviewId
             )
         const person = {own: byPerson(users.employee), reviewer: byPerson(users.manager), hr: byPerson(users.hr)}
-        return {goals, release, person}
+        return {goals, release, person, chatter}
     },
-    then({goals, release, person}) {
+    then({goals, release, person, chatter}) {
+        chatter.visible && chatter.typeLabel == "Goal" && chatter.title == "Spec goal: run a till audit"
         person.own.length == 1 && person.own[0].resultText == "Fulfills expectations" && person.own[0].statusText == "Released"
         person.reviewer.length == 1 && person.reviewer[0].resultText == "Fulfills expectations"
         // the HR officer (no development reading) reads none of them
