@@ -22,9 +22,10 @@ const choiceLimit = 30
 const organizationOptionLimit = 100
 
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_PPL_<Area>): Settings the People
-// administrator's (P1). Home is every People user's.
+// administrator's (P1); P6: the hire and employment change wizards (BOSS_PPL_EMPLOYMENT), HR's. Home is every People user's.
 const areas = {
-    settings: "Settings"
+    settings: "Settings",
+    employment: "Employees/HireEmployee"
 }
 
 // ===== scope =====
@@ -134,7 +135,10 @@ const linkPaths = [
     // P5: the approvals list and the People administrator's approval rules and HR vocabularies (design §12, §13)
     "Approvals",
     "Settings/ApprovalPolicies",
-    "Settings/Lookups"
+    "Settings/Lookups",
+    // P6: the hire and employment change wizards (design §4)
+    "Employees/HireEmployee",
+    "Employees/EmploymentChange"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -209,7 +213,9 @@ function checkRecord(p) {
 // is in scope but not on the page. An unknown choice throws. Later phases add sources (positions, pay groups). P3: employees (one
 // employer's current employees, the managers and members OrgStructure and OrgChart choose). P4: departments (one employer's), job
 // classes and pay grades (names only: a grade's amounts are payroll's, PayrollSetupServices.find#PayGrades). P5: staff (one
-// employer's current employees and agents, who an approval rule names to decide).
+// employer's current employees and agents, who an approval rule names to decide). P6: positions (one employer's seats in effect
+// that are not inactive, the vacant ones first, by name; a department narrows them), workLocations (one employer's facilities)
+// and the termination reasons and types (People's lookups, ended values left out).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -301,6 +307,122 @@ const choiceSources = {
     // P5: one employer's current employees and agents (organizationPartyId; none without one), who an approval rule names
     staff: (userScope, term, selected, p) =>
         employeeOptions(userScope, term, selected, p, ["PrtEmployee", "PrtAgent"], !!p?.organizationPartyId),
+    // P6: one employer's positions in effect and not inactive (organizationPartyId; none without one), narrowed to a department
+    // (departmentPartyId) when one is chosen, each with its state of occupancy now: the seat a hire or a transfer takes
+    positions: (userScope, term, selected, p) => {
+        if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
+        const factory = ec.entity.conditionFactory
+        const base = () => {
+            let query = find("mantle.humanres.position.EmplPosition")
+                .condition("organizationPartyId", p.organizationPartyId)
+                .condition("statusId", "not-equals", "EmpsInactive")
+                .condition(
+                    factory.makeCondition(
+                        factory.makeCondition("thruDate", "is-null", null),
+                        "or",
+                        factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                    )
+                )
+            if (p.departmentPartyId) query = query.condition("departmentPartyId", p.departmentPartyId)
+            return query
+        }
+        let query = base()
+            .orderBy("^description")
+            .limit(choiceLimit * 2)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["emplPositionId", "description"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const found = Array.from(query.list())
+        const held = new Set(
+            found.length
+                ? Array.from(
+                      find("mantle.humanres.position.EmplPositionParty")
+                          .condition(
+                              "emplPositionId",
+                              "in",
+                              found.map(row => row.emplPositionId)
+                          )
+                          .conditionDate("fromDate", "thruDate", null)
+                          .list()
+                  ).map(row => row.emplPositionId)
+                : []
+        )
+        const label = row => (row.description || row.emplPositionId) + (held.has(row.emplPositionId) ? " (held)" : " (vacant)")
+        const options = found
+            .sort((a, b) => Number(held.has(a.emplPositionId)) - Number(held.has(b.emplPositionId)))
+            .slice(0, choiceLimit)
+            .map(row => ({value: row.emplPositionId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => base().condition("emplPositionId", id).count() > 0,
+            id => one("mantle.humanres.position.EmplPosition", {emplPositionId: id})?.description || id
+        )
+    },
+    // P6: one employer's facilities (organizationPartyId; none without one), an assignment's work location
+    workLocations: (userScope, term, selected, p) => {
+        if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
+        const factory = ec.entity.conditionFactory
+        const base = () => find("mantle.facility.Facility").condition("ownerPartyId", p.organizationPartyId)
+        let query = base().orderBy("^facilityName").limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["facilityId", "facilityName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({value: row.facilityId, label: row.facilityName || row.facilityId}))
+        return withSelected(
+            options,
+            selected,
+            id => base().condition("facilityId", id).count() > 0,
+            id => one("mantle.facility.Facility", {facilityId: id})?.facilityName || id
+        )
+    },
+    // P6: the people a hire may be (Mantle's preview#Hire matches, public identity only, with their relationships with the
+    // employer: by name the people related to the user's employers, anyone else by an exact email typed; the user's call), for an
+    // HR editor; two characters at least. The selected one is labelled only when Mantle admits them by id (a related person), so a
+    // supplied id names no one
+    hirePeople: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.hrView || !userScope.capabilities.hrEdit) return []
+        const organizationPartyId = p?.organizationPartyId || employerIds(userScope)[0] || null
+        if (!organizationPartyId || !employerIds(userScope).includes(organizationPartyId)) return []
+        const preview = parameters => {
+            try {
+                return lib.probe("mantle.humanres.PeopleServices.preview#Hire", Object.assign({organizationPartyId}, parameters))
+            } catch (error) {
+                // a People user who may not hire finds no one; a person not admitted by id is not named
+                if (!["PERMISSION_DENIED", "RECORD_UNAVAILABLE"].includes(codeOf(error))) throw error
+                return null
+            }
+        }
+        const options =
+            term.length >= 2
+                ? Array.from(preview({term})?.matches || []).map(row => ({
+                      value: row.partyId,
+                      label:
+                          (row.preferredName ? row.personName + " (" + row.preferredName + ")" : row.personName) +
+                          (row.relationshipText ? " · " + row.relationshipText : "")
+                  }))
+                : []
+        if (selected && !options.some(option => option.value === selected)) {
+            const person = preview({partyId: selected})?.person
+            if (person?.partyId === selected) options.push({value: selected, label: person.personName})
+        }
+        return options
+    },
+    // P6: the termination reasons and types (People's lookups, Enumeration.thruDate: an ended value left out)
+    terminationReasons: (userScope, term, selected) => vocabularyOptions("TerminationReason", term, selected),
+    terminationTypes: (userScope, term, selected) => vocabularyOptions("TerminationType", term, selected),
     // P4: the departments of one employer (organizationPartyId; none without one), a position's department
     departments: (userScope, term, selected, p) => {
         if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
@@ -388,6 +510,30 @@ const choiceSources = {
         const gradeName = id => one("mantle.humanres.rate.PayGrade", {payGradeId: id})?.description || id
         return withSelected(options, selected, id => readable().condition("payGradeId", id).count() > 0, gradeName)
     }
+}
+// The current values of one of People's HR vocabularies (an Enumeration family whose ended values, thruDate, are left out), in
+// their order, searched by name.
+function vocabularyOptions(enumTypeId, term, selected) {
+    const factory = ec.entity.conditionFactory
+    const current = () =>
+        find("moqui.basic.Enumeration")
+            .condition("enumTypeId", enumTypeId)
+            .condition(
+                factory.makeCondition(
+                    factory.makeCondition("thruDate", "is-null", null),
+                    "or",
+                    factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                )
+            )
+    let query = current().orderBy(["sequenceNum", "description"]).limit(choiceLimit)
+    if (term) query = query.condition(factory.makeCondition("description", "like", likeText(term)).ignoreCase())
+    const options = Array.from(query.list()).map(row => ({value: row.enumId, label: row.description || row.enumId}))
+    return withSelected(
+        options,
+        selected,
+        id => current().condition("enumId", id).count() > 0,
+        id => one("moqui.basic.Enumeration", {enumId: id})?.description || id
+    )
 }
 // The current employees of the employers a staff reader sees, or of the one asked for (refused outside, as none): each person once,
 // by name or id; the selected one when it is one of them. relationshipTypes widens them (P5's staff: agents too), and a source that
@@ -522,8 +668,8 @@ const employee360Path = app => "/qapps/" + (app === "Commons" ? "Commons/People/
 function employee360(p) {
     const app = Object.hasOwn(employee360Apps, p.appRoot || "") ? employee360Apps[p.appRoot] : null
     if (!app) denied("PEOPLE_CONTEXT", "This person's record is not available here")
-    if (p.appRoot === "People") required()
-    else if (!ec.user.userId) denied("PEOPLE_UNAVAILABLE", "People is not available")
+    const userScope = p.appRoot === "People" ? required() : null
+    if (!userScope && !ec.user.userId) denied("PEOPLE_UNAVAILABLE", "People is not available")
     // checkOnly: a person or employment the user may not read answers no region, as a missing one, rather than a refusal
     // logged as a failed service on every "Not available" view
     const found = call("mantle.humanres.PeopleServices.get#Employee360", {
@@ -556,6 +702,10 @@ function employee360(p) {
         record,
         own,
         editableFields: caps.editPersonal && regions.includes("personalInfo") ? editable : [],
+        // P6: the employment changes, People's alone: an HR editor of the opened employment's employer with the wizards' grant
+        // changes it (Mantle checks again), and People shows the changes waiting to HR and to their approvers
+        canChangeEmployment: !!userScope && !!caps.changeEmployment && !!userScope.capabilities.employment,
+        showsChanges: !!userScope,
         returnLabel: app.returnLabel,
         returnPath: app.returnPath
     }
@@ -673,9 +823,31 @@ function lookup(p) {
     throw new Error("Unknown record lookup " + p.operation)
 }
 
+// ===== the employment change wizard (P6) =====
+// The parameters of mantle.humanres.PeopleServices preview#EmploymentChange and apply#EmploymentChange for an EmploymentChange
+// draft: the employment, the kind, the date and why, and the fields of that kind only (a transfer's four terms, an empty one
+// cleared; a manager change's manager; a leave's return; a separation's type and reason), so a term of another kind is not sent.
+const changeFields = {
+    transfer: ["departmentPartyId", "emplPositionId", "managerPartyId", "facilityId"],
+    manager: ["managerPartyId"],
+    leave: ["returnDate"],
+    return: [],
+    separation: ["terminationReasonEnumId", "terminationTypeEnumId"]
+}
+function changeParameters(partyRelationshipId, changeKind, draft) {
+    const out = {
+        partyRelationshipId: partyRelationshipId || null,
+        changeKind: changeKind || null,
+        effectiveDate: draft.effectiveDate || null,
+        reason: draft.reason || null
+    }
+    for (const field of changeFields[changeKind] || []) out[field] = draft[field] ?? ""
+    return out
+}
+
 const operations = {sharedContext, checkRecord, choices, search, employee360, employee360Link, lookup}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown People operation " + op)
     return operations[op](p || {})
 }
-;({execute: run, employmentLink})
+;({execute: run, employmentLink, changeParameters})

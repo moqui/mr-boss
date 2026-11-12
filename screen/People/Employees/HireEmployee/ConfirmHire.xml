@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Hire employee, step 3, ConfirmHire (design-people §4 HireEmployee): the hire as mantle.humanres.PeopleServices.preview#Hire reads
+    it: the person and employer, the plan (a new employment, the employee relationship of the employer completed, or a rehire beside
+    the earlier employment, which stays as it was), the first assignment's terms by name, the person's other relationships with the
+    employer (a contractor's stays) and the warnings and notes. Hire, the one primary, makes it in one transaction (hire#Employee,
+    with the draft's operation key, so a second press answers the first) and opens the person's Employee360; the draft record is discarded. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Confirm" default-menu-index="3" menu-image="sym_o_task_alt" menu-image-type="icon">
+
+    <transition name="hireEmployee">
+        <actions>
+            <script><![CDATA[
+                const draft = hireDraft
+                if (!draft.organizationPartyId || !(draft.partyId || (draft.firstName && draft.lastName))) {
+                    ec.message.addError('Start with the person')
+                    return
+                }
+                hired = ec.service.sync().name('mantle.humanres.PeopleServices.hire#Employee').parameters({
+                    organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
+                    lastName: draft.lastName, preferredName: draft.preferredName, workEmail: draft.workEmail, workPhone: draft.workPhone,
+                    confirmNewPerson: draft.confirmNewPerson === 'Y', fromDate: draft.fromDate, thruDate: draft.thruDate,
+                    departmentPartyId: draft.departmentPartyId, emplPositionId: draft.emplPositionId,
+                    managerPartyId: draft.managerPartyId, facilityId: draft.facilityId, reason: String(reason ?? '').trim() || null,
+                    operationKey: hireOperationKey}).call()
+                if (ec.message.hasError()) return
+                // the draft is done with
+                if (hireDraftId) ec.service.sync().name('mantle.humanres.PeopleServices.delete#EmploymentDraft').parameters({
+                    employmentDraftId: hireDraftId}).call()
+                hiredPartyId = hired.partyId
+                hiredEmploymentId = hired.partyRelationshipId
+                const person = ec.entity.find('mantle.party.Person').condition('partyId', hired.partyId).disableAuthz().one()
+                ec.message.addMessage([person?.firstName, person?.lastName].filter(Boolean).join(' ') + ' is hired', 'success')
+            ]]></script>
+        </actions>
+        <default-response url="//People/Employees/Employee360">
+            <parameter name="partyId" from="hiredPartyId"/>
+            <parameter name="partyRelationshipId" from="hiredEmploymentId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <if condition="hireDraft.organizationPartyId &amp;&amp; (hireDraft.partyId || (hireDraft.firstName &amp;&amp; hireDraft.lastName))">
+            <service-call name="mantle.humanres.PeopleServices.preview#Hire" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:hireDraft.organizationPartyId, partyId:hireDraft.partyId, firstName:hireDraft.firstName,
+                        lastName:hireDraft.lastName, preferredName:hireDraft.preferredName, workEmail:hireDraft.workEmail,
+                        confirmNewPerson:(hireDraft.confirmNewPerson == 'Y'), fromDate:hireDraft.fromDate, thruDate:hireDraft.thruDate,
+                        departmentPartyId:hireDraft.departmentPartyId, emplPositionId:hireDraft.emplPositionId,
+                        managerPartyId:hireDraft.managerPartyId, facilityId:hireDraft.facilityId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            const found = preview || {}
+            const person = found.person || {}
+            const terms = found.terms || {}
+            reviewFound = !!found.person
+            reviewTitle = reviewFound ? (person.personName + (person.preferredName ? ' (' + person.preferredName + ')' : '')) : ''
+            reviewRows = [
+                ['Employer', found.organizationName],
+                ['Person', person.isNew ? 'A new person' : 'Known to People'],
+                ['Employment', found.planText],
+                ['Starts', terms.fromDateText],
+                ['Ends', terms.thruDateText],
+                ['Department', terms.departmentName],
+                ['Position', terms.positionName],
+                ['Manager', terms.managerName],
+                ['Work location', terms.facilityName],
+                ['Work email', hireDraft.workEmail],
+                ['Work phone', hireDraft.workPhone]
+            ].filter(([, value]) => value).map(([label, value]) => ({label, value}))
+            const severityTexts = {error: 'Cannot hire', warning: 'Check', info: 'Note'}
+            findingRows = Array.from(found.findings || []).map(row => Object.assign({}, row, {severityText: severityTexts[row.severity] || ''}))
+            relationshipRows = Array.from(found.relationships || [])
+            canHire = !!found.canHire
+            severityColors = {error: 'negative', warning: 'warning', info: 'grey-8'}
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="NoDraft" condition="!reviewFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Nothing to hire yet"/>
+                    <box-body><label type="p" text="Go back to choose the person and the terms."/></box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Review" condition="reviewFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Hire ${reviewTitle}"/>
+                    <box-body>
+                        <form-list name="HireReview" list="reviewRows" skip-form="true" paginate="false">
+                            <field name="label"><default-field title="Hire"><display/></default-field></field>
+                            <field name="value"><default-field title=""><display/></default-field></field>
+                        </form-list>
+                        <form-list name="HireRelationships" list="relationshipRows" skip-form="true" paginate="false"
+                                condition="relationshipRows.length">
+                            <field name="typeText"><default-field title="Relationship with the employer"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="typeText"/><field-ref name="fromDateText"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="HireFindings" list="findingRows" skip-form="true" paginate="false" condition="findingRows.length">
+                            <field name="severityText">
+                                <default-field title="">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColors[severity] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(severityText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
+                                        <text type="html">${severityText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="message"><default-field title="Before hiring"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="message"/></column>
+                                <column><field-ref name="severityText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-single name="ConfirmHireForm" transition="hireEmployee">
+                            <field name="reason">
+                                <default-field title="Note" tooltip="Kept on the hire's record"><text-line size="50"/></default-field>
+                            </field>
+                        </form-single>
+                        <label type="p" style="text-negative" condition="!canHire"
+                                text="This hire cannot be made as it is: go back and change what the list says."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

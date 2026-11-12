@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Hire employee, step 2, EmploymentTerms (design-people §4 HireEmployee): the employment's start and optional end and the first
+    assignment: the department, the position (the employer's seats in effect, vacant ones first, narrowed to the department; a
+    position's department is the assignment's), the manager (one of the employer's employees) and the work location (a facility
+    of the employer). Next checks the whole hire (mantle.humanres.PeopleServices.preview#Hire: an overlapping employment, a seat
+    held then, a department or manager not of the employer) and keeps the draft (the user's draft record). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Employment terms" default-menu-index="2" menu-image="sym_o_work" menu-image-type="icon">
+
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="saveTerms">
+        <actions>
+            <script><![CDATA[
+                const text = value => String(value ?? '').trim()
+                const draft = Object.assign({}, hireDraft, {
+                    fromDate: text(fromDate) || null,
+                    thruDate: text(thruDate) || null,
+                    departmentPartyId: text(departmentPartyId) || null,
+                    emplPositionId: text(emplPositionId) || null,
+                    managerPartyId: text(managerPartyId) || null,
+                    facilityId: text(facilityId) || null
+                })
+                if (!draft.organizationPartyId) { ec.message.addError('Start with the person'); return }
+                ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
+                    employmentDraftId: hireDraftId, draft}).call()
+                if (ec.message.hasError()) return
+                const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#Hire').parameters({
+                    organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
+                    lastName: draft.lastName, workEmail: draft.workEmail, confirmNewPerson: draft.confirmNewPerson === 'Y',
+                    fromDate: draft.fromDate, thruDate: draft.thruDate, departmentPartyId: draft.departmentPartyId,
+                    emplPositionId: draft.emplPositionId, managerPartyId: draft.managerPartyId, facilityId: draft.facilityId}).call()
+                if (ec.message.hasError()) return
+                for (const finding of Array.from(previewed?.findings || []))
+                    if (finding.severity === 'error') ec.message.addError(finding.message)
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="terms" from="Object.assign({fromDate: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')}, hireDraft)"/>
+        <set field="employerName" from="hireDraft.organizationPartyId ? (ec.entity.find('mantle.party.Organization').condition('partyId',
+                hireDraft.organizationPartyId).disableAuthz().one()?.organizationName || '') : ''"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Employment terms"/>
+            <box-body>
+                <label type="p" style="m-muted" text="The employment at ${employerName} from its start, and where the person works: department, position, manager and work location. Pay is set by payroll."/>
+                <form-single name="HireTerms" transition="saveTerms" map="terms" focus-field="fromDate">
+                    <field name="fromDate"><default-field title="Starts"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+                    <field name="thruDate">
+                        <default-field title="Ends" tooltip="Empty for an open-ended employment"><date-time type="date" format="yyyy-MM-dd"/></default-field>
+                    </field>
+                    <field name="departmentPartyId">
+                        <default-field title="Department" tooltip="The position's department when a position is chosen">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'departments', choiceOrganizationPartyId:hireDraft.organizationPartyId,
+                                            selected:terms.departmentPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="emplPositionId">
+                        <default-field title="Position">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'positions', choiceOrganizationPartyId:hireDraft.organizationPartyId,
+                                            selected:terms.emplPositionId}">
+                                    <depends-on field="departmentPartyId" parameter="choiceDepartmentPartyId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="managerPartyId">
+                        <default-field title="Manager">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:hireDraft.organizationPartyId,
+                                            selected:terms.managerPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Work location">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workLocations', choiceOrganizationPartyId:hireDraft.organizationPartyId,
+                                            selected:terms.facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                        <field-row><field-ref name="departmentPartyId"/><field-ref name="emplPositionId"/></field-row>
+                        <field-row><field-ref name="managerPartyId"/><field-ref name="facilityId"/></field-row>
+                    </field-layout>
+                </form-single>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

@@ -47,6 +47,10 @@ feature(
             rendered.output.includes("Edit personal information")
             rendered.output.includes("Employment history")
             rendered.output.includes("Files and activity")
+            // P6: the employment's department and assignments, and the HR officer's Change employment
+            rendered.output.includes("Store Operations")
+            rendered.output.includes("Sales associate 1")
+            rendered.output.includes("Change employment")
             rendered.output.includes("mantle.humanres.employment.Employment")
         }
     }
@@ -170,6 +174,7 @@ feature(
             commons.output.includes("Personal information")
             commons.output.includes("Edit personal information")
             !commons.output.includes("Employment history")
+            !commons.output.includes("Change employment")
         }
     }
 )

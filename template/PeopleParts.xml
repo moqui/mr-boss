@@ -14,15 +14,16 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Parts of the IronStone People screens (impl-people P1). A screen includes each transition it uses by name
     (transition-include), so a form here posts to the screen it is on.
-    - choices: the app's drop-downs (ironstone.people.ContextServices.get#Choices: employers, units, people, employees, departments, job classes, pay grades), after
-      the root's People check; choiceOrganizationPartyId names the employer of employees (P3) and of departments (P4). -->
+    - choices: the app's drop-downs (ironstone.people.ContextServices.get#Choices: employers, units, people, employees, departments, job classes, pay grades,
+      staff, positions, work locations, termination reasons and types), after the root's People check; choiceOrganizationPartyId names the employer of
+      employees (P3), departments (P4), positions and work locations (P6), choiceDepartmentPartyId the department of positions (P6). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="choices" read-only="true">
         <actions>
             <service-call name="ironstone.people.ContextServices.get#Choices" out-map="found"
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
-                        organizationPartyId:(choiceOrganizationPartyId || null)}"/>
+                        organizationPartyId:(choiceOrganizationPartyId || null), departmentPartyId:(choiceDepartmentPartyId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>

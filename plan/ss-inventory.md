@@ -633,7 +633,7 @@ is unchanged.
 | FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills; Shared/Supplier360/Bills (SupplierBillRows) (Purchasing P6); Purchasing/Performance/SupplierStatement#SupplierStatementRows (Purchasing P15) |
 | FindParty | CreatePersonForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreatePersonCustForm |  |  |
-| FindParty | CreateEmployeeForm | People/Employees/HireEmployee |  |
+| FindParty | CreateEmployeeForm | People/Employees/HireEmployee | People/Employees/HireEmployee (Identity: a person found, or a new one with work contacts; EmploymentTerms; ConfirmHire, over mantle.humanres.PeopleServices preview#Hire and hire#Employee, never create#PersonEmployee) (People P6) |
 | FindParty | CreateOrganizationForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreateAccountForm |  |  |
 | FindParty | CreateContactForm | Commons/QuickCreate | Commons/QuickCreate |
