@@ -7,7 +7,8 @@
 // Settings' one html render (the administrator's; the reader's a refusal), P2's equipment write (the resource administrator's,
 // the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
-// Retail) and its record panels,
+// Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
+// panels, and Commons' Report a problem (the requester's, not another user's),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -25,6 +26,11 @@ const registry = "ironstone.admin.RegistryServices."
 // a refusal of a user without Maintenance: the service is not authorized for them, or it refuses them
 const refused = message => /MAINTENANCE_UNAVAILABLE|is not authorized/.test(message)
 const unauthorized = message => /^40[13] |is not authorized/.test(message)
+// a Commons screen's refusal as the user (P4's Report a problem): "" when it opens
+function screenRefusalIn(user, path) {
+    const rendered = asUser(user, () => page(path, {}, "html", "Commons"))
+    return rendered.status === 200 && rendered.errors.length === 0 ? "" : rendered.status + " " + rendered.errors.join(" | ")
+}
 // a spec-local Maintenance user whose only capability group holds MAINTENANCE_PLAN, an agent of Services
 const editOnly = "MNT_SPEC_EDIT_ONLY"
 
@@ -538,6 +544,46 @@ feature(
             out.resources.includes("RECORD_UNAVAILABLE")
             out.retail.includes("RECORD_UNAVAILABLE")
             out.missing.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
+
+feature(
+    "a maintenance request is a planner's of its organization, not a technician's or Retail's; a requester reports in Commons only (P4)",
+    {
+        when() {
+            const check = (user, requestId = ids.openRequestId) =>
+                asUser(user, () => refusal(checkRecord, {appRoot: "Maintenance", recordType: "request", recordId: requestId}))
+            const panel = user =>
+                asUser(
+                    user,
+                    () =>
+                        deviceRequest("apps/Maintenance/RecordFiles/filesData", null, {
+                            recordEntity: "mantle.request.Request",
+                            recordId: ids.openRequestId
+                        }).errors
+                )
+            return {
+                planner: check(users.planner),
+                tech: check(users.tech),
+                retail: check(users.retailPlanner),
+                missing: check(users.planner, "BOSS_MNT_REQ_NONE"),
+                plannerPanel: panel(users.planner),
+                retailPanel: panel(users.retailPlanner),
+                // Report a problem: the requester's screen in Commons (BOSS_MNT_REPORT_PROBLEM), not another Commons user's
+                requesterReport: screenRefusalIn(users.requester, "ReportProblem"),
+                plannerReport: screenRefusalIn(users.planner, "ReportProblem")
+            }
+        },
+        then(out) {
+            out.planner == ""
+            out.tech.includes("RECORD_UNAVAILABLE")
+            out.retail.includes("RECORD_UNAVAILABLE")
+            out.missing.includes("RECORD_UNAVAILABLE")
+            !out.plannerPanel.includes("RECORD_PANEL_UNAVAILABLE")
+            out.retailPanel.includes("RECORD_PANEL_UNAVAILABLE")
+            out.requesterReport == ""
+            out.plannerReport != ""
         }
     }
 )

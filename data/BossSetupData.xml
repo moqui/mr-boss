@@ -521,7 +521,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="CommitStatusFailed" linkTemplate="/qapps/Projects/Code/CommitDetail?repositoryId=${repositoryId}&amp;commitId=${commitId}"/>
     <!-- and of the request topics (mantle.request.RequestServices notify#RequestTriage, complete#RequestFromWork): the request
         (impl-projects.md P5) -->
-    <moqui.security.user.NotificationTopic topic="RequestTriage" linkTemplate="/qapps/Projects/Requests/RequestDetail?requestId=${requestId}"/>
+    <moqui.security.user.NotificationTopic topic="RequestTriage" linkTemplate="/qapps/${typeLabel == 'Maintenance' ? 'Maintenance' : 'Projects'}/Requests/RequestDetail?requestId=${requestId}"/>
     <!-- a support case's work done goes to its CaseDetail (the message's isCase, impl-customer-service P2) -->
     <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/${isCase ? 'CustomerService/Cases/CaseDetail' : 'Projects/Requests/RequestDetail'}?requestId=${requestId}"/>
     <!-- and of the timesheet topics (mantle.work.TimesheetServices, impl-projects.md P6a): the approval opens the week's TimesheetDetail, the
@@ -5527,4 +5527,22 @@ along with this software (see the LICENSE.md file). If not, see
             resourceKind="assignment" lookupService="ironstone.maintenance.LifecycleServices.find#Assignments"
             transferService="ironstone.maintenance.LifecycleServices.transfer#Assignments" resourceParameter="assignmentKind"
             requiredPermission="ADMIN_IDENTITY_VIEW" sequenceNum="60"/>
+    <!-- Maintenance P4 (impl-maintenance P4, F78; design-maintenance §3 Requests): Report a problem, Commons' quick create of a
+        maintenance problem (Commons/ReportProblem), for the requesters and the Maintenance administrator only: denied to BOSS_USERS,
+        so the + menu offers it to no one else (as Manufacturing's ReportDowntime); Mantle's report#MaintenanceProblem checks
+        MAINTENANCE_REQUEST again. The requester follows their reports in Commons' RequestDetail (its Maintenance summary). The
+        maintenance planners' triage notice opens Maintenance's RequestDetail (the RequestTriage topic's link above). -->
+    <artifactGroups artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Maintenance: report a problem (Commons)">
+        <artifacts artifactName="component://mr-boss/screen/Commons/ReportProblem.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_DENY" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_REQUEST" userGroupId="BOSS_MAINTENANCE_REQUEST"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_ADMIN" userGroupId="BOSS_MAINTENANCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
 </entity-facade-xml>

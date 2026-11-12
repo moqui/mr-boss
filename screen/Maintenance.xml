@@ -47,7 +47,8 @@ along with this software (see the LICENSE.md file). If not, see
                 inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to a user given
                 Maintenance without Commons. P2: equipment (Asset) and facilities, each checked as Maintenance's check#Record checks
                 the record (the user's maintenance scope); P3: a work order and its steps (a WorkEffort; a step is checked as its
-                work order, and a work effort that is no work order is refused). A panel request with no record (a person search, an
+                work order, and a work effort that is no work order is refused); P4: a maintenance request (a Request), a planner's or
+                supervisor's of its organization. A panel request with no record (a person search, an
                 avatar) names none. -->
             <script><![CDATA[
                 const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
@@ -57,7 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
                     let entityName = String(wanted)
                     try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
                     const panelHosts = {'mantle.product.asset.Asset': 'asset', 'mantle.facility.Facility': 'facility',
-                        'mantle.work.effort.WorkEffort': 'workOrder'}
+                        'mantle.work.effort.WorkEffort': 'workOrder', 'mantle.request.Request': 'request'}
                     if (!Object.hasOwn(panelHosts, entityName))
                         throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
                     let admitted = false
@@ -88,6 +89,10 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P3: Work orders (design §3), for a user who reads maintenance work (a view or assigned view permission) -->
         <subscreens-item name="WorkOrders" location="component://mr-boss/screen/Maintenance/WorkOrders.xml" menu-index="2"
                 menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW')"/>
+        <!-- P4: Requests (design §3), for a planner or supervisor, who triage them; a requester reports and follows their own in
+            Commons (Commons/ReportProblem, Commons/Requests/RequestDetail) -->
+        <subscreens-item name="Requests" location="component://mr-boss/screen/Maintenance/Requests.xml" menu-index="3"
+                menu-include="ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')"/>
         <!-- P2: Equipment and Facilities (design §6), for a user who reads them -->
         <subscreens-item name="Equipment" location="component://mr-boss/screen/Maintenance/Equipment.xml" menu-index="6"
                 menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
@@ -111,6 +116,7 @@ along with this software (see the LICENSE.md file). If not, see
         <keymap scope="maintenance">
             <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>
             <key keys="g w" label="Work orders" screen="Maintenance/WorkOrders"/>
+            <key keys="g r" label="Maintenance requests" screen="Maintenance/Requests"/>
             <key keys="g e" label="Equipment" screen="Maintenance/Equipment"/>
             <key keys="g f" label="Facilities" screen="Maintenance/Facilities"/>
         </keymap>
