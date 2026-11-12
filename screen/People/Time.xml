@@ -27,12 +27,16 @@ along with this software (see the LICENSE.md file). If not, see
     People administrator's Settings): the working schedules HR's and the managers' (BOSS_PPL_SCHEDULES), Holidays HR's alone
     (BOSS_PPL_HOLIDAYS), both denied to the root user group and to self-service, and what each sees is what Mantle's
     ScheduleServices admit: the schedules of the employers an HR officer reads, those a manager's reports follow.
-    Attendance, the shift roster, hours for pay and leave join with P11 to P14. -->
+    P11 adds Leave balances (HR's and the managers', BOSS_PPL_LEAVE_BALANCES: an HR reader's employers' balances, a manager's
+    reports'), and HR's Leave policies with LeavePolicyDetail and Allocations (BOSS_PPL_LEAVE; under Time rather than Settings, as
+    Holidays), both denied to the root user group and to self-service (whose own balances are SelfService's), whose services are
+    Mantle's LeaveServices. Attendance, the shift roster, hours for pay and leave requests join with P12 to P14. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time &amp; leave" default-menu-index="7" menu-image="sym_o_schedule" menu-image-type="icon">
     <subscreens default-item="Timesheets">
         <!-- P10's time screens, Projects' mounted; WorkingSchedules (menu index 5) and HolidayCalendars (9) are P9's files under Time/,
-            with WorkingScheduleDetail out of the menu -->
+            with WorkingScheduleDetail out of the menu; P11: LeaveBalances (7), LeavePolicies (10) and LeaveAllocations (11), with
+            LeavePolicyDetail out of the menu -->
         <subscreens-item name="Timesheets" location="component://mr-boss/screen/Projects/Time/Timesheets.xml" menu-title="Timesheets"
                 menu-index="1"/>
         <subscreens-item name="MyTime" location="component://mr-boss/screen/Projects/Time/MyTime.xml" menu-title="My time" menu-index="2"/>

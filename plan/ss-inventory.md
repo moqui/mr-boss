@@ -37,6 +37,12 @@ screens over Mantle's new ScheduleServices, design §6 and §7); a person's own 
 (CalendarServices.store#WorkingHours), which a People schedule overrides in capacity. HolidayCalendars is at People/Time, HR's,
 not People/Settings (the user's call of Nov 11 on HR's editors). Their **Implemented in** is in usl-inventory's People rows.
 
+**People P11 (Nov 11, 2026):** no baseline form is mapped to LeavePolicies, LeavePolicyDetail, LeaveAllocations or LeaveBalances
+(new screens over Mantle's new LeaveServices, design §7); Marble's HumanRes has no leave form, and the legacy EmploymentLeave rows
+are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolicies, LeavePolicyDetail and LeaveAllocations are at
+People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
+usl-inventory's People rows.
+
 **People P7 (Nov 11, 2026):** no baseline form is mapped to the lifecycle checklists (ChecklistTemplates is new), the equipment custody of People's EquipmentDetail (crosscut §3.10's People row) or the employees import (EmployeeImport, the shared DataImport); their Implemented in is in usl-inventory's People rows.
 
 **People P2 (Nov 11, 2026):** **Implemented in** of the directory and Employee360 rows ([impl-people P2](impl-people.md#p2--employees-and-employee360)): FindParty's search and list forms name `People/Employees/List`; EditParty's person, identification (read, masked, no tax types), phone and postal purpose, note and content forms name `People/Employees/Employee360` and the region that carries each. AddIdentificationForm is not built (identifications are read only in P2), and the email, web and other purpose forms are not People's: a person's work contacts are kept in Commons.
