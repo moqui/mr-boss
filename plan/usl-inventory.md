@@ -2230,10 +2230,25 @@ after `ironstone.maintenance.AccessServices.check#Record`:
 
 | File | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| work/ResourceBookingServices | record#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime (RecordDowntime); Maintenance/WorkOrders/WorkOrderDetail/Downtime (Record outage); WorkOrderDetail's Start with offline intent and Complete leaving equipment down (through transition#MaintenanceWorkOrder); Manufacturing/WorkCenters/Downtime (an equipment-fault stop, through store#ProductionDowntime, Manufacturing P11) |
-| work/ResourceBookingServices | find#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime (DowntimeRows, the correction history); Maintenance/WorkOrders/WorkOrderDetail/Downtime |
-| work/ResourceBookingServices | correct#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (Correct) |
-| work/ResourceBookingServices | end#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (RestoreResource) |
+| work/ResourceBookingServices | record#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime (RecordDowntime); Maintenance/WorkOrders/WorkOrderDetail/Downtime (Record outage); WorkOrderDetail's Start with offline intent and Complete leaving equipment down (through transition#MaintenanceWorkOrder); Manufacturing/WorkCenters/Downtime (an equipment-fault stop, through store#ProductionDowntime, Manufacturing P11); P15: Maintenance/Scheduling/Blackouts (StoreBlock, a planned block) and Manufacturing's FacilityDetail offline change (store#WorkCenterOffline's planned block) |
+| work/ResourceBookingServices | find#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime (DowntimeRows, the correction history); Maintenance/WorkOrders/WorkOrderDetail/Downtime; P15: Maintenance/Scheduling/Blackouts (BlockRows, the list and calendar) |
+| work/ResourceBookingServices | correct#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/Scheduling/Blackouts | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (Correct); P15: Maintenance/Scheduling/Blackouts (a block's Correct) |
+| work/ResourceBookingServices | end#ResourceUnavailability | Maintenance/Equipment/Downtime; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/Equipment/Downtime and WorkOrderDetail/Downtime (RestoreResource); P15: Maintenance/Scheduling/Blackouts (a block's End) |
+
+Added in `work/ResourceBookingServices.xml` (impl-maintenance P15; `ResourcePolicy.js`), the booking policy, its approvers and the one
+availability read, which `EventServices`' `book#Resource`, `check#ResourceBookings` (and through it `update#EventOccurrence`,
+`store#EventRecurrence` for a managed resource and the CalDAV event PUT), `create#Event`'s equipment, `get#FreeBusy` and
+`get#FullCalendarData` (its `unavailableList`, and a managed resource's hidden bookings answered Busy) call:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/ResourceBookingServices | find#BookableResources | Maintenance/Scheduling/Resources | Maintenance/Scheduling/Resources (ResourceRows) |
+| work/ResourceBookingServices | get#ResourceBookingPolicy | Maintenance/Scheduling/ResourcePolicyDetail | Maintenance/Scheduling/ResourcePolicyDetail (BookingPolicy, BookingApprovers, the history) |
+| work/ResourceBookingServices | store#ResourceBookingPolicy | Maintenance/Scheduling/Resources; Maintenance/Scheduling/ResourcePolicyDetail | Maintenance/Scheduling/Resources (Bookability); Maintenance/Scheduling/ResourcePolicyDetail (BookingPolicy) |
+| work/ResourceBookingServices | preview#ResourceBookingPolicy | Maintenance/Scheduling/ResourcePolicyDetail | Maintenance/Scheduling/ResourcePolicyDetail (PolicyImpact) |
+| work/ResourceBookingServices | store#ResourceApprover | Maintenance/Scheduling/ResourcePolicyDetail | Maintenance/Scheduling/ResourcePolicyDetail (BookingApprovers' add and end); Admin's offboarding (Maintenance's lifecycle participant, bookingApprovals) |
+| work/ResourceBookingServices | get#ResourceAvailability | Maintenance/Scheduling/ResourceCalendar | Maintenance/Scheduling/ResourcePolicyDetail; Maintenance/Equipment/EquipmentDetail/Schedule; Maintenance/Facilities/FacilityDetail/Schedules |
+
 Added in `work/ProcessServices.xml` (impl-maintenance P6; `MaintenanceProcedures.js`, the checked path of the WppMaintenanceProcedure
 policy), called by built screens through the Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`
 (recordType procedure):

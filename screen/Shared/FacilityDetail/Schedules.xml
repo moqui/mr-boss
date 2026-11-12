@@ -14,7 +14,10 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- FacilityDetail's Schedules tab: the events that book the facility in the next two weeks on the Commons calendar
     (design-drawers-commons §7; ironstone.warehouse.FacilityServices.get#FacilitySchedule over
-    mantle.work.EventServices.get#FullCalendarData). Bookings are made in Commons. -->
+    mantle.work.EventServices.get#FullCalendarData). Bookings are made in Commons. Under Maintenance (impl-maintenance P15; design
+    §6 FacilityDetail's Schedules, §7.1): the facility's booking policy in words and its availability for two weeks
+    (mantle.work.ResourceBookingServices.get#ResourceAvailability: bookings, blackouts, its own and those above it, and outages kept
+    apart, an event the user may not see named Busy), after Maintenance's record check, linking its policy and Blackouts. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Schedules"
@@ -31,10 +34,32 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <set field="maintenanceSchedule" from="false"/>
+        <if condition="appRoot == 'Maintenance'">
+            <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="maintenanceRecord"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId}" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <if condition="maintenanceRecord?.recordId">
+                <service-call name="mantle.work.ResourceBookingServices.get#ResourceAvailability" out-map="availability"
+                        transaction="force-new" ignore-error="true" in-map="{facilityId:facilityId}"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="maintenanceSchedule" from="availability?.intervalList != null"/>
+                <set field="scheduleRows" from="availability?.intervalList || []"/>
+                <set field="schedulePolicyText" from="availability?.policyText"/>
+                <set field="scheduleResource" from="{facilityId:facilityId}"/>
+                <set field="scheduleReadsPolicy" from="!!(maintenance?.capabilities?.policyView || maintenance?.capabilities?.policyEdit
+                        || maintenance?.capabilities?.resourceRead)"/>
+            </if>
+        </if>
         <set field="recordFound" from="schedule?.bookingList != null"/>
         <set field="bookingList" from="schedule?.bookingList || []"/>
     </actions>
     <widgets>
+        <section name="MaintenanceFacilitySchedule" condition="maintenanceSchedule">
+            <widgets>
+                <section-include name="ResourceSchedule" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+            </widgets>
+        </section>
         <section name="FacilitySchedule" condition="recordFound">
             <widgets>
                 <container-box>
