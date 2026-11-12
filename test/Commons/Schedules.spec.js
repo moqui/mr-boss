@@ -4,7 +4,8 @@
 // resources with their policy (Bob Developer approves the Board room and the video kit) and the type, text and seats filters, not the
 // manufacturing equipment; the bookings of a week with their status; a booking made at once, one waiting for approval, a clash
 // refused with no event left behind, a booking cancelled with the event made for it; ResourceDetail with its policy, the user's
-// bookings and Book. Joe Developer may not cancel john.doe's booking.
+// bookings and Book. Joe Developer may not cancel john.doe's booking. "Scheduling admin" is john.doe's, not Joe's (impl-maintenance
+// P16).
 // Run: ./moq test mr-boss --spec Schedules
 const webroot = "component://webroot/screen/webroot.xml"
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -70,12 +71,16 @@ feature("the bookable rooms and equipment with their policies; the type, text an
         const kit = get("resources", { text: "video" })
         // seats at least 10: the Board room (16) and not Maple (8) or a room without a capacity; equipment is not narrowed
         const seats = get("resources", { minCapacity: "10" })
+        // "Scheduling admin" (impl-maintenance P16): Maintenance's Scheduling for john.doe, who has it; none for Joe Developer
+        const joeAdminUrl = as("joe.developer", () => get("resources")).json.adminUrl ?? null
         const list = everything.json.resourceList || []
-        return { everything, list, rooms: rooms.json.resourceList || [], kit: kit.json.resourceList || [], seats: seats.json.resourceList || [],
+        return { everything, joeAdminUrl, list, rooms: rooms.json.resourceList || [], kit: kit.json.resourceList || [], seats: seats.json.resourceList || [],
             board: list.find((item) => item.key === "room|BOSS_DEMO_ROOM_BOARD") || {}, maple: list.find((item) => item.key === "room|BOSS_DEMO_ROOM_MAPLE") || {} }
     },
-    then({ everything, list, rooms, kit, seats, board, maple }) {
+    then({ everything, joeAdminUrl, list, rooms, kit, seats, board, maple }) {
         everything.status == 200
+        everything.json.adminUrl == "/qapps/Maintenance/Scheduling/Resources"
+        joeAdminUrl == null
         everything.json.timeZone == "US/Central"
         list.some((item) => item.key === "equipment|BOSS_DEMO_PROJECTOR")
         !list.some((item) => item.resourceId === "EQUIP_AB4_1")

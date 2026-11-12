@@ -12,7 +12,8 @@
 // organization's procedures; an author's change), P9's part issue (the assigned technician with the stock grant; another
 // technician without it and another owner's stock refused), P13's preventive plan (a maintenance reader of its organization; a
 // planner's create), P15's booking policy and blackout (the resource administrator's, the planner refused, Retail's facility
-// refused; a booking approver reads the policy of the room they approve only), P10's purchases of a work order (its planner reads
+// refused; a booking approver reads the policy of the room they approve only), P7's checklist (its
+// technician reads it, not another or Retail; a waiver is a supervisor's), P10's purchases of a work order (its planner reads
 // them, a resource administrator and Retail's planner do not; a technician asks for nothing, a planner links no order line the
 // work did not request and Retail's planner asks for nothing on Services' work; the supervisor, Warehouse's receiver for
 // accept#ServiceItem, gets no Warehouse app or receipt quick create: the lead's decision, P10 review R1),
@@ -974,6 +975,71 @@ feature(
         }
     }
 )
+
+feature(
+    "booking requests are their approver's: a planner is refused the list and the decision, and a room the approver does not approve is refused",
+    {
+        when() {
+            const R = "mantle.work.ResourceBookingServices."
+            const as = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            const listed = asUser(users.booking, () => {
+                ec.artifactExecution.disableAuthz()
+                // from the demo's week, so the handover (Nov 18, 2026) is listed after its day has passed too
+                return invoke(R + "find#ResourceBookingRequests", {fromDate: "2026-11-12"}).requestList || []
+            })
+            // another organization's facility asked by name lists nothing
+            const otherListed = asUser(users.booking, () => {
+                ec.artifactExecution.disableAuthz()
+                return invoke(R + "find#ResourceBookingRequests", {facilityId: ids.otherFacilityId, fromDate: "2026-11-12"}).requestList || []
+            })
+            const deny = {workEffortId: ids.requestedEventId, facilityId: ids.managedRoomId, decision: "deny", reason: "Spec"}
+            return {
+                listed,
+                otherListed,
+                planner: as(users.planner, R + "find#ResourceBookingRequests", {}),
+                plannerDecides: as(users.planner, R + "decide#ResourceBooking", deny),
+                otherRoom: as(users.booking, R + "decide#ResourceBooking", Object.assign({}, deny, {facilityId: ids.otherFacilityId}))
+            }
+        },
+        then({listed, otherListed, planner, plannerDecides, otherRoom}) {
+            listed.some(row => row.workEffortId == ids.requestedEventId && row.canDecide)
+            otherListed.length == 0
+            planner.includes("PERMISSION_DENIED")
+            plannerDecides.includes("PERMISSION_DENIED")
+            otherRoom.includes("NOT_APPROVER")
+        }
+    }
+)
+
+// P7: a work order's checklist is read by its readers (Mantle's get#ProcessExecution: the technician it is assigned to, not another
+// technician, and not Retail's planner), and a waiver is a supervisor's (waive#ProcessStep: the technician refused before anything
+// else; the supervisor passes the permission and is refused only for naming the work order, not a step)
+feature("a work order's checklist is read by its technician, not another or Retail's planner; a waiver is a supervisor's", {
+    when() {
+        const call = (user, service, parameters) =>
+            asUser(user, () => {
+                ec.artifactExecution.disableAuthz()
+                return refusal(service, parameters)
+            })
+        const read = user => call(user, "mantle.work.ProcessServices.get#ProcessExecution", {workEffortId: ids.inProgressOrderId})
+        const waive = user =>
+            call(user, "mantle.work.ProcessServices.waive#ProcessStep", {workEffortId: ids.inProgressOrderId, reason: "Spec"})
+        const problems = []
+        if (read(users.tech) !== "") problems.push("the technician cannot read: " + read(users.tech))
+        if (!read(users.tech2).includes("NOT_ASSIGNED")) problems.push("another technician reads: " + read(users.tech2))
+        if (!read(users.retailPlanner).includes("RECORD_UNAVAILABLE")) problems.push("Retail reads: " + read(users.retailPlanner))
+        if (!waive(users.tech).includes("PERMISSION_DENIED")) problems.push("the technician waives: " + waive(users.tech))
+        if (!waive(users.supervisor).includes("STEP_REQUIRED")) problems.push("the supervisor: " + waive(users.supervisor))
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
 
 feature(
     "a work order's purchases are its planner's: a resource administrator and Retail are refused; a technician asks for nothing and a planner links no unrequested line; the receiving supervisor opens no Warehouse",

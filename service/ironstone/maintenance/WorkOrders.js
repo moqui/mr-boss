@@ -134,16 +134,16 @@ function openAssignments(partyId) {
             .list()
     ).map(row => row.workEffortId)
     if (assigned.length) {
-        // a step counts as its work order (its root)
+        // a step counts as its work order (its root) while it is open: a step that is done is no one's open work (P7, F160)
         const roots = new Set(assigned)
         for (const row of Array.from(
             find("mantle.work.effort.WorkEffort")
                 .condition("workEffortId", "in", Array.from(new Set(assigned)))
                 .condition("rootWorkEffortId", "is-not-null", null)
-                .selectField("workEffortId,rootWorkEffortId")
+                .selectField("workEffortId,rootWorkEffortId,statusId")
                 .list()
         ))
-            roots.add(row.rootWorkEffortId)
+            if (!["WeComplete", "WeClosed", "WeCancelled"].includes(row.statusId)) roots.add(row.rootWorkEffortId)
         const orders = Array.from(
             find("mantle.work.maintenance.MaintenanceWorkOrderDetail")
                 .condition("workEffortId", "in", Array.from(roots))
@@ -269,10 +269,42 @@ function transferAssignments(p) {
     return {transferred: true}
 }
 
+// ===== the Procedure tab's amendment (P7) =====
+// ExecutionAmendment's form as one change of amend#ProcessExecution, by amendAction: change (the default; the step and each field
+// given, an empty one left as it is), add (a new step: its name, the group it goes under, its response kind, and the fields given;
+// the user's call of Nov 12, P7 review) or remove (a step not yet started); what the step waits for only when steps are named.
+function amendmentChange(p) {
+    const action = text(p.amendAction) || "change"
+    if (action === "remove") return {action, workEffortId: text(p.amendStepId)}
+    const change =
+        action === "add"
+            ? {
+                  action,
+                  workEffortName: text(p.amendStepName),
+                  parentWorkEffortId: text(p.amendParentId),
+                  responseKindEnumId: text(p.amendResponseKindEnumId) || "WsrCheckOff"
+              }
+            : {workEffortId: text(p.amendStepId)}
+    const fields = {
+        isRequired: "amendIsRequired",
+        evidenceRequired: "amendEvidenceRequired",
+        commentRequired: "amendCommentRequired",
+        waiverAllowed: "amendWaiverAllowed",
+        minimumValue: "amendMinimumValue",
+        maximumValue: "amendMaximumValue"
+    }
+    for (const [field, name] of Object.entries(fields)) if (text(p[name]) != null) change[field] = text(p[name])
+    const waits = p.amendDependsOnIds == null ? [] : Array.isArray(p.amendDependsOnIds) ? p.amendDependsOnIds : String(p.amendDependsOnIds).split(",")
+    const dependsOnIds = waits.map(text).filter(Boolean)
+    if (dependsOnIds.length) change.dependsOnIds = dependsOnIds
+    return change
+}
+
 const operations = {rows, today, findAssignments, transferAssignments}
 ;({
     execute: (op, parameters) => {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown Maintenance work order operation " + op)
         return operations[op](parameters || {})
-    }
+    },
+    amendmentChange
 })
