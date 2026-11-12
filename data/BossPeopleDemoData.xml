@@ -540,4 +540,77 @@ along with this software (see the LICENSE.md file). If not, see
         floor, so his self-service shows the clock; HR turns clocking on for others from Attendance's Who clocks. No punch is seeded:
         his days start when he clocks in or a door file is imported. -->
     <mantle.humanres.employment.Employment partyRelationshipId="BOSS_PPL_TOMAS_EMP" clockingEnabled="Y"/>
+    <!-- impl-people P18 (design-people §10 SkillsMatrix and Qualifications): the job classes' requirements get their levels (a
+        SkillLevel value's number) and a certificate where one proves the skill: a sales associate needs customer service and point of
+        sale at Working (2) and first aid proved by a first aid certificate, a store manager team leadership and customer service at
+        Proficient (3), a service technician field service at Proficient proved by an electrical safety certificate. The people: Tomas
+        (people.employee) evaluated at Proficient in customer service, with point of sale only self-declared and no first aid
+        certificate (his gaps; the acceptance PeopleSkillsUsable closes the first aid one); Rafael evaluated in both, with a verified
+        first aid certificate and a verified work permit (its number HR's and his alone); Hannah evaluated in leadership and service;
+        Kenji in field service, with his electrical safety certificate verified. The evaluations are their managers'. -->
+    <moqui.basic.Enumeration enumId="BOSS_PPL_SK_FIRSTAID" enumTypeId="SkillType" description="First aid"/>
+    <moqui.basic.Enumeration enumId="BOSS_PPL_QT_FIRSTAID" enumTypeId="QualificationType" parentEnumId="QualCertification"
+            description="First aid certificate" sequenceNum="21"/>
+    <moqui.basic.Enumeration enumId="BOSS_PPL_QT_ELECTRICAL" enumTypeId="QualificationType" parentEnumId="QualCertification"
+            description="Electrical safety certificate" sequenceNum="22"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_SERVICE"
+            minimumLevel="2" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_POS"
+            minimumLevel="2" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_ASSOC" skillTypeEnumId="BOSS_PPL_SK_FIRSTAID"
+            qualificationTypeEnumId="BOSS_PPL_QT_FIRSTAID" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_LEAD"
+            minimumLevel="3" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_STOREMGR" skillTypeEnumId="BOSS_PPL_SK_SERVICE"
+            minimumLevel="3" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.position.EmplPositionClassSkill emplPositionClassId="BOSS_PPL_JC_TECH" skillTypeEnumId="BOSS_PPL_SK_FIELD"
+            minimumLevel="3" qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL" requiredFlag="Y" fromDate="2024-01-01 00:00:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_TOMAS_SVC" partyId="BOSS_PPL_TOMAS"
+            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksEvaluated" skillLevel="3" evaluationDate="2026-03-02 10:00:00"
+            assessorPartyId="BOSS_PPL_HANNAH" evidence="Observed on the floor during the spring sale"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_TOMAS" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="3" sourceEnumId="SksEvaluated"
+            partySkillEvaluationId="BOSS_PPL_SE_TOMAS_SVC" evaluatedDate="2026-03-02 10:00:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_TOMAS_POS" partyId="BOSS_PPL_TOMAS"
+            skillTypeEnumId="BOSS_PPL_SK_POS" sourceEnumId="SksSelfDeclared" skillLevel="3" evaluationDate="2026-04-10 09:00:00"
+            assessorPartyId="BOSS_PPL_TOMAS"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_TOMAS" skillTypeEnumId="BOSS_PPL_SK_POS" skillLevel="3" sourceEnumId="SksSelfDeclared"
+            partySkillEvaluationId="BOSS_PPL_SE_TOMAS_POS" evaluatedDate="2026-04-10 09:00:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_SVC" partyId="BOSS_PPL_RAFAEL"
+            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksEvaluated" skillLevel="2" evaluationDate="2026-03-02 11:00:00"
+            assessorPartyId="BOSS_PPL_HANNAH"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_RAFAEL" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="2" sourceEnumId="SksEvaluated"
+            partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_SVC" evaluatedDate="2026-03-02 11:00:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_POS" partyId="BOSS_PPL_RAFAEL"
+            skillTypeEnumId="BOSS_PPL_SK_POS" sourceEnumId="SksEvaluated" skillLevel="3" evaluationDate="2026-03-02 11:30:00"
+            assessorPartyId="BOSS_PPL_HANNAH"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_RAFAEL" skillTypeEnumId="BOSS_PPL_SK_POS" skillLevel="3" sourceEnumId="SksEvaluated"
+            partySkillEvaluationId="BOSS_PPL_SE_RAFAEL_POS" evaluatedDate="2026-03-02 11:30:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_HANNAH_LEAD" partyId="BOSS_PPL_HANNAH"
+            skillTypeEnumId="BOSS_PPL_SK_LEAD" sourceEnumId="SksEvaluated" skillLevel="4" evaluationDate="2026-02-16 14:00:00"
+            assessorPartyId="BOSS_PPL_GRETA"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_HANNAH" skillTypeEnumId="BOSS_PPL_SK_LEAD" skillLevel="4" sourceEnumId="SksEvaluated"
+            partySkillEvaluationId="BOSS_PPL_SE_HANNAH_LEAD" evaluatedDate="2026-02-16 14:00:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_HANNAH_SVC" partyId="BOSS_PPL_HANNAH"
+            skillTypeEnumId="BOSS_PPL_SK_SERVICE" sourceEnumId="SksEvaluated" skillLevel="4" evaluationDate="2026-02-16 14:30:00"
+            assessorPartyId="BOSS_PPL_GRETA"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_HANNAH" skillTypeEnumId="BOSS_PPL_SK_SERVICE" skillLevel="4" sourceEnumId="SksEvaluated"
+            partySkillEvaluationId="BOSS_PPL_SE_HANNAH_SVC" evaluatedDate="2026-02-16 14:30:00"/>
+    <mantle.humanres.ability.PartySkillEvaluation partySkillEvaluationId="BOSS_PPL_SE_KENJI_FIELD" partyId="BOSS_PPL_KENJI"
+            skillTypeEnumId="BOSS_PPL_SK_FIELD" sourceEnumId="SksEvaluated" skillLevel="4" evaluationDate="2026-01-20 09:00:00"
+            assessorPartyId="BOSS_PPL_AMARA"/>
+    <mantle.humanres.ability.PartySkill partyId="BOSS_PPL_KENJI" skillTypeEnumId="BOSS_PPL_SK_FIELD" skillLevel="4" sourceEnumId="SksEvaluated"
+            partySkillEvaluationId="BOSS_PPL_SE_KENJI_FIELD" evaluatedDate="2026-01-20 09:00:00"/>
+    <mantle.humanres.ability.PartyQualification partyQualificationId="BOSS_PPL_QL_KENJI_ELEC" partyId="BOSS_PPL_KENJI"
+            qualificationTypeEnumId="BOSS_PPL_QT_ELECTRICAL" title="Electrical safety, low voltage" issuerName="Electrical Safety Board"
+            referenceNumber="ESB-55120" fromDate="2025-06-01 00:00:00" thruDate="2028-05-31 00:00:00" verificationStatusId="QlVerVerified"
+            submittedByUserId="BOSS_PPL_HR" submittedDate="2025-06-03 10:00:00" verifiedByUserId="BOSS_PPL_HR" verifiedDate="2025-06-04 10:00:00"/>
+    <mantle.humanres.ability.PartyQualification partyQualificationId="BOSS_PPL_QL_RAFAEL_AID" partyId="BOSS_PPL_RAFAEL"
+            qualificationTypeEnumId="BOSS_PPL_QT_FIRSTAID" title="Workplace first aid" issuerName="Red Cross"
+            referenceNumber="FA-20931" fromDate="2025-09-15 00:00:00" thruDate="2028-09-14 00:00:00" verificationStatusId="QlVerVerified"
+            submittedByUserId="BOSS_PPL_DEVELOP" submittedDate="2025-09-16 10:00:00" verifiedByUserId="BOSS_PPL_DEVELOP"
+            verifiedDate="2025-09-17 10:00:00"/>
+    <mantle.humanres.ability.PartyQualification partyQualificationId="BOSS_PPL_QL_RAFAEL_PERMIT" partyId="BOSS_PPL_RAFAEL"
+            qualificationTypeEnumId="QualWorkPermit" title="Work permit" issuerName="Immigration office"
+            referenceNumber="WP-RET-2041" fromDate="2025-04-01 00:00:00" thruDate="2028-03-31 00:00:00" verificationStatusId="QlVerVerified"
+            submittedByUserId="BOSS_PPL_HR" submittedDate="2025-04-02 10:00:00" verifiedByUserId="BOSS_PPL_HR" verifiedDate="2025-04-02 11:00:00"/>
 </entity-facade-xml>

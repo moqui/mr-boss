@@ -14,10 +14,11 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- People › Job class (design-people §5 JobClassDetail; style-guide §3.3 Detail; impl-people P4): one job profile, from
     mantle.humanres.PositionServices.get#JobClass: the record header (title, state), JobProfile (its description and work types)
-    and Requirements (the skills it requires; a skill's minimum level, required or desired, and dates are P18's), with a link to
-    its positions. An HR editor (PEOPLE_HR_EDIT) edits the profile (Edit profile, store#JobClass at the revision read), adds and
-    removes skills (store#JobRequirement) and ends the class (End job class): an ended class keeps its positions and is offered
-    for no new one. The assist-prompt "Draft a job description" (design §1.4) waits for its skill file (P16). No pay band is part
+    and Requirements (the skills it requires, each with P18's least level, the qualification type a verified certificate of which
+    must prove it, required or desired, and the date it is required from), with a link to its positions. An HR editor
+    (PEOPLE_HR_EDIT) edits the profile (Edit profile, store#JobClass at the revision read), adds, changes (at the requirement's
+    revision) and removes requirements (store#JobRequirement: a removed one is ended and kept) and ends the class (End job class):
+    an ended class keeps its positions and is offered for no new one. The skills matrix opens on the class's people. The assist-prompt "Draft a job description" (design §1.4) waits for its skill file (P16). No pay band is part
     of it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Job class" default-menu-include="false">
@@ -42,12 +43,15 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="emplPositionClassId"/></default-response>
         <error-response url="."><parameter name="emplPositionClassId"/></error-response>
     </transition>
-    <!-- a skill required, or removed -->
+    <!-- a skill required, changed (P18: its level, certificate, required or desired, at its revision) or removed (ended) -->
     <transition name="storeRequirement">
         <actions>
             <service-call name="mantle.humanres.PositionServices.store#JobRequirement"
-                    in-map="{emplPositionClassId:emplPositionClassId, skillTypeEnumId:(skillTypeEnumId || null), remove:(remove == 'true')}"/>
-            <if condition="!ec.message.hasError()"><message type="success">${remove == 'true' ? 'Skill removed' : 'Skill added'}</message></if>
+                    in-map="{emplPositionClassId:emplPositionClassId, skillTypeEnumId:(skillTypeEnumId || null), remove:(remove == 'true'),
+                        change:(change == 'true'), expectedRevision:(expectedRevision || null), minimumLevel:(minimumLevel ?? null),
+                        qualificationTypeEnumId:(qualificationTypeEnumId ?? null), requiredFlag:(requiredFlag || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${remove == 'true' ? 'Skill removed' : change == 'true' ? 'Requirement changed' : 'Skill added'}</message></if>
         </actions>
         <default-response url="."><parameter name="emplPositionClassId"/></default-response>
         <error-response url="."><parameter name="emplPositionClassId"/></error-response>
@@ -63,6 +67,17 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="canEdit" from="!!jobClass?.canEdit &amp;&amp; jobClass.state !== 'ended'"/>
         <set field="stateColors" from="{current: 'positive', ended: 'grey-8'}"/>
         <set field="workTypeText" from="workTypes.map(row =&gt; row.workTypeName).join(', ')"/>
+        <!-- P18: the skill levels (each value's number) and the qualification types not ended (People's lookups) -->
+        <script><![CDATA[
+            const nowMillis = ec.user.timestampMillis(ec.user.nowTimestamp)
+            const currentValues = enumTypeId => Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', enumTypeId)
+                .orderBy(['sequenceNum', 'description']).disableAuthz().list())
+                .filter(row => row.thruDate == null || ec.user.timestampMillis(row.thruDate) > nowMillis)
+            levelOptions = currentValues('SkillLevel').filter(row => /^\d+$/.test(String(row.enumCode || '')))
+                .map(row => ({key: String(row.enumCode), text: row.enumCode + ' ' + row.description}))
+            qualificationTypeOptions = currentValues('QualificationType').map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            matrixUrl = sharedLinks?.['Development/SkillsMatrix'] || null
+        ]]></script>
         <set field="editValues" from="jobClass ? {emplPositionClassId: jobClass.emplPositionClassId, expectedRevision: jobClass.revision,
                 title: jobClass.title, description: jobClass.description, workTypeEnumIds: workTypes.map(row =&gt; row.workTypeEnumId)} : {}"/>
     </actions>
@@ -101,6 +116,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="${sharedLinks['Staffing/JobClasses']}" text="Job classes" link-type="anchor" icon="sym_o_arrow_back"/>
                             <link url="${sharedLinks['Staffing/Positions']}" text="Positions of this class" link-type="anchor"
                                     parameter-map="{emplPositionClassId:jobClass.emplPositionClassId}" condition="jobClass.positionCount != null"/>
+                            <link url="${matrixUrl}" url-type="plain" text="Skills matrix" link-type="anchor" condition="matrixUrl"
+                                    parameter-map="{emplPositionClassId:jobClass.emplPositionClassId}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <container-dialog id="EditJobClassDialog" button-text="Edit profile" icon="sym_o_edit" type="primary" width="720"
@@ -167,6 +184,21 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
+                                <field name="minimumLevel">
+                                    <default-field title="At least" tooltip="Empty: any level">
+                                        <drop-down allow-empty="true"><list-options list="levelOptions" key="${key}" text="${text}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="qualificationTypeEnumId">
+                                    <default-field title="Proved by" tooltip="A verified, valid qualification of this kind must prove it">
+                                        <drop-down allow-empty="true"><list-options list="qualificationTypeOptions" key="${key}" text="${text}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="requiredFlag">
+                                    <default-field title="">
+                                        <radio no-current-selected-key="Y"><option key="Y" text="Required"/><option key="N" text="Desired"/></radio>
+                                    </default-field>
+                                </field>
                                 <field name="submitButton"><default-field title="Add skill"><submit/></default-field></field>
                             </form-single>
                         </container-dialog>
@@ -174,16 +206,48 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="Requirements" list="skills" skip-form="true" paginate="false" condition="skills.length">
                             <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                            <field name="minimumLevelText"><default-field title="At least"><display/></default-field></field>
+                            <field name="qualificationTypeName"><default-field title="Proved by"><display/></default-field></field>
+                            <field name="requiredText"><default-field title=""><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
                             <field name="actions">
                                 <default-field title="">
+                                    <container-dialog id="ChangeRequirement_${skillTypeEnumId}" button-text="Change" icon="sym_o_edit" type="default"
+                                            width="520" title="Change ${skillName} for ${jobClass.title}" condition="canEdit">
+                                        <form-single name="ChangeRequirement" transition="storeRequirement"
+                                                map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, change:'true',
+                                                    expectedRevision:revision, minimumLevel:(minimumLevel == null ? '' : String(minimumLevel)),
+                                                    qualificationTypeEnumId:(qualificationTypeEnumId || ''), requiredFlag:requiredFlag}">
+                                            <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                                            <field name="skillTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="change"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="minimumLevel">
+                                                <default-field title="At least" tooltip="Empty: any level">
+                                                    <drop-down allow-empty="true"><list-options list="levelOptions" key="${key}" text="${text}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="qualificationTypeEnumId">
+                                                <default-field title="Proved by">
+                                                    <drop-down allow-empty="true"><list-options list="qualificationTypeOptions" key="${key}" text="${text}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="requiredFlag">
+                                                <default-field title="">
+                                                    <radio><option key="Y" text="Required"/><option key="N" text="Desired"/></radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
                                     <link url="storeRequirement" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
-                                            condition="canEdit" confirmation="Remove ${skillName} from ${jobClass.title}?"
+                                            condition="canEdit" confirmation="Remove ${skillName} from ${jobClass.title}? The requirement is ended and kept."
                                             parameter-map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, remove:'true'}"/>
                                 </default-field>
                             </field>
                             <columns type="mobile">
-                                <column><field-ref name="skillName"/></column>
-                                <column><field-ref name="actions"/></column>
+                                <column><field-ref name="skillName"/><field-ref name="minimumLevelText"/></column>
+                                <column><field-ref name="requiredText"/><field-ref name="actions"/></column>
                             </columns>
                         </form-list>
                         <label type="p" style="q-pa-md m-muted" condition="!skills.length"

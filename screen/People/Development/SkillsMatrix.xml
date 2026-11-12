@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Skills matrix (design-people §10 SkillsMatrix, §1.1; style-guide §3.8 Report; PE-14, PE-20; impl-people P18): a .qvue matrix
+    (SkillsMatrix.qvue) of people by skill, each column a requirement of the job class chosen (or of the people's own classes, or the
+    skills they hold), each cell the person's level (a self-declared one labelled so) and whether it meets the requirement, a
+    certificate-proved one with its validity (mantle.humanres.DevelopmentServices.get#SkillsMatrix: a development or HR reader's
+    employers' current employees, a manager's reports; by employer, department or team, job class, skill and name; paged by person).
+    A development editor clicks a cell to record an evaluation (EvaluateSkill, store#Skill). Find available (design's FindAvailable)
+    ranks who has a skill and is free over the days, through Projects' find#StaffingCandidates (owner contract) bounded to the people
+    of the user's scope; its cost rate shows only to PAYROLL_VIEW holders for employees (Y2). The terminal twin is SkillsMatrixTui (the
+    person and skill list, with the same evaluation and search). Every People user's through the root; the services decide who reads
+    whom; denied to a self-service employee (BOSS_PPL_SKILLS). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Skills matrix" default-menu-index="1" menu-image="sym_o_grid_on" menu-image-type="icon"
+        render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
+    <parameter name="organizationPartyId"/>
+    <parameter name="unitPartyId"/>
+    <parameter name="emplPositionClassId"/>
+    <parameter name="skillTypeEnumId"/>
+    <parameter name="term"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the matrix the component draws: the people of the user's scope by skill, a page at a time -->
+    <transition name="matrix" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('mantle.humanres.DevelopmentServices.get#SkillsMatrix').requireNewTransaction(true)
+                .parameters({organizationPartyId: organizationPartyId || null, unitPartyId: unitPartyId || null,
+                    emplPositionClassId: emplPositionClassId || null, skillTypeEnumId: skillTypeEnumId || null, term: term || null,
+                    pageIndex: Number(ec.context.pageIndex) || 0}).call() || {}
+            if (ec.message.hasError()) {
+                const message = ec.message.getErrorsString()
+                ec.message.clearErrors()
+                ec.web.sendJsonResponse(/ORGANIZATION_DENIED|PERMISSION_DENIED/.test(message) ? {notAvailable: true} : {failed: message})
+                return
+            }
+            const matrix = Object.assign({}, out)
+            delete matrix.scopePartyIds
+            ec.web.sendJsonResponse({matrix, organizationOptions: Array.from(people?.organizationOptions || [])})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- EvaluateSkill: Mantle checks the evaluator (PEOPLE_DEVELOP_EDIT and the person in scope), the level, the date and the revision -->
+    <transition name="evaluateSkill">
+        <actions><script><![CDATA[
+            const value = (name) => { const found = ec.context.get(name); return found == null || found === '' ? null : String(found) }
+            ec.service.sync().name('mantle.humanres.DevelopmentServices.store#Skill').requireNewTransaction(true).parameters({
+                partyId: value('partyId'), skillTypeEnumId: value('skillTypeEnumId'), skillLevel: value('skillLevel'),
+                evaluationDate: value('evaluationDate'), evidence: value('evidence'), expectedRevision: value('expectedRevision')}).call()
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: true, messageInfos: [{type: 'danger', message}]}); return }
+            ec.web.sendJsonResponse({messageInfos: [{type: 'success', message: ec.l10n.localize('Evaluation saved')}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- FindAvailable: who has the skill and is free, among the people of the user's scope the filters keep -->
+    <transition name="findAvailable" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const found = ec.service.sync().name('ironstone.people.ContextServices.find#AvailablePeople').requireNewTransaction(true)
+                .parameters({organizationPartyId: organizationPartyId || null, unitPartyId: unitPartyId || null,
+                    emplPositionClassId: emplPositionClassId || null, term: term || null, skillTypeEnumId: skillTypeEnumId || null,
+                    fromDate: ec.context.fromDate || null, thruDate: ec.context.thruDate || null, hoursPerWeek: ec.context.hoursPerWeek || null}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: message}); return }
+            ec.web.sendJsonResponse({candidates: Array.from(found.candidates || [])})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/People/Development/SkillsMatrix.qvue" template="false"/>
+            <!-- the terminal: SkillsMatrixTui, the person and skill list beside this screen, on the same filters -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "SkillsMatrixTui", url: sri.buildUrl("../SkillsMatrixTui").addParameters({
+                organizationPartyId: organizationPartyId || null, unitPartyId: unitPartyId || null, emplPositionClassId: emplPositionClassId || null,
+                skillTypeEnumId: skillTypeEnumId || null, term: term || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">${ec.l10n.localize('The skills matrix opens in the browser app; ')}<a href="${
+                sri.buildUrl('../SkillsMatrixTui').getUrlWithParams()}">${ec.l10n.localize('open the list of people and skills')}</a>.</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

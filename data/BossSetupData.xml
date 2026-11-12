@@ -5458,4 +5458,46 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=${invoiceId}"/>
     <moqui.security.user.NotificationTopic topic="PeopleAdvanceApproval"
             linkTemplate="/qapps/People/Expenses/EmployeeAdvances?show=decide"/>
+    <!-- impl-people P18 (design-people §10 SkillsMatrix and Qualifications, §1.2; PE-14): Skills & training (People/Development) is every
+        People user's through the root, and a self-service employee without the launcher opens it by this inheritable ALLOW on the area
+        (as Time & leave, BOSS_PPL_TIME), for their own qualifications: Mantle's DevelopmentServices answer them their own alone
+        (BOSS_PPL_DEVELOPMENT). The skills matrix and its terminal twin are development's, HR's and the managers' (the readers
+        get#SkillsMatrix answers): denied to the root user group and to self-service, opened to BOSS_PEOPLE_DEVELOP, BOSS_PEOPLE_HR and
+        BOSS_PEOPLE_MANAGER (ALWAYS, as the working schedules) and to the People administrator and ADMIN through the root's ALWAYS
+        (BOSS_PPL_SKILLS). A qualification's files are on its own content host (PartyQualification, the person's and HR's), whose panel
+        is People's RecordFiles; the person's expiry notice (Mantle's QualificationExpiring) opens their qualifications. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_DEVELOPMENT" description="People skills and training, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Development.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_DEVELOPMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_SKILLS" description="People skills matrix">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/SkillsMatrix(Tui)?\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P18: the record files panel for a self-service employee without the launcher, so they attach a certificate to their own
+        qualification under People (People/RecordFiles; the People root's check serves People's hosts alone, and get#RecordLinkInfo
+        shows a qualification's files to the person and HR only). The panel's location is the one Commons mounts, which every BOSS
+        user opens there already: what it shows is decided per record, so the grant reaches no record Commons' panel does not. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_FILES_SELF" description="People record files for self-service employees">
+        <artifacts artifactName="component://mr-boss/screen/Shared/RecordFiles.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_FILES_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="QualificationExpiring"
+            linkTemplate="/qapps/People/Development/Qualifications?show=mine&amp;partyQualificationId=${partyQualificationId}"/>
 </entity-facade-xml>

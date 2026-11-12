@@ -1,0 +1,229 @@
+<template><div class="q-pa-sm m-wrap-anywhere">
+    <!-- the skills matrix (design-people §10 SkillsMatrix, PE-20; impl-people P18): people by skill against their job class's requirements;
+        its data, the evaluation and FindAvailable are SkillsMatrix.xml's transitions; the terminal twin is SkillsMatrixTui -->
+    <div class="row items-center q-col-gutter-sm q-mb-sm">
+        <div class="col">
+            <div class="text-h5">{{t('Skills matrix')}}</div>
+            <div class="text-caption m-muted">{{t('Who has the skills their work needs, and the gaps. A self-declared level meets no requirement.')}}</div>
+        </div>
+        <div class="col-auto row q-gutter-sm">
+            <q-btn unelevated no-caps class="m-btn-tonal" icon="sym_o_person_search" :label="t('Find available')" @click="openAvailable"></q-btn>
+            <q-btn flat no-caps icon="sym_o_list" :label="t('List')" @click="go(twinUrl)"></q-btn>
+        </div>
+    </div>
+    <m-container-box :title="t('People and skills')">
+        <div class="row q-col-gutter-sm items-end">
+            <div class="col-12 col-md-3" v-if="organizationOptions.length > 1"><m-drop-down v-model="filter.organizationPartyId" name="organizationPartyId"
+                    :label="t('Employer')" :options="organizationOptions" allow-empty></m-drop-down></div>
+            <div class="col-12 col-md-3"><m-drop-down v-model="filter.unitPartyId" name="unitPartyId" :label="t('Department or team')" allow-empty
+                    :options-url="url('choices')" :options-parameters="{choice: 'units', selected: filter.unitPartyId}" server-search></m-drop-down></div>
+            <div class="col-12 col-md-3"><m-drop-down v-model="filter.emplPositionClassId" name="emplPositionClassId" :label="t('Job class')" allow-empty
+                    :options-url="url('choices')" :options-parameters="{choice: 'jobClasses', selected: filter.emplPositionClassId}" server-search></m-drop-down></div>
+            <div class="col-12 col-md-3"><m-drop-down v-model="filter.skillTypeEnumId" name="skillTypeEnumId" :label="t('Skill')" allow-empty
+                    :options-url="url('choices')" :options-parameters="{choice: 'skillTypes', selected: filter.skillTypeEnumId}" server-search></m-drop-down></div>
+            <div class="col-12 col-md-3"><m-text-line v-model="filter.term" name="term" :label="t('Person')" @keydown.enter.prevent="load(0)"></m-text-line></div>
+            <div class="col-auto"><q-btn unelevated no-caps color="primary" :label="t('Show')" :loading="loading" @click="load(0)"></q-btn></div>
+        </div>
+        <p v-if="notAvailable" role="alert" class="text-negative q-mt-sm">{{t('The skills matrix is not available to you: development and HR read their employers\' people, a manager their team.')}}</p>
+        <p v-else-if="failed" role="alert" class="text-negative q-mt-sm">{{failed}}</p>
+    </m-container-box>
+
+    <m-container-box v-if="matrix" :title="t('Matrix') + ' · ' + (matrix.peopleCount || 0) + ' ' + t('people')">
+        <div class="row q-gutter-sm q-mb-sm text-caption">
+            <q-chip dense square class="q-ma-none m-tonal text-positive">{{t('Met')}}</q-chip>
+            <q-chip dense square class="q-ma-none m-tonal text-negative">{{t('Gap')}}</q-chip>
+            <q-chip dense square class="q-ma-none m-tonal text-warning">{{t('Expiring')}}</q-chip>
+            <q-chip dense square outline class="q-ma-none">{{t('Self-declared')}}</q-chip>
+            <span class="m-muted self-center" v-if="matrix.canEvaluate">{{t('Click a cell to record an evaluation.')}}</span>
+        </div>
+        <p v-if="!rows.length" class="m-muted">{{t('No one matches. Choose another employer, unit, job class or skill.')}}</p>
+        <p v-else-if="!columns.length" class="m-muted">{{t('No skill is required or recorded for these people yet.')}}</p>
+        <!-- the matrix: a person per row, a skill per column; on a phone, a card per person -->
+        <div v-else-if="!phone" class="scroll" data-skills-matrix>
+            <table class="q-table m-skills-table">
+                <thead><tr>
+                    <th scope="col" class="text-left">{{t('Person')}}</th>
+                    <th v-for="column in columns" :key="column.skillTypeEnumId" scope="col" class="text-left">
+                        <div>{{column.skillName}}</div>
+                        <div class="text-caption m-muted">{{requirementText(column)}}</div>
+                    </th>
+                </tr></thead>
+                <tbody><tr v-for="row in rows" :key="row.partyId" :data-party-id="row.partyId">
+                    <th scope="row" class="text-left">
+                        <div>{{row.personName}}</div>
+                        <div class="text-caption m-muted">{{row.jobText}}</div>
+                        <q-chip v-if="row.gapCount" dense square class="q-ma-none m-tonal text-negative">{{row.gapCount}} {{row.gapCount === 1 ? t('gap') : t('gaps')}}</q-chip>
+                    </th>
+                    <td v-for="cell in row.cells" :key="cell.skillTypeEnumId" :class="row.canEvaluate ? 'cursor-pointer' : ''"
+                            :tabindex="row.canEvaluate ? 0 : -1" :aria-label="row.personName + ', ' + skillName(cell) + ': ' + (cell.levelText || t('none')) + (cell.stateText ? ', ' + cell.stateText : '')"
+                            @click="openEvaluate(row, cell)" @keydown.enter.prevent="openEvaluate(row, cell)">
+                        <div>{{cell.levelText || '–'}}</div>
+                        <q-chip v-if="cell.state === 'met' || cell.state === 'gap'" dense square class="q-ma-none m-tonal" :class="'text-' + cellColor(cell)">{{cell.stateText}}</q-chip>
+                        <q-chip v-else-if="cell.selfDeclared" dense square outline class="q-ma-none">{{t('Self-declared')}}</q-chip>
+                    </td>
+                </tr></tbody>
+            </table>
+        </div>
+        <div v-else data-skills-list>
+            <q-card v-for="row in rows" :key="row.partyId" flat bordered class="q-mb-sm"><q-card-section class="q-pa-sm">
+                <div class="text-weight-medium">{{row.personName}}</div>
+                <div class="text-caption m-muted">{{row.jobText}}</div>
+                <q-list dense>
+                    <q-item v-for="cell in row.cells" :key="cell.skillTypeEnumId" :clickable="row.canEvaluate" @click="openEvaluate(row, cell)">
+                        <q-item-section>{{skillName(cell)}}</q-item-section>
+                        <q-item-section side>{{cell.levelText || '–'}}<span v-if="cell.stateText" class="text-caption" :class="'text-' + cellColor(cell)">{{cell.stateText}}</span></q-item-section>
+                    </q-item>
+                </q-list>
+            </q-card-section></q-card>
+        </div>
+        <div class="row q-gutter-sm items-center q-mt-sm" v-if="(matrix.peoplePageMaxIndex || 0) > 0">
+            <q-btn flat no-caps :label="t('Previous')" :disable="loading || pageIndex === 0" @click="load(pageIndex - 1)"></q-btn>
+            <span>{{t('Page')}} {{pageIndex + 1}} / {{(matrix.peoplePageMaxIndex || 0) + 1}}</span>
+            <q-btn flat no-caps :label="t('Next')" :disable="loading || pageIndex >= (matrix.peoplePageMaxIndex || 0)" @click="load(pageIndex + 1)"></q-btn>
+        </div>
+    </m-container-box>
+
+    <!-- EvaluateSkill: a supported evaluation of one person's skill (DevelopmentServices.store#Skill) -->
+    <m-dialog v-model="evaluate.open" :title="t('Evaluate') + ' ' + evaluate.skillName + ': ' + evaluate.personName" width="520">
+        <div class="text-body2 m-muted q-mb-sm" v-if="evaluate.current">{{t('Now')}}: {{evaluate.current}}</div>
+        <m-drop-down v-model="evaluate.skillLevel" name="skillLevel" :label="t('Level')" :options="levelOptions"></m-drop-down>
+        <m-date-time v-model="evaluate.evaluationDate" name="evaluationDate" type="date" :label="t('Evaluated on')"></m-date-time>
+        <m-text-area v-model="evaluate.evidence" name="evidence" rows="2" :label="t('Evidence')"></m-text-area>
+        <div class="row justify-end q-gutter-sm q-mt-md">
+            <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+            <q-btn unelevated no-caps color="primary" :label="t('Save evaluation')" :loading="saving" :disable="!evaluate.skillLevel" @click="saveEvaluation"></q-btn>
+        </div>
+    </m-dialog>
+
+    <!-- FindAvailable: who has a skill and is free (Projects' find#StaffingCandidates over the people of the user's scope) -->
+    <m-dialog v-model="available.open" :title="t('Find who is available')" width="720">
+        <div class="row q-col-gutter-sm">
+            <div class="col-12 col-sm-6"><m-drop-down v-model="available.skillTypeEnumId" name="availableSkill" :label="t('Skill')" allow-empty
+                    :options-url="url('choices')" :options-parameters="{choice: 'skillTypes', selected: available.skillTypeEnumId}" server-search></m-drop-down></div>
+            <div class="col-12 col-sm-6"><m-text-line v-model="available.hoursPerWeek" name="hoursPerWeek" input-type="number" :label="t('Hours a week')"></m-text-line></div>
+            <div class="col-6"><m-date-time v-model="available.fromDate" name="availableFrom" type="date" :label="t('From')"></m-date-time></div>
+            <div class="col-6"><m-date-time v-model="available.thruDate" name="availableThru" type="date" :label="t('Through')"></m-date-time></div>
+        </div>
+        <div class="row justify-end q-mt-sm"><q-btn unelevated no-caps color="primary" :label="t('Find')" :loading="available.loading"
+                :disable="!available.fromDate || !available.thruDate || !available.hoursPerWeek" @click="findAvailable"></q-btn></div>
+        <p v-if="available.failed" role="alert" class="text-negative">{{available.failed}}</p>
+        <p v-else-if="available.searched && !available.candidates.length" class="m-muted">{{t('No one with the skill or free time in these days.')}}</p>
+        <q-list v-if="available.candidates.length" separator bordered class="rounded-borders q-mt-sm" data-available>
+            <q-item v-for="one in available.candidates" :key="one.partyId">
+                <q-item-section>
+                    <q-item-label>{{one.name}}
+                        <q-chip dense square class="q-my-none q-ml-sm m-tonal" :class="one.fits ? 'text-positive' : 'text-warning'">{{one.fits ? t('Free') : one.shortWeeks + ' ' + t('weeks short')}}</q-chip></q-item-label>
+                    <q-item-label caption>{{[one.freeText, one.skillText, one.rateText].filter(Boolean).join(' · ')}}</q-item-label>
+                    <q-item-label caption class="ellipsis" v-if="one.projectsText">{{one.projectsText}}</q-item-label>
+                </q-item-section>
+            </q-item>
+        </q-list>
+    </m-dialog>
+</div></template>
+<script>
+const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
+module.exports = {
+    data() {
+        return {
+            filter: {organizationPartyId: null, unitPartyId: null, emplPositionClassId: null, skillTypeEnumId: null, term: ''},
+            matrix: null, organizationOptions: [], pageIndex: 0, loading: false, notAvailable: false, failed: '', seq: 0,
+            evaluate: {open: false}, saving: false,
+            available: {open: false, skillTypeEnumId: null, hoursPerWeek: '20', fromDate: null, thruDate: null, loading: false, searched: false,
+                failed: '', candidates: []},
+            requestPath: null, disposed: false
+        };
+    },
+    computed: {
+        screenPath() { return this.$root.basePath + '/' + this.$root.currentPathList.join('/'); },
+        phone() { return this.$q.screen.lt.sm; },
+        rows() { return (this.matrix && this.matrix.rows) || []; },
+        columns() { return (this.matrix && this.matrix.columns) || []; },
+        levelOptions() { return (this.matrix && this.matrix.levelOptions) || []; },
+        twinUrl() {
+            const params = Object.entries(this.filter).filter(([, value]) => value).map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&');
+            return this.$root.linkBasePath + '/' + this.$root.currentPathList.slice(0, -1).concat('SkillsMatrixTui').join('/') + (params ? '?' + params : '');
+        }
+    },
+    methods: {
+        t,
+        url(name) { return (this.requestPath || this.screenPath) + '/' + name; },
+        go(url) { if (url) this.$root.setUrl(url); },
+        skillName(cell) { return (this.columns.find((column) => column.skillTypeEnumId === cell.skillTypeEnumId) || {}).skillName || ''; },
+        requirementText(column) {
+            return [column.minimumLevelText ? '≥ ' + column.minimumLevelText : '', column.qualificationTypeName,
+                column.required === false ? t('desired') : ''].filter(Boolean).join(' · ');
+        },
+        cellColor(cell) {
+            if (cell.state === 'gap') return 'negative';
+            if (cell.qualificationState === 'expiring') return 'warning';
+            return cell.state === 'met' ? 'positive' : 'grey-8';
+        },
+        load(page) {
+            if (this.disposed) return;
+            const seq = ++this.seq;
+            this.loading = true;
+            this.failed = '';
+            const params = Object.assign({pageIndex: page || 0}, this.filter);
+            for (const key of Object.keys(params)) if (params[key] == null || params[key] === '') delete params[key];
+            return moqui.request(this.url('matrix'), {params}).then((result) => {
+                if (seq !== this.seq || this.disposed) return;
+                this.loading = false;
+                const json = result.json || {};
+                this.notAvailable = !!json.notAvailable;
+                this.failed = json.failed || '';
+                this.matrix = json.matrix || null;
+                if (json.organizationOptions) this.organizationOptions = json.organizationOptions;
+                this.pageIndex = (this.matrix && this.matrix.peoplePageIndex) || 0;
+            }, (err) => { if (seq === this.seq) { this.loading = false; moqui.handleAjaxError(err); } });
+        },
+        openEvaluate(row, cell) {
+            if (!row.canEvaluate) return;
+            this.evaluate = {open: true, partyId: row.partyId, personName: row.personName, skillTypeEnumId: cell.skillTypeEnumId,
+                skillName: this.skillName(cell), current: cell.levelText ? cell.levelText + (cell.sourceText ? ' (' + cell.sourceText.toLowerCase() + ')' : '') : '',
+                skillLevel: cell.level != null && !cell.selfDeclared ? String(cell.level) : null, evaluationDate: null, evidence: '',
+                expectedRevision: cell.revision || ''};
+        },
+        saveEvaluation() {
+            const evaluate = this.evaluate;
+            this.saving = true;
+            const params = {partyId: evaluate.partyId, skillTypeEnumId: evaluate.skillTypeEnumId, skillLevel: evaluate.skillLevel,
+                evaluationDate: evaluate.evaluationDate || '', evidence: evaluate.evidence || '', expectedRevision: evaluate.expectedRevision || ''};
+            return moqui.request(this.url('evaluateSkill'), {method: 'POST', params}).then((result) => {
+                this.saving = false;
+                const json = result.json || {};
+                if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos);
+                if (!json.failed) { this.evaluate = {open: false}; this.load(this.pageIndex); }
+            }, (err) => { this.saving = false; moqui.handleAjaxError(err); });
+        },
+        openAvailable() {
+            this.available = Object.assign({}, this.available, {open: true, skillTypeEnumId: this.available.skillTypeEnumId || this.filter.skillTypeEnumId,
+                failed: '', searched: false, candidates: []});
+        },
+        findAvailable() {
+            const available = this.available;
+            available.loading = true;
+            available.failed = '';
+            const params = Object.assign({}, this.filter, {skillTypeEnumId: available.skillTypeEnumId || '', hoursPerWeek: available.hoursPerWeek,
+                fromDate: available.fromDate, thruDate: available.thruDate});
+            for (const key of Object.keys(params)) if (params[key] == null) delete params[key];
+            return moqui.request(this.url('findAvailable'), {params}).then((result) => {
+                const json = result.json || {};
+                available.loading = false;
+                available.searched = true;
+                available.failed = json.failed || '';
+                available.candidates = json.candidates || [];
+            }, (err) => { available.loading = false; moqui.handleAjaxError(err); });
+        },
+        fromParameters() {
+            const current = this.$root.currentParameters || {};
+            for (const key of Object.keys(this.filter)) if (current[key]) this.filter[key] = current[key];
+        }
+    },
+    mounted() { this.requestPath = this.screenPath; this.fromParameters(); this.load(0); },
+    beforeUnmount() { this.disposed = true; }
+};
+</script>
+<style>
+.m-skills-table th, .m-skills-table td { vertical-align: top; padding: 6px 10px; }
+.m-skills-table td.cursor-pointer:hover { background: rgba(127, 127, 127, 0.08); }
+</style>

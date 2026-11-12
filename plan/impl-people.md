@@ -4480,6 +4480,171 @@ Design §10 SkillsMatrix, Qualifications, JobClassDetail's Requirements (levels)
   half): an employee submits a certificate, a verifier accepts it, the matrix shows the gap closed, and a staffing
   reader sees valid or expiring and nothing else.
 
+**Built Nov 12 (P18).** mr-mantle 74a7d62f, mr-boss (branch `ppl/p18`).
+- Checked first (the code over the plan): F6 (PartyQualification, PartyResume and the review and training sketches inside one XML
+  comment, the qualification keyed by person, type and date with a two-value verification status), F7 (`WorkEffortSkillStandard`
+  skill, people, duration and cost), F8 (`EmplPositionClassSkill` class and skill only; PartySkill rating, level, start and
+  experience), P4's `store#JobRequirement` (a delete on remove) and `classRows`' count of every row, P5's `SkillLevel` values (their
+  number in `enumCode`) and `Enumeration.thruDate`, P2's employment host (F66: `get#RecordLinkInfo`'s map and visibility branch,
+  RecordFiles' `get#ContentType`, no Records-drive folder) and P13's Today on both roots; Projects' `find#StaffingCandidates` (its
+  pool every time keeper, skill holder and role holder, its rating `rating ?? skillLevel`, open to whoever calls it); the demo's
+  `people.develop` (BOSS_PEOPLE_DEVELOP, an agent of Retail, PEOPLE_DEVELOP_VIEW and _EDIT) and its four skills and four classes.
+  Also: there was no Development area; a self-service employee reaches People's time area by its own grant but not People's
+  RecordFiles panel; design §10 names `store#WorkEffortReminders` for expiry and the plan a `QualificationExpiring` topic.
+- Mantle:
+  - `entity/HumanResourcesEntities.xml`: PartySkill gains `sourceEnumId` (`SkillSource`: `SksSelfDeclared`, `SksEvaluated`; empty
+    for a level recorded before People), `partySkillEvaluationId` and `evaluatedDate`; `PartySkillEvaluation` (each self-declaration
+    and evaluation: level, date, assessor, evaluating user, evidence, a qualification it rests on; kept, never changed);
+    `PartyQualification` refined (its own id; type, title, issuer, reference, issued and expiry dates, `verificationStatusId`
+    audit-logged: `QlVerPending`, `QlVerVerified`, `QlVerRejected`, `QlVerRevoked`; who submitted and verified it and when, the
+    decision's reason, the qualification it renews, the expiry last reminded; the types Degree, Certification, Licence, Work
+    experience, Identity document, Work permit); `PartyQualificationContent` (the content host, `QualificationContentType`);
+    `PartyResume` refined to resume lines (`ResumeLineType`, organization, role, dates); `EmplPositionClassSkill.minimumLevel`,
+    `qualificationTypeEnumId`, `requiredFlag`, `fromDate`, `thruDate`; `entity/WorkEffortEntities.xml`:
+    `WorkEffortSkillStandard.minimumSkillLevel`. The review and training sketches stay commented for P19 and P20;
+  - `mantle.humanres.DevelopmentServices` over a new module `Development.js`: `find#Qualifications` (mine, a person, one, or everyone
+    the scope reaches; by state waiting, valid, expiring within thirty days, expired, attention (verified, expiring or expired, not
+    renewed), type with its child types and name; paged with an export; each row at the reader's level: the person and HR of an
+    employer of theirs every field, development all but an identity document's or work permit's reference, a manager and other
+    staff readers verified ones only as type, dates and validity), `store#Qualification` (the person, an HR editor, or a development
+    editor for a type not restricted; `TYPE_REQUIRED`, `TYPE_INVALID`, `VALUE_ENDED`, `EXPIRY_REQUIRED` for a restricted type,
+    `DATES_INVALID`, `RENEWAL_INVALID`, `QUALIFICATION_DECIDED` (a verified one is renewed, never edited), `REVISION_CHANGED`),
+    `verify#Qualification` (verify, reject, revoke at the revision read; an HR editor, or a development editor for a type not
+    restricted; `SELF_APPROVAL`, `NOT_PENDING`, `NOT_VERIFIED`, `REASON_REQUIRED`), `check#QualificationAccess`,
+    `create#QualificationContent` and `save#QualificationContentFile` (the content host: the person and HR read the files; the
+    person while it waits or was rejected and an HR editor add them), `check#Qualifications` (the staffing answer: per requirement of
+    a job class, a work effort's skill standards or one skill and type, else each person's own class's, at the planned date,
+    qualified, expiring, missing or expired with why, and the person's worst required state; a self-declared level and an
+    unverified, rejected or revoked certificate meet nothing; a certificate requirement with no least level is met by the valid
+    verified certificate alone; no reference, issuer, title, decision reason or file; a person outside the caller's People scope
+    `unavailable` and nothing else), `store#Skill` (a self-declaration, or an evaluation by a development editor reading the person
+    as development or manager; `LEVEL_INVALID`, `DATE_INVALID`, `QUALIFICATION_INVALID`, `REVISION_CHANGED`; PartySkill takes an
+    evaluation, and a self-declaration only over another or none), `get#SkillsMatrix` (development's and HR's employers' current
+    employees and a manager's reports, by employer, unit and the units under it, job class, skill and name, paged by person; columns
+    the class's requirements, else the page's classes' and the skills held; each cell's level and met, gap, held or none with why;
+    `scopePartyIds` for a staffing search), `get#PersonDevelopment` (Employee360's region: skills, qualifications at the reader's
+    level, resume lines for the person, HR and development, what the caller may change; `checkOnly`), `store#ResumeLine` and
+    `send#ExpiryReminders` (the daily job `send_QualificationExpiryReminders`: once per expiry, a verified qualification expiring
+    within thirty days and not renewed, the `QualificationExpiring` topic to the person's accounts, never the reference; each in its
+    own transaction, a failure logged and the rest going on);
+  - `PositionServices.store#JobRequirement` (Positions.js): a requirement's least level (`LEVEL_INVALID`), qualification type
+    (`TYPE_INVALID`, `VALUE_ENDED`), required or desired and start; `change` at the requirement's revision; remove ends it (kept),
+    a skill required again reopens its row; `get#JobClass` lists the requirements in effect with their terms and revision and
+    `find#JobClasses` counts only those; `Employees.js titlesOf` also answers the seat's job class;
+  - `get#RecordLinkInfo` (CommunicationServices.xml): the qualification host's content map entry and its visibility branch (the
+    person and HR, for every caller); `Lookups.js`: the `QualificationType` family; `data/PeopleDevelopmentSetupData.xml`: the
+    `QualificationExpiring` topic ("Your {type} expires {date}") and the job;
+  - owner contract with Projects: `ResourceServices.find#StaffingCandidates` takes `partyIdList` (the pool bounded to it) and
+    answers `skillSelfDeclared`; Projects' callers pass neither.
+- BOSS:
+  - Screens: `People/Development` (menu 12, "Skills & training", `sym_o_school`): `Development/SkillsMatrix` (the default; a
+    `.qvue` matrix, SkillsMatrix.qvue, over the transitions `matrix` (get#SkillsMatrix), `evaluateSkill` (store#Skill, a cell's
+    dialog) and `findAvailable`; a list of cards on a phone; the terminal twin `Development/SkillsMatrixTui`, a row per person and
+    skill with Evaluate a skill and Find available) and `Development/Qualifications` (FindQualifications, QualificationList with the
+    state chips, Add qualification the primary, a row's Verify, Reject, Revoke, Change, Renew and Files, the Files box the
+    qualification's RecordFiles); JobClassDetail's Requirements gain At least, Proved by, Required or Desired, From, Change and Remove
+    (ended) and the header links the skills matrix; Employee360's Skills and reviews under People (skills, qualifications, resume
+    lines with Add resume line and Remove); SelfService's My qualifications; the root: the keys `g k` and `g q`, the
+    `QualificationExpiring` topic, the record panels admitting `PartyQualification`;
+  - `ironstone.people`: Today's my qualification expiring (`find#Qualifications`' attention, the user's own, PEOPLE_SELF_SERVICE,
+    opening Qualifications; on both roots), `find#AvailablePeople` (Find available: the staffing search bounded to the matrix's
+    people, the cost rate only for PAYROLL_VIEW), the choices `skillTypes`, `skillLevels` and `qualificationTypes`, the links,
+    `get#SelfServiceContext`'s `qualificationsUrl`, `get#Employee360Context`'s `showsDevelopment`; Commons' `get#RecordLink`
+    (People.js `qualificationLink`), RecordFiles' `get#ContentType` and Chatter's record title for a qualification;
+  - `data/BossSetupData.xml` (appended): `BOSS_PPL_DEVELOPMENT` (the area, an inheritable ALLOW for self-service), `BOSS_PPL_SKILLS`
+    (the matrix and its twin: ALWAYS for develop, HR and the managers, DENY for the root user group and self-service),
+    `BOSS_PPL_FILES_SELF` (Shared/RecordFiles.xml for self-service, so the employee attaches a certificate under People), the topic's
+    link; demo (`BossPeopleDemoData.xml`, appended): the first aid skill, the first aid and electrical safety certificate types, the
+    classes' requirements with levels and certificates, evaluations and levels of Tomas (point of sale self-declared, no first aid
+    certificate: his gaps), Rafael (with a verified first aid certificate and work permit), Hannah and Kenji (a verified electrical
+    safety certificate).
+- Specs: Mantle `test/humanres/Qualifications` (4 features, stepwise, 2.4 s: 0.48, 0.77, 0.65, 0.48: a requirement's level,
+  certificate, desired, change at its revision and end kept; a self-declared skill, a missing and a waiting certificate missing, an
+  evaluation and a verified certificate qualified, expiring at 185 days and expired at 220, the person's own verification
+  `SELF_APPROVAL`, a work effort's level, the staffing answer holding no number, issuer, title or file, another employer's caller
+  `unavailable`; a work permit's expiry required, its number the person's and HR's and not development's or the manager's, only HR
+  verifying it, its files the person's and HR's, `get#RecordLinkInfo`; the matrix against the class, the reader refused, the
+  manager's reports, a reminder sent once, a renewal ending the attention, the manager's part of the development record). BOSS
+  `test/People/PeopleSkills` (3 features, 0.65 s: 0.29, 0.08, 0.28: SkillsMatrix's one qvue render and its transitions' contract as
+  the learning administrator, Tomas's two gaps, an evaluation closing one, Find available bounded to Retail; SkillsMatrixTui's one
+  tui render as HR; Qualifications' one qvt render as HR with the work permit's number, the three choices with a selected value off
+  the page, the manager's development record). `PeopleAccess` gains one feature (0.51 s: the matrix opened by develop, HR and the
+  manager and refused to the reader and the employee; a verified qualification revoked by the development administrator, the reader
+  refused `PERMISSION_DENIED` with the same parameters, Services' refused to Retail's development administrator; the employee's
+  Qualifications by the area's grant), its menu feature the Development group and the employee's context the new link (PeopleSpecLib:
+  the menus, `developmentMenu`, `readerDevelopmentMenu`, the keys, the P18 ids); PeopleEmployees' Employee360 render checks Skills and
+  reviews; Mantle PeopleApprovals' families list gains `QualificationType`. Acceptance, written and not run:
+  `acceptance/People/PeopleSkillsUsable` (3 features: Tomas submits his first aid certificate from Qualifications and his gap
+  stays, waiting; the learning administrator verifies it from Qualifications, Tomas refused his own, and the matrix shows it met; his
+  manager reads its kind and validity without number or issuer, on the service and the page, and the directory reader's staffing
+  check answers qualified with no number, issuer or title).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Qualifications, PeoplePositions,
+  PeopleApprovals, WorkResources, HumanResServices, PeopleDirectory, RecordLinks and RecordVisibility 62 of 62 (mr-mantle 14.6 s of
+  features), and after formatting Qualifications, PeopleApprovals, PeoplePositions, WorkResources and RecordLinks 42 of 42 (11.4 s);
+  BOSS PeopleSkills, PeopleAccess and PeopleEmployees 27 of 27 (10.5 s), then PeopleSkills, PeoplePositions, PeopleApprovals,
+  PeopleSelfService, PeopleTime, PeopleLeave, Resources, ProjectsAccess, TodayPanel, RecordFiles, Chatter and InsightsRecords 93 of
+  93 (15.4 s), and after the last changes PeopleSkills, PeopleAccess, PeopleEmployees, PeopleSelfService, TodayPanel, RecordFiles,
+  PeopleApprovals and PeoplePositions 58 of 58 (15.2 s). A one-off spec (not kept): Tomas's submission through Qualifications'
+  transition, his Qualifications, People's and Commons' RecordFiles for his certificate (refused under People before
+  `BOSS_PPL_FILES_SELF`, open after; HR's open, development's not visible), his Today item, SelfService's link, the record link,
+  development's and the manager's Qualifications (the work permit's number absent for both). `moqui lint --screens`: 135 flagged
+  sites as before, none in the screens P18 touched, no TUI worklist entry. Prettier clean on the new and changed JavaScript. Not
+  run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table (the DevelopmentServices rows), `store#JobRequirement`'s,
+  `find#StaffingCandidates`' and `store#WorkEffortReminders`' Implemented in; ss-inventory's P18 note (no baseline form is mapped).
+- Design edits: design-people (header; §1.2 Skills & training; §1.4 Today and the topic; §4 Employee360's Skills and reviews; §5
+  JobClassDetail; §10, SkillsMatrix and Qualifications as built; §13 RecordFiles); design-projects (header; §15 StaffAllocation's owner
+  contract).
+- Findings (provisional, numbered by the lead):
+  - `EmplPositionClassSkill` keeps its key (class and skill), so a removed requirement is ended in place and a skill required again
+    reopens the same row from the new date: the earlier period's dates are not kept; a requirement's dated history needs `fromDate`
+    in the key (an entity change);
+  - an evaluation needs PEOPLE_DEVELOP_EDIT beside a development reader's or manager's scope; the demo manager holds no
+    PEOPLE_DEVELOP_EDIT, so a manager reads their reports' skills and evaluates none (design §10's EvaluateSkill is under "manager
+    scope"); whether managers evaluate (the permission in BOSS_PEOPLE_MANAGER, or one of their own) is open;
+  - a qualification's files are the person's and HR's (as the phase's brief says), so a development editor verifies a certificate
+    whose file they may not open; an identity document or work permit is HR's alone to verify;
+  - `check#Qualifications` admits every caller whose People scope admits the person (a directory reader, a manager, the person),
+    with the staffing projection; no staffing permission of its own was added, so Maintenance's dispatchers, who hold no People
+    permission, need one (or a path of Maintenance's) when its technician assignment adopts it (§7);
+  - a requirement with a certificate and no least level is met by the valid verified certificate alone; with a least level the
+    level must be evaluated too;
+  - a PartySkill level with no source (recorded before People: Projects' skill rows, a rating with no level) counts as recorded by
+    staff and meets a requirement at its level; Projects' screens still write PartySkill directly, with no evaluation history;
+  - the person is not told when their qualification is verified, rejected or revoked (no topic); Qualifications and Today show it;
+  - the expiry reminder is its own topic, not Commons' `WorkEffortReminder` (design §10 and §1.4 changed): a qualification is no
+    work effort;
+  - Find available's pool is the staffing search's (time keepers, skill holders and role holders) bounded to the scope, so an
+    employee who keeps no time and lacks the skill is not proposed;
+  - `BOSS_PPL_FILES_SELF` grants Shared/RecordFiles.xml by location, the panel every app mounts; what it shows is decided per record
+    by `get#RecordLinkInfo`, so the employee reaches nothing Commons' panel would not show them;
+  - a reader who sees no waiting qualification (a manager, a directory reader) is answered `RECORD_UNAVAILABLE` for its decision,
+    not `PERMISSION_DENIED`; PeopleAccess checks the permission on revoking a verified one;
+  - an HR reader's list across people reads current employees; a former employee's qualifications are read by naming the person;
+  - the restricted kinds are fixed in code (`QualIdentityDocument`, `QualWorkPermit` and the types under them): a new restricted
+    kind is added under one of them;
+  - Home has no expiring-qualifications count (design §1.2's Home list; P29's reports and alerts);
+  - the matrix shows at most 24 columns when no class or skill narrows it, reads at most 2000 people, and the staffing check 500.
+- For the lead:
+  - budget share: mr-mantle about 2.4 s (Qualifications); mr-boss about 1.2 s (PeopleSkills 0.65 s, PeopleAccess's feature 0.51 s);
+    no client spec;
+  - merge hot spots (P15 and P16 touch several): mr-mantle `entity/HumanResourcesEntities.xml` (the ability entities, the
+    `EmplPositionClassSkill` fields; P16 refines the recruitment sketch in the same file), `entity/WorkEffortEntities.xml`,
+    `service/mantle/party/CommunicationServices.xml` (the content map and visibility branch beside the employment's; P15 and P16 add
+    hosts there too), `Lookups.js` (the families; P16 may add applicant stages), `Positions.js`, `PositionServices.xml`,
+    `Employees.js` (`titlesOf`), `ResourceServices.xml` (find#StaffingCandidates), `PeopleServices.xml` (find#Lookups' description),
+    `test/humanres/PeopleApprovals.spec.js` (the families list); mr-boss `service/ironstone/people/People.js` (`linkPaths`, the
+    self-service links, `choiceSources`, `developmentApps`, `today`, `selfServiceContext`, `availablePeople`, the exports),
+    `ContextServices.xml`, `screen/People.xml` (header, panel check, keys, topic), `screen/Shared/Employee360.xml`,
+    `screen/Shared/PeopleSelfService.xml`, `screen/People/Staffing/JobClassDetail.xml`, `screen/People/Settings/Lookups.xml`
+    (header), `service/ironstone/shared/RecordFilesServices.xml`, `ChatterServices.xml`, `service/ironstone/commons/PaletteServices.xml`,
+    `data/BossSetupData.xml` and `data/BossPeopleDemoData.xml` (appended at their ends), `test/People/PeopleSpecLib.js` (the menus,
+    keys and ids: a new top-level menu entry in every list), `PeopleAccess.spec.js` (header, menu feature, the employee's links, the
+    appended feature), `PeopleEmployees.spec.js`, the inventories, design-people (header, §1.2, §1.4, §4, §5, §10, §13),
+    design-projects (header, §15);
+  - for the user's call: whether managers evaluate their reports' skills (the second finding); and whether a requirement's history
+    needs the key change (the first). Nothing else waits on the user.
+
 ### P19 — Training
 
 Design §10 Training, TrainingDetail, §15 (the completion certificate); PE-14. After P16 (the assessment form) and

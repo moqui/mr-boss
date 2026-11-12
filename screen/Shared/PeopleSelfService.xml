@@ -36,7 +36,8 @@ along with this software (see the LICENSE.md file). If not, see
     user's call of Nov 12, 2026): My interviews, the interviews the user is on the panel of (mantle.humanres.RecruitingServices
     find#MyInterviews, which takes no party), shown when they have any, each opening MyInterview beside this screen, where they read
     the applicant's name, the opening and what the recruiter shared with the panel and answer their scorecard; the scorecards to
-    submit counted in the summary. Payslips (P26) join with their phase. -->
+    submit counted in the summary. P18: My qualifications links People's Qualifications (their own, when the Skills and training
+    area opens to them), where they submit a certificate or document for verification. Payslips (P26) join with their phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -159,6 +160,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     icon="sym_o_receipt_long" condition="links?.expenseClaimsUrl"/>
                             <link url="${links.advancesUrl}" url-type="plain" text="My advances" link-type="anchor-button"
                                     icon="sym_o_payments" condition="links?.advancesUrl"/>
+                            <!-- P18 -->
+                            <link url="${links.qualificationsUrl}" url-type="plain" text="My qualifications" link-type="anchor-button"
+                                    icon="sym_o_workspace_premium" condition="links?.qualificationsUrl"/>
                         </container>
                     </container>
                 </container>

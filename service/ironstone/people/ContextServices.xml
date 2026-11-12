@@ -105,7 +105,8 @@ along with this software (see the LICENSE.md file). If not, see
             organizationPartyId's employees and agents), positions (P6: organizationPartyId's seats in effect and not inactive,
             vacant ones first, narrowed to departmentPartyId), workLocations (P6: organizationPartyId's facilities) and
             terminationReasons and terminationTypes (P6: People's lookups, ended values left out), leaveTypes and leavePolicies (P11:
-            People's leave types; an HR reader's policies not closed, of organizationPartyId when given). Refuses a user without
+            People's leave types; an HR reader's policies not closed, of organizationPartyId when given); skillTypes, skillLevels
+            and qualificationTypes (P18: People's lookups, ended values left out; a level by its number). Refuses a user without
             People and an unknown choice.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <in-parameters>
@@ -172,6 +173,8 @@ along with this software (see the LICENSE.md file). If not, see
                 user may see (mantle.humanres.PeopleServices.find#EmploymentChanges)</description></parameter>
             <parameter name="showsEquipment" type="Boolean"><description>P7: People's mount, which lists the equipment the person
                 holds (mantle.humanres.PeopleServices.get#AssignedEquipment: the person and HR of their employer)</description></parameter>
+            <parameter name="showsDevelopment" type="Boolean"><description>P18: People's mount, which shows Skills and reviews
+                (mantle.humanres.DevelopmentServices.get#PersonDevelopment: each reader their part)</description></parameter>
             <parameter name="returnLabel"/>
             <parameter name="returnPath"/>
         </out-parameters>
@@ -181,6 +184,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="canChangeEmployment" from="!!found.canChangeEmployment"/>
             <set field="showsChanges" from="!!found.showsChanges"/>
             <set field="showsEquipment" from="!!found.showsEquipment"/>
+            <set field="showsDevelopment" from="!!found.showsDevelopment"/>
             <set field="recordFound" from="found.recordFound"/>
             <set field="regions" from="found.regions"/>
             <set field="record" from="found.record"/>
@@ -240,7 +244,10 @@ along with this software (see the LICENSE.md file). If not, see
             a self-service employee by the time area's grant) and does not open Projects, whose own source answers them there,
             each opening the week in People's My time; and P12 the leave starting today or tomorrow of a manager's live reports
             (kind leave, PEOPLE_TEAM_VIEW: who is out, never why; not a colleague's day the team calendar shows), each opening the
-            request. Another user's Today gets none. Declared on both roots, it is taken once.</description>
+            request; and P18 the user's own verified qualifications expiring within thirty days or expired and not renewed (kind
+            qualification, mantle.humanres.DevelopmentServices.find#Qualifications' attention, PEOPLE_SELF_SERVICE: its type and
+            expiry, never its number), each opening their qualifications. Another user's Today gets none. Declared on both roots,
+            it is taken once.</description>
         <in-parameters>
             <parameter name="userId"/>
             <parameter name="partyId"/>
@@ -278,6 +285,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="expenseClaimsUrl"><description>P15: the user's own expense claims (People's expenses area, when it opens
                 to them)</description></parameter>
             <parameter name="advancesUrl"><description>P15: the user's own advances (the same area)</description></parameter>
+            <parameter name="qualificationsUrl"><description>P18: the user's own qualifications (People's Skills &amp; training
+                area, when it opens to them)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -291,6 +300,35 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="teamCalendarUrl" from="found.teamCalendarUrl"/>
             <set field="expenseClaimsUrl" from="found.expenseClaimsUrl"/>
             <set field="advancesUrl" from="found.advancesUrl"/>
+            <set field="qualificationsUrl" from="found.qualificationsUrl"/>
+        </actions>
+    </service>
+
+    <!-- P18 (design §10 SkillsMatrix FindAvailable) -->
+    <service verb="find" noun="AvailablePeople" allow-remote="false">
+        <description>Who has a skill and is free over the days (SkillsMatrix's and SkillsMatrixTui's Find available): Projects'
+            mantle.work.ResourceServices.find#StaffingCandidates (skill, dates, hours a week), bounded to the people the user's
+            skills matrix keeps (mantle.humanres.DevelopmentServices.get#SkillsMatrix's scopePartyIds, with the same employer,
+            unit, job class and name), ranked by free hours and skill, each as text: free hours of those needed, the skill's
+            level (self-declared said so), the open projects the user sees and, for a holder of PAYROLL_VIEW, the cost rate (an
+            employee's pay, Y2). Refuses a user who reads no one's skills (PERMISSION_DENIED) and what the staffing search refuses
+            (its dates and hours).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="unitPartyId"/>
+            <parameter name="emplPositionClassId"/>
+            <parameter name="term"/>
+            <parameter name="skillTypeEnumId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+            <parameter name="hoursPerWeek"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="candidates" type="List"><description>partyId, name, fits, shortWeeks, freeText, skillText, rateText,
+                projectsText</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="candidates" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('availablePeople', context).candidates"/>
         </actions>
     </service>
 </services>

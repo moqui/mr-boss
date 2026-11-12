@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P15, Nov 11 and 12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P18, Nov 11–12, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -520,7 +520,7 @@ the screens that call it.
 | PositionServices | find#JobClasses | People/Staffing/JobClasses | People/Staffing/JobClasses (FindJobClasses, JobClassList) (People P4) |
 | PositionServices | get#JobClass | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (the header, Job profile, Requirements) (People P4) |
 | PositionServices | store#JobClass | People/Staffing/JobClasses; People/Staffing/JobClassDetail | People/Staffing/JobClasses (NewJobClass); People/Staffing/JobClassDetail (EditJobClass, End job class) (People P4) |
-| PositionServices | store#JobRequirement | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (AddSkill, Remove) (People P4) |
+| PositionServices | store#JobRequirement | People/Staffing/JobClassDetail | People/Staffing/JobClassDetail (AddSkill, Remove; P18: a requirement's level, certificate, required or desired, ChangeRequirement, Remove ending it) (People P4, P18) |
 | PositionServices | find#Positions | People/Staffing/Positions | People/Staffing/Positions (FindPositions, PositionList as list and board) (People P4) |
 | PositionServices | get#Position | People/Staffing/PositionDetail | People/Staffing/PositionDetail (the header, Terms, Holders; P5: Approval, the latest activation request) (People P4, P5) |
 | PositionServices | store#Position | People/Staffing/Positions; People/Staffing/PositionDetail | People/Staffing/Positions (NewPosition); People/Staffing/PositionDetail (EditPosition, EndPosition) (People P4) |
@@ -641,6 +641,16 @@ the screens that call it.
 | party/FormDefinitionServices | find#Forms, create#Form | People/Settings/Forms | People/Settings/Forms (Shared/SurveyForms with People's registration: the forms list, New form) (People P16) |
 | party/FormDefinitionServices | get#Form, rename#Form, save#FormField, save#FormCondition, end#FormPart, publish#Form | People/Settings/FormDetail | People/Settings/FormDetail (Shared/SurveyFormDetail with People's registration: FormFields, FieldOptions, the rules, Publish, Rename, the preview) (People P16) |
 | party/FormPublicationServices | open#Publication | — | no screen: a form's publication by an access kind its purpose's registration admits (People's purposes admit none; Marketing's publication screens build on it, impl-marketing P12) (People P16) |
+| DevelopmentServices | get#SkillsMatrix | People/Development/SkillsMatrix | People/Development/SkillsMatrix (the .qvue matrix, through its matrix transition) and SkillsMatrixTui (the person and skill rows) (People P18) |
+| DevelopmentServices | store#Skill | People/Development/SkillsMatrix (EvaluateSkill) | People/Development/SkillsMatrix (a cell's evaluation, through evaluateSkill) and SkillsMatrixTui (Evaluate a skill) (People P18) |
+| DevelopmentServices | find#Qualifications | People/Development/Qualifications | People/Development/Qualifications (FindQualifications, QualificationList, the Files box's record); Today's my qualification expiring (ironstone.people.ContextServices.get#TodayItems) (People P18) |
+| DevelopmentServices | store#Qualification | People/Development/Qualifications (Qualification) | People/Development/Qualifications (AddQualification, a row's Change and Renew) (People P18) |
+| DevelopmentServices | verify#Qualification | People/Development/Qualifications (Qualification's verifier decision) | People/Development/Qualifications (a row's Verify, Reject and Revoke) (People P18) |
+| DevelopmentServices | check#Qualifications | Maintenance/WorkOrders (technician assignment); Projects' StaffAllocation | — (the staffing answer: no People screen calls it; Maintenance's technician assignment and Projects' StaffAllocation adopt it, impl-people §7) (People P18) |
+| DevelopmentServices | get#PersonDevelopment | Shared/Employee360 (SkillsAndReviews) | Shared/Employee360 under People (Skills and reviews) (People P18) |
+| DevelopmentServices | store#ResumeLine | Shared/Employee360 (SkillsAndReviews) | Shared/Employee360 under People (Add resume line, Remove) (People P18) |
+| DevelopmentServices | check#QualificationAccess, create#QualificationContent | People/RecordFiles (the qualification host, PE-01) | People/Development/Qualifications (Files: RecordFiles of PartyQualification, through get#RecordLinkInfo and RecordFiles' get#ContentType) (People P18) |
+| DevelopmentServices | send#ExpiryReminders | — (the daily job send_QualificationExpiryReminders) | the QualificationExpiring notice, opening People/Development/Qualifications (People P18) |
 
 ## Ledger (81 services)
 
@@ -1487,7 +1497,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | EventServices | get#FreeBusy | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar; Commons/Calendar/EventDetail |
 | EventServices | book#Resource | Maintenance/Scheduling/ResourceCalendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | cancel#ResourceBooking | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail |
-| EventServices | store#WorkEffortReminders | People/Time/LeaveRequestDetail; People/Development/TrainingDetail; People/Development/Qualifications | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
+| EventServices | store#WorkEffortReminders | People/Time/LeaveRequestDetail; People/Development/TrainingDetail; People/Development/Qualifications | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar; — not People/Development/Qualifications: a qualification's expiry is reminded by its own topic, QualificationExpiring (DevelopmentServices.send#ExpiryReminders), a qualification being no work effort (People P18) |
 | WorkEffortServices | link#WorkEffortRecord | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Panel/Today; Commons/QuickCreate; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/QuickCreate; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | WorkEffortServices | unlink#WorkEffortRecord | Projects/WorkItems/WorkItemDetail | Commons/Calendar/EventDetail |
 | WorkEffortServices | get#UserTodayItems |  | Commons/Home; Commons/Panel/Today; — a production run and its operations left out (Manufacturing P10, F41); Manufacturing's today-source ironstone.manufacturing.HomeServices.get#TodayItems lists the due operations |
@@ -1556,7 +1566,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ResourceServices | cancel#Allocation |  | Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
 | ResourceServices | create#Allocation |  | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/TeamPlanner |
 | ResourceServices | find#Allocations |  | Projects/Home; Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/PersonDetail/Allocations; Projects/Resources/TeamPlanner |
-| ResourceServices | find#StaffingCandidates | People/Development/SkillsMatrix; Maintenance/WorkOrders | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
+| ResourceServices | find#StaffingCandidates | People/Development/SkillsMatrix; Maintenance/WorkOrders | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner; People/Development/SkillsMatrix and SkillsMatrixTui (Find available, through ironstone.people.ContextServices.find#AvailablePeople, bounded by partyIdList) (People P18) |
 | ResourceServices | get#AllocationAccess |  | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
 | ResourceServices | get#TeamPlan |  | Projects/Resources/PersonDetail/Capacity; Projects/Resources/PersonDetail/Overview; Projects/Resources/TeamPlanner |
 | ResourceServices | reject#Allocation |  | Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |

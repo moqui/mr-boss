@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The terminal twin of the skills matrix (SkillsMatrix.xml's tui text is a dynamic container of this screen; design-people §10
+    SkillsMatrix's TUI person-skill list, PE-20): the same people and skills (mantle.humanres.DevelopmentServices.get#SkillsMatrix,
+    the same filters, a page of people at a time) as one row per person and skill, with the level (self-declared said so), the
+    requirement and whether it is met; and the same commands: Evaluate a skill (store#Skill, a development editor's) and Find
+    available (ironstone.people.ContextServices.find#AvailablePeople over Projects' staffing search). Readers have the list only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Skills matrix" default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="unitPartyId"/>
+    <parameter name="emplPositionClassId"/>
+    <parameter name="skillTypeEnumId"/>
+    <parameter name="term"/>
+    <parameter name="pageIndex"/>
+    <!-- Find available's terms (the results box below) -->
+    <parameter name="availableSkillTypeEnumId"/>
+    <parameter name="availableFromDate"/>
+    <parameter name="availableThruDate"/>
+    <parameter name="availableHours"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="evaluateSkill">
+        <actions>
+            <service-call name="mantle.humanres.DevelopmentServices.store#Skill"
+                    in-map="{partyId:(evaluatePartyId || null), skillTypeEnumId:(evaluateSkillTypeEnumId || null), skillLevel:(skillLevel || null),
+                        evaluationDate:(evaluationDate || null), evidence:(evidence || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Evaluation saved</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.DevelopmentServices.get#SkillsMatrix" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), unitPartyId:(unitPartyId || null),
+                    emplPositionClassId:(emplPositionClassId || null), skillTypeEnumId:(skillTypeEnumId || null), term:(term || null),
+                    pageIndex:(pageIndex || 0)}"/>
+        <set field="matrixError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="availableFromDate &amp;&amp; availableThruDate &amp;&amp; availableHours">
+            <service-call name="ironstone.people.ContextServices.find#AvailablePeople" out-map="available" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:(organizationPartyId || null), unitPartyId:(unitPartyId || null),
+                        emplPositionClassId:(emplPositionClassId || null), term:(term || null), skillTypeEnumId:(availableSkillTypeEnumId || null),
+                        fromDate:availableFromDate, thruDate:availableThruDate, hoursPerWeek:availableHours}"/>
+            <set field="availableError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            matrixFound = !!found?.rows
+            canEvaluate = !!found?.canEvaluate
+            const columns = Array.from(found?.columns || [])
+            const columnOf = id => columns.find(column => column.skillTypeEnumId === id) || {}
+            // one row per person and skill: the person's level, the requirement and whether it is met
+            skillRows = Array.from(found?.rows || []).flatMap(row => Array.from(row.cells || []).map(cell => {
+                const column = columnOf(cell.skillTypeEnumId)
+                return {personName: row.personName, jobText: row.jobText, skillName: column.skillName || cell.skillTypeEnumId,
+                    levelText: cell.levelText ? cell.levelText + (cell.selfDeclared ? ' (self-declared)' : '') : '',
+                    requirementText: [cell.minimumLevel != null ? 'at least ' + cell.minimumLevel : '', column.qualificationTypeName,
+                        cell.required === false ? 'desired' : ''].filter(Boolean).join(', '),
+                    stateText: cell.stateText || ''}
+            }))
+            peopleCount = found?.peopleCount || 0
+            pageShown = (found?.peoplePageIndex || 0) + 1
+            pageMax = (found?.peoplePageMaxIndex || 0) + 1
+            levelOptions = Array.from(found?.levelOptions || []).map(option => ({key: option.value, text: option.label}))
+            peopleOptions = Array.from(found?.rows || []).filter(row => row.canEvaluate).map(row => ({key: row.partyId, text: row.personName}))
+            skillOptions = columns.map(column => ({key: column.skillTypeEnumId, text: column.skillName}))
+            availableRows = Array.from(available?.candidates || [])
+            findValues = {organizationPartyId: organizationPartyId || null, unitPartyId: unitPartyId || null, emplPositionClassId: emplPositionClassId || null,
+                skillTypeEnumId: skillTypeEnumId || null, term: term || null}
+        ]]></script>
+    </actions>
+    <widgets>
+        <label text="Skills matrix" type="h5"/>
+        <form-single name="SkillsTuiFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Employer">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'employers', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="unitPartyId">
+                <default-field title="Department or team">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'units', selected:unitPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="emplPositionClassId">
+                <default-field title="Job class">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'jobClasses', selected:emplPositionClassId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="skillTypeEnumId">
+                <default-field title="Skill">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'skillTypes', selected:skillTypeEnumId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Person"><text-find size="20" hide-options="true"/></default-field></field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+        </form-single>
+        <section name="SkillsTuiShown" condition="matrixFound">
+            <widgets>
+                <container style="row q-gutter-sm">
+                    <container-dialog id="SkillsTuiEvaluateDialog" button-text="Evaluate a skill" icon="sym_o_grade" width="560" title="Evaluate a skill"
+                            condition="canEvaluate &amp;&amp; peopleOptions.length &amp;&amp; skillOptions.length">
+                        <form-single name="SkillsTuiEvaluate" transition="evaluateSkill" map="findValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="unitPartyId"><default-field><hidden/></default-field></field>
+                            <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                            <field name="skillTypeEnumId"><default-field><hidden/></default-field></field>
+                            <field name="term"><default-field><hidden/></default-field></field>
+                            <field name="evaluatePartyId">
+                                <default-field title="Person"><drop-down><list-options list="peopleOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                            </field>
+                            <field name="evaluateSkillTypeEnumId">
+                                <default-field title="Skill"><drop-down><list-options list="skillOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                            </field>
+                            <field name="skillLevel">
+                                <default-field title="Level"><drop-down><list-options list="levelOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                            </field>
+                            <field name="evaluationDate"><default-field title="Evaluated on"><date-time type="date"/></default-field></field>
+                            <field name="evidence"><default-field title="Evidence"><text-area rows="2"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Save evaluation"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="SkillsTuiAvailableDialog" button-text="Find available" icon="sym_o_person_search" width="560"
+                            title="Find who is available">
+                        <form-single name="SkillsTuiAvailable" transition="." map="findValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="unitPartyId"><default-field><hidden/></default-field></field>
+                            <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                            <field name="skillTypeEnumId"><default-field><hidden/></default-field></field>
+                            <field name="term"><default-field><hidden/></default-field></field>
+                            <field name="availableSkillTypeEnumId">
+                                <default-field title="Skill">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'skillTypes', selected:availableSkillTypeEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="availableFromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                            <field name="availableThruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                            <field name="availableHours"><default-field title="Hours a week"><text-line size="5" input-type="number" default-value="20"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Find"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <section name="SkillsTuiAvailableShown" condition="availableRows.length || availableError">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Available"/>
+                            <box-body-nopad>
+                                <label text="${availableError}" type="p" style="text-negative q-pa-sm" condition="availableError"/>
+                                <form-list name="SkillsTuiAvailableList" list="availableRows" skip-form="true" paginate="false" condition="availableRows.length">
+                                    <field name="name"><default-field title="Person"><display/></default-field></field>
+                                    <field name="fits"><default-field title="Free"><display text="${fits ? 'Yes' : shortWeeks + ' weeks short'}"/></default-field></field>
+                                    <field name="freeText"><default-field title="Hours"><display/></default-field></field>
+                                    <field name="skillText"><default-field title="Skill"><display/></default-field></field>
+                                    <field name="rateText"><default-field title="Cost rate"><display/></default-field></field>
+                                    <field name="projectsText"><default-field title="Projects"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="skillText"/></column>
+                                        <column><field-ref name="fits"/><field-ref name="freeText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="People and skills (page ${pageShown} of ${pageMax}, ${peopleCount} people)"/>
+                    <box-toolbar>
+                        <link url="." text="Previous people" link-type="anchor" condition="pageShown &gt; 1"
+                                parameter-map="Object.assign({}, findValues, {pageIndex: pageShown - 2})"/>
+                        <link url="." text="Next people" link-type="anchor" condition="pageShown &lt; pageMax"
+                                parameter-map="Object.assign({}, findValues, {pageIndex: pageShown})"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SkillsTuiRows" list="skillRows" skip-form="true" paginate="false" condition="skillRows.length">
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                            <field name="levelText"><default-field title="Level"><display/></default-field></field>
+                            <field name="requirementText"><default-field title="Requirement"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="skillName"/></column>
+                                <column><field-ref name="levelText"/><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No one matches, or no skill is required or recorded for them." type="p" style="m-muted q-pa-sm q-mb-none"
+                                condition="!skillRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+            <fail-widgets>
+                <label text="The skills matrix is not available to you: development and HR read their employers' people, a manager their team." type="p" style="m-muted"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

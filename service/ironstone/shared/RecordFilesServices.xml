@@ -69,7 +69,10 @@ along with this software (see the LICENSE.md file). If not, see
                     'EmploymentContentType'],
                 // People's application content host (impl-people P16): a recruiter's files of an application (its resume)
                 'mantle.humanres.employment.EmploymentApplication': ['mantle.humanres.RecruitingServices.create#ApplicationContent',
-                    'applicationContentId', 'EmploymentApplicationContentType']}
+                    'applicationContentId', 'EmploymentApplicationContentType'],
+                // People's qualification content host (impl-people P18, PE-01): a certificate's or document's files, never on the Party
+                'mantle.humanres.ability.PartyQualification': ['mantle.humanres.DevelopmentServices.create#QualificationContent',
+                    'partyQualificationContentId', 'QualificationContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
@@ -125,6 +128,13 @@ along with this software (see the LICENSE.md file). If not, see
             if (info.recordEntityName === 'mantle.humanres.employment.EmploymentApplication') {
                 const access = ec.service.sync().name('mantle.humanres.RecruitingServices.check#ApplicationAccess')
                     .parameters({employmentApplicationId:info.recordId}).disableAuthz().call()
+                contentType.catalogCanChange = !!access?.canEdit
+            }
+            // P18: a qualification's files: the person while it waits or was rejected, and an HR editor of an employer of theirs, change
+            // them (Mantle's check#QualificationAccess)
+            if (info.recordEntityName === 'mantle.humanres.ability.PartyQualification') {
+                const access = ec.service.sync().name('mantle.humanres.DevelopmentServices.check#QualificationAccess')
+                    .parameters({partyQualificationId:info.recordId}).disableAuthz().call()
                 contentType.catalogCanChange = !!access?.canEdit
             }
             if (info.recordEntityName === 'mantle.party.Party') {

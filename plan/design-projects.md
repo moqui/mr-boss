@@ -4,7 +4,8 @@ Oct 21, 2026 — draft; the inventories' **Designed in** columns filled from it 
 open questions folded in (§16, §17); as built through P11 (Oct 22); Nov 1, 2026 — review rows folded in;
 consistency pass; Nov 11, 2026 — impl-people P9 (owner contract): capacity reads a person's People working schedule first (§15
 PersonDetail); Nov 12, 2026 — impl-people P14 (owner contract): the Timeline's resource mode is a contract any mount answers (§5
-Timeline), and a published People shift takes its day's capacity (§15)
+Timeline), and a published People shift takes its day's capacity (§15); Nov 12, 2026 — impl-people P18 (owner contract): the
+staffing search takes a list of people to bound it to and says when a candidate's skill is self-declared (§15 StaffAllocation)
 
 **IronStone Projects** is the app for project managers and services staff (initial-design's app table). This file
 adds three audiences to that row: the software teams who deliver the work (developers, testers, release
@@ -1965,6 +1966,11 @@ unless they ask for approval.
 | `AllocationDecision` | list, bulk | Approve or reject | reason for a rejection | | `mantle.work.ResourceServices.approve#Allocation`, `reject#Allocation` (new) | OpenProject allocation states |
 
 - **Needs:** Allocations; Capacity.
+- **Owner contract (impl-people P18, Nov 12, 2026):** `find#StaffingCandidates` also takes `partyIdList`, the people to bound
+  the search to (People's skills matrix FindAvailable passes the people of the user's People scope), and each candidate carries
+  `skillSelfDeclared` (the skill's level is the person's own claim, People's `SksSelfDeclared`), which People labels and no People
+  requirement takes. Projects' callers pass neither, and StaffAllocation is unchanged; adopting
+  `mantle.humanres.DevelopmentServices.check#Qualifications` for a placeholder's skill is later Projects work (impl-people §7).
 
 ### PersonDetail (Context passed)
 
