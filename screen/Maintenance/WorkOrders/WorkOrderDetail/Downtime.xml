@@ -16,11 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     or linked (mantle.work.ResourceBookingServices.find#ResourceUnavailability with its workEffortId), with their production context
     and the other work orders linked; whether starting the work takes its target out of service (its offline intent); Record outage
     for the work's own target (record#ResourceUnavailability: the assigned technician, a supervisor or the resource administrator;
-    an open outage is linked, not doubled); and each row's Restore and Correct for a supervisor or resource administrator. Restore
-    waits for every linked work order to be done, this one included, so two work orders on one resource cannot each end the other's;
-    completing or cancelling the work restores nothing. -->
+    an open outage is linked, not doubled); and each row's Restore and Correct for a supervisor or resource administrator. Only
+    Restore ends an outage: completing or cancelling the work restores nothing, so two work orders on one resource cannot each end
+    the other's; a Restore with linked work still open lists it, asks why, and leaves it open (the user's call, Nov 12). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Downtime" default-menu-index="3">
+        default-menu-title="Downtime" default-menu-index="60">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <transition-include name="recordDowntime" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
@@ -68,7 +68,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${workOrder.outage?.text || (workOrder.targetName + ' has no outage recorded with this work.')}" type="p"
                                 style="${workOrder.outage?.open ? 'text-negative' : 'm-muted'}"/>
                         <label text="${intentText}" type="p" style="text-caption m-muted" condition="openStatus"/>
-                        <label text="Completing the work does not restore it: a supervisor restores it once every work order on the outage is done."
+                        <label text="Completing the work does not restore it: a supervisor or resource administrator restores it."
                                 type="p" style="text-caption m-muted" condition="workOrder.outage?.open"/>
                         <section-include name="DowntimeRows" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
                     </box-body>

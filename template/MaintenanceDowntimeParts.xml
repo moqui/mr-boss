@@ -14,13 +14,13 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Parts of the Maintenance downtime screens (impl-maintenance P5; design-maintenance §6 Downtime, §3 WorkDowntime): Equipment's
     Downtime and WorkOrderDetail's Downtime tab. A screen includes each transition it uses by name (transition-include), so a form
-    here posts to the screen it is on. Each checks the record through check#Record first (the root's Maintenance check: the work
-    order, else the equipment or facility), then calls Mantle's mantle.work.ResourceBookingServices, which checks the permission,
-    the scope and the assignment again:
+    here posts to the screen it is on. recordDowntime checks the record through check#Record first (the root's Maintenance check: the
+    work order, else the equipment or facility); each calls Mantle's mantle.work.ResourceBookingServices, which checks the
+    permission, the scope (restore and correct: the outage's organization) and the assignment:
     - recordDowntime: RecordDowntime (record#ResourceUnavailability), an outage of equipment or a facility, or the open one linked;
       the bookings it affects are kept and counted;
-    - restoreResource: RestoreResource (end#ResourceUnavailability), with the disposition and the readiness evidence, refused while a
-      linked work order is open;
+    - restoreResource: RestoreResource (end#ResourceUnavailability), with the disposition and the readiness evidence; the dialog lists
+      the linked work orders still open, which stay open, and asks why it is restored while they are (the user's call, Nov 12);
     - correctDowntime: a correction (correct#ResourceUnavailability), a new row in force over the one kept;
     - RecordDowntimeForm: the dialog's form (recordValues; recordFixed hides the resource, as the work order's tab gives it);
     - DowntimeRows: the outages (outageList) with their production and work context and each row's Restore and Correct. -->
@@ -58,8 +58,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.work.ResourceBookingServices.end#ResourceUnavailability" out-map="restored"
                     in-map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:expectedRevision,
-                        thruDate:thruDate, dispositionEnumId:dispositionEnumId, endComments:endComments}"/>
-            <if condition="!ec.message.hasError()"><message type="success">Restored: outage ${resourceUnavailabilityId} ended</message></if>
+                        thruDate:thruDate, dispositionEnumId:dispositionEnumId, endComments:endComments,
+                        openWorkReason:openWorkReason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Restored: outage ${resourceUnavailabilityId} ended${restored.openWorkList?.length ? '; still open: ' + Array.from(restored.openWorkList).map(work => work.workEffortId).join(', ') : ''}</message></if>
         </actions>
         <default-response url=".">
             <parameter name="workEffortId"/>
@@ -166,7 +167,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <section-iterate name="OutageWork" list="workList" entry="work">
                                 <widgets>
                                     <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${work.workEffortId} ${work.workEffortName} (${work.statusText})"
-                                            link-type="anchor" parameter-map="{workEffortId:work.workEffortId}"/>
+                                            link-type="anchor" parameter-map="{workEffortId:work.workEffortId}" condition="work.readable"/>
+                                    <!-- a work order the user may not read: its id and status only (impl-maintenance F69) -->
+                                    <label text="${work.workEffortId} (${work.statusText})" type="div" condition="!work.readable"/>
                                 </widgets>
                             </section-iterate>
                         </default-field>
@@ -178,7 +181,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="Corrected by ${correctedByName}: ${changeReason}" type="div" style="text-caption m-muted" condition="changeReason"/>
                             <label text="${affectedBookingCount} booking(s) over it are kept for their owners" type="div" style="text-caption text-warning"
                                     condition="affectedBookingCount"/>
-                            <label text="Restoration waits for: ${restoreBlockerText}" type="div" style="text-caption text-warning" condition="restoreBlockerText"/>
+                            <label text="Open work on it: ${openWorkText}" type="div" style="text-caption text-warning" condition="openWorkText"/>
+                            <label text="Restored with work open: ${openWorkReason}" type="div" style="text-caption m-muted" condition="openWorkReason"/>
                         </default-field>
                     </field>
                     <field name="actions">
@@ -187,6 +191,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     icon="sym_o_check_circle" title="Restore ${resourceName}" width="560">
                                 <label text="Out of service since ${fromText} (${reasonText}). Restoring it makes it available to production, booking and work again."
                                         type="p" style="text-caption"/>
+                                <label text="Work orders on this outage still open, which stay open: ${openWorkText}" type="p"
+                                        style="text-caption text-warning" condition="openWorkText"/>
                                 <form-single name="RestoreResource" transition="restoreResource"
                                         map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:revision, workEffortId:workEffortId}">
                                     <field name="resourceUnavailabilityId"><default-field><hidden/></default-field></field>
@@ -202,6 +208,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="thruDate"><default-field title="Available since" tooltip="Now when empty"><date-time/></default-field></field>
                                     <field name="endComments"><default-field title="Readiness checked"><text-area rows="2"/></default-field></field>
+                                    <field name="openWorkReason" hide="!openWorkText">
+                                        <default-field title="Why restore it while that work is open"><text-line/></default-field>
+                                    </field>
                                     <field name="submit"><default-field title=""><submit text="Restore" type="primary"/></default-field></field>
                                 </form-single>
                             </container-dialog>

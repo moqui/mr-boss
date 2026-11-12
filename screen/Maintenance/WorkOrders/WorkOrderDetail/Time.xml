@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     call the time services unchanged); the time entries of the work order's tree, a technician's own only, and the totals: their own
     hours, and the team's for a broad reader. Hours only: no rate or cost. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Time" default-menu-index="2">
+        default-menu-title="Time" default-menu-index="30">
     <parameter name="workEffortId"/>
     <transition-include name="startTimer" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
     <transition-include name="stopTimer" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>

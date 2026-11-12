@@ -233,7 +233,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="followUpName" hide="!actionRow.needsFollowUp">
-                                    <default-field title="Follow-up work" tooltip="A new work order on the same target for what is left; an outage waits for it">
+                                    <default-field title="Follow-up work" tooltip="A new work order on the same target for what is left, linked to its outage">
                                         <text-line size="50"/>
                                     </default-field>
                                 </field>

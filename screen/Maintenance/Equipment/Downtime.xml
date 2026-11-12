@@ -17,10 +17,11 @@ along with this software (see the LICENSE.md file). If not, see
     fact Manufacturing's equipment-fault stops and Maintenance both record, so a stop shows here once with its production context.
     DowntimeFind (the list's header filters: equipment, facility with those inside it, reason, planned or unplanned, open or ended,
     source); DowntimeRows (resource, state with its restoration and disposition, interval and elapsed time, reason and
-    classification, the production stop or the work orders, who recorded and corrected it, the bookings it affects and what
-    restoration waits for); RecordDowntime (Record outage, a supervisor's, resource administrator's or technician's: Mantle admits a
+    classification, the production stop or the work orders, who recorded and corrected it, the bookings it affects and the work
+    orders on it still open); RecordDowntime (Record outage, a supervisor's, resource administrator's or technician's: Mantle admits a
     technician only from their assigned work, which WorkOrderDetail's Downtime tab gives); RestoreResource (Restore, a supervisor's
-    or resource administrator's, once no linked work order is open: the only restoration); and Correct (a correction in force over
+    or resource administrator's, the only restoration: linked work orders still open are listed and stay open, and it then asks
+    why); and Correct (a correction in force over
     the outage kept). With resourceUnavailabilityId its correction history shows. Open to a work or resource reader; Mantle checks
     every action again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"

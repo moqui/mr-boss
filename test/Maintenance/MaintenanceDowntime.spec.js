@@ -1,5 +1,5 @@
 // Maintenance downtime in BOSS (impl-maintenance P5; design-maintenance §6 Downtime, §3 WorkDowntime): Downtime's one qvt render (the
-// supervisor's list: Room 201 out of service with what its restoration waits for, the compressor's October outage restored with its
+// supervisor's list: Room 201 out of service with its open work order, which its Restore lists and asks a reason for, the compressor's October outage restored with its
 // disposition, Record outage) and WorkOrderDetail's Downtime tab's one qvt render (Room 201's work order with its outage); Home's
 // count of the resources down; and the owner contracts of availability: an outage the supervisor records on the compressor makes
 // it out of service in Manufacturing's and Warehouse's equipment reads, and only its restoration makes it available again. The rules
@@ -36,7 +36,9 @@ feature("Downtime lists the scope's outages with their state and restoration; th
         list.output.includes("Record outage")
         list.output.includes("Room 201")
         list.output.includes("Out of service")
-        list.output.includes("Restoration waits for: Work order " + ids.roomOrderId)
+        // Room 201's work order is open: Restore lists it, it stays open, and the dialog asks why (the user's call, Nov 12)
+        list.output.includes("Open work on it: Work order " + ids.roomOrderId)
+        list.output.includes("Why restore it while that work is open")
         list.output.includes("Restored 2026-10-20")
         list.output.includes("available for use")
         list.output.includes("Safety stop")

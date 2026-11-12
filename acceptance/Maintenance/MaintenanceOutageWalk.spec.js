@@ -2,9 +2,10 @@
 // acceptance walk through the screens' transitions with artifact authorization on: an equipment-fault stop on Services' line in
 // Manufacturing records the compressor's outage, which shows once in Downtime with its production context; the planner's work order
 // is started by maint.tech taking the compressor out of service (the open outage is linked, not doubled) and completed with the
-// compressor still down and a follow-up; Restore waits for the follow-up, which maint.tech2 completes; ending the production stop
-// restores nothing; the supervisor restores the compressor from Downtime, and Manufacturing shows it available, with the
-// restoration on its stop. Gate 1. The rules are Mantle's MaintenanceOutages; the renders are MaintenanceDowntime's.
+// compressor still down and a follow-up; ending the production stop restores nothing; a Restore without a reason is refused,
+// naming the open follow-up; the supervisor restores the compressor from Downtime right after the completion, with the follow-up
+// still open and the reason (the user's call, Nov 12), and Manufacturing shows it available, with the restoration on its stop,
+// while the follow-up stays open. Gate 1. The rules are Mantle's MaintenanceOutages; the renders are MaintenanceDowntime's.
 // Run: ./moq accept mr-boss --spec MaintenanceOutageWalk
 const lib = ec.resource.script("component://mr-boss/test/Maintenance/MaintenanceSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -165,68 +166,59 @@ feature(
     }
 )
 
-feature("Restore waits for the follow-up; ending the production stop restores nothing", {
+feature("ending the production stop restores nothing; a Restore without a reason names the open follow-up", {
     when() {
-        const blocked = asUser(users.supervisor, () => {
-            ec.artifactExecution.disableAuthz()
-            return lib.refusal(R + "end#ResourceUnavailability", {
-                resourceUnavailabilityId: state.outageId,
-                expectedRevision: 1,
-                dispositionEnumId: "MdispAvailable"
-            })
-        })
-        as(users.planner, M + "schedule#MaintenanceWorkOrder", {
-            workEffortId: state.followUpId,
-            expectedRevision: revision(state.followUpId),
-            assigneePartyIds: [ids.tech2PartyId]
-        })
-        for (const action of ["start", "complete"])
-            post(users.tech2, "WorkOrders/WorkOrderDetail/lifecycleAction", {
-                workEffortId: state.followUpId,
-                lifecycleAction: action,
-                expectedRevision: revision(state.followUpId),
-                outcomeEnumId: "MoutRepaired",
-                dispositionEnumId: "MdispAvailable"
-            })
         const stopEnded = as(operator, P + "store#ProductionDowntime", {
             operationKey: "walk-outage-close-" + ec.user.randomString(12),
             action: "close",
             productionDowntimeId: state.stop.productionDowntimeId,
             expectedRevision: state.stop.revision
         }).result
+        const noReason = post(users.supervisor, "Equipment/Downtime/restoreResource", {
+            resourceUnavailabilityId: state.outageId,
+            expectedRevision: Number(outageOf(state.outageId).revision),
+            dispositionEnumId: "MdispAvailable",
+            endComments: "Fan motor reset; ran an hour at load"
+        })
+        const downtime = asUser(users.supervisor, () => page("Equipment/Downtime", {assetId: ids.compressorId, open: "true"}))
+        return {stopEnded, noReason, downtime, availability: manufacturingAvailability()}
+    },
+    then({stopEnded, noReason, downtime, availability}) {
+        stopEnded.statusId == "PdtClosed"
+        noReason.errors.join(" ").includes("OPEN_WORK")
+        noReason.errors.join(" ").includes(state.followUpId)
+        opened(downtime)
+        downtime.output.includes("Open work on it: Work order " + state.followUpId)
+        outageOf(state.outageId).thruDate == null
+        availability == "Out of service"
+    }
+})
+
+feature("the supervisor restores the compressor from Downtime with the follow-up open; Manufacturing shows it available", {
+    when() {
+        const restored = post(users.supervisor, "Equipment/Downtime/restoreResource", {
+            resourceUnavailabilityId: state.outageId,
+            expectedRevision: Number(outageOf(state.outageId).revision),
+            dispositionEnumId: "MdispRestricted",
+            endComments: "Fan motor reset; ran an hour at load",
+            openWorkReason: "Runs on the old fan motor at reduced load until the follow-up replaces it"
+        })
+        const stops = as(operator, P + "find#ProductionDowntime", {productionDowntimeId: state.stop.productionDowntimeId})
         return {
-            blocked,
-            stopEnded,
+            restored,
+            row: outageOf(state.outageId),
+            stops,
             followUp: system(() =>
                 ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", state.followUpId).one()
             ),
             availability: manufacturingAvailability()
         }
     },
-    then({blocked, stopEnded, followUp, availability}) {
-        blocked.includes("OPEN_WORK")
-        followUp.statusId == "WeComplete" || followUp.statusId == "WeClosed"
-        stopEnded.statusId == "PdtClosed"
-        outageOf(state.outageId).thruDate == null
-        availability == "Out of service"
-    }
-})
-
-feature("the supervisor restores the compressor from Downtime, and Manufacturing shows it available with the restoration", {
-    when() {
-        const restored = post(users.supervisor, "Equipment/Downtime/restoreResource", {
-            resourceUnavailabilityId: state.outageId,
-            expectedRevision: Number(outageOf(state.outageId).revision),
-            dispositionEnumId: "MdispAvailable",
-            endComments: "Fan motor replaced; ran an hour at load"
-        })
-        const stops = as(operator, P + "find#ProductionDowntime", {productionDowntimeId: state.stop.productionDowntimeId})
-        return {restored, row: outageOf(state.outageId), stops, availability: manufacturingAvailability()}
-    },
-    then({restored, row, stops, availability}) {
+    then({restored, row, stops, followUp, availability}) {
         restored.errors.length == 0
         row.thruDate != null
-        row.dispositionEnumId == "MdispAvailable"
+        row.dispositionEnumId == "MdispRestricted"
+        row.openWorkReason.startsWith("Runs on the old fan motor")[("WeInPlanning", "WeApproved")].includes(followUp.statusId)
         availability != "Out of service"
         stops.downtimeList[0].outageText.startsWith("Restored")
     }
