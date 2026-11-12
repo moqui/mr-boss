@@ -23,7 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
     wait) publishes the drafts of these days (publish#Shifts): each worker is told once, and their shifts reach capacity, the
     team calendar, SelfService and the My shifts calendar. The terminal: ShiftRosterTui, a person and day table with the same
     commands; the print: ShiftRosterPrint. HR's and the managers' (BOSS_PPL_SCHEDULES), denied to the root user group and to
-    self-service; Mantle checks who rosters whom again. -->
+    self-service; Mantle checks who rosters whom again: PEOPLE_ROSTER_EDIT beside the manager's line or HR's employer (the user's
+    call, impl-people §4, Nov 12, 2026), so without it every lane is read only and Add shift, the dialog's Save and Publish are not
+    offered (they follow the roster's canRoster). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shift roster" default-menu-index="12" menu-image="sym_o_view_timeline" menu-image-type="icon"
         render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">

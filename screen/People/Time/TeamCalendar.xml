@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     by mantle.humanres.LeaveServices.get#TeamAbsences: who is out among the people the user sees in People (their own leave and their
     colleagues', the people sharing a department, team or manager with them, a manager's reports', an HR reader's employers'), each approved absence as "{person} · Out" (a morning or an afternoon said so),
     never its leave type, its reason or a refused request; one the user reads opens LeaveRequestDetail. P14: the published shifts of
-    the same people (mantle.humanres.ScheduleServices.get#TeamShifts: "{person} · Shift" with its work location, never a draft), as
+    the same people (mantle.humanres.ScheduleServices.get#TeamShifts: "{person} · Shift", with its work location for the user's own, a
+    report's or an HR reader's, a colleague's its times alone, never a draft), as
     work hours. Nothing moves or is edited here: changes are the request's and the roster's. The same absences are the Team
     absence CalDAV collection, a worker's own shifts My shifts (read only, CX-SYNC). The terminal: an agenda of the next two weeks
     (TeamCalendarTui). Every People user's and a self-service employee's (the time

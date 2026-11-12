@@ -5064,15 +5064,18 @@ along with this software (see the LICENSE.md file). If not, see
         PAYROLL_APPROVE; the learning and review administrator PEOPLE_DEVELOP_VIEW and _EDIT; the case handler PEOPLE_CASE_HANDLE;
         the People administrator PEOPLE_CONFIGURE beside its payroll grants, and PEOPLE_ALL_ORGANIZATIONS, with which Mantle's
         People scope is every internal organization (or the active one), as BOSS_COMMERCE_ADMIN's COMMERCE_ALL_ORGANIZATIONS (the
-        user's call, impl-people §4, Nov 11, 2026). -->
+        user's call, impl-people §4, Nov 11, 2026). P14: PEOPLE_ROSTER_EDIT, saving and publishing shifts, to the manager and the HR
+        officer, each in their own scope (the user's call, impl-people §4, Nov 12, 2026). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_REQUEST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_ROSTER_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_IMPORT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_REQUEST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_ROSTER_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
@@ -5086,7 +5089,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_ALL_ORGANIZATIONS" fromDate="0"/>
     <!-- People's capability bundles in Admin's registry (owner contract, impl-people F27; design-crosscut §1.4's rows, as the
         built apps' above): each group with the permissions it carries (view, edit or sensitive: private person data, pay and
-        cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle. -->
+        cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle; PEOPLE_ROSTER_EDIT in
+        the manager's and HR's (P14). -->
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_ADMIN" appName="People" description="People administrator" scopeDependency="organization, employment" sequenceNum="1100"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
@@ -5101,11 +5105,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_MANAGER" appName="People" description="People manager" scopeDependency="live reporting lines, assigned approval steps" sequenceNum="1140"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_REQUEST_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_ROSTER_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_HR" appName="People" description="HR officer" scopeDependency="organization, employment" sequenceNum="1150"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_IMPORT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_REQUEST_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_ROSTER_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_RECRUIT" appName="People" description="Recruiter" scopeDependency="organization, assigned openings" sequenceNum="1160"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" capabilityKindEnumId="CpkEdit"/>

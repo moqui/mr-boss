@@ -3760,6 +3760,102 @@ Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its rost
     changed under it);
   - for the user's call: whether rostering needs a permission of its own (the first finding); nothing else waits on the user.
 
+**Review Nov 12 (P14).** A fresh review of `git diff master...ppl/p14` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §6 ShiftRoster, §13 TeamCalendar, §3 SelfService, §15, design-projects §5 (the timeline's resource mode) and
+design-manufacturing ProductionSchedule, with Timeline.qvue's owner contract and its callers first; the user's call of Nov 12 built
+and recorded in §4; fixes committed apart per repository ("People P14 review: …"). mr-boss's branch was rebased onto master's tip
+(82343f6b: the archived Admin-Screens-Down plan's path edits), cleanly; mr-mantle's already sat on master's tip (236800d9).
+- Checked and found sound:
+  - The timeline's owner contract: Timeline.qvue enters resource mode only where the path has no `Timeline` segment and is not
+    under ProjectDetail (Projects' own Timeline, `WorkItems/Timeline`, and ProjectDetail's Plan tab, whose default is Timeline, keep
+    the work-item modes; no other screen serves the component), and in it every request and post goes to the mount's own screen
+    (`ownPath`, the mount's path): `schedule`, the move and decide transitions and the header actions the mount's answer names, so
+    the contract reaches no other app's transitions and adds no right (each mount's transitions check their own access:
+    ProductionSchedule's `AccessServices.check#Record` and Mantle's checks, ShiftRoster's ScheduleServices). ProductionSchedule's
+    answer keeps its own fields beside the generic ones (ManufacturingSchedule's specs and its terminal twin unchanged),
+    `moveOperation` takes `laneId` and `remove` beside `targetFacilityId` and `unschedule`, and a commit carries the preview's
+    revisions as before (`moveParameters`). ProjectsPlanningResponses' Manufacturing features drive the generic methods with the
+    same assertions.
+  - store#Shift: the employment is the caller's to roster or `RECORD_UNAVAILABLE` (a supplied employment, shift or person never
+    widens scope: a manager's live line at the employment's own employer, an HR editor of that employer); a change re-reads the
+    shift under the person's Party lock and checks its revision, removed and started states; an apply takes the lock, looks up the
+    operation key again and assesses again (overlap across the person's employments, approved leave by half day, the employment's
+    dates, a past start, a day's length, the break) before writing; preview writes nothing; a published shift does not move to
+    another person; rows are cancelled, never deleted; the audit log on the status and the instants.
+  - Capacity: `scheduledDays` replaces a day's planned hours by the person's published shifts of that day (drafts and removed
+    ones never), summed when split; `get#PartyCapacity` takes no holiday from a shift's day and leave once (`min(base, leave)`, a
+    whole-day leave 24 h), so a shift counts once with the schedule and with leave; a failure to read the shifts leaves the
+    schedule's days.
+  - Publishing: each draft in its own `runRequireNew`, assessed again under the person's lock, a refused one named with its code and
+    left a draft, the rest going on; each worker told once per publish, by `PeopleShiftChange`, whose title names the days and the
+    count only (never who rostered or why), to the worker's own accounts.
+  - Self and team: `get#MyShifts` and `get#ShiftProjection` take no party and read the caller's own published shifts only (the
+    projection admits a self-service user with a person); `get#TeamShifts` reaches exactly the people `absences` reaches (own,
+    `colleaguesOf` at shared employers, a manager's live reports at the line's employers, an HR reader's employers), published shifts
+    only, never opening anything, consistent with the user's call of Nov 11 on absences.
+  - Scope by reporting line per employment and employer: `accessKinds` and `rosterEmployments` take a line's employers from
+    `reportLines` (the intersection of the manager's and the report's employers, the assignment's manager where there is one), so a
+    person employed by two employers is two lanes and a manager rosters only the employment at their line's employer.
+- Fixes:
+  - **R1 (the user's call of Nov 12).** Rostering gets its own permission, `PEOPLE_ROSTER_EDIT`. Mantle seeds it granted to `ADMIN`
+    (`MantleSetupData.xml`); People.js's capabilities read it (`rosterEdit`); Shifts.js's `rosters` needs it beside the manager's
+    line or HR's employer, and `store#Shift` (preview included) and `publish#Shifts` refuse `PERMISSION_DENIED` without it, while
+    `get#Roster` answers the manager or HR without it the same lanes, each read only (`canRoster` false, no drafts to publish), so
+    ShiftRoster's Add shift, Save shift and Publish and ShiftRosterTui's Shift, Remove shift and Publish are not offered (the
+    screens follow `canRoster`; their headers say so). BossSetupData grants it to `BOSS_PEOPLE_MANAGER` and `BOSS_PEOPLE_HR` and adds
+    it to both capability bundles. Specs: Mantle ShiftRoster (the manager's and the HR officer's accounts without it refused the
+    same shift the holders are accepted with, preview included, the manager the same publish too and reading the roster read only; the HR reader given it
+    still `RECORD_UNAVAILABLE` without PEOPLE_HR_EDIT); PeopleAccess (the capability `rosterEdit` held by the manager and HR alone;
+    Hannah's roster and publish accepted, a spec-local account of hers without the permission reading the same roster read only and
+    refused the same shift and publish; the account is hers only inside that feature, so no other feature meets a second account of
+    the demo manager). Both fail on the phase's code.
+  - **R2 (low, confidentiality).** The rosterer's comments (the dialog's and the terminal's Reason, which may say why someone
+    covers) were in `get#MyShifts`' rows, the worker's own answer; they are left out there. Spec: ShiftRoster (a Saturday shift saved
+    with a reason; the worker's rows carry none).
+  - **R3 (low, confidentiality; the user's call of Nov 11 on absences).** The team calendar titled a colleague's shift with its
+    work location; a colleague's shift is now its times alone ("{person} · Shift"), the work location kept for the user's own, a
+    report's and an HR reader's (`get#TeamShifts`). Spec: ShiftRoster (Leo, a colleague by the same manager, sees Ana's three shifts
+    as "Shift ANA · Shift"; Ana sees her shop).
+  - **R4 (low, scope).** `store#Shift` took any `facilityId` and the roster then showed its name: a rosterer could store another
+    organization's facility and read its name. A work location must now be the employer's own or the employment's assignment's
+    (`FACILITY_INVALID`; one kept unchanged is not asked again). Spec: ShiftRoster (B's shop for an A shift refused).
+  - **R5 (low, scope).** `OVERLAP` named the other shift's times even when that shift was at an employer the rosterer does not read
+    (a person employed twice); such an overlap is now "It overlaps another shift of the same person". Spec: ShiftRoster (Ana also
+    employed by B: B's HR over A's Monday told without its times; the manager at A with them).
+  - **R6 (low, publishing).** `publish#Shifts` counted a draft as published (and told its worker) before its transaction had
+    committed; it is now kept only after `runRequireNew` returns. No spec (a commit failure after the update is not reproducible
+    in a spec).
+- Provisional findings (for the lead to number):
+  - approved leave at another employer of the person shades the roster's lane and refuses a shift there (`LEAVE_CONFLICT`, "on
+    approved leave"), so a manager or HR of one employer learns that the person is away from the other on those half days (never its
+    type or reason); the overlap check across employments (R5) has the same shape, now without the other shift's times;
+  - the dialog's work location choices are every facility of the roster's employers and the lanes' assignments, so on a roster of
+    two employers a lane is offered the other's shops, which `store#Shift` then refuses (`FACILITY_INVALID`);
+  - `get#Roster` reads at most 600 employments before sorting by name and cutting to 200, so a truncated roster is not the first
+    200 by name;
+  - an HR editor who is also the worker (their own employer) may roster and publish their own shift; it is not an approval, and
+    the notice skips the caller;
+  - the worker's findings stand otherwise; their first (no roster permission) is answered by the user's call of Nov 12.
+- Tests (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle ShiftRoster, ProductionSchedule,
+  WorkProjectPlan, PeopleSchedules, WorkResources, LeaveRequests, Dav, Attendance, WorkTimesheets and BusinessTime 60 of 60 (mr-mantle
+  17.5 s of features; ShiftRoster 1.8 s: 1.02 and 0.78); BOSS PeopleAccess, PeopleRoster, PeopleSelfService, PeopleLeave,
+  PeopleSchedules, ManufacturingSchedule, ProjectsAccess, WorkItems, ProjectDetail, Resources and PeopleTime 74 of 74 (mr-boss 27.5 s
+  of features; PeopleAccess's roster feature 0.48 s); the client regression ProjectsPlanningResponses 7 of 7 offline (4.6 s; this
+  phase's runtime with a `Cargo.toml` placed for the run in the worktrees' folder, its parent, and removed after). The new checks
+  fail on the code before them (ShiftRoster at the permission and at `FACILITY_INVALID`, each run against it; PeopleAccess's roster
+  feature against the phase's Shifts.js). Prettier clean on the changed JavaScript. `moqui lint --screens` not run: the screens
+  touched (ShiftRoster.xml, TeamCalendar.xml) changed in their header comments only. Not run: `./moq test-apps`, the acceptance
+  suite (PeopleRosterUsable needs no change: its manager and HR hold the permission by their groups).
+- For the lead:
+  - budget share beside the Built note's: mr-mantle about +0.4 s (ShiftRoster's new checks); mr-boss about +0.2 s (PeopleAccess's
+    roster feature);
+  - merge hot spots beside the Built note's: mr-mantle `MantleSetupData.xml` (the People permissions), `People.js`
+    (`capabilityPermissions`), `Shifts.js` (`rosters`, `rosterScope`, `assess`, `publishShifts`, `getMyShifts`, `getTeamShifts`),
+    `ScheduleServices.xml` (the P14 descriptions), `test/humanres/ShiftRoster.spec.js`; mr-boss `BossSetupData.xml` (the People
+    grants and bundles), `PeopleAccess.spec.js` (the setup, the capability list, the roster feature), design-people (header, §1.1,
+    §6 ShiftRoster, §13), §4 here;
+  - the user's call of Nov 12 is in §4 and built; nothing waits on the user.
+
 ### P15 — Expense claims and advances
 
 Design §9 ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, §13 InvoiceDetail (claims); PE-13, PE-24
@@ -4212,6 +4308,7 @@ the owner's design.
 | Nov 11, 2026 | A leave ledger allocation's or adjustment's reason is HR's working note, shown only to HR of the employer (`find#Ledger`), as P12 built it (F202) | The user's call on F202, as built; LeaveLedger checks the person does not read it and HR does (P12's review) |
 | Nov 12, 2026 | A quick create can carry a condition the shell checks: the framework's `quick-create` takes a `condition-service`, a service (the interface `org.moqui.ui.ShellServices.offer#QuickCreate`) the shell calls as the app root that declares the kind, in a transaction of its own, whose `offer` true offers the kind to the session's user; false, no answer or a failing or missing service leaves out that kind alone, logged. People's Clock in uses it (`AttendanceServices.get#ClockOffer`): offered only to a user who clocks for a current employment of their own | The user's call on P13's finding (built in P13's review: mr-moqui `screen/shell.rs`, xml-screen-3.xsd, ShellServices.xml, docs/ui/Qvt-Client.md, the gallery's galleryTask; framework spec ShellQuickCreate and cargo's shell test; design-people §1.4, design-drawers-commons §1.5) |
 | Nov 12, 2026 | Clocking is an employer's default with per-employment exceptions: the employer's `PartySetting` `PeopleClocking` (Y on; none or N off) unless the employment's `clockingEnabled` says Y or N (empty follows the employer); `Attendance.js isClockingOn` is the one rule every reader uses (record#Punch, get#MyClock, find#Clocking, get#ClockOffer, and later the kiosk and hours for pay). P29 builds the employer setting's screen | The user's call on P13's finding (the rule built in P13's review; Who clocks shows each employment's own setting or the default, with Turn off and Follow the employer; P29's text gains the screen; design-people §6) |
+| Nov 12, 2026 | Rostering has its own permission, `PEOPLE_ROSTER_EDIT`: Mantle seeds it granted to `ADMIN`; `ScheduleServices.store#Shift` (its preview too) and `publish#Shifts` require it of managers and HR alike, on top of their scope (a manager's live line at the employer; an HR editor's employer with PEOPLE_HR_VIEW and PEOPLE_HR_EDIT), refusing `PERMISSION_DENIED` without it; `get#Roster` answers every lane read only to the manager or HR without it, so ShiftRoster's and ShiftRosterTui's actions (Add shift, Save shift, Remove shift, Publish) are not offered. BossSetupData grants it to `BOSS_PEOPLE_MANAGER` and `BOSS_PEOPLE_HR` and puts it in both capability bundles | The user's call on P14's first finding (built in P14's review, R1: People.js `rosterEdit`, Shifts.js `rosters`; Mantle's ShiftRoster and PeopleAccess's roster feature check the holder and the non-holder; design-people §1.1 and §6 ShiftRoster) |
 
 ## 5. Open questions
 

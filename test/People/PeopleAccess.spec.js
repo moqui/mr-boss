@@ -39,7 +39,9 @@
 // with the parameters HR is answered, Services' employer refused to Retail's HR).
 // P14: the Shift roster HR's and the managers' (the reader and the employee refused the screen), a shift of Tomas rostered by his
 // manager (the reader refused with the same parameters, Services' employee refused to Retail's HR), and the employee's own shifts
-// through get#MyShifts by its own grant (BOSS_PPL_SHIFTS_SELF).
+// through get#MyShifts by its own grant (BOSS_PPL_SHIFTS_SELF); PEOPLE_ROSTER_EDIT (the user's call of Nov 12, 2026): the manager
+// without it (a spec-local account of Hannah's) reads the roster but saves and publishes nothing, with the parameters she is
+// accepted with.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -52,6 +54,9 @@ const refused = message => /PEOPLE_UNAVAILABLE|is not authorized/.test(message)
 const unauthorized = message => /^40[13] |is not authorized/.test(message)
 // a spec-local People user whose only capability group holds PEOPLE_HR_EDIT, an agent of Retail
 const editOnly = "PPL_SPEC_EDIT_ONLY"
+// P14: a spec-local account whose group holds the manager's view permissions without PEOPLE_ROSTER_EDIT; it is Hannah's (the demo
+// manager's) only while the roster feature runs, so no other feature meets a second account of hers
+const teamOnly = "PPL_SPEC_TEAM_ONLY"
 
 spec({
     setupSpec() {
@@ -81,6 +86,21 @@ spec({
             })
             for (const userGroupId of ["BOSS_USERS", "BOSS_PEOPLE", editOnly])
                 call("create#moqui.security.UserGroupMember", {userId: editOnly, userGroupId, fromDate: 0})
+            call("create#moqui.security.UserGroup", {
+                userGroupId: teamOnly,
+                description: "People spec: a manager who does not roster"
+            })
+            for (const userPermissionId of ["PEOPLE_TEAM_VIEW", "PEOPLE_SELF_SERVICE"])
+                call("create#moqui.security.UserGroupPermission", {userGroupId: teamOnly, userPermissionId, fromDate: 0})
+            call("create#moqui.security.UserAccount", {
+                userId: teamOnly,
+                username: "people.spec.teamonly",
+                currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                passwordHashType: "SHA",
+                timeZone: "America/Chicago"
+            })
+            for (const userGroupId of ["BOSS_USERS", "BOSS_PEOPLE", teamOnly])
+                call("create#moqui.security.UserGroupMember", {userId: teamOnly, userGroupId, fromDate: 0})
         })
     },
     cleanupSpec() {
@@ -90,7 +110,7 @@ spec({
         system(() =>
             ec.entity
                 .find("moqui.security.UserGroupMember")
-                .condition("userId", editOnly)
+                .condition("userId", "in", [editOnly, teamOnly])
                 .updateAll({thruDate: ec.user.nowTimestamp})
         )
         ec.artifactExecution.enableAuthz()
@@ -219,6 +239,8 @@ const capabilityNames = [
     "requestApprove",
     "hrView",
     "hrEdit",
+    // P14: saving and publishing shifts (PEOPLE_ROSTER_EDIT), the managers' and HR's
+    "rosterEdit",
     "recruitView",
     "recruitEdit",
     "developView",
@@ -246,9 +268,9 @@ const capabilityNames = [
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     // the manager is an employee too: BOSS_PEOPLE_SELF beside BOSS_PEOPLE_MANAGER (groups are not nested; P8's review)
-    {user: users.manager, granted: ["self", "team", "requestApprove", "schedules"]},
+    {user: users.manager, granted: ["self", "team", "requestApprove", "rosterEdit", "schedules"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
-    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment", "schedules"]},
+    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "rosterEdit", "import", "staff", "employment", "schedules"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff", "payroll"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff", "payroll"]},
@@ -1020,7 +1042,7 @@ feature(
 )
 
 feature(
-    "the shift roster: HR's and the managers' screen; Tomas's shift rostered by his manager, the reader refused with the same parameters, Services' employee refused to Retail's HR; the employee's own shifts by their own grant",
+    "the shift roster: HR's and the managers' screen; Tomas's shift rostered by his manager, the reader refused with the same parameters, Services' employee refused to Retail's HR; the employee's own shifts by their own grant; the manager without PEOPLE_ROSTER_EDIT reads the roster and saves and publishes nothing",
     {
         when() {
             const S = "mantle.humanres.ScheduleServices."
@@ -1045,6 +1067,43 @@ feature(
                 ),
                 employeeShifts: code(asUser(users.employee, () => refusal(S + "get#MyShifts", {})))
             }
+            // PEOPLE_ROSTER_EDIT: Hannah reads her roster and rosters Tomas, and publishes the week; her account without it reads the
+            // same roster, every lane read only, and is refused the same shift and the same publish
+            const week = {fromDay: day, days: 7}
+            const rosterOf = roster => (roster?.lanes || []).filter(lane => lane.partyRelationshipId == ids.employmentId)
+            const holder = asUser(users.manager, () =>
+                system(() => ({
+                    lanes: rosterOf(invoke(S + "get#Roster", week).roster),
+                    publish: code(refusal(S + "publish#Shifts", week))
+                }))
+            )
+            let nonHolder = null
+            try {
+                system(() => call("update#moqui.security.UserAccount", {userId: teamOnly, partyId: ids.managerPartyId}))
+                nonHolder = asUser("people.spec.teamonly", () =>
+                    system(() => {
+                        const roster = invoke(S + "get#Roster", week).roster
+                        return {
+                            lanes: rosterOf(roster),
+                            canRoster: !!roster?.canRoster,
+                            save: code(refusal(S + "store#Shift", shift)),
+                            publish: code(refusal(S + "publish#Shifts", week))
+                        }
+                    })
+                )
+            } finally {
+                system(() =>
+                    ec.entity.find("moqui.security.UserAccount").condition("userId", teamOnly).updateAll({partyId: null})
+                )
+            }
+            codes.holder = holder.lanes.length + " " + holder.lanes.every(lane => lane.canRoster) + " " + holder.publish
+            codes.nonHolder = [
+                nonHolder.lanes.length,
+                nonHolder.lanes.some(lane => lane.canRoster),
+                nonHolder.canRoster,
+                nonHolder.save,
+                nonHolder.publish
+            ].join(" ")
             for (const user of [users.manager, users.hr]) {
                 const opened = screenRefusal(user, "Time/ShiftRoster")
                 if (opened) problems.push(`${user}'s ShiftRoster: ${opened}`)
@@ -1056,7 +1115,15 @@ feature(
             return {codes, problems}
         },
         then({codes, problems}) {
-            codes == {manager: "accepted", reader: "PERMISSION_DENIED", hrOther: "RECORD_UNAVAILABLE", employeeShifts: "accepted"}
+            codes ==
+                {
+                    manager: "accepted",
+                    reader: "PERMISSION_DENIED",
+                    hrOther: "RECORD_UNAVAILABLE",
+                    employeeShifts: "accepted",
+                    holder: "1 true accepted",
+                    nonHolder: "1 false false PERMISSION_DENIED PERMISSION_DENIED"
+                }
             problems.join("\n") == ""
         }
     }
