@@ -118,8 +118,8 @@ along with this software (see the LICENSE.md file). If not, see
                     workEffortTypeEnumId: isEvent ? 'WetEvent' : 'WetTask'}).url
                 else if (item.requestId) url = link({docType: 'MantleRequest', id: item.requestId}).url
                 else if (item.url) url = String(item.url)
-                // Projects' timesheet to submit opens its week in My time
-                if (kind === 'timesheet' && item.weekStart) url = '/qapps/Projects/Time/MyTime?weekDate=' + encodeURIComponent(item.weekStart)
+                // Projects' timesheet to submit opens its week in My time (People's own item, impl-people P10, names its mount's)
+                if (kind === 'timesheet' && item.weekStart && !item.url) url = '/qapps/Projects/Time/MyTime?weekDate=' + encodeURIComponent(item.weekStart)
                 const record = item.record || null
                 let recordCaption = null
                 let recordUrl = null

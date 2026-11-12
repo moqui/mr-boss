@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     changes the time) and Print (TimesheetPrint, impl-projects.md P9). The number cards: Hours, Billable, Working hours, Difference. The boxes: Entries by day (a day's header with
     its total, then its entries: from, to, work item, project, hours, work type, billable, comment), By project, Flags (no comment
     where the policy needs one, time on no work item, a day off, a closed item, over 12 hours a day) and History (the status
-    changes, by whom and when); Chatter, where a return's reason and the answers live, as the right column from 1440 px. -->
+    changes, by whom and when); Chatter, where a return's reason and the answers live, as the right column from 1440 px. Mounted
+    under People too (People/Time/TimesheetDetail, impl-people P10): the links and Print follow the mount (appRoot). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Timesheet" default-menu-include="false">
 
@@ -36,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions><script><![CDATA[
-        const out = ec.service.sync().name('ironstone.projects.TimeServices.get#TimesheetDetail').parameters({timesheetId: timesheetId || ''}).call() || {}
+        const out = ec.service.sync().name('ironstone.projects.TimeServices.get#TimesheetDetail').parameters({timesheetId: timesheetId || '', appRoot: appRoot || null}).call() || {}
         ec.message.clearErrors()
         recordFound = !!out.detail
         if (!recordFound) return
@@ -52,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
         stateText = sheet.returned ? L('Returned') + ': ' + (sheet.reason || '') : sheet.statusId === 'TmshApproved'
                 ? L('Approved') + (sheet.approvedByName ? ' ' + L('by') + ' ' + sheet.approvedByName : '') + (sheet.approvedText ? ' · ' + sheet.approvedText : '')
                 : sheet.statusId === 'TmshCompleted' ? L('Submitted') + (sheet.submittedText ? ' ' + sheet.submittedText : '') + ', ' + L('waiting for approval') : ''
-        printUrl = '/apps/Projects/Time/TimesheetPrint?renderMode=html-print&timesheetId=' + encodeURIComponent(timesheetId)
+        printUrl = '/apps/' + (appRoot === 'People' ? 'People' : 'Projects') + '/Time/TimesheetPrint?renderMode=html-print&timesheetId=' + encodeURIComponent(timesheetId)
         stateStyle = sheet.returned ? 'text-warning' : sheet.statusId === 'TmshApproved' ? 'text-positive' : 'm-muted'
     ]]></script></actions>
 

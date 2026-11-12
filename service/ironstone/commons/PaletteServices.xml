@@ -278,12 +278,12 @@ along with this software (see the LICENSE.md file). If not, see
                 icon = 'sym_o_rate_review'
                 return
             }
-            // whether the user may open IronStone Projects: an authorization of the user's groups on its root, with no deny
-            const mayOpenProjects = () => {
+            // whether the user may open IronStone Projects: an authorization of the user's groups on its root, with no deny (People
+            // P10: or on another screen, People's time area)
+            const mayOpenProjects = (root = 'component://mr-boss/screen/Projects.xml') => {
                 if (!ec.user.userId) return false
                 try {
                     const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
-                    const root = 'component://mr-boss/screen/Projects.xml'
                     const rows = Array.from(ec.entity.find('moqui.security.ArtifactAuthzCheckView').condition('userGroupId', 'in', groupIds)
                             .condition('artifactTypeEnumId', 'AT_XML_SCREEN').condition('authzActionEnumId', 'in', ['AUTHZA_ALL', 'AUTHZA_VIEW'])
                             .disableAuthz().list()).filter((row) => row.nameIsPattern === 'Y' ? new RegExp(`^(?:${row.artifactName})$`).test(root)
@@ -295,9 +295,12 @@ along with this software (see the LICENSE.md file). If not, see
                     return false
                 }
             }
-            // a timesheet (the timesheet topics, Chatter on it) opens its TimesheetDetail in Projects (impl-projects.md P6a)
+            // a timesheet (the timesheet topics, Chatter on it) opens its TimesheetDetail in Projects (impl-projects.md P6a), else under
+            // People's time area for a People user or a self-service employee (impl-people P10: the same screen mounted there)
             if (!type && recordEntityName === 'mantle.work.time.Timesheet') {
-                url = mayOpenProjects() ? '/qapps/Projects/Time/TimesheetDetail?timesheetId=' + q : null
+                url = mayOpenProjects() ? '/qapps/Projects/Time/TimesheetDetail?timesheetId=' + q
+                        : mayOpenProjects('component://mr-boss/screen/People.xml') || mayOpenProjects('component://mr-boss/screen/People/Time.xml')
+                        ? '/qapps/People/Time/TimesheetDetail?timesheetId=' + q : null
                 icon = 'sym_o_schedule'
                 return
             }

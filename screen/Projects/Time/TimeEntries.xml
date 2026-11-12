@@ -90,7 +90,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
-    <transition name="import"><default-response url="//Projects/Time/Import"/></transition>
+    <transition name="import"><default-response url="//${appRoot == 'People' ? 'People' : 'Projects'}/Time/Import"/></transition>
 
     <actions>
         <script><![CDATA[
@@ -114,7 +114,8 @@ along with this software (see the LICENSE.md file). If not, see
                 clientInvoiced: clientInvoiced || null, workerInvoiced: workerInvoiced || null, sheetStatus: sheetStatus || null, text: text || null,
                 dateFrom: dateFrom, dateThru: dateThru}
             const out = ec.service.sync().name('ironstone.projects.TimeServices.find#TimeEntryRows').parameters(Object.assign({}, findParameters, {rootWorkEffortId: fixedProjectId,
-                orderByField: orderByField || null, pageIndex: Number(pageIndex || 0) || 0, pageSize: 50, pageNoLimit: ec.web?.parameters?.pageNoLimit === 'true'})).call() || {}
+                orderByField: orderByField || null, pageIndex: Number(pageIndex || 0) || 0, pageSize: 50, pageNoLimit: ec.web?.parameters?.pageNoLimit === 'true',
+                appRoot: appRoot || null})).call() || {}
             ec.message.clearErrors()
             list = out.list || list
             entryRows = Array.from(out.rowList || [])
@@ -137,7 +138,7 @@ along with this software (see the LICENSE.md file). If not, see
             const printDates = {}
             if (dateFrom != null) printDates.entryDate_from = ec.l10n.format(dateFrom, 'yyyy-MM-dd')
             if (dateThru != null) printDates.entryDate_thru = ec.l10n.format(new Date((dateThru instanceof Date ? dateThru.getTime() : Number(String(dateThru))) - 1), 'yyyy-MM-dd')
-            teamPrintUrl = '/apps/Projects/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(Object.assign({list: list}, find, printDates, projectFixed ? {workEffortId: fixedProjectId} : {}))
+            teamPrintUrl = '/apps/' + (appRoot === 'People' ? 'People' : 'Projects') + '/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(Object.assign({list: list}, find, printDates, projectFixed ? {workEffortId: fixedProjectId} : {}))
                     .filter(([key, value]) => value != null && value !== '' && key !== 'orderByField' && !key.startsWith('entryDate_p'))
                     .map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label), icon: icon, on: key === list,

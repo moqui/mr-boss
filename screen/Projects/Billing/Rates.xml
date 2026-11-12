@@ -20,7 +20,11 @@ along with this software (see the LICENSE.md file). If not, see
     never changes, so a change of scope is End and New rate), End. New rate (purpose, rate type, project, person, position class, work
     type, from, thru, amount). Which rate: the client and worker rates a person's time on a project or work item, of a work type, on a
     day finds (mantle.work.TimeServices.find#RateAmount), and why. A rate applies to time logged in its dates; the rates already found for
-    time not invoiced are found again by the project's Update rates (ProjectTime). -->
+    time not invoiced are found again by the project's Update rates (ProjectTime). People P10 (impl-people P10, F57; design-projects §10
+    "Context passed", owner contract): mounted under People too (People/Payroll/Rates), where payroll reads and sets the employees'
+    pay rates (Worker pay, PAYROLL_VIEW and PAYROLL_EDIT; check#RateAccess) and client billing is hidden without money; and a
+    third chip, Labor costing, lists the labor costing rates (RaprCost) read only, which finance administration sets in
+    Accounting's Costing policies. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Rates" default-menu-index="3" menu-image="sym_o_percent" menu-image-type="icon">
 
@@ -59,10 +63,18 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="purpose"/><parameter name="whichPartyId"/><parameter name="whichWorkEffortId"/><parameter name="whichWorkTypeEnumId"/><parameter name="whichDate"/>
         </default-response>
     </transition>
+    <!-- the people to choose: under People, the employees the user reads (People's choices); else those who keep time or have a user -->
     <transition name="people" read-only="true">
         <actions>
-            <service-call name="ironstone.projects.ResourceServices.search#AllocationPeople" in-map="{term:term}" out-map="found"/>
-            <script>ec.web.sendJsonResponse(found.optionList || [])</script>
+            <if condition="appRoot == 'People'">
+                <service-call name="ironstone.people.ContextServices.get#Choices" out-map="found"
+                        in-map="{appRoot:appRoot, choice:'employees', term:(term || null), selected:(selected || null)}"/>
+                <script>ec.web.sendJsonResponse(found.options || [])</script>
+                <else>
+                    <service-call name="ironstone.projects.ResourceServices.search#AllocationPeople" in-map="{term:term}" out-map="found"/>
+                    <script>ec.web.sendJsonResponse(found.optionList || [])</script>
+                </else>
+            </if>
         </actions>
         <default-response type="none"/>
     </transition>
@@ -70,8 +82,12 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            if (!['RaprClient', 'RaprVendor'].includes(purpose)) purpose = 'RaprClient'
-            managesMoney = !!ec.service.sync().name('ironstone.projects.BillingServices.check#Money').parameters({need: 'none'}).call()?.managesMoney
+            // what the user reads (check#RateAccess): client billing with money, worker pay with money or payroll, labor costing read only
+            rateAccess = ec.service.sync().name('ironstone.projects.BillingServices.check#RateAccess').parameters({need: 'none'}).call() || {}
+            const purposes = [['RaprClient', 'Client billing', 'sym_o_request_quote', 'client'], ['RaprVendor', 'Worker pay', 'sym_o_badge', 'worker'],
+                ['RaprCost', 'Labor costing', 'sym_o_calculate', 'cost']].filter((entry) => rateAccess[entry[3]])
+            if (!purposes.some((entry) => entry[0] === purpose)) purpose = purposes.length ? purposes[0][0] : 'RaprClient'
+            managesMoney = !!rateAccess.worker
             rateRows = []
             if (!managesMoney) return
             const out = ec.service.sync().name('ironstone.projects.BillingServices.find#RateRows').parameters({ratePurposeEnumId: purpose, rootWorkEffortId: rootWorkEffortId || null,
@@ -91,18 +107,22 @@ along with this software (see the LICENSE.md file). If not, see
             Object.keys(find).forEach((key) => { if (find[key] == null) delete find[key] })
             filtered = Object.keys(find).length > 0
             clearParams = Object.assign(Object.fromEntries(Object.keys(find).map((key) => [key, ''])), {purpose: purpose})
-            purposeChips = [['RaprClient', 'Client billing', 'sym_o_request_quote'], ['RaprVendor', 'Worker pay', 'sym_o_badge']].map(([key, label, icon]) => ({key: key,
+            purposeChips = purposes.map(([key, label, icon]) => ({key: key,
                 label: L(label) + ' · ' + (counts[key] ?? 0), icon: icon, on: key === purpose, params: Object.assign({}, find, {purpose: key})}))
-            purposeLabel = purpose === 'RaprVendor' ? L('Worker pay') : L('Client billing')
+            purposeLabel = L(purposes.find((entry) => entry[0] === purpose)?.[1] || 'Client billing')
+            // a labor costing rate is Accounting's; payroll without money adds an employee's pay rate only
+            canAddRate = purpose !== 'RaprCost'
+            payOnly = !!rateAccess.payOnly
             newRateValue = {ratePurposeEnumId: purpose, newRateTypeEnumId: 'RatpStandard', rateWorkEffortId: rootWorkEffortId || '', ratePartyId: partyId || '',
                 fromDate: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'), rateCurrencyUomId: ec.user.getPreference('CurrencyDefault') || 'USD'}
-            emptyText = filtered ? L('No rates match') : purpose === 'RaprVendor' ? L('No worker pay rates: time is paid at none') : L('No client rates: time is billed at none')
+            emptyText = filtered ? L('No rates match') : purpose === 'RaprVendor' ? L('No worker pay rates: time is paid at none')
+                    : purpose === 'RaprCost' ? L('No labor costing rates: labor hours are unpriced') : L('No client rates: time is billed at none')
             // Which rate
             whichAsked = !!(whichPartyId || whichWorkEffortId || whichWorkTypeEnumId || whichDate)
             whichValue = {purpose: purpose, whichPartyId: whichPartyId || '', whichWorkEffortId: whichWorkEffortId || '', whichWorkTypeEnumId: whichWorkTypeEnumId || '',
                 whichDate: whichDate || ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')}
             whichAnswer = null
-            if (whichAsked) {
+            if (whichAsked && rateAccess.client) {
                 whichAnswer = ec.service.sync().name('ironstone.projects.BillingServices.get#WhichRate').parameters({partyId: whichPartyId || null, workEffortId: whichWorkEffortId || null,
                     workTypeEnumId: whichWorkTypeEnumId || null, onDate: whichDate || null}).call()?.answer || null
                 whichError = ec.message.hasError() ? ec.message.getErrorsString() : ''
@@ -118,14 +138,15 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section name="NoMoney" condition="!managesMoney"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
-                <label type="p" text="Rates are for those who manage money." style="q-mb-none"/>
+                <label type="p" text="Rates are for those who manage money or payroll." style="q-mb-none"/>
             </box-body></container-box>
         </widgets></section>
         <section name="Rates" condition="managesMoney"><widgets>
             <container style="row items-center q-mb-sm q-gutter-y-xs">
                 <label text="Rates" type="h5" style="q-my-none q-mr-sm"/>
                 <container style="col"/>
-                <container-dialog id="WhichRateDialog" button-text="Which rate" icon="sym_o_help" width="560" title="Which rate applies">
+                <container-dialog id="WhichRateDialog" button-text="Which rate" icon="sym_o_help" width="560" title="Which rate applies"
+                        condition="rateAccess.client">
                     <form-single name="WhichRate" transition="whichRate" map="whichValue">
                         <field name="purpose"><default-field><hidden/></default-field></field>
                         <field name="whichPartyId"><default-field title="Person">
@@ -137,15 +158,19 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="submitButton"><default-field title="Find the rates"><submit/></default-field></field>
                     </form-single>
                 </container-dialog>
-                <container-dialog id="NewRateDialog" button-text="New rate" icon="sym_o_add" width="600" title="New rate">
+                <container-dialog id="NewRateDialog" button-text="New rate" icon="sym_o_add" width="600" title="New rate" condition="canAddRate">
                     <form-single name="NewRate" transition="saveRate" map="newRateValue">
-                        <field name="ratePurposeEnumId"><default-field title="For"><radio>
+                        <field name="ratePurposeEnumId"><conditional-field condition="!rateAccess.client"><hidden/></conditional-field>
+                            <default-field title="For"><radio>
                             <option key="RaprClient" text="Client billing"/><option key="RaprVendor" text="Worker pay"/></radio></default-field></field>
                         <field name="newRateTypeEnumId"><default-field title="Rate type">
                             <drop-down><list-options list="rateTypeOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
-                        <field name="rateWorkEffortId"><default-field title="Project (empty: any)">
+                        <field name="rateWorkEffortId"><conditional-field condition="payOnly"><hidden/></conditional-field>
+                            <default-field title="Project (empty: any)">
                             <drop-down allow-empty="true"><list-options list="projectOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
-                        <field name="ratePartyId"><default-field title="Person (empty: anyone)">
+                        <field name="ratePartyId"><conditional-field condition="payOnly" title="Employee">
+                            <drop-down><dynamic-options transition="people" server-search="true" min-length="0"/></drop-down></conditional-field>
+                            <default-field title="Person (empty: anyone)">
                             <drop-down allow-empty="true"><dynamic-options transition="people" server-search="true" min-length="0"/></drop-down></default-field></field>
                         <field name="rateWorkTypeEnumId"><default-field title="Work type (empty: any)">
                             <drop-down allow-empty="true"><list-options list="workTypeOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
@@ -270,7 +295,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <label type="p" text="${emptyText}" style="m-muted q-pa-sm q-mb-none"/>
                 </widgets></section>
             </box-body-nopad></container-box>
-            <label type="p" text="A time entry finds its rate when it is logged: a rate on its work item, else on its project, else on no project; a person's own rate when it is the greater; the closest work type and position. Rates change only the time logged in their dates." style="text-caption m-muted q-mt-sm"/>
+            <label type="p" text="A time entry finds its rate when it is logged: a rate on its work item, else on its project, else on no project; a person's own rate when it is the greater; the closest work type and position. Rates change only the time logged in their dates." style="text-caption m-muted q-mt-sm"
+                    condition="purpose != 'RaprCost'"/>
+            <label type="p" text="Labor costing rates price approved hours by position and work type for cost reports, never a person's pay. Finance administration sets them in Accounting's Costing policies." style="text-caption m-muted q-mt-sm"
+                    condition="purpose == 'RaprCost'"/>
         </widgets></section>
     </widgets>
 </screen>

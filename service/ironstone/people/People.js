@@ -30,12 +30,19 @@ const areas = {
     employment: "Employees/HireEmployee",
     // P8: My team, the managers' (BOSS_PPL_TEAM; the capability team is PEOPLE_TEAM_VIEW's)
     myTeam: "MyTeam",
-    // P9: Time & leave (working schedules), HR's and the managers' (BOSS_PPL_TIME; its Holidays HR's alone, BOSS_PPL_HOLIDAYS)
-    schedules: "Time"
+    // P9: Time & leave's working schedules, HR's and the managers' (BOSS_PPL_SCHEDULES; Holidays HR's alone, BOSS_PPL_HOLIDAYS;
+    // the area itself every People user's since P10, BOSS_PPL_TIME)
+    schedules: "Time/WorkingSchedules",
+    // P10: Payroll, the payroll groups' (BOSS_PPL_PAYROLL; Rates under it)
+    payroll: "Payroll"
 }
 // P8: the self-service screen (Shared/PeopleSelfService.xml, mounted at People/SelfService and Commons/People/SelfService), whose
 // own grant opens it to a self-service employee without People (BOSS_PPL_SELF)
 const selfServiceLocation = "component://mr-boss/screen/Shared/PeopleSelfService.xml"
+// P10: Time & leave (Projects' time screens mounted under People/Time), which a self-service employee opens by its own grant
+// (BOSS_PPL_TIME); and Projects' root, whose own Today source answers a Projects user's weeks to submit
+const timeLocation = "component://mr-boss/screen/People/Time.xml"
+const projectsLocation = "component://mr-boss/screen/Projects.xml"
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Insights.js and Commerce.js): screenAuthz reads the groups' rows once, and
@@ -174,7 +181,14 @@ const linkPaths = [
     "Time",
     "Time/WorkingSchedules",
     "Time/WorkingScheduleDetail",
-    "Time/HolidayCalendars"
+    "Time/HolidayCalendars",
+    // P10: Projects' time screens and Rates, mounted under People (design §13)
+    "Time/MyTime",
+    "Time/Timesheets",
+    "Time/TimesheetDetail",
+    "Time/TimeEntries",
+    "Payroll",
+    "Payroll/Rates"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -194,7 +208,7 @@ function sharedContext(p) {
             appRoot: "People",
             linkBase: "//People",
             webBase: "/qapps/People",
-            sharedLinks: {SelfService: "//People/SelfService"}
+            sharedLinks: {SelfService: "//People/SelfService", "Time/MyTime": "//People/Time/MyTime"}
         }
     }
     const userScope = required()
@@ -1036,35 +1050,84 @@ function decisionUrl(row) {
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
 // People root, and the shell gathers sources from the roots a user may open, F64; Home and the panel take each service once):
-// the People decisions waiting on the user (find#DueWork's decision, PEOPLE_REQUEST_APPROVE), each opening where it is decided.
-// A user without PEOPLE_REQUEST_APPROVE, and another user's Today, get none of them; the self-service items of later phases
-// (leave starting, a qualification expiring), each answering nothing without PEOPLE_SELF_SERVICE, join here.
+// the People decisions waiting on the user (find#DueWork's decision, PEOPLE_REQUEST_APPROVE), each opening where it is decided;
+// and (P10) the user's own weeks to submit (my week not submitted: TimesheetServices.find#WeeksToSubmit, the rule of Projects'
+// Today), for one who keeps time under People (a People user, or a self-service employee by the time area's own grant) and does
+// not open Projects, whose own source answers them there, each opening the week in People's My time. Another user's Today gets
+// none. The self-service items of later phases (leave starting, a qualification expiring) join here.
 function today(p) {
     const label = "People"
     if (!ec.user.userId || (p.userId && p.userId !== ec.user.userId)) return {items: [], label}
+    const items = []
+    const item = values =>
+        Object.assign(
+            {
+                workEffortId: null,
+                requestId: null,
+                dueDate: null,
+                startDate: null,
+                endDate: null,
+                allDay: false,
+                priority: null,
+                statusId: null,
+                assignees: [],
+                canUpdate: false,
+                hasCallLink: false,
+                record: null
+            },
+            values
+        )
     // the decisions are a decider's (PEOPLE_REQUEST_APPROVE), with a party to decide as
-    if (!ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") || !ec.user.userAccount?.partyId) return {items: [], label}
-    const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
-    return {
-        label,
-        items: Array.from(found.dueWork || []).map(row => ({
-            kind: "approval",
-            workEffortId: null,
-            requestId: null,
-            title: row.title,
-            dueDate: null,
-            startDate: null,
-            endDate: null,
-            allDay: false,
-            priority: null,
-            statusId: null,
-            assignees: [],
-            canUpdate: false,
-            hasCallLink: false,
-            url: decisionUrl(row),
-            record: null
-        }))
+    if (ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") && ec.user.userAccount?.partyId) {
+        const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
+        for (const row of Array.from(found.dueWork || []))
+            items.push(item({kind: "approval", title: row.title, url: decisionUrl(row)}))
     }
+    if (keepsTimeHere()) {
+        try {
+            for (const week of Array.from(lib.probe("mantle.work.TimesheetServices.find#WeeksToSubmit", {}).weekList || [])) {
+                const hours = ec.l10n.format(week.hours, "#,##0.##")
+                const text = week.returned
+                    ? "Returned: fix and submit your week of ${week} (${hours} h)"
+                    : "Submit your week of ${week} (${hours} h)"
+                items.push(
+                    item({
+                        kind: "timesheet",
+                        timesheetId: week.timesheetId,
+                        weekStart: week.weekStart,
+                        hours: week.hours,
+                        returned: week.returned,
+                        overdue: week.overdue,
+                        title: ec.resource.expand(ec.l10n.localize(text), "", {week: week.weekText, hours}),
+                        url: "/qapps/People/Time/MyTime?weekDate=" + encodeURIComponent(week.weekStart),
+                        record: {
+                            recordEntityName: "mantle.work.time.Timesheet",
+                            recordId: week.timesheetId,
+                            recordName: ec.resource.expand(ec.l10n.localize("Week of ${week}"), "", {week: week.weekText})
+                        }
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the weeks to submit were left out: " + error.message)
+        }
+    }
+    return {label, items}
+}
+// P10: whether People's time area opens to the user: through the root, or by the area's own grant for a self-service employee.
+function timeAreaOpens(grants = rootGrants()) {
+    if (grants.systemAdmin) return true
+    if (grants.read) return areaGrant(grants, "Time")
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(timeLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P10: whether the user keeps their time under People and not in Projects: People's time area opens to them and Projects' root
+// does not (its own Today source answers a Projects user's weeks to submit).
+function keepsTimeHere() {
+    const grants = rootGrants()
+    if (grants.systemAdmin || !timeAreaOpens(grants)) return false
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(projectsLocation, screenAuthz(groupIds)).allowed.length === 0
 }
 // get#SelfServiceContext: the links of Shared/PeopleSelfService under the app that mounts it (People or Commons): the user's own
 // employee record (People's mount for a People user, else Commons'), and under People the approvals and Home. Another root is
@@ -1073,12 +1136,15 @@ function selfServiceContext(p) {
     if (!["People", "Commons"].includes(p.appRoot)) denied("PEOPLE_CONTEXT", "Self-service is not available here")
     const partyId = ec.user.userAccount?.partyId || null
     const record = partyId ? employee360Link({partyId}) : {url: null}
-    const peopleUser = rootGrants().read
+    const grants = rootGrants()
+    const peopleUser = grants.read
     return {
         appRoot: p.appRoot,
         employee360Url: record.url || null,
         approvalsUrl: peopleUser ? "/qapps/People/Approvals" : null,
-        peopleHomeUrl: peopleUser ? "/qapps/People/Home" : null
+        peopleHomeUrl: peopleUser ? "/qapps/People/Home" : null,
+        // P10: the user's own week, under People's time area when it opens to them (the root or the area's own grant)
+        myTimeUrl: timeAreaOpens(grants) ? "/qapps/People/Time/MyTime" : null
     }
 }
 

@@ -38,12 +38,12 @@ along with this software (see the LICENSE.md file). If not, see
         const ctx = (name) => { const value = ec.context.get(name); return value == null || value === '' ? null : String(value) }
         const params = {}
         for (const name of ['workEffortId', 'list', 'partyId', 'itemId', 'workTypeEnumId', 'billable', 'sheetStatus', 'text', 'entryDate_from', 'entryDate_thru']) if (ctx(name)) params[name] = ctx(name)
-        printUrl = '/apps/Projects/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(params).map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
+        printUrl = '/apps/' + (appRoot === 'People' ? 'People' : 'Projects') + '/Time/TeamTimesheet?renderMode=html-print&' + Object.entries(params).map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
         const dateFrom = ctx('entryDate_from') ? ec.l10n.parseTimestamp(ctx('entryDate_from').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS') : null
         const dateThru = ctx('entryDate_thru') ? new Date(Number(String(ec.l10n.parseTimestamp(ctx('entryDate_thru').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'))) + 86400000) : null
         const out = ec.service.sync().name('ironstone.projects.TimeServices.find#TimeEntryRows').parameters({list: ctx('list') || 'all', partyId: ctx('partyId'), itemId: ctx('itemId'),
             rootWorkEffortId: ctx('workEffortId'), workTypeEnumId: ctx('workTypeEnumId'), billable: ctx('billable'), sheetStatus: ctx('sheetStatus'), text: ctx('text'),
-            dateFrom: dateFrom, dateThru: dateThru, orderByField: 'fromDate', pageNoLimit: true}).call() || {}
+            dateFrom: dateFrom, dateThru: dateThru, orderByField: 'fromDate', pageNoLimit: true, appRoot: appRoot || null}).call() || {}
         ec.message.clearErrors()
         const rows = Array.from(out.rowList || []).filter((row) => !row.running)
         // the work it is on: the item, else the project, else the find

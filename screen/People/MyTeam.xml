@@ -19,10 +19,22 @@ along with this software (see the LICENSE.md file). If not, see
     decision, the People requests whose step waiting the manager may decide now, each opening where it is decided (PositionDetail,
     the person's Employee360), whose decision services recheck the approver and the source. The managers' area (BOSS_PPL_TEAM:
     denied to the root user group, ALWAYS for BOSS_PEOPLE_MANAGER, and the People administrator and ADMIN through the root's
-    ALWAYS). The schedule and who is out (P9, P12), missing time and "Remind missing time" (P10) and reviews due (P20) join with
-    their phases. -->
+    ALWAYS). P10: each person's last week (submitted, or not: mantle.work.TimesheetServices.find#Timesheets' missing list, which holds
+    the manager's live reports), opening the week in People's My time, and Remind missing time on the selected people
+    (send#MissingTimeReminders, which checks per person that the manager approves that week and counts the others as skipped).
+    Who is out (P12) and reviews due (P20) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="My team" default-menu-index="2" menu-image="sym_o_diversity_3" menu-image-type="icon">
+    <!-- P10: Remind missing time, the selected people (selectedIds, a comma list of their parties), for last week -->
+    <transition name="remindMissing">
+        <actions>
+            <service-call name="mantle.work.TimesheetServices.send#MissingTimeReminders" out-map="remindOut"
+                    in-map="{partyIds:Array.from(new Set(String(selectedIds || '').split(',').map(id =&gt; id.trim()).filter(id =&gt; id)))}"/>
+            <if condition="!ec.message.hasError()"><script>ec.message.addMessage(remindOut.message, remindOut.skippedCount ? 'warning' : 'success')</script></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <actions>
         <service-call name="mantle.humanres.PeopleServices.get#Team" out-map="teamFound" transaction="force-new" ignore-error="true"/>
         <set field="teamAvailable" from="teamFound?.team != null"/>
@@ -30,9 +42,15 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="decisionsFound" transaction="force-new"
                     ignore-error="true" in-map="{kinds:'decision', pageSize:50}"/>
         </if>
+        <!-- P10: last week's missing weeks of the people the manager may remind (their live reports among them) -->
+        <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingFound" transaction="force-new" ignore-error="true"
+                in-map="{list:'missing', withCounts:false}"/>
         <script><![CDATA[
             ec.message.clearErrors()
-            teamRows = Array.from(teamFound?.team || [])
+            const missing = new Set(Array.from(missingFound?.rowList || []).map(row => row.partyId))
+            const weekOf = Object.fromEntries(Array.from(missingFound?.rowList || []).map(row => [row.partyId, row.weekStart]))
+            teamRows = Array.from(teamFound?.team || []).map(row => Object.assign({}, row, {weekMissing: missing.has(row.partyId),
+                weekText: missing.has(row.partyId) ? 'Not submitted' : 'Submitted', weekStart: weekOf[row.partyId] || null}))
             availabilityColors = {working: 'positive', leave: 'warning'}
             // each decision opens where it is decided: a position's activation on PositionDetail, an employment change on the
             // person's record
@@ -58,6 +76,13 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Team"/>
                     <box-body-nopad>
                         <form-list name="TeamRows" list="teamRows" skip-form="true" paginate="false" condition="teamRows.length">
+                            <!-- P10: Remind missing time on the selected people whose week is not submitted -->
+                            <row-selection id-field="partyId" parameter="selectedIds" list-mode="true">
+                                <action><form-single name="RemindMissing" transition="remindMissing">
+                                    <field name="submitButton"><default-field title="Remind missing time"><submit icon="sym_o_notifications"
+                                            confirmation="Remind the selected people to submit last week's time?"/></default-field></field>
+                                </form-single></action>
+                            </row-selection>
                             <field name="personName">
                                 <default-field title="Person">
                                     <link url="${sharedLinks['Employees/Employee360']}" text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
@@ -80,9 +105,17 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="scheduleName"><default-field title="Working schedule"><display/></default-field></field>
                             <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
+                            <!-- P10: last week's time, a missing week opening it in My time -->
+                            <field name="weekText">
+                                <default-field title="Last week">
+                                    <link url="${sharedLinks['Time/MyTime']}" text="Not submitted" link-type="anchor" style="text-warning"
+                                            parameter-map="{partyId:partyId, weekDate:weekStart}" condition="weekMissing"/>
+                                    <label text="Submitted" type="span" style="m-muted" condition="!weekMissing"/>
+                                </default-field>
+                            </field>
                             <columns type="mobile">
                                 <column><field-ref name="personName"/><field-ref name="jobTitle"/></column>
-                                <column><field-ref name="availabilityText"/><field-ref name="workPhone"/></column>
+                                <column><field-ref name="availabilityText"/><field-ref name="weekText"/></column>
                             </columns>
                         </form-list>
                         <label text="No one reports to you now." type="p" style="m-muted q-pa-md" condition="!teamRows.length"/>

@@ -5241,25 +5241,39 @@ along with this software (see the LICENSE.md file). If not, see
         assignees alone; a People user reaches its People box from there -->
     <moqui.security.user.NotificationTopic topic="PeopleTaskAssigned"
             linkTemplate="/qapps/Commons/Tasks/TaskDetail?workEffortId=${workEffortId}"/>
-    <!-- impl-people P9 (design-people §6 WorkingSchedules and WorkingScheduleDetail, §7 HolidayCalendars, §1.2: a section with no
-        capability is omitted): Time & leave is HR's and the managers' for now (working schedules: HR's, and a manager's read of the
-        schedules their reports follow): denied to the root user group, opened to BOSS_PEOPLE_HR and BOSS_PEOPLE_MANAGER (ALWAYS, as
-        My team) and to the People administrator and ADMIN through their ALWAYS on the root. Holidays under it is HR's own editor (the
-        user's call of Nov 11 put HR's editors out of Settings): denied to the root user group, opened to the HR officers (Time's own
-        grant is not inheritable, so the managers' does not reach it). Mantle's
-        ScheduleServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and the employer again. The time screens of later
-        phases (timesheets, attendance, leave) widen the area with their own grants. -->
-    <artifactGroups artifactGroupId="BOSS_PPL_TIME" description="People time and leave">
-        <!-- the menu group's own render, not inherited (an inherited ALWAYS would open Holidays to the managers), and the working
-            schedules below it -->
-        <artifacts artifactName="component://mr-boss/screen/People/Time.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+    <!-- impl-people P9 and P10 (design-people §1.2: a section with no capability is omitted; §6 WorkingSchedules and
+        WorkingScheduleDetail, §7 HolidayCalendars; §13 MyTime, Timesheets, TimesheetDetail, TimeEntries and Rates; F17, F57). Time &
+        leave (People/Time) holds P10's time screens (Projects' mounted: Timesheets, My time, Time entries and what they open), P9's
+        working schedules and P9's Holidays, each part open to its own users:
+        - the area and its time screens: every People user's through the root, and a self-service employee without the launcher
+          opens them by this inheritable ALLOW on the area (as their own self-service); its screens and services show and change only
+          the user's own weeks and those they approve (mantle.work.TimesheetServices: the week's person, its approvers by the
+          organization's policy, ADMIN), so the grant opens nothing else; the rest of People stays refused to them (BOSS_PPL_TIME);
+        - the working schedules: HR's and the managers' (a manager's read of the schedules their reports follow): denied to the root
+          user group and to self-service, opened to BOSS_PEOPLE_HR and BOSS_PEOPLE_MANAGER (ALWAYS, as My team) and to the People
+          administrator and ADMIN through their ALWAYS on the root (BOSS_PPL_SCHEDULES);
+        - Holidays, HR's own editor (the user's call of Nov 11 put HR's editors out of Settings): denied to the root user group and to
+          self-service, opened to the HR officers (BOSS_PPL_HOLIDAYS).
+        Mantle's ScheduleServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and the employer again. Payroll is the payroll
+        groups' (denied to the root user group, ALWAYS for the payroll operator and approver, and the People administrator and ADMIN
+        through the root's ALWAYS); Rates' services check PAYROLL_VIEW and PAYROLL_EDIT for an employee's pay rate again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TIME" description="People time and leave, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Time.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_SCHEDULES" description="People working schedules">
         <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_PPL_TIME_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_PPL_TIME_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_PPL_TIME_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_PPL_HOLIDAYS" description="People holiday calendars">
@@ -5268,6 +5282,17 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_PAYROLL" description="People payroll">
+        <artifacts artifactName="component://mr-boss/screen/People/Payroll.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_OPERATOR" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_APPROVER" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
                 authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
 </entity-facade-xml>

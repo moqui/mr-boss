@@ -2625,6 +2625,135 @@ missing time"; PE-18, PE-23.
   Projects manager with `TIME_ENTRY_RATE` cannot see; a finance administrator sets a costing rate that People shows
   read only.
 
+**Built Nov 11 (P10).** mr-mantle 00765bfd, mr-boss (branch `ppl/p10`).
+- Checked first (the code over the plan): F57's list as found (the ten `BOSS_PROJECT_MANAGER` checks of
+  `ironstone.projects.TimeServices`, its links to `/qapps/Projects/...`, MyTime.qvue finding its path by `lastIndexOf`, the
+  `Projects/Time` paths of MyTime's terminal container, TimeEntries' import, EditEntry's three returns and the two prints, Rates'
+  `check#Money`); F61's lookup (rows with no party or work effort, work type and class matching or empty, most specific, then
+  newest; `laborFits` by rate id); `get#PayRateAccess` (no organization scope); `find#Timesheets`' missing list (the time keepers of
+  the managed projects only); how the shell calls a `today-source` (under the root that declares it, so its grant decides);
+  P9's worktree untouched so far. The `line` policy: Projects' demo keeps time at Services (Joe and Bob Developer, Ana Designer),
+  Joe has a line manager (Bob, BossDemoData), and TimeEntries and WorkTimesheets read john.doe as the approver of Joe's week, so
+  `line` on Services would change Projects; Retail holds only People's employees and Manufacturing's demo, whose operators have
+  no line manager (the policy falls back to the project rule; ManufacturingShopFloor passes). `line` is set on Retail alone.
+- Mantle:
+  - RatePurpose `RaprCost` seeded with RateAmount (HumanResourcesEntities); `RateServices` over a new module `CostingRates.js`:
+    `get#CostingRate` (Manufacturing's lookup rules unchanged; a class or a person's class at a date; priced false when no row
+    applies; reads no pay, checks no permission), `find#CostingRates` (`ACCOUNTING_ADMIN`, `ACCOUNTING_VIEW`, `PAYROLL_VIEW` or
+    `TIME_ENTRY_RATE`), `store#CostingRate` and `end#CostingRate` (`ACCOUNTING_ADMIN`; a change ends the row of the same scope
+    in effect and starts the next from now or later; `RATE_INVALID`, `RATE_COMING`, `REVISION_CHANGED`, `RATE_ENDED`,
+    `RECORD_UNAVAILABLE`), and `migrate#ProductionCostRates` (the data update: `RaprProductionCost` rows moved to `RaprCost`, each
+    in its own transaction, then the value removed; called from ProductionShopFloorData in place of the old value's seed);
+    `create#` and `update#RateAmount` refuse a `RaprCost` row without `ACCOUNTING_ADMIN`;
+  - ProductionShopFloor.js's `costingRate` calls `get#CostingRate` (`laborFits` stays); ProductionServices' description and the
+    one spec line name `RaprCost`;
+  - TimesheetServices: `get#LineReports` (the user's live reports by `PrtManager`, persons only), added to `find#Timesheets`'
+    missing list beside the managed projects' time keepers; `find#WeeksToSubmit` (the user's own weeks to submit, the rule of
+    Projects' Today, which `ProjectServices.get#ProjectTodayItems` now calls, unchanged);
+  - `PeopleServices.get#SelfService` answers `weeksToSubmit` (a probe; a failure logged and the card left out).
+- BOSS:
+  - `screen/People/Time.xml` (Time & leave, menu 8: Timesheets the default, My time, Time entries; TimesheetDetail, the prints,
+    the team timesheet, the terminal twin and the import out of the menu) and `screen/People/Payroll.xml` (Payroll, menu 10:
+    Rates), each mounting Projects' screens as they are; `BOSS_PPL_TIME` (an inheritable ALLOW on the area for
+    `BOSS_PEOPLE_SELF`, so the self-service employee keeps and submits their own week; every People user opens it through the
+    root) and `BOSS_PPL_PAYROLL` (denied to the root user group, ALWAYS for the payroll operator and approver); People.js's area
+    `payroll`, its link paths, the self-service context's `Time/MyTime` link; the keys `g t` and `g r`; the four timesheet topics on
+    the People root;
+  - Projects' owner contract (design-projects §8 "As built for People"): `TimeServices.get#TimeLinks` (the mount's time links from
+    `appRoot`; a work item's or project's link only for a user who opens Projects, read from their own grants), `appRoot` on
+    `get#MyWeek`, `find#TimesheetRows`, `get#TimesheetDetail` and `find#TimeEntryRows`, the screens' paths from `appRoot`, the ten
+    group checks as `TIME_ENTRY_RATE` (money) and `TIMESHEET_APPROVE` (a manager's visible projects, the approver's default
+    list), `get#TimePeople` with the live reports (MyWeek's pickers through it); BillingServices' `check#RateAccess` (client
+    billing with money, worker pay with money or `PAYROLL_VIEW`, labor costing read only to either) and `get#PayrollEmployees`
+    (payroll without money reads and sets only the pay rates of the employees of their People employers, on no project);
+    Rates' third chip Labor costing (read only), client billing and Which rate hidden from payroll, its person picker People's
+    employees under People;
+  - Accounting's owner contract (design-accounting §15 "As built"): CostingPolicies' Labor costing rates box (New rate, a row's
+    Change and End; the rows shared by every organization);
+  - MyTeam: each report's Last week (from the missing list) and Remind missing time on the selected people over
+    `send#MissingTimeReminders`; Home: Weeks not submitted for a manager or time approver, opening Timesheets' Missing;
+    SelfService: My time and Weeks to submit (`get#SelfServiceContext`'s `myTimeUrl`); Today: `get#TodayItems` adds the user's own
+    weeks to submit (kind `timesheet`, opening People's My time) for one who keeps time under People and does not open Projects;
+  - Commons' owner contract (design-drawers-commons): `get#TodayView` keeps a timesheet item's own link; a timesheet's record link
+    opens People's TimesheetDetail for a user with People's time area and not Projects;
+  - Manufacturing's demo rate `BOSS_MFG_RATE_RUN` is `RaprCost`; People's demo sets `{"ap":"line"}` on Retail.
+- Specs: Mantle `test/humanres/LaborCostingRate` (3 features, 0.65 s: the most specific dated row, a person's class, an ended row
+  and a row on a person unpriced, never the person's RaprVendor rate; store ending the rate in effect, a stale form, a coming
+  rate, no currency, payroll refused store and `create#RateAmount` with the same scope, payroll reading the rows read only, a
+  reader without a grant refused, a coming rate ended at its start, a pay rate not a costing rate; the data update moving a row
+  and removing the value, then nothing). The production labor event priced from a `RaprCost` row is ProductionShopFloor's labor
+  features (their rates `RaprCost` rows since this phase; one line changed). BOSS `test/People/PeopleTime` (4 features, 0.7 to
+  1.05 s: Remind missing time from My team reaching the manager's report and skipping Services' employee, Retail `line` and
+  Services `project`; the employee's week to submit as their Today item and self-service card under People, none for HR; the
+  manager approving the submitted week from People's Timesheets (its one html render under People: People's links, none to
+  Projects) and TimesheetDetail, HR refused; payroll setting and reading Tomas's pay rate, refused Kenji's and a client rate,
+  reading the costing row read only, People's Rates' one html render, HR's rows refused). `PeopleAccess` gains a feature (0.15 s:
+  the employee opens My time under People by the area's grant and is refused Payroll and Employees; HR refused Rates), its menu
+  feature the payroll operator's menu and the Time group, its capabilities the `payroll` area, its context feature the
+  employee's My time link; `PeopleSpecLib`'s menus and keys; `PeopleSelfService`'s SelfService render checks My time and Weeks to
+  submit, its My team render Last week and Remind missing time. Acceptance, written and not run: `acceptance/People/PeopleTimeUsable`
+  (3 features); `PeopleFoundationWalk` walks the admin menu, which now holds Time and Payroll.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle LaborCostingRate, ProductionShopFloor,
+  HumanResServices, PayrollServices, PeopleChecklists, PeopleScope, PeopleDirectory, CommonsToday, WorkManualTimeBilling,
+  WorkManualTimeRates, WorkPlanToCashBasicFlow, WorkProjectBilling, WorkProjectMilestones, WorkProjectReports, WorkResources,
+  WorkTimeEntries, WorkTimesheets, AccountingProjectCost and WorkProjectHub with their dependencies 184 of 184 (mr-mantle 23.5 s
+  of features); BOSS PeopleAccess, PeopleSelfService, PeopleTime, PeopleEmployees, PeopleHire, PeopleLifecycle, PeopleApprovals,
+  TimeEntries, Billing, ClientBilling, Reports, ProjectRequests, ProjectsAccess, Projects, ProjectsHome, WorkItemDetail,
+  Resources, ManufacturingShopFloor, ManufacturingAccess, AccountingProductionCostClose, TodayPanel, Notifications, Tasks, Chatter
+  and AppOrganizationFilters with their dependencies 196 of 196 (mr-boss 35.7 s of features). `moqui lint --screens`: 135 flagged
+  sites as before, none in the screens P10 touched, no new TUI worklist entry. Prettier clean on the new and changed JavaScript.
+  Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: ss-inventory's P10 note and the TimeEntries, EditTimeEntry, PartyTimeEntries and EditRateAmounts rows (People's
+  mounts); usl-inventory's RateServices, TimeServices and TimesheetServices rows with People's mounts, and the new services.
+- Design edits: design-people (header; §1.2 the menu; §1.4 Today; §3 Home, MyTeam, SelfService; §13's as-built block; PE-23);
+  design-projects §8 "As built for People" (owner contract); design-accounting §15 LaborCostingRates as built; design-manufacturing
+  §3's costing rate; design-drawers-commons (header, §5 Home).
+- Findings (provisional, numbered by the lead):
+  - `line` is set on Retail alone: Services is Projects' demo organization, where Joe's line manager (Bob) would replace john.doe
+    as his approver, which Projects' specs read; People's Services employees (Amara's team) keep the project rule in the demo;
+  - the timesheet topics' links (BossSetupData's `TimesheetApproval`, `TimesheetReturned`, `TimesheetApproved`, `TimesheetMissing`)
+    open Projects' screens, one template per topic, so a People-only approver's email opens a screen they are refused; the tray
+    opens the record by `get#RecordLink` (now People's TimesheetDetail for them), but `TimesheetMissing` for a week with no
+    timesheet has no record;
+  - an employee without Projects logs time only on a work item of a project they are on or a task they may update in Projects
+    (`check#TimeItem`), else on no work item; People's demo employees are on no project, so their weeks are entries with no item;
+  - the labor costing rates carry no organization (RateAmount has none and the lookup reads none, F61), so CostingPolicies' box
+    is every organization's and design-accounting's "organization" field is not built; `get#CostingRate` ignores currency, as
+    production did, so rows in several currencies are the reader's to convert;
+  - People's Rates limits payroll's pay rows to the employees of their People employers (`get#PayrollEmployees`), but Mantle's
+    `get#PayRateAccess` has no organization scope, so a holder of both `TIME_ENTRY_RATE` and `PAYROLL_VIEW` in Projects' Rates
+    reads any employee's pay rate (as before);
+  - `get#CostingRate` takes a person's class from their dated occupancy row (EmplPositionParty), production's rule, not from
+    `Employment.emplPositionId` (P6's seat in effect); a person seated only on the employment gets no class;
+  - My team's Last week lists every live report as Not submitted when they keep no time (the missing list is every report, not
+    only time keepers); Remind skips those whose week the manager does not approve (a `project`-policy employer);
+  - Today's week items come from People only for a user who does not open Projects; a user of both gets Projects' item, opening
+    Projects' My time;
+  - Home's Weeks not submitted runs the missing list (each person's expected hours) on every manager's Home render;
+  - `ironstone.projects.TimeServices.get#TimePeople` still reads `isInGroup('ADMIN')` for every time keeper (Mantle's convention
+    for ADMIN), as `find#Timesheets` and `get#TimesheetAccess` do.
+- For the lead:
+  - budget share: mr-mantle about 0.65 s (LaborCostingRate); mr-boss about 1.0 s (PeopleTime 0.7 to 1.05 s, PeopleAccess's new
+    feature 0.15 s, its menu feature about +0.05 s); the client walk unchanged;
+  - merge hot spots (P9 runs beside): mr-mantle `TimesheetServices.xml` (P9 changes `get#WeekDays`; P10 adds `get#LineReports`
+    before `find#Timesheets`, `find#WeeksToSubmit` before `send#MissingTimeReminders` and changes `find#Timesheets`' missing
+    list), `ProjectServices.xml` (`get#ProjectTodayItems`' timesheets part), `Employees.js` (`selfService`, `weeksToSubmit`),
+    `PeopleServices.xml` (`get#SelfService`), `HumanResourcesEntities.xml` (the RatePurpose seed), `RateServices.xml`,
+    `ProductionShopFloorData.xml`, `ProductionShopFloor.js`; mr-boss `screen/People/Time.xml` (new here; P9 puts Working
+    schedules under Time & leave and will likely make the same file), `screen/People.xml` (header comment, keymap, topics),
+    `People/MyTeam.xml` (Team's columns, P9's schedule), `People/Home.xml`, `Shared/PeopleSelfService.xml`, `People.js` (areas,
+    linkPaths, sharedContext's self links, today, selfServiceContext and the new functions), `ContextServices.xml`,
+    `BossSetupData.xml` (appended block), `BossPeopleDemoData.xml` (appended block), `BossManufacturingDemoData.xml`,
+    `PeopleSpecLib.js` (menus, keys: P9 adds its entries to `staffMenu`, `adminMenu`, `timeMenu`, `settingsMenu`),
+    `PeopleAccess.spec.js`, `PeopleSelfService.spec.js`, the inventories, design-people's header, §1.2, §1.4, §3, §13 and PE-23;
+    Projects' `TimeServices.xml`, `BillingServices.xml`, the time screens and Rates, Accounting's CostingPolicies, Commons'
+    `CommonsServices.xml` and `PaletteServices.xml`;
+  - acceptance to run with the full suites: PeopleTimeUsable (new) and PeopleFoundationWalk (the admin menu gains Time and
+    Payroll);
+  - the user's call: whether the timesheet topics' links should open People's screens for a People-only user (a per-app
+    template is not available: one link template per topic), and whether My team's Last week should list only reports who keep
+    time.
+
 ### P11 — Leave policies, allocations and balances
 
 Design §7 (the model), LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances; PE-07.

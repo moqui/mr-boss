@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
                     breakHours:(breakHours || null), billable:(billable || 'Y'), workTypeEnumId:(workTypeEnumId || null), comments:(comments || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(saveOut.message, 'success')</script></if>
         </actions>
-        <conditional-response url="//Projects/Time/MyTime">
+        <conditional-response url="//${appRoot == 'People' ? 'People' : 'Projects'}/Time/MyTime">
             <condition><expression>myTimeWeek &amp;&amp; !ec.message.hasError()</expression></condition>
             <parameter name="weekDate" from="myTimeWeek"/><parameter name="partyId" from="myTimePartyId"/>
         </conditional-response>
@@ -50,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
                     vendorHourRate:vendorHourRate, reset:(reset == 'Y')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(ratesOut.message, 'success')</script></if>
         </actions>
-        <conditional-response url="//Projects/Time/MyTime">
+        <conditional-response url="//${appRoot == 'People' ? 'People' : 'Projects'}/Time/MyTime">
             <condition><expression>myTimeWeek &amp;&amp; !ec.message.hasError()</expression></condition>
             <parameter name="weekDate" from="myTimeWeek"/><parameter name="partyId" from="myTimePartyId"/>
         </conditional-response>
@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.projects.TimeServices.delete#WeekEntry" out-map="deleteOut" in-map="{timeEntryId:timeEntryId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(deleteOut.message, 'success')</script></if>
         </actions>
-        <conditional-response url="//Projects/Time/MyTime">
+        <conditional-response url="//${appRoot == 'People' ? 'People' : 'Projects'}/Time/MyTime">
             <condition><expression>myTimeWeek &amp;&amp; !ec.message.hasError()</expression></condition>
             <parameter name="weekDate" from="myTimeWeek"/><parameter name="partyId" from="myTimePartyId"/>
         </conditional-response>
