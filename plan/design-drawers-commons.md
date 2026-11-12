@@ -944,7 +944,8 @@ Manufacturing's production runs) changes only in that app; EventDetail shows it 
 writes (403).
 
 **Who books for an event (Nov 12, 2026; impl-maintenance F356, F357).** A booking changes no event, so the rooms and equipment of
-an event are booked, cancelled and rechecked by whoever may change it and, for an event an app keeps, by its organizer
+an event are booked, cancelled and rechecked by whoever may change it and, for a meeting an app keeps (People's interview or training session; not leave or a production
+run, which stay with their apps), by its organizer
 (`check#EventAccess` `canBook`; `book#Resource`, `cancel#ResourceBooking` and `check#ResourceBookings` ask permission `book`),
 with every booking rule (policy, blocks and outages, approval, the resource lock, Busy). An attendee is refused. The app moves and
 cancels its own events and keeps their bookings right through Mantle's `ResourceBookingDecisions.js` `keptEventMoved` (the

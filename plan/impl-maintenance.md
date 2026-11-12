@@ -5705,7 +5705,7 @@ leave (`WetTimeOff`) and no training session.
 
 **Review Nov 12 (follow-ups F356–F360).** A fresh review of mnt/fu (mr-mantle ae0d18b1, mr-boss 4b804b88) against F356–F360,
 the follow-up note, §2, AGENTS.md and Practices-App-Dev, with the lead's calls on the worker's two open gaps; fixes in mr-mantle
-35213411 and mr-boss (this commit).
+35213411 and f78c839c (R4) and mr-boss efec5192 and this commit.
 - Checked and found sound:
   - `canBook` (`check#EventAccess`) is canEdit, or for a kept event being its organizer; a calendar editor of a kept event, a
     calendar viewer, an attendee and a user who cannot see the event (another organization) are refused, and with no user and
@@ -5746,13 +5746,17 @@ the follow-up note, §2, AGENTS.md and Practices-App-Dev, with the lead's calls 
     only its organizer books: a calendar editor or viewer, another organization and no user are refused; an approval notice skips
     a catch-all subscriber" (the editor of the same calendar books for a plain event; the subscriber check fails without
     `directOnly`).
+  - R4 (Low, the lead's call on the review's recommendation): `canBook` reached every kept event's organizer, so the person of an
+    approved leave's "Out of office" and a production run's owner could book a room or equipment on it through `book#Resource`.
+    `check#EventAccess` now gives a kept event's organizer `canBook` only for a meeting (a WetEvent other than a production run:
+    People's interview or training session); leave and production runs stay with their apps, their organizers refused as any
+    non-editor ("... books no rooms or equipment here; it is changed on ..."). ResourceBookingDecisions' R3 feature adds Ann
+    refused booking on her own leave (fails without the fix); rerun: ResourceBookingDecisions 9, Recruiting 10, Training 4,
+    LeaveRequests 5 (28 of 28), EventDetail 15 and Schedules 6 (21 of 21).
 - Findings:
   - Manufacturing's production runs are kept events whose moves and cancels do not call `keptEventMoved` or
     `keptEventCancelled`; their work centers are booked by Manufacturing's own rules, not `book#Resource`, but a room or equipment
     booked on a run through the services would not be rechecked or withdrawn. For later, with Manufacturing.
-  - `canBook` reaches every kept event's organizer: the person of an approved leave's "Out of office" (PeopleLeave) and a
-    production run's owner may book a room or equipment on it through `book#Resource` (no screen offers it: EventDetail refuses
-    both). Harmless, but a booking on leave holds a room for nothing.
   - Dispatch takes a person's session hours off the whole window's free hours, not day by day, so a session on a day with no
     capacity (a weekend, a holiday, leave) still takes hours off. Rare; a day-wise figure needs `get#PartyCapacity`'s dayList.
   - People's interview and training screens have no link to their event's EventDetail booking box; the organizer reaches it from
@@ -5767,9 +5771,8 @@ the follow-up note, §2, AGENTS.md and Practices-App-Dev, with the lead's calls 
   `./moq test-apps`, the acceptance suite.
 - For the lead: budget share +0.4 s mr-mantle, +0.2 s mr-boss. Merge hot spots: Commons' `ScheduleServices.get#ResourceBookings`,
   `CalendarServices.get#EventAccessInfo`, `EventServices.get#EventDetail` and EventDetail.xml's Where box; People's Training.js,
-  Recruiting.js and Leave.js (the worker's hooks, unchanged here). The user's call, open: whether `canBook` should be limited to
-  kept events of type WetEvent (interviews and training sessions), leaving leave and production runs to their apps; recommended,
-  a one-line change in `check#EventAccess`.
+  Recruiting.js and Leave.js (the worker's hooks, unchanged here). No user's call open: limiting `canBook` to kept meetings was
+  decided by the lead and built as R4.
 
 ## 4. Decisions
 
