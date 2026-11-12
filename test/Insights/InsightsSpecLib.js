@@ -118,8 +118,24 @@ function shell(user, menuOnly = false) {
         }
     })
 }
+// A transition of an Insights screen asked as the user through a root (Insights' own, or webroot for another app's route),
+// posted unless it is a read (method null); no page is rendered. Where it sends the browser, its errors and what it
+// answered.
+function transition(user, root, path, parameters, method = "post") {
+    return asUser(user, () => {
+        const result = ec.screen.makeTest().rootScreen(root).render(path, parameters, method)
+        const out = {
+            status: result.status,
+            location: String(result.header("Location") || ""),
+            errors: Array.from(result.errorMessages || []).join(" | "),
+            output: String(result.output || "")
+        }
+        ec.message.clearErrors()
+        return out
+    })
+}
 // The framework's report screens Insights mounts by location (mr-moqui plans/Admin-Screens-Down.md, Track I: Library panels,
-// and Report builder's Explore and Compare), as [path under Insights, location], read from the subscreens items of the root
+// Report builder's Explore and Compare, and Scheduled reports' three screens), as [path under Insights, location], read from the subscreens items of the root
 // and of each area: the screen sweeps (acceptance InsightsTui and InsightsServerStatic) list Insights' screens from its own
 // files, which these have left.
 function mountedScreens() {
@@ -139,4 +155,4 @@ function mountedScreens() {
     return found
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell, mountedScreens})
+;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell, transition, mountedScreens})

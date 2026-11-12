@@ -17,7 +17,6 @@ const {ids, users, asUser, system, invoke} = lib
 const R = "org.moqui.report.ReportServices."
 const G = "ironstone.insights.RegistryServices."
 const A = "ironstone.insights.AssistServices."
-const D = "ironstone.insights.DeliveryServices."
 const F = "ironstone.insights.FlowMapServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const range = {from: "now-10y", thru: "now+1d"}
@@ -259,11 +258,13 @@ feature("Assist answers from the same scoped query as the page; another organiza
 
 feature("schedules and alerts reach only owner-equivalent recipients, each refusal named without the other's data", {
     when() {
-        const audience = attempt(users.distributor, D + "check#Audience", {
+        // the engine's own audience check, which Scheduled reports' screens (the framework's) ask as the viewer: the
+        // distributor's, and not a reader's
+        const audience = attempt(users.distributor, R + "check#ReportAudience", {
             definitionId: "mantle-sales",
             recipientUserIds: [people.reader, people.services]
         })
-        const readerAudience = attempt(users.reader, D + "check#Audience", {definitionId: "mantle-sales", recipientUserIds: [people.services]})
+        const readerAudience = attempt(users.reader, R + "check#ReportAudience", {definitionId: "mantle-sales", recipientUserIds: [people.services]})
         const title = "Review walk breaches " + run
         const copied = attempt(users.distributor, "ironstone.insights.AlertServices.copy#Alert", {definitionId: "boss-service-sla-breach", title})
         let draft = {}

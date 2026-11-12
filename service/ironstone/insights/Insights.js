@@ -310,13 +310,15 @@ function reportLinks(capabilities) {
 // - datasetScopeParameter, datasetScopeLabel and datasetScopeHelp: the dataset forms' scope field under Insights, the
 //   field that carries a row's organization: its words, and the rowFilterParameters entry it is sent in under a scope
 //   policy whose registration names none (Mantle's organization policy takes organizationField);
-// - recipientPermissionId: whom a distributor may propose (Delivery.js readerIds: Insights' readers);
-// - reportEmailTemplateId and alertAudience: the fixed parts of a schedule and of an alert rule (Delivery.js TEMPLATE;
-//   Alerts.js TOPIC, TEMPLATE and DETAIL_LINK);
+// - recipientPermissionId: whom a distributor may propose and name, Insights' readers (the module's recipientPermissionId,
+//   one value: the framework's schedule screens ask find#ReportRecipients with it, and Delivery.js proposable reads it for
+//   an alert rule);
+// - reportEmailTemplateId: the message of a schedule saved under Insights, written here only;
+// - alertAudience: the fixed parts of an alert rule (Alerts.js TOPIC, TEMPLATE and DETAIL_LINK);
 // - shareGroups: the wall displays, beside the sharer's own groups (get#ShareGroups);
 // - calendar: the display zone and week start of the organization in scope (calendarParameters), nothing where it set none.
-// The recipient cap (recipientCap below) is not read for every request: the screens that deliver set it where they are
-// mounted.
+// The recipient cap (recipientCap above) is not read for every request: the area that delivers adds it (deliveryPolicy
+// below, set by Scheduled reports through the framework's ReportMount.js policyWith).
 function reportPolicy(capabilities, settings) {
     const weekOffset = settings.weekStart
         ? one("moqui.basic.Enumeration", {enumId: settings.weekStart, enumTypeId: "InsightsWeekStart"})?.enumCode || null
@@ -484,7 +486,12 @@ function answering(parameters, read) {
     }
 }
 
-const operations = {context, shareGroups, shareDashboard}
+// get#DeliveryPolicy: what a delivering area adds to the root's reportPolicy, the recipient cap of the caller's scope.
+function deliveryPolicy() {
+    return {recipientCap: recipientCap(required())}
+}
+
+const operations = {context, shareGroups, shareDashboard, deliveryPolicy}
 ;({
     // the scope for a later phase's own module: the user's scope, the same refusing a user without Insights
     scope,
@@ -503,6 +510,8 @@ const operations = {context, shareGroups, shareDashboard}
     organizationSettings,
     recipientCeiling,
     recipientCap,
+    // whom a distributor may propose and name: Insights' readers (reportPolicy's recipientPermissionId)
+    recipientPermissionId: capabilityPermissions.view,
     calendarParameters,
     partyName,
     organizationIds,

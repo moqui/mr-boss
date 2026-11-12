@@ -4302,9 +4302,12 @@ along with this software (see the LICENSE.md file). If not, see
         The copied ScheduledReports (BOSS_INS_LEGACY, impl-insights F20) is replaced by Insights' own list, every Insights user's to
         open (Received is every reader's): the group's last pattern row is reloaded as a plain name, which no screen location
         equals, so it denies nothing (as F65's rows), on a fresh load and an existing instance alike. No screen grant is added:
-        the root's ALLOW opens Scheduled reports and Management digest, each transition reaches an ironstone.insights
-        DeliveryServices operation that checks INSIGHTS_SCHEDULE or INSIGHTS_DISTRIBUTE itself, and the report engine's
-        operations stay denied (BOSS_INS_REPORT_ENGINE) but for the grants below. -->
+        the root's ALLOW opens Scheduled reports and Management digest. Scheduled reports' three screens are the framework's
+        Dashboards screens, mounted by location (mr-moqui plans/Admin-Screens-Down.md, Track I): no row names them or a
+        transition of theirs, each transition reaches the report engine's operations as the viewer, and those stay denied
+        (BOSS_INS_REPORT_ENGINE) but for the grants below, which are therefore who may schedule, deliver to others and read
+        deliveries. Management digest's transitions reach ironstone.insights DeliveryServices, which checks the INSIGHTS_*
+        permissions itself. -->
     <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
         <artifacts artifactName="component://mr-boss/screen/Insights/ScheduledReports\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
@@ -4323,7 +4326,12 @@ along with this software (see the LICENSE.md file). If not, see
         recipient; a recipient other than the owner also needs the group delivery artifact below), the owner's list, pause,
         Send now, retry and reconciliation. P1's BOSS_INS_REPORT_SCHEDULE keeps the distributor's create#Schedule (owner mode),
         which no Insights screen calls; a schedule it makes over a business dataset is held to the same recipient check at
-        each run (mr-moqui crates/moqui-report/src/delivery.rs). -->
+        each run (mr-moqui crates/moqui-report/src/delivery.rs). And what the framework's schedule screens read and write
+        beside the engine's own: the screen schedules a user set up for themselves (the copied scheduled finds, listed under
+        Mine and changed in their timing: find#ScreenSchedules, store#ScreenSchedule, each the caller's own rows alone), and
+        find#ReportRecipients, which the list asks at every render and which answers an account or a group only to a caller
+        who holds the group delivery artifact below (the distributor), and then only Insights' readers (the root's
+        reportPolicy names INSIGHTS_VIEW). -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_OWN" description="Insights: scheduling reports for oneself">
         <artifacts artifactName="org.moqui.report.ReportServices.store#Schedule" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.list#Schedules" artifactTypeEnumId="AT_SERVICE"/>
@@ -4331,6 +4339,9 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.send#Report" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.retry#ReportRecipients" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.reconcile#ReportRecipient" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ScreenSchedules" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.store#ScreenSchedule" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.find#ReportRecipients" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_OWN_READ" userGroupId="BOSS_INSIGHTS_READ"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_OWN_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"

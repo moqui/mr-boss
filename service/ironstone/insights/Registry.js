@@ -691,15 +691,15 @@ function findRoute(row, grants) {
 }
 
 // ===== legacy mapping (design §13.2; P12) =====
-// The copied report screens' lists that moved when Insights replaced them (impl-insights F20; P3's dataset fields, P7's
-// scheduled finds): a saved find on the left is rewritten to the right by migrate#LegacySavedFinds, and a schedule of the old
-// screen path to the new one. A find on any other list that is gone (the copied builder's raw document list, the legacy report
-// picker) is left as it is: SavedReports shows it as not valid.
+// The copied report screens' lists that moved when Insights replaced them (impl-insights F20; P3's dataset fields): a saved
+// find on the left is rewritten to the right by migrate#LegacySavedFinds, and a schedule of the old screen path to the new
+// one (P7's scheduled finds). A find on any other list that is gone (the copied builder's raw document list, the legacy
+// report picker, the copied list of scheduled finds: the list of schedules is the framework's now, mounted by location, and
+// keeps no saved finds) is left as it is: SavedReports shows it as not valid.
 const legacyScreen = "component://mr-boss/screen/Insights/"
 const legacyLists = {
     "ReportBuilder/DatasetDetail/FieldList.xml.form_list$FieldList": "ReportBuilder/DatasetFields.xml.form_list$FieldList",
-    "ReportBuilder/DatasetDetail/FieldList.xml.form_list$ConditionList": "ReportBuilder/DatasetFields.xml.form_list$ConditionList",
-    "ScheduledReports.xml.form_list$ScreenScheduledList": "ScheduledReports/Schedules.xml.form_list$ScreenScheduledList"
+    "ReportBuilder/DatasetDetail/FieldList.xml.form_list$ConditionList": "ReportBuilder/DatasetFields.xml.form_list$ConditionList"
 }
 const legacyPaths = {
     "Insights/ReportBuilder/DatasetDetail/FieldList": "Insights/ReportBuilder/DatasetFields",
