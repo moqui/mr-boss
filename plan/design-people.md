@@ -658,7 +658,10 @@ Applicants remain Person parties with a proposed Applicant role, separate from e
 **As built (Commons calendar editors, Nov 12, 2026).** An interview's event is People's (`EventManager` PeopleInterview): its
 recruiter changes its time, length, place or note (`change#Interview`) and cancels it (`cancel#Interview`) from its row in the
 Interviews box, the attendees told; Commons' EventDetail shows it read-only, saying it is changed here, and no attendee puts it in a
-calendar.
+calendar. The invitations of a schedule, change or cancel go once it commits (People follow-up 1, F358: a tx-commit rule runs
+`send#InterviewInvitations` as the system in a transaction of its own), so a failed send is logged and never undoes the interview;
+the screen says they are on their way. Approved leave's "Out of office" is People's the same way (`EventManager` PeopleLeave): it
+changes only with its request, never by its employee on the calendar or a phone.
 
 
 

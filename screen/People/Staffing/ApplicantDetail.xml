@@ -62,28 +62,28 @@ along with this software (see the LICENSE.md file). If not, see
         panel, the scorecard and the stage) -->
     <transition name="scheduleInterview">
         <actions>
-            <service-call name="mantle.humanres.RecruitingServices.schedule#Interview" out-map="scheduled"
+            <service-call name="mantle.humanres.RecruitingServices.schedule#Interview"
                     in-map="{employmentApplicationId:employmentApplicationId, startDate:(startDate || null),
                         durationMinutes:(durationMinutes || null),
                         panelPartyIds:(Array.isArray(panelPartyIds) ? panelPartyIds.join(',') : (panelPartyIds || null)),
                         formId:(formId || null), videoCall:(videoCall == 'Y'), location:(location || null),
                         inviteCandidate:(inviteCandidate == 'Y'), note:(note || null)}"/>
             <if condition="!ec.message.hasError()">
-                <message type="success">${scheduled.invitationsSent ? 'Interview scheduled; the panel and the candidate are invited' : 'Interview scheduled; the invitations were not sent: send them from the interview'}</message>
+                <message type="success">Interview scheduled; the invitations are on their way</message>
             </if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
         <error-response url="."><parameter name="employmentApplicationId"/></error-response>
     </transition>
     <!-- an interview changed or cancelled here, the only place its event changes (Mantle checks the recruiter and the times; the
-        attendees are told) -->
+        attendees are told once it commits) -->
     <transition name="changeInterview">
         <actions>
-            <service-call name="mantle.humanres.RecruitingServices.change#Interview" out-map="changed"
+            <service-call name="mantle.humanres.RecruitingServices.change#Interview"
                     in-map="{workEffortId:workEffortId, startDate:(startDate || null), durationMinutes:(durationMinutes || null),
                         location:(hasCall == 'Y' ? null : (location ?? '')), note:(note || null)}"/>
             <if condition="!ec.message.hasError()">
-                <message type="success">${changed.invitationsSent ? 'Interview changed; the attendees are told' : 'Interview changed; the attendees were not told'}</message>
+                <message type="success">Interview changed; the attendees are being told</message>
             </if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
@@ -91,10 +91,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="cancelInterview">
         <actions>
-            <service-call name="mantle.humanres.RecruitingServices.cancel#Interview" out-map="cancelled"
+            <service-call name="mantle.humanres.RecruitingServices.cancel#Interview"
                     in-map="{workEffortId:workEffortId, reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <message type="success">${cancelled.invitationsSent ? 'Interview cancelled; the attendees are told' : 'Interview cancelled; the attendees were not told'}</message>
+                <message type="success">Interview cancelled; the attendees are being told</message>
             </if>
         </actions>
         <default-response url="."><parameter name="employmentApplicationId"/></default-response>
