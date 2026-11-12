@@ -2,7 +2,7 @@
 
 Nov 11, 2026 — screens moved to the framework (§9): after gate 5 the generic screens of Admin became the framework's
 System screens, which Admin shows under its root, and the readiness, refresh and settings registries the framework's
-(mr-moqui `plans/Admin-Screens-Down.md`, phases A0 to A6). The phase entries below stay as the record of the build;
+(mr-moqui `plans/archive/Admin-Screens-Down.md`, phases A0 to A6). The phase entries below stay as the record of the build;
 §9 says where a file or a service they name is now.
 Nov 11, 2026 — gate 5 built: every phase of both plans (Admin P1–P19, Insights P1–P12), each reviewed by a fresh agent
 and merged on its focused specs. Next: the full suites and the acceptance suite, run once (the user's call); their
@@ -5378,7 +5378,7 @@ the owner's design.
 | Nov 11, 2026 | In BOSS the data operator exports only a contact book they may themselves view: an export target adds no right to read | The user's call (Nov 11), confirming F249 (P16) |
 | Nov 11, 2026 | The access log dataset's artifact is granted to no group: `ironstone.admin.AuditServices.get#AccessLog` checks `ADMIN_AUDIT_VIEW` and reads the one dataset itself, under both row filters, so a line is never read whole through the engine (a dataset has no field list, and a holder with an Insights group read recipient addresses and setting values). The audit reader therefore cannot chart the access log in Insights | P17 review, F272; over the plan's and design §12's grant to `BOSS_ADMIN_AUDIT`; design §12 changed |
 | Nov 11, 2026 | An app's own import target names an import permission of that app (`PEOPLE_IMPORT`, `MAINTENANCE_IMPORT`, `SALES_IMPORT`, `MARKETING_AUDIENCE_IMPORT`) beside the app's edit permission, and no `ADMIN_*` permission. Admin's Imports lists such a run for a data operator who also holds the app's view permission | The user's call (Nov 11; impl-sales §4, and §4 of impl-people, impl-maintenance and impl-marketing). A rows-mode target requires every permission it lists (framework service/org/moqui/admin/DataTransferImports.js:37-41, DataTransferBatch.js:82), so `ADMIN_TRANSFER_RUN` beside them, as staff invitations have, would shut the app's own users out of their import; a wizard-mode target's permission is checked by its owner's wizard services. Design §11.1 |
-| Nov 11, 2026 | The generic screens of Admin are the framework's System screens, which Admin mounts by location, wraps, or builds its own screens around; the readiness, refresh and settings registries are framework records and `org.moqui.admin.ReadinessServices`, with `check#OwnerReadiness` and its organization scope kept here; the Developer tools area is removed | The user's call (Nov 11). It reverses the Nov 7 row on the §14 registries for these three (LifecycleParticipant stays a BOSS record); §9; mr-moqui `plans/Admin-Screens-Down.md`; design §1.4, §13, §14 and §18 changed |
+| Nov 11, 2026 | The generic screens of Admin are the framework's System screens, which Admin mounts by location, wraps, or builds its own screens around; the readiness, refresh and settings registries are framework records and `org.moqui.admin.ReadinessServices`, with `check#OwnerReadiness` and its organization scope kept here; the Developer tools area is removed | The user's call (Nov 11). It reverses the Nov 7 row on the §14 registries for these three (LifecycleParticipant stays a BOSS record); §9; mr-moqui `plans/archive/Admin-Screens-Down.md`; design §1.4, §13, §14 and §18 changed |
 
 ## 5. Open questions
 
@@ -5602,7 +5602,7 @@ Designed, not in this build:
 After gate 5 the screens of Admin that have no business model in them moved to the framework's System app
 (`runtime/base-component/tools/screen/System/`), with the old raw System screens folded in as parts for the instance
 administrator, and Admin shows them under its own root. The plan and the record of each phase, with its findings and
-tests, are mr-moqui's [plans/Admin-Screens-Down.md](../../../../plans/Admin-Screens-Down.md) (Track A, phases A0 to
+tests, are mr-moqui's [plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md) (Track A, phases A0 to
 A6). How an app mounts the screens is in the tools component's
 [README](../../../../runtime/base-component/tools/README.md#mounting-the-administration-screens), and what each Admin
 screen is now in [design-admin §1.4](design-admin.md#14-screens-that-are-the-frameworks). The phase entries of §3 are

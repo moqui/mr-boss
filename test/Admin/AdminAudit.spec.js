@@ -5,7 +5,7 @@
 // targets written under its own organization's people, their addresses counted and their values left out, and no other log
 // line whatever is asked of the dataset; the dataset itself is granted to no group, so the engine answers its whole lines to
 // no Admin group. AuditChanges is the framework's System › Audit screen mounted by location (mr-moqui
-// plans/Admin-Screens-Down.md), over org.moqui.admin.AuditServices.find#Changes: a record's place is a route of the mount,
+// plans/archive/Admin-Screens-Down.md), over org.moqui.admin.AuditServices.find#Changes: a record's place is a route of the mount,
 // shown as a link the audit reader cannot follow where its screen does not open to them. One html render each of
 // AuditChanges and AccessLog (their lists' rows are in the html). The framework's rules are its AdminAuditChanges spec,
 // the organization scope of changes Mantle's IdentityAudit.

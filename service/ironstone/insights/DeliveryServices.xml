@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Insights' management digests (design-insights §7.3; impl-insights P7, INS-11; Delivery.js) and the caller's own preview of a
     digest or dashboard as a file. Scheduled delivery and business alerts themselves are the framework's: Scheduled reports
     and Business alerts show the framework's Dashboards screens, which read and write through
-    org.moqui.report.ReportServices (mr-moqui plans/Admin-Screens-Down.md, Track I). Every write answers a refusal as applied
+    org.moqui.report.ReportServices (mr-moqui plans/archive/Admin-Screens-Down.md, Track I). Every write answers a refusal as applied
     false with reasonCode and reason. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="preview" noun="Report" allow-remote="false" transaction="ignore">

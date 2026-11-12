@@ -1,4 +1,4 @@
-// Admin's part of the readiness registry (impl-admin P2; design-admin §3, §10, §14; mr-moqui plans/Admin-Screens-Down.md A6).
+// Admin's part of the readiness registry (impl-admin P2; design-admin §3, §10, §14; mr-moqui plans/archive/Admin-Screens-Down.md A6).
 // The registries are the framework's (moqui.server ReadinessProvider, RefreshOperation and SettingsEntry, read by
 // org.moqui.admin.ReadinessServices, which calls each registered service as the viewer and holds the framework's own checks).
 // What stays here is BOSS's:

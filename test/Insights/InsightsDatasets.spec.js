@@ -4,7 +4,7 @@
 // sends; DatasetView's one qvt render (the author's, Retail's rows only) and its scoped export, the same rows; the dataset's
 // readiness and its index refresh through Admin's registries, the refresh the steward's; the steward's own dataset names
 // neither the log index nor the sales document without its filter (impl-admin F277). The four dataset screens are the
-// framework's Dashboards screens at Insights' locations (mr-moqui plans/Admin-Screens-Down.md, Track I): through Insights'
+// framework's Dashboards screens at Insights' locations (mr-moqui plans/archive/Admin-Screens-Down.md, Track I): through Insights'
 // route a dataset the steward creates is named insights- and scoped on its organization field (Insights' reportPolicy), an
 // author creates none, and the Dashboards screens' own transitions, which Insights does not take in, are not on the route.
 // The engine's admission rules and what the screens read are the framework's BusinessDatasets, and the organization filter

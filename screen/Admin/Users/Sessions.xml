@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Sessions (design-admin §4 Sessions; style-guide §3.2 List; mr-moqui plans/Admin-Screens-Down.md): the sessions of the staff
+<!-- Sessions (design-admin §4 Sessions; style-guide §3.2 List; mr-moqui plans/archive/Admin-Screens-Down.md): the sessions of the staff
     identities of the organizations the user administers, as Admin's own screen for what Admin adds to the framework's
     System › Security sessions screen: the identities are Mantle's (find#Users, narrowed by an organization the user
     administers), their sessions the framework's org.moqui.admin.IdentityServices.find#Sessions, the one session definition

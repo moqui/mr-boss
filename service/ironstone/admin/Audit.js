@@ -1,7 +1,7 @@
 // Admin's access evidence, ironstone.admin.AuditServices (design-admin §12 AccessLog, §16 "Audit evidence"; impl-admin
 // P17): what Admin › Audit's AccessLog shows, and its print and CSV, which are the same list. Change evidence, the area's
 // other screen, is the framework's (System › Audit's AuditChanges mounted by location, over
-// org.moqui.admin.AuditServices.find#Changes; mr-moqui plans/Admin-Screens-Down.md): nothing of it is here, and a
+// org.moqui.admin.AuditServices.find#Changes; mr-moqui plans/archive/Admin-Screens-Down.md): nothing of it is here, and a
 // record's place in Admin is a route of the mount (Admin.js mountRoutes).
 //
 // Access evidence is the report engine's own read of the shipped dataset admin-access-log (report/admin-access-log.json: the

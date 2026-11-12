@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Admin › Audit's AccessLog shows, prints and writes as CSV. Change evidence, the area's other screen, is the
     framework's (System › Audit's AuditChanges mounted by location, over org.moqui.admin.AuditServices.find#Changes:
     registered projections only; a record of an organization found by its owner within the user's scope; a secret never
-    a value; mr-moqui plans/Admin-Screens-Down.md) and has no service here. Access evidence is the report engine's own
+    a value; mr-moqui plans/archive/Admin-Screens-Down.md) and has no service here. Access evidence is the report engine's own
     read (org.moqui.report.ReportServices.query#Documents) of the shipped dataset admin-access-log, which is granted to no
     group: get#AccessLog checks the permission and reads it past its artifact, under the dataset's row filters; this
     answers of each line only the fields named here, never its other attributes. It checks ADMIN_AUDIT_VIEW under

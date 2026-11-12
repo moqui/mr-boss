@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Report builder › DatasetDetail (design-insights §5 DatasetDetail; impl-insights P3, INS-03, INS-09; mr-moqui
-    plans/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetDetail at this location, which
+    plans/archive/Admin-Screens-Down.md, Track I): the framework's Dashboards › DatasetDetail at this location, which
     BOSS_INS_DATASET_STEWARDSHIP opens to the dataset steward, with the four transitions Insights offers: storeDataset,
     admitDataset, retireDataset and rebuildIndex, each through the engine's guarded operations (store#BusinessDataset,
     index#BusinessDataset), which check the dataset's own update artifact. The dataset is read by get#BusinessDataset; the

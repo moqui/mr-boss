@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- GroupDetail (design-admin §5 GroupDetail; style-guide §3.3 Detail; mr-moqui plans/Admin-Screens-Down.md): one group, as
+<!-- GroupDetail (design-admin §5 GroupDetail; style-guide §3.3 Detail; mr-moqui plans/archive/Admin-Screens-Down.md): one group, as
     Admin's own screen for what Admin adds to the framework's System › Access group screen: the organization scope of its
     members. The group is checked as an Admin record first (check#Record) and read with
     org.moqui.admin.AccessServices.get#Group; GroupMembers names only the users of the organizations the user administers

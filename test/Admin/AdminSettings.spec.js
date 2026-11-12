@@ -4,7 +4,7 @@
 // through the screens' transitions by the configuration administrator, who is not an instance administrator, an unregistered
 // key and a dropped placeholder refused with their reasons; the administrative reader, without ADMIN_SETTINGS_VIEW, opens
 // neither screen; ReferenceData links a kind's owner only for a viewer the owner's screen opens to. InstanceSettings and
-// Localization are over the framework's System › Settings screens (mr-moqui plans/Admin-Screens-Down.md): a transition of
+// Localization are over the framework's System › Settings screens (mr-moqui plans/archive/Admin-Screens-Down.md): a transition of
 // Localization's instance administrator's part (a stored row created or deleted directly) is not on Admin's route, for the
 // configuration administrator and for ADMIN. The framework's rules (types, limits, revisions, secrets, label targets) are
 // the framework's AdminConfiguration spec.
