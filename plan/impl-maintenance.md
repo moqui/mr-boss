@@ -1,5 +1,6 @@
 # IronStone BOSS — Maintenance implementation
 
+Nov 12, 2026 — gate 6: Maintenance built. P0–P20, every phase reviewed by a fresh agent and merged on its focused specs, then the full suites and the acceptance suite once (the user's call): the acceptance suite passes (71 and 18 features) after its fixes, and `./moq test-apps` passes but for one People failure (F353); the budgets raised by Maintenance's measured share with the user's agreement (Final suites under P20).
 Nov 12, 2026 — gate 5 built (P15, P16: scheduling administration) and P6, P7, P9 and P13 merged, each reviewed by a fresh agent and merged on its focused specs; P10 in review; P14 and P18 building; P11, P12, P17 and P19 next; P8 waits on People P18.
 Nov 12, 2026 — gate 1 built: P1–P5 (corrective maintenance from a report to a restored resource), each phase reviewed by a fresh agent and merged on its focused specs; the full suites and the acceptance suite run once at the end of the build (the user's call). P6 and P15 are built or building; only P8 waits on People (P18).
 Nov 11, 2026 — P0 done (§6 F58–F75), at mr-moqui 5d83f22d, mr-boss 9c7e87e4 and mr-mantle 61e5ae33, with People P1–P7
@@ -5616,6 +5617,35 @@ the same way and are left as they are (§7). Tests: MaintenanceAccess 28 of 28 (
 MaintenanceCosts, MaintenanceReports, MaintenanceWorkOrders and AdminCapabilities 27 of 27 (6.8 s); `lint --screens` nothing new in
 the changed screens. Not run: `./moq test-apps`, the acceptance suite.
 
+**Final suites Nov 12.** On master at mr-moqui 9943779b, mr-mantle 5ebb393b and mr-boss 362d5adc, after every phase, the
+F346 gating and the acceptance fixes, with origin's People P14–P18 and the framework's high-level review, Sealed-Secrets and
+backup follow-ups pulled in, on a release binary built from that mr-moqui.
+- `./moq test-apps`, first run (before the acceptance fixes): 3897 of 3899 regression features; two failures, both fixed on
+  master: PeopleAccess's setup readiness found MaintenanceDispatch's spec-local employer with no department (the spec now gives it
+  one; F350) and InsightsAlerts' list of shipped business templates lacked Maintenance's overdue-PM and resource-down alerts (F351).
+  Client 37 of 37.
+- Maintenance's measured share of feature time in that run, taken from the workers' results: mr-mantle 47.6 s over its
+  twenty-one specs (MaintenanceProcesses 4.9 s the largest; LedgerMaintenance, which predates this build, left out), mr-boss server
+  26.3 s over its fifteen (MaintenanceAccess 11.1 s, under 15 s), client 8.07 s (MaintenanceWorkOrdersWalk). Over the §4 estimates
+  of 40 s and 20 s: the budgets were raised by the measured share with the user's agreement (mr-mantle 393 → 441, mr-boss
+  server 264 → 291, client 57 → 66; §4).
+- The acceptance suite (`moqui test --acceptance` and `test-client --serve --acceptance` over the Maintenance specs), first run:
+  server 42 of 71 (15 failed, 14 skipped behind them), client 6 of 18. Fixed by three agents in their own worktrees and merged:
+  every failure a test bug (stale labels and paths, a revision posted as a number, authz-on direct calls where the screens call
+  through their transitions, a walk depending on another's leftovers, notifications outside the page, times in the browser's
+  zone, a page-echo of the search text) except three code bugs: the reports swallowed a refusal's reason (`ignore-error`; now read
+  through `AdminCalls.read`), the root's record-panel check called a service in a script, which the server-static check flags
+  (now a read-only `service-call`), and the Assign dialog's technician search filtered after cutting the ranked list to 30 (now
+  searches every ranked candidate; a MaintenanceWorkOrders case) (F352).
+- Final run, after the acceptance fixes and the last pull: the acceptance suite 71 of 71 server and 18 of 18 client; `./moq
+  test-apps` 3899 of 3900 regression features and 37 of 37 client. The one failure is People's: PeopleAccess's setup readiness
+  fails after People's own Recruiting spec (`--spec Recruiting --spec PeopleAccess` reproduces it; no Maintenance spec does),
+  left to impl-people's lead (F353). The suites' totals are over budget (mr-mantle 648.7 s of 441 s, mr-boss 356.1 s of 291 s,
+  client 77.8 s of 66 s, mr-marble's client 9.1 s of 9 s): Maintenance's share is raised; the rest is People's phases since its
+  last raise and a loaded machine (People's own suites ran beside this one), for People's lead to measure.
+- `./moq test-framework` not run: Maintenance changed nothing under `crates/`, `runtime/base-component` or `dev-component`
+  (mr-moqui's only Maintenance change is `plans/Remaining-Work.md`).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -6056,6 +6086,12 @@ paths under `mr-boss/`.
 | F347 | P20: ProcedureDetail/Steps.xml's comment says Waits are written through `store#ProcessDependency` | P20's Built note |
 | F348 | P20: Maintenance's record panels serve no AssetMaintenance host | P20's Built note |
 | F349 | P20: The mr-mantle README's line on Upgrading.md names key changes only | P20's Built note |
+| F350 | Final suites: MaintenanceDispatch's spec-local employer had employees and no department, so People's setup readiness (PeopleAccess's Settings check) failed after it on the shared test database | The spec gives it a department |
+| F351 | Final suites: InsightsAlerts' shipped business templates lacked Maintenance's two business alerts (the generation-failure alert reads the server log and is not listed) | The spec's list updated |
+| F352 | Acceptance: three code bugs: the reports swallowed a refusal's reason; the root's panel check called a service in a script (server-static); the technician search filtered after the 30-row cut | Fixed (Final suites note) |
+| F353 | Final suites: People's Recruiting spec leaves an employer with no department, failing PeopleAccess's setup readiness after it | impl-people's lead |
+| F354 | Acceptance: in a spec's `then` block, `Array.from(...)` on a passed list and `JSON.parse(...)` answered `[]` and `{}` (a testkit rewrite, likely) | The walks compute them in `when`; a framework finding for later |
+| F355 | Acceptance: changing Planned start or Due in Assign and schedule drops the technicians already chosen (the list re-ranks for the window); a refused booking (bookSlot) answers HTTP 500 | Later |
 
 
 ## 7. Later
