@@ -380,8 +380,28 @@ function commerceContext() {
 // Maintenance/Equipment/Product360, an equipment model's Summary, Identifiers, Equipment (its meters and maintenance defaults),
 // Spare parts (PatSparePart associations) and Documents. Read by Maintenance's read scope (a user who reads equipment, its
 // organizations the products' owners); catalog writes only as the user's own catalog capabilities give them (store#CatalogRow
-// checks them again), and no price, cost, method or stock read.
-const maintenanceTabs = ["Summary", "Identifiers", "Equipment", "SpareParts", "Documents"]
+// checks them again), and no price, cost or method read. P9 (F67): the Stock tab and Maintenance/WorkOrders/InventoryAvailability,
+// the stock in the facilities of the scope's organizations that hold stock (facilityIds), for a planner's and technician's spare
+// parts.
+const maintenanceTabs = ["Summary", "Identifiers", "Equipment", "SpareParts", "Stock", "Documents"]
+// The facilities of the organizations whose stock (inventory or supplies) they hold, a facility's organization its owner or its
+// nearest owning ancestor's (as Maintenance reads facilities).
+function maintenanceFacilities(organizationPartyIds) {
+    if (!organizationPartyIds.length) return []
+    const facilityScope = ec.resource.script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
+    const facilityIds = Array.from(
+        ec.entity
+            .find("mantle.product.asset.Asset")
+            .condition("ownerPartyId", "in", organizationPartyIds)
+            .condition("assetTypeEnumId", "in", ["AstTpInventory", "AstTpSupplies"])
+            .condition("facilityId", "is-not-null", null)
+            .selectField("facilityId")
+            .distinct(true)
+            .disableAuthz()
+            .list()
+    ).map(row => row.facilityId)
+    return facilityIds.filter(facilityId => organizationPartyIds.includes(facilityScope.facilityOrganization(facilityId)))
+}
 function maintenanceContext() {
     const found = call("ironstone.maintenance.ContextServices.get#SharedContext", {appRoot: "Maintenance"})
     const maintenance = found.capabilities || {}
@@ -405,13 +425,16 @@ function maintenanceContext() {
         sharedLinks: {
             "": "//Maintenance/Equipment",
             "Products/Product360": "//Maintenance/Equipment/Product360",
-            "Equipment/Find": "//Maintenance/Equipment/Find"
+            "Equipment/Find": "//Maintenance/Equipment/Find",
+            // P9: a part's stock from a work order's Parts tab
+            "WorkOrders/InventoryAvailability": "//Maintenance/WorkOrders/InventoryAvailability"
         },
         productTabs: read ? maintenanceTabs : [],
         connectionTypes: [],
         ownerPartyIds: organizationPartyIds,
         organizationPartyIds,
-        activeOrganizationPartyId: read ? found.activeOrganizationPartyId || null : null
+        activeOrganizationPartyId: read ? found.activeOrganizationPartyId || null : null,
+        facilityIds: read ? maintenanceFacilities(organizationPartyIds) : []
     }
 }
 function context(p) {

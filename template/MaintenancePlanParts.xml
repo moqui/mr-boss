@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of Maintenance's preventive plan screens (impl-maintenance P13; design-maintenance §5 Plans and PlanDetail). A screen includes
+    each transition it uses by name (transition-include), so a form here posts to the screen it is on. Each runs Maintenance's record
+    check of the plan when it names one (check#Record plan: a maintenance reader of its organization) and then Mantle's
+    mantle.work.MaintenancePlanServices.store#MaintenanceSchedule, which checks the permission (MAINTENANCE_PLAN or _SUPERVISE) and
+    scope again.
+    - storePlan: a new plan (a draft, for the equipment or the facility targetKind names; it opens its PlanDetail) or a change of
+      its name and terms (a draft's in place, an active plan's from the effective time with a reason);
+    - planAction: activate a draft (the findings first) or end a plan (with a reason). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storePlan">
+        <actions>
+            <if condition="maintenanceScheduleId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            </if>
+            <set field="forFacility" from="!maintenanceScheduleId &amp;&amp; targetKind == 'facility'"/>
+            <service-call name="mantle.work.MaintenancePlanServices.store#MaintenanceSchedule" out-map="saved"
+                    in-map="{maintenanceScheduleId:(maintenanceScheduleId || null), expectedRevision:expectedRevision, operationKey:operationKey,
+                        scheduleName:scheduleName, assetId:(forFacility ? null : assetId), facilityId:(forFacility ? facilityId : null),
+                        productMaintenanceId:(forFacility ? null : productMaintenanceId), triggerEnumId:triggerEnumId,
+                        cadenceEnumId:cadenceEnumId, intervalQuantity:intervalQuantity, intervalUomId:intervalUomId,
+                        firstDueLocal:firstDueLocal, productMeterId:productMeterId, baselineValue:baselineValue, baselineDate:baselineDate,
+                        maxReadingAgeDays:maxReadingAgeDays, businessDaysOnly:businessDaysOnly, holidayCategoryId:holidayCategoryId,
+                        leadDays:leadDays, templateWorkEffortId:templateWorkEffortId, maintenanceTypeEnumId:maintenanceTypeEnumId,
+                        teamPartyId:teamPartyId, estimatedWorkTime:estimatedWorkTime, effectiveDate:effectiveDate, changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="isNew" from="!maintenanceScheduleId"/>
+                <set field="maintenanceScheduleId" from="saved.maintenanceScheduleId"/>
+                <message type="success">${isNew ? 'Plan ' + saved.maintenanceScheduleId + ' created as a draft' : 'Plan saved'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
+            <parameter name="maintenanceScheduleId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="planAction">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <service-call name="mantle.work.MaintenancePlanServices.store#MaintenanceSchedule" out-map="saved"
+                    in-map="{maintenanceScheduleId:maintenanceScheduleId, expectedRevision:expectedRevision, action:planAction,
+                        changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${planAction == 'activate' ? 'Plan activated' : 'Plan ended'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
+            <parameter name="maintenanceScheduleId"/>
+        </default-response>
+        <error-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
+            <parameter name="maintenanceScheduleId"/>
+        </error-response>
+    </transition>
+</screen>

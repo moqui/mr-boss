@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's parts and stock (impl-maintenance P9, F31; Materials.js): Shared/MaterialIssueReceipt's Maintenance context under
+    WorkOrders, Maintenance's own pair as Manufacturing's is. The screen checks the work order (AccessServices.check#Record) before
+    each read and posting; the Mantle maintenance verbs (MaintenanceExecutionServices) check their own permission, organization,
+    assignment and the stock's facility again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="MaterialSource" allow-remote="false">
+        <description>A work order as Shared/MaterialIssueReceipt shows it in Maintenance: its planned parts as the lines (step,
+            needed, issued, returned and left, the free stock of the work organization in the user's facilities to issue from, for
+            those who may issue: STOCK_ISSUE and the assigned technician or a supervisor, on approved or started work), the issues
+            with something left to return, and the issues and returns once each (value only with MAINTENANCE_COST_VIEW). Refuses a
+            user without Maintenance (MAINTENANCE_UNAVAILABLE) and a work order outside the scope (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="sourceId"/>
+            <parameter name="workEffortId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="sourceType"/>
+            <parameter name="source" type="Map"/>
+            <parameter name="materialRows" type="List"/>
+            <parameter name="movementRows" type="List"/>
+            <parameter name="outputRows" type="List"/>
+            <parameter name="returnRows" type="List"/>
+            <parameter name="trackingRows" type="List"/>
+            <parameter name="filesRecordId"/>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="packageOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="material" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Materials.js')
+                    .execute('materialSource', context)"/>
+            <script>ec.context.putAll(material)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="MaterialAction" allow-remote="false">
+        <description>The posting a Maintenance MaterialIssueReceipt form asks for: the record check#Record checks (the work order,
+            or the step a line is planned on, read as its work order), the Mantle entry point and its parameters:
+            issue#MaintenanceMaterial for a planned line (lineKey: the root or step and the product) from the chosen stock, or
+            return#MaintenanceMaterial of an issuance (lineKey). Posts nothing; the screen's transition checks the record and calls the
+            entry point, which checks everything again. ACTION_INVALID for another kind.</description>
+        <in-parameters>
+            <parameter name="sourceId"/>
+            <parameter name="workEffortId"/>
+            <parameter name="lineKey"/>
+            <parameter name="quantity"/>
+            <parameter name="operationKey"/>
+            <parameter name="actionKind"><description>issue (default) or return.</description></parameter>
+            <parameter name="assetId"/>
+            <parameter name="toLocationSeqId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="capability"/>
+            <parameter name="serviceName"/>
+            <parameter name="parameters" type="Map"/>
+            <parameter name="doneText"/>
+        </out-parameters>
+        <actions>
+            <set field="action" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Materials.js')
+                    .execute('materialAction', context)"/>
+            <script>ec.context.putAll(action)</script>
+        </actions>
+    </service>
+</services>

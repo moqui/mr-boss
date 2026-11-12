@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Parts tab (design-maintenance §3 PlannedParts and PartsUsed; impl-maintenance P9, F128: index 40): the work
+    order's planned parts (mantle.work.MaintenanceExecutionServices.get#MaintenanceMaterials: each a WorkEffortProduct of the root or
+    a step, with its quantity, the date it is needed by and the facility to issue it from, and what was issued, used and is left),
+    Add part, Edit and Remove for a planner or supervisor (store#MaintenanceMaterial: a change ends the line and starts the next),
+    Add suggested parts (the equipment model's spare parts not yet planned), each line's stock (InventoryAvailability), and the parts
+    used: what was issued and returned once each, with values for a cost reader only. Issuing and returning are the shared
+    MaterialIssueReceipt's (Issue and return), under the stock permission and the assignment. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Parts" default-menu-index="40">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition name="storeMaterial">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <service-call name="mantle.work.MaintenanceExecutionServices.store#MaintenanceMaterial"
+                    in-map="{workEffortId:stepWorkEffortId || workEffortId, productId:productId, fromDate:fromDate || null,
+                        estimatedQuantity:estimatedQuantity || null, requiredDate:requiredDate || null,
+                        sourceFacilityId:sourceFacilityId == null ? null : sourceFacilityId, remove:remove || null,
+                        addSuggested:addSuggested || null}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Parts of work order ${workEffortId} saved</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <actions>
+        <set field="parts" from="null"/>
+        <if condition="recordFound">
+            <service-call name="mantle.work.MaintenanceExecutionServices.get#MaintenanceMaterials" out-map="parts"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="plannedList" from="parts?.plannedList || []"/>
+        <set field="suggestedList" from="parts?.suggestedList || []"/>
+        <set field="usedList" from="parts?.usedList || []"/>
+        <set field="stepOptions" from="parts?.stepList || []"/>
+        <set field="movementList" from="(parts?.issuanceList || []).map(row =&gt; ({kind: 'Issued', stepName: row.stepName,
+                productName: row.productName, quantity: row.quantity, dateText: row.issuedDateText, valueText: row.valueText,
+                sortKey: String(row.issuedDate || '')})).concat((parts?.receiptList || []).map(row =&gt; ({kind: 'Returned',
+                stepName: row.stepName, productName: row.productName, quantity: row.quantity, dateText: row.receivedDateText,
+                valueText: row.valueText, sortKey: String(row.receivedDate || '')})))"/>
+        <set field="organizationPartyId" from="parts?.organizationPartyId || null"/>
+        <set field="suggestedText" from="suggestedList.map(row =&gt; row.quantity + ' × ' + row.productName).join(', ')"/>
+    </actions>
+    <widgets>
+        <section name="PartsFound" condition="parts">
+            <widgets>
+                <container-box>
+                    <box-header title="Planned parts · ${plannedList.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AddPart" button-text="Add part" icon="sym_o_add" title="Plan a part for work order ${workEffortId}"
+                                width="560" condition="parts.canPlan">
+                            <form-single name="AddPartForm" transition="storeMaterial" map="{workEffortId:workEffortId, estimatedQuantity:'1'}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="stepWorkEffortId">
+                                    <default-field title="For">
+                                        <drop-down no-current-selected-key="${workEffortId}">
+                                            <list-options list="stepOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Part">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'stockParts'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="estimatedQuantity"><default-field title="Quantity"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="requiredDate"><default-field title="Needed by"><date-time/></default-field></field>
+                                <field name="sourceFacilityId">
+                                    <default-field title="Issue from">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'partFacilities', organizationPartyId:organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <section name="AddSuggested" condition="parts.canPlan &amp;&amp; suggestedList.length">
+                            <widgets>
+                                <form-single name="AddSuggestedForm" transition="storeMaterial"
+                                        map="{workEffortId:workEffortId, addSuggested:'Y'}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="addSuggested"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="">
+                                            <submit text="Add suggested parts (${suggestedList.length})"
+                                                    confirmation="Plan the equipment model's spare parts: ${suggestedText}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <link url="${sharedLinks['WorkOrders/MaterialIssueReceipt']}" text="Issue and return" icon="sym_o_input"
+                                link-type="anchor-button" parameter-map="{workEffortId:workEffortId}" condition="parts.stockIssue"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="No parts are planned yet." type="p" style="q-pa-md m-muted" condition="!plannedList.length"/>
+                        <label text="Suggested from the equipment model: ${suggestedText}" type="p" style="q-px-md text-caption m-muted"
+                                condition="suggestedList.length"/>
+                        <form-list name="PlannedParts" list="plannedList" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Part"><display/></default-field></field>
+                            <field name="stepName"><default-field title="For"><display/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Planned"><display/></default-field></field>
+                            <field name="requiredDateText"><default-field title="Needed by"><display/></default-field></field>
+                            <field name="sourceFacilityName"><default-field title="Issue from"><display/></default-field></field>
+                            <field name="issued" align="right"><default-field title="Issued"><display/></default-field></field>
+                            <field name="used" align="right"><default-field title="Used"><display/></default-field></field>
+                            <field name="left" align="right"><default-field title="Left"><display/></default-field></field>
+                            <field name="lineActions">
+                                <default-field title="">
+                                    <link url="${sharedLinks['WorkOrders/InventoryAvailability']}" text="Stock" icon="sym_o_inventory"
+                                            link-type="anchor" parameter-map="{productId:productId, facilityId:sourceFacilityId}"/>
+                                    <container-dialog id="EditPart_${lineKey}" button-text="Edit" icon="sym_o_edit"
+                                            title="Edit ${productName}" width="480" condition="parts.canPlan">
+                                        <form-single name="EditPartForm" transition="storeMaterial"
+                                                map="{workEffortId:parts.workEffortId, stepWorkEffortId:workEffortId, productId:productId,
+                                                    fromDate:fromDate, estimatedQuantity:quantity, requiredDate:requiredDate,
+                                                    sourceFacilityId:sourceFacilityId}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="productId"><default-field><hidden/></default-field></field>
+                                            <field name="fromDate"><default-field><hidden/></default-field></field>
+                                            <field name="estimatedQuantity"><default-field title="Quantity"><text-line size="6" input-type="number"/></default-field></field>
+                                            <field name="requiredDate"><default-field title="Needed by"><date-time/></default-field></field>
+                                            <field name="sourceFacilityId">
+                                                <default-field title="Issue from">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'partFacilities', organizationPartyId:organizationPartyId,
+                                                                    selected:sourceFacilityId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                                        </form-single>
+                                        <form-single name="RemovePartForm" transition="storeMaterial"
+                                                map="{workEffortId:parts.workEffortId, stepWorkEffortId:workEffortId, productId:productId,
+                                                    fromDate:fromDate, remove:'Y'}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="productId"><default-field><hidden/></default-field></field>
+                                            <field name="fromDate"><default-field><hidden/></default-field></field>
+                                            <field name="remove"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="">
+                                                    <submit text="Remove" confirmation="Remove ${productName} from the planned parts?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="stepName"/></column>
+                                <column><field-ref name="left"/><field-ref name="lineActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Parts used · ${usedList.length}"/>
+                    <box-body-nopad>
+                        <label text="Nothing is issued to this work order yet." type="p" style="q-pa-md m-muted" condition="!movementList.length"/>
+                        <form-list name="PartsUsedTotals" list="usedList" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Part"><display/></default-field></field>
+                            <field name="used" align="right"><default-field title="Used, net of returns"><display/></default-field></field>
+                        </form-list>
+                        <form-list name="PartsUsed" list="movementList" skip-form="true" paginate="false">
+                            <field name="kind"><default-field title="Movement"><display/></default-field></field>
+                            <field name="productName"><default-field title="Part"><display/></default-field></field>
+                            <field name="stepName"><default-field title="For"><display/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                            <field name="valueText" align="right" hide="!parts.costRead">
+                                <default-field title="Value"><display/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="kind"/><field-ref name="productName"/></column>
+                                <column><field-ref name="quantity"/><field-ref name="dateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

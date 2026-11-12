@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     WorkHeader with Edit, Assignments with Assign and schedule), Procedure (20, P7: the checklist, StepResponse, the waiver and
     amendment dialogs, the printed checklist; Complete waits for its required steps), Time (30: the user's timer and own time; the team's total for a
     broad reader), Downtime (60, P5: the outages the work recorded or linked, Record outage, Restore), Files (70), Conversation (80)
-    and History (90). The other tabs of design §3 join with their phases at their gaps: Parts (40, P9),
+    and History (90). The other tabs of design §3 join with their phases at their gaps: Parts (40, P9: built, the planned parts and the parts used),
     Purchasing (50, P10) and Costs (100, P11). P5: Start asks whether the work takes its target out of service, Complete may name follow-up work,
     and the header says when the target is out of service. No cost. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
