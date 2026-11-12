@@ -420,8 +420,8 @@ feature(
             !hrHome.output.includes("Amara Diallo")
             settings.errors.length == 0
             settings.output.includes("Setup readiness")
-            // P3's demo departments: each employer's department check is ready
-            !settings.output.includes("No department is set up")
+            // the administrator reads every employer, spec-local ones of the shared test database among them, so the demo
+            // employers' department checks are read per employer in the next feature (impl-maintenance F353)
             settings.output.includes("Ziziwork Services")
             unauthorized(hrSettings)
             unauthorized(readerSettings)
@@ -433,24 +433,29 @@ feature(
     "Admin's registries read People's setup checks per employer and show People's settings entry to the People administrator only",
     {
         when() {
-            const readiness = asUser(users.system, () =>
-                invoke(registry + "get#Readiness", {
-                    providerKey: "people.setup",
-                    scopeParameters: {organizationPartyId: ids.organizationId}
-                })
-            )
+            const readinessOf = organizationPartyId =>
+                asUser(users.system, () =>
+                    invoke(registry + "get#Readiness", {providerKey: "people.setup", scopeParameters: {organizationPartyId}})
+                )
+            const readiness = readinessOf(ids.organizationId)
+            // P3's demo departments: Services' department check is ready too (Retail's below)
+            const otherDepartments = Array.from(readinessOf(ids.otherOrganizationId).checks || [])
+                .filter(row => row.checkKey === "people.departments")
+                .map(row => row.state)
             const settingsKeys = user =>
                 Array.from(asUser(user, () => invoke(registry + "find#Settings", {})).entries || []).map(
                     entry => entry.settingsKey
                 )
             return {
                 checks: Array.from(readiness.checks || []).map(row => [row.checkKey, row.state, row.reasonCode].join(" ")),
+                otherDepartments,
                 admin: settingsKeys(users.admin),
                 hr: settingsKeys(users.hr)
             }
         },
-        then({checks, admin, hr}) {
+        then({checks, otherDepartments, admin, hr}) {
             checks.sort() == ["people.departments ready ", "people.managers warning EMPLOYEE_NO_MANAGER"]
+            otherDepartments.join(",") == "ready"
             admin.includes("people.settings")
             !hr.includes("people.settings")
         }
