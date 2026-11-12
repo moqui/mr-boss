@@ -138,6 +138,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="group" from="found?.group || null"/>
         <set field="canManage" from="!!found?.canManage"/>
         <set field="manageReason" from="found?.manageReason || null"/>
+        <set field="manageReasonCode" from="found?.manageReasonCode || null"/>
         <set field="allMembers" from="found?.members || []"/>
         <if condition="group &amp;&amp; allMembers.length">
             <service-call name="ironstone.admin.ContextServices.get#MemberScope" out-map="memberScope"
@@ -215,6 +216,9 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                     <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="!canManage &amp;&amp; manageReason" text="${manageReason}"/>
+                    <!-- a group Admin does not manage is changed on System's User Groups (disabled for one who may not open it) -->
+                    <link url="/apps/system/Security/UserGroup/UserGroupDetail" text="Open in System" icon="sym_o_open_in_new"
+                            condition="manageReasonCode == 'UNREGISTERED_BUNDLE'" parameter-map="{userGroupId:userGroupId}"/>
                 </container>
 
                 <container-box>
