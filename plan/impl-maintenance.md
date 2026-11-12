@@ -1590,16 +1590,27 @@ Comms `create-from` hook (Chat's `createFrom`, `ChatServices.create#FromChat`). 
     `UniversalSearchServices.xml` (beside the work filter), `MaintenanceAccess.js` (requestHidden at the end); mr-boss
     `data/BossSetupData.xml`'s end (the two P4 groups, to move into BossSetupMaintenanceData.xml, F118),
     `MaintenanceAccess.spec.js` (P5 changes the registries line too), the acceptance MaintenanceFoundationWalk.
-  - The user's calls (open):
-    - The `create-from` provider (design §1.4): build it as a Comms screen-target `ext-action` that prefills Commons' Report a problem
-      from a chat message or voicemail (my recommendation, with P19's Comms work), or change the design to make the request directly
-      with no target, left for triage, as mail does.
-    - The reporter sees the request's Assignee by name (with a contact link) in Commons' people list after Assign; design §3 says
-      "not ... employee details". Recommendation: keep the name (Projects shows a request's assignee to its requester) and say so in
-      §3, or hide the Assignee row from a reporter who is not a triager.
-    - Who reports: MAINTENANCE_REQUEST is the requester group's alone, so planners, technicians and supervisors have no Report a
-      problem. Recommendation: grant MAINTENANCE_REQUEST to the technician and supervisor groups (people at the equipment), and
-      keep a planner on New work order.
+  - The user's calls, decided Nov 12 (the lead's message):
+    - `create-from`: a Comms screen-target action prefills Report a problem; P19 builds it. Nothing built here.
+    - The assignee: the reporter sees the assignee's name, as built; design §3 says so.
+    - Report a problem: every Maintenance group (reader, planner, technician, supervisor, procedure author and approver, booking
+      approver, resource administrator, cost reader) holds MAINTENANCE_REQUEST and `BOSS_MNT_REPORT_PROBLEM` (an ALWAYS each), and
+      every Maintenance bundle carries the permission and the screen (CapabilityBundleArtifact), the requester's and the
+      administrator's too, so a group given a bundle in Admin has it (closing the finding above for this screen).
+      MAINTENANCE_REQUEST_VIEW_OWN stays the requester's: another group's reporter opens their report in Commons as its filer but
+      sees the Maintenance box only as a planner or supervisor (the lead may extend VIEW_OWN too). MaintenanceAccess: each group's
+      capabilities include `request`, every group's user has Report a problem in the + menu, another app's user has neither the
+      item nor the screen; MaintenanceRequests no longer expects the planner without it. Design §3.
+- Merged master into `mnt/p4` (Nov 12, both repos; P5 and F118 among it). mr-mantle merged cleanly. mr-boss: P4's two artifact groups
+  (`BOSS_MNT_REPORT_PROBLEM`, `BOSS_MNT_REQUESTS`) moved from the end of BossSetupData.xml into BossSetupMaintenanceData.xml (the
+  bundle artifacts after them, so the group exists first); `Maintenance.js` linkPaths, MaintenanceSpecLib's ids, the demo data,
+  design-maintenance's header and §1.2, impl-manufacturing's log and usl-inventory kept both phases' lines; MaintenanceAccess's
+  registries line was the same fix on both sides.
+- Tests after the merge and the calls (the main checkout's release binary of Nov 12 03:11, `--nobuild`): mr-mantle MaintenanceIntake,
+  ProductionDowntime, RecordLinks, UniversalSearch, MaintenanceOutages, MaintenanceWorkOrders, MaintenanceManagedWork and
+  MaintenanceScope 60 of 60 (10.6 s); mr-boss MaintenanceRequests, MaintenanceAccess, MaintenanceDowntime, MaintenanceWorkOrders,
+  MaintenanceEquipment, ManufacturingDowntime and Requests 43 of 43 (10.0 s). Prettier clean on the changed specs. Not run:
+  ./moq test-apps, the acceptance suite.
 
 ### P5 — Downtime and restoration
 

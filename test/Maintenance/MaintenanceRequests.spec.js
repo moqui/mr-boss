@@ -2,7 +2,7 @@
 // Requests' one qvt render (the planner's untriaged and triaged requests and the adoption queue), RequestDetail's one qvt render
 // under Maintenance (the planner's Maintenance box with the reported fault and the triage dialogs; Retail's planner refused),
 // Commons' RequestDetail of a maintenance request rendered once for its reporter (the owner contract with Commons: the safe
-// summary, no time, no technician, no other report of the fault), and Report a problem: in the requester's + menu only, its one
+// summary, no time, no technician, no other report of the fault), and Report a problem: in the requester's + menu (every group's is MaintenanceAccess'), its one
 // qvt render and a report through it. The intake rules (one target, own requests, triage once, mail, the production handoff)
 // are Mantle's MaintenanceIntake; the "usable when" is the acceptance MaintenanceIntakeWalk.
 // Run: ./moq test mr-boss --spec MaintenanceRequests
@@ -80,7 +80,7 @@ feature(
     }
 )
 
-feature("Report a problem is in the requester's + menu, not another user's, and makes their request", {
+feature("Report a problem is in the requester's + menu and makes their request", {
     when() {
         const quickCreate = user =>
             JSON.stringify(
@@ -117,11 +117,10 @@ feature("Report a problem is in the requester's + menu, not another user's, and 
                         .list()
                 ).length
         )
-        return {requester: quickCreate(users.requester), planner: quickCreate(users.planner), rendered, reported, made}
+        return {requester: quickCreate(users.requester), rendered, reported, made}
     },
-    then({requester, planner, rendered, reported, made}) {
+    then({requester, rendered, reported, made}) {
         requester == true
-        planner == false
         rendered.errors.length == 0
         rendered.output.includes("What is wrong")
         rendered.output.includes("Or scan its tag")

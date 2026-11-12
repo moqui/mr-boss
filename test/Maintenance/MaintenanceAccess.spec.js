@@ -8,7 +8,7 @@
 // the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
 // Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
-// panels, and Commons' Report a problem (the requester's, not another user's),
+// panels, and Commons' Report a problem (every Maintenance group's, not another app's user's),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -31,6 +31,13 @@ function screenRefusalIn(user, path) {
     const rendered = asUser(user, () => page(path, {}, "html", "Commons"))
     return rendered.status === 200 && rendered.errors.length === 0 ? "" : rendered.status + " " + rendered.errors.join(" | ")
 }
+// the quick create kinds of the user's + menu (the shell's data)
+const quickCreates = user =>
+    JSON.stringify(
+        asUser(user, () =>
+            JSON.parse(ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output)
+        )
+    )
 // a spec-local Maintenance user whose only capability group holds MAINTENANCE_PLAN, an agent of Services
 const editOnly = "MNT_SPEC_EDIT_ONLY"
 
@@ -201,20 +208,20 @@ const capabilityNames = [
     "settings"
 ]
 const reads = ["workRead", "resourceRead", "anyRead"]
-// design §1.1's table
+// design §1.1's table; every group also reports a problem (MAINTENANCE_REQUEST, the user's call of Nov 12, P4 review)
 const capabilityUsers = [
-    {user: users.reader, granted: ["view", "processView", ...reads]},
-    {user: users.planner, granted: ["view", "plan", "processView", ...reads]},
-    {user: users.tech, granted: ["assignedView", "execute", ...reads]},
-    {user: users.supervisor, granted: ["view", "supervise", "processView", ...reads]},
-    {user: users.author, granted: ["processView", "processEdit", "anyRead"]},
-    {user: users.approver, granted: ["processView", "processApprove", "anyRead"]},
-    {user: users.booking, granted: ["bookingViewAssigned", "bookingApprove", "anyRead"]},
+    {user: users.reader, granted: ["request", "view", "processView", ...reads]},
+    {user: users.planner, granted: ["request", "view", "plan", "processView", ...reads]},
+    {user: users.tech, granted: ["request", "assignedView", "execute", ...reads]},
+    {user: users.supervisor, granted: ["request", "view", "supervise", "processView", ...reads]},
+    {user: users.author, granted: ["request", "processView", "processEdit", "anyRead"]},
+    {user: users.approver, granted: ["request", "processView", "processApprove", "anyRead"]},
+    {user: users.booking, granted: ["request", "bookingViewAssigned", "bookingApprove", "anyRead"]},
     {
         user: users.resources,
-        granted: ["resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
+        granted: ["request", "resourceView", "resourceEdit", "import", "policyView", "policyEdit", "facilityEdit", "resourceRead", "anyRead"]
     },
-    {user: users.cost, granted: ["view", "costView", ...reads]},
+    {user: users.cost, granted: ["request", "view", "costView", ...reads]},
     // the user's call (P1 review): every Maintenance permission, every organization among them, and not FACILITY_EDIT
     {user: users.admin, granted: capabilityNames.filter(name => name !== "facilityEdit")},
     {user: "maint.spec.planonly", granted: ["plan"]},
@@ -572,7 +579,23 @@ feature(
                 retailPanel: panel(users.retailPlanner),
                 // Report a problem: the requester's screen in Commons (BOSS_MNT_REPORT_PROBLEM), not another Commons user's
                 requesterReport: screenRefusalIn(users.requester, "ReportProblem"),
-                plannerReport: screenRefusalIn(users.planner, "ReportProblem"),
+                // the user's call (Nov 12, P4 review): every Maintenance group has Report a problem in its + menu, another
+                // app's user neither the item nor the screen
+                withoutReport: [
+                    users.reader,
+                    users.planner,
+                    users.tech,
+                    users.supervisor,
+                    users.author,
+                    users.approver,
+                    users.booking,
+                    users.resources,
+                    users.cost,
+                    users.admin,
+                    users.requester
+                ].filter(user => !quickCreates(user).includes("maintenanceReportProblem")),
+                otherQuickCreate: quickCreates(users.otherApp).includes("maintenanceReportProblem"),
+                otherReport: screenRefusalIn(users.otherApp, "ReportProblem"),
                 // P4 review: the Requests area is the planner's and supervisor's (BOSS_MNT_REQUESTS); the planner's render is
                 // MaintenanceRequests'
                 techRequests: screenRefusal(users.tech, "Requests"),
@@ -602,7 +625,9 @@ feature(
             !out.plannerPanel.includes("RECORD_PANEL_UNAVAILABLE")
             out.retailPanel.includes("RECORD_PANEL_UNAVAILABLE")
             out.requesterReport == ""
-            out.plannerReport != ""
+            out.withoutReport.length == 0
+            out.otherQuickCreate == false
+            out.otherReport != ""
             out.techRequests != ""
             out.readerRequests != ""
             out.seen[users.requester] == true
