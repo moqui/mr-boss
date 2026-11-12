@@ -315,7 +315,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | built and reviewed Nov 11, merged |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | built and reviewed Nov 11, merged |
 | P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | built and reviewed Nov 11, merged |
-| P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | — |
+| P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | built and reviewed Nov 11, merged |
 | P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | — |
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | — |
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | — |
@@ -2468,7 +2468,7 @@ Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCale
   baseline form maps to the three screens).
 - Design edits: design-people (header; §1.2 Time & leave; §2 HolidayCalendars' path; §3 MyTeam's schedule; §6, WorkingSchedules,
   WorkingScheduleDetail and HolidayCalendars as built); design-projects (header; §15 PersonDetail's capacity, owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F169 to F175 in order:
   - a holiday is written by `store#Holiday` directly, with no owner, not through Commons' `create#Event` (which makes the HR user its
     owner and takes no category): with an owner of the employer, the old convention would make a regional calendar every employee's.
     The employer-owned `WepHoliday` convention still applies to everyone of the policy organization, scheduled or not; the design's
@@ -2557,7 +2557,7 @@ the schedule as an employment change first; the lead's call on HolidayCalendars 
     previewing a person employed by two read the other employer's schedule name. The preview names only the schedules the caller
     reads (the hours still count, as in Projects). Spec: the fifth feature.
   - ScheduleServices' descriptions and design-people §6 and §7's As built say so.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F176 to F179 in order:
   - changing a followed schedule's holiday calendar (`store#Schedule` `holidayCategoryId`) applies to its past days too (the change
     is audited, not dated); a dated calendar is the assignment's override, from a date;
   - a person on a leave of absence (an `EasLeave` assignment, which carries the schedule) is planned the schedule's hours, as
@@ -3176,7 +3176,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
