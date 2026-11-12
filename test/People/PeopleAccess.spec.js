@@ -208,7 +208,8 @@ const capabilityNames = [
 // design §1.1's table
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
-    {user: users.manager, granted: ["team", "requestApprove"]},
+    // the manager is an employee too: BOSS_PEOPLE_SELF beside BOSS_PEOPLE_MANAGER (groups are not nested; P8's review)
+    {user: users.manager, granted: ["self", "team", "requestApprove"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
     {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment"]},
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
@@ -698,9 +699,26 @@ feature(
             // the employee's self-service under People (its one html render), every other People screen refused
             const self = screenRefusal(users.employee, "SelfService")
             if (self) problems.push(`the employee is refused SelfService: ${self}`)
-            for (const path of ["Employees", "MyTeam", "Approvals"]) {
-                const refused = screenRefusal(users.employee, path)
+            for (const path of ["Home", "Employees", "Employees/Employee360", "MyTeam", "Approvals"]) {
+                const refused = screenRefusal(users.employee, path, {partyId: ids.employeePartyId})
                 if (!unauthorized(refused)) problems.push(`the employee opens ${path}: ${refused || "opened"}`)
+            }
+            // (P8 review) their own record's transitions under People and People's other services called directly stay refused:
+            // the self grant opens the self-service screen, its transition and the services it calls alone
+            const transition = asUser(users.employee, () =>
+                hit("apps/People/Employees/Employee360/storeEmergencyContact", {
+                    partyId: ids.employeePartyId,
+                    firstName: "Not",
+                    lastName: "Added",
+                    phone: "555 0103"
+                })
+            )
+            if (!transition.refused) problems.push(`the employee posts to Employee360 under People: ${transition.status}`)
+            for (const service of ["get#Team", "get#Employee360", "get#Home"]) {
+                const message = asUser(users.employee, () =>
+                    refusal("mantle.humanres.PeopleServices." + service, {partyId: ids.employeePartyId})
+                )
+                if (!unauthorized(message)) problems.push(`the employee calls ${service}: ${message || "accepted"}`)
             }
             // My team: the manager's (its one html render), not the directory reader's
             const manager = screenRefusal(users.manager, "MyTeam")
