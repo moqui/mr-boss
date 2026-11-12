@@ -23,11 +23,11 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="timesheetId" required="true"/>
 
     <actions><script><![CDATA[
-        const out = ec.service.sync().name('ironstone.projects.TimeServices.get#TimesheetDetail').parameters({timesheetId: timesheetId || ''}).call() || {}
+        const out = ec.service.sync().name('ironstone.projects.TimeServices.get#TimesheetDetail').parameters({timesheetId: timesheetId || '', appRoot: appRoot || null}).call() || {}
         ec.message.clearErrors()
         const L = (text) => ec.l10n.localize(text)
         const enc = (text) => String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-        printUrl = '/apps/Projects/Time/TimesheetPrint?renderMode=html-print&timesheetId=' + encodeURIComponent(timesheetId || '')
+        printUrl = '/apps/' + (appRoot === 'People' ? 'People' : 'Projects') + '/Time/TimesheetPrint?renderMode=html-print&timesheetId=' + encodeURIComponent(timesheetId || '')
         const sheet = out.detail
         if (!sheet) { printHtml = '<p>' + enc(L('This timesheet is not available')) + '</p>'; return }
         const row = (label, value) => value ? '<tr><td class="field-title">' + enc(L(label)) + '</td><td class="field-value">' + enc(value) + '</td></tr>' : ''

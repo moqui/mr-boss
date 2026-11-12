@@ -231,8 +231,11 @@ along with this software (see the LICENSE.md file). If not, see
         <description>People's Today source (design §1.4 Today; People.xml and Commons.xml shell-providers, F64; get#UserTodayItems
             calls it): the People decisions waiting on the user (mantle.humanres.PeopleServices.find#DueWork's decision: a request
             whose step waiting they may decide now, PEOPLE_REQUEST_APPROVE), each opening where it is decided (PositionDetail, the
-            person's Employee360). A user without PEOPLE_REQUEST_APPROVE, and another user's Today, get none. Declared on both
-            roots, it is taken once.</description>
+            person's Employee360); and P10 the user's own weeks to submit (my week not submitted:
+            mantle.work.TimesheetServices.find#WeeksToSubmit, kind timesheet), for one who keeps time under People (a People user or
+            a self-service employee by the time area's grant) and does not open Projects, whose own source answers them there,
+            each opening the week in People's My time. Another user's Today gets none. Declared on both roots, it is taken
+            once.</description>
         <in-parameters>
             <parameter name="userId"/>
             <parameter name="partyId"/>
@@ -252,14 +255,15 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="SelfServiceContext" allow-remote="false">
         <description>The links of Shared/PeopleSelfService under the app that mounts it (People or Commons; design §3 SelfService):
             the user's own employee record (People's Employee360 for a People user who reads it, else Commons'), and for a People
-            user People's Approvals and Home. Refuses another app root (PEOPLE_CONTEXT). Grants nothing: get#SelfService checks the
-            user.</description>
+            user People's Approvals and Home; P10: the user's own week (People's My time, when People's time area opens to them).
+            Refuses another app root (PEOPLE_CONTEXT). Grants nothing: get#SelfService checks the user.</description>
         <implements service="ironstone.people.ContextServices.define#Parameters"/>
         <out-parameters>
             <parameter name="appRoot"/>
             <parameter name="employee360Url"/>
             <parameter name="approvalsUrl"/>
             <parameter name="peopleHomeUrl"/>
+            <parameter name="myTimeUrl"/>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -267,6 +271,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="employee360Url" from="found.employee360Url"/>
             <set field="approvalsUrl" from="found.approvalsUrl"/>
             <set field="peopleHomeUrl" from="found.peopleHomeUrl"/>
+            <set field="myTimeUrl" from="found.myTimeUrl"/>
         </actions>
     </service>
 </services>

@@ -2,7 +2,8 @@
 // SelfService's one qvt render, under Commons, as the self-service employee (their employment, People tasks, requests and
 // emergency contacts, and their record's link), with a supplied partyId changing nothing there or in Mantle's self-service and
 // another person's emergency contacts refused; Commons Home's People card for them; My team's one qvt render as the manager (their
-// reports and no one else); and People's Today source, the decisions waiting on a decider and nothing for the employee. The access
+// reports and no one else; P10: their last week and Remind missing time); and People's Today source, the decisions waiting on a
+// decider and nothing for the employee (P10: their weeks to submit are PeopleTime's). P10: SelfService's My time and missing-week card. The access
 // cases (the self-service grant, which opens SelfService and nothing else of People, and My team the managers') are PeopleAccess's;
 // Mantle's rules (the team's employments, self-service's own party, due work, emergency contacts) are Mantle's PeopleScope,
 // PeopleDirectory, PeopleApprovals and PeopleChecklists. The usable-when walk is the acceptance PeopleSelfServiceUsable.
@@ -101,6 +102,9 @@ feature(
             // the primary action: their own record, under Commons (they open no People screen)
             rendered.output.includes("Open my employee record")
             rendered.output.includes("Commons/People/Employee360")
+            // P10: their own week, under People's time area (its own grant), and the missing-week card
+            rendered.output.includes("Weeks to submit")
+            rendered.output.includes("/qapps/People/Time/MyTime")
         }
     }
 )
@@ -136,6 +140,9 @@ feature("My team shows the manager their reports and the decisions waiting on th
         !rendered.output.includes("Leon Ferreira")
         !rendered.output.includes("Kenji Arakawa")
         rendered.output.includes("Decisions waiting on you")
+        // P10: each report's last week, and Remind missing time on the selected people
+        rendered.output.includes("Last week")
+        rendered.output.includes("Remind missing time")
     }
 })
 

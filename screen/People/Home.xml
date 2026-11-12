@@ -23,8 +23,10 @@ along with this software (see the LICENSE.md file). If not, see
     opening Positions' vacant ones) and Decisions waiting (the People decisions waiting on the user, opening My team or Approvals);
     DueWork over mantle.humanres.PeopleServices.find#DueWork (an HR reader's employees with no manager and the open lifecycle tasks
     of the employers, paged, each opening the person or the task); for a People user who reads no employer (a manager), their
-    decisions waiting and My team; and My self-service for a user with People self-service. People out, payroll exceptions and
-    expiring qualifications (design §1.2) come with P12, P25 and P18. -->
+    decisions waiting and My team; and My self-service for a user with People self-service. P10: the missing-week card, Weeks not
+    submitted (last week's missing weeks of the people whose time the user follows: the time keepers of the projects they manage
+    and their live reports, mantle.work.TimesheetServices.find#Timesheets missing), for a manager or a time approver, opening
+    Timesheets' Missing. People out, payroll exceptions and expiring qualifications (design §1.2) come with P12, P25 and P18. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -47,7 +49,14 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="myDecisions" transaction="force-new"
                     ignore-error="true" in-map="{kinds:'decision', pageSize:1}"/>
         </if>
+        <!-- P10: last week's missing weeks of the people whose time a manager or time approver follows -->
+        <if condition="can.myTeam || ec.user.hasPermission('TIMESHEET_APPROVE')">
+            <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingWeeks" transaction="force-new"
+                    ignore-error="true" in-map="{list:'missing', withCounts:false}"/>
+        </if>
         <script>ec.message.clearErrors()</script>
+        <set field="missingWeeksText" from="missingWeeks?.rowList != null ? String(missingWeeks.rowList.length) : null"/>
+        <set field="missingWeeksLink" from="sharedLinks['Time/Timesheets'] + '?list=missing'"/>
         <set field="homeFound" from="!!home?.counts"/>
         <set field="counts" from="home?.counts || {}"/>
         <set field="countText" from="Object.fromEntries(Object.entries(counts).map(([name, value]) =&gt; [name, String(value)]))"/>
@@ -81,9 +90,11 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="Home summarizes the employers you read for HR, payroll and People administration; your own work is below."
                         type="p" style="m-muted"/>
                 <!-- P8: a People user who reads no employer (a manager): their decisions waiting and their team -->
-                <dashboard min-width="160" condition="can.requestApprove">
+                <dashboard min-width="160" condition="can.requestApprove || missingWeeksText != null">
                     <number-card title="Decisions waiting" value="${decisionCountText}" icon="sym_o_approval" size="sm"
                             link="${can.myTeam ? sharedLinks['MyTeam'] : sharedLinks['Approvals']}" condition="can.requestApprove"/>
+                    <number-card title="Weeks not submitted" value="${missingWeeksText}" icon="sym_o_schedule_send" size="sm"
+                            link="${missingWeeksLink}" condition="missingWeeksText != null"/>
                 </dashboard>
                 <link url="${sharedLinks['MyTeam']}" text="My team" link-type="anchor-button" icon="sym_o_diversity_3" condition="can.myTeam"/>
             </widgets>
@@ -143,6 +154,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     link="${sharedLinks['Staffing/Positions'] + '?vacancy=vacant'}" condition="countText.vacancies != null"/>
                             <number-card title="Decisions waiting" value="${countText.decisions}" icon="sym_o_approval" size="sm"
                                     link="${sharedLinks['Approvals']}" condition="countText.decisions != null"/>
+                            <!-- P10: the missing-week card -->
+                            <number-card title="Weeks not submitted" value="${missingWeeksText}" icon="sym_o_schedule_send" size="sm"
+                                    link="${missingWeeksLink}" condition="missingWeeksText != null"/>
                         </dashboard>
                         <label text="Headcount counts each person once; a person employed by two employers has two employments."
                                 type="p" style="text-caption m-muted"/>

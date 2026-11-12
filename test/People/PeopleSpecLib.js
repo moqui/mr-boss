@@ -35,23 +35,27 @@ const ids = {
     sharedPayGradeId: "BOSS_PPL_PG_LEAD",
     // the menu of design §1.2 built so far: every People user's, and with Settings the People administrator's; Employees holds
     // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades; P5:
-    // Approvals (every People user's own), and Settings' tabs the approval rules and lookups
-    staffMenu: ["Home", "Approvals", "Employees", "Staffing"],
-    adminMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Settings"],
-    // P8: My team, the managers' (and the administrator's, through the root's ALWAYS); P9: Time & leave, the HR officers' and the
-    // managers'
+    // Approvals (every People user's own), and Settings' tabs the approval rules and lookups; P10: Time & leave (every People
+    // user's) and Payroll (the payroll groups', and the administrator's through the root's ALWAYS)
+    staffMenu: ["Home", "Approvals", "Employees", "Staffing", "Time"],
+    adminMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Settings"],
+    // P8: My team, the managers' (and the administrator's, through the root's ALWAYS)
     managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time"],
     hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time"],
-    // P9: Time & leave's working schedules (HR's and the managers') and holidays (HR's)
-    hrTimeMenu: ["WorkingSchedules", "HolidayCalendars"],
-    managerTimeMenu: ["WorkingSchedules"],
+    payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll"],
+    // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
+    // managers') and holidays (HR's)
+    timeMenu: ["Timesheets", "MyTime", "TimeEntries"],
+    hrTimeMenu: ["Timesheets", "MyTime", "TimeEntries", "WorkingSchedules", "HolidayCalendars"],
+    managerTimeMenu: ["Timesheets", "MyTime", "TimeEntries", "WorkingSchedules"],
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
     // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings
     hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "ChecklistTemplates", "EmployeeImport"],
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
-    // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w"],
+    // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers;
+    // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll)
+    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
     // P7: Retail's onboarding and offboarding checklists, and the laptop Ines holds
@@ -60,7 +64,9 @@ const ids = {
     laptopAssetId: "BOSS_PPL_LAPTOP_INES",
     // P9: Retail's store week (America/Chicago, followed by nobody in the demo) and Retail's holiday calendar
     scheduleId: "BOSS_PPL_WS_STORE",
-    holidayCalendarId: "BOSS_PPL_HOL_RETAIL"
+    holidayCalendarId: "BOSS_PPL_HOL_RETAIL",
+    // P10: Manufacturing's demo labor costing rate (RaprCost since P10), which People's Rates shows read only
+    costingRateId: "BOSS_MFG_RATE_RUN"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

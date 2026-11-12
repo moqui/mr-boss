@@ -1,5 +1,8 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 11, 2026 — impl-people P10 as built (owner contract): People's Today source adds the user's own weeks to submit, opening
+People's My time, which Today's rows keep (a Projects timesheet item still opens Projects' My time); a timesheet's record link
+opens People's TimesheetDetail for a user who has People's time area and not Projects (§5 Home).
 Nov 11, 2026 — impl-people P8 as built (owner contract): Home's People card, People's Today source on Commons' root and
 `Commons/People/SelfService` (§5 Home, SelfService).
 Nov 11, 2026 — the decisions of impl-people, impl-sales and impl-marketing written in: the approval topics are listed in
@@ -685,7 +688,11 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
   `checkOnly`, nothing for anyone else): their employments and the counts of their open People requests and tasks, with
   a link to `Commons/People/SelfService`. People's Today source (`ironstone.people.ContextServices.get#TodayItems`, the
   decisions waiting on the user) is declared on Commons' root too, since a self-service employee opens no People root;
-  Home and the panel take each source service once.
+  Home and the panel take each source service once. P10: the source adds the user's own weeks to submit (kind
+  `timesheet`, for one who keeps time under People and not in Projects), each with its own link to People's My time,
+  which `get#TodayView` keeps (it gives Projects' My time only to a timesheet item with no link of its own); and a
+  timesheet's record link (`get#RecordLink`) opens People's TimesheetDetail for a user who opens People's time area and not
+  Projects.
 
 ### SelfService (Context passed)
 
