@@ -1665,6 +1665,8 @@ Design §5.1 (schedule and due semantics), Plans and PlanDetail; MT-05 (schedule
 
 ### P14 — Generation, occurrences and compliance
 
+(F117: the job's and recovery descriptor's `ownerRoute` are route keys in Admin.js `mountRoutes`.)
+
 Design §5.1 (occurrences, catch-up), DueMaintenance, PlanDetail's OccurrenceHistory, §8
 PreventiveComplianceReport, §1.4 (the job's operation marks); MT-05, MT-11.
 
@@ -1762,6 +1764,8 @@ approval kind; MT-07 (decisions), MT-01, MT-11.
 
 ### P17 — Reports and Insights
 
+(F117: dataset readiness and refresh rows are `moqui.server.ReadinessProvider` and `RefreshOperation` with `fixRoute="insightsDataset"`; Insights' registries are unchanged.)
+
 Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exports); MT-11.
 
 - **Mantle `MaintenanceReportServices.get#MaintenanceStatusReport`:** backlog, completions, cancellations, overdue
@@ -1790,6 +1794,8 @@ Design §8 Reports and WorkStatusReport, §1.4 Shipped reports, §12 (report exp
   with the same numbers; an overdue-PM alert copied from the template tells its subscribers once.
 
 ### P18 — Settings, lookups, readiness and import
+
+(F117: the readiness provider is a `moqui.server.ReadinessProvider` with `fixRoute`, its service answering `subject`, `scope` and `fixRoute` as People's `get#Readiness`; the import's owner route is a `mountRoutes` key in Admin.js; Data.js and DataImport.js no longer hold owner routes.)
 
 Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outcome file); MT-12, MT-11. Teams is P8's.
 
@@ -1826,6 +1832,8 @@ Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outco
   operator who also holds the resource view permission.
 
 ### P19 — Assist, Comms, sync and outputs
+
+(F117: export targets' `ownerRoute` are route keys in Admin.js `mountRoutes`.)
 
 Design §1.4 (Assist, Comms hooks, Sync, Meetings), §12 (the outputs not built earlier); MT-16, MT-12.
 
@@ -2049,6 +2057,7 @@ paths under `mr-boss/`.
 | F114 | P3 review: holders of `MAINTENANCE_PLAN`/`_SUPERVISE` could make the held moves on other work through a raw update where they have that path | No BOSS group has it (§2) |
 | F115 | P3 review: `assignedTo` counts declined and unassigned rows | Harmless while only schedule writes them |
 | F116 | P3 merge: master moved Admin's settings registry to the framework (`moqui.server.SettingsEntry`, `destinationRoute`, `screenLocation`) | P1's row moved at the merge; P18 follows the framework's readiness registry |
+| F117 | Pull of Nov 12: mr-moqui's Admin Screens Down (plans/Admin-Screens-Down.md A0–A6, I0–I4) moved Admin's generic screens to the framework's System and Tools apps and three registries to the framework: `moqui.server.SettingsEntry` (`destinationRoute` + `screenLocation`), `moqui.server.ReadinessProvider` (`fixRoute` + `fixId` + `scopeParameters`, was `fixPath`; services `org.moqui.admin.ReadinessServices`) and `moqui.server.RefreshOperation`. Owner routes are keys in mr-boss `service/ironstone/admin/Admin.js` `settingsRoutes` and `mountRoutes` (Data.js's and DataImport.js's tables are gone) or the framework's in tools `template/AdminMount.js`; `ownerRoute`, `fixRoute` and `linkKey` name one. Unchanged: `ironstone.admin.LifecycleParticipant`, the framework's CapabilityBundle, TopicRegistration, JobRegistration, RecoveryDescriptor, TransferTarget and AuditProjection, `Shared/DataImport` with `get#ImportMount`, and Insights' ironstone.insights registries (still `routePath`). Dataset readiness and refresh rows are `moqui.server.*` with `fixRoute="insightsDataset"`. System screens renamed with no aliases (SystemMessageDetail under Integrations, Jobs and JobDetail under Operations, Groups under Access, AuditChanges under Audit; Admin mounts the same names under its own areas) | P1's settings row moved (F116); P14 registers the job's `ownerRoute` and recovery as route keys; P17's dataset readiness and refresh are `moqui.server` rows; P18's readiness provider is a `moqui.server.ReadinessProvider` with `fixRoute`, and the equipment import's owner route a `mountRoutes` key; P19's export targets name route keys |
 
 
 ## 7. Later
