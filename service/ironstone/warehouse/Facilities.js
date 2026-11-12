@@ -436,6 +436,12 @@ function equipment(p) {
         .condition("assetId", asset.assetId)
         .condition("statusId", "not-in", ["AsMntCompleted", "AsMntCancelled"])
         .count()
+    // in maintenance: an AssetMaintenance in process, not a planned one (impl-maintenance §4, F13; an owner contract with Maintenance);
+    // the open jobs are still counted for the summary
+    const inMaintenance = find("mantle.product.maintenance.AssetMaintenance")
+        .condition("assetId", asset.assetId)
+        .condition("statusId", "AsMntInProcess")
+        .count()
     const reading = Array.from(
         find("mantle.product.maintenance.AssetMeter").condition("assetId", asset.assetId).orderBy("-readingDate").limit(1).list()
     )[0]
@@ -472,7 +478,7 @@ function equipment(p) {
         ? {availabilityText: "Left the facility", availabilityColor: "grey-8"}
         : current
           ? {availabilityText: "Assigned to work " + current.workEffortId, availabilityColor: "warning"}
-          : openMaintenance
+          : inMaintenance
             ? {availabilityText: "In maintenance", availabilityColor: "warning"}
             : {availabilityText: statusText(asset.statusId) || "Available", availabilityColor: "positive"}
     const bookingList = bookings({assetId: asset.assetId})

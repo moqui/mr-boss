@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Settings › Work policy (design-maintenance §9 MaintenanceSettings; style-guide §3.9 Settings; impl-maintenance P3):
+    one organization's work policy (mantle.work.MaintenanceSettingsServices get# and store#MaintenancePolicy, MAINTENANCE_SETTINGS_EDIT):
+    the planned-work approval threshold in hours (zero puts all template, preventive and planned work before a supervisor; corrective
+    work by a planner is approved on create), the closure policy, the default work type and team, and whether production requests
+    and warranty repairs become managed work (off). A change starts a dated policy from now and ends the one in effect. The cost half
+    of the threshold, the qualification check, procedure self-approval and the job defaults join with their phases (P11, P8, P6,
+    P14). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work policy" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId, capability:'settingsEdit'}"/>
+            <service-call name="mantle.work.MaintenanceSettingsServices.store#MaintenancePolicy"
+                    in-map="{organizationPartyId:organizationPartyId, approvalThresholdHours:approvalThresholdHours,
+                        closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
+                        defaultTeamPartyId:defaultTeamPartyId, productionRequestsManaged:productionRequestsManaged,
+                        warrantyRepairsManaged:warrantyRepairsManaged, comments:comments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Work policy saved from now</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="organizationPartyId"/>
+        </error-response>
+    </transition>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="organizationPartyId" from="organizationPartyId || maintenance.activeOrganizationPartyId || maintenance.organizationPartyIds?.[0] || null"/>
+        <if condition="can.settingsEdit &amp;&amp; organizationPartyId">
+            <service-call name="mantle.work.MaintenanceSettingsServices.get#MaintenancePolicy" out-map="policyOut" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="policy" from="policyOut?.policy || null"/>
+        <set field="policyValues" from="policy ? {organizationPartyId: organizationPartyId,
+                approvalThresholdHours: String(policy.approvalThresholdHours ?? 0), closurePolicyEnumId: policy.closurePolicyEnumId,
+                defaultMaintenanceTypeEnumId: policy.defaultMaintenanceTypeEnumId, defaultTeamPartyId: policy.defaultTeamPartyId,
+                productionRequestsManaged: policy.productionRequestsManaged ? 'Y' : 'N',
+                warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', comments: policy.comments} : {organizationPartyId: organizationPartyId}"/>
+        <set field="sinceText" from="policy?.fromDate ? 'In effect since ' + policy.fromDateText : 'The defaults are in effect: no policy has been saved.'"/>
+    </actions>
+    <widgets>
+        <label text="Work policy" type="h5"/>
+        <label text="Maintenance's settings are the Maintenance administrator's." type="p" style="m-muted" condition="!can.settingsEdit"/>
+        <label text="This organization is not available to you." type="p" style="text-negative" condition="can.settingsEdit &amp;&amp; !policy"/>
+        <section name="PolicyForm" condition="can.settingsEdit &amp;&amp; policy">
+            <widgets>
+                <form-single name="PolicyOrganization" transition="." map="policyValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down>
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:policyValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="showButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="showButton"/></field-row></field-layout>
+                </form-single>
+                <label text="${sinceText}" type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-body>
+                        <form-single name="MaintenanceSettings" transition="storePolicy" map="policyValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="approvalThresholdHours">
+                                <default-field title="Approve planned work up to (hours)"
+                                        tooltip="Planned work estimated above this, or with no estimate, waits for a supervisor; zero sends all of it">
+                                    <text-line size="6" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="closurePolicyEnumId">
+                                <default-field title="Closing completed work">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'closurePolicies', selected:policyValues.closurePolicyEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="defaultMaintenanceTypeEnumId">
+                                <default-field title="Default work type">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'maintenanceTypes', selected:policyValues.defaultMaintenanceTypeEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="defaultTeamPartyId">
+                                <default-field title="Default team">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'teams', selected:policyValues.defaultTeamPartyId, organizationPartyId:policyValues.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productionRequestsManaged">
+                                <default-field title="Production maintenance requests become work orders">
+                                    <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="warrantyRepairsManaged">
+                                <default-field title="Warranty repairs become work orders">
+                                    <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="comments"><default-field title="Why it changes"><text-line size="60"/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="Save from now">
+                                    <submit type="primary" confirmation="Save this work policy from now? The one in effect ends."/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

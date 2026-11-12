@@ -5474,4 +5474,15 @@ along with this software (see the LICENSE.md file). If not, see
             description="Work policy, teams, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
             scopeEnumId="AdmScOrganization" screenPath="Maintenance/Settings" viewPermission="MAINTENANCE_SETTINGS_EDIT"
             configuredBy="Maintenance administrator" sequenceNum="75"/>
+    <!-- impl-maintenance P3: the MaintenanceWork topic opens the work order (Mantle seeds the topic and its registration) -->
+    <moqui.security.user.NotificationTopic topic="MaintenanceWork" linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P3 (owner contract, design-admin §14; F56): Maintenance's lifecycle participant, a leaver's open work order
+        assignments and the equipment they hold, read as Projects' are (ADMIN_IDENTITY_VIEW, counts only) and moved through Mantle's
+        schedule#MaintenanceWorkOrder and change#MaintenanceCustody, which check the caller's maintenance permissions and the new
+        person themselves; Projects' participant leaves managed work out (Lifecycle.js). -->
+    <ironstone.admin.LifecycleParticipant participantKey="maintenance.assignments" version="1" ownerApp="Maintenance" title="Maintenance work and equipment"
+            description="The open maintenance work orders assigned to the user and the equipment they hold, moved through Maintenance's own services."
+            resourceKind="assignment" lookupService="ironstone.maintenance.LifecycleServices.find#Assignments"
+            transferService="ironstone.maintenance.LifecycleServices.transfer#Assignments" resourceParameter="assignmentKind"
+            requiredPermission="ADMIN_IDENTITY_VIEW" sequenceNum="60"/>
 </entity-facade-xml>

@@ -132,7 +132,12 @@ const linkPaths = [
     "Equipment/Product360",
     "Equipment/Employee360",
     "Facilities/Find",
-    "Facilities/FacilityDetail"
+    "Facilities/FacilityDetail",
+    // P3: Work orders and the work order record (design §3)
+    "WorkOrders/Find",
+    "WorkOrders/NewWorkOrder",
+    "WorkOrders/WorkOrderDetail",
+    "Settings/WorkPolicy"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -185,6 +190,26 @@ const recordKinds = {
             }
         }
     },
+    // P3: a work order (its root WorkEffort; a step reads as its root's), through Mantle's work read (a broad reader of its
+    // service organization, or the technician it is assigned to)
+    workOrder: {
+        name: "Work order",
+        icon: "sym_o_handyman",
+        destination: "WorkOrders/WorkOrderDetail",
+        parameter: "workEffortId",
+        read: (userScope, workEffortId) => {
+            const found = maintenanceAccess.requireWork(userScope.mantle, workEffortId)
+            if (!one("mantle.work.maintenance.MaintenanceWorkOrder", {workEffortId: found.rootWorkEffortId})) return null
+            const root = one("mantle.work.effort.WorkEffort", {workEffortId: found.rootWorkEffortId})
+            if (root.isTemplate === "Y") return null
+            return {
+                organizationPartyId: found.organizationPartyId,
+                label: root.workEffortName || root.workEffortId,
+                detail: organizationName(found.organizationPartyId),
+                rootWorkEffortId: root.workEffortId
+            }
+        }
+    },
     asset: {
         name: "Equipment",
         icon: "sym_o_build",
@@ -220,7 +245,8 @@ function recordOf(userScope, kind, recordId) {
         kindName: definition.name,
         organizationPartyId: found.organizationPartyId,
         label: found.label,
-        detail: found.detail
+        detail: found.detail,
+        rootWorkEffortId: found.rootWorkEffortId || null
     }
 }
 // check#Record: a record a Maintenance screen or mount was given, refused unless the user may see it and, when a capability is
@@ -245,8 +271,13 @@ function withSelected(options, selected, admits, label) {
 }
 // enumeration options of a type, searched by description, with the selected one
 function enumOptions(enumTypeId, term, selected, filter = null) {
-    let query = find("moqui.basic.Enumeration").condition("enumTypeId", enumTypeId).orderBy("sequenceNum").orderBy("description").limit(choiceLimit * 2)
-    if (term) query = query.condition(ec.entity.conditionFactory.makeCondition("description", "like", likeText(term)).ignoreCase())
+    let query = find("moqui.basic.Enumeration")
+        .condition("enumTypeId", enumTypeId)
+        .orderBy("sequenceNum")
+        .orderBy("description")
+        .limit(choiceLimit * 2)
+    if (term)
+        query = query.condition(ec.entity.conditionFactory.makeCondition("description", "like", likeText(term)).ignoreCase())
     let rows = Array.from(query.list())
     if (filter) rows = rows.filter(filter)
     const options = rows.slice(0, choiceLimit).map(row => ({value: row.enumId, label: row.description || row.enumId}))
@@ -265,9 +296,9 @@ const partyLabel = partyId => {
 // of the internal organizations only the scope's (another organization's people and private contacts are never offered).
 function organizationPartyOptions(userScope, term, selected) {
     const factory = ec.entity.conditionFactory
-    const internal = Array.from(find("mantle.party.PartyRole").condition("roleTypeId", "OrgInternal").selectField("partyId").list()).map(
-        row => row.partyId
-    )
+    const internal = Array.from(
+        find("mantle.party.PartyRole").condition("roleTypeId", "OrgInternal").selectField("partyId").list()
+    ).map(row => row.partyId)
     const outside = internal.filter(partyId => !covers(userScope, partyId))
     let query = find("mantle.party.PartyDetail")
         .condition("partyTypeEnumId", "PtyOrganization")
@@ -306,14 +337,19 @@ function custodianOptions(userScope, term, selected) {
     if (term)
         query = query.condition(
             factory.makeCondition(
-                ["fromPartyId", "firstName", "lastName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                ["fromPartyId", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
                 "or"
             )
         )
     const byParty = new Map()
     for (const row of Array.from(query.list()))
         if (!byParty.has(row.fromPartyId))
-            byParty.set(row.fromPartyId, {value: row.fromPartyId, label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId})
+            byParty.set(row.fromPartyId, {
+                value: row.fromPartyId,
+                label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+            })
     const options = Array.from(byParty.values()).concat(organizationOptions(organizations, term, choiceLimit))
     const employed = partyId =>
         find("mantle.party.PartyRelationship")
@@ -339,6 +375,95 @@ const resourceChoices = [
     "timeZones",
     "parentFacilities"
 ]
+// the choices of work orders, answered to a user who reads work (workRead) or keeps the work policy (settingsEdit)
+const workChoices = [
+    "maintenanceKinds",
+    "maintenanceTypes",
+    "maintenanceSources",
+    "severities",
+    "failureModes",
+    "holdReasons",
+    "cancelReasons",
+    "outcomes",
+    "dispositions",
+    "closurePolicies",
+    "teams",
+    "workPeople",
+    "workFacilities"
+]
+// The teams of the scope's organizations (one organization's with organizationPartyId): an OrgTeam an organization owns.
+function teamOptions(userScope, term, selected, p) {
+    const owners = p?.organizationPartyId
+        ? covers(userScope, p.organizationPartyId)
+            ? [p.organizationPartyId]
+            : []
+        : organizationIds(userScope)
+    if (!owners.length) return []
+    const factory = ec.entity.conditionFactory
+    const teamIds = Array.from(find("mantle.party.PartyRole", {roleTypeId: "OrgTeam"}).selectField("partyId").list()).map(
+        row => row.partyId
+    )
+    if (!teamIds.length) return []
+    let query = find("mantle.party.PartyDetail")
+        .condition("partyId", "in", teamIds)
+        .condition("ownerPartyId", "in", owners)
+        .orderBy("^organizationName")
+        .limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["partyId", "organizationName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const options = Array.from(query.list()).map(row => ({value: row.partyId, label: row.organizationName || row.partyId}))
+    const admits = partyId =>
+        teamIds.includes(partyId) && owners.includes(one("mantle.party.Party", {partyId})?.ownerPartyId || "")
+    return withSelected(options, selected, admits, partyLabel)
+}
+// The people a work order may be assigned to: the persons employed by or agents of the scope's organizations now (one
+// organization's with organizationPartyId), by name, as Mantle's schedule#MaintenanceWorkOrder admits them.
+function workPeopleOptions(userScope, term, selected, p) {
+    const factory = ec.entity.conditionFactory
+    const organizations = p?.organizationPartyId
+        ? covers(userScope, p.organizationPartyId)
+            ? [p.organizationPartyId]
+            : []
+        : organizationIds(userScope)
+    if (!organizations.length) return []
+    let query = find("mantle.party.PartyFromAndRelationship")
+        .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+        .condition("toPartyId", "in", organizations)
+        .condition("partyTypeEnumId", "PtyPerson")
+        .conditionDate("fromDate", "thruDate", null)
+        .selectField(["fromPartyId", "firstName", "lastName"])
+        .orderBy(["^firstName", "^lastName"])
+        .limit(choiceLimit * 2)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["fromPartyId", "firstName", "lastName"].map(field =>
+                    factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                ),
+                "or"
+            )
+        )
+    const byParty = new Map()
+    for (const row of Array.from(query.list()))
+        if (!byParty.has(row.fromPartyId))
+            byParty.set(row.fromPartyId, {
+                value: row.fromPartyId,
+                label: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+            })
+    const member = partyId =>
+        find("mantle.party.PartyRelationship")
+            .condition({fromPartyId: partyId})
+            .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+            .condition("toPartyId", "in", organizations)
+            .conditionDate("fromDate", "thruDate", null)
+            .count() > 0
+    return withSelected(Array.from(byParty.values()).slice(0, choiceLimit), selected, member, partyLabel)
+}
 const choiceSources = {
     // the organizations of the user's maintenance scope
     organizations: (userScope, term, selected) =>
@@ -391,19 +516,20 @@ const choiceSources = {
     // P2: the drop-downs of Equipment, Facilities and their shared records
     facilityTypes: (userScope, term, selected) => enumOptions("FacilityType", term, selected),
     equipmentTypes: (userScope, term, selected) =>
-        enumOptions("AssetType", term, selected, row => !["AstTpInventory", "AstTpSupplies"].includes(row.enumId))
-    ,
+        enumOptions("AssetType", term, selected, row => !["AstTpInventory", "AstTpSupplies"].includes(row.enumId)),
     equipmentClasses: (userScope, term, selected) => enumOptions("AssetClass", term, selected),
     roomFeatures: (userScope, term, selected) => enumOptions("RoomFeature", term, selected),
     custodyRoles: (userScope, term, selected) => {
         const roles = ["Custodian", "Operator"]
         return roles
-            .map(roleTypeId => ({value: roleTypeId, label: one("mantle.party.RoleType", {roleTypeId})?.description || roleTypeId}))
+            .map(roleTypeId => ({
+                value: roleTypeId,
+                label: one("mantle.party.RoleType", {roleTypeId})?.description || roleTypeId
+            }))
             .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
     },
     readingReasons: (userScope, term, selected) =>
-        enumOptions("AssetMeterReadingReason", term, selected, row => row.enumId !== "AmrCorrection")
-    ,
+        enumOptions("AssetMeterReadingReason", term, selected, row => row.enumId !== "AmrCorrection"),
     // a warrantor or a registration agency: organizations, of the internal ones only the scope's
     parties: (userScope, term, selected) => organizationPartyOptions(userScope, term, selected),
     // a custodian or operator: the scope's organizations' employees, and the organizations
@@ -432,7 +558,10 @@ const choiceSources = {
     },
     // equipment of the scope (a parent), never the asset itself (assetId)
     equipment: (userScope, term, selected, p) => {
-        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {text: term || null, pageSize: choiceLimit})
+        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {
+            text: term || null,
+            pageSize: choiceLimit
+        })
         const options = Array.from(found.equipmentList || [])
             .filter(row => row.assetId !== p?.assetId)
             .map(row => ({value: row.assetId, label: row.assetName + (row.serialNumber ? " (" + row.serialNumber + ")" : "")}))
@@ -460,7 +589,11 @@ const choiceSources = {
         if (modelMeters.length)
             return modelMeters.map(row => ({
                 value: row.productMeterId,
-                label: row.meterName || one("mantle.product.maintenance.ProductMeterType", {productMeterTypeId: row.productMeterTypeId})?.description || row.productMeterId
+                label:
+                    row.meterName ||
+                    one("mantle.product.maintenance.ProductMeterType", {productMeterTypeId: row.productMeterTypeId})
+                        ?.description ||
+                    row.productMeterId
             }))
         return Array.from(find("mantle.product.maintenance.ProductMeterType").orderBy("description").list()).map(row => ({
             value: "type:" + row.productMeterTypeId,
@@ -474,10 +607,50 @@ const choiceSources = {
         if (selected && !found.includes(selected) && zones.includes(selected)) found.push(selected)
         return found.map(zone => ({value: zone, label: zone}))
     },
+    // P3: the lookups of work orders (design §9; Settings' Lookups maintain them from P18)
+    maintenanceKinds: (userScope, term, selected) => enumOptions("MaintenanceKind", term, selected),
+    maintenanceTypes: (userScope, term, selected) => enumOptions("MaintenanceType", term, selected),
+    maintenanceSources: (userScope, term, selected) => enumOptions("MaintenanceSource", term, selected),
+    severities: (userScope, term, selected) => enumOptions("MaintenanceSeverity", term, selected),
+    failureModes: (userScope, term, selected) => enumOptions("MaintenanceFailureMode", term, selected),
+    holdReasons: (userScope, term, selected) => enumOptions("MaintenanceHoldReason", term, selected),
+    cancelReasons: (userScope, term, selected) => enumOptions("MaintenanceCancelReason", term, selected),
+    outcomes: (userScope, term, selected) => enumOptions("MaintenanceOutcome", term, selected),
+    dispositions: (userScope, term, selected) => enumOptions("MaintenanceDisposition", term, selected),
+    closurePolicies: (userScope, term, selected) => enumOptions("MaintenanceClosurePolicy", term, selected),
+    // the teams and people work may be given to
+    teams: (userScope, term, selected, p) => teamOptions(userScope, term, selected, p),
+    workPeople: (userScope, term, selected, p) => workPeopleOptions(userScope, term, selected, p),
+    // a facility work is for: every facility of the scope (a room inside a building), through Mantle's scoped find
+    workFacilities: (userScope, term, selected) => {
+        if (!userScope.capabilities.resourceRead) return []
+        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {
+            text: term || null,
+            pageSize: choiceLimit
+        })
+        const options = Array.from(found.facilityList || [])
+            .filter(row => !row.hiddenAncestor)
+            .map(row => ({value: row.facilityId, label: row.facilityName}))
+        return withSelected(
+            options,
+            selected,
+            facilityId => {
+                try {
+                    return !!recordOf(userScope, "facility", facilityId)
+                } catch (error) {
+                    return false
+                }
+            },
+            facilityName
+        )
+    },
     // the facilities of the scope as a parent: every facility of the scope (a room inside a building), never the facility itself
     // (facilityId)
     parentFacilities: (userScope, term, selected, p) => {
-        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {text: term || null, pageSize: choiceLimit})
+        const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {
+            text: term || null,
+            pageSize: choiceLimit
+        })
         // an unnamed node (a parent outside the scope, hidden-n) is no facility to choose
         const options = Array.from(found.facilityList || [])
             .filter(row => !row.hiddenAncestor && row.facilityId !== p?.facilityId)
@@ -500,6 +673,8 @@ function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Maintenance choice " + p.choice)
     if (resourceChoices.includes(p.choice) && !userScope.capabilities.resourceRead) return {options: []}
+    if (workChoices.includes(p.choice) && !userScope.capabilities.workRead && !userScope.capabilities.settingsEdit)
+        return {options: []}
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 
@@ -510,11 +685,34 @@ function choices(p) {
 const recordUrl = (kind, recordId) =>
     "/qapps/Maintenance/" + recordKinds[kind].destination + "?" + recordKinds[kind].parameter + "=" + encodeURIComponent(recordId)
 const searchFinds = [
+    // P3: work orders, through Mantle's scoped list (a technician with the assigned view finds their own)
+    {
+        kind: "workOrder",
+        rows: (userScope, text, limit) => {
+            if (!userScope.mantle.capabilities.workRead) return []
+            const found = lib.probe("mantle.work.MaintenanceServices.find#MaintenanceWorkOrders", {
+                text,
+                statusId: "all",
+                pageSize: limit
+            })
+            return Array.from(found.workOrderList || []).map(row => ({
+                title: row.workEffortName,
+                subtitle: ["Work order " + row.workEffortId, row.targetName, row.statusText].filter(Boolean).join(" · "),
+                icon: recordKinds.workOrder.icon,
+                recordEntity: "mantle.work.effort.WorkEffort",
+                recordId: row.workEffortId,
+                url: recordUrl("workOrder", row.workEffortId)
+            }))
+        }
+    },
     {
         kind: "asset",
         rows: (userScope, text, limit) => {
             if (!userScope.mantle.capabilities.resourceRead) return []
-            const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {text, pageSize: limit})
+            const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceEquipment", {
+                text,
+                pageSize: limit
+            })
             return Array.from(found.equipmentList || []).map(row => ({
                 title: row.assetName,
                 subtitle: ["Equipment", row.serialNumber, row.facilityName].filter(Boolean).join(" · "),
@@ -529,16 +727,21 @@ const searchFinds = [
         kind: "facility",
         rows: (userScope, text, limit) => {
             if (!userScope.mantle.capabilities.resourceRead) return []
-            const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {text, pageSize: limit})
+            const found = lib.probe("mantle.product.MaintenanceResourceServices.find#MaintenanceFacilities", {
+                text,
+                pageSize: limit
+            })
             // an unnamed node (a parent outside the scope) is not a record to open
-            return Array.from(found.facilityList || []).filter(row => !row.hiddenAncestor).map(row => ({
-                title: row.facilityName,
-                subtitle: ["Facility", row.typeText, row.organizationName].filter(Boolean).join(" · "),
-                icon: recordKinds.facility.icon,
-                recordEntity: "mantle.facility.Facility",
-                recordId: row.facilityId,
-                url: recordUrl("facility", row.facilityId)
-            }))
+            return Array.from(found.facilityList || [])
+                .filter(row => !row.hiddenAncestor)
+                .map(row => ({
+                    title: row.facilityName,
+                    subtitle: ["Facility", row.typeText, row.organizationName].filter(Boolean).join(" · "),
+                    icon: recordKinds.facility.icon,
+                    recordEntity: "mantle.facility.Facility",
+                    recordId: row.facilityId,
+                    url: recordUrl("facility", row.facilityId)
+                }))
         }
     }
 ]
@@ -582,7 +785,20 @@ function resolveScan(p) {
     }
 }
 
-const operations = {sharedContext, capabilities: capabilitiesOf, checkRecord, choices, search, resolveScan}
+// recordLink: a record's Maintenance screen for the current user (Commons' get#RecordLink), or null when Maintenance does not admit
+// them to it (no root grant, or the record outside their scope).
+function recordLink(p) {
+    const userScope = scope()
+    if (!userScope.read) return {url: null}
+    try {
+        const found = recordOf(userScope, p.recordType, p.recordId)
+        return {url: recordUrl(p.recordType, found.rootWorkEffortId || found.recordId)}
+    } catch (error) {
+        return {url: null}
+    }
+}
+
+const operations = {sharedContext, capabilities: capabilitiesOf, checkRecord, choices, search, resolveScan, recordLink}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Maintenance operation " + op)
     return operations[op](p || {})

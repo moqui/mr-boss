@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Work orders area of IronStone Maintenance (design-maintenance §3 WorkOrders and WorkOrderDetail, §1.2; impl-maintenance P3):
+    Find, the work orders of the user's scope as a list, a board by status and a calendar of the planned windows; NewWorkOrder, the
+    quick create's and Find's New work order; WorkOrderDetail, a work order's record with its lifecycle, assignments, time, files,
+    conversation and history, hidden from the menu. Shown to a user who reads maintenance work (the root's menu condition); every
+    read and write is Mantle's mantle.work.MaintenanceServices after the root's check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_handyman" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true">
+        <subscreens-item name="NewWorkOrder" location="component://mr-boss/screen/Maintenance/WorkOrders/NewWorkOrder.xml" menu-include="false"/>
+        <subscreens-item name="WorkOrderDetail" location="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenanceWorkOrdersPanel" type="tab"/>
+    </widgets>
+</screen>

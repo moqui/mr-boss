@@ -49,7 +49,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="TaskAccess" allow-remote="false">
         <description>Whether the current user may see and change a task: found (a WetTask), visible (get#RecordLinkInfo with
             checkOnly), the user's current roles on it (not declined or unassigned), isOwner, isAssignee, isWatcher (the Watcher
-            role or a RecordFollower row) and canUpdate (owner or assignee; never in a closed project or for a production run's operation, F38, which is not found in Projects). need: check answers without an error, view adds
+            role or a RecordFollower row) and canUpdate (owner or assignee; never in a closed project or for a production run's operation, F38, which is not found in Projects; a maintenance work order and its steps are not
+            found at all, MANAGED_WORK naming the work order to open in Maintenance, impl-maintenance P3). need: check answers without an error, view adds
             "not available" when it is not found or not visible, update adds an error also when the user may not change it.</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
@@ -91,6 +92,13 @@ along with this software (see the LICENSE.md file). If not, see
                     || (row.parentWorkEffortId !== row.rootWorkEffortId && productionRun(row.parentWorkEffortId))
             if (production && app === 'projects') {
                 if (need !== 'check') ec.message.addError(notAvailable())
+                return
+            }
+            // a maintenance work order and its steps (managed work, impl-maintenance P3) are no task here: they are worked from
+            // their work order in Maintenance, and the generic task services refuse them (MANAGED_WORK)
+            if (ec.resource.script('component://mr-mantle/service/mantle/work/WorkProcesses.js').managedIds([workEffortId]).length) {
+                if (need !== 'check') ec.message.addError(ec.resource.expand('MANAGED_WORK: Work ${workEffortId} is a maintenance work order\'s; open it in Maintenance (/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${rootId})', '',
+                        {workEffortId: workEffortId, rootId: row.rootWorkEffortId || workEffortId}))
                 return
             }
             found = true
@@ -445,6 +453,8 @@ along with this software (see the LICENSE.md file). If not, see
             const aboveIds = Array.from(new Set(projectIds.concat(tasks.map((task) => task.parentWorkEffortId).filter((id) => id))))
             const productionRunIds = new Set(aboveIds.length ? Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', aboveIds)
                     .condition('purposeEnumId', 'WepProductionRun').selectField('workEffortId').disableAuthz().list()).map((run) => run.workEffortId) : [])
+            // managed work (a maintenance work order and its steps, impl-maintenance P3) is no task to change here
+            const managedIds = new Set(ec.resource.script('component://mr-mantle/service/mantle/work/WorkProcesses.js').managedIds(ids))
             // the assignees
             const assignees = {}
             const assigneeParties = new Set()
@@ -494,7 +504,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const isOwner = !!partyId && task.ownerPartyId === partyId
                 const production = task.purposeEnumId === 'WepProductionRun' || productionRunIds.has(task.rootWorkEffortId)
                         || productionRunIds.has(task.parentWorkEffortId)
-                const canUpdate = !production && (isOwner || roles.includes('Assignee'))
+                const canUpdate = !production && !managedIds.has(id) && (isOwner || roles.includes('Assignee'))
                 const isDone = ['WeComplete', 'WeClosed'].includes(task.statusId)
                 const isOpen = !isDone && task.statusId !== 'WeCancelled'
                 const due = toMillis(task.estimatedCompletionDate) ?? toMillis(task.estimatedStartDate)

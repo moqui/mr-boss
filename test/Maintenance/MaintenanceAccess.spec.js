@@ -6,6 +6,8 @@
 // Chatter and RecordFiles panels (F74) and a user served only Maintenance's record hosts' panels, Home's one qvt render (its counters not configured) and
 // Settings' one html render (the administrator's; the reader's a refusal), P2's equipment write (the resource administrator's,
 // the planner refused, another organization's equipment refused) and record panels (equipment and facilities of the scope only),
+// P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
+// Retail) and its record panels,
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -69,7 +71,10 @@ spec({
         // the kiosk's device goes and its display account's memberships end
         system(() => {
             ec.entity.find("moqui.security.DeviceCredential").condition("deviceName", "Spec maintenance kiosk").deleteAll()
-            const display = ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.maintenance.kiosk").one()
+            const display = ec.entity
+                .find("moqui.security.UserAccount")
+                .condition("username", "display.spec.maintenance.kiosk")
+                .one()
             if (display)
                 ec.entity
                     .find("moqui.security.UserGroupMember")
@@ -287,9 +292,12 @@ feature(
                 // P2: a custodian is one of the scope's employees; a warrantor or agency an organization, never a person or
                 // another internal organization
                 const options = (choice, term) => invoke(choices, {choice, term}).options.map(option => option.value)
-                if (!options("custodians", "Kenji").includes(ids.custodianId)) problems.push("the planner's custodians lack Kenji")
-                if (options("parties", "Kenji").length) problems.push(`the planner's parties offer people: ${options("parties", "Kenji")}`)
-                if (options("parties", "Retail").includes(ids.otherOrganizationId)) problems.push("the planner's parties offer Retail")
+                if (!options("custodians", "Kenji").includes(ids.custodianId))
+                    problems.push("the planner's custodians lack Kenji")
+                if (options("parties", "Kenji").length)
+                    problems.push(`the planner's parties offer people: ${options("parties", "Kenji")}`)
+                if (options("parties", "Retail").includes(ids.otherOrganizationId))
+                    problems.push("the planner's parties offer Retail")
             })
             asUser(users.retailPlanner, () => {
                 expect(
@@ -333,7 +341,9 @@ feature(
 feature("an equipment write is the resource administrator's: the planner is refused, and Retail's forklift is refused to both", {
     when() {
         const store = "mantle.product.MaintenanceResourceServices.store#MaintenanceEquipment"
-        const original = system(() => ec.entity.find("mantle.product.asset.Asset").condition("assetId", ids.compressorId).one().comments)
+        const original = system(
+            () => ec.entity.find("mantle.product.asset.Asset").condition("assetId", ids.compressorId).one().comments
+        )
         const parameters = assetId => ({assetId, comments: "Checked by the Maintenance access spec"})
         // the Mantle writer as the screens call it under the root's inheritable grant: the artifact check aside, its own
         // permission and scope checks decide
@@ -348,7 +358,9 @@ feature("an equipment write is the resource administrator's: the planner is refu
         const checkEdit = asUser(users.planner, () =>
             refusal(checkRecord, {recordType: "asset", recordId: ids.compressorId, capability: "resourceEdit"})
         )
-        const saved = system(() => ec.entity.find("mantle.product.asset.Asset").condition("assetId", ids.compressorId).one().comments)
+        const saved = system(
+            () => ec.entity.find("mantle.product.asset.Asset").condition("assetId", ids.compressorId).one().comments
+        )
         system(() => call("update#mantle.product.asset.Asset", {assetId: ids.compressorId, comments: original}))
         return {resources, planner, otherAsset, checkEdit, saved}
     },
@@ -431,13 +443,16 @@ feature("a shared device gets no Maintenance context and no record panel; a user
                 displayUserId: display.userId,
                 issueCode: false
             })
-            const code = invoke("mantle.party.IdentityServices.reveal#SharedDeviceCode", {deviceId: registered.deviceId})
-                .registrationCode
+            const code = invoke("mantle.party.IdentityServices.reveal#SharedDeviceCode", {
+                deviceId: registered.deviceId
+            }).registrationCode
             const redeemed = ec.screen
                 .makeTest()
                 .rootScreen("component://webroot/screen/webroot.xml")
                 .render("Device/redeem", {code}, "post")
-            return String(redeemed.header("Set-Cookie") || "").split(";")[0].replace("moqui.device=", "")
+            return String(redeemed.header("Set-Cookie") || "")
+                .split(";")[0]
+                .replace("moqui.device=", "")
         })
         login("john.doe")
         // the panels' data, as the chatter and record-files elements ask for it: of a facility and equipment the planner reads (P2's
@@ -457,11 +472,29 @@ feature("a shared device gets no Maintenance context and no record panel; a user
                 otherFacility: panel("mantle.facility.Facility", ids.otherFacilityId),
                 otherAsset: panel("mantle.product.asset.Asset", ids.otherAssetId),
                 product: panel("mantle.product.Product", ids.modelId),
-                plannerChatter: deviceRequest("apps/Maintenance/Chatter/chatterData", null)
-            }))
+                plannerChatter: deviceRequest("apps/Maintenance/Chatter/chatterData", null),
+                // P3: a work order is a host (F82); a work effort that is no work order is not
+                plannerWork: panel("mantle.work.effort.WorkEffort", ids.inProgressOrderId),
+                plainWork: panel("mantle.work.effort.WorkEffort", "BOSS_DEMO_TASK")
+            })),
+            retailWork: asUser(users.retailPlanner, () => panel("mantle.work.effort.WorkEffort", ids.inProgressOrderId))
         }
     },
-    then({cookie, home, chatter, files, plannerFiles, plannerAsset, otherFacility, otherAsset, product, plannerChatter}) {
+    then({
+        cookie,
+        home,
+        chatter,
+        files,
+        plannerFiles,
+        plannerAsset,
+        otherFacility,
+        otherAsset,
+        product,
+        plannerChatter,
+        plannerWork,
+        plainWork,
+        retailWork
+    }) {
         cookie.includes(".")
         home.status == 200 && home.errors == ""
         home.output.includes("Nothing of it is open to you.")
@@ -473,8 +506,41 @@ feature("a shared device gets no Maintenance context and no record panel; a user
         otherAsset.includes("RECORD_PANEL_UNAVAILABLE")
         product.includes("RECORD_PANEL_UNAVAILABLE")
         !plannerChatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
+        !plannerWork.includes("RECORD_PANEL_UNAVAILABLE")
+        plainWork.includes("RECORD_PANEL_UNAVAILABLE")
+        retailWork.includes("RECORD_PANEL_UNAVAILABLE")
     }
 })
+
+feature(
+    "a work order is read by a work reader of its organization and the technician assigned to it, not a resource administrator, another technician or Retail (P3)",
+    {
+        when() {
+            const check = (user, workEffortId = ids.inProgressOrderId) =>
+                asUser(user, () =>
+                    refusal(checkRecord, {appRoot: "Maintenance", recordType: "workOrder", recordId: workEffortId})
+                )
+            return {
+                planner: check(users.planner),
+                tech: check(users.tech),
+                tech2: check(users.tech2),
+                resources: check(users.resources),
+                retail: check(users.retailPlanner),
+                // the same check of Retail's planner is not a missing record: Services' planner reads it with the same parameters
+                missing: check(users.planner, "BOSS_MNT_WO_NONE")
+            }
+        },
+        then(out) {
+            out.planner == ""
+            out.tech == ""
+            // another technician of the organization: in scope but not theirs (Mantle's NOT_ASSIGNED)
+            out.tech2.includes("NOT_ASSIGNED")
+            out.resources.includes("RECORD_UNAVAILABLE")
+            out.retail.includes("RECORD_UNAVAILABLE")
+            out.missing.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
 
 feature("Home shows the planner their organization and the counters not configured; Settings is the administrator's", {
     when() {
@@ -490,6 +556,11 @@ feature("Home shows the planner their organization and the counters not configur
         plannerHome.output.includes("Counters")
         plannerHome.output.includes("Open work orders")
         plannerHome.output.includes("Not configured")
+        // P3: the work order counters, the planner's New work order and the team's work
+        plannerHome.output.includes("Unassigned")
+        plannerHome.output.includes("My work")
+        plannerHome.output.includes("New work order")
+        plannerHome.output.includes("Team work")
         plannerHome.output.includes("Ziziwork Services")
         !plannerHome.output.includes("is not available to you")
         // the planner has no Settings shortcut
@@ -549,12 +620,13 @@ feature(
                 if (launcher.size() !== 1 || launcher.get(0).artifactGroupId !== "BOSS_MAINTENANCE")
                     problems.push("the launcher's artifact")
                 const holders = userPermissionId =>
-                    Array.from(
-                        ec.entity.find("moqui.security.CapabilityBundlePermission").condition({userPermissionId}).list()
-                    )
+                    Array.from(ec.entity.find("moqui.security.CapabilityBundlePermission").condition({userPermissionId}).list())
                         .map(row => row.userGroupId)
                         .sort()
-                if (JSON.stringify(holders("MAINTENANCE_IMPORT")) !== '["BOSS_MAINTENANCE_ADMIN","BOSS_MAINTENANCE_RESOURCE_ADMIN"]')
+                if (
+                    JSON.stringify(holders("MAINTENANCE_IMPORT")) !==
+                    '["BOSS_MAINTENANCE_ADMIN","BOSS_MAINTENANCE_RESOURCE_ADMIN"]'
+                )
                     problems.push(`MAINTENANCE_IMPORT's bundles: ${holders("MAINTENANCE_IMPORT")}`)
                 if (JSON.stringify(holders("MAINTENANCE_ALL_ORGANIZATIONS")) !== '["BOSS_MAINTENANCE_ADMIN"]')
                     problems.push(`MAINTENANCE_ALL_ORGANIZATIONS's bundles: ${holders("MAINTENANCE_ALL_ORGANIZATIONS")}`)
