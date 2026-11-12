@@ -45,7 +45,8 @@ const ids = {
     payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll"],
     // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
     // managers') and holidays (HR's); P11's leave balances (HR's and the managers'), leave policies and allocations (HR's); P12's
-    // leave requests and team calendar (every People user's); P13's attendance (every People user's)
+    // leave requests and team calendar (every People user's); P13's attendance (every People user's); P14's shift roster (HR's and
+    // the managers')
     timeMenu: ["Timesheets", "MyTime", "TimeEntries", "LeaveRequests", "TeamCalendar", "Attendance"],
     hrTimeMenu: [
         "Timesheets",
@@ -58,7 +59,8 @@ const ids = {
         "Attendance",
         "HolidayCalendars",
         "LeavePolicies",
-        "LeaveAllocations"
+        "LeaveAllocations",
+        "ShiftRoster"
     ],
     managerTimeMenu: [
         "Timesheets",
@@ -68,7 +70,8 @@ const ids = {
         "WorkingSchedules",
         "TeamCalendar",
         "LeaveBalances",
-        "Attendance"
+        "Attendance",
+        "ShiftRoster"
     ],
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
@@ -77,8 +80,9 @@ const ids = {
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
     // the HR officer's keys (P8's g m, My team, is shown only to whom My team opens; P9's g w, Working schedules, to HR and managers;
     // P10's g t, Timesheets, to every People user, and g r, Rates, to payroll; P11's g b, Leave balances, to HR and managers; P12's
-    // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user)
-    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d"],
+    // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user; P14's g h, Shift roster, to HR and
+    // managers)
+    keys: ["g p", "g e", "g o", "g c", "g s", "g a", "g w", "g t", "g b", "g l", "g d", "g h"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
     // P7: Retail's onboarding and offboarding checklists, and the laptop Ines holds

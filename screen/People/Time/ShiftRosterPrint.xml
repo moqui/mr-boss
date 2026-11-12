@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The roster print (design-people §15, "Shift/attendance/timesheet" from ShiftRoster; impl-people P14): the same roster as the
+    browser's and the terminal's (mantle.humanres.ScheduleServices.get#Roster for the employer and days), as of now, a week a table:
+    each person's shifts by day (drafts said so), approved leave (never its type or reason) and holidays, and their rostered hours
+    (template/PeopleRoster.xml). Opened from the roster's Print (html-print); it renders in every mode. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Shift roster print" default-menu-include="false">
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDay"/>
+    <parameter name="days"/>
+    <actions>
+        <service-call name="mantle.humanres.ScheduleServices.get#Roster" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), fromDay:(fromDay || null), days:(Number(days) || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="roster" from="found?.roster || null"/>
+        <set field="employerText" from="roster?.organizationPartyId ? ((roster.organizationOptions || []).find((option) =&gt; option.value == roster.organizationPartyId)?.label || roster.organizationPartyId) + ' · ' : ''"/>
+    </actions>
+    <widgets>
+        <section name="RosterPrintFound" condition="roster">
+            <widgets>
+                <label text="Shift roster" type="h5"/>
+                <label text="${employerText}${roster.fromDay} to ${roster.thruDay} · as of ${roster.nowText} (${roster.timeZone || ec.user.timeZone || 'server time'})" type="p"/>
+                <label text="${(roster.shifts || []).length} ${(roster.shifts || []).length == 1 ? 'shift' : 'shifts'}, ${roster.draftCount} not published${roster.truncated ? '; only the first 200 people' : ''}" type="p"
+                        style="m-muted"/>
+                <section-include name="RosterWeeks" location="component://mr-boss/template/PeopleRoster.xml"/>
+            </widgets>
+            <fail-widgets>
+                <label text="This roster is not available." type="p" style="m-muted"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

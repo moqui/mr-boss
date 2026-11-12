@@ -550,7 +550,7 @@ Contracts:
   (`define#ProjectionOwner`: admitted, eventList), reading no record of the owner itself; put and
   delete refuse it (403), after the DAV server's own read-only refusal. People's Team absence
   (`LeaveServices.get#AbsenceProjection`) is the first; shifts, interviews, Maintenance's and
-  Marketing's register the same way.
+  Marketing's register the same way. As built (impl-people P14): My shifts (`projected-PeopleMyShifts`, `ScheduleServices.get#ShiftProjection`), a worker's own published shifts, registers on the same kind.
 - **CX-MAIL-INTAKE (L3).** Business mail intake is an `EmailRuleAction` enumeration whose
   `optionValue` names the owner's service, reached by a plus-tag intake address, as Projects'
   `createRequest` and `createWorkItem` already are. Proposed actions: `createApplication`,

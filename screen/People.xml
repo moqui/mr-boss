@@ -38,7 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
     own leave requests, the LeaveRequest record-lookup (the people.records provider), Today's leave starting for my team, the key g l
     and the prompt "Explain my balance"; P13 Attendance under Time & leave (every People user's and a self-service employee's, by the
     area's grant) with HR's Time import (BOSS_PPL_TIME_IMPORT) and the Clock in screen (the quick create, declared on Commons' root),
-    the attendance topic and the key g d. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
+    the attendance topic and the key g d; P14 the Shift roster under Time & leave (HR's and the managers', BOSS_PPL_SCHEDULES), the
+    worker's shift topic and the key g h. The Chatter and RecordFiles panels under this root open only People's own record hosts (the
     employment, P2; each later host with its phase): any other record's notes and files are kept in its own app, so the root's
     grant opens no other record's panel. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -75,7 +76,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="SelfService" location="component://mr-boss/screen/Shared/PeopleSelfService.xml" menu-include="false"/>
     </subscreens>
 
-    <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
+    <!-- P1: the people keymap (P3: g o and g c; P4: g s; P5: g a; P8: g m; P9: g w; P10: g t and g r; P11: g b; P14: g h). P2: the palette's directory (Employees, as Commons' People group is its contacts) and the Person
         record-lookup over the directory projection (design §1.4). Quick create and Today (design §1.4) come with their records. -->
     <shell-providers>
         <palette-source group="Employees" label="Employee directory" icon="sym_o_badge"
@@ -98,6 +99,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g l" label="Leave requests" screen="People/Time/LeaveRequests"/>
             <!-- P13: attendance -->
             <key keys="g d" label="Attendance" screen="People/Time/Attendance"/>
+            <!-- P14: the shift roster -->
+            <key keys="g h" label="Shift roster" screen="People/Time/ShiftRoster"/>
         </keymap>
         <!-- P5: a position's activation to approve (Mantle's PeoplePositionApproval), for the Notifications panel's filter by app -->
         <notification-topic topic="PeoplePositionApproval"/>
@@ -130,6 +133,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P13: an attendance correction to approve (PeopleAttendanceApproval); the quick create Clock in is declared on Commons' root,
             which a self-service employee opens too -->
         <notification-topic topic="PeopleAttendanceApproval"/>
+        <!-- P14: a worker's shifts published, changed or removed (PeopleShiftChange) -->
+        <notification-topic topic="PeopleShiftChange"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

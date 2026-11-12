@@ -31,7 +31,8 @@ const areas = {
     // P8: My team, the managers' (BOSS_PPL_TEAM; the capability team is PEOPLE_TEAM_VIEW's)
     myTeam: "MyTeam",
     // P9: Time & leave's working schedules, HR's and the managers' (BOSS_PPL_SCHEDULES; Holidays HR's alone, BOSS_PPL_HOLIDAYS;
-    // the area itself every People user's since P10, BOSS_PPL_TIME)
+    // the area itself every People user's since P10, BOSS_PPL_TIME); P14's Shift roster is in the same group, so this capability
+    // is its too
     schedules: "Time/WorkingSchedules",
     // P10: Payroll, the payroll groups' (BOSS_PPL_PAYROLL; Rates under it)
     payroll: "Payroll"
@@ -204,7 +205,11 @@ const linkPaths = [
     // Clock in) and HR's time import
     "Time/Attendance",
     "Time/Clock",
-    "Time/TimeImport"
+    "Time/TimeImport",
+    // P14: the shift roster (HR's and the managers', with the working schedules), its terminal twin and its print
+    "Time/ShiftRoster",
+    "Time/ShiftRosterTui",
+    "Time/ShiftRosterPrint"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1334,7 +1339,9 @@ function selfServiceContext(p) {
         // P12: their leave requests and the team calendar, under the same area
         leaveRequestsUrl: timeAreaOpens(grants) ? "/qapps/People/Time/LeaveRequests" : null,
         // P13: their own attendance days, under the same area
-        attendanceUrl: timeAreaOpens(grants) ? "/qapps/People/Time/Attendance?show=mine" : null
+        attendanceUrl: timeAreaOpens(grants) ? "/qapps/People/Time/Attendance?show=mine" : null,
+        // P14: their published shifts on the team calendar, under the same area
+        teamCalendarUrl: timeAreaOpens(grants) ? "/qapps/People/Time/TeamCalendar" : null
     }
 }
 
