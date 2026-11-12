@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProcedureDetail's Steps tab (design-maintenance §4 StepTree, StepRequirements and Dependencies; impl-maintenance P6): the steps in
+    order, each indented under its group, with whether it is required, its response (check off, pass or fail, a reading of a measurement
+    in a unit with its bounds; evidence or a comment required; whether a supervisor may waive it), the steps it waits for, its
+    requirements and its estimate. For an author: Add step, and on each step Up and Down (move#ProcessStep, the keyboard and terminal
+    reorder), Edit (store#ProcessStep with its response policy), Waits for (store#ProcessDependency: steps of this procedure; a loop is
+    refused) and Remove from new work (its policy ended). A reader sees the same rows without the actions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Steps" default-menu-index="2">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeStep" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="moveStep" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <actions>
+        <!-- ProcedureDetail's actions read the procedure when it renders with the tab; alone (a reloaded tab, the terminal) it reads
+            it here -->
+        <if condition="procedureDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.ProcessServices.get#WorkProcess" out-map="procedureDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="procedure" from="procedureDetail?.procedure || null"/>
+        <set field="stepList" from="procedureDetail?.stepList || []"/>
+        <set field="canEdit" from="!!procedureDetail?.canEdit"/>
+        <set field="newStep" from="{rootWorkEffortId: workEffortId, isRequired: 'Y', evidenceRequired: 'N', commentRequired: 'N', waiverAllowed: 'N'}"/>
+    </actions>
+    <widgets>
+        <section name="StepsFound" condition="procedure">
+            <widgets>
+                <container-box>
+                    <box-header title="Steps"/>
+                    <box-toolbar>
+                        <container-dialog id="AddStep" button-text="Add step" icon="sym_o_add" title="Add a step" width="720" condition="canEdit">
+                            <form-single name="AddStepForm" transition="storeStep" map="newStep">
+                                <field name="rootWorkEffortId"><default-field><hidden/></default-field></field>
+                                <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                <field name="parentWorkEffortId">
+                                    <default-field title="Under" tooltip="Empty: at the top; a step with steps under it is a group">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedureSteps', choiceRootWorkEffortId:workEffortId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="workEffortName"><default-field title="Step"><text-line size="50"/></default-field></field>
+                                <field name="description"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                                <field name="estimatedWorkTime"><default-field title="Estimated hours"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="isRequired">
+                                    <default-field title="Required">
+                                        <drop-down><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="responseKindEnumId">
+                                    <default-field title="Response" tooltip="A group takes none: its steps do">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'responseKinds', selected:newStep.responseKindEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="measurementTypeId">
+                                    <default-field title="Reading of">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'measurementTypes', selected:newStep.measurementTypeId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="measurementUomId">
+                                    <default-field title="Unit">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'measurementUoms', selected:newStep.measurementUomId}">
+                                                <depends-on field="measurementTypeId" parameter="choiceMeasurementTypeId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="minimumValue"><default-field title="Minimum"><text-line size="8" input-type="number"/></default-field></field>
+                                <field name="maximumValue"><default-field title="Maximum"><text-line size="8" input-type="number"/></default-field></field>
+                                <field name="evidenceRequired">
+                                    <default-field title="Evidence required">
+                                        <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="commentRequired">
+                                    <default-field title="Comment required">
+                                        <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="waiverAllowed">
+                                    <default-field title="A supervisor may waive it">
+                                        <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Save step"><submit type="primary"/></default-field></field>
+                                <field-layout>
+                                    <field-ref name="parentWorkEffortId"/>
+                                    <field-ref name="workEffortName"/>
+                                    <field-ref name="description"/>
+                                    <field-row><field-ref name="estimatedWorkTime"/><field-ref name="isRequired"/></field-row>
+                                    <field-row><field-ref name="responseKindEnumId"/><field-ref name="measurementTypeId"/></field-row>
+                                    <field-row><field-ref name="measurementUomId"/><field-ref name="minimumValue"/><field-ref name="maximumValue"/></field-row>
+                                    <field-row><field-ref name="evidenceRequired"/><field-ref name="commentRequired"/><field-ref name="waiverAllowed"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No step yet." type="p" style="m-muted" condition="!stepList.length"/>
+                        <section-iterate name="StepRows" list="stepList" entry="step">
+                            <actions>
+                                <set field="stepValues" from="{rootWorkEffortId: workEffortId, stepWorkEffortId: step.workEffortId,
+                                        workEffortName: step.workEffortName, description: step.description, estimatedWorkTime: step.estimatedWorkTime,
+                                        isRequired: step.isRequired ? 'Y' : 'N', responseKindEnumId: step.responseKindEnumId,
+                                        measurementTypeId: step.measurementTypeId, measurementUomId: step.measurementUomId,
+                                        minimumValue: step.minimumValue, maximumValue: step.maximumValue,
+                                        evidenceRequired: step.evidenceRequired ? 'Y' : 'N', commentRequired: step.commentRequired ? 'Y' : 'N',
+                                        waiverAllowed: step.waiverAllowed ? 'Y' : 'N'}"/>
+                                <set field="dependencyValues" from="{rootWorkEffortId: workEffortId, stepWorkEffortId: step.workEffortId,
+                                        dependencyForm: 'Y', dependsOnIds: step.dependsOnIds}"/>
+                                <set field="stepCaption" from="[step.isGroup ? 'Group' : step.requiredText, step.responseText,
+                                        step.dependsOnText ? 'waits for ' + step.dependsOnText : null, step.requirementText,
+                                        step.estimatedWorkTime != null ? step.estimatedWorkTime + ' h' : null].filter(Boolean).join(' · ')"/>
+                            </actions>
+                            <widgets>
+                                <container style="row items-center q-py-xs m-divider-bottom">
+                                    <container style="col">
+                                        <label text="${step.indentedName}" type="div" style="${step.isGroup ? 'text-weight-medium' : ''}"/>
+                                        <label text="${stepCaption}" type="div" style="text-caption m-muted"/>
+                                    </container>
+                                    <section name="StepActions" condition="canEdit"><widgets>
+                                    <container style="col-auto row items-center q-gutter-x-xs">
+                                        <link url="moveStep" text="Up" icon="sym_o_arrow_upward" link-type="hidden-form-link" condition="step.canMoveUp"
+                                                parameter-map="{rootWorkEffortId:workEffortId, stepWorkEffortId:step.workEffortId, direction:'up'}"/>
+                                        <link url="moveStep" text="Down" icon="sym_o_arrow_downward" link-type="hidden-form-link" condition="step.canMoveDown"
+                                                parameter-map="{rootWorkEffortId:workEffortId, stepWorkEffortId:step.workEffortId, direction:'down'}"/>
+                                        <container-dialog id="EditStep_${step.workEffortId}" button-text="Edit" icon="sym_o_edit"
+                                                title="Edit step ${step.workEffortName}" width="720">
+                                            <form-single name="EditStepForm_${step.workEffortId}" transition="storeStep" map="stepValues">
+                                <field name="rootWorkEffortId"><default-field><hidden/></default-field></field>
+                                <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                <field name="workEffortName"><default-field title="Step"><text-line size="50"/></default-field></field>
+                                <field name="description"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                                <field name="estimatedWorkTime"><default-field title="Estimated hours"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="isRequired">
+                                    <default-field title="Required">
+                                        <drop-down><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="responseKindEnumId">
+                                    <default-field title="Response" tooltip="A group takes none: its steps do">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'responseKinds', selected:stepValues.responseKindEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="measurementTypeId">
+                                    <default-field title="Reading of">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'measurementTypes', selected:stepValues.measurementTypeId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="measurementUomId">
+                                    <default-field title="Unit">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'measurementUoms', selected:stepValues.measurementUomId}">
+                                                <depends-on field="measurementTypeId" parameter="choiceMeasurementTypeId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="minimumValue"><default-field title="Minimum"><text-line size="8" input-type="number"/></default-field></field>
+                                <field name="maximumValue"><default-field title="Maximum"><text-line size="8" input-type="number"/></default-field></field>
+                                <field name="evidenceRequired">
+                                    <default-field title="Evidence required">
+                                        <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="commentRequired">
+                                    <default-field title="Comment required">
+                                        <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="waiverAllowed">
+                                    <default-field title="A supervisor may waive it">
+                                        <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Save step"><submit type="primary"/></default-field></field>
+                                <field-layout>
+                                    <field-ref name="workEffortName"/>
+                                    <field-ref name="description"/>
+                                    <field-row><field-ref name="estimatedWorkTime"/><field-ref name="isRequired"/></field-row>
+                                    <field-row><field-ref name="responseKindEnumId"/><field-ref name="measurementTypeId"/></field-row>
+                                    <field-row><field-ref name="measurementUomId"/><field-ref name="minimumValue"/><field-ref name="maximumValue"/></field-row>
+                                    <field-row><field-ref name="evidenceRequired"/><field-ref name="commentRequired"/><field-ref name="waiverAllowed"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="StepDependencies_${step.workEffortId}" button-text="Waits for" icon="sym_o_account_tree"
+                                                title="Steps ${step.workEffortName} waits for" width="560">
+                                            <form-single name="DependencyForm_${step.workEffortId}" transition="storeStep" map="dependencyValues">
+                                                <field name="rootWorkEffortId"><default-field><hidden/></default-field></field>
+                                                <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                <field name="dependencyForm"><default-field><hidden/></default-field></field>
+                                                <field name="dependsOnIds">
+                                                    <default-field title="Waits for" tooltip="Steps of this procedure; a loop is refused">
+                                                        <drop-down allow-empty="true" allow-multiple="true">
+                                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'procedureSteps', choiceRootWorkEffortId:workEffortId, choiceWorkEffortId:step.workEffortId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <link url="storeStep" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" btn-type="danger"
+                                                parameter-map="{rootWorkEffortId:workEffortId, stepWorkEffortId:step.workEffortId, endStep:'Y'}"
+                                                confirmation="Remove this step and the steps under it from new work? Work made earlier keeps it."/>
+                                    </container>
+                                    </widgets></section>
+                                </container>
+                            </widgets>
+                        </section-iterate>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

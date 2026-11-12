@@ -43,6 +43,8 @@ are read only, listed as historical leave on LeaveBalances (§5 Q8). LeavePolici
 People/Time, HR's, not People/Settings (the user's call of Nov 11 on HR's editors, as Holidays). Their **Implemented in** is in
 usl-inventory's People rows.
 
+**Maintenance P6 (Nov 12, 2026):** no baseline form is mapped to the procedures (Procedures and ProcedureDetail are new, design-maintenance §4); their Implemented in is in usl-inventory's ProcessServices rows. Product360's maintenance default (CreateProductMaintenance) takes only a procedure the applicability check admits.
+
 **People P7 (Nov 11, 2026):** no baseline form is mapped to the lifecycle checklists (ChecklistTemplates is new), the equipment custody of People's EquipmentDetail (crosscut §3.10's People row) or the employees import (EmployeeImport, the shared DataImport); their Implemented in is in usl-inventory's People rows.
 
 **People P2 (Nov 11, 2026):** **Implemented in** of the directory and Employee360 rows ([impl-people P2](impl-people.md#p2--employees-and-employee360)): FindParty's search and list forms name `People/Employees/List`; EditParty's person, identification (read, masked, no tax types), phone and postal purpose, note and content forms name `People/Employees/Employee360` and the region that carries each. AddIdentificationForm is not built (identifications are read only in P2), and the email, web and other purpose forms are not People's: a person's work contacts are kept in Commons.
@@ -446,7 +448,7 @@ is unchanged.
 | EditProduct | ProductLocationList | Products/Products/Product360; Shared/Product360 | Shared/InventoryAvailability/Policy (LocationStockPolicy, LocationPolicies) |
 | EditProduct | CreateProductMeter | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
 | EditProduct | ProductMeterList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
-| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
+| EditProduct | CreateProductMaintenance | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment (its work template a maintenance procedure the applicability check admits, impl-maintenance P6) |
 | EditProduct | ProductMaintenanceList | Products/Products/Product360; Shared/Product360; Maintenance/Equipment/Product360 | Shared/Product360/Equipment; Maintenance/Equipment/Product360/Equipment |
 | FindProduct | NewProductForm | Products/Products | Products/Products/NewProduct |
 | FindProduct | ProductsForm | Products/Products | Products/Products/List |

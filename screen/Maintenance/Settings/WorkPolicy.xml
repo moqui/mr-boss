@@ -16,9 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     one organization's work policy (mantle.work.MaintenanceSettingsServices get# and store#MaintenancePolicy, MAINTENANCE_SETTINGS_EDIT):
     the planned-work approval threshold in hours (zero puts all template, preventive and planned work before a supervisor; corrective
     work by a planner is approved on create), the closure policy, the default work type and team, and whether production requests
-    and warranty repairs become managed work (off). A change starts a dated policy from now and ends the one in effect. The cost half
-    of the threshold, the qualification check, procedure self-approval and the job defaults join with their phases (P11, P8, P6,
-    P14). -->
+    and warranty repairs become managed work (off), and whether a procedure's last author may approve it (P6; off). A change starts a
+    dated policy from now and ends the one in effect. The cost half of the threshold, the qualification check and the job defaults
+    join with their phases (P11, P8, P14). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work policy" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:organizationPartyId, approvalThresholdHours:approvalThresholdHours,
                         closurePolicyEnumId:closurePolicyEnumId, defaultMaintenanceTypeEnumId:defaultMaintenanceTypeEnumId,
                         defaultTeamPartyId:defaultTeamPartyId, productionRequestsManaged:productionRequestsManaged,
-                        warrantyRepairsManaged:warrantyRepairsManaged, comments:comments}"/>
+                        warrantyRepairsManaged:warrantyRepairsManaged, procedureSelfApproval:procedureSelfApproval, comments:comments}"/>
             <if condition="!ec.message.hasError()"><message type="success">Work policy saved from now</message></if>
         </actions>
         <default-response url=".">
@@ -54,7 +54,8 @@ along with this software (see the LICENSE.md file). If not, see
                 approvalThresholdHours: String(policy.approvalThresholdHours ?? 0), closurePolicyEnumId: policy.closurePolicyEnumId,
                 defaultMaintenanceTypeEnumId: policy.defaultMaintenanceTypeEnumId, defaultTeamPartyId: policy.defaultTeamPartyId,
                 productionRequestsManaged: policy.productionRequestsManaged ? 'Y' : 'N',
-                warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', comments: policy.comments} : {organizationPartyId: organizationPartyId}"/>
+                warrantyRepairsManaged: policy.warrantyRepairsManaged ? 'Y' : 'N', procedureSelfApproval: policy.procedureSelfApproval ? 'Y' : 'N',
+                comments: policy.comments} : {organizationPartyId: organizationPartyId}"/>
         <set field="sinceText" from="policy?.fromDate ? 'In effect since ' + policy.fromDateText : 'The defaults are in effect: no policy has been saved.'"/>
     </actions>
     <widgets>
@@ -117,6 +118,11 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="warrantyRepairsManaged">
                                 <default-field title="Warranty repairs become work orders">
+                                    <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="procedureSelfApproval">
+                                <default-field title="A procedure's last author may approve it" tooltip="Off: another approver approves each change">
                                     <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
                                 </default-field>
                             </field>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProcedureDetail's Approval tab (design-maintenance §4 ProcessApproval, §1.2; impl-maintenance P6, F44): the publication of the
+    procedure: Request approval (an author or approver, a draft with no finding; the organization's approvers are told on
+    WorkProcessApproval, which Commons' approvals inbox shows with Approve and Refuse), Approve (an approver who did not change it
+    last, unless the organization allows self-approval; from an effective time), Refuse with a reason, Retire (no new work from now),
+    and the history of its approval requests (WorkEffortApproval: who asked, who decided, when and why). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Approval" default-menu-index="5">
+    <parameter name="workEffortId"/>
+    <transition-include name="requestApproval" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="approveProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="refuseProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <transition-include name="retireProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <actions>
+        <!-- ProcedureDetail's actions read the procedure when it renders with the tab; alone (a reloaded tab, the terminal) it reads
+            it here -->
+        <if condition="procedureDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.ProcessServices.get#WorkProcess" out-map="procedureDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="procedure" from="procedureDetail?.procedure || null"/>
+        <set field="approvalList" from="procedureDetail?.approvalList || []"/>
+        <set field="canApprove" from="!!procedureDetail?.canApprove"/>
+        <set field="decidable" from="!!(procedure &amp;&amp; procedure.pendingApprovalId &amp;&amp; maintenance.capabilities.processApprove &amp;&amp; !procedure.assignedRead)"/>
+        <set field="whyNot" from="procedureDetail?.approveWhyNot || ''"/>
+    </actions>
+    <widgets>
+        <section name="ApprovalFound" condition="procedure">
+            <widgets>
+                <container-box>
+                    <box-header title="Publication"/>
+                    <box-body>
+                        <label text="${procedure.approvedText || 'Not approved yet'}" type="p"/>
+                        <label text="${procedure.effectiveText}" type="p" style="text-caption m-muted" condition="procedure.effectiveText"/>
+                        <label text="Waiting for approval. ${canApprove ? '' : whyNot}" type="p" style="text-warning" condition="procedure.pendingApprovalId"/>
+                        <container style="row q-gutter-sm">
+                            <link url="requestApproval" text="Request approval" icon="sym_o_send" link-type="hidden-form-link" btn-type="primary"
+                                    parameter-map="{workEffortId:workEffortId}" condition="procedureDetail.canRequest"/>
+                            <container-dialog id="ApproveFromTab" button-text="Approve" type="primary" icon="sym_o_verified"
+                                    title="Approve ${procedure.workEffortName}" width="560" condition="canApprove">
+                                <form-single name="ApproveFromTabForm" transition="approveProcedure">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="effectiveDate"><default-field title="Effective from" tooltip="Now when empty"><date-time/></default-field></field>
+                                    <field name="comments"><default-field title="Findings or note"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit type="primary"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RefuseFromTab" button-text="Refuse" type="danger" icon="sym_o_block"
+                                    title="Refuse ${procedure.workEffortName}" width="560" condition="decidable">
+                                <form-single name="RefuseFromTabForm" transition="refuseProcedure">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-area rows="3"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="retireProcedure" text="Retire" icon="sym_o_archive" link-type="hidden-form-link"
+                                    parameter-map="{workEffortId:workEffortId}" condition="procedureDetail.canRetire"
+                                    confirmation="Retire this procedure? No new work is made of it; its work and history stay."/>
+                        </container>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="History"/>
+                    <box-body-nopad>
+                        <form-list name="ApprovalHistory" list="approvalList" skip-form="true">
+                            <field name="statusText"><header-field title="Decision"/><default-field><display/></default-field></field>
+                            <field name="requestedText"><header-field title="Requested"/><default-field><display/></default-field></field>
+                            <field name="decidedText"><header-field title="Decided"/><default-field><display/></default-field></field>
+                            <field name="comments"><header-field title="Notes"/><default-field><display/></default-field></field>
+                        </form-list>
+                        <label text="No approval has been requested." type="p" style="m-muted q-pa-sm" condition="!approvalList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

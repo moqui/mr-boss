@@ -16,7 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     (transition-include), so a form here posts to the screen it is on.
     - choices: the app's drop-downs (ironstone.maintenance.ContextServices.get#Choices), after the root's Maintenance check;
       choiceOrganizationPartyId names the organization whose facilities are offered, choiceAssetId the equipment whose meters
-      (or which not as its own parent) and choiceFacilityId the facility not offered as its own parent.
+      (or which not as its own parent) and choiceFacilityId the facility not offered as its own parent; P6: choiceAssetId and
+      choiceFacilityId the target whose procedures are offered, choiceRootWorkEffortId and choiceWorkEffortId the procedure and
+      step whose other steps are offered, choiceMeasurementTypeId the measurement whose units are offered.
     - P2, the equipment and facility writes, each after check#Record with its capability (the record in the user's scope) and
       then the Mantle service, which checks again: storeEquipment (store#MaintenanceEquipment; a new one opens its
       EquipmentDetail), changeCustody, recordMeter, storeRegistration, moveEquipment (move#MaintenanceEquipment, after its
@@ -29,7 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.maintenance.ContextServices.get#Choices" out-map="found"
                     in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null),
                         organizationPartyId:(choiceOrganizationPartyId || null), assetId:(choiceAssetId || null),
-                        facilityId:(choiceFacilityId || null)}"/>
+                        facilityId:(choiceFacilityId || null), rootWorkEffortId:(choiceRootWorkEffortId || null),
+                        workEffortId:(choiceWorkEffortId || null), measurementTypeId:(choiceMeasurementTypeId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>

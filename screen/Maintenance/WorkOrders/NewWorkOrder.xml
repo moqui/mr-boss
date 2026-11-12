@@ -14,7 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Maintenance › Work orders › New work order (design-maintenance §3 WorkOrders NewWork; impl-maintenance P3), the quick create's and
     Find's: one target, equipment or a facility of the user's scope, the name and description, the kind (corrective by default),
-    type, severity and priority, the estimated hours, the planned window and the team (the organization's default when empty),
+    type, severity and priority, the estimated hours, the planned window and the team (the organization's default when empty), and
+    (P6) a procedure: an approved one in effect for the target (Use procedure on a procedure opens this with it chosen), whose steps
+    become the work's in the same transaction; work from a procedure waits for the threshold, as planned work does,
     through create#MaintenanceWorkOrder (MAINTENANCE_PLAN or _SUPERVISE), with an operation key so a second submit answers the first.
     Corrective work, and planned work within the approval threshold, is approved on create; other planned work waits for a
     supervisor. A user who may not create work is told so. -->
@@ -22,13 +24,15 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="New work order" default-menu-include="false">
     <parameter name="assetId"/>
     <parameter name="facilityId"/>
+    <parameter name="templateWorkEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <transition-include name="createWorkOrder" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
     <actions>
         <set field="can" from="maintenance.capabilities"/>
         <set field="canCreate" from="!!(can.plan || can.supervise)"/>
         <set field="newWork" from="{targetKind: facilityId &amp;&amp; !assetId ? 'facility' : 'equipment', assetId: assetId || null,
-                facilityId: facilityId || null, maintenanceKindEnumId: 'MkCorrective', priority: '5',
+                facilityId: facilityId || null, templateWorkEffortId: templateWorkEffortId || null,
+                maintenanceKindEnumId: templateWorkEffortId ? 'MkPreventive' : 'MkCorrective', priority: '5',
                 operationKey: 'new-work-' + ec.user.randomString(20)}"/>
     </actions>
     <widgets>
@@ -62,7 +66,20 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
-                            <field name="workEffortName"><default-field title="What needs doing"><text-line size="60"/></default-field></field>
+                            <field name="templateWorkEffortId">
+                                <default-field title="Procedure" tooltip="An approved procedure for the equipment or facility; its steps become the work's">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'procedures', selected:newWork.templateWorkEffortId}">
+                                            <depends-on field="assetId" parameter="choiceAssetId"/>
+                                            <depends-on field="facilityId" parameter="choiceFacilityId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="workEffortName">
+                                <default-field title="What needs doing" tooltip="The procedure's name when empty"><text-line size="60"/></default-field>
+                            </field>
                             <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
                             <field name="maintenanceKindEnumId">
                                 <default-field title="Kind">
@@ -111,6 +128,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-layout>
                                 <field-ref name="targetKind"/>
                                 <field-row><field-ref name="assetId"/><field-ref name="facilityId"/></field-row>
+                                <field-ref name="templateWorkEffortId"/>
                                 <field-ref name="workEffortName"/>
                                 <field-ref name="description"/>
                                 <field-row><field-ref name="maintenanceKindEnumId"/><field-ref name="maintenanceTypeEnumId"/></field-row>

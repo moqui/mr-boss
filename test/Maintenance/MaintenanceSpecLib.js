@@ -35,13 +35,25 @@ const ids = {
     heldOrderId: "BOSS_MNT_WO_MOTOR",
     techPartyId: "BOSS_MNT_TECH",
     tech2PartyId: "BOSS_MNT_TECH2",
-    // the menu of design §1.2 built so far: a Maintenance user's who reads work and equipment, and with Settings the Maintenance
-    // administrator's; a user who reads none (a procedure author) has Home alone
-    staffMenu: ["Home", "WorkOrders", "Equipment", "Facilities"],
+    // P6: the procedures (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
+    // steps, a dependency and a pressure reading), the room inspection (approved, for rooms), the van's pre-trip check (a draft) and
+    // the old compressor checklist (retired)
+    compressorProcedureId: "BOSS_MNT_PROC_COMP",
+    compressorPrepareId: "BOSS_MNT_PROC_COMP_PREP",
+    compressorOilId: "BOSS_MNT_PROC_COMP_OIL",
+    compressorPressureId: "BOSS_MNT_PROC_COMP_PRESS",
+    roomProcedureId: "BOSS_MNT_PROC_ROOM",
+    draftProcedureId: "BOSS_MNT_PROC_VAN",
+    retiredProcedureId: "BOSS_MNT_PROC_OLD",
+    // the menu of design §1.2 built so far: a Maintenance user's who reads work, procedures and equipment, and with Settings the
+    // Maintenance administrator's; a procedure author reads procedures alone (P6: Procedures, for a reader of procedures or a planner
+    // or supervisor)
+    staffMenu: ["Home", "WorkOrders", "Procedures", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
-    adminMenu: ["Home", "WorkOrders", "Equipment", "Facilities", "Settings"],
+    authorMenu: ["Home", "Procedures"],
+    adminMenu: ["Home", "WorkOrders", "Procedures", "Equipment", "Facilities", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
-    keys: ["g m", "g w", "g e", "g f"]
+    keys: ["g m", "g w", "g p", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork
 // Services but maint.retail (Retail only) and maint.admin (Services and Retail), none in ADMIN; a Projects client contact, a PASS
