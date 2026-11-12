@@ -376,7 +376,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Customer repair | Mantle, BOSS | WorkOrderDetail's repair context; Customer Service's RepairLinks | — |
 | P13 Preventive plans and due maintenance | Mantle, BOSS | Plans, PlanDetail | — |
 | P14 Generation, occurrences and compliance | Mantle, BOSS | DueMaintenance, PreventiveComplianceReport | — |
-| P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | — |
+| P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | — |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | — |
@@ -2485,7 +2485,7 @@ the availability read).
   blackout (no row).
 - Design edits: design-maintenance's header, §1.2, §2 (ResourcePolicyDetail's path), §7.1, Resources, ResourcePolicyDetail and Blackouts
   as built; impl-manufacturing's log (the owner contract).
-- Findings (provisional):
+- Findings, numbered by the lead F162 to F170 in order:
   - `get#FullCalendarData` returns a resource's events with their titles to anyone who asks by facility or asset; Commons'
     ScheduleServices masks them, the Mantle read does not. P15 masks them in the guard's conflicts and the availability read only; the
     eventList is unchanged, so Commons' specs pass.
@@ -2594,7 +2594,7 @@ and the framework's DAV status mapping (moqui-dav `status_of_error`).
   - **R7 (low, style).** The worker's note says prettier was clean; ResourcePolicy.js, ResourceOutages.js, ProductionSchedule.js,
     ProductionCalendar.js, ResourceBookingPolicy.spec.js, MaintenanceScheduling.spec.js and MaintenanceResourcePolicyWalk.spec.js were
     not (with the repository's .prettierrc.json); formatted.
-- Findings:
+- Findings, numbered by the lead F171 to F176 in order:
   - Locking with Manufacturing: store#WorkCenterOffline's record# does not lock, so a booking of the work center (or of a facility
     inside a plant being taken offline) can pass beside a new offline block. The hang the worker met is not a lock-order problem: the
     offline call holds its transaction open while each move runs in a transaction of its own, which waits on the row the outer one
@@ -3013,6 +3013,21 @@ paths under `mr-boss/`.
 | F159 | P6 review: the `/mantle` REST task writers (`add#WorkEffortProduct`, `store#TimeEntry`, `create#TimeEntryClockIn`, `add#TaskComment`, `set#TaskMilestone`, `store#WorkEffortPartyTime`) do not refuse managed work; REST is ADMIN's | P7 guards `add#WorkEffortProduct`, `store#TimeEntry` and `create#TimeEntryClockIn` with `check#ManagedWork` (the managed-work rule of §4) |
 | F160 | P6 review: a completed step's assignee still counts in Admin's participant | P7 |
 | F161 | P6 review: Prettier not installed in the review's environment | Lead runs it before the end |
+| F162 | P15: `get#FullCalendarData` returned a resource's event titles to anyone | P15 review R1 masks a managed resource's bookings the caller may not open; unmanaged as before |
+| F163 | P15: `create#Event` assigned equipment with no check | Through `book#Resource` for a managed asset |
+| F164 | P15: locking the work center in `record#` hung Manufacturing's moves | Manufacturing's offline path takes no lock (F171) |
+| F165 | P15: an unmanaged resource's recurring booking is checked on its first instance only | P16: outages and blackouts over the whole range, up to 365 days; conflicts as today (review's recommendation) |
+| F166 | P15: allowed hours, a booking calendar and people capacity not built | Later |
+| F167 | P15: `affectedBookings` reads estimated dates only | Later |
+| F168 | P15: equipment in a blacked-out room is not blocked | As design §7.1 |
+| F169 | P15: MaintenanceFoundationWalk's menus are stale since P2 | P20 updates the acceptance walks before running them |
+| F170 | P15: an existing database needs `MaintenanceWorkResourceData.xml` (`RurOffline`) | Load on upgrade, as F129 |
+| F171 | P15 review: `store#WorkCenterOffline`'s record# takes no lock, so a booking can land under a new offline block (flagged, not refused) | P16: lock a row the moves never write (the WorkCenter row) in both the offline path and a work center's booking |
+| F172 | P15 review: the guard's `resourceOf` refuses a stock asset, so booking an inventory or supplies asset, which worked, now fails | P16 restores it for an unmanaged asset |
+| F173 | P15 review: a Busy event keeps its id | EventDetail refuses it on open |
+| F174 | P15 review: Manufacturing's schedulers see a blackout's description as the offline reason | None |
+| F175 | P15 review: the recurrence recheck runs over every resource of an event once one is managed | None |
+| F176 | P15 review: (F170) a release note for the seed | P20's Remaining-Work and README |
 
 
 ## 7. Later
