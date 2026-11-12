@@ -1228,8 +1228,9 @@ along with this software (see the LICENSE.md file). If not, see
         .recruiter, .payroll, .payapprover, .develop and .case are in the root user group BOSS_PEOPLE and their capability group, each
         an agent of Ziziwork Retail only (people.hr is the HR officer of Retail and not of Services); people.manager is Hannah Okafor
         and people.employee Tomas Lindqvist, demo employees of Retail (data/BossPeopleDemoData.xml) whose employment makes Retail
-        their organization: the manager in BOSS_PEOPLE and BOSS_PEOPLE_MANAGER, the employee in BOSS_PEOPLE_SELF alone, which opens no
-        People root (self-service is Commons', P8). people.admin is in BOSS_PEOPLE_ADMIN alone, an agent of Retail and Services,
+        their organization: the manager in BOSS_PEOPLE, BOSS_PEOPLE_MANAGER and BOSS_PEOPLE_SELF (groups are not nested: an employee
+        who manages needs self-service too, as a hire's default proposal gives it; P8 review), the employee in BOSS_PEOPLE_SELF alone,
+        which opens no People root (their self-service opens by its own grant, P8). people.admin is in BOSS_PEOPLE_ADMIN alone, an agent of Retail and Services,
         and reads every employer through the group's PEOPLE_ALL_ORGANIZATIONS. -->
     <mantle.party.Party partyId="BOSS_PPL_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_READER" firstName="People" lastName="Directory reader"/>
@@ -1252,6 +1253,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PPL_MANAGER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PEOPLE" userId="BOSS_PPL_MANAGER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PEOPLE_MANAGER" userId="BOSS_PPL_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PEOPLE_SELF" userId="BOSS_PPL_MANAGER" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PPL_HR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_HR" firstName="People" lastName="HR officer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_HR_ORG" relationshipTypeEnumId="PrtAgent"

@@ -2783,6 +2783,25 @@ The listed fields are the full field list. People's proposed `RateServices.get#C
 most specific dated row. Finance admin edits the rows, and no pay grant is needed, since no row names
 a person. Until rows exist, those reports show labor hours as unpriced.
 
+As built (impl-people P10, owner contract): a box Labor costing rates on CostingPolicies, below the allocation policy
+and shared by every organization, as the rows carry no organization (`RateAmount` has none, and the lookup Manufacturing
+built reads none; impl-people F61): position class, work type, rate type, cost an hour with its currency, from, thru and
+state; New rate and a row's Change (a new row from now or a later date, ending the row in effect, refused when the form's
+row is no longer the one in effect or a later row is coming) and End, for finance administration. The services are
+Mantle's `RateServices.find#CostingRates` (`ACCOUNTING_VIEW`, `ACCOUNTING_ADMIN`, `PAYROLL_VIEW` or `TIME_ENTRY_RATE`),
+`store#CostingRate` and `end#CostingRate` (`ACCOUNTING_ADMIN`), and `create#`/`update#RateAmount` refuse a `RaprCost`
+row without `ACCOUNTING_ADMIN`; `get#CostingRate` resolves a class and work type (or a person's class) at a date with
+Manufacturing's rules, unpriced when no row applies. People's and Projects' Rates list the rows read only.
+As reviewed (impl-people P10's review, the user's call of Nov 11, 2026): a row carries an optional organization
+(`RateAmount.organizationPartyId`); `get#CostingRate` prefers the employer's rows (the organization given, else the person's
+employers at the date), then the shared ones; the box lists the chosen organization's rows and the shared ones, with an
+Organization column and New rate's For (the chosen organization, or every organization), and the services scope them as
+Accounting scopes finance administration (`AccountingPolicy.scope` admin: every internal organization, the active one when
+chosen): an organization's row is changed within that scope (`ORGANIZATION_DENIED` otherwise; another organization's row
+answers as missing to End), a shared row only working for every organization (no organization chosen), as a shared pay
+grade needs `PEOPLE_ALL_ORGANIZATIONS`; readers see the shared rows and their organizations' (every one for
+`ACCOUNTING_ADMIN`). Projects' rates carry no organization.
+
 **Source:** research §15; Manufacturing §14 Open (allocation basis, now settled here and in impl-manufacturing §4).
 
 **Needs:** AC-07.

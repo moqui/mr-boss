@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     work item and day, totals against the working hours, the timesheet's status, the running timer), a cell's hours, one entry in
     full, a row added or removed, last week's rows copied, the timer started, stopped or commented, and the week submitted, approved,
     returned or reopened. The terminal: MyTimeTui beside this file, the week by day with the timer, Log time, an entry's Edit and
-    Delete, and Submit, Approve, Return and Reopen (impl-projects.md P11). -->
+    Delete, and Submit, Approve, Return and Reopen (impl-projects.md P11). Mounted under People too (People/Time/MyTime, impl-people
+    P10): the links and the terminal's container follow the mount (appRoot). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="My time" default-menu-index="1" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue" menu-image="sym_o_work_history" menu-image-type="icon">
 
@@ -28,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the week -->
     <transition name="week" method="get" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('ironstone.projects.TimeServices.get#MyWeek').parameters({partyId: partyId || null, weekDate: weekDate || null}).call() || {}
+            const out = ec.service.sync().name('ironstone.projects.TimeServices.get#MyWeek').parameters({partyId: partyId || null, weekDate: weekDate || null, appRoot: appRoot || null}).call() || {}
             if (ec.message.hasError() || !out.myWeek) { ec.message.clearErrors(); ec.web.sendJsonResponse({notAvailable: true}); return }
             ec.web.sendJsonResponse({week: out.myWeek})
         ]]></script></actions>
@@ -113,7 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
         <render-mode><text type="qvue" location="component://mr-boss/screen/Projects/Time/MyTime.qvue" template="false"/>
             <!-- the terminal: MyTimeTui, the plain screen beside this one, on the same week -->
             <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "MyTimeTui",
-                url: sri.buildUrl("//Projects/Time/MyTimeTui").addParameters({partyId: partyId || null, weekDate: weekDate || null}).getUrlWithParams()}])}]]></text>
+                url: sri.buildUrl("//" + (appRoot === "People" ? "People" : "Projects") + "/Time/MyTimeTui").addParameters({partyId: partyId || null, weekDate: weekDate || null}).getUrlWithParams()}])}]]></text>
             <text type="html,qvt"><![CDATA[<p>${ec.l10n.localize('My time opens in the browser app (the qvue render mode).')}</p>]]></text></render-mode>
     </widgets>
 </screen>

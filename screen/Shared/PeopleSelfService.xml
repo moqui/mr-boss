@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SelfService (design-people §3 SelfService, §1.2; style-guide §3.1 Landing; impl-people P8): an employee's own People page,
+    one definition mounted at People/SelfService and at Commons/People/SelfService (out of both menus, reached from People Home,
+    Commons Home's People card and Today). It fixes the current user's party: mantle.humanres.PeopleServices.get#SelfService takes
+    no party, so nothing supplied here reads another person. MySummary: the user's current and coming employments (employer, job
+    title, department, manager, work location, dates, state) and the counts of their open requests and People tasks; My tasks: the
+    open People tasks assigned to them (find#DueWork's myTask, a protected task about them left out); MyRequests: the People
+    requests they made, with their state, who decides next and a refusal's reason (find#MyRequests); Emergency contacts: theirs,
+    added, changed and ended here (template/PeopleEmergencyContacts.xml). Open my employee record is the primary action (their
+    Employee360 under People for a People user, else under Commons). A self-service employee without People opens it under either
+    root by its own grant (BOSS_PPL_SELF, non-inheritable, data/BossSetupData.xml); every other People screen stays refused to them.
+    P10: My time (the user's own week, People's time area) and the missing-week card, the user's own weeks to submit
+    (get#SelfService's weeksToSubmit, the rule of Projects' Today), opening the oldest in My time. The clock (P13), leave balances and
+    requests (P11, P12), payslips (P26) and claims (P15) join with their phases. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
+
+    <transition-include name="storeEmergencyContact" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
+
+    <actions>
+        <service-call name="ironstone.people.ContextServices.get#SelfServiceContext" out-map="links" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot}"/>
+        <service-call name="mantle.humanres.PeopleServices.get#SelfService" out-map="self" transaction="force-new"
+                ignore-error="true" in-map="{checkOnly:true}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="available" from="!!self?.available"/>
+        <if condition="available">
+            <service-call name="mantle.humanres.PeopleServices.find#MyRequests" out-map="requestsFound" transaction="force-new"
+                    ignore-error="true" in-map="{pageSize:10}"/>
+            <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="tasksFound" transaction="force-new"
+                    ignore-error="true" in-map="{kinds:'myTask', pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            employmentRows = Array.from(self?.employments || [])
+            stateColors = {current: 'positive', future: 'primary', ended: 'grey-8'}
+            requestRows = Array.from(requestsFound?.requests || [])
+            requestMoreText = requestsFound && requestsFound.requestsCount > requestRows.length
+                ? 'The newest ' + requestRows.length + ' of ' + requestsFound.requestsCount + '.' : ''
+            requestColors = {PapPending: 'warning', PapApproved: 'positive', PapRefused: 'negative', PapSuperseded: 'grey-8'}
+            taskRows = Array.from(tasksFound?.dueWork || [])
+            openRequestText = String(self?.openRequestCount || 0)
+            openTaskText = String(self?.openTaskCount || 0)
+            // P10: the user's own weeks to submit, the oldest opened in My time
+            weekRows = Array.from(self?.weeksToSubmit || [])
+            weeksText = String(weekRows.length)
+            weekLink = links?.myTimeUrl ? links.myTimeUrl + (weekRows.length ? '?weekDate=' + encodeURIComponent(weekRows[0].weekStart) : '') : null
+            // the emergency contacts: the user's own, which they change here (Mantle checks again)
+            contactOwnerPartyId = self?.partyId || null
+            contactOwnerName = self?.personName || ''
+            contactOpenedEmploymentId = null
+            contactRows = Array.from(self?.emergencyContacts || [])
+            canEditContacts = available
+            titleText = self?.preferredName ? self.personName + ' (' + self.preferredName + ')' : (self?.personName || '')
+        ]]></script>
+    </actions>
+
+    <widgets>
+        <section name="SelfServiceMissing" condition="!available">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Self-service is not available to you: it is for employees whose account has People self-service."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SelfServicePage" condition="available">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${titleText}" type="h5"/>
+                            <label text="Your employment, your requests and the people to call in an emergency." type="p"
+                                    style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${links.employee360Url}" url-type="plain" text="Open my employee record" link-type="anchor-button"
+                                    btn-type="primary" icon="sym_o_badge" condition="links?.employee360Url"/>
+                            <link url="${links.approvalsUrl}" url-type="plain" text="Approvals" link-type="anchor-button"
+                                    icon="sym_o_approval" condition="links?.approvalsUrl"/>
+                            <link url="${links.myTimeUrl}" url-type="plain" text="My time" link-type="anchor-button"
+                                    icon="sym_o_schedule" condition="links?.myTimeUrl"/>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- MySummary: the counts, and each employment the user has (several need a visible choice) -->
+                <dashboard min-width="160">
+                    <number-card title="Open requests" value="${openRequestText}" icon="sym_o_pending_actions" size="sm"/>
+                    <number-card title="My People tasks" value="${openTaskText}" icon="sym_o_task_alt" size="sm"/>
+                    <!-- P10: the missing-week card -->
+                    <number-card title="Weeks to submit" value="${weeksText}" icon="sym_o_schedule_send" size="sm" link="${weekLink}"
+                            condition="weekLink"/>
+                    <number-card title="Weeks to submit" value="${weeksText}" icon="sym_o_schedule_send" size="sm" condition="!weekLink &amp;&amp; weekRows.length"/>
+                </dashboard>
+                <container-box>
+                    <box-header title="My employment"/>
+                    <box-body-nopad>
+                        <form-list name="MyEmployments" list="employmentRows" skip-form="true" paginate="false" condition="employmentRows.length">
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                            <field name="managerName"><default-field title="Manager"><display/></default-field></field>
+                            <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(onLeave ? 'On leave' : stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: onLeave ? "On leave" : stateText})}]]></text>
+                                        <text type="html">${onLeave ? 'On leave' : stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="managerName"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="You have no current employment." type="p" style="m-muted q-pa-md" condition="!employmentRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- My tasks: the open People tasks assigned to the user, each opened as a task in Commons -->
+                <container-box>
+                    <box-header title="My People tasks"/>
+                    <box-body-nopad>
+                        <form-list name="MyTasks" list="taskRows" skip-form="true" paginate="false" condition="taskRows.length">
+                            <field name="title">
+                                <default-field title="Task">
+                                    <link url="/qapps/Commons/Tasks/TaskDetail" url-type="plain" text="${title}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="personName"><default-field title="For"><display/></default-field></field>
+                            <field name="whenText">
+                                <conditional-field condition="overdue" title="Due"><label text="${whenText}" style="text-warning text-no-wrap"/></conditional-field>
+                                <default-field title="Due"><label text="${whenText}" style="text-no-wrap"/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="personName"/></column>
+                                <column><field-ref name="whenText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No People task is yours to do." type="p" style="m-muted q-pa-md" condition="!taskRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- MyRequests: the requests the user made in People -->
+                <container-box>
+                    <box-header title="My requests"/>
+                    <box-body-nopad>
+                        <form-list name="MyRequests" list="requestRows" skip-form="true" paginate="false" condition="requestRows.length">
+                            <field name="summary"><default-field title="Request"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="requestedDateText"><default-field title="Asked"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${requestColors[statusId] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="nextApproverText"><default-field title="Waiting for"><display/></default-field></field>
+                            <field name="returnReason"><default-field title="Reason"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="summary"/><field-ref name="requestedDateText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="nextApproverText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="${requestMoreText}" type="p" style="text-caption m-muted q-px-md" condition="requestMoreText"/>
+                        <label text="Requests you make in People show here with their state." type="p" style="m-muted q-pa-md"
+                                condition="!requestRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <section-include name="EmergencyContacts" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

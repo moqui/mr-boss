@@ -28,6 +28,15 @@ Accounting P4 mappings name only built receivables forms. Payable, settlement, s
 
 **People design (Oct 31, 2026):** [design-people §14.2](design-people.md#142-baseline-forms-and-service-coverage) adds employee/lifecycle, organization, pay-rate, shared work-time and expense mappings to Designed in. Attendance and the new payroll core are proposed workflows, not implementation coverage. Existing mappings and Implemented in remain unchanged; account administration and worker-invoice forms stay with their owners.
 
+**People P10 (Nov 11, 2026):** **Implemented in** of the shared work-time and pay-rate rows ([impl-people P10](impl-people.md#p10--time-mounts-rates-and-labor-costing)): Projects' time screens and Rates mounted under People as they are, so TimeEntries' and EditTimeEntry's forms name `People/Time/MyTime` and `People/Time/TimeEntries`, PartyTimeEntries' list `People/Time/TimeEntries`, and EditRateAmounts' two forms `People/Payroll/Rates` (an employee's pay rate, payroll's; the labor costing rates read only, which Accounting's CostingPolicies edits). PartyTimeEntries' ClockInForm stays blank, as for Projects (impl-projects §7).
+
+**People P8 (Nov 11, 2026):** no baseline form is mapped to SelfService, MyTeam or Home's due work (new screens over new services); the emergency contacts are a People record of their own (a Person per contact linked by a dated relationship, private contact data), not EditParty's relationship form, which stays Commons' for directory parties. Their **Implemented in** is in usl-inventory's People rows.
+
+**People P9 (Nov 11, 2026):** no baseline form is mapped to WorkingSchedules, WorkingScheduleDetail or HolidayCalendars (new
+screens over Mantle's new ScheduleServices, design §6 and §7); a person's own weekly hours stay Commons' Preferences
+(CalendarServices.store#WorkingHours), which a People schedule overrides in capacity. HolidayCalendars is at People/Time, HR's,
+not People/Settings (the user's call of Nov 11 on HR's editors). Their **Implemented in** is in usl-inventory's People rows.
+
 **People P7 (Nov 11, 2026):** no baseline form is mapped to the lifecycle checklists (ChecklistTemplates is new), the equipment custody of People's EquipmentDetail (crosscut §3.10's People row) or the employees import (EmployeeImport, the shared DataImport); their Implemented in is in usl-inventory's People rows.
 
 **People P2 (Nov 11, 2026):** **Implemented in** of the directory and Employee360 rows ([impl-people P2](impl-people.md#p2--employees-and-employee360)): FindParty's search and list forms name `People/Employees/List`; EditParty's person, identification (read, masked, no tax types), phone and postal purpose, note and content forms name `People/Employees/Employee360` and the region that carries each. AddIdentificationForm is not built (identifications are read only in P2), and the email, web and other purpose forms are not People's: a person's work contacts are kept in Commons.
@@ -117,7 +126,7 @@ is unchanged.
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
 | MyTasks | MyTasks | Commons/Panel/Today; Commons/Home; Commons/Tasks; Projects/Home | Commons/Panel/Today; Commons/Home; Commons/Tasks/List; Projects/Home |
 | TaskDetail | UpdateEvent | Commons/Tasks/TaskDetail | Commons/Tasks/TaskDetail |
-| TimeEntries | TimeEntryList | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
+| TimeEntries | TimeEntryList | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries |
 
 ## Accounting (166 forms)
 
@@ -495,8 +504,8 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditRateAmounts | CreateRateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
-| EditRateAmounts | EditRateAmounts | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates |
+| EditRateAmounts | CreateRateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates |
+| EditRateAmounts | EditRateAmounts | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates |
 
 ## Manufacturing (23 forms)
 
@@ -664,8 +673,8 @@ is unchanged.
 | PartyTasks | UpdateUserAssignForm | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail | Projects/WorkItems/WorkItemDetail; Projects/Resources/PersonDetail |
 | PartyTimeEntries | ClockInForm | Projects/Time/TimeEntries; People/Time/TimeEntries |  |
 | PartyTimeEntries | WorkerInvoice | Projects/Billing/Unbilled |  |
-| PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail; People/Time/TimeEntries | Projects/Time/TimeEntries; Projects/Resources/PersonDetail |
-| EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries |
+| PartyTimeEntries | TimeEntryList | Projects/Time/TimeEntries; Projects/Resources/PersonDetail; People/Time/TimeEntries | Projects/Time/TimeEntries; Projects/Resources/PersonDetail; People/Time/TimeEntries |
+| EditTimeEntry | AddTimeForm | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries |
 | EditPaymentMethod | PaymentMethodInfoForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | Accounting/Banking/BankAccountDetail (record header) |
 | EditPaymentMethod | NewContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |
 | EditPaymentMethod | UpdateContentForm | Accounting/Banking/BankAccountDetail; Accounting/Settings/PaymentMethods | — (not built; BankAccountDetail has no files) |

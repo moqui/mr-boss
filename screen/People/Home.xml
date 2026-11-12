@@ -18,13 +18,20 @@ along with this software (see the LICENSE.md file). If not, see
     reader; each count of a later phase absent, no pay), DueWork (the employees with no manager, an HR reader's), and the
     first-use state when no employer in scope has employees, which links Settings for the People administrator. A People user
     who reads no employer (a manager, the root group alone) is told what Home holds. P2: Headcount and Employments open the
-    directory (Employees) of the employer chosen, and each due person their Employee360. Hire employee and
-    the other counts of design §1.2 (people out, vacancies, decisions, payroll exceptions, expiring qualifications) come with
-    the phases that build them. -->
+    directory (Employees) of the employer chosen, and each due person their Employee360. P8 completes it for the phases built: Hire
+    employee the primary action for HR (the hire wizard's grant); the counts Vacant positions (P4's seats, a position reader's,
+    opening Positions' vacant ones) and Decisions waiting (the People decisions waiting on the user, opening My team or Approvals);
+    DueWork over mantle.humanres.PeopleServices.find#DueWork (an HR reader's employees with no manager and the open lifecycle tasks
+    of the employers, paged, each opening the person or the task); for a People user who reads no employer (a manager), their
+    decisions waiting and My team; and My self-service for a user with People self-service. P10: the missing-week card, Weeks not
+    submitted (last week's missing weeks of the people whose time the user follows: the time keepers of the projects they manage
+    and their live reports, mantle.work.TimesheetServices.find#Timesheets missing), for a manager or a time approver, opening
+    Timesheets' Missing. People out, payroll exceptions and expiring qualifications (design §1.2) come with P12, P25 and P18. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="asOfDate"/>
+    <parameter name="pageIndex"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
     <actions>
         <set field="can" from="people.capabilities"/>
@@ -33,22 +40,63 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:(organizationPartyId || null), asOfDate:(asOfDate || null)}"/>
             <script>ec.message.clearErrors()</script>
         </if>
+        <!-- P8: the due work an HR reader clears, paged; a decider's decisions waiting when Home has no summary for them -->
+        <if condition="can.hrView">
+            <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="due" transaction="force-new" ignore-error="true"
+                    in-map="{kinds:'noManager,checklistTask', organizationPartyId:(organizationPartyId || null), pageIndex:(pageIndex || 0), pageSize:20}"/>
+        </if>
+        <if condition="!can.staff &amp;&amp; can.requestApprove">
+            <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="myDecisions" transaction="force-new"
+                    ignore-error="true" in-map="{kinds:'decision', pageSize:1}"/>
+        </if>
+        <!-- P10: last week's missing weeks of the people whose time a manager or time approver follows -->
+        <if condition="can.myTeam || ec.user.hasPermission('TIMESHEET_APPROVE')">
+            <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingWeeks" transaction="force-new"
+                    ignore-error="true" in-map="{list:'missing', withCounts:false}"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="missingWeeksText" from="missingWeeks?.rowList != null ? String(missingWeeks.rowList.length) : null"/>
+        <set field="missingWeeksLink" from="sharedLinks['Time/Timesheets'] + '?list=missing'"/>
         <set field="homeFound" from="!!home?.counts"/>
         <set field="counts" from="home?.counts || {}"/>
         <set field="countText" from="Object.fromEntries(Object.entries(counts).map(([name, value]) =&gt; [name, String(value)]))"/>
-        <set field="dueRows" from="home?.dueWork || []"/>
-        <set field="dueMoreText" from="home &amp;&amp; home.dueWorkCount &gt; dueRows.length ? 'The first ' + dueRows.length + ' of ' + home.dueWorkCount + ', by name.' : ''"/>
+        <set field="dueRows" from="Array.from(due?.dueWork || [])"/>
+        <!-- the list's pages are the service's -->
+        <set field="dueRowsCount" from="due?.dueWorkCount || 0"/>
+        <set field="dueRowsPageIndex" from="due?.dueWorkPageIndex || 0"/>
+        <set field="dueRowsPageSize" from="due?.dueWorkPageSize || 20"/>
+        <set field="dueRowsPageMaxIndex" from="due?.dueWorkPageMaxIndex || 0"/>
+        <set field="dueRowsPageRangeLow" from="due?.dueWorkPageRangeLow || 0"/>
+        <set field="dueRowsPageRangeHigh" from="due?.dueWorkPageRangeHigh || 0"/>
+        <set field="decisionCountText" from="String(myDecisions?.dueWorkCount || 0)"/>
         <set field="scope" from="{organizationPartyId: organizationPartyId || null, asOfDate: asOfDate || null}"/>
         <set field="employeesLink" from="'/qapps/People/Employees' + (organizationPartyId &amp;&amp; homeFound ? '?organizationPartyId=' + encodeURIComponent(organizationPartyId) : '')"/>
         <set field="scopeText" from="(organizationPartyId &amp;&amp; homeFound ? (people.organizationOptions.find(option =&gt; option.value === organizationPartyId)?.label || organizationPartyId)
                 : people.allOrganizations ? 'Every employer' : 'Your employers') + (homeFound ? ', as of ' + ec.l10n.format(home.asOfDate, 'yyyy-MM-dd') : '')"/>
     </actions>
     <widgets>
-        <label text="People" type="h5"/>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="People" type="h5"/></container>
+            <container style="col-auto row items-center q-gutter-sm">
+                <!-- P8: Hire employee, HR's primary; the user's own self-service -->
+                <link url="${sharedLinks['Employees/HireEmployee']}" text="Hire employee" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_person_add" condition="can.employment"/>
+                <link url="${sharedLinks['SelfService']}" text="My self-service" link-type="anchor-button" icon="sym_o_person"
+                        condition="can.self"/>
+            </container>
+        </container>
         <section name="NotStaff" condition="!can.staff">
             <widgets>
-                <label text="Home summarizes the employers you read for HR, payroll and People administration. Nothing of it is open to you."
+                <label text="Home summarizes the employers you read for HR, payroll and People administration; your own work is below."
                         type="p" style="m-muted"/>
+                <!-- P8: a People user who reads no employer (a manager): their decisions waiting and their team -->
+                <dashboard min-width="160" condition="can.requestApprove || missingWeeksText != null">
+                    <number-card title="Decisions waiting" value="${decisionCountText}" icon="sym_o_approval" size="sm"
+                            link="${can.myTeam ? sharedLinks['MyTeam'] : sharedLinks['Approvals']}" condition="can.requestApprove"/>
+                    <number-card title="Weeks not submitted" value="${missingWeeksText}" icon="sym_o_schedule_send" size="sm"
+                            link="${missingWeeksLink}" condition="missingWeeksText != null"/>
+                </dashboard>
+                <link url="${sharedLinks['MyTeam']}" text="My team" link-type="anchor-button" icon="sym_o_diversity_3" condition="can.myTeam"/>
             </widgets>
         </section>
         <section name="StaffHome" condition="can.staff">
@@ -84,7 +132,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="No employer you read has employees yet. People's setup checks are in Settings." type="p"
                                         condition="can.settings"/>
                                 <label text="No employer you read has employees yet." type="p" condition="!can.settings"/>
-                                <link url="${sharedLinks['Settings']}" text="Settings" link-type="anchor-button" btn-type="primary"
+                                <link url="${sharedLinks['Settings']}" text="Settings" link-type="anchor-button"
                                         icon="sym_o_settings" condition="can.settings"/>
                             </box-body>
                         </container-box>
@@ -101,6 +149,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="countText.joins != null"/>
                             <number-card title="Left, last 30 days" value="${countText.exits}" icon="sym_o_person_remove" size="sm"
                                     condition="countText.exits != null"/>
+                            <!-- P8: the vacant seats in effect, and the decisions waiting on the user -->
+                            <number-card title="Vacant positions" value="${countText.vacancies}" icon="sym_o_event_seat" size="sm"
+                                    link="${sharedLinks['Staffing/Positions'] + '?vacancy=vacant'}" condition="countText.vacancies != null"/>
+                            <number-card title="Decisions waiting" value="${countText.decisions}" icon="sym_o_approval" size="sm"
+                                    link="${sharedLinks['Approvals']}" condition="countText.decisions != null"/>
+                            <!-- P10: the missing-week card -->
+                            <number-card title="Weeks not submitted" value="${missingWeeksText}" icon="sym_o_schedule_send" size="sm"
+                                    link="${missingWeeksLink}" condition="missingWeeksText != null"/>
                         </dashboard>
                         <label text="Headcount counts each person once; a person employed by two employers has two employments."
                                 type="p" style="text-caption m-muted"/>
@@ -112,19 +168,31 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Due work"/>
                             <box-body>
                                 <label text="Nothing is due." type="p" condition="!dueRows.length"/>
-                                <label text="${dueMoreText}" type="p" style="text-caption m-muted" condition="dueMoreText"/>
-                                <form-list name="DueWorkRows" list="dueRows" skip-form="true" paginate="false" condition="dueRows.length">
+                                <!-- P8: find#DueWork, paged: the employees with no manager and the open lifecycle tasks -->
+                                <form-list name="DueWorkRows" list="dueRows" skip-form="true" condition="dueRows.length">
                                     <field name="personName">
                                         <default-field title="Employee">
                                             <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
                                                     parameter-map="{partyId:partyId}"/>
                                         </default-field>
                                     </field>
-                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="title">
+                                        <conditional-field condition="workEffortId" title="Work">
+                                            <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="${title}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId}"/>
+                                        </conditional-field>
+                                        <default-field title="Work"><display/></default-field>
+                                    </field>
+                                    <field name="dueText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="whenText">
+                                        <conditional-field condition="overdue" title="Due"><label text="${whenText}" style="text-warning text-no-wrap"/></conditional-field>
+                                        <default-field title="Due"><label text="${whenText}" style="text-no-wrap"/></default-field>
+                                    </field>
+                                    <field name="assigneeText"><default-field title="Assigned to"><display/></default-field></field>
                                     <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
                                     <columns type="mobile">
-                                        <column><field-ref name="personName"/><field-ref name="organizationName"/></column>
-                                        <column><field-ref name="dueText"/></column>
+                                        <column><field-ref name="personName"/><field-ref name="title"/></column>
+                                        <column><field-ref name="whenText"/><field-ref name="dueText"/></column>
                                     </columns>
                                 </form-list>
                             </box-body>

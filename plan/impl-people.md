@@ -1,5 +1,8 @@
 # IronStone BOSS — People implementation
 
+Nov 11, 2026 — gate 1 built: P1–P8 (stage 1), People's first release (the employee record), each phase reviewed by a fresh
+agent and merged on its focused specs; the full suites and the acceptance suite run once at the end of the build (the
+user's call). Next: stage 2 (P9 beside P10, then P11–P14), time and leave.
 Nov 11, 2026 — P0 done: the checks left after the plan's review, F55–F71, against the code as Admin P17–P19 and Insights
 P11–P12 left it. P30 no longer waits: Admin P18 is built, and the kiosk is a page of its own that a device reads as a
 display account (F55). People registers no audit projection (F56). P10's time mounts change more of Projects' code than
@@ -311,9 +314,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Approval rules and Approvals | Mantle, BOSS | ApprovalPolicies, Approvals, Lookups | built and reviewed Nov 11, merged |
 | P6 Hire and employment change | Mantle, BOSS | HireEmployee, EmploymentChange | built and reviewed Nov 11, merged |
 | P7 Checklists, equipment return, provisioning and employee import | Mantle, BOSS | ChecklistTemplates, WorkItemDetail, EquipmentDetail, EmployeeImport | built and reviewed Nov 11, merged |
-| P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | — |
-| P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | — |
-| P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | — |
+| P8 Self-service, MyTeam and Home | Mantle, BOSS | SelfService (People and Commons), MyTeam, Home | built and reviewed Nov 11, merged |
+| P9 Working schedules, holidays and capacity | Mantle, BOSS | WorkingSchedules, WorkingScheduleDetail, HolidayCalendars | built and reviewed Nov 11, merged |
+| P10 Time mounts, rates and labor costing | Mantle, BOSS | MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates; Accounting's LaborCostingRates | built and reviewed Nov 11, merged |
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | — |
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | — |
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | — |
@@ -2158,6 +2161,210 @@ stage 1.
   SelfService from Commons Home, sees their employment and requests, and opens their own Employee360;
   `people.manager` sees their reports and waiting decisions in MyTeam and no one else's.
 
+**Built Nov 11 (P8).** mr-mantle 733251b6, mr-boss (branch `ppl/p8`).
+- Checked first (the code over the plan): F28 (BossSetupData's settings-index grant, non-inheritable on the screen, its root's
+  context and its services), F46 (Commons/People out of the menu, Employee360 its only screen), F64 (Commons Home has no card
+  registry; `get#UserTodayItems` calls each `today-source` the shell gathers from the roots a user may open, and Home and the Today
+  panel take each service once by name), P6's per-employment lines (`linesOf`, `reportLines`), P7's `hiddenTaskIds`, protected
+  steps and the checklist roots with no owner, and P2's private-contact category. Also: every party reader that hides a personal
+  contact does so by `Party.privateOwnerUserId` (the entity filters, `find#Party`, contact books, Commons' contacts and contact page,
+  the palette, `search#Universal`, `get#RecordLinkInfo`, mail matching), a field with a foreign key to UserAccount; a checklist step's
+  assignment (`create#WorkEffortParty`) is told on the generic `WorkItemAssigned`, whose title names the task and its root
+  ("Offboarding: <person>", "Return … from <person>"), and `instantiate#WorkProcess` wrote the execution's policy after the
+  assignments; the shell filters a key by whether its screen opens; a service-call's authorization under a non-inheritable screen
+  grant is the service's own.
+- Mantle:
+  - `PeopleServices` over `Employees.js`, `Approvals.js`, `Checklists.js` and `People.js`: `get#SelfService` (`PEOPLE_SELF_SERVICE`,
+    no party parameter: the caller's current and coming employments with employer, title, department, manager and work location,
+    their emergency contacts, and the counts of their open requests and People tasks; `checkOnly` answers available false);
+    `find#MyRequests` (the caller's own PeopleApproval requests: kind, what, dates, state, who decides the step waiting or that no
+    one may yet, a refusal's reason; paged); `get#Team` (`PEOPLE_TEAM_VIEW`: the caller's live lines, one row per employment at an
+    employer the line is at, the public work identity with department, work location and Working or On leave, no employment id;
+    no manager or party parameter); `find#DueWork` (kinds `decision`: the requests whose step waiting the caller may decide now,
+    read from the notices sent to them and checked against the route; `noManager` and `checklistTask`: an HR reader's employees with
+    no manager and the open lifecycle tasks of the employers in scope; `myTask`: the caller's own open People tasks under P7's
+    `hiddenTaskIds`; a protected task about the caller never shown, as HR either; paged; `KIND_INVALID`, `PERMISSION_DENIED`,
+    `ORGANIZATION_DENIED`); `get#Home` adds `vacancies` (a position reader's, through `find#Positions`) and `decisions`, a count that
+    fails logged and left out;
+  - emergency contacts (the user's call on F80): `store#EmergencyContact` (the person or an HR editor of their employer, as
+    `store#PersonalInfo`; add, change at the contact's revision, end, never delete; `NAME_REQUIRED`, `PHONE_REQUIRED`,
+    `REVISION_CHANGED`, `CONTACT_LIMIT` at five), each contact a Person party with its `PhonePrimary` phone, linked by a dated
+    `PrtEmergencyContact` relationship (the relation in `relationshipName`), the party held by a new account `_PEOPLE_PRIVATE_`
+    (`privateOwnerUserId`; disabled, no password, no group) and owned by the employee, so no reader shows it to anyone; read with
+    `get#Employee360`'s personal information (the person and HR), each with its own revision;
+  - `PeopleTaskAssigned` (seeded in `PeopleLifecycleSetupData.xml` with `notify#PeopleTaskAssigned`; title "<who> assigned you a
+    People task, due <day>"): `TaskServices.notify#TaskAssigned` hands a task whose root's process policy is People's to it, so
+    `WorkItemAssigned` is never sent for People's work; `WorkProcesses.js instantiate` writes the execution's policy before pass two.
+- BOSS:
+  - `Shared/PeopleSelfService.xml`, mounted at `People/SelfService` and `Commons/People/SelfService` (owner contract, F46), out of
+    both menus: MySummary (the counts, My employment), My People tasks (each a Commons task), My requests, Emergency contacts, and
+    Open my employee record (primary; `get#SelfServiceContext`: People's Employee360 for a People user who reads them, else
+    Commons'); `template/PeopleEmergencyContacts.xml` (its transition and section, also in Employee360's Personal information,
+    changed wherever the personal information is: People's mount and Commons' own record);
+  - `People/MyTeam` (menu 2, `g m`; Team over `get#Team`, Decisions over `find#DueWork` with All approvals), the managers' by
+    `BOSS_PPL_TEAM` (DENY the root group, ALWAYS `BOSS_PEOPLE_MANAGER`); People.js's area `myTeam`;
+  - Home: Hire employee primary for HR and My self-service for a self-service user, Vacant positions and Decisions waiting cards,
+    DueWork over `find#DueWork` (paged, persons and tasks linked), and for a People user who reads no employer their decisions
+    waiting and My team;
+  - `BOSS_PPL_SELF` (F28): non-inheritable ALLOW for `BOSS_PEOPLE_SELF` on the shared screen (one location for both mounts), its
+    contact transition, `get#SharedContext` and `get#SelfServiceContext`, and `get#SelfService`, `find#MyRequests`, `find#DueWork`
+    and `store#EmergencyContact`; `get#SharedContext` answers such a user `{read: false, self: true}`, their employments and the
+    SelfService link alone; the launcher and every other People screen stay refused;
+  - Today (F64): `ironstone.people.ContextServices.get#TodayItems` (the decisions waiting, `PEOPLE_REQUEST_APPROVE`, each opening
+    PositionDetail or the person's Employee360) on the People root and on Commons' root (owner contract); the root's
+    `PeopleTaskAssigned` topic, its link (BossSetupData) Commons' TaskDetail;
+  - Commons Home (owner contract, design-drawers-commons §5): one card, My employment, over `get#SelfService` with `checkOnly`,
+    linking `Commons/People/SelfService`.
+- Specs: Mantle `PeopleScope` gains the manager's team case (0.28 s: the lines' employments at their employers, a report employed by
+  two at the line's alone, a supplied party and manager dropped, the reader refused; self-service the caller's own; no requests);
+  `PeopleDirectory` gains the emergency contacts (0.45 s: the person adds, HR of A changes at its revision, a stale revision, a
+  phone missing and the reader refused, the reader reads none, no party search or record link finds the party, ended and kept);
+  `PeopleApprovals`' activation feature checks the decision waiting on the head alone and the requester's own request waiting for
+  them (+0.1 s); `PeopleChecklists`' offboarding feature checks the assignee told on `PeopleTaskAssigned` and not `WorkItemAssigned`
+  with a title naming no one, the leaver's due work and self-service count leaving out the protected task and HR's reading it
+  (+0.1 s). BOSS `test/People/PeopleSelfService` (5 features, 0.43 s: a supplied partyId changing nothing, another person's contacts
+  refused; SelfService's one qvt render under Commons as the employee; Commons Home's People card in html; My team's one qvt render
+  as the manager, Leon and Kenji absent; Today's source for the manager and nothing for the employee); `PeopleAccess` gains one
+  feature (0.42 s: the employee opens SelfService under People, the one html render, and is refused Employees, My team and
+  Approvals; My team the manager's, the html render, the reader refused), its context feature the employee's own context and its
+  menu feature the manager's menu (`managerMenu`; `adminMenu` gains My team). Acceptance, written and not run:
+  `acceptance/People/PeopleSelfServiceUsable` (2 features); `PeopleFoundationWalk`'s manager Home check follows Home's new text.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleApprovals,
+  PeopleChecklists, PeopleEmployment, PeopleScheduledChanges, PeopleOrganization, PeoplePositions, WorkProcess, UserProvisioning,
+  HumanResServices, WorkMyTasks, WorkProjectItems, WorkProjectServices, CommonsToday, CalendarServices, Dav, RecordLinks,
+  RecordVisibility, UniversalSearch, ContactBooks, PartyServices, WorkProjectHub and SupportCases 206 of 206 (mr-mantle 39.0 s),
+  PeopleChecklists 3 of 3 again after its last check; BOSS PeopleSelfService, PeopleAccess, PeopleEmployees, PeopleHire,
+  PeopleLifecycle, PeopleApprovals, PeopleOrganization, PeoplePositions, CommonsSettings, TodayPanel, Tasks, QuickCreate,
+  Notifications, Contacts, AdminCapabilities, AdminRegistries, AdminLifecycle, AdminUsers, AdminAccess, AdminGroups, ProjectsAccess,
+  AppOrganizationFilters, InsightsRecords, InsightsAccess, Resources, Chatter, RecordFiles, WorkItemDetail and CommerceAccess 277 of
+  277 (mr-boss 40.8 s), then PeopleSelfService, PeopleAccess, WorkItems and Projects 34 of 34; the client walk PeopleHireWalk 1 of 1
+  (7.1 s). `moqui lint --screens`: 135 flagged sites as before, none in the screens P8 touched, no new TUI worklist entry. Prettier
+  clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People rows (`get#SelfService`, `find#MyRequests`, `get#Team`, `find#DueWork`,
+  `store#EmergencyContact`, `notify#PeopleTaskAssigned`; `get#Home`'s counts); ss-inventory's P8 note (no baseline form maps to
+  SelfService, MyTeam or Home's due work; the emergency contacts are People's own record).
+- Design edits: design-people (header; §1.2 the menu; §1.4 Today and the topic; §3 Home, MyTeam and SelfService as built; §4
+  Employee360's emergency contacts); design-drawers-commons (header; §5 Home's People card and SelfService, owner contract).
+- Findings, numbered by the lead F156 to F164 in order:
+  - the emergency contact's party is hidden by a new system account, `_PEOPLE_PRIVATE_`, as its `privateOwnerUserId` (the field
+    has a foreign key to UserAccount, and the employee may have no account); an ADMIN user sees the account in Admin's users, as
+    `_EDGE_` and `_AGENT_ASSIST_`. A party-level private flag would need a Mantle entity change and every reader's condition;
+  - before P8 a checklist step's or return task's assignee was told on `WorkItemAssigned` with "Offboarding: <person>" or "Return …
+    from <person>" in the title, a lock-screen leak of a separation (P7 left it); P8's topic replaces it for People's work;
+  - the decisions waiting are read from the notices sent to the user (up to 200, newest first), each checked against its route now: a
+    request rerouted to the user without a notice is not listed until one is sent (P5's notify sends one on every reroute);
+  - My team lists direct reports only (the expansion of the hierarchy within team scope, design §3, is later); Remind missing time
+    waits on P10's timesheets;
+  - My requests holds only the People approval requests the user asked for: a plain employee has none until leave (P12) and claims
+    (P15); a change about them that HR asked is not theirs to see;
+  - Today's People source answers decisions only, to `PEOPLE_REQUEST_APPROVE`; its self items (leave starting, a qualification
+    expiring) come with P12 and P18, so "nothing without `PEOPLE_SELF_SERVICE`" holds trivially now; a decision's link opens People's
+    screens, which a decider without the People root (a ParPerson approver who is only a self-service employee) cannot open, though
+    the tray and Commons' Notifications decide it;
+  - the self-service employee who opens `People/SelfService` gets People's frame with an empty menu (the launcher hides People);
+    Commons' mount is the one linked;
+  - the demo manager (`people.manager`, Hannah) has no self-service: the groups are not nested, so an employee who manages needs
+    `BOSS_PEOPLE_SELF` too (a hire's default proposal gives it);
+  - Home's Vacant positions reads `find#Positions` for a count, which builds every position row in reach up to its cap.
+- For the lead:
+  - budget share: mr-mantle about 0.95 s (PeopleScope's team feature 0.28, PeopleDirectory's contacts 0.45, PeopleApprovals' and
+    PeopleChecklists' checks about 0.2); mr-boss about 0.85 s (PeopleSelfService 0.43, PeopleAccess's feature 0.42); the client walk
+    unchanged (7.1 s);
+  - merge hot spots: mr-mantle `Employees.js` (personalOf, the operations table, the appended functions), `People.js` (homeCounts,
+    home's loop, dueWork, the exports), `Approvals.js` (the appended section, operations, exports), `Checklists.js`
+    (lifecycleTasks, exports), `WorkProcesses.js` (instantiate's policy write), `TaskServices.xml` (`notify#TaskAssigned`),
+    `PeopleServices.xml` (header, get#Home, get#Employee360, appended services), `PeopleLifecycleSetupData.xml` (appended); mr-boss
+    `BossSetupData.xml` (appended), `People.js` (areas, linkPaths, sharedContext, the appended functions and operations),
+    `ContextServices.xml` (appended), `screen/People.xml` (subscreens, keymap, providers), `People/Home.xml`, `Shared/Employee360.xml`,
+    `Commons.xml`, `Commons/Home.xml`, `Commons/People.xml`, `PeopleSpecLib.js` (menus), `PeopleAccess.spec.js`, the inventories,
+    design-people's header, §1.2, §1.4, §3, §4 and design-drawers-commons §5;
+  - gate 1: the acceptance tests to run with the full suites are PeopleSelfServiceUsable (new) and PeopleFoundationWalk (its
+    manager Home check changed; AGENTS.md asks a changed acceptance test to be run, the brief not to);
+  - the user's call: whether an emergency contact's party may be held by the `_PEOPLE_PRIVATE_` account (built) or wants a
+    party-level private flag.
+
+**Review Nov 11 (P8).** A fresh review of `git diff master...ppl/p8` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §3 (Home, MyTeam, SelfService), §1.2, §1.4, design-drawers-commons §5 and F28, F46, F64, F80, with self scope, the self grant,
+the team and decisions, protected tasks and the emergency contacts' privacy first; the user's call of Nov 11 (§4) recorded; fixes
+committed apart per repository ("People P8 review: …"; mr-mantle 0dc6354c).
+- Checked and found sound:
+  - Self scope: `get#SelfService`, `find#MyRequests` and `find#DueWork` take no party or user (a supplied `partyId` is dropped:
+    PeopleSelfService's first feature); `store#EmergencyContact` admits the person (`PEOPLE_SELF_SERVICE`, own party) or an HR editor
+    of an employer of theirs through `personAccess`, a contact of another person refused as missing; `get#SelfServiceContext` and
+    the self branch of `get#SharedContext` answer the user's own party and employments and links alone.
+  - The self grant (`BOSS_PPL_SELF`, non-inheritable), probed as `people.employee` with authorization on: SelfService opens under
+    People and Commons; People's Home and root, Employees, Employee360 (their own too), Settings, Staffing, Approvals, MyTeam and
+    HireEmployee are refused by screen, through the web root and by transition (Employee360's `storeEmergencyContact` and
+    `storePersonalInfo` under People refused before they run); the self-service transition with Ines's `partyId` is refused by the
+    service and writes nothing; `get#Team`, `find#Employees`, `get#Employee360`, `get#Home`, `get#Scope`, `find#Positions`, People's
+    `search#Records` and `get#TodayItems` called directly are refused by authorization; `find#DueWork` answers `myTask` only.
+  - `get#Team` reads the caller's live lines (`scopeOf().reportLines`, `linesOf` now) and only the employments at the line's
+    employers, no employment id, private contact or pay; `waitingFor` (the decisions) lists only requests pending now whose current
+    step the caller is an approver of, by user and party, on a route that already leaves out the requester, the subject and the
+    deciders of other steps (`resolve`), so every row is one `recordDecision` would accept.
+  - Protected tasks: `myTasks` applies `hiddenTaskIds`; HR's `checklistTask` leaves out the reader's own protected work; the
+    self-service count is `myTaskCount`. The PeopleTaskAssigned title names who assigned and the due day only (the email template's
+    subject is the title, its body the message's three fields).
+  - `notify#TaskAssigned` hands a task to People only when its root's process policy is `WppPeopleChecklist`; other work keeps
+    `WorkItemAssigned` unchanged. `instantiate#WorkProcess` writing the policy before pass two changes nothing for a guarding policy:
+    pass two writes by entity-auto services, which `check#ManagedWork` does not guard. WorkProjectItems, WorkProcess, WorkMyTasks
+    (Mantle) and WorkItems, Projects, Tasks, CustomerServiceCases and CustomerServiceAssignment (BOSS) pass.
+  - Emergency contacts' party, probed as HR, the manager, the reader, the People administrator, an ADMIN user and an Insights
+    administrator: Commons' ContactDetail of the party and of the employee (relationships go through `visibleParty`), the Contacts
+    list searched by the contact's name, Commons' Employee360, Chatter's `get#RecordInfo` and `get#RecordLinkInfo` show nothing of
+    it; People's Employee360 shows it to HR of the employer and ADMIN only. `search#Universal` and `find#Party` filter
+    `privateOwnerUserId` in the query.
+  - The Commons root's Today source answers nothing without `PEOPLE_REQUEST_APPROVE` or for another user's Today; Commons Home's
+    card asks `get#SelfService` with `checkOnly` and links `Commons/People/SelfService`, out of the menu.
+- Fixes:
+  - **R1 (high, install).** Mantle seeded the `_PEOPLE_PRIVATE_` account in `PeopleLifecycleSetupData.xml` (type seed). The Login
+    screen and `UserServices.create#InitialAdminAccount` offer a fresh install its first administrator only while no account exists
+    but `_NA_`, `_EDGE_` and the agents' chat users, so a production install with Mantle's seed could no longer create its first
+    administrator. The account (the user's call: kept) is now made with the first emergency contact, in its own transaction
+    (`Employees.js privateHolderId`; disabled, no password, no group), and is no longer seeded. Spec: PeopleDirectory's contacts
+    feature checks the account disabled with no password and no group (the seeded test database cannot show the first-run case).
+  - **R2 (medium, integrity and access).** `emergencyLinks` took any current `PrtEmergencyContact` relationship from the person,
+    and Commons' `add#ContactRelationship` writes any relationship type (with `reverse`, from any party the user sees to their own
+    personal contact; a contact administrator from an employee to any directory person). Such a row put a directory party or
+    someone's personal contact in the person's emergency contacts, and `store#EmergencyContact` then let the person or HR rename that
+    party and replace its primary phone with authorization off. Only a party held by `_PEOPLE_PRIVATE_` and owned by the person is
+    now an emergency contact. Spec: PeopleDirectory's contacts feature (a row to a directory person is not listed and changing it
+    is RECORD_UNAVAILABLE, the party unchanged); it fails on the code as built.
+  - **R3 (the worker's finding, the lead's instruction).** The demo manager (`people.manager`, Hannah) is in `BOSS_PEOPLE_SELF`
+    too (BossUsersDemoData; groups are not nested). PeopleAccess's capabilities table gives the manager `self`.
+  - PeopleAccess's self-service feature now also checks the employee refused People's Home and their own Employee360 under People,
+    Employee360's emergency-contact transition under People, and `get#Team`, `get#Employee360` and `get#Home` called directly.
+- Findings, numbered by the lead F165 to F168 in order:
+  - Commons' Add a relationship still offers the Emergency Contact type (it offers every `PartyRelationshipType`); a row made there is
+    inert since R2 but visible as a relationship to whoever sees both parties. Leaving the type out of Commons' choice is an owner
+    contract on ContactServices;
+  - an offboarding step of the Employee role assigned to the leaver (P7's finding) also sends them a PeopleTaskAssigned notice
+    (neutral title) for a task they cannot open: at the assignment, inside `instantiate#WorkProcess`, the step's protection and the
+    execution's `EmploymentChecklist` are not yet written, so `hiddenTaskIds` cannot tell;
+  - an ADMIN user reads emergency contacts in People's Employee360 (ADMIN holds every People permission) and in Mantle's ledger
+    party lookups (`EntityLib` shows personal contacts to a system administrator), as every personal contact;
+  - two first emergency contacts at once on a fresh install: the second's account create fails in its own transaction and is read
+    again, so neither fails unless the account cannot be made at all.
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleScope, PeopleDirectory, PeopleApprovals,
+  PeopleChecklists, PeopleEmployment, PeopleScheduledChanges, WorkProcess, WorkProjectItems, WorkMyTasks, RecordLinks,
+  RecordVisibility, ContactBooks, PartyServices, UniversalSearch, HumanResServices, UserProvisioning, UserLifecycle and CommonsToday
+  147 of 147 (48.5 s; mr-mantle 24.8 s of features; PeopleDirectory's contacts feature 0.50 s); BOSS PeopleAccess, PeopleSelfService,
+  PeopleEmployees, PeopleLifecycle, PeopleHire, PeopleApprovals, PeopleOrganization, PeoplePositions, WorkItems, Projects,
+  CustomerServiceAssignment, CustomerServiceCases, Contacts, AdminUsers, AdminGroups, AdminCapabilities, AdminLifecycle, TodayPanel,
+  Tasks, CommonsSettings, Notifications, InsightsRecords and Chatter with their dependencies 204 of 204 (50.5 s; mr-boss 27.7 s of
+  features; PeopleAccess's P8 feature 0.54 s). The R2 check fails on the code as built. Prettier clean on the changed JavaScript. No
+  screen changed: `moqui lint --screens` not run. Not run: `./moq test-apps`, the acceptance suite (the user's call).
+- For the lead:
+  - budget share: mr-mantle about +0.05 s over the Built note (PeopleDirectory's contacts feature); mr-boss about +0.15 s
+    (PeopleAccess's P8 feature 0.54 s);
+  - merge hot spots beside the Built note's: mr-mantle `Employees.js` (emergencyLinks, privateHolderId), `PeopleLifecycleSetupData.xml`
+    (the account no longer seeded), `PeopleDirectory.spec.js`; mr-boss `BossUsersDemoData.xml` (the manager's membership),
+    `PeopleAccess.spec.js`, design-people §4;
+  - the user's call is in §4: the emergency contacts stay hidden through the disabled system account `_PEOPLE_PRIVATE_` as
+    `privateOwnerUserId`, not a party-level flag (made with the first contact since R1);
+  - gate 1's acceptance tests are the Built note's (PeopleSelfServiceUsable, PeopleFoundationWalk); the demo manager's new
+    self-service membership leaves their checks as written.
+
 ### P9 — Working schedules, holidays and capacity
 
 Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCalendars; PE-06.
@@ -2174,6 +2381,206 @@ Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCale
   Mantle's Work capacity specs unchanged.
 - **Usable when** (`acceptance/People/PeopleSchedulesUsable`): `people.hr` defines a four-day week in another zone,
   assigns it from a date, adds a holiday, and CapacityPreview and Projects' PersonDetail show the same hours.
+
+**Built Nov 11 (P9).** mr-mantle effe0fa8, mr-boss (branch `ppl/p9`).
+- Checked first (the code over the plan): F23 (ResourceServices' header names People's schedule as the replacement of the
+  WetAvailable source and nothing else); `TimesheetServices.get#WeekDays` with a person already reads `get#PartyCapacity`, so one
+  change serves both; F31 (HolidayUsaData is install data, its categories `WcatHoliday` WorkEffortCategories linked by
+  `WorkEffortCategoryAppl`; only `get#NextBusinessDay` reads categories, while capacity, BusinessTime and Projects' planner read the
+  employer-owned `WepHoliday` convention for everyone of the organization); P6's finding that the assignment has no schedule field
+  (added here); P6's `termFields` (every change copies the terms in effect to the next assignment, so the schedule must be a term or a
+  transfer would drop it) and `checkDate` (no change on or before a later assignment's start); `create#Event` defaults the owner to
+  the user and takes no category; `ec.l10n.parseTimestamp` and `format` take an IANA zone and `getAvailableTimeZones` lists them; and
+  the framework's authorization: an inherited ALWAYS is not overridden by a more specific DENY of another group the user is in, so an
+  area's own grant must be non-inheritable to keep a child screen from it.
+- Mantle:
+  - `entity/PeopleScheduleEntities.xml`: `mantle.humanres.schedule.WorkingSchedule` (an employer's dated week: name, IANA zone,
+    holiday calendar, from and through, `copiedFromScheduleId`; name, zone, calendar and end audit-logged) and `WorkingScheduleLine`
+    (dated weekly intervals: ISO day, local start and end, an end at or before the start ending the next day, unpaid break);
+    `EmploymentAssignment` and `EmploymentChange` gain `workingScheduleId` and `holidayCategoryId` (audit-logged on the assignment),
+    and the change kind `EckSchedule` (Working schedule);
+  - `mantle.humanres.ScheduleServices` over a new module `Schedules.js`: `find#Schedules` (a staff reader's employers' schedules and
+    those a manager's live reports follow; weekly hours, calendar, dates, state, HR's count of followers; paged), `get#Schedule`
+    (every dated line, who follows it now or later: all for HR of the employer, a manager their reports), `store#Schedule` (new, copy,
+    change at the schedule's revision, end; `ORGANIZATION_REQUIRED`, `ORGANIZATION_DENIED`, `NAME_REQUIRED`, `ZONE_INVALID`,
+    `CALENDAR_UNAVAILABLE`, `OWNER_CHANGE`, `ZONE_IN_USE` once anyone followed it, `DATE_PAST`, `SCHEDULE_ASSIGNED`,
+    `REVISION_CHANGED`), `store#ScheduleLine` (added, changed or ended from a date; before the line's start in place, after it ended
+    and restarted; `DAY_INVALID`, `TIME_INVALID`, `BREAK_INVALID`, `OVERLAP` across midnight and the week's end, `DATE_OUTSIDE`,
+    `LINE_ENDED`), `get#Holidays`, `store#HolidayCalendar` (an employer's, or shared with `PEOPLE_ALL_ORGANIZATIONS`),
+    `store#Holiday` (a no-owner all-day `WepHoliday` in the calendar; `DAY_TAKEN`, `HOLIDAY_PAST`, `DATE_REQUIRED`) and
+    `get#CapacityPreview` (a person HR reads or a manager's report, up to 62 days, over `get#PartyCapacity` with each day's schedule);
+  - `assign#Schedule` is Employment.js's `assignSchedule`: an HR editor of the employer; the schedule the employer's and in effect
+    (`SCHEDULE_OUTSIDE`, `SCHEDULE_NOT_IN_EFFECT`), the calendar the employer's or shared, an empty schedule ending the following;
+    a change of its own applied at once (`EckSchedule`, operation key, withdrawable while to come) that starts the next assignment
+    with the other terms and state as they were (an employment with no assignment gets its first); `NOTHING_CHANGES`,
+    `SCHEDULE_REQUIRED`, `ASSIGNMENT_SCHEDULED`, `DATE_OUTSIDE`, `REVISION_CHANGED` when a revision is given. `termFields` carries the
+    schedule and calendar, so a transfer, manager change, leave or reorganization keeps them; `termTexts` and the assignment history
+    name the schedule; `get#Team` rows carry the schedule a report follows now (MyTeam's column; P8's note left it for P9);
+  - capacity (owner contract with Projects, F23): `get#PartyCapacity` reads `Schedules.js scheduledDays` once for all its parties:
+    each day planned by the schedule in effect at noon of that day in its zone; an interval's hours are its actual instants less
+    the break, counted on the day it starts (a night shift across a daylight saving change has its true length); two employments'
+    overlapping intervals count once; the planned days replace the WetAvailable and policy hours (`source` `schedule`, each day's
+    `workingScheduleId`), the policy organization's holidays still apply and the schedule's calendar (the assignment's, else the
+    schedule's) adds its own. People with no schedule are not touched (the WetAvailable read is skipped only when every day is
+    planned); a failure is logged and the person keeps today's capacity. `get#WeekDays` is unchanged but its description.
+- BOSS:
+  - `screen/People/Time.xml` (Time & leave, menu 7, `g w`), `Time/WorkingSchedules` (list, New schedule the primary, Copy),
+    `Time/WorkingScheduleDetail` (record header; Assign the primary; More: Edit schedule, End schedule; Week with Add working hours,
+    Change and End; Assignments with End for employee; Capacity preview over `get#CapacityPreview`) and `Time/HolidayCalendars`
+    (Holidays, menu 9: calendars, the holidays of a year, New calendar the primary, Add holiday, Rename, Change, Remove), HR's own
+    editor under Time rather than Settings (the user's call of Nov 11 on HR's editors, recorded as a design edit);
+  - `BOSS_PPL_TIME` (Time.xml non-inheritable, WorkingSchedules and WorkingScheduleDetail inheritable: ALWAYS `BOSS_PEOPLE_HR` and
+    `BOSS_PEOPLE_MANAGER`, DENY `BOSS_PEOPLE`) and `BOSS_PPL_HOLIDAYS` (HolidayCalendars: ALWAYS HR, DENY `BOSS_PEOPLE`);
+    `ironstone.people` People.js: area `schedules` (Time), link paths for the three screens, choices `workingSchedules`,
+    `holidayCalendars`, `timeZones` and `employments`; MyTeam's Working schedule column;
+  - Projects' PersonDetail (owner contract, design-projects §15): the overview's source text "Their working schedule (People)";
+  - demo (`BossPeopleDemoData.xml`, appended): Retail's Store week (America/Chicago, Monday to Thursday 8 h, Saturday 4 h) with
+    Retail's holiday calendar (two 2027 holidays), followed by nobody, so every demo person keeps the capacity Projects' and
+    Manufacturing's demo and specs read; no seeded calendar is assigned (F31).
+- Specs: Mantle `test/humanres/PeopleSchedules` (4 features, stepwise, 2.7 s: overlapping intervals refused on a day and across
+  midnight, a break too long, a bad time, a stale revision, a reader, another employer's HR; a person following the four-day Berlin week
+  from a date gets its hours from then and the policy's before, one following none today's, a holiday of the schedule's calendar takes
+  the day and another calendar's not, the assignment's calendar replacing the schedule's, the operation-key retry, `NOTHING_CHANGES`,
+  `ASSIGNMENT_SCHEDULED`, `ZONE_IN_USE`, `SCHEDULE_ASSIGNED`, a manager reading the schedule their report follows and not another;
+  a line changed from a date keeps the weeks before it and a leave carries the schedule; a New York night shift 7 h across the spring
+  change and 9 h across the fall change, and `get#WeekDays`' week of 7 h). BOSS `test/People/PeopleSchedules` (4 features, 0.6 s:
+  WorkingScheduleDetail's one html render as HR with a follower and their preview, HolidayCalendars' one html render, the four choices
+  with a selected value off the page and the reader given no employments, Projects' `get#PersonOverview` source text); `PeopleAccess`
+  gains one feature (0.34 s: Retail's schedule changed by Retail's HR, the reader refused with the same parameters, Services'
+  schedule refused to Retail's HR, WorkingSchedules' one html render as HR, the reader refused the screen, the manager refused
+  Holidays), its menu feature the HR, manager, reader and administrator menus and the Time group (`hrMenu`, `hrTimeMenu`,
+  `managerTimeMenu`; `adminMenu` and `managerMenu` gain Time, `keys` `g w`) and its capability table `schedules`. Acceptance, written
+  and not run: `acceptance/People/PeopleSchedulesUsable` (2 features: people.hr's Berlin four-day week, calendar, holiday and
+  assignment through the screens' transitions; the preview and Projects' PersonDetail giving Rafael 40 h and 30 h for the same weeks
+  from the schedule); `PeopleFoundationWalk` reads `ids.adminMenu`, which now has Time, unchanged as a file.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleSchedules, PeopleEmployment, PeopleScheduledChanges,
+  PeopleOrganization, PeopleScope, PeopleDirectory, PeopleChecklists, PeopleApprovals, PeoplePositions, WorkResources, WorkTimesheets,
+  BusinessTime, WorkTimeEntries, WorkProjectReports, ProductionShopFloor, HumanResServices and WorkProcess 102 of 102 (mr-mantle
+  34.5 s of features; PeopleSchedules 2.8 s: 1.26, 1.12, 0.23, 0.15), then PeopleScope and PeopleDirectory 10 of 10 after My team's
+  schedule; BOSS PeopleSchedules, PeopleAccess, PeopleEmployees, PeopleHire, PeopleLifecycle, PeopleOrganization, PeoplePositions,
+  PeopleApprovals, PeopleSelfService, Resources, TimeEntries, Reports, Projects, ProjectsAccess, ProjectsHome, ManufacturingSchedule,
+  ManufacturingWorkCenters, ManufacturingAccess, Schedules, AppOrganizationFilters, InsightsRecords, AdminCapabilities, TodayPanel,
+  QuickCreate, Notifications and CommonsSettings with their dependencies 175 of 175 (mr-boss 34.6 s), then PeopleSelfService and
+  PeopleAccess 20 of 20; the client walk PeopleHireWalk 1 of 1 (7.0 s). The three new screens rendered once more by hand in qvt and
+  tui as HR without errors (not kept in the suite). `moqui lint --screens`: 135 flagged sites as before, none in the screens P9
+  touched, no TUI worklist entry. Prettier clean on the new and changed JavaScript. Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's `get#PartyCapacity` row and the People Added table's ScheduleServices rows; ss-inventory's P9 note (no
+  baseline form maps to the three screens).
+- Design edits: design-people (header; §1.2 Time & leave; §2 HolidayCalendars' path; §3 MyTeam's schedule; §6, WorkingSchedules,
+  WorkingScheduleDetail and HolidayCalendars as built); design-projects (header; §15 PersonDetail's capacity, owner contract).
+- Findings, numbered by the lead F169 to F175 in order:
+  - a holiday is written by `store#Holiday` directly, with no owner, not through Commons' `create#Event` (which makes the HR user its
+    owner and takes no category): with an owner of the employer, the old convention would make a regional calendar every employee's.
+    The employer-owned `WepHoliday` convention still applies to everyone of the policy organization, scheduled or not; the design's
+    "applicable organization" of a holiday is its calendar's employer;
+  - a schedule assignment is a change applied to the employment, so by P6's rule it supersedes a transfer or separation of that
+    employment waiting for approval (the waiting change carries the old schedule in its terms, so applying it later would undo the
+    assignment); assigning schedules to many people would supersede their pending transfers;
+  - a schedule cannot be assigned on the start of the assignment in effect nor before a change set for a later date
+    (`ASSIGNMENT_SCHEDULED`, P6's `checkDate`): it is set from a later day, or after withdrawing the scheduled change;
+  - dates are entered in the HR user's zone, and a schedule's day is planned when the assignment is in effect at noon of that day in
+    the schedule's zone: for a zone more than twelve hours ahead of the HR user's (Tokyo from Chicago), the first day of an assignment
+    from midnight is not planned;
+  - holidays of a recurring series (`recurStartCron`, HolidayUsaData's Columbus Day) are not read, as `get#NextBusinessDay` and
+    capacity never read them;
+  - a schedule is an employer's (no shared schedule, unlike pay grades and calendars); its zone is fixed once followed (a copy is the
+    way to another zone);
+  - the preview of a change's impact on leave and shifts (design WorkingScheduleDetail) waits for P11, P12 and P14; Employee360 and
+    HireEmployee do not show or take the schedule yet (the assignment history carries its name).
+- For the lead:
+  - budget share: mr-mantle about 2.7 s (PeopleSchedules); mr-boss about 0.95 s (PeopleSchedules 0.6, PeopleAccess's feature 0.34);
+    the client walk unchanged;
+  - merge hot spots with P10 (the second to merge rebases): mr-mantle `service/mantle/work/ResourceServices.xml` (`get#PartyCapacity`:
+    the header comment, the description, `entryOf` and the loop before it), `service/mantle/work/TimesheetServices.xml` (`get#WeekDays`'
+    description only), `entity/HumanResourcesEntities.xml` (EmploymentAssignment and EmploymentChange fields, the `EckSchedule` enum),
+    `Employment.js` (`termFields`, `kindTexts`, `withdrawableKinds`, `termTexts`, `applyChange`'s `EckSchedule` branch, the appended
+    `assignSchedule`, operations), `Employees.js` (`team`), `PeopleServices.xml` (`get#Team`'s description); no Mantle setup data
+    changed; mr-boss `screen/People/Time.xml` (new here: P10 mounts its time screens under `People/Time` too and must open the area to
+    its users, Time.xml's own grant being non-inheritable and denied to `BOSS_PEOPLE`; menu indexes 2 and 9 taken),
+    `data/BossSetupData.xml` (appended `BOSS_PPL_TIME`, `BOSS_PPL_HOLIDAYS`), `data/BossPeopleDemoData.xml` (appended),
+    `service/ironstone/people/People.js` (`areas`, `linkPaths`, the choice sources' comment and four appended sources),
+    `screen/People.xml` (the keymap and comment), `screen/People/MyTeam.xml`, `service/ironstone/projects/ResourceServices.xml`
+    (`get#PersonOverview`'s source text), `test/People/PeopleSpecLib.js` (menus, keys, ids), `test/People/PeopleAccess.spec.js`
+    (header, menu and capability features, the appended feature), the inventories, design-people's header, §1.2, §2, §3, §6, §7 and
+    design-projects' header and §15;
+  - the user's call: HolidayCalendars is built under Time & leave (HR's), not Settings as designed, following the call of Nov 11 that
+    put HR's editors out of the People administrator's Settings.
+
+**Review Nov 11 (P9).** A fresh review of `git diff master...ppl/p9` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §6 (WorkingSchedules, WorkingScheduleDetail), §7 HolidayCalendars and F23, F31, with capacity, holidays and their scope, and
+the schedule as an employment change first; the lead's call on HolidayCalendars recorded in §4; fixes committed apart per repository
+("People P9 review: …"; mr-mantle a65a0d3c).
+- Checked and found sound:
+  - Capacity (F23): `get#PartyCapacity` reads `Schedules.js scheduledDays` once for its parties; a person with no schedule takes the
+    same path as before (the WetAvailable read and the policy, `source` unchanged; the day rows only gain `workingScheduleId: null`),
+    and a failure of the schedule read is logged and leaves today's capacity. Projects' and Manufacturing's specs pass unchanged.
+  - Cross-midnight and DST: an interval's hours are the instants between its local start and end in the schedule's zone (the end on
+    the next day when at or before the start) less the break, counted on the day it starts; a day is planned by the schedule and
+    assignment in effect at its noon in the schedule's zone; two employments' overlapping intervals count once.
+  - Holidays: a calendar's holiday has no owner, and every other holiday reader (BusinessTime, ProductionCalendar, Projects'
+    planner, `get#WeekDays`' policy days, `get#NextBusinessDay`, Manufacturing's work centers) asks for an owner or a category, so it
+    counts only on the days of a person whose assignment or schedule names its calendar; `checkCalendar` lets a schedule or an
+    assignment name only its employer's calendar or a shared one, so another employer's never applies. Calendars are read (`get#Holidays`,
+    the `holidayCalendars` choice) only as shared or of the reader's employers, and changed only by an HR editor of the owner (a
+    shared one with `PEOPLE_ALL_ORGANIZATIONS`); a holiday is changed through its calendar's owner alone.
+  - Schedules are an employer's: changed and assigned only by its HR editors (`canEditAt`), assigned only to its employments
+    (`SCHEDULE_OUTSIDE`), the owner never changed (`OWNER_CHANGE`); a manager reads only the schedules their live reports follow and
+    of the followers only their reports. Overlapping lines are refused on a day, across midnight and the week's end, among lines in
+    effect together; the zone is refused once anyone has followed the schedule (`ZONE_IN_USE`); every write names the revision.
+  - The access grants: Time.xml's own grant non-inheritable, Holidays HR's alone, the root group denied; PeopleAccess's feature
+    checks the holder, the reader and another employer's schedule.
+- Fixes:
+  - **R1 (high, integrity; the worker's finding 2, the lead's instruction).** A schedule assignment was an employment change applied
+    at once, so P6's rule superseded the employment's transfer or separation waiting for approval (and its request, bound to the
+    employment's revision, went stale): assigning schedules to many people would wipe their pending transfers, and a waiting
+    transfer carried the old schedule in its terms. Now `assign#Schedule` (and the withdrawal of a scheduled `EckSchedule`) leaves
+    the waiting changes as they are: `Approvals.js keepWaiting` binds each request that was current to the employment's new
+    revision and sends its step again (the earlier notice, naming the old revision, read); the waiting change carries the schedule
+    in effect on its date; and `applyChange` gives a transfer or manager change the schedule in effect on its date, never the one it
+    was asked with (the schedule is assign#Schedule's alone). A schedule from the waiting change's date or later is refused
+    (`CHANGE_WAITING`), since the change, once approved, could not apply before a later assignment. Spec: PeopleSchedules' fifth
+    feature (a transfer waiting, a schedule assigned before its date, the transfer still waiting with its approval and one fresh
+    notice, approved through it and applied with the schedule; `CHANGE_WAITING` from its date); fails on the code as built.
+  - **R2 (medium; the worker's finding 3).** A date-boundary bug: `checkDate` counts an assignment starting on the change's date
+    as a later one, so a schedule could not be assigned from the day the assignment in effect starts (a hire's first day, or the
+    date of the person's first schedule). A schedule from that day now changes that assignment's schedule and calendar in place
+    (audited with the reason; the `EckSchedule` change names it), unless it is a change set for a later date HR may still withdraw
+    (then `ASSIGNMENT_SCHEDULED` stands: withdraw it first). An empty date is the start of today, or of the employment or the
+    assignment in effect when it began later today, as the screen's "Today when empty" says (it was the current instant). Spec:
+    the fifth feature (an assignment from a past date given a calendar from the same date: one row, changed in place).
+  - **R3 (medium, history).** `store#ScheduleLine` took any date, so a line added, changed in place or ended from a past date
+    rewrote weeks people had been planned by, and `store#Holiday` added a holiday on a past day while refusing to change one
+    (design: no historical recomputation; a retrospective edit is reported and corrected). A schedule anyone has followed now changes
+    from today on (`DATE_PAST`, on the date the hours actually change in each branch), and a holiday is added for today or later
+    (`HOLIDAY_PAST`). Spec: the fifth feature; fails on the code as built.
+  - **R4 (low, scope).** `get#CapacityPreview` named every schedule planning the person's days, so an HR officer of one employer
+    previewing a person employed by two read the other employer's schedule name. The preview names only the schedules the caller
+    reads (the hours still count, as in Projects). Spec: the fifth feature.
+  - ScheduleServices' descriptions and design-people §6 and §7's As built say so.
+- Findings, numbered by the lead F176 to F179 in order:
+  - changing a followed schedule's holiday calendar (`store#Schedule` `holidayCategoryId`) applies to its past days too (the change
+    is audited, not dated); a dated calendar is the assignment's override, from a date;
+  - a person on a leave of absence (an `EasLeave` assignment, which carries the schedule) is planned the schedule's hours, as
+    capacity planned the policy's hours before P9; leave enters capacity with P12;
+  - a schedule set in place on a hire's first day that is still to come is not withdrawn by withdraw#EmploymentChange (its change
+    has no assignment of its own: `CHANGE_IN_EFFECT`); another assignment from that day changes it again;
+  - the withdrawal of a scheduled `EckSchedule` beside a waiting transfer (R1's second path) is not in a spec;
+  - the worker's findings 1 and 4 to 7 stand as written (holidays written without Commons' event services, with no owner, as the
+    review checked above; the noon rule across zones; recurring holidays; no shared schedule; leave, shifts, Employee360 and
+    HireEmployee later).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleSchedules, PeopleEmployment, PeopleScheduledChanges,
+  PeopleApprovals, PeopleChecklists, PeopleOrganization, PeoplePositions, WorkResources, WorkTimesheets, BusinessTime and
+  HumanResServices 63 of 63 (47.2 s; mr-mantle 23.4 s of features; PeopleSchedules 3.3 s: 1.16, 1.12, 0.22, 0.15 and the fifth
+  feature 0.61); BOSS PeopleSchedules, PeopleAccess, PeopleLifecycle, PeopleHire, Resources and ProjectsAccess 38 of 38 (34.4 s;
+  mr-boss 13.8 s of features). The fifth feature's checks were run on the code as built: every one fails there. Prettier clean on
+  the changed JavaScript. No screen changed: `moqui lint --screens` not run. Not run: `./moq test-apps`, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +0.6 s over the Built note (PeopleSchedules' fifth feature); mr-boss unchanged;
+  - merge hot spots beside the Built note's (P10 rebases): mr-mantle `Employment.js` (`applyChange`, `withdrawEmploymentChange`,
+    `assignSchedule` and its helpers), `Approvals.js` (`keepWaiting` and the exports), `Schedules.js`, `ScheduleServices.xml`,
+    `PeopleSchedules.spec.js`; mr-boss design-people §6 and §7, §4 here;
+  - the lead's call is in §4: HolidayCalendars stays under Time & leave as HR's own screen, not Settings;
+  - nothing waits on the user's decision.
 
 ### P10 — Time mounts, rates and labor costing
 
@@ -2217,6 +2624,239 @@ missing time"; PE-18, PE-23.
   employee submits a week from People; their manager approves it there; `people.payroll` sets a pay rate that a
   Projects manager with `TIME_ENTRY_RATE` cannot see; a finance administrator sets a costing rate that People shows
   read only.
+
+**Built Nov 11 (P10).** mr-mantle 00765bfd, mr-boss (branch `ppl/p10`).
+- Checked first (the code over the plan): F57's list as found (the ten `BOSS_PROJECT_MANAGER` checks of
+  `ironstone.projects.TimeServices`, its links to `/qapps/Projects/...`, MyTime.qvue finding its path by `lastIndexOf`, the
+  `Projects/Time` paths of MyTime's terminal container, TimeEntries' import, EditEntry's three returns and the two prints, Rates'
+  `check#Money`); F61's lookup (rows with no party or work effort, work type and class matching or empty, most specific, then
+  newest; `laborFits` by rate id); `get#PayRateAccess` (no organization scope); `find#Timesheets`' missing list (the time keepers of
+  the managed projects only); how the shell calls a `today-source` (under the root that declares it, so its grant decides);
+  P9's worktree untouched so far. The `line` policy: Projects' demo keeps time at Services (Joe and Bob Developer, Ana Designer),
+  Joe has a line manager (Bob, BossDemoData), and TimeEntries and WorkTimesheets read john.doe as the approver of Joe's week, so
+  `line` on Services would change Projects; Retail holds only People's employees and Manufacturing's demo, whose operators have
+  no line manager (the policy falls back to the project rule; ManufacturingShopFloor passes). `line` is set on Retail alone.
+- Mantle:
+  - RatePurpose `RaprCost` seeded with RateAmount (HumanResourcesEntities); `RateServices` over a new module `CostingRates.js`:
+    `get#CostingRate` (Manufacturing's lookup rules unchanged; a class or a person's class at a date; priced false when no row
+    applies; reads no pay, checks no permission), `find#CostingRates` (`ACCOUNTING_ADMIN`, `ACCOUNTING_VIEW`, `PAYROLL_VIEW` or
+    `TIME_ENTRY_RATE`), `store#CostingRate` and `end#CostingRate` (`ACCOUNTING_ADMIN`; a change ends the row of the same scope
+    in effect and starts the next from now or later; `RATE_INVALID`, `RATE_COMING`, `REVISION_CHANGED`, `RATE_ENDED`,
+    `RECORD_UNAVAILABLE`), and `migrate#ProductionCostRates` (the data update: `RaprProductionCost` rows moved to `RaprCost`, each
+    in its own transaction, then the value removed; called from ProductionShopFloorData in place of the old value's seed);
+    `create#` and `update#RateAmount` refuse a `RaprCost` row without `ACCOUNTING_ADMIN`;
+  - ProductionShopFloor.js's `costingRate` calls `get#CostingRate` (`laborFits` stays); ProductionServices' description and the
+    one spec line name `RaprCost`;
+  - TimesheetServices: `get#LineReports` (the user's live reports by `PrtManager`, persons only), added to `find#Timesheets`'
+    missing list beside the managed projects' time keepers; `find#WeeksToSubmit` (the user's own weeks to submit, the rule of
+    Projects' Today, which `ProjectServices.get#ProjectTodayItems` now calls, unchanged);
+  - `PeopleServices.get#SelfService` answers `weeksToSubmit` (a probe; a failure logged and the card left out).
+- BOSS:
+  - `screen/People/Time.xml` (Time & leave, menu 8: Timesheets the default, My time, Time entries; TimesheetDetail, the prints,
+    the team timesheet, the terminal twin and the import out of the menu) and `screen/People/Payroll.xml` (Payroll, menu 10:
+    Rates), each mounting Projects' screens as they are; `BOSS_PPL_TIME` (an inheritable ALLOW on the area for
+    `BOSS_PEOPLE_SELF`, so the self-service employee keeps and submits their own week; every People user opens it through the
+    root) and `BOSS_PPL_PAYROLL` (denied to the root user group, ALWAYS for the payroll operator and approver); People.js's area
+    `payroll`, its link paths, the self-service context's `Time/MyTime` link; the keys `g t` and `g r`; the four timesheet topics on
+    the People root;
+  - Projects' owner contract (design-projects §8 "As built for People"): `TimeServices.get#TimeLinks` (the mount's time links from
+    `appRoot`; a work item's or project's link only for a user who opens Projects, read from their own grants), `appRoot` on
+    `get#MyWeek`, `find#TimesheetRows`, `get#TimesheetDetail` and `find#TimeEntryRows`, the screens' paths from `appRoot`, the ten
+    group checks as `TIME_ENTRY_RATE` (money) and `TIMESHEET_APPROVE` (a manager's visible projects, the approver's default
+    list), `get#TimePeople` with the live reports (MyWeek's pickers through it); BillingServices' `check#RateAccess` (client
+    billing with money, worker pay with money or `PAYROLL_VIEW`, labor costing read only to either) and `get#PayrollEmployees`
+    (payroll without money reads and sets only the pay rates of the employees of their People employers, on no project);
+    Rates' third chip Labor costing (read only), client billing and Which rate hidden from payroll, its person picker People's
+    employees under People;
+  - Accounting's owner contract (design-accounting §15 "As built"): CostingPolicies' Labor costing rates box (New rate, a row's
+    Change and End; the rows shared by every organization);
+  - MyTeam: each report's Last week (from the missing list) and Remind missing time on the selected people over
+    `send#MissingTimeReminders`; Home: Weeks not submitted for a manager or time approver, opening Timesheets' Missing;
+    SelfService: My time and Weeks to submit (`get#SelfServiceContext`'s `myTimeUrl`); Today: `get#TodayItems` adds the user's own
+    weeks to submit (kind `timesheet`, opening People's My time) for one who keeps time under People and does not open Projects;
+  - Commons' owner contract (design-drawers-commons): `get#TodayView` keeps a timesheet item's own link; a timesheet's record link
+    opens People's TimesheetDetail for a user with People's time area and not Projects;
+  - Manufacturing's demo rate `BOSS_MFG_RATE_RUN` is `RaprCost`; People's demo sets `{"ap":"line"}` on Retail.
+- Specs: Mantle `test/humanres/LaborCostingRate` (3 features, 0.65 s: the most specific dated row, a person's class, an ended row
+  and a row on a person unpriced, never the person's RaprVendor rate; store ending the rate in effect, a stale form, a coming
+  rate, no currency, payroll refused store and `create#RateAmount` with the same scope, payroll reading the rows read only, a
+  reader without a grant refused, a coming rate ended at its start, a pay rate not a costing rate; the data update moving a row
+  and removing the value, then nothing). The production labor event priced from a `RaprCost` row is ProductionShopFloor's labor
+  features (their rates `RaprCost` rows since this phase; one line changed). BOSS `test/People/PeopleTime` (4 features, 0.7 to
+  1.05 s: Remind missing time from My team reaching the manager's report and skipping Services' employee, Retail `line` and
+  Services `project`; the employee's week to submit as their Today item and self-service card under People, none for HR; the
+  manager approving the submitted week from People's Timesheets (its one html render under People: People's links, none to
+  Projects) and TimesheetDetail, HR refused; payroll setting and reading Tomas's pay rate, refused Kenji's and a client rate,
+  reading the costing row read only, People's Rates' one html render, HR's rows refused). `PeopleAccess` gains a feature (0.15 s:
+  the employee opens My time under People by the area's grant and is refused Payroll and Employees; HR refused Rates), its menu
+  feature the payroll operator's menu and the Time group, its capabilities the `payroll` area, its context feature the
+  employee's My time link; `PeopleSpecLib`'s menus and keys; `PeopleSelfService`'s SelfService render checks My time and Weeks to
+  submit, its My team render Last week and Remind missing time. Acceptance, written and not run: `acceptance/People/PeopleTimeUsable`
+  (3 features); `PeopleFoundationWalk` walks the admin menu, which now holds Time and Payroll.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): Mantle LaborCostingRate, ProductionShopFloor,
+  HumanResServices, PayrollServices, PeopleChecklists, PeopleScope, PeopleDirectory, CommonsToday, WorkManualTimeBilling,
+  WorkManualTimeRates, WorkPlanToCashBasicFlow, WorkProjectBilling, WorkProjectMilestones, WorkProjectReports, WorkResources,
+  WorkTimeEntries, WorkTimesheets, AccountingProjectCost and WorkProjectHub with their dependencies 184 of 184 (mr-mantle 23.5 s
+  of features); BOSS PeopleAccess, PeopleSelfService, PeopleTime, PeopleEmployees, PeopleHire, PeopleLifecycle, PeopleApprovals,
+  TimeEntries, Billing, ClientBilling, Reports, ProjectRequests, ProjectsAccess, Projects, ProjectsHome, WorkItemDetail,
+  Resources, ManufacturingShopFloor, ManufacturingAccess, AccountingProductionCostClose, TodayPanel, Notifications, Tasks, Chatter
+  and AppOrganizationFilters with their dependencies 196 of 196 (mr-boss 35.7 s of features). `moqui lint --screens`: 135 flagged
+  sites as before, none in the screens P10 touched, no new TUI worklist entry. Prettier clean on the new and changed JavaScript.
+  Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: ss-inventory's P10 note and the TimeEntries, EditTimeEntry, PartyTimeEntries and EditRateAmounts rows (People's
+  mounts); usl-inventory's RateServices, TimeServices and TimesheetServices rows with People's mounts, and the new services.
+- Design edits: design-people (header; §1.2 the menu; §1.4 Today; §3 Home, MyTeam, SelfService; §13's as-built block; PE-23);
+  design-projects §8 "As built for People" (owner contract); design-accounting §15 LaborCostingRates as built; design-manufacturing
+  §3's costing rate; design-drawers-commons (header, §5 Home).
+- Findings, numbered by the lead F180 to F189 in order:
+  - `line` is set on Retail alone: Services is Projects' demo organization, where Joe's line manager (Bob) would replace john.doe
+    as his approver, which Projects' specs read; People's Services employees (Amara's team) keep the project rule in the demo;
+  - the timesheet topics' links (BossSetupData's `TimesheetApproval`, `TimesheetReturned`, `TimesheetApproved`, `TimesheetMissing`)
+    open Projects' screens, one template per topic, so a People-only approver's email opens a screen they are refused; the tray
+    opens the record by `get#RecordLink` (now People's TimesheetDetail for them), but `TimesheetMissing` for a week with no
+    timesheet has no record;
+  - an employee without Projects logs time only on a work item of a project they are on or a task they may update in Projects
+    (`check#TimeItem`), else on no work item; People's demo employees are on no project, so their weeks are entries with no item;
+  - the labor costing rates carry no organization (RateAmount has none and the lookup reads none, F61), so CostingPolicies' box
+    is every organization's and design-accounting's "organization" field is not built; `get#CostingRate` ignores currency, as
+    production did, so rows in several currencies are the reader's to convert;
+  - People's Rates limits payroll's pay rows to the employees of their People employers (`get#PayrollEmployees`), but Mantle's
+    `get#PayRateAccess` has no organization scope, so a holder of both `TIME_ENTRY_RATE` and `PAYROLL_VIEW` in Projects' Rates
+    reads any employee's pay rate (as before);
+  - `get#CostingRate` takes a person's class from their dated occupancy row (EmplPositionParty), production's rule, not from
+    `Employment.emplPositionId` (P6's seat in effect); a person seated only on the employment gets no class;
+  - My team's Last week lists every live report as Not submitted when they keep no time (the missing list is every report, not
+    only time keepers); Remind skips those whose week the manager does not approve (a `project`-policy employer);
+  - Today's week items come from People only for a user who does not open Projects; a user of both gets Projects' item, opening
+    Projects' My time;
+  - Home's Weeks not submitted runs the missing list (each person's expected hours) on every manager's Home render;
+  - `ironstone.projects.TimeServices.get#TimePeople` still reads `isInGroup('ADMIN')` for every time keeper (Mantle's convention
+    for ADMIN), as `find#Timesheets` and `get#TimesheetAccess` do.
+- For the lead:
+  - budget share: mr-mantle about 0.65 s (LaborCostingRate); mr-boss about 1.0 s (PeopleTime 0.7 to 1.05 s, PeopleAccess's new
+    feature 0.15 s, its menu feature about +0.05 s); the client walk unchanged;
+  - merge hot spots (P9 runs beside): mr-mantle `TimesheetServices.xml` (P9 changes `get#WeekDays`; P10 adds `get#LineReports`
+    before `find#Timesheets`, `find#WeeksToSubmit` before `send#MissingTimeReminders` and changes `find#Timesheets`' missing
+    list), `ProjectServices.xml` (`get#ProjectTodayItems`' timesheets part), `Employees.js` (`selfService`, `weeksToSubmit`),
+    `PeopleServices.xml` (`get#SelfService`), `HumanResourcesEntities.xml` (the RatePurpose seed), `RateServices.xml`,
+    `ProductionShopFloorData.xml`, `ProductionShopFloor.js`; mr-boss `screen/People/Time.xml` (new here; P9 puts Working
+    schedules under Time & leave and will likely make the same file), `screen/People.xml` (header comment, keymap, topics),
+    `People/MyTeam.xml` (Team's columns, P9's schedule), `People/Home.xml`, `Shared/PeopleSelfService.xml`, `People.js` (areas,
+    linkPaths, sharedContext's self links, today, selfServiceContext and the new functions), `ContextServices.xml`,
+    `BossSetupData.xml` (appended block), `BossPeopleDemoData.xml` (appended block), `BossManufacturingDemoData.xml`,
+    `PeopleSpecLib.js` (menus, keys: P9 adds its entries to `staffMenu`, `adminMenu`, `timeMenu`, `settingsMenu`),
+    `PeopleAccess.spec.js`, `PeopleSelfService.spec.js`, the inventories, design-people's header, §1.2, §1.4, §3, §13 and PE-23;
+    Projects' `TimeServices.xml`, `BillingServices.xml`, the time screens and Rates, Accounting's CostingPolicies, Commons'
+    `CommonsServices.xml` and `PaletteServices.xml`;
+  - acceptance to run with the full suites: PeopleTimeUsable (new) and PeopleFoundationWalk (the admin menu gains Time and
+    Payroll);
+  - the user's call: whether the timesheet topics' links should open People's screens for a People-only user (a per-app
+    template is not available: one link template per topic), and whether My team's Last week should list only reports who keep
+    time.
+
+**Review Nov 11 (P10).** A fresh review of `git diff master...ppl/p10` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §13 (MyTime, Timesheets, TimesheetDetail, TimeEntries, Rates), §3 MyTeam, PE-23 and F17, F34, F57, F61, with the Projects
+owner contract, the group checks as permissions, the time approver's reach, Rates' pay and client rows, the costing lookup and
+its migration first; the user's three calls of Nov 11 built and recorded in §4; fixes committed apart per repository ("People P10
+review: …").
+- Rebased first: P9 (working schedules), built beside P10, merged to master in both repositories, and `ppl/p10` was rebased onto
+  it (mr-mantle cleanly; mr-boss with the conflicts resolved in the rebased P10 commit, so both phases' work stands):
+  - Time & leave is one area (`People/Time`, menu 7 and P9's icon) holding P10's time screens (Timesheets the default, My time,
+    Time entries, menu 1 to 3) and P9's Working schedules (menu 5, was 2) and Holidays (9). The group names collided (both phases
+    made `BOSS_PPL_TIME`): `BOSS_PPL_TIME` is now the area's (Time.xml inheritable, every People user's through the root and a
+    self-service employee's by its ALLOW, P10's), and P9's schedules group is `BOSS_PPL_SCHEDULES` (WorkingSchedules and
+    WorkingScheduleDetail: ALWAYS HR and the managers, denied to the root user group and, new, to `BOSS_PEOPLE_SELF`, whom the
+    area's inheritable ALLOW would otherwise let in); `BOSS_PPL_HOLIDAYS` denies `BOSS_PEOPLE_SELF` too. P9's Time.xml grant
+    (non-inheritable, the root group denied) is gone: every People user opens the area. People.js's `schedules` area reads
+    `Time/WorkingSchedules`, so the capability is still HR's and the managers'. PeopleSpecLib's menus (Time in every People
+    user's menu; `timeMenu`, `hrTimeMenu`, `managerTimeMenu` by group) and keys (`g w` then `g t`); PeopleAccess's menu feature
+    checks the HR officer's, the manager's and the reader's Time groups, and P10's feature also refuses the self-service employee
+    Working schedules and Holidays. People.xml's keymap and header, MyTeam (P9's schedule column and P10's last week), the demo
+    and setup data's appended blocks, design-people's header, §1.2 and §3, and usl-inventory's rows are merged.
+  - Run after the rebase, before the review: Mantle PeopleSchedules, LaborCostingRate, ProductionShopFloor 17 of 17; BOSS
+    PeopleSchedules, PeopleTime, PeopleAccess 24 of 24.
+- Checked and found sound:
+  - Projects' owner contract: the ten `BOSS_PROJECT_MANAGER` checks of `TimeServices` are `TIME_ENTRY_RATE` (money, which was
+    the group or ADMIN) and `TIMESHEET_APPROVE`; BossSetupData grants both only to `BOSS_PROJECT_MANAGER`, and Mantle to ADMIN, so
+    no Projects user gains or loses money or reach (ADMIN's Timesheets now opens on To approve, where it opened on Mine; its
+    projects were every project already). The links follow `appRoot` for links only; the screens' paths follow the mount.
+    ProjectsAccess, TimeEntries, Billing, ClientBilling, ProjectsSettings, ProjectsHome, Reports, Resources,
+    ManufacturingShopFloor, ManufacturingAccess, AccountingProductionCostClose pass, and Mantle's time, timesheet, billing,
+    production and project cost specs.
+  - A time approver under People reads only the weeks `get#TimesheetAccess` admits (the week's person, its approvers by the
+    organization's policy, ADMIN): `get#MyWeek` answers no week otherwise, Timesheets' lists are filtered by it, and a line
+    manager decides a report's week only under `line`. The pickers list the user's live reports, whose weeks are checked again.
+  - Rates: pay rows only for `PAYROLL_VIEW` holders, of the employees of their People employers (`get#PayrollEmployees`), set
+    with `PAYROLL_EDIT` on no project; client billing and Which rate only with money; the services check it again.
+  - `get#CostingRate` is production's lookup (the same rows, filter and order, the class from the same EmplPositionParty rule;
+    `laborFits` re-checks by rate id); `migrate#ProductionCostRates` moves each row in its own transaction and removes the old
+    value only when none is left; RaprCost writes need `ACCOUNTING_ADMIN` on every path (`store#`, `end#`, `create#`,
+    `update#RateAmount`).
+- Fixes:
+  - **R1 (low, owner contract).** TimeEntries.xml's Update rates button still read the group (`isMoneyManager`, BOSS_PROJECT_MANAGER
+    or ADMIN); it is `TIME_ENTRY_RATE`, as its service checks.
+  - **R2 (the user's call 1).** The four timesheet topics link through a record-link resolver: Commons' `openRecord` transition
+    (`/apps/Commons/openRecord?recordEntityName=…&id=…` or `?docType=MantleTimesheetWeek&id=<day>`; a browser's GET of the
+    `/apps` path runs it and redirects to the `/qapps` screen, a GET of a `/qapps` path loading the shell) over
+    `PaletteServices.get#RecordLink`, which gains `MantleTimesheetWeek` (the user's own week in My time: Projects' for a Projects
+    user, else People's for a People user or a self-service employee, else none). TimesheetApproval opens the timesheet, Returned,
+    Approved and Missing the person's week (a missing week with no timesheet too); `decorate#Notifications` resolves the same
+    link in the tray. Projects users' links still open Projects. Spec: PeopleTime's third feature (the reminder's link, the
+    employee's and john.doe's resolution, the transition's redirect).
+  - **R3 (the user's call 2).** `get#LineReports` answers `keeperIdList`: the live reports who logged time this week or in the
+    eight before, or whose organization's policy says every employee keeps a weekly timesheet (a new policy key `rq`, `required`,
+    default N; Projects' TimeSettings offers it as a check box, owner contract; Retail's demo sets it). `find#Timesheets`' missing
+    list adds only those (so Home's Weeks not submitted and Timesheets' Missing too), and My team shows Last week only for them,
+    nothing for the others. Spec: PeopleTime's third feature (Hannah's three reports with Retail's `rq`; without it only Tomas,
+    who kept time, and Ines and Rafael out of the missing list).
+  - **R4 (the user's call 3).** `RateAmount.organizationPartyId` (Mantle entity field). `get#CostingRate` takes `organizationPartyId`
+    (else the person's employers at the date, PrtEmployee) and prefers that organization's rows, by the same rules, then the
+    shared ones, so production (which now passes the person) is unchanged where no organization keeps rows; `laborFits` also
+    re-checks an organization's row against the employer. `find#CostingRates` lists the shared rows and those of the reader's
+    organizations (every one for `ACCOUNTING_ADMIN` or `PEOPLE_ALL_ORGANIZATIONS`), or of `organizationPartyId` (another refused,
+    `ORGANIZATION_DENIED`), with canChange by row; `store#`, `end#CostingRate` and `create#`/`update#RateAmount` of a RaprCost row
+    scope by organization as Accounting scopes finance administration (`AccountingPolicy.access` admin: every internal
+    organization, the active one when chosen): another organization's row is refused (`ORGANIZATION_DENIED`; End answers it as
+    missing), and a shared row is changed only working for every organization (no active organization) or by ADMIN, as a shared
+    pay grade needs `PEOPLE_ALL_ORGANIZATIONS`. A rate of another purpose carries no organization (`create#RateAmount` clears it),
+    so Projects' rows are unchanged. Accounting's box lists the chosen organization's rows and the shared ones with an
+    Organization column and New rate's For; Rates' Labor costing rows are those `find#CostingRates` gives the user. Spec:
+    LaborCostingRate's fourth feature (the employer's row, another organization's when asked, the shared row without either,
+    the shared fallback; working for A: A's row stored, B's and a shared one refused, B's End missing, A's list; a shared row with
+    none chosen; a reader of A seeing A's and the shared rows, refused B's).
+  - design-accounting §15, design-people (§3 MyTeam, §13, PE-23), design-projects §8 and usl-inventory say so.
+- Findings, numbered by the lead F190 to F193 in order:
+  - Accounting has no organization-scoped finance administration (`ACCOUNTING_ADMIN` is every internal organization, narrowed only
+    by the active organization), so the "all-organizations grant" a shared costing row needs is read as finance administration
+    working for every organization (no active organization chosen), and an organization's row as one in that scope; Accounting's
+    CostingPolicies sets the active organization when one is chosen there, so a shared row is changed with none chosen (the box
+    says so). A dedicated `ACCOUNTING_ALL_ORGANIZATIONS` would be the user's call;
+  - `get#CostingRate` with a person employed by two organizations that both keep a matching row takes the most specific, then the
+    newest, of either;
+  - a database loaded with P9's data before this rebase keeps P9's `BOSS_PPL_TIME` rows (`BOSS_PPL_TIME_HR`, `_MANAGER`, `_DENY` and
+    the WorkingSchedules pattern member); a reload does not remove them, and the DENY then refuses Time & leave to the directory
+    reader. Nothing is released; a dev database is rebuilt from the data;
+  - My team's keepers and the missing list read each report's policy (`get#TimesheetPolicy` per report without recent time) on every
+    render, beside Home's missing list (the Built note's finding);
+  - the worker's findings stand otherwise: the timesheet topics' and Last week's are built (R2, R3); the costing rows' organization
+    is built (R4).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle LaborCostingRate (4 features: 0.01, 0.49, 0.17 and the new
+  0.84 s), ProductionShopFloor, WorkTimesheets 21 of 21; WorkTimeEntries, WorkManualTimeRates, WorkManualTimeBilling,
+  WorkProjectBilling, HumanResServices, PayrollServices, AccountingProjectCost, PeopleSchedules, ProductionCostClose 56 of 56;
+  BOSS PeopleTime (5 features; the new one 0.31 to 0.35 s), PeopleAccess, PeopleSelfService, CommonsSettings, Tasks, QuickCreate
+  75 of 75; AccountingProductionCostClose (CostingPolicies' render) 3 of 3; ProjectsAccess, TimeEntries, Billing, ClientBilling, ProjectsSettings, ProjectsHome,
+  Reports, Resources, ManufacturingShopFloor, ManufacturingAccess, TodayPanel, Notifications, PeopleSchedules 86 of 86. The new
+  features fail on the code as built (no organization field, no `keeperIdList`, no `MantleTimesheetWeek`, the old links).
+  `moqui lint --screens`: 135 flagged sites as before, none in the screens touched. Prettier clean on the changed JavaScript.
+  Not run: `./moq test-apps`, the acceptance suite (PeopleTimeUsable's costing rate is a shared row, set with no organization
+  chosen, as before).
+- For the lead:
+  - budget share: mr-mantle about +0.85 s (LaborCostingRate's fourth feature); mr-boss about +0.35 s (PeopleTime's third feature);
+  - merge hot spots: the rebase is done; mr-mantle `HumanResourcesEntities.xml` (RateAmount), `TimesheetServices.xml` (policy,
+    `get#LineReports`), `CostingRates.js`, `RateServices.xml`; mr-boss `BossSetupData.xml` (the Time groups, the topics),
+    `Commons.xml`, `CommonsServices.xml`, `PaletteServices.xml`, `CostingPolicies.xml`, `Projects/Settings/Time.xml`;
+  - the user's calls are in §4; the all-organizations reading for a shared costing row (the first finding) may want the user's
+    word.
 
 ### P11 — Leave policies, allocations and balances
 
@@ -2749,6 +3389,11 @@ the owner's design.
 | Nov 11, 2026 | A hire's provisioning still waits for an identity operator (Admin's rule stands), and the request notifies the employer's identity operators through a notification topic, `IdentityOperatorRequest`, seeded in Mantle with the service that owns it (`IdentityServices.request#Provisioning`; `request#AccessEnd` the same), its title naming only the person and employer an operator sees on the operation, so they act from the tray or LifecycleOperations | The user's call on P7's question (built in P7's review, R8; design-admin §4.1). BossSetupData links it to LifecycleDetail |
 | Nov 11, 2026 | An equipment return task is assigned to the leaver's manager at that employment (from the assignment the separation ends), falling back to the HR officer who asked for the separation | The user's call on P7's question (built in P7's review, R9; design-people §4). An offboarding step of the Manager role is assigned the same way |
 | Nov 11, 2026 | A scheduled (later-dated) separation is withdrawable by HR like the other scheduled changes: no access end and no return tasks follow, and its checklist tasks are cancelled | The user's call on P7's question (built in P7's review, R10, with a spec; design-people §4, design-admin §4.1) |
+| Nov 11, 2026 | Emergency contacts are hidden through the disabled system account `_PEOPLE_PRIVATE_` as each contact party's `privateOwnerUserId` (no one signs in as it, it holds no group, so every reader that hides a personal contact shows the party to no one, and People's services show it to the person and HR of their employer), not a party-level private flag | The user's call on P8's question (built in P8; P8's review makes the account with the first contact rather than seeding it, R1) |
+| Nov 11, 2026 | HolidayCalendars stays under Time & leave as HR's own screen (`People/Time/HolidayCalendars`, `BOSS_PPL_HOLIDAYS`), not under People Settings as design §7 placed it | The lead's call, following the user's call of Nov 11 that moved HR's editors out of Settings (P7's review); as built in P9 (design-people §2, §7) |
+| Nov 11, 2026 | The four timesheet notification topics link through a neutral record-link resolver, so a notice opens People's or Projects' screen for whichever the user may open, as the tray does, a TimesheetMissing week with no timesheet included; Projects users' links keep opening Projects | The user's call on P10's question (built in P10's review, R2: Commons' `openRecord` over `get#RecordLink`, the docType `MantleTimesheetWeek`; design-projects §8, design-people §13) |
+| Nov 11, 2026 | My team's Last week lists only reports who keep time: those who kept time in recent weeks (the last eight) or whose employer's timesheet policy requires it; the others show nothing | The user's call on P10's question (built in P10's review, R3: `get#LineReports`' `keeperIdList`, the policy key `rq`; design-people §3, §13) |
+| Nov 11, 2026 | `RateAmount` gains an optional `organizationPartyId`, used for `RaprCost` rows: `get#CostingRate` prefers the employer's row, then a shared one; `store#`/`end#CostingRate` and Accounting's Labor costing box are scoped by organization (a shared row needs an all-organizations grant to change, as pay grades do); Projects' rate rows unchanged | The user's call on P10's finding (built in P10's review, R4, with LaborCostingRate's spec; design-accounting §15, design-people PE-23) |
 
 ## 5. Open questions
 
@@ -2767,7 +3412,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |

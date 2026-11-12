@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › My team (design-people §3 MyTeam, §1.2; style-guide §3.1 Landing; impl-people P8): a manager's current reports and the
+    decisions waiting on them. Team: mantle.humanres.PeopleServices.get#Team, the people of the manager's live reporting lines, one
+    row per employment at an employer the line is at (never a report's employment elsewhere), their public work identity with the
+    department, work location and whether they work or are on leave; each opens their Employee360. Decisions: find#DueWork's
+    decision, the People requests whose step waiting the manager may decide now, each opening where it is decided (PositionDetail,
+    the person's Employee360), whose decision services recheck the approver and the source. The managers' area (BOSS_PPL_TEAM:
+    denied to the root user group, ALWAYS for BOSS_PEOPLE_MANAGER, and the People administrator and ADMIN through the root's
+    ALWAYS). P10: each person's last week, for those who keep time (mantle.work.TimesheetServices.get#LineReports' keeperIdList: who
+    kept time lately, or whose employer's timesheet policy says every employee keeps one; the user's call of Nov 11, 2026; nothing
+    for the others), submitted or not (find#Timesheets' missing list, which holds the manager's live reports who keep time),
+    opening the week in People's My time, and Remind missing time on the selected people
+    (send#MissingTimeReminders, which checks per person that the manager approves that week and counts the others as skipped).
+    Who is out (P12) and reviews due (P20) join with their phases. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="My team" default-menu-index="2" menu-image="sym_o_diversity_3" menu-image-type="icon">
+    <!-- P10: Remind missing time, the selected people (selectedIds, a comma list of their parties), for last week -->
+    <transition name="remindMissing">
+        <actions>
+            <service-call name="mantle.work.TimesheetServices.send#MissingTimeReminders" out-map="remindOut"
+                    in-map="{partyIds:Array.from(new Set(String(selectedIds || '').split(',').map(id =&gt; id.trim()).filter(id =&gt; id)))}"/>
+            <if condition="!ec.message.hasError()"><script>ec.message.addMessage(remindOut.message, remindOut.skippedCount ? 'warning' : 'success')</script></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.PeopleServices.get#Team" out-map="teamFound" transaction="force-new" ignore-error="true"/>
+        <set field="teamAvailable" from="teamFound?.team != null"/>
+        <if condition="people.capabilities.requestApprove">
+            <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="decisionsFound" transaction="force-new"
+                    ignore-error="true" in-map="{kinds:'decision', pageSize:50}"/>
+        </if>
+        <!-- P10: last week's missing weeks of the people the manager may remind (their live reports among them) -->
+        <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingFound" transaction="force-new" ignore-error="true"
+                in-map="{list:'missing', withCounts:false}"/>
+        <!-- and which reports keep time (the others show no week) -->
+        <service-call name="mantle.work.TimesheetServices.get#LineReports" out-map="lineReports" transaction="force-new" ignore-error="true"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const missing = new Set(Array.from(missingFound?.rowList || []).map(row => row.partyId))
+            const weekOf = Object.fromEntries(Array.from(missingFound?.rowList || []).map(row => [row.partyId, row.weekStart]))
+            const keepers = new Set(Array.from(lineReports?.keeperIdList || []))
+            teamRows = Array.from(teamFound?.team || []).map(row => Object.assign({}, row, {keepsTime: keepers.has(row.partyId),
+                weekMissing: keepers.has(row.partyId) && missing.has(row.partyId),
+                weekText: !keepers.has(row.partyId) ? '' : missing.has(row.partyId) ? 'Not submitted' : 'Submitted', weekStart: weekOf[row.partyId] || null}))
+            availabilityColors = {working: 'positive', leave: 'warning'}
+            // each decision opens where it is decided: a position's activation on PositionDetail, an employment change on the
+            // person's record
+            decisionRows = Array.from(decisionsFound?.dueWork || []).map(row => Object.assign({}, row,
+                row.approvalKindEnumId == 'PakPosition'
+                    ? {openPath: sharedLinks['Staffing/PositionDetail'], openParameters: {emplPositionId: row.sourceId}}
+                    : row.partyId ? {openPath: sharedLinks['Employees/Employee360'], openParameters: {partyId: row.partyId}}
+                    : {openPath: sharedLinks['Approvals'], openParameters: {}}))
+            decisionsMoreText = decisionsFound && decisionsFound.dueWorkCount > decisionRows.length
+                ? 'The first ' + decisionRows.length + ' of ' + decisionsFound.dueWorkCount + '.' : ''
+        ]]></script>
+    </actions>
+    <widgets>
+        <label text="My team" type="h5"/>
+        <section name="TeamMissing" condition="!teamAvailable">
+            <widgets>
+                <label text="My team shows the people who report to you. It is not available to you." type="p" style="m-muted"/>
+            </widgets>
+        </section>
+        <section name="Team" condition="teamAvailable">
+            <widgets>
+                <container-box>
+                    <box-header title="Team"/>
+                    <box-body-nopad>
+                        <form-list name="TeamRows" list="teamRows" skip-form="true" paginate="false" condition="teamRows.length">
+                            <!-- P10: Remind missing time on the selected people whose week is not submitted -->
+                            <row-selection id-field="partyId" parameter="selectedIds" list-mode="true">
+                                <action><form-single name="RemindMissing" transition="remindMissing">
+                                    <field name="submitButton"><default-field title="Remind missing time"><submit icon="sym_o_notifications"
+                                            confirmation="Remind the selected people to submit last week's time?"/></default-field></field>
+                                </form-single></action>
+                            </row-selection>
+                            <field name="personName">
+                                <default-field title="Person">
+                                    <link url="${sharedLinks['Employees/Employee360']}" text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
+                                            link-type="anchor" parameter-map="{partyId:partyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
+                            <field name="availabilityText">
+                                <default-field title="Now">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${availabilityColors[availability] || 'grey-8'}">${
+                                            WebUtilities.encodeHtml(availabilityText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: availabilityText})}]]></text>
+                                        <text type="html">${availabilityText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="scheduleName"><default-field title="Working schedule"><display/></default-field></field>
+                            <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
+                            <!-- P10: last week's time, a missing week opening it in My time -->
+                            <field name="weekText">
+                                <default-field title="Last week">
+                                    <link url="${sharedLinks['Time/MyTime']}" text="Not submitted" link-type="anchor" style="text-warning"
+                                            parameter-map="{partyId:partyId, weekDate:weekStart}" condition="weekMissing"/>
+                                    <label text="Submitted" type="span" style="m-muted" condition="keepsTime &amp;&amp; !weekMissing"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="jobTitle"/></column>
+                                <column><field-ref name="availabilityText"/><field-ref name="weekText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No one reports to you now." type="p" style="m-muted q-pa-md" condition="!teamRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Decisions" condition="people.capabilities.requestApprove">
+            <widgets>
+                <container-box>
+                    <box-header title="Decisions waiting on you"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Approvals']}" link-type="anchor" text="All approvals"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="DecisionRows" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
+                            <field name="title">
+                                <default-field title="Decision">
+                                    <link url="${openPath}" text="${title}" link-type="anchor" parameter-map="openParameters"/>
+                                </default-field>
+                            </field>
+                            <field name="dueText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="assigneeText"><default-field title="Step"><display/></default-field></field>
+                            <field name="whenText"><default-field title="Asked"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                                <column><field-ref name="whenText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="${decisionsMoreText}" type="p" style="text-caption m-muted q-px-md" condition="decisionsMoreText"/>
+                        <label text="No decision waits on you." type="p" style="m-muted q-pa-md" condition="!decisionRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

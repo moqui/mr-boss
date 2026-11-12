@@ -1,5 +1,10 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 11, 2026 — impl-people P10 as built (owner contract): People's Today source adds the user's own weeks to submit, opening
+People's My time, which Today's rows keep (a Projects timesheet item still opens Projects' My time); a timesheet's record link
+opens People's TimesheetDetail for a user who has People's time area and not Projects (§5 Home).
+Nov 11, 2026 — impl-people P8 as built (owner contract): Home's People card, People's Today source on Commons' root and
+`Commons/People/SelfService` (§5 Home, SelfService).
 Nov 11, 2026 — the decisions of impl-people, impl-sales and impl-marketing written in: the approval topics are listed in
 §4 and seeded by their owners, People's and Sales' in Mantle and Marketing's with its setup data (§4, §20); BOSS `/u/`
 stays its own page and a token is made for the sending organization's site (§16); the shared sending screens are built
@@ -678,6 +683,16 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
 
 - **Source:** research §4 (Nextcloud dashboard, OpenProject and Redmine My page); style-guide §3.1.
 - **Needs:** `number-card`; Today and timeline services (`get#UserTodayItems`); File services.
+- **People's card (as built, impl-people P8, F64):** Home has no card registry, so People's owner contract adds one card,
+  "My employment", for a user with People self-service (`mantle.humanres.PeopleServices.get#SelfService` with
+  `checkOnly`, nothing for anyone else): their employments and the counts of their open People requests and tasks, with
+  a link to `Commons/People/SelfService`. People's Today source (`ironstone.people.ContextServices.get#TodayItems`, the
+  decisions waiting on the user) is declared on Commons' root too, since a self-service employee opens no People root;
+  Home and the panel take each source service once. P10: the source adds the user's own weeks to submit (kind
+  `timesheet`, for one who keeps time under People and not in Projects), each with its own link to People's My time,
+  which `get#TodayView` keeps (it gives Projects' My time only to a timesheet item with no link of its own); and a
+  timesheet's record link (`get#RecordLink`) opens People's TimesheetDetail for a user who opens People's time area and not
+  Projects.
 
 ### SelfService (Context passed)
 
@@ -686,6 +701,11 @@ that builds that service, as Mantle's purchase topics are (impl-people §4, F42;
 include its authorized leave/shift/request summaries and shortcuts. Personal profile, leave, expenses, own time
 and issued payslips link to their owner screens; app context adds no HR/payroll authority. The staff People launcher
 is not required. This proposed mount is part of People PE-01/PE-18, not a claim that Commons already implements it.
+
+As built (impl-people P8): `Commons/People/SelfService` mounts `Shared/PeopleSelfService.xml`, out of the menu, reached
+from Home's People card; it fixes the user's own party (`get#SelfService` takes none) and shows their employments, their
+People tasks, the People requests they made and their emergency contacts, which they change there. A self-service
+employee opens it by People's own non-inheritable grant on the screen (`BOSS_PPL_SELF`) as well as through Commons' root.
 
 ### Search
 

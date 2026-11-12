@@ -525,11 +525,16 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a support case's work done goes to its CaseDetail (the message's isCase, impl-customer-service P2) -->
     <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/${isCase ? 'CustomerService/Cases/CaseDetail' : 'Projects/Requests/RequestDetail'}?requestId=${requestId}"/>
     <!-- and of the timesheet topics (mantle.work.TimesheetServices, impl-projects.md P6a): the approval opens the week's TimesheetDetail, the
-        person's notices their week in My time -->
-    <moqui.security.user.NotificationTopic topic="TimesheetApproval" linkTemplate="/qapps/Projects/Time/TimesheetDetail?timesheetId=${timesheetId}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetReturned" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetApproved" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetMissing" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
+        person's notices their week in My time; each through Commons' record-link resolver (openRecord, impl-people P10, the user's
+        call of Nov 11, 2026), so it opens Projects' screen for a Projects user and People's for one who keeps time under People
+        (a TimesheetMissing week with no timesheet too). The link is the resolver's /apps path: a browser's GET of it runs the
+        transition and redirects to the screen under /qapps (a GET of a /qapps path loads the shell); the tray resolves it itself
+        (CommonsServices.decorate#Notifications). -->
+    <moqui.security.user.NotificationTopic topic="TimesheetApproval"
+            linkTemplate="/apps/Commons/openRecord?recordEntityName=mantle.work.time.Timesheet&amp;id=${timesheetId}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetReturned" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetApproved" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetMissing" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
     <!-- and of the allocation topics (mantle.work.ResourceServices, impl-projects.md P7): the request opens Allocations' Requested list,
         the decision the team planner on the allocation's project -->
     <moqui.security.user.NotificationTopic topic="AllocationRequest" linkTemplate="/qapps/Projects/Resources/Allocations?list=requested"/>
@@ -5211,6 +5216,95 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PPL_ACCESS_REQUEST_ALL" userGroupId="ALL_USERS" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/></authz>
+    </artifactGroups>
+    <!-- impl-people P8 (design-people §1.1, §3 SelfService; F28): a self-service employee opens their own self-service without the
+        People launcher, as every BOSS user opens Admin's settings index: a non-inheritable ALLOW on the shared self-service screen
+        (one location for both mounts, People/SelfService and Commons/People/SelfService), its emergency contact transition, the
+        People root's context (which answers such a user their own employments and the self-service link, and nothing else) and the
+        Mantle services the screen calls, each checking PEOPLE_SELF_SERVICE and the caller's own party itself. The People root and
+        every other People screen and service still refuse them (an inheritable grant here would open what is below it). -->
+    <artifactGroups artifactGroupId="BOSS_PPL_SELF" description="People self-service for employees without the launcher">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/storeEmergencyContact"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="ironstone\.people\.ContextServices\.get#(SharedContext|SelfServiceContext)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.PeopleServices\.(get#SelfService|find#MyRequests|find#DueWork|store#EmergencyContact)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- impl-people P8 (design-people §3 MyTeam, §1.2: a section with no capability is omitted): My team is the managers': denied
+        to the root user group, opened to BOSS_PEOPLE_MANAGER (ALWAYS, as the HR officers' wizards) and to the People administrator
+        and ADMIN through their ALWAYS on the root. Mantle's get#Team checks PEOPLE_TEAM_VIEW and the caller's own lines again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TEAM" description="People my team">
+        <artifacts artifactName="component://mr-boss/screen/People/MyTeam.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TEAM_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TEAM_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-people P8: a People task assigned (Mantle's PeopleTaskAssigned topic, a checklist step or an equipment return, its title
+        naming nothing private) opens the task in Commons, which every BOSS user opens and which shows a protected task to its
+        assignees alone; a People user reaches its People box from there -->
+    <moqui.security.user.NotificationTopic topic="PeopleTaskAssigned"
+            linkTemplate="/qapps/Commons/Tasks/TaskDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-people P9 and P10 (design-people §1.2: a section with no capability is omitted; §6 WorkingSchedules and
+        WorkingScheduleDetail, §7 HolidayCalendars; §13 MyTime, Timesheets, TimesheetDetail, TimeEntries and Rates; F17, F57). Time &
+        leave (People/Time) holds P10's time screens (Projects' mounted: Timesheets, My time, Time entries and what they open), P9's
+        working schedules and P9's Holidays, each part open to its own users:
+        - the area and its time screens: every People user's through the root, and a self-service employee without the launcher
+          opens them by this inheritable ALLOW on the area (as their own self-service); its screens and services show and change only
+          the user's own weeks and those they approve (mantle.work.TimesheetServices: the week's person, its approvers by the
+          organization's policy, ADMIN), so the grant opens nothing else; the rest of People stays refused to them (BOSS_PPL_TIME);
+        - the working schedules: HR's and the managers' (a manager's read of the schedules their reports follow): denied to the root
+          user group and to self-service, opened to BOSS_PEOPLE_HR and BOSS_PEOPLE_MANAGER (ALWAYS, as My team) and to the People
+          administrator and ADMIN through their ALWAYS on the root (BOSS_PPL_SCHEDULES);
+        - Holidays, HR's own editor (the user's call of Nov 11 put HR's editors out of Settings): denied to the root user group and to
+          self-service, opened to the HR officers (BOSS_PPL_HOLIDAYS).
+        Mantle's ScheduleServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and the employer again. Payroll is the payroll
+        groups' (denied to the root user group, ALWAYS for the payroll operator and approver, and the People administrator and ADMIN
+        through the root's ALWAYS); Rates' services check PAYROLL_VIEW and PAYROLL_EDIT for an employee's pay rate again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TIME" description="People time and leave, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Time.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_SCHEDULES" description="People working schedules">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_HOLIDAYS" description="People holiday calendars">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/HolidayCalendars.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_PAYROLL" description="People payroll">
+        <artifacts artifactName="component://mr-boss/screen/People/Payroll.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_OPERATOR" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_APPROVER" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <!-- Maintenance P1 (impl-maintenance P1, F1, F35, F50; design-maintenance §1.1, design-crosscut §1.4): the root user group and
         the capability groups; the administrator group BOSS_MAINTENANCE_ADMIN is above, with its ALWAYS on the root (F1). Groups are
