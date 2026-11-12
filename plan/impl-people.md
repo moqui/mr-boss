@@ -334,7 +334,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P19 Training | Mantle, BOSS | Training, TrainingDetail | built and reviewed Nov 11, merged |
 | P20 Reviews and goals | Mantle, BOSS | ReviewCycles, Reviews, ReviewDetail, Goals | built and reviewed Nov 12, merged |
 | P21 Grievances | Mantle, BOSS | Grievances, RequestDetail | built and reviewed Nov 11, merged |
-| P22 Pay components, structures and groups | mr-moqui, Mantle, BOSS | PayComponents, PayComponentDetail, PayStructures, PayStructureDetail, PayGroups | — |
+| P22 Pay components, structures and groups | mr-moqui, Mantle, BOSS | PayComponents, PayComponentDetail, PayStructures, PayStructureDetail, PayGroups | built and reviewed Nov 12, merged |
 | P23 Pay assignments and compensation | Mantle, BOSS | PayAssignments; Employee360's Compensation | — |
 | P24 Pay inputs and hours for pay | Mantle, BOSS | HoursForPay, PayAdjustments | — |
 | P25 Pay runs | Mantle, BOSS | PayRuns, PayRunDetail (to Approval) | — |
@@ -6320,7 +6320,7 @@ PayGroups; PE-08, PE-09 (the evaluator), PE-12 (the registration).
   their screens; ss-inventory notes no baseline form maps to the five screens.
 - Design edits: design-people (header; §1.2 Settings' tabs; §8 PayComponents, PayComponentDetail, PayStructures,
   PayStructureDetail and PayGroups as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F395 to F401 in order:
   - BOSS has no payroll configuration holder but the People administrator: payroll configuration needs PAYROLL_EDIT and
     PEOPLE_CONFIGURE (design §1.1), and only BOSS_PEOPLE_ADMIN (with ADMIN) holds both, so the usable-when's "`people.payroll` with
     `PEOPLE_CONFIGURE`" has no group; the walk is people.admin's. A payroll configuration group (or PEOPLE_CONFIGURE granted to
@@ -6428,7 +6428,7 @@ binary (`CARGO_BUILD_JOBS=4`; `./moq test … --debug --nobuild` on this phase's
     a changed example superseding it, a refusal needing its reason and keeping the draft, the approval publishing it by who asked, a
     structure approved through the topic's service at the notice's revision); every other publish in the Mantle and BOSS specs now
     approved by a payroll approver; PeoplePayConfiguration renders PayComponentDetail as the approver with the request waiting.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F402 to F406 in order:
   - Every Debug data load logs `Error: stack overflow` in `ironstone.customerservice.DemoServices.load#DemoOrder` (the script stack
     exhausted while validating `checkSet#InvoiceDueDate`'s `overrideExisting`, deep in the demo order's nested service calls); the
     shared release binary loads the same data (this phase's runtime, master's Customer Service and Mantle code) with none. Not
@@ -6779,7 +6779,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. P15's F253 to F271 (Nov 11, 2026) are in its Built and Review notes. P16's F272 to F287 (Nov 11, 2026) are in its Built and Review notes. P18's F288 to F304 (Nov 11, 2026) are in its Built and Review notes. P17's F305 to F319 (Nov 11, 2026) are in its Built and Review notes. P19's F320 to F335 (Nov 11, 2026) are in its Built and Review notes. P21's F336 to F353 (Nov 11, 2026) are in its Built and Review notes. The Commons calendar follow-up's F354 to F362 (Nov 12, 2026) are in its note under P19. Follow-up 1's F363 to F369 (Nov 12, 2026) are in its note after P21. The Maintenance merge review's F390 to F394 (Nov 12, 2026) are in its note after P20.  P20's F370 to F389 (Nov 12, 2026) are in its Built and Review notes. P22's F395 to F406 (Nov 12, 2026) are in its Built and Review notes.Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
