@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     Correct (CorrectAttendance: the intervals worked and the reason, request#Correction; the person, their manager or HR, the punches
     kept), Approve and Refuse for an approver of the step waiting, and Withdraw for the person or who asked (decide#Correction).
     Correct a missed day asks for a day with no punch of the user's own. Who clocks (HR's): the employments with clocking on
-    (find#Clocking), turned on and off by an HR editor (store#Clocking). Every People user's and a self-service employee's (the time
+    (find#Clocking: their own setting or the employer's default), turned on or off for one, or set to follow the employer again, by
+    an HR editor (store#Clocking). Every People user's and a self-service employee's (the time
     area's own grant, BOSS_PPL_TIME); what each reads and may do is Mantle's check. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Attendance" default-menu-index="8" menu-image="sym_o_fact_check" menu-image-type="icon">
@@ -89,11 +90,13 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
-    <!-- Who clocks: an HR editor turns clocking on or off for an employment, with a reason -->
+    <!-- Who clocks: an HR editor turns clocking on or off for an employment (an exception to the employer's default), or sets it to
+        follow the employer again (E, posted as empty), with a reason -->
     <transition name="storeClocking">
         <actions>
             <service-call name="mantle.humanres.AttendanceServices.store#Clocking" out-map="stored"
-                    in-map="{partyRelationshipId:partyRelationshipId, clockingEnabled:clockingEnabled, reason:(reason || null)}"/>
+                    in-map="{partyRelationshipId:partyRelationshipId, clockingEnabled:(clockingEnabled == 'E' ? '' : clockingEnabled),
+                        reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">${stored.clockingEnabled ? 'Clocking is on' : 'Clocking is off'}</message></if>
         </actions>
         <default-response url="."/>
@@ -389,7 +392,8 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
 
-        <!-- Who clocks: HR's list of the employments with clocking on -->
+        <!-- Who clocks: HR's list of the employments that clock (their own setting or the employer's default, impl-people §4 Nov 12)
+            and those set apart from the default; the employer's default is People Settings' (P29) -->
         <section name="ClockingShown" condition="showing == 'clocking'">
             <widgets>
                 <container-box>
@@ -425,11 +429,12 @@ along with this software (see the LICENSE.md file). If not, see
                         <form-list name="ClockingRows" list="clockingRows" skip-form="true" paginate="true" condition="clockingRows.length">
                             <field name="personName"><default-field title="Person"><display/></default-field></field>
                             <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="settingText"><default-field title="Clocking"><display/></default-field></field>
                             <field name="stateText"><default-field title="Now"><display/></default-field></field>
                             <field name="actions">
                                 <default-field title="">
                                     <container-dialog id="ClockingOff_${partyRelationshipId}" button-text="Turn off" icon="sym_o_timer_off" type="default"
-                                            width="520" title="Turn clocking off for ${personName}" condition="canChange">
+                                            width="520" title="Turn clocking off for ${personName}" condition="canChange &amp;&amp; clockingEnabled">
                                         <label type="p" text="Their punches are kept; their self-service no longer offers the clock."/>
                                         <form-single name="ClockingOff" transition="storeClocking"
                                                 map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'N'}">
@@ -441,11 +446,23 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                         </form-single>
                                     </container-dialog>
+                                    <container-dialog id="ClockingFollow_${partyRelationshipId}" button-text="Follow the employer" icon="sym_o_undo"
+                                            type="default" width="520" title="Clocking of ${personName} as the employer's default"
+                                            condition="canChange &amp;&amp; clockingSetting">
+                                        <label type="p" text="Their clocking follows the employer's default again: ${employerDefault ? 'they clock' : 'they do not clock'}."/>
+                                        <form-single name="ClockingFollow" transition="storeClocking"
+                                                map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'E'}">
+                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                            <field name="clockingEnabled"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Follow the employer"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
                                 </default-field>
                             </field>
                             <columns type="mobile">
                                 <column><field-ref name="personName"/><field-ref name="organizationName"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                <column><field-ref name="settingText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
                             </columns>
                         </form-list>
                         <label type="p" style="q-pa-md m-muted" condition="!clockingRows.length"

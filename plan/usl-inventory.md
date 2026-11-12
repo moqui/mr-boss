@@ -597,7 +597,8 @@ the screens that call it.
 | LeaveServices | get#TeamAbsences | People/Time/TeamCalendar | People/Time/TeamCalendar and TeamCalendarTui; People/MyTeam (Who is out); People's Today source (leave starting for my team) (People P12) |
 | LeaveServices | get#AbsenceProjection | — (CX-SYNC) | the Team absence projected CalDAV collection (mantle.work.CalendarDavServices, CalendarProjection PeopleTeamAbsence) (People P12) |
 | AttendanceServices | record#Punch, get#MyClock | Shared/PeopleSelfService (Clock) | Shared/PeopleSelfService and People/Time/Clock (template/PeopleClock.xml: the user's own clock; the quick create Clock in on Commons' root) (People P13) |
-| AttendanceServices | store#Clocking, find#Clocking | — | People/Time/Attendance (Who clocks: Turn clocking on, Turn off) (People P13) |
+| AttendanceServices | get#ClockOffer | — (the shell) | Commons' quick create Clock in, its condition-service (People P13 review) |
+| AttendanceServices | store#Clocking, find#Clocking | — | People/Time/Attendance (Who clocks: Turn clocking on, Turn off, Follow the employer; the employer's default, PartySetting PeopleClocking, is People Settings', P29) (People P13) |
 | AttendanceServices | find#Attendance, get#Day | People/Time/Attendance | People/Time/Attendance (AttendanceDays: mine, to decide, all I see, missing punches only, the CSV export; the day open with its punches and corrections) (People P13) |
 | AttendanceServices | request#Correction, decide#Correction | People/Time/Attendance | People/Time/Attendance (CorrectAttendance, Correct a missed day, AttendanceDecision: Approve, Refuse, Withdraw, Approve selected) (People P13) |
 | AttendanceServices | approve#Correction, refuse#Correction | People/Approvals | People/Approvals (the PeopleAttendanceApproval topic's approve and refuse, through Commons' Notifications) (People P13) |

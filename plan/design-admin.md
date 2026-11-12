@@ -1081,9 +1081,9 @@ Secrets, password hashes, arbitrary groups, privileged authz, executable service
   Mantle (`data/PeopleAttendanceSetupData.xml`) on the statement imports' pattern: People's own batch (`mantle.humanres.attendance`
   `AttendanceImport` and its rows) and wizard (People/Time/TimeImport, owner route `peopleTimeImport` in Admin's mount routes), its
   `findService` `mantle.humanres.AttendanceServices.find#ImportRuns` (the imports of the employers an HR reader reads, granted to every
-  user and checking `PEOPLE_HR_VIEW` and People's scope itself), `importPermission` `PEOPLE_IMPORT` and `viewPermission` `PEOPLE_HR_VIEW`,
-  no `ADMIN_*` permission; `preview#Import` and `import#Records` check `PEOPLE_IMPORT` beside `PEOPLE_HR_VIEW`, `PEOPLE_HR_EDIT` and
-  the employer.
+  user and checking `PEOPLE_HR_VIEW` and People's scope itself), `importPermission` `PEOPLE_IMPORT,PEOPLE_HR_VIEW,PEOPLE_HR_EDIT` (all
+  required, what `preview#Import` and `import#Records` check again with the employer; People P13's review) and `viewPermission`
+  `PEOPLE_HR_VIEW`, no `ADMIN_*` permission.
 
 ### Imports
 

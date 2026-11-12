@@ -2,9 +2,10 @@
 // read by work email (Tomas in with no out, and a worker People does not know) through Time import; Attendance's one qvt render as
 // the manager with Tomas's day open (the punch as it came, what is missing, the correction he asked waiting and Approve), approved
 // from her Approvals (the tray's approve service); Time import's one html render as HR with the problem rows; Admin's Imports listing
-// the run with People's owner place; and the Clock in quick create: the employee's shell offers it from Commons, and its screen's one
-// html render shows him his clock. SelfService's clock is checked on PeopleSelfService's render; the rules are Mantle's Attendance;
-// access is PeopleAccess's (the self-service clock, Time import HR's).
+// the run with People's owner place; and the Clock in quick create: the employee's shell offers it from Commons and a People user
+// who does not clock is not offered it (its condition-service), and its screen's one html render shows him his clock. SelfService's
+// clock is checked on PeopleSelfService's render; the rules are Mantle's Attendance; access is PeopleAccess's (the self-service
+// clock, Time import HR's).
 // Run: ./moq test mr-boss --spec PeopleAttendance
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -122,27 +123,36 @@ feature("Time import as HR shows the rows that were not imported and why; Admin'
     }
 })
 
-feature("the Clock in quick create: the employee's shell offers it from Commons, and its screen shows him his clock", {
-    when() {
-        const shell = asUser(users.employee, () =>
-            JSON.parse(
-                ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output
-            )
+// the quick create kinds the user's shell offers from Commons
+const clockInOffered = username =>
+    asUser(username, () => {
+        const shell = JSON.parse(
+            ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("shellData", {}, null).output
         )
         const commons = Array.from(shell.apps || []).find(app => app.name === "Commons")
-        const offered = Array.from(commons?.providers?.quickCreate || []).some(
+        return Array.from(commons?.providers?.quickCreate || []).some(
             entry => entry.kind === "peopleClockIn" && String(entry.url).includes("People/Time/Clock")
         )
-        const rendered = asUser(users.employee, () => page("Time/Clock", {}, "html"))
-        const reader = asUser(users.reader, () => system(() => invoke(A + "get#MyClock", {})))
-        return {offered, rendered, reader}
-    },
-    then({offered, rendered, reader}) {
-        offered
-        rendered.status == 200 && rendered.errors.length == 0
-        rendered.output.includes("Clocked") && rendered.output.includes("Clock")
-        !rendered.output.includes("Clocking is not on")
-        // a People user whose employment has no clocking has no clock to show
-        reader.clocking == false
+    })
+
+feature(
+    "the Clock in quick create: offered to the employee who clocks, not to a People user who does not; its screen shows his clock",
+    {
+        when() {
+            const offered = clockInOffered(users.employee)
+            // the reader's employment does not clock (no setting, and Retail's default is off): no Clock in in their + menu
+            const notOffered = clockInOffered(users.reader)
+            const rendered = asUser(users.employee, () => page("Time/Clock", {}, "html"))
+            const reader = asUser(users.reader, () => system(() => invoke(A + "get#MyClock", {})))
+            return {offered, notOffered, rendered, reader}
+        },
+        then({offered, notOffered, rendered, reader}) {
+            offered && !notOffered
+            rendered.status == 200 && rendered.errors.length == 0
+            rendered.output.includes("Clocked") && rendered.output.includes("Clock")
+            !rendered.output.includes("Clocking is not on")
+            // a People user whose employment has no clocking has no clock to show
+            reader.clocking == false
+        }
     }
-})
+)
