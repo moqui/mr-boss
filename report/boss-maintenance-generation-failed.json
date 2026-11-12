@@ -1,0 +1,45 @@
+{
+  "id": "boss-maintenance-generation-failed",
+  "type": "alert",
+  "title": "Preventive generation failures",
+  "body": {
+    "description": "Fires when the preventive generation job named a plan it could not generate in the last day (the job's warning line \"Preventive generation: plan \u2026 failed\"; the other plans of the batch were generated). Each plan's reason is in Due maintenance's generation outcome. Reads the server log, so its owner needs the log dataset. A template: copy it in Insights \u203a Business alerts, set the audience, then activate it.",
+    "query": {
+      "datasetId": "otel_logs",
+      "from": "now-1d",
+      "thru": "now",
+      "queryString": "body:\"Preventive generation\"",
+      "aggregations": [
+        {
+          "id": "failures",
+          "type": "value_count",
+          "role": "metric",
+          "params": {
+            "field": "severity_number"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ]
+    },
+    "field": "failures",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "operations",
+      "severity": "warning"
+    }
+  }
+}

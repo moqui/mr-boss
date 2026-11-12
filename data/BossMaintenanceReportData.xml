@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's shipped datasets (design-maintenance §1.4 Shipped reports, CX-OPS-REPORTS; impl-maintenance P17, F37), on Customer
+    Service's pattern (BossCustomerServiceReportData.xml): three DataDocuments indexed by the BossMaintenanceReports push feed as their
+    records are written, each carrying its organization (organizationPartyId), on which Mantle's organization row filter scopes the
+    datasets, and no cost, rate or amount:
+    - BossMaintenanceWorkOrder: a work order (MaintenanceWorkOrder, only an execution root has one; a procedure and a process step
+      none) with its root's status, organization, facility, priority and dates, read by report/boss-maintenance-work-status.json;
+    - BossMaintenanceOccurrence: a preventive obligation made due (MaintenanceOccurrence, P14) with its plan's organization and
+      target, read by report/boss-maintenance-pm-compliance.json and the overdue PM alert template;
+    - BossMaintenanceOutage: an outage (ResourceUnavailability, P5; the correction chain kept, so a reader takes the row in force,
+      supersededByUnavailabilityId empty, F119), read by report/boss-maintenance-outages.json and the resource-down alert template.
+    Granted here to ADMIN; the Insights groups and Maintenance's supervisors and administrators, the admission, the dataset classes
+    and the readiness and refresh rows are in BossSetupMaintenanceData.xml (F118). -->
+<entity-facade-xml type="seed-initial">
+    <dataDocuments dataDocumentId="BossMaintenanceWorkOrder" indexName="boss_maintenance" documentName="Maintenance Work Order"
+            primaryEntityName="mantle.work.maintenance.MaintenanceWorkOrder" documentTitle="${workEffortId}">
+        <fields fieldSeqId="01" fieldPath="workEffortId"/>
+        <fields fieldSeqId="02" fieldPath="assetId"/>
+        <fields fieldSeqId="03" fieldPath="maintenanceKindEnumId"/>
+        <fields fieldSeqId="04" fieldPath="maintenanceTypeEnumId"/>
+        <fields fieldSeqId="05" fieldPath="sourceEnumId"/>
+        <fields fieldSeqId="06" fieldPath="severityEnumId"/>
+        <fields fieldSeqId="07" fieldPath="failureModeEnumId"/>
+        <fields fieldSeqId="08" fieldPath="holdReasonEnumId"/>
+        <fields fieldSeqId="09" fieldPath="cancelReasonEnumId"/>
+        <fields fieldSeqId="10" fieldPath="outcomeEnumId"/>
+        <fields fieldSeqId="11" fieldPath="dispositionEnumId"/>
+        <fields fieldSeqId="12" fieldPath="offlineIntent"/>
+        <fields fieldSeqId="13" fieldPath="procedureWorkEffortId"/>
+        <fields fieldSeqId="21" fieldPath="workEffort:workEffortName"/>
+        <fields fieldSeqId="22" fieldPath="workEffort:statusId"/>
+        <fields fieldSeqId="23" fieldPath="workEffort:ownerPartyId" fieldNameAlias="organizationPartyId"/>
+        <fields fieldSeqId="24" fieldPath="workEffort:facilityId"/>
+        <fields fieldSeqId="25" fieldPath="workEffort:priority"/>
+        <fields fieldSeqId="26" fieldPath="workEffort:estimatedStartDate"/>
+        <fields fieldSeqId="27" fieldPath="workEffort:estimatedCompletionDate"/>
+        <fields fieldSeqId="28" fieldPath="workEffort:actualStartDate"/>
+        <fields fieldSeqId="29" fieldPath="workEffort:actualCompletionDate"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossMaintenanceOccurrence" indexName="boss_maintenance" documentName="Maintenance Occurrence"
+            primaryEntityName="mantle.work.maintenance.MaintenanceOccurrence" documentTitle="${maintenanceScheduleId}:${obligationKey}">
+        <fields fieldSeqId="01" fieldPath="maintenanceOccurrenceId"/>
+        <fields fieldSeqId="02" fieldPath="maintenanceScheduleId"/>
+        <fields fieldSeqId="03" fieldPath="obligationKey"/>
+        <fields fieldSeqId="04" fieldPath="dueDate"/>
+        <fields fieldSeqId="05" fieldPath="dueThreshold"/>
+        <fields fieldSeqId="06" fieldPath="statusId"/>
+        <fields fieldSeqId="07" fieldPath="workEffortId"/>
+        <fields fieldSeqId="08" fieldPath="catchUp"/>
+        <fields fieldSeqId="09" fieldPath="coveredByOccurrenceId"/>
+        <fields fieldSeqId="10" fieldPath="generatedDate"/>
+        <fields fieldSeqId="11" fieldPath="completedDate"/>
+        <fields fieldSeqId="21" fieldPath="schedule:scheduleName"/>
+        <fields fieldSeqId="22" fieldPath="schedule:organizationPartyId"/>
+        <fields fieldSeqId="23" fieldPath="schedule:assetId"/>
+        <fields fieldSeqId="24" fieldPath="schedule:facilityId"/>
+        <fields fieldSeqId="25" fieldPath="schedule:statusId" fieldNameAlias="scheduleStatusId"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossMaintenanceOutage" indexName="boss_maintenance" documentName="Maintenance Outage"
+            primaryEntityName="mantle.work.effort.ResourceUnavailability" documentTitle="${resourceUnavailabilityId}">
+        <fields fieldSeqId="01" fieldPath="resourceUnavailabilityId"/>
+        <fields fieldSeqId="02" fieldPath="assetId"/>
+        <fields fieldSeqId="03" fieldPath="facilityId"/>
+        <fields fieldSeqId="04" fieldPath="organizationPartyId"/>
+        <fields fieldSeqId="05" fieldPath="unavailabilityKindEnumId"/>
+        <fields fieldSeqId="06" fieldPath="unavailabilityReasonEnumId"/>
+        <fields fieldSeqId="07" fieldPath="plannedOutage"/>
+        <fields fieldSeqId="08" fieldPath="fromDate"/>
+        <fields fieldSeqId="09" fieldPath="thruDate"/>
+        <fields fieldSeqId="10" fieldPath="workEffortId"/>
+        <fields fieldSeqId="11" fieldPath="supersededByUnavailabilityId"/>
+        <fields fieldSeqId="12" fieldPath="dispositionEnumId"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossMaintenanceReports" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Maintenance reports" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossMaintenanceWorkOrder"/>
+        <documents dataDocumentId="BossMaintenanceOccurrence"/>
+        <documents dataDocumentId="BossMaintenanceOutage"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="ADMIN"/>
+</entity-facade-xml>

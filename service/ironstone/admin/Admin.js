@@ -412,6 +412,8 @@ const mountRoutes = {
     maintenanceEquipmentImport: {url: "/qapps/Maintenance/Equipment/EquipmentImport", plain: true},
     // Maintenance's due list: the preventive generation job's and its recovery's owner place (impl-maintenance P14, F117)
     maintenanceDue: {url: "/qapps/Maintenance/Preventive/DueMaintenance", plain: true},
+    // Maintenance's Reports: its reports' exports (impl-maintenance P17, F72)
+    maintenanceReports: {url: "/qapps/Maintenance/Reports", plain: true},
     commonsContacts: {url: "/qapps/Commons/Contacts/List", plain: true},
     insightsDatasets: {url: "/qapps/Insights/ReportBuilder/Datasets", plain: true},
     insightsReports: {url: "/qapps/Insights/Reports", plain: true},
