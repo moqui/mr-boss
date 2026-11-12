@@ -2382,7 +2382,7 @@ Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCale
 - **Usable when** (`acceptance/People/PeopleSchedulesUsable`): `people.hr` defines a four-day week in another zone,
   assigns it from a date, adds a holiday, and CapacityPreview and Projects' PersonDetail show the same hours.
 
-**Built Nov 11 (P9).** mr-mantle, mr-boss (branch `ppl/p9`).
+**Built Nov 11 (P9).** mr-mantle effe0fa8, mr-boss (branch `ppl/p9`).
 - Checked first (the code over the plan): F23 (ResourceServices' header names People's schedule as the replacement of the
   WetAvailable source and nothing else); `TimesheetServices.get#WeekDays` with a person already reads `get#PartyCapacity`, so one
   change serves both; F31 (HolidayUsaData is install data, its categories `WcatHoliday` WorkEffortCategories linked by
