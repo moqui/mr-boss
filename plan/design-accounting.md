@@ -825,9 +825,15 @@ worker's time) as before. `approve#Payable` (and every approval through `change#
 approval (`CLAIM_NOT_APPROVED`) and one reserved for payroll (`CLAIM_RESERVED`), and reserves an approved one for accounts payable
 (`mantle.humanres.ExpenseServices` Expense.js `financeApproval`); a claim reserved for one route is refused by the other
 (`reserve#ClaimSettlement`, the payroll route's, impl-people P27). The tab Employee advances lists the organization's approved
-employee advances (`ExpenseServices.find#Advances` with finance, a finance reader of it): Pay records an advance's prepayment
-(`pay#Advance`, a `PtPrePayment` from the organization to the employee, delivered) and Apply applies it to the employee's claim
-approved for payment (`apply#Advance`, through `apply#InvoicePayment`), each with PAYMENT_EDIT in the organization.
+employee advances (`ExpenseServices.find#Advances` with finance, a finance reader of it), each with its bill and what was delivered,
+applied and is outstanding, and Apply applies a paid advance to the employee's claim approved for payment (`apply#Advance`: a credit
+the organization issues against the claim on the employee advances account, `ItemAdvancePay`'s incoming account, applied through
+`apply#InvoiceToInvoice`), with PAYMENT_EDIT in the organization. People P15's review (the user's call, impl-people §4, Nov 12,
+2026): an approved advance is paid through payment authorization and payment runs like any other payable: its approval makes a bill
+from the employee (one `ItemAdvancePay` line, due when the advance is needed, received), listed in this queue for finance's approval,
+which a payment run then pays; there is no Pay action here. A payment run (`PaymentRuns.js` select and paySupplier) neither selects
+nor pays an expense claim reserved for payroll (`BILL_RESERVED`), which impl-people P27's pay run settles. PEOPLE_EXPENSE_MANAGE
+(granted to BOSS_ACCOUNTING_AP and HR) reads every claim and advance of the user's organizations in People's services.
 
 **Payroll-origin projection (Nov 1, 2026; review Y7, R-PPL-07; AC-23).** Accounting owns the
 retrofit of its built screens so that payroll-origin documents are seen only with a payroll-finance

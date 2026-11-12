@@ -13,14 +13,14 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- People › Advances (design-people §9 EmployeeAdvances; style-guide §3.2 List; impl-people P15): the employee advances the user
-    reads (mantle.humanres.ExpenseServices.find#Advances): their own, those they decide now (To decide) and a manager's reports' and an
-    HR or payroll reader's employers' (All); each with what was asked, delivered (its payment, once delivered), applied to claims and
-    outstanding (delivered less applied, never a balance kept), its stage (waiting, approved: to pay, paid: outstanding, settled,
+    reads (mantle.humanres.ExpenseServices.find#Advances): their own, those they decide now (To decide) and a manager's reports' and
+    the employers' of a holder of PEOPLE_EXPENSE_MANAGE (All); each with what was asked, delivered (what delivered payments paid of its bill), applied to claims and
+    outstanding (delivered less applied, never a balance kept), its stage (waiting, approved: with finance, approved for payment, paid: outstanding, settled,
     refused, withdrawn) and the claims it was applied to. Request advance is the primary action (RequestAdvance: the employer when the
-    employee has several, an HR editor's employer and employee, the purpose, amount, currency, when it is needed and when it should
+    employee has several, the employer and employee of a holder of PEOPLE_EXPENSE_MANAGE, the purpose, amount, currency, when it is needed and when it should
     be settled; request#Advance); an approver of the step waiting approves or refuses it in its row (AdvanceDecision, decide#Advance),
-    the person or who asked withdraws it. Approval to advance is not payment: finance pays and applies it in Accounting's Expense
-    posting. Every People user's and a self-service employee's (BOSS_PPL_EXPENSES); Mantle checks every read and decision. -->
+    the person or who asked withdraws it. Approval to advance is not payment: it makes a bill to the employee that finance approves
+    for payment and a payment run pays, and finance applies it to a claim in Accounting's Expense posting. Every People user's and a self-service employee's (BOSS_PPL_EXPENSES); Mantle checks every read and decision. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Advances" default-menu-index="2" menu-image="sym_o_payments" menu-image-type="icon">
     <parameter name="show"/>
@@ -53,8 +53,9 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <set field="caps" from="people?.capabilities || {}"/>
         <set field="canDecide" from="ec.user.hasPermission('PEOPLE_REQUEST_APPROVE')"/>
-        <set field="seesOthers" from="!!(caps.team || caps.hrView || caps.payrollView)"/>
-        <set field="hrEditor" from="!!(caps.hrView &amp;&amp; caps.hrEdit)"/>
+        <set field="seesOthers" from="!!(caps.team || caps.expenseManage)"/>
+        <!-- who claims or asks for an employee: PEOPLE_EXPENSE_MANAGE (the user's call, impl-people §4, Nov 12, 2026) -->
+        <set field="hrEditor" from="!!caps.expenseManage"/>
         <set field="showing" from="['mine', 'decide', 'all'].includes(show) ? show : (canDecide ? 'decide' : (seesOthers ? 'all' : 'mine'))"/>
         <service-call name="mantle.humanres.ExpenseServices.find#Advances" out-map="found" transaction="force-new" ignore-error="true"
                 in-map="{mine:(showing == 'mine'), toDecide:(showing == 'decide'), statusEnumId:(statusEnumId || null), pageIndex:(pageIndex || 0)}"/>

@@ -1,6 +1,8 @@
 // People P15's "usable when" (impl-people P15; design-people §9, §14.3 "Expense reimbursement and advances", its accounts payable
 // half), as an acceptance walk with artifact authorization on, through the screens' transitions: Tomas (people.employee) asks an
-// advance, which Hannah (people.manager) approves and finance (finance.admin) pays in Accounting's Expense posting; on his phone he
+// advance, which Hannah (people.manager) approves, making it a bill finance (finance.admin) approves for payment in Accounting's
+// Expense posting and a payment run pays (the run's check stands in, applied as a run applies it; the user's call of Nov 12,
+// 2026); on his phone he
 // makes a claim, adds an expense with a photo of its receipt (and one from a receipt's text read and reviewed), and submits it;
 // Hannah approves it from Approvals, which leaves it with finance; finance approves it for payment in Expense posting and applies
 // the advance to it; People shows the advance settled and what is left to reimburse. The rules themselves are Mantle's
@@ -43,53 +45,81 @@ spec({
     }
 })
 
-feature("Tomas asks an advance; Hannah approves it from Approvals; finance pays it in Expense posting", {
-    when() {
-        const out = {}
-        out.asked = request(
-            users.employee,
-            "apps/People/Expenses/EmployeeAdvances/requestAdvance",
-            {purpose: "Trade fair stand", amount: "40", operationKey: "PPL_ACCEPT_ADVANCE"},
-            "post"
-        ).errors
-        const mine = read(users.employee, E + "find#Advances", {mine: true}).advances || []
-        state.advance = mine.find(row => row.purpose === "Trade fair stand")?.employeeAdvanceId
-        out.approvals = request(users.manager, "apps/People/Approvals", {lastStandalone: "-2"})
-        const notice = system(
-            () =>
-                Array.from(
-                    ec.entity
-                        .find("moqui.security.user.NotificationMessage")
-                        .condition({topic: "PeopleAdvanceApproval", recordId: state.advance})
-                        .list()
-                )[0]
-        )
-        out.approved = read(users.manager, "org.moqui.ui.NotificationServices.approve#NotificationMessage", {
-            notificationMessageId: notice?.notificationMessageId
-        })
-        out.queue = request(finance, "apps/Accounting/Payables/ExpensePosting", {
-            organizationPartyId: ids.organizationId,
-            view: "advances",
-            lastStandalone: "-2"
-        })
-        out.paid = request(
-            finance,
-            "apps/Accounting/Payables/ExpensePosting/payAdvance",
-            {organizationPartyId: ids.organizationId, employeeAdvanceId: state.advance, paymentRefNum: "ADV-ACC-1"},
-            "post"
-        ).errors
-        out.after = (read(users.employee, E + "find#Advances", {mine: true}).advances || []).find(
-            row => row.employeeAdvanceId === state.advance
-        )
-        return out
-    },
-    then({asked, approvals, queue, paid, after}) {
-        asked == "" && state.advance
-        approvals.status == 200 && approvals.errors == ""
-        queue.status == 200 && queue.errors == "" && queue.output.includes(state.advance)
-        paid == "" && after.stageText == "Paid: outstanding" && after.outstanding.compare(40) == 0
+feature(
+    "Tomas asks an advance; Hannah approves it from Approvals; finance approves its bill in Expense posting and a run pays it",
+    {
+        when() {
+            const out = {}
+            out.asked = request(
+                users.employee,
+                "apps/People/Expenses/EmployeeAdvances/requestAdvance",
+                {purpose: "Trade fair stand", amount: "40", operationKey: "PPL_ACCEPT_ADVANCE"},
+                "post"
+            ).errors
+            const mine = read(users.employee, E + "find#Advances", {mine: true}).advances || []
+            state.advance = mine.find(row => row.purpose === "Trade fair stand")?.employeeAdvanceId
+            out.approvals = request(users.manager, "apps/People/Approvals", {lastStandalone: "-2"})
+            const notice = system(
+                () =>
+                    Array.from(
+                        ec.entity
+                            .find("moqui.security.user.NotificationMessage")
+                            .condition({topic: "PeopleAdvanceApproval", recordId: state.advance})
+                            .list()
+                    )[0]
+            )
+            out.approved = read(users.manager, "org.moqui.ui.NotificationServices.approve#NotificationMessage", {
+                notificationMessageId: notice?.notificationMessageId
+            })
+            out.queue = request(finance, "apps/Accounting/Payables/ExpensePosting", {
+                organizationPartyId: ids.organizationId,
+                view: "advances",
+                lastStandalone: "-2"
+            })
+            const bill = system(
+                () =>
+                    ec.entity.find("mantle.humanres.expense.EmployeeAdvance").condition("employeeAdvanceId", state.advance).one()
+                        ?.invoiceId
+            )
+            out.billQueue = request(finance, "apps/Accounting/Payables/ExpensePosting", {
+                organizationPartyId: ids.organizationId,
+                lastStandalone: "-2"
+            })
+            out.paid = request(
+                finance,
+                "apps/Accounting/Payables/ExpensePosting/approveExpense",
+                {organizationPartyId: ids.organizationId, invoiceId: bill, lastUpdatedStamp: invoiceRow(bill).lastUpdatedStamp},
+                "post"
+            ).errors
+            // the payment run's check to Tomas, delivered and applied to the bill as a run's paySupplier does
+            system(() => {
+                const payment = invoke("mantle.account.PaymentServices.create#Payment", {
+                    paymentTypeEnumId: "PtInvoicePayment",
+                    fromPartyId: ids.organizationId,
+                    toPartyId: ids.employeePartyId,
+                    amount: "40",
+                    amountUomId: invoiceRow(bill).currencyUomId,
+                    paymentInstrumentEnumId: "PiCompanyCheck",
+                    statusId: "PmntDelivered",
+                    effectiveDate: ec.user.nowTimestamp
+                })
+                invoke("mantle.account.PaymentServices.apply#InvoicePayment", {paymentId: payment.paymentId, invoiceId: bill})
+            })
+            out.bill = bill
+            out.after = (read(users.employee, E + "find#Advances", {mine: true}).advances || []).find(
+                row => row.employeeAdvanceId === state.advance
+            )
+            return out
+        },
+        then({asked, approvals, queue, billQueue, bill, paid, after}) {
+            asked == "" && state.advance
+            approvals.status == 200 && approvals.errors == ""
+            queue.status == 200 && queue.errors == "" && queue.output.includes(state.advance)
+            bill && billQueue.status == 200 && billQueue.output.includes(bill)
+            paid == "" && after.stageText == "Paid: outstanding" && after.outstanding.compare(40) == 0
+        }
     }
-})
+)
 
 feature("Tomas makes a claim on his phone, adds an expense with its receipt photo and one read from a receipt, and submits it", {
     when() {

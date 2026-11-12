@@ -15,9 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Expense posting's Employee advances tab (design-accounting §5 "People integration", design-people §9 EmployeeAdvances; People
     P15, owner contract), section-included by Accounting/Payables/ExpensePosting with view advances: the organization's approved
     employee advances (mantle.humanres.ExpenseServices.find#Advances with finance, a finance reader of the organization), each with
-    what was asked, delivered, applied and is outstanding. Pay records an approved advance's prepayment from the organization to the
-    employee (pay#Advance); Apply applies a paid advance to one of the employee's claims approved for payment (apply#Advance); both
-    post through ExpensePosting's transitions and need PAYMENT_EDIT in the organization, which Mantle checks. -->
+    what was asked, its bill, delivered, applied and is outstanding. An approved advance is paid as its bill (Expense posting's
+    queue, then a payment run), never from here; Apply applies a paid advance to one of the employee's claims approved for payment
+    (apply#Advance, through ExpensePosting's transition), which needs PAYMENT_EDIT in the organization, which Mantle checks. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
@@ -34,6 +34,11 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="personName">
                                 <default-field title="Employee">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="invoiceId">
+                                <default-field title="Bill">
                                     <display/>
                                 </default-field>
                             </field>
@@ -59,40 +64,6 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="actions">
                                 <default-field title="">
-                                    <container-dialog id="PayAdvance_${employeeAdvanceId}"
-                                            button-text="Pay"
-                                            title="Pay advance ${employeeAdvanceId} to ${personName}"
-                                            width="520"
-                                            condition="canPay &amp;&amp; stage == 'toPay' &amp;&amp; !paymentId">
-                                        <form-single name="PayAdvance_${employeeAdvanceId}" transition="payAdvance">
-                                            <field name="organizationPartyId" from="organizationPartyId">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="employeeAdvanceId" from="employeeAdvanceId">
-                                                <default-field title="">
-                                                    <hidden/>
-                                                </default-field>
-                                            </field>
-                                            <field name="effectiveDate" from="todayText">
-                                                <default-field title="Paid on">
-                                                    <date-time type="date"/>
-                                                </default-field>
-                                            </field>
-                                            <field name="paymentRefNum">
-                                                <default-field title="Reference">
-                                                    <text-line size="30"/>
-                                                </default-field>
-                                            </field>
-                                            <field name="submit">
-                                                <default-field title="">
-                                                    <submit text="Record the payment"
-                                                            confirmation="Pay ${amountText} to ${personName}?"/>
-                                                </default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
                                     <container-dialog id="ApplyAdvance_${employeeAdvanceId}"
                                             button-text="Apply"
                                             title="Apply advance ${employeeAdvanceId} to a claim"
@@ -142,7 +113,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </column>
                             </columns>
                         </form-list>
-                        <label text="No approved employee advance: People approves them, then they wait here to be paid."
+                        <label text="No approved employee advance: People approves them, and each is a bill to approve and pay like any other."
                                 type="p"
                                 style="q-pa-md m-muted"
                                 condition="!advances.length"/>

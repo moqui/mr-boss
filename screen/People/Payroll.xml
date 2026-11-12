@@ -19,13 +19,13 @@ along with this software (see the LICENSE.md file). If not, see
     CostingPolicies; client rates and contractors' rates only to those who manage project money (TIME_ENTRY_RATE). The area is
     the payroll groups' (BOSS_PPL_PAYROLL: denied to the root user group, ALWAYS for BOSS_PEOPLE_PAYROLL and
     BOSS_PEOPLE_PAYROLL_APPROVE, and the People administrator and ADMIN through the root's ALWAYS). P15 adds InvoiceDetail out of the
-    menu: the shared InvoiceDetail in People's context, an expense claim's invoice read and reconciled by a payroll reader (F19). Pay
+    menu: the shared InvoiceDetail in People's context, an expense claim's invoice read and reconciled by a reader of the claim, a holder of PEOPLE_EXPENSE_MANAGE (F19). Pay
     runs, payslips, pay assignments, pay adjustments and the payroll exchange join with P22 to P28. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="Rates">
         <subscreens-item name="Rates" location="component://mr-boss/screen/Projects/Billing/Rates.xml" menu-title="Rates" menu-index="5"/>
-        <!-- P15: the shared InvoiceDetail in People's context (an expense claim's invoice for a payroll reader; F19), out of the menu -->
+        <!-- P15: the shared InvoiceDetail in People's context (an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE; F19), out of the menu -->
         <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml" menu-include="false"/>
     </subscreens>
     <widgets>

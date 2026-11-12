@@ -46,7 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
     for a GL poster. Its widgets and transition are template/PurchasingInvoiceDetail.xml's.
 
     People (design-people §13 InvoiceDetail; crosscut §3.16 People row; impl-people P15, F19; mounted at People/Payroll/InvoiceDetail):
-    an expense claim's invoice for a payroll reader of the employer (mantle.humanres.ExpenseServices.get#Claim), read and reconcile
+    an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE at the employer (mantle.humanres.ExpenseServices.get#Claim), read and reconcile
     only: the header, the settlement (route, applied, unpaid, the payments applied), the lines and the claim. Its widgets are
     template/PeopleInvoiceDetail.xml's; payroll-origin invoices join with P27.
 
@@ -114,7 +114,7 @@ along with this software (see the LICENSE.md file). If not, see
             try {
                 const read = ec.service.sync().name('mantle.humanres.ExpenseServices.get#Claim').parameters({invoiceId: invoiceId || ''})
                     .requireNewTransaction(true).call() || {}
-                peopleClaim = !ec.message.hasError() && read.claim && Array.from(read.access || []).includes('payroll') ? read : null
+                peopleClaim = !ec.message.hasError() && read.claim && Array.from(read.access || []).includes('manage') ? read : null
             } catch (error) {
                 peopleClaim = null
             } finally {

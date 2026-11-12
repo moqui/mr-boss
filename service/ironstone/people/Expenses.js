@@ -74,14 +74,37 @@ function printHtml(found) {
     )
 }
 
-// The claim's evidence bundle: a zip of its printed PDF (the page as html when this server has no PDF engine) and its receipts,
-// written under the runtime's tmp folder; answers its location and file name for the transition to send.
+// The bundles are written under the runtime's tmp folder (served by no URL), each in a folder of a random name, and a bundle
+// older than an hour is deleted when the next one is made; the printed page is deleted once it is in the zip.
+const evidenceRoot = "runtime://tmp/people-claims/"
+const evidenceKeepMs = 60 * 60 * 1000
+function pruneEvidence() {
+    try {
+        const root = ec.resource.getLocationReference(evidenceRoot)
+        if (!root.getExists()) return
+        const cutoff = Date.now() - evidenceKeepMs
+        for (const folder of Array.from(root.getDirectoryEntries() || [])) {
+            if (!folder.isDirectory()) continue
+            // a bundle's age is its newest file's; one whose age is not known (or one being written) is left
+            const files = Array.from(folder.getDirectoryEntries() || [])
+            const newest = Math.max(0, ...files.map(file => Number(file.getLastModified() || 0)))
+            if (!newest || newest > cutoff) continue
+            for (const file of files) file.delete()
+            folder.delete()
+        }
+    } catch (error) {
+        ec.logger.warn("Expense claim evidence: old bundles not cleaned up: " + error.message)
+    }
+}
+// The claim's evidence bundle: a zip of its printed PDF (the page as html when this server has no PDF engine) and its receipts;
+// answers its location and file name for the transition to send.
 function evidence(invoiceId) {
     const found = ec.service.sync().name("mantle.humanres.ExpenseServices.get#Claim").parameters({invoiceId}).call()
     if (ec.message.hasError() || !found?.claim) return null
     const receipts = ec.service.sync().name("mantle.humanres.ExpenseServices.get#ClaimEvidence").parameters({invoiceId}).call()
     if (ec.message.hasError()) return null
-    const folder = "runtime://tmp/people-claims/" + invoiceId + "-" + Date.now() + "/"
+    pruneEvidence()
+    const folder = evidenceRoot + ec.user.randomString(24) + "/"
     const document =
         '<html><head><meta charset="utf-8"/><title>' +
         enc(L("Expense claim") + " " + invoiceId) +
@@ -102,6 +125,14 @@ function evidence(invoiceId) {
     const written = ec.resource.writeZip(folder + "evidence.zip", entries)
     for (const failure of Array.from(written?.failures || []))
         ec.logger.error("Expense claim " + invoiceId + " evidence: " + failure.path + " left out: " + failure.error)
+    // the printed page is in the zip now; the zip itself goes with the next bundle made after an hour
+    for (const entry of entries)
+        if (entry.location.startsWith(folder))
+            try {
+                ec.resource.getLocationReference(entry.location).delete()
+            } catch (error) {
+                ec.logger.warn("Expense claim " + invoiceId + " evidence: " + entry.location + " not deleted: " + error.message)
+            }
     return {location: folder + "evidence.zip", fileName: "Claim-" + invoiceId + "-evidence.zip"}
 }
 

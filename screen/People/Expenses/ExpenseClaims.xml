@@ -13,12 +13,12 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- People › Expense claims (design-people §9 ExpenseClaims; style-guide §3.2 List; impl-people P15): the claims the user reads
-    (mantle.humanres.ExpenseServices.find#Claims): their own, those they decide now (To decide), and a manager's reports' and an HR or
-    payroll reader's employers' (All); by state; each opening ExpenseClaimDetail, with its stage (draft, waiting, returned, approved
+    (mantle.humanres.ExpenseServices.find#Claims): their own, those they decide now (To decide), and a manager's reports' and the employers'
+    of a holder of PEOPLE_EXPENSE_MANAGE (All); by state; each opening ExpenseClaimDetail, with its stage (draft, waiting, returned, approved
     and with finance, finance approved, paid, refused, cancelled), never its lines. New claim is the primary action (the quick create
     New claim opens it): the claimant's own, under their current employment (the employer when they have several), an optional project
-    they work on, the day and the purpose, made by mantle.account.InvoiceServices.create#ProjectExpenseInvoice with expenseClaim; an HR
-    editor chooses an employer and an employee to claim for. The claim opens to add its expenses. Every People user's and a
+    they work on, the day and the purpose, made by mantle.account.InvoiceServices.create#ProjectExpenseInvoice with expenseClaim; a
+    holder of PEOPLE_EXPENSE_MANAGE (HR) chooses an employer and an employee to claim for. The claim opens to add its expenses. Every People user's and a
     self-service employee's (the expenses area's own grant, BOSS_PPL_EXPENSES); what each reads and may make is Mantle's check. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Expense claims" default-menu-index="1" menu-image="sym_o_receipt_long" menu-image-type="icon">
@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageIndex"/>
     <parameter name="newClaim"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
-    <!-- the claim made: the claimant's own (their employment), or an HR editor's for an employee; Mantle checks who and where -->
+    <!-- the claim made: the claimant's own (their employment), or one for an employee under PEOPLE_EXPENSE_MANAGE; Mantle checks who and where -->
     <transition name="createClaim">
         <actions>
             <script><![CDATA[
@@ -55,8 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <set field="caps" from="people?.capabilities || {}"/>
         <set field="canDecide" from="ec.user.hasPermission('PEOPLE_REQUEST_APPROVE')"/>
-        <set field="seesOthers" from="!!(caps.team || caps.hrView || caps.payrollView)"/>
-        <set field="hrEditor" from="!!(caps.hrView &amp;&amp; caps.hrEdit)"/>
+        <set field="seesOthers" from="!!(caps.team || caps.expenseManage)"/>
+        <!-- who claims or asks for an employee: PEOPLE_EXPENSE_MANAGE (the user's call, impl-people §4, Nov 12, 2026) -->
+        <set field="hrEditor" from="!!caps.expenseManage"/>
         <set field="showing" from="['mine', 'decide', 'all'].includes(show) ? show : (canDecide ? 'decide' : (seesOthers ? 'all' : 'mine'))"/>
         <service-call name="mantle.humanres.ExpenseServices.find#Claims" out-map="found" transaction="force-new" ignore-error="true"
                 in-map="{mine:(showing == 'mine'), toDecide:(showing == 'decide'), statusEnumId:(statusEnumId || null),

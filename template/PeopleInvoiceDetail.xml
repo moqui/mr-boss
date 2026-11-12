@@ -14,8 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- InvoiceDetail's People context (design-people §13 InvoiceDetail; crosscut §3.16 People row; impl-people P15, F19),
     section-included by Shared/InvoiceDetail when appRoot is People (mounted at People/Payroll/InvoiceDetail): an expense claim's
-    invoice for a payroll reader of the employer (mantle.humanres.ExpenseServices.get#Claim, its payroll access; another invoice, or a
-    reader without it, is not available), read and reconcile only: the header, the claim's lines, the settlement (the route and its
+    invoice for a reader of the claim who opens Payroll: a holder of PEOPLE_EXPENSE_MANAGE at the employer (the user's call,
+    impl-people §4, Nov 12, 2026: PAYROLL_VIEW alone reads no claim; mantle.humanres.ExpenseServices.get#Claim; another invoice,
+    or a reader without it, is not available), read and reconcile only: the header, the claim's lines, the settlement (the route and its
     reservation, applied and unpaid, the payments applied: an advance or a reimbursement) and the claim it belongs to. Financial
     edits and approval stay Accounting's. Payroll-origin invoices join with P27. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -28,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box type="warning">
                             <box-header title="Not available"/>
                             <box-body>
-                                <label type="p" text="Invoice ${invoiceId} is not available: it is no expense claim of an employer whose payroll you read."/>
+                                <label type="p" text="Invoice ${invoiceId} is not available: it is no expense claim of an employer whose expenses you manage."/>
                                 <link url="${sharedLinks['Payroll/Rates']}" url-type="plain" link-type="anchor" text="Back to payroll"/>
                             </box-body>
                         </container-box>

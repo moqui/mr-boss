@@ -18,9 +18,11 @@ along with this software (see the LICENSE.md file). If not, see
     Projects keep the capture and time approval. People P15 (owner contract, design-accounting §5 "People integration"): an
     employee's expense claim is listed once its business approval is done in People, on the accounts payable route
     (mantle.account.InvoiceServices.find#Payables' expenses queue), and approve#Payable refuses one before it or reserved for
-    payroll; Accounting mounts no claim screen, the claim opens in People. The Employee advances tab lists the organization's
-    approved advances (mantle.humanres.ExpenseServices.find#Advances with finance): Pay records the advance's prepayment
-    (pay#Advance) and Apply applies a paid advance to the employee's claim approved for payment (apply#Advance), each needing
+    payroll; Accounting mounts no claim screen, the claim opens in People. An approved advance is a bill
+    from the employee listed here like any other (the user's call, impl-people §4, Nov 12, 2026): approved for payment here, paid
+    by a payment run. The Employee advances tab lists the organization's approved advances (mantle.humanres.ExpenseServices
+    find#Advances with finance), each with its bill and what was delivered, applied and is outstanding, and Apply applies a paid
+    advance to the employee's claim approved for payment (apply#Advance: a credit on the employee advances account), which needs
     PAYMENT_EDIT in the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -41,15 +43,6 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response url="."/>
         <error-response url="."/>
-    </transition>
-    <transition name="payAdvance">
-        <actions>
-            <service-call name="mantle.humanres.ExpenseServices.pay#Advance" out-map="paid"
-                    in-map="{employeeAdvanceId:employeeAdvanceId, effectiveDate:(effectiveDate || null), paymentRefNum:(paymentRefNum || null)}"/>
-            <if condition="!ec.message.hasError()"><message type="success">Advance ${employeeAdvanceId} paid: payment ${paid.paymentId}</message></if>
-        </actions>
-        <default-response url="."><parameter name="view" value="advances"/></default-response>
-        <error-response url="."><parameter name="view" value="advances"/></error-response>
     </transition>
     <transition name="applyAdvance">
         <actions>
@@ -74,7 +67,6 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true" in-map="{finance:true, organizationPartyId:organizationPartyId, pageSize:100}"/>
             <script>ec.message.clearErrors()</script>
             <set field="advances" from="Array.from(advancesFound?.advances || [])"/>
-            <set field="todayText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
             <set field="canPay" from="ec.user.hasPermission('PAYMENT_EDIT')"/>
         </if>
         <if condition="organizationPartyId &amp;&amp; view != 'advances'">

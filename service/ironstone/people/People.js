@@ -213,7 +213,7 @@ const linkPaths = [
     "Time/ShiftRosterTui",
     "Time/ShiftRosterPrint",
     // P15: expense claims, a claim's detail and advances (every People user's and a self-service employee's by the expenses area's
-    // own grant), and Payroll's InvoiceDetail (an expense claim's invoice for a payroll reader)
+    // own grant), and Payroll's InvoiceDetail (an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE)
     "Expenses",
     "Expenses/ExpenseClaims",
     "Expenses/ExpenseClaimDetail",
