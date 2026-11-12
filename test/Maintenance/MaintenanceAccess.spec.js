@@ -10,6 +10,8 @@
 // Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
 // panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P6's procedure record (a reader of its
 // organization's procedures; an author's change), P13's preventive plan (a maintenance reader of its organization; a planner's create),
+// P15's booking policy and blackout (the resource administrator's, the planner refused, Retail's facility refused; a booking
+// approver reads the policy of the room they approve only),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -162,9 +164,9 @@ feature("the Maintenance menu, keys and palette follow the groups; the launcher 
         // P2: a user who reads no equipment (the procedure author) has no Equipment or Work orders; P6: the author has Procedures
         const author = shell(users.author, true).names
         if (JSON.stringify(author) !== JSON.stringify(ids.authorMenu)) problems.push(`the author's menu: ${author}`)
-        // the booking approver reads neither work, procedures nor equipment: Home alone
+        // the booking approver reads neither work, procedures nor equipment: Home and Scheduling (P15, the rooms they approve)
         const booking = shell(users.booking, true).names
-        if (JSON.stringify(booking) !== JSON.stringify(ids.homeOnlyMenu)) problems.push(`the booking approver's menu: ${booking}`)
+        if (JSON.stringify(booking) !== JSON.stringify(ids.bookingMenu)) problems.push(`the booking approver's menu: ${booking}`)
         // the palette finds the scope's equipment and facilities (P2), Retail's planner none of Services', and a user who reads no
         // equipment none
         const rows = (user, text) => asUser(user, () => invoke(contextServices + "search#Records", {text}).rows || [])
@@ -897,6 +899,43 @@ feature(
             out.plannerMakes == ""
             out.readerMakes.includes("PERMISSION_DENIED")
             out.retailMakes.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
+
+feature(
+    "a booking policy and a blackout are the resource administrator's: the planner is refused, and Retail's facility is refused to both",
+    {
+        when() {
+            const R = "mantle.work.ResourceBookingServices."
+            const write = (user, service, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(service, parameters)
+                })
+            // preview# writes nothing: the holder's case is its answer
+            const unmanaged = {facilityId: ids.unmanagedRoomId, approvalModeEnumId: "RbamAutomatic"}
+            const blackout = {facilityId: ids.otherFacilityId, unavailabilityKindEnumId: "RukPlanned", fromDate: new Date(Date.now() + 864e5),
+                thruDate: new Date(Date.now() + 2 * 864e5)}
+            return {
+                holder: write(users.resources, R + "preview#ResourceBookingPolicy", unmanaged),
+                planner: write(users.planner, R + "preview#ResourceBookingPolicy", unmanaged),
+                otherOrganization: write(users.resources, R + "preview#ResourceBookingPolicy", {facilityId: ids.otherFacilityId}),
+                plannerBlackout: write(users.planner, R + "record#ResourceUnavailability", Object.assign({}, blackout, {facilityId: ids.unmanagedRoomId})),
+                otherBlackout: write(users.resources, R + "record#ResourceUnavailability", blackout),
+                approverReads: write(users.booking, R + "get#ResourceBookingPolicy", {facilityId: ids.managedRoomId}),
+                approverOther: write(users.booking, R + "get#ResourceBookingPolicy", {facilityId: ids.unmanagedRoomId})
+            }
+        },
+        then({holder, planner, otherOrganization, plannerBlackout, otherBlackout, approverReads, approverOther}) {
+            holder == ""
+            planner.includes("PERMISSION_DENIED")
+            otherOrganization.includes("RECORD_UNAVAILABLE")
+            plannerBlackout.includes("PERMISSION_DENIED")
+            otherBlackout.includes("RECORD_UNAVAILABLE") || otherBlackout.includes("PERMISSION_DENIED")
+            // a booking approver reads the policy of the room they approve, not another's
+            approverReads == ""
+            approverOther.includes("RECORD_UNAVAILABLE")
         }
     }
 )

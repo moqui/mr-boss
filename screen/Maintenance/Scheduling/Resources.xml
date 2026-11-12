@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Scheduling › Resources (design-maintenance §7 Resources; style-guide §3.2 List; impl-maintenance P15): the bookable
+    equipment and facilities of the user's scope (mantle.work.ResourceBookingServices.find#BookableResources; a booking approver
+    sees the resources they approve). ResourceFind (the list's header filters: type, name, inside a facility, managed or not);
+    ResourceRows (resource, type and location, capacity and features, the policy in words, the longest booking, the approvers,
+    what blocks it now or next, the requests waiting); Bookability (a resource administrator's: bookable or not, booked at once or by
+    its approvers, from when, why; or no longer managed), and the policy record, ResourcePolicyDetail. Mantle checks again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Resources" default-menu-index="1">
+    <parameter name="resourceType"/>
+    <parameter name="text"/>
+    <parameter name="facilityId"/>
+    <parameter name="managed"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storePolicy" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+    <actions>
+        <set field="resourceList" from="null"/>
+        <service-call name="mantle.work.ResourceBookingServices.find#BookableResources" out-map="context"
+                transaction="force-new" ignore-error="true"
+                in-map="{resourceType:resourceType || null, text:text || null, facilityId:facilityId || null, managed:managed || null,
+                    pageIndex:pageIndex || 0}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="resourcesAvailable" from="resourceList != null"/>
+        <set field="resourceList" from="resourceList || []"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-x-md q-mb-sm">
+            <container style="col-12 col-md">
+                <label text="Resources" type="h5"/>
+                <label text="Rooms and equipment people book in Commons, with the rules each is booked by. A resource with no policy is booked as before: at once, or by its approvers."
+                        type="p" style="text-caption m-muted"/>
+            </container>
+            <container style="col-12 col-md-auto">
+                <link url="${sharedLinks['Scheduling/Blackouts']}" text="Blackouts" link-type="anchor-button" icon="sym_o_event_busy"/>
+            </container>
+        </container>
+        <label text="Resources are not available to you." type="p" condition="!resourcesAvailable"/>
+        <section name="ResourceSection" condition="resourcesAvailable">
+            <widgets>
+                <form-single name="ResourceFind" transition="." map="{resourceType:resourceType, text:text, facilityId:facilityId, managed:managed}">
+                    <field name="resourceType">
+                        <default-field title="Kind">
+                            <drop-down allow-empty="true"><option key="facility" text="Rooms and facilities"/><option key="asset" text="Equipment"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="text"><default-field title="Name"><text-find hide-options="true"/></default-field></field>
+                    <field name="facilityId">
+                        <default-field title="Inside" tooltip="A site, building or floor, with what is inside it">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="managed">
+                        <default-field title="Policy">
+                            <drop-down allow-empty="true"><option key="Y" text="Managed"/><option key="N" text="Not managed"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="resourceType"/><field-ref name="text"/></field-row>
+                        <field-row><field-ref name="facilityId"/><field-ref name="managed"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <form-list name="ResourceRows" list="resourceList" skip-form="true" paginate="true">
+                    <field name="resourceName">
+                        <default-field title="Resource">
+                            <link url="${sharedLinks['Scheduling/ResourcePolicyDetail']}" text="${resourceName}" link-type="anchor"
+                                    parameter-map="{assetId:assetId, facilityId:(assetId ? null : facilityId)}"/>
+                            <label text="${typeText}${locationName ? ' · ' + locationName : ''}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="capacityText">
+                        <default-field title="Capacity">
+                            <label text="${capacityText}" type="div"/>
+                            <label text="${featuresText}" type="div" style="text-caption m-muted" condition="featuresText"/>
+                        </default-field>
+                    </field>
+                    <field name="policyText">
+                        <default-field title="Booking rule">
+                            <label text="${policyText}" type="div"/>
+                            <label text="Approvers: ${approverNames}" type="div" style="text-caption m-muted" condition="approverNames"/>
+                        </default-field>
+                    </field>
+                    <field name="blockText">
+                        <default-field title="Blocked">
+                            <label text="${blockText}" type="div" style="${blockedNow ? 'text-negative' : 'text-warning'}" condition="blockText"/>
+                            <label text="${pendingCount} request(s) waiting" type="div" style="text-caption" condition="pendingCount"/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="Bookability_${resourceType}_${assetId || facilityId}" condition="canEdit" button-text="Bookability"
+                                    icon="sym_o_toggle_on" title="Booking of ${resourceName}" width="560">
+                                <label text="A change applies to new and changed bookings; those already made are kept, and the ones it no longer allows are counted for review. Approval by its approvers with none named refuses every booking."
+                                        type="p" style="text-caption"/>
+                                <form-single name="Bookability" transition="storePolicy"
+                                        map="{assetId:assetId, facilityId:(assetId ? null : facilityId), expectedRevision:policyRevision, bookable:bookable,
+                                            approvalModeEnumId:(approvalModeEnumId || 'RbamAutomatic'), bookingHorizonDays:bookingHorizonDays,
+                                            maximumDurationMinutes:maximumDurationMinutes, softConflictOverride:softConflictOverride}">
+                                    <field name="assetId"><default-field><hidden/></default-field></field>
+                                    <field name="facilityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="bookingHorizonDays"><default-field><hidden/></default-field></field>
+                                    <field name="maximumDurationMinutes"><default-field><hidden/></default-field></field>
+                                    <field name="softConflictOverride"><default-field><hidden/></default-field></field>
+                                    <field name="bookable">
+                                        <default-field title="Bookable">
+                                            <drop-down><option key="Y" text="Bookable"/><option key="N" text="Not bookable"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="approvalModeEnumId">
+                                        <default-field title="Booked">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'approvalModes', selected:approvalModeEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="endPolicy" hide="!managed">
+                                        <default-field title="">
+                                            <check><option key="Y" text="No longer managed (booked as before)"/></check>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time/></default-field></field>
+                                    <field name="changeReason" hide="!managed"><default-field title="Why it changes"><text-line/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="Save" type="primary"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="resourceName"/><field-ref name="policyText"/></column>
+                        <column><field-ref name="blockText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="No bookable resource matches. A room or piece of equipment is bookable from its own record." type="p" style="m-muted"
+                        condition="!resourceList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Scheduling › ResourcePolicyDetail (design-maintenance §7 ResourcePolicyDetail; style-guide §3.3 Record; impl-maintenance
+    P15): one resource's booking rules (assetId or facilityId; mantle.work.ResourceBookingServices.get#ResourceBookingPolicy). The
+    header (the policy in words, the setup findings); BookingPolicy (a resource administrator's store#ResourceBookingPolicy, from a
+    date, with the reason for a change; a resource with no policy is booked as before); BookingApprovers (the dated BookingApprover
+    rows, store#ResourceApprover: add, or end with another approver or the reason the waiting requests are left); PolicyImpact (the
+    bookings already made that the rules in force no longer allow, kept for review: preview#ResourceBookingPolicy); its availability
+    for two weeks (get#ResourceAvailability) and the history of its policies. Read by a policy or resource reader of its
+    organization and by its approvers; Mantle checks every action again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Booking policy" default-menu-include="false">
+    <parameter name="assetId"/>
+    <parameter name="facilityId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storePolicy" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+    <transition-include name="storeApprover" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+    <actions>
+        <set field="resourceKey" from="{assetId:(assetId || null), facilityId:(assetId ? null : (facilityId || null))}"/>
+        <set field="policyRead" from="null"/>
+        <if condition="assetId || facilityId">
+            <service-call name="mantle.work.ResourceBookingServices.get#ResourceBookingPolicy" out-map="policyRead"
+                    transaction="force-new" ignore-error="true" in-map="resourceKey"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!policyRead?.resourceName"/>
+        <if condition="recordFound">
+            <set field="policy" from="policyRead.policy"/>
+            <set field="approverList" from="policyRead.approverList || []"/>
+            <set field="historyList" from="policyRead.historyList || []"/>
+            <set field="setupFindings" from="Array.from(policyRead.setupFindings || [])"/>
+            <set field="policyValues" from="Object.assign({}, resourceKey, {expectedRevision:policy?.revision, bookable:policy?.bookable || 'Y',
+                    approvalModeEnumId:policy?.approvalModeEnumId || 'RbamApprovers', bookingHorizonDays:policy?.bookingHorizonDays,
+                    maximumDurationMinutes:policy?.maximumDurationMinutes, timeZone:policy?.timeZone,
+                    softConflictOverride:policy?.softConflictOverride || 'N'})"/>
+            <set field="approverValues" from="Object.assign({}, resourceKey)"/>
+            <!-- the bookings the rules in force no longer allow, kept for review (PolicyImpact) -->
+            <set field="impactList" from="[]"/>
+            <if condition="policy &amp;&amp; policyRead.canEdit">
+                <service-call name="mantle.work.ResourceBookingServices.preview#ResourceBookingPolicy" out-map="impact"
+                        transaction="force-new" ignore-error="true"
+                        in-map="Object.assign({}, resourceKey, {bookable:policy.bookable, approvalModeEnumId:policy.approvalModeEnumId,
+                            bookingHorizonDays:policy.bookingHorizonDays, maximumDurationMinutes:policy.maximumDurationMinutes})"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="impactList" from="impact?.impactList || []"/>
+            </if>
+            <service-call name="mantle.work.ResourceBookingServices.get#ResourceAvailability" out-map="availability"
+                    transaction="force-new" ignore-error="true" in-map="resourceKey"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="scheduleRows" from="availability?.intervalList || []"/>
+            <set field="schedulePolicyText" from="null"/>
+            <set field="scheduleResource" from="resourceKey"/>
+            <set field="scheduleReadsPolicy" from="false"/>
+        </if>
+    </actions>
+    <widgets>
+        <label text="This resource is not available." type="p" condition="!recordFound"/>
+        <section name="PolicyRecord" condition="recordFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-x-md q-mb-sm">
+                    <container style="col-12 col-md">
+                        <label text="${policyRead.resourceName}" type="h5"/>
+                        <label text="${policyRead.policyText}" type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto">
+                        <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="Equipment record" link-type="anchor" condition="assetId"
+                                parameter-map="{assetId:assetId}"/>
+                        <link url="${sharedLinks['Facilities/FacilityDetail']}" text="Facility record" link-type="anchor" condition="!assetId"
+                                parameter-map="{facilityId:facilityId}"/>
+                        <link url="${sharedLinks['Scheduling/Blackouts']}" text="Blackouts" link-type="anchor" parameter-map="resourceKey"/>
+                    </container>
+                </container>
+                <section-iterate name="SetupFindings" list="setupFindings" entry="finding">
+                    <widgets><label text="${finding}" type="p" style="text-warning"/></widgets>
+                </section-iterate>
+                <container-box>
+                    <box-header title="Booking policy"/>
+                    <box-body>
+                        <label text="Not managed: it is booked at once, or by its approvers when it has any. Save a policy to manage it." type="p"
+                                style="m-muted" condition="!policy"/>
+                        <label text="In force since ${policy?.fromText}, set by ${policy?.createdByName}${policy?.changeReason ? ': ' + policy.changeReason : ''}"
+                                type="p" style="text-caption m-muted" condition="policy"/>
+                        <form-single name="BookingPolicy" transition="storePolicy" map="policyValues">
+                            <field name="assetId"><default-field><hidden/></default-field></field>
+                            <field name="facilityId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="bookable">
+                                <default-field title="Bookable">
+                                    <drop-down><option key="Y" text="Bookable"/><option key="N" text="Not bookable"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="approvalModeEnumId">
+                                <default-field title="Booked">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'approvalModes', selected:approvalModeEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="maximumDurationMinutes">
+                                <default-field title="Longest booking (minutes)"><text-line size="8" input-type="number"/></default-field>
+                            </field>
+                            <field name="bookingHorizonDays">
+                                <default-field title="Booked up to (days ahead)" tooltip="Also how far a repeating booking may run"><text-line size="8" input-type="number"/></default-field>
+                            </field>
+                            <field name="timeZone">
+                                <default-field title="Time zone">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'timeZones', selected:timeZone}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="softConflictOverride">
+                                <default-field title="Over another booking">
+                                    <drop-down><option key="N" text="Never"/><option key="Y" text="With the override permission and a reason"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time/></default-field></field>
+                            <field name="changeReason"><default-field title="Why it changes"><text-line/></default-field></field>
+                            <field name="submit" hide="!policyRead.canEdit"><default-field title=""><submit text="Save policy" type="primary"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="bookable"/><field-ref name="approvalModeEnumId"/></field-row>
+                                <field-row><field-ref name="maximumDurationMinutes"/><field-ref name="bookingHorizonDays"/></field-row>
+                                <field-row><field-ref name="timeZone"/><field-ref name="softConflictOverride"/></field-row>
+                                <field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Approvers"/>
+                    <box-toolbar>
+                        <container-dialog id="AddApproverDialog" condition="policyRead.canEdit" button-text="Add approver" icon="sym_o_person_add"
+                                title="Add an approver of ${policyRead.resourceName}" width="520" type="primary">
+                            <form-single name="AddApprover" transition="storeApprover" map="approverValues">
+                                <field name="assetId"><default-field><hidden/></default-field></field>
+                                <field name="facilityId"><default-field><hidden/></default-field></field>
+                                <field name="approverPartyId">
+                                    <default-field title="Person">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'approvers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Add approver"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No approver: bookings are approved at once unless its policy requires approval, which then refuses them." type="p"
+                                style="m-muted" condition="!approverList.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="BookingApprovers" list="approverList" skip-form="true" paginate="false">
+                            <field name="partyName"><default-field title="Approver"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EndApprover_${partyId}" condition="policyRead.canEdit" button-text="End"
+                                            icon="sym_o_person_remove" title="End ${partyName} as an approver" width="520">
+                                        <label text="Requests waiting for approval need another approver, or the reason they are left." type="p" style="text-caption"/>
+                                        <form-single name="EndApprover" transition="storeApprover"
+                                                map="{assetId:assetId, facilityId:(assetId ? null : facilityId), approverPartyId:partyId, end:'Y'}">
+                                            <field name="assetId"><default-field><hidden/></default-field></field>
+                                            <field name="facilityId"><default-field><hidden/></default-field></field>
+                                            <field name="approverPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="replacementPartyId">
+                                                <default-field title="Hand over to">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'approvers'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="unresolvedReason"><default-field title="Or why the requests are left"><text-line/></default-field></field>
+                                            <field name="submit"><default-field title=""><submit text="End approver"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="PolicyImpactSection" condition="impactList.length"><widgets>
+                <container-box>
+                    <box-header title="Bookings its rules no longer allow"/>
+                    <box-body-nopad>
+                        <form-list name="PolicyImpact" list="impactList" skip-form="true" paginate="false">
+                            <field name="label"><default-field title="Booking"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="finding"><default-field title="Finding"><display/></default-field></field>
+                            <field name="consequence"><default-field title="Then"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                </widgets></section>
+                <section-include name="ResourceSchedule" location="component://mr-boss/template/MaintenanceSchedulingParts.xml"/>
+                <section name="PolicyHistorySection" condition="historyList.length &gt; 1"><widgets>
+                <container-box>
+                    <box-header title="Policy history"/>
+                    <box-body-nopad>
+                        <form-list name="PolicyHistory" list="historyList" skip-form="true" paginate="false">
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="approvalModeText"><default-field title="Booked"><display/></default-field></field>
+                            <field name="maximumDurationMinutes"><default-field title="Longest (min)"><display/></default-field></field>
+                            <field name="createdByName"><default-field title="Set by"><display/></default-field></field>
+                            <field name="changeReason"><default-field title="Why"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                </widgets></section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -44,6 +44,12 @@ const ids = {
     roomOutageId: "BOSS_MNT_OUT_ROOM201",
     roomOutageFacilityId: "BOSS_MNT_ROOM_201",
     restoredOutageId: "BOSS_MNT_OUT_COMP_BELT",
+    // P15: Room 101 managed (maint.booking approves, two hours at most), Room 103 not managed, the planner's vendor walkthrough in
+    // Room 101 next Tuesday and the carpet replacement's blackout over it
+    managedRoomId: "BOSS_MNT_ROOM_101",
+    unmanagedRoomId: "BOSS_MNT_ROOM_103",
+    vendorEventId: "BOSS_MNT_EV_VENDOR",
+    blackoutId: "BOSS_MNT_BLK_ROOM101",
     // P6: the procedures (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
     // steps, a dependency and a pressure reading), the room inspection (approved, for rooms), the van's pre-trip check (a draft) and
     // the old compressor checklist (retired)
@@ -66,7 +72,8 @@ const ids = {
     staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities"],
     homeOnlyMenu: ["Home"],
     authorMenu: ["Home", "Procedures"],
-    adminMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Settings"],
+    bookingMenu: ["Home", "Scheduling"],
+    adminMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Scheduling", "Settings"],
     settingsMenu: ["SettingsHome", "WorkPolicy"],
     keys: ["g m", "g w", "g r", "g p", "g l", "g e", "g f"]
 }
