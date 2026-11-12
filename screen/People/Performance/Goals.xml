@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Goals (design-people §11 Goals; style-guide §3.2 List; impl-people P20): the goals the user reads, from
+    mantle.humanres.ReviewServices.find#Goals: Mine (the default), My team's (a manager's reports'), All (a development reader's
+    employers'), a person's (partyId) or a review's (performanceReviewId, from ReviewDetail); Open, Closed or every state. Each goal is a
+    WorkEffort of the WetGoal type and WepGoal purpose (never a task: it is in no task list, CalDAV collection, project or search),
+    with its owner, parent goal, period, measure, target, actual value and unit, progress and state; a linked task's completion is
+    evidence, never the goal met. Add goal is the one primary (store#Goal: the user's own, a report's for their manager, an employee's
+    for a development editor; agreed in a review when opened from one); a row's Update progress, Change, Close (with its outcome) and
+    Cancel (danger, with the reason) for one who may change it. Every People user's and a self-service employee's (the area's own
+    grant, BOSS_PPL_PERFORMANCE); what each reads and changes is Mantle's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Goals" default-menu-index="2" menu-image="sym_o_flag" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="state"/>
+    <parameter name="partyId"/>
+    <parameter name="performanceReviewId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a goal agreed, changed, its progress recorded, closed or cancelled: Mantle checks who may, the measure and the revision -->
+    <transition name="storeGoal">
+        <actions>
+            <service-call name="mantle.humanres.ReviewServices.store#Goal" out-map="stored"
+                    in-map="{workEffortId:(workEffortId || null), partyId:(goalPartyId || null), parentWorkEffortId:(parentWorkEffortId ?? null),
+                        performanceReviewId:(goalReviewId || null), title:(title ?? null), description:(description ?? null), fromDate:(fromDate ?? null),
+                        thruDate:(thruDate ?? null), measureText:(measureText ?? null), targetValue:(targetValue ?? null), actualValue:(actualValue ?? null),
+                        unitText:(unitText ?? null), percentComplete:(percentComplete ?? null), progressNote:(progressNote ?? null),
+                        close:(close || null), outcomeEnumId:(outcomeEnumId || null), cancel:(cancel || null), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${cancel ? 'Goal cancelled' : close ? 'Goal closed' : workEffortId ? 'Goal saved' : 'Goal added'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="showing" from="['mine', 'team', 'all'].includes(show) ? show : 'mine'"/>
+        <set field="stateShowing" from="['open', 'closed', 'all'].includes(state) ? state : 'open'"/>
+        <service-call name="mantle.humanres.ReviewServices.find#Goals" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{show:showing, state:stateShowing, partyId:(partyId || null), performanceReviewId:(performanceReviewId || null),
+                    pageIndex:(pageIndex || 0)}"/>
+        <set field="goalsError" from="ec.message.hasError()"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            goals = Array.from(found?.goals || [])
+            goalsCount = found?.goalsCount || 0
+            goalsPageIndex = found?.goalsPageIndex || 0
+            goalsPageSize = found?.goalsPageSize || 20
+            goalsPageMaxIndex = found?.goalsPageMaxIndex || 0
+            goalsPageRangeLow = found?.goalsPageRangeLow || 0
+            goalsPageRangeHigh = found?.goalsPageRangeHigh || 0
+            showOptions = [{key: 'mine', text: 'Mine'}].concat(caps.team ? [{key: 'team', text: 'My team'}] : [])
+                .concat(caps.developView ? [{key: 'all', text: 'All'}] : [])
+            outcomeOptions = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'GoalOutcome')
+                .orderBy('sequenceNum').disableAuthz().list()).map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            parentOptions = goals.filter(row => row.open).map(row => ({key: row.workEffortId, text: row.title + ' · ' + row.ownerName}))
+            stateColors = {WeInProgress: 'primary', WeComplete: 'positive', WeCancelled: 'grey-8'}
+            // who a new goal is for: the person or the review the list is of, else the user (a manager or development chooses)
+            choosesPerson = !partyId && !performanceReviewId && !!(caps.team || caps.developEdit)
+            newGoal = {goalPartyId: partyId || null, goalReviewId: performanceReviewId || null}
+            findValues = {show: showing, state: stateShowing, partyId: partyId || null, performanceReviewId: performanceReviewId || null}
+            scopeText = performanceReviewId ? 'The goals agreed in this review.' : partyId ? 'The goals of one person.' : ''
+            reviewUrl = performanceReviewId ? (sharedLinks?.['Performance/ReviewDetail'] || '/qapps/People/Performance/ReviewDetail') : null
+            emptyText = goalsError ? 'These goals are not available to you.'
+                : showing == 'team' ? 'Your team has no goal ' + (stateShowing == 'closed' ? 'closed yet.' : 'open.')
+                : 'No goal ' + (stateShowing == 'closed' ? 'closed yet.' : 'open. Add goal agrees one: what is measured, the target and when it is due.')
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Goals" type="h5"/>
+                <label text="Agreed development and performance objectives, their measure and progress. A goal is not a task: it is in no task list." type="p" style="text-caption m-muted q-mb-none"/>
+                <label text="${scopeText}" type="p" style="text-caption q-mb-none" condition="scopeText"/>
+                <link url="${reviewUrl}" url-type="plain" text="Back to the review" link-type="anchor" icon="sym_o_arrow_back" condition="reviewUrl"
+                        parameter-map="{performanceReviewId:performanceReviewId}"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="AddGoalDialog" button-text="Add goal" icon="sym_o_add" type="primary" width="760" title="Agree a goal"
+                        condition="!goalsError">
+                    <form-single name="AddGoal" transition="storeGoal" map="newGoal">
+                        <field name="goalPartyId" hide="!choosesPerson">
+                            <default-field title="For" tooltip="Yourself, one of your reports or, for development, an employee; empty: yourself">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'people'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="goalReviewId"><default-field><hidden/></default-field></field>
+                        <field name="title"><default-field title="Goal"><text-line size="60"/></default-field></field>
+                        <field name="measureText"><default-field title="Measured by"><text-line size="40"/></default-field></field>
+                        <field name="targetValue"><default-field title="Target"><text-line size="8"/></default-field></field>
+                        <field name="unitText"><default-field title="Unit"><text-line size="12"/></default-field></field>
+                        <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                        <field name="thruDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                        <field name="parentWorkEffortId">
+                            <default-field title="Part of" tooltip="A broader goal this one serves">
+                                <drop-down allow-empty="true"><list-options list="parentOptions" key="${key}" text="${text}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description"><default-field title="Details"><text-area rows="3"/></default-field></field>
+                        <field name="submitButton"><default-field title="Add goal"><submit/></default-field></field>
+                        <field-layout>
+                            <field-ref name="goalPartyId"/>
+                            <field-ref name="title"/>
+                            <field-row><field-ref name="measureText"/><field-ref name="parentWorkEffortId"/></field-row>
+                            <field-row><field-ref name="targetValue"/><field-ref name="unitText"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-ref name="description"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+
+        <form-single name="FindGoals" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show"><radio><list-options list="showOptions" key="${key}" text="${text}"/></radio></default-field>
+            </field>
+            <field name="state">
+                <default-field title="State">
+                    <radio>
+                        <option key="open" text="Open"/>
+                        <option key="closed" text="Closed"/>
+                        <option key="all" text="All"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="partyId"><default-field><hidden/></default-field></field>
+            <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+
+        <container-box>
+            <box-body-nopad>
+                <form-list name="GoalList" list="goals" skip-form="true" paginate="true" condition="goals.length">
+                    <field name="title">
+                        <default-field title="Goal"><display text="${title}${parentTitle ? ' (part of ' + parentTitle + ')' : ''}"/></default-field>
+                    </field>
+                    <field name="ownerName"><default-field title="Whose"><display/></default-field></field>
+                    <field name="measureText"><default-field title="Measured by"><display/></default-field></field>
+                    <field name="progressText" align="right"><default-field title="Progress"><display/></default-field></field>
+                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="Progress_${workEffortId}" button-text="Update progress" icon="sym_o_trending_up" width="560"
+                                    title="Progress of ${title}" condition="canChange">
+                                <form-single name="GoalProgress" transition="storeGoal"
+                                        map="{workEffortId:workEffortId, expectedRevision:revision, actualValue:actualValue, percentComplete:percentComplete,
+                                            progressNote:progressNote}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="actualValue"><default-field title="Actual${unitText ? ' (' + unitText + ')' : ''}"><text-line size="8"/></default-field></field>
+                                    <field name="percentComplete"><default-field title="Percent complete"><text-line size="5" input-type="number"/></default-field></field>
+                                    <field name="progressNote"><default-field title="Evidence" tooltip="What shows the progress; a finished task is evidence, not the goal met"><text-area rows="3"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save progress"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="canChange">
+                                <container-dialog id="ChangeGoal_${workEffortId}" button-text="Change" icon="sym_o_edit" width="720" title="Change ${title}">
+                                    <form-single name="ChangeGoal" transition="storeGoal"
+                                            map="{workEffortId:workEffortId, expectedRevision:revision, title:title, measureText:measureText, targetValue:targetValue,
+                                                unitText:unitText, fromDate:fromDate, thruDate:thruDate, description:description}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="title"><default-field title="Goal"><text-line size="60"/></default-field></field>
+                                        <field name="measureText"><default-field title="Measured by"><text-line size="40"/></default-field></field>
+                                        <field name="targetValue"><default-field title="Target"><text-line size="8"/></default-field></field>
+                                        <field name="unitText"><default-field title="Unit"><text-line size="12"/></default-field></field>
+                                        <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                        <field name="thruDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                        <field name="description"><default-field title="Details"><text-area rows="3"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save goal"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CloseGoal_${workEffortId}" button-text="Close" icon="sym_o_flag_check" width="480" title="Close ${title}">
+                                    <form-single name="CloseGoal" transition="storeGoal" map="{workEffortId:workEffortId, expectedRevision:revision, close:'true'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="close"><default-field><hidden/></default-field></field>
+                                        <field name="outcomeEnumId">
+                                            <default-field title="Outcome"><drop-down><list-options list="outcomeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Close goal"><submit confirmation="Close ${title}? It is not changed after."/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="CancelGoal_${workEffortId}" button-text="Cancel goal" icon="sym_o_cancel" width="480" title="Cancel ${title}">
+                                    <form-single name="CancelGoal" transition="storeGoal" map="{workEffortId:workEffortId, expectedRevision:revision, cancel:'true'}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="cancel"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Cancel goal"><submit type="danger" confirmation="Cancel ${title}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="ownerName"/><field-ref name="periodText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="progressText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!goals.length" text="${emptyText}"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

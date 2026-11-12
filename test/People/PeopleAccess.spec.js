@@ -72,6 +72,9 @@
 // RequestDetail's one qvt render as the handler (the case inside its AI opt-out) and the employee's html render by their own
 // grant; Grievances opened to the self-service employee by its own grant and refused another app's user, and the Employees group
 // with Grievances.
+// P20: a review cycle set up by a development editor of the employer (the HR officer refused with the same parameters, Services
+// refused to Retail's review administrator); Review cycles the review administrator's (the HR officer and the employee refused the
+// screen), Reviews the employee's by the area's own grant and their self-service link to it; the Performance group per user.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -283,6 +286,15 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             const development = shell(user, true, "Development/Qualifications", "Development")
             if (JSON.stringify(development.names) !== JSON.stringify(menu))
                 problems.push(`${label} Development group: ${development.status} ${development.names}`)
+        }
+        // P20: Reviews & goals' reviews and goals every People user's; its review cycles and forms the review administrator's
+        for (const [user, menu, label] of [
+            [users.develop, ids.developPerformanceMenu, "the review administrator's"],
+            [users.reader, ids.performanceMenu, "the reader's"]
+        ]) {
+            const performance = shell(user, true, "Performance/Reviews", "Performance")
+            if (JSON.stringify(performance.names) !== JSON.stringify(menu))
+                problems.push(`${label} Performance group: ${performance.status} ${performance.names}`)
         }
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
@@ -1769,6 +1781,54 @@ feature(
                     admin: "RECORD_UNAVAILABLE",
                     system: "RECORD_UNAVAILABLE"
                 }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "reviews: a review cycle set up by a development editor of the employer (the HR officer refused with the same parameters, Services refused to Retail's review administrator); Review cycles the review administrator's (the HR officer and the employee refused); Reviews the employee's by the area's own grant, and their self-service links their reviews",
+    {
+        when() {
+            const R = "mantle.humanres.ReviewServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const cycle = organizationPartyId => ({
+                organizationPartyId,
+                cycleName: "People access spec cycle",
+                reviewTemplateId: ids.reviewTemplateId,
+                periodFromDate: "2026-01-01",
+                periodThruDate: "2026-12-31"
+            })
+            const codes = {
+                developStores: code(
+                    asUser(users.develop, () => system(() => refusal(R + "store#Cycle", cycle(ids.organizationId))))
+                ),
+                hrStores: code(asUser(users.hr, () => system(() => refusal(R + "store#Cycle", cycle(ids.organizationId))))),
+                otherEmployer: code(
+                    asUser(users.develop, () => system(() => refusal(R + "store#Cycle", cycle(ids.otherOrganizationId))))
+                )
+            }
+            const problems = []
+            const cycles = screenRefusal(users.develop, "Performance/ReviewCycles")
+            if (cycles) problems.push(`the review administrator's review cycles: ${cycles}`)
+            for (const [user, who] of [
+                [users.hr, "the HR officer"],
+                [users.employee, "the employee"]
+            ]) {
+                const refused = screenRefusal(user, "Performance/ReviewCycles")
+                if (!unauthorized(refused)) problems.push(`${who} opens the review cycles: ${refused || "opened"}`)
+            }
+            const own = screenRefusal(users.employee, "Performance/Reviews")
+            if (own) problems.push(`the employee's Reviews: ${own}`)
+            const links = asUser(users.employee, () =>
+                invoke("ironstone.people.ContextServices.get#SelfServiceContext", {appRoot: "Commons"})
+            )
+            if (links.reviewsUrl !== "/qapps/People/Performance/Reviews?show=mine")
+                problems.push(`the employee's reviews link: ${links.reviewsUrl}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes == {developStores: "accepted", hrStores: "PERMISSION_DENIED", otherEmployer: "ORGANIZATION_DENIED"}
             problems.join("\n") == ""
         }
     }

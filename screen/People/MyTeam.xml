@@ -26,7 +26,9 @@ along with this software (see the LICENSE.md file). If not, see
     (send#MissingTimeReminders, which checks per person that the manager approves that week and counts the others as skipped).
     P12: Who is out, the next two weeks of the team's approved leave (mantle.humanres.LeaveServices.get#TeamAbsences: "{person} · Out",
     never the leave type or the reason), each opening the request, with the team calendar; a leave decision waiting opens
-    LeaveRequestDetail. Reviews due (P20) join with their phase. -->
+    LeaveRequestDetail. P20: Reviews due, the open reviews the manager gives (mantle.humanres.ReviewServices.find#Reviews' team:
+    the person, the cycle, what waits and the due day, never a rating), each opening ReviewDetail (Reviews & goals is every
+    People user's); a review's approval waiting opens ReviewDetail too. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="My team" default-menu-index="2" menu-image="sym_o_diversity_3" menu-image-type="icon">
     <!-- P10: Remind missing time, the selected people (selectedIds, a comma list of their parties), for last week -->
@@ -51,6 +53,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="outThru" from="new Date(Date.parse(outFrom + 'T12:00:00Z') + 13 * 86400000).toISOString().substring(0, 10)"/>
         <service-call name="mantle.humanres.LeaveServices.get#TeamAbsences" out-map="outFound" transaction="force-new" ignore-error="true"
                 in-map="{start:outFrom, end:outThru}"/>
+        <!-- P20: the open reviews the manager gives (Mantle answers those they give while they work for the employer) -->
+        <if condition="sharedLinks?.['Performance/ReviewDetail']">
+            <service-call name="mantle.humanres.ReviewServices.find#Reviews" out-map="reviewsFound" transaction="force-new"
+                    ignore-error="true" in-map="{show:'team', pageSize:50}"/>
+        </if>
         <!-- P10: last week's missing weeks of the people the manager may remind (their live reports among them) -->
         <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingFound" transaction="force-new" ignore-error="true"
                 in-map="{list:'missing', withCounts:false}"/>
@@ -72,8 +79,15 @@ along with this software (see the LICENSE.md file). If not, see
                     ? {openPath: sharedLinks['Staffing/PositionDetail'], openParameters: {emplPositionId: row.sourceId}}
                     : row.approvalKindEnumId == 'PakLeave'
                     ? {openPath: sharedLinks['Time/LeaveRequestDetail'], openParameters: {leaveRequestId: row.sourceId}}
+                    : row.approvalKindEnumId == 'PakReview' && sharedLinks['Performance/ReviewDetail']
+                    ? {openPath: sharedLinks['Performance/ReviewDetail'], openParameters: {performanceReviewId: row.sourceId}}
                     : row.partyId ? {openPath: sharedLinks['Employees/Employee360'], openParameters: {partyId: row.partyId}}
                     : {openPath: sharedLinks['Approvals'], openParameters: {}}))
+            // P20: the reviews the manager gives that are still open, the earliest due first (as find#Reviews orders them)
+            showsReviews = !!sharedLinks?.['Performance/ReviewDetail']
+            reviewRows = Array.from(reviewsFound?.reviews || []).filter(row =>
+                ['PrvInProgress', 'PrvApproval', 'PrvFinalized'].includes(row.statusEnumId)).map(row => Object.assign({}, row, {
+                waitsText: row.todoText || row.statusText}))
             decisionsMoreText = decisionsFound && decisionsFound.dueWorkCount > decisionRows.length
                 ? 'The first ' + decisionRows.length + ' of ' + decisionsFound.dueWorkCount + '.' : ''
             // P12: the team's absences (not the manager's own, nor a colleague's the calendar shows them as an employee: the ones
@@ -165,6 +179,35 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="whenText"><default-field title="When"><display/></default-field></field>
                         </form-list>
                         <label text="No one on your team is out in the next two weeks." type="p" style="m-muted q-pa-md" condition="!outRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- P20: the open reviews the manager gives -->
+        <section name="ReviewsDue" condition="showsReviews">
+            <widgets>
+                <container-box>
+                    <box-header title="Reviews due"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Performance/Reviews']}" link-type="anchor" text="All reviews" parameter-map="{show:'team'}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ReviewRows" list="reviewRows" skip-form="true" paginate="false" condition="reviewRows.length">
+                            <field name="personName">
+                                <default-field title="Person">
+                                    <link url="${sharedLinks['Performance/ReviewDetail']}" text="${personName}" link-type="anchor"
+                                            parameter-map="{performanceReviewId:performanceReviewId}"/>
+                                </default-field>
+                            </field>
+                            <field name="cycleName"><default-field title="Cycle"><display/></default-field></field>
+                            <field name="waitsText"><default-field title="Waiting"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="cycleName"/></column>
+                                <column><field-ref name="waitsText"/><field-ref name="dueText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No review you give is open." type="p" style="m-muted q-pa-md" condition="!reviewRows.length"/>
                     </box-body-nopad>
                 </container-box>
             </widgets>

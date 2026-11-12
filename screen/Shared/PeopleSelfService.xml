@@ -195,6 +195,11 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- P21: their confidential cases, and filing one -->
                             <link url="${links.grievancesUrl}" url-type="plain" text="Raise a concern" link-type="anchor-button"
                                     icon="sym_o_shield_person" condition="links?.grievancesUrl"/>
+                            <!-- P20: their own reviews and goals -->
+                            <link url="${links.reviewsUrl}" url-type="plain" text="My reviews" link-type="anchor-button"
+                                    icon="sym_o_rate_review" condition="links?.reviewsUrl"/>
+                            <link url="${links.goalsUrl}" url-type="plain" text="My goals" link-type="anchor-button"
+                                    icon="sym_o_flag" condition="links?.goalsUrl"/>
                         </container>
                     </container>
                 </container>

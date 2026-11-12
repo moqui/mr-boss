@@ -114,7 +114,7 @@ const apps = {
             {
                 who: "The People administrator of its employer",
                 what: "Change and publish the form; a training assessment also the learning administrator",
-                how: "People configure (PEOPLE_CONFIGURE); a training assessment also People develop edit (PEOPLE_DEVELOP_EDIT)"
+                how: "People configure (PEOPLE_CONFIGURE); a training assessment and a review form also People develop edit (PEOPLE_DEVELOP_EDIT)"
             },
             {
                 who: "Recruiters, development and HR readers of the employer",
@@ -165,6 +165,45 @@ const apps = {
                         who: "The session's trainer",
                         what: "Answer it for each person they assess, and read their session's answers",
                         how: "The session's trainer, while they work for its employer"
+                    }
+                ]
+            },
+            // impl-people P20: the review forms under Reviews & goals (Performance/ReviewForms), built by the review administrator
+            // (PEOPLE_DEVELOP_EDIT) or the People administrator, whom Mantle's review purpose admits (its FormPurpose editPermission)
+            Performance: {
+                purposes: ["DbfpReview"],
+                capabilities: {context: "people", edit: ["developEdit", "configure"]},
+                links: {
+                    forms: "Performance/ReviewForms/List",
+                    formDetail: "Performance/ReviewForms/FormDetail",
+                    responses: null,
+                    response: null
+                },
+                words: {
+                    listTitle: "Review forms",
+                    listCaption:
+                        "The questions of a review's self assessment, reviewer's assessment and feedback. A review template names its forms; the answers are read through the review (the person their own self assessment and, once released, the reviewer's), and a form changes by dated questions, so earlier answers keep the questions they answered.",
+                    empty: "No review form yet. Make one with New form, add its questions and publish it; a review template then names it.",
+                    formsLink: "All review forms",
+                    backLink: "Back to review forms",
+                    previewCaption:
+                        "The person, the reviewer or a colleague asked for feedback answers the published questions with these rules in People (on the review), and the server checks the answer again."
+                },
+                accessRows: [
+                    {
+                        who: "The review administrator or the People administrator of its employer",
+                        what: "Change and publish the form",
+                        how: "People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)"
+                    },
+                    {
+                        who: "Development readers of the employer",
+                        what: "Read the form and every review's answers",
+                        how: "People develop view (PEOPLE_DEVELOP_VIEW)"
+                    },
+                    {
+                        who: "The review's person, reviewer and the colleagues asked for feedback",
+                        what: "Answer their own step once; the person reads the reviewer's answers once released",
+                        how: "Their step on the review"
                     }
                 ]
             }

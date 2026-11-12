@@ -5362,6 +5362,278 @@ form) and P18.
   half): a cycle starts for a team, an employee and their manager assess, the review is released and acknowledged,
   and the manager's private notes appear in no export or Chatter.
 
+**Built Nov 12 (P20).** mr-mantle b465da64, mr-boss (branch `ppl/p20`).
+- Checked first (the code over the plan): F6 (the PerformanceReview, PerformanceReviewItem and PerformanceNote sketches in one XML comment
+  of HumanResourcesEntities.xml: a review keyed to employee, manager and a payment, items by a fixed type list with a five-step rating,
+  a note keyed by employee and date; no cycle, template, step or goal record); P5's approvals (`Approvals.js` kinds, `request`,
+  `sourceSummary`, `keepWaiting`, `sourceChanged`, `reroute` called with no kind by P6's separation, a manager change and the daily job,
+  `find#OwnedApprovals` and `transfer#ApprovalOwner` with P16's openings and P21's cases), P12's opt-out (an entity field, a section, a
+  form field; `isAgentRender`), P16's survey builder (`DbfpReview` registered, edited with PEOPLE_CONFIGURE, read with
+  PEOPLE_DEVELOP_VIEW; `publishedFormFor`, `recordAnswer`, `answersOf`; a FormInvitation naming the respondent and the record, no link),
+  P19's comma-list permission and Development mount of the registration (SurveyApps.js `mounts`), P18's and P21's content hosts
+  (`get#RecordLinkInfo`'s content map and visibility branches, RecordFiles' `get#ContentType`, Chatter's record title, the People
+  root's panel check) and P19's stored certificate (a page and PDF written once). Also: every task list (`get#MyTasks`,
+  `get#TaskObjectTags`, `get#FullCalendarData`, Today through People's own lifecycle tasks), the project rollup EECAs and the search
+  documents (MantleTask, MantleEvent, MantleProject) read only WetTask, WetEvent and WetProject work efforts, so a work effort of a type
+  of its own is in none of them; `get#RecordLinkInfo` admits a work effort outside a project to its owner, a party of it, a calendar
+  of it or a staff reader of WorkEffort, so a goal needs a rule of its own; design §1.4 keeps review topics' titles free of names.
+- Mantle:
+  - `entity/PeopleReviewEntities.xml` (package `mantle.humanres.ability`; the sketches' comment taken out of HumanResourcesEntities.xml):
+    `ReviewTemplate` (dated, an employer's: self assessment, feedback allowed and shared, approval before release, the review form of
+    each step), `ReviewCycle` (an employer or a unit and those under it, the template, the period and due dates; `ReviewCycleStatus`
+    draft, in progress, closed, audit-logged), `PerformanceReview` refined (a person's review of one employment in a cycle; the reviewer
+    `managerPartyId` and the state `PerformanceReviewStatus` (assessing, waiting for approval, finalized, released, acknowledged,
+    excluded) audit-logged; the overall rating on the sketch's scale; the release's stored page and PDF; the acknowledgment comment,
+    opted out of AI), `PerformanceReviewStep` (the self assessment, the reviewer's assessment, each feedback asked: assignee, due day,
+    form response and invitation, summary opted out of AI, rating, returns, who asked), `PerformanceNote` refined (the reviewer's private
+    note, its author's, opted out of AI), `PerformanceReviewContent` (the review's content host) and `PersonGoal` (a goal's measure,
+    target, actual value, unit, progress note, outcome `GoalOutcome`, owner and the review it was agreed in, keyed by its WorkEffort);
+    the sketch's PerformanceReviewItem is not built: an assessment's criteria are the questions of its review form;
+  - `data/PeopleReviewSetupData.xml`: the WorkEffort type `WetGoal` and purpose `WepGoal`; the kind `PakReview` and the topic
+    `PeopleReviewStep` (approve and refuse handlers, refusal reason required, its title the cycle, employer and step, never the
+    person); `PeopleReviewUpdate` (a step given or returned, a review released: a sentence naming the cycle and a date, never the
+    person, a rating, an answer or a note); `DbfpReview`'s registration (PeopleRecruitingSetupData) edited by PEOPLE_CONFIGURE or
+    PEOPLE_DEVELOP_EDIT;
+  - `mantle.humanres.ReviewServices` (`ReviewServices.xml`) over a new module `Reviews.js`: `find#Cycles`, `store#ReviewTemplate`,
+    `store#Cycle` (with close), `start#Cycle` (with preview), `find#Reviews`, `get#Review`, `store#Assessment`, `submit#Feedback`,
+    `change#ReviewState` (requestFeedback, cancelFeedback, return, finalize, approve, refuse, release, acknowledge, reassign, exclude),
+    `approve#ReviewStep`, `refuse#ReviewStep`, `store#ReviewNote`, `get#ReviewRelease`, `check#ReviewAccess`, `create#ReviewContent`,
+    `save#ReviewContentFile`, `find#Goals` and `store#Goal`, their reason codes in the descriptions. Who: a development reader
+    (PEOPLE_DEVELOP_VIEW) of the employer reads every review and step and a development editor sets up templates and cycles, starts,
+    closes, returns the reviewer's assessment, releases, changes the reviewer and excludes; the reviewer (while they work for the
+    employer) reads every step but feedback an earlier reviewer asked for, assesses, asks for and withdraws feedback, returns the self
+    assessment, finalizes and releases; the person reads their state and own self assessment and, once released, the reviewer's
+    assessment, the rating and the feedback the template shares, and acknowledges; a feedback giver their own feedback; an approver of
+    the PakReview step the steps (never a note); a private note its author alone; missing and unauthorized alike `RECORD_UNAVAILABLE`;
+  - start: one review per current employee of the employer in scope who has none in the cycle, each in its own transaction; the
+    reviewer the manager of the employment's live line; a person with none named `NO_REVIEWER` and left out; the person and the reviewer
+    told; a later start adds who was left out. A step is answered once on its form (a FormResponse its FormInvitation locks, naming the
+    person, the respondent and the step) or as a summary, and locked; a return (with its reason) reopens it. Finalizing needs the
+    reviewer's assessment submitted and nothing waiting; with the template's approval it waits for a People approval of kind PakReview
+    (no rule: the employer's HR officers, `defaultRole` ParHr; never the reviewer who asks or the person), whose refusal returns the
+    reviewer's assessment. Releasing renders the review once (Mantle's `template/humanres/ReviewRelease.print.html.fancy`: the person,
+    cycle, reviewer, overall rating, the self and reviewer's assessments with their answers, the shared feedback; never a note), stores
+    its page and PDF on the review and tells the person; a PDF that fails is logged and the page kept;
+  - goals: a WorkEffort of the `WetGoal` type and `WepGoal` purpose (title, period, percent complete, parent goal, restricted, owned by
+    the person, no WorkEffortParty) with its PersonGoal; set by the person, the manager of a live line at the employer or a development
+    editor of the employer; closed with an outcome or cancelled with a reason; read by those and by the reviewer of the review it was
+    agreed in;
+  - the lifecycle participant (`Approvals.js`): `find#OwnedApprovals` lists the open reviews the user reviews (`review:<id>`) and the
+    feedback asked of them (`reviewStep:<id>`) by the person's name, not transferable; `reroute` with no kind (P6's separation, a
+    manager change, the daily job) calls `Reviews.js rerouteSteps` in the caller's transaction: a review whose person left is excluded,
+    a reviewer who left (or whose line no longer manages the person while their assessment waits) is replaced by the manager of the
+    employment's live line, else the review waits with no reviewer, and feedback asked of a leaver is withdrawn; each review on its own;
+  - `get#RecordLinkInfo` (CommunicationServices.xml): the review host's content map entry and visibility branch (its reviewer and
+    development readers of its employer, its person once released, `check#ReviewAccess`, for every caller) and a goal's rule (a WepGoal
+    work effort: its person, their manager, its review's reviewer, development readers of its employer, `Reviews.js goalVisible`).
+- BOSS:
+  - Screens: `People/Performance` (menu 13, "Reviews & goals", `sym_o_rate_review`): `Reviews` (the default: To do, Mine, I review,
+    All; the state chip; phone columns), `Goals` (Mine, My team, All, a person's or a review's; Add goal the one primary; a row's
+    Update progress and More's Change, Close and Cancel goal), `ReviewCycles` (Open, Closed, All; New cycle the one primary; Preview
+    with who it reviews and who is left out, Start reviews; Change, Close; the Templates box), `ReviewForms` (the survey builder's
+    shared screens with People's new Performance mount, the review forms), `ReviewDetail` (out of the menu: the record header with
+    one primary by state and More; Approval; Your self assessment, Your assessment of, Your feedback on over the step's form as a
+    dynamic form of its DbForm with the summary and the rating; Steps; Your private notes; the acknowledgment; the goals of the
+    review; Files on the review's host; every text section and field `ai-opt-out`) and `ReviewRelease` (out of the menu: the stored
+    page in html-print, `ai-opt-out`);
+  - `ironstone.people` People.js: the link paths, the self-service links `reviewsUrl` and `goalsUrl` (SelfService's My reviews and My
+    goals, both mounts), `decisionUrl` for PakReview (ReviewDetail), the choices `reviewForms` and `reviewColleagues`, `reviewLink`
+    (Commons' `get#RecordLink` for a review), `performanceAreaOpens`; ContextServices' two links; People.xml: the panels admit the review
+    host, the key `g f`, the two topics; People/Approvals: `PeopleReviewStep` among `notificationTopics`; RecordFilesServices: the
+    review host (`create#ReviewContent`, the reviewer and development editors change); ChatterServices: a review's record title (the
+    person and the cycle); SurveyApps.js: the Performance mount (the review purpose, edited by `developEdit` or `configure`);
+    BossSetupData (appended): `BOSS_PPL_PERFORMANCE` (the area, an inheritable ALLOW for self-service), `BOSS_PPL_REVIEW_ADMIN` (Review
+    cycles and Review forms: ALWAYS for BOSS_PEOPLE_DEVELOP, denied to BOSS_PEOPLE and BOSS_PEOPLE_SELF), the two topics' links, and
+    the lifecycle participant's description; BossPeopleDemoData (appended): Retail's Annual review template (`BOSS_PPL_RT_ANNUAL`: self
+    assessment, feedback kept by the reviewer, no approval, no form), no cycle.
+- Specs: Mantle `test/humanres/Reviews` (4 features, stepwise, 3.3 s: 0.72, 0.79, 0.95, 0.88: a template's and a cycle's refusals
+  (another employer, a non-editor, a form not the employer's, dates), the preview changing nothing, the start making three reviews and
+  naming the two people with no manager, a second start adding none, a started cycle and a used template refused a change, the to-do
+  lists; the self assessment once, a colleague refused, the note the reviewer's, feedback asked and given once, the form's missing and
+  invalid answers and an unknown rating refused, what the person, the giver, the reviewer, development, another employer and a
+  colleague read (the note the author's alone); finalizing waiting for HR, the reviewer's and the person's decisions refused, the
+  notice's title naming the cycle and not the person, a refusal returning the assessment with its reason, the approval, the release
+  refused before and repeated after, the stored release with the assessment and rating and without the note or the feedback, the
+  person reading the assessment and rating after release and never the note or the feedback, a note refused after release, the files
+  and the record link the person's after release, the acknowledgment, no notice holding a note, a summary or a rating; a reviewer
+  changed by development (not by the reviewer), the new one reading none of the earlier note and the earlier one nothing, the lifecycle
+  lookup, the reviewer leaving (the review back to the line's manager, the leaver's own review waiting with no reviewer), the note read
+  again by its author, goals set by the person and their manager and refused to a colleague, the measure's progress, the review's
+  goals, the goal's record link, the WetGoal type outside every task list (My tasks, the phone's Tasks collection, People's own due
+  work), a closed goal refused a change); Training's check of a development editor's form now names an exit interview (the review
+  purpose admits them). BOSS `test/People/PeopleReviews` (3 features, 1.0 s: 0.26, 0.36, 0.34: ReviewCycles' one qvt render as the
+  review administrator with the preview, Templates and the choices `reviewForms` and `reviewColleagues` with a selected value off the
+  page; Reviews' one qvt render as Tomas; ReviewDetail's one qvt render as Hannah with his self assessment, the form's field, the rating,
+  her note and the opt-out markers, and its one agent (tui) render without the note or the self assessment; her assessment posted
+  through `assess` with authorization on; Goals' one qvt render as Tomas; ReviewRelease's one html-print render as Tomas without the
+  note). `PeopleAccess` gains one feature (0.42 s: a cycle stored by the review administrator, the HR officer refused with the same
+  parameters, Services refused to Retail's administrator; Review cycles opened by the administrator and refused to the HR officer and
+  the employee; Reviews opened to the employee by the area's grant; the employee's self-service link) and its menu feature the
+  Performance group (PeopleSpecLib: every menu gains Performance, `performanceMenu`, `developPerformanceMenu`, the key `g f`,
+  `reviewTemplateId`). Acceptance, written and not run: `acceptance/People/PeopleReviewsUsable` (4 features: the review administrator
+  adds a template asking for approval and starts Store Operations' cycle from Review cycles; Tomas submits his self assessment, Hannah
+  keeps a private note, assesses him and finalizes; the HR officer approves on ReviewDetail, Hannah releases, Tomas reads and prints
+  it, acknowledges it and agrees a goal from it; the note in none of Reviews' CSV, the review's Chatter panel, Tomas's timeline, the
+  notices, search or an agent's render).
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Reviews, Training, FormDefinitions,
+  PeopleApprovals, PeopleEmployment, PeopleScheduledChanges, PeopleCases, RecordLinks, RecordVisibility, Qualifications, Recruiting,
+  WorkMyTasks, Dav, PeopleChecklists, Offers, LeaveRequests and CaseFeedback 108 of 108 (mr-mantle 38.8 s of features); BOSS
+  PeopleReviews, PeopleAccess, PeopleSelfService, PeopleTraining, PeopleApprovals, PeopleSkills, PeopleRecruiting, RecordFiles,
+  Chatter, CustomerServiceFeedback, CustomerServiceTemplates, CustomerServiceAccess, TodayPanel, AdminLifecycle, PeopleLifecycle,
+  PeopleEmployees, PeopleLeave, Notifications and PeopleOffers 146 of 146 (mr-boss 39.1 s). A check of each new spec failed when
+  changed (a mutation, put back). One-off renders (a spec not kept): ReviewCycles, Reviews, Goals and ReviewDetail in tui, ReviewDetail
+  in html as the reviewer and as a person who does not read it (not available), Review forms, All reviews and My team's goals in qvt;
+  all without error. `moqui lint --screens` (release binary): 136 flagged sites as before, none in the screens P20 added or touched, no
+  TUI worklist entry for them. Prettier clean on the new and changed JavaScript (People.js's earlier `openingOptions` lines left as
+  merged). Not run: `./moq test-apps`, the acceptance suite.
+- Inventories: usl-inventory's People Added table (the ReviewServices rows; "P1 to P21"); ss-inventory's P20 note (no baseline form is
+  mapped).
+- Design edits: design-people (header; §1.2 Reviews & goals; §1.4 the two topics; §11 as built; §12 the topic's handlers; §15 the
+  review release); design-drawers-commons §4 (the `PeopleReviewStep` row); design-admin §14 (People's participant: reviews).
+- Findings (provisional, numbered by the lead):
+  - the sketch's PerformanceReviewItem is not built: an assessment's criteria are the questions of the step's review form (P16's
+    `DbfpReview`), and a step with no form is a written summary and, for the reviewer, the overall rating on the sketch's scale;
+  - review topics' titles name no person (design §1.4's rule), so a notice reads "A review for Annual 2026 waits for your assessment,
+    by …"; the approval's message, Approvals and ReviewDetail name the person;
+  - with no approval rule the employer's HR officers decide a review's finalizing (`defaultRole` ParHr, as offers): the person's manager
+    is usually the reviewer who asks, and there is no "manager's manager" role; an employer's PakReview rule routes it otherwise;
+  - the reviewer is the manager of the employment's live line when the cycle starts; the design's "reviewer rule" is not built (no
+    other rule), and a person with no manager is left out with `NO_REVIEWER` until a line exists and the cycle is started again, or
+    development changes the reviewer once a review exists;
+  - a private note is read by its author alone, development and HR included; a replaced reviewer no longer reads the review, so not
+    their own notes either; nothing hands a note on;
+  - a new reviewer reads none of the feedback the earlier one asked for (design §11's "do not silently disclose earlier feedback");
+    development and an approver read it;
+  - a step is submitted once, with no draft saved for later; a return reopens it;
+  - feedback is asked by the reviewer alone, never anonymous; the person reads it only when the template shares it, and is not shown
+    who was asked before release; development withdraws it but asks none;
+  - a goal's owner is on PersonGoal, not a WorkEffortParty row, so no assignment list (Projects', Commons') sees it; linking the tasks
+    that implement it (design §11 Goals) and team or department goals are not built; a parent goal is one of the same employer; a goal
+    has no record link outside Goals (it is in no search);
+  - not built: Today's review step due, MyTeam's reviews due (design §1.2) and Employee360's reviews (SkillsAndReviews); the notices
+    carry the due dates;
+  - a template a started cycle uses is not changed (end it and add another); there is no copy;
+  - the reviewer follows the line only when `reroute` runs (a separation, an applied manager change, the daily job), as approvals do
+    (P5's finding); P3's `change#Manager` alone leaves the reviewer until then;
+  - a review's files and Chatter (People's panels) are the reviewer's and development's and become the person's once released, so a
+    reviewer's Chatter note is not private: ReviewDetail shows no Chatter panel, and the private notes are their own record;
+  - the review purpose's forms are built under Review forms by the review administrator and still listed in the People
+    administrator's Forms.
+- For the lead:
+  - budget share: mr-mantle about 3.3 s (Reviews); mr-boss about 1.4 s (PeopleReviews 1.0 s, PeopleAccess's feature 0.4 s); no client
+    spec;
+  - merge hot spots (P22 runs beside; ppl/fix1 merges first): mr-mantle `Approvals.js` (`PERFORMANCE_REVIEW`, `reviews()`, the
+    `PakReview` kind after `PakTraining`, `reroute`'s review call, `findOwnedApprovals`' review rows, `transferApprovalOwner`'s refusal),
+    `party/CommunicationServices.xml` (`get#RecordLinkInfo`'s description, content map and the review and goal branches after the
+    qualification's), `entity/HumanResourcesEntities.xml` (the sketches' comment removed), `data/PeopleRecruitingSetupData.xml` (the
+    review purpose's edit permission), `DevelopmentServices.xml` (header), `test/humanres/Training.spec.js` (the development editor's form
+    check); mr-boss `service/ironstone/people/People.js` (`linkPaths`' end, `performanceLocation`, `decisionUrl`, the P20 choices before
+    `choices`, `selfServiceContext`, `performanceAreaOpens` and `reviewLink` before the grievances helpers, the exports),
+    `ContextServices.xml` (two links), `screen/People.xml` (header, panel check, key, topics), `screen/People/Approvals.xml`,
+    `screen/Shared/PeopleSelfService.xml`, `service/ironstone/shared/SurveyApps.js` (the Performance mount), `RecordFilesServices.xml`,
+    `ChatterServices.xml`, `commons/PaletteServices.xml`, `data/BossSetupData.xml` (appended; the participant's description),
+    `data/BossPeopleDemoData.xml` (appended), `test/People/PeopleSpecLib.js` (every menu, keys, ids), `PeopleAccess.spec.js` (header, menu
+    feature, appended feature), the inventories, design-people (header, §1.2, §1.4, §11, §12, §15), design-drawers-commons §4,
+    design-admin §14, this file. Notifications use master's `ec.makeNotificationMessage()...userIds(...)` (`Reviews.js tell`), as P19's
+    decision notice does: ppl/fix1's named-recipients send replaces it there;
+  - acceptance to run with the full suites: PeopleReviewsUsable (new), PeopleApprovalsUsable (a new kind and topic on Approvals),
+    PeopleFoundationWalk (the new menu entry), PeopleTrainingUsable (the review purpose's permission beside the training one);
+  - for the user's call: who decides a review's finalizing by default (built: the employer's HR officers); whether development (the
+    review administrator) reads the reviewer's private notes (built: their author alone); whether a new reviewer reads the feedback the
+    earlier one asked for (built: no).
+
+**Review Nov 12 (P20).** A fresh review of `git diff master...ppl/p20` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §11, §15, PE-01, PE-16 and PE-21, confidentiality first (as the person before and after release, the reviewer, a new
+reviewer, a feedback giver, an approver, HR, development, ADMIN and other apps' staff, each with a valid id, through the review
+services, ReviewDetail, the record rule, Chatter, RecordFiles, notices, the id lookup, search, Today and the task lists); the
+user's three calls of Nov 12 recorded in §4; fixes committed apart per repository ("People P20 review: …"). Both branches were
+rebased onto master after People follow-up 1 (directOnly notices, after-commit interview invitations, the EventManager rows,
+`ConfidentialRecordType`) with no conflict: Approvals.js, CommunicationServices.xml, HumanResourcesEntities.xml, Training.spec.js,
+People.js, People.xml, Approvals.xml, BossSetupData.xml, PeopleSpecLib.js, PeopleAccess.spec.js and this file merged cleanly, each
+keeping both sides; the phase commits are now mr-mantle 4f559f8c and mr-boss ca90d063. Reviews, PeopleApprovals, Training and
+RecordNotes (24 of 24) and PeopleReviews and PeopleAccess (30 of 30) passed after it.
+- Checked and found sound:
+  - A private note is read by its author alone on every path: `get#Review` reads the caller's own (`authorPartyId`), so the person,
+    a later reviewer, development, HR, an approver and ADMIN (who holds `PEOPLE_DEVELOP_VIEW` and reads every step) read none;
+    `store#ReviewNote` changes only the author's; the release renders steps, never a note; no list, export, notice, Chatter host,
+    DataDocument, palette source or Assist tool reads `PerformanceNote`, and its text, the steps' summaries and the
+    acknowledgment are `ai-opt-out` (ReviewDetail's sections too; its agent render shows neither the note nor the assessments).
+  - The person reads their state and own self assessment before release and the reviewer's assessment and rating after; feedback
+    only when the template shares it; never who was asked before release; a giver their own feedback alone; missing and
+    unauthorized reviews are `RECORD_UNAVAILABLE` alike.
+  - Goals are in no task list: every Today, My tasks, CalDAV Tasks, Commons task, Projects work item, project rollup, search
+    document (MantleTask, MantleEvent, MantleProject), calendar and shell count reads typed work efforts (WetTask, WetEvent,
+    WetProject) or WorkEffortParty rows, which a goal never has; the Work EECAs and SECAs act only on tasks or named purposes; no
+    WorkEffort roll-up to a parent exists. Projects' and Commons' screens over WorkEffort go through those services.
+  - No self-approval: `record#Decision` refuses the requester (the reviewer who finalized) and the person; the person's actions are
+    their own steps and the acknowledgment; development's own review is not in their reach (`develop` excludes self).
+  - `start#Cycle` starts each person in its own transaction with its errors pushed, names `NO_REVIEWER` and each failure and goes
+    on; a second start adds only those left out. The release is rendered once (`issueRelease` returns when the page is stored),
+    under the review's lock, from a finalized review only; a PDF that fails keeps the page.
+  - Scope: templates, cycles and starts are a development editor's of the employer; the reviewer reads and acts only while they
+    work for it; goals by the person, a live line's manager at the employer or development; `reroute` with no kind re-routes each
+    review on its own (a leaver's review excluded, a leaver's feedback withdrawn, a reviewer replaced by the live line's manager).
+- Fixed:
+  - R1 (the user's call of Nov 12, 2026): a new reviewer read none of the feedback an earlier reviewer had asked for, nor could
+    withdraw what still waited, so finalizing was blocked (`FEEDBACK_WAITING`) until development withdrew it. The feedback is the
+    review's: `readsStep` gives every full reader every step, and `cancelFeedback` lets the review's reviewer withdraw any waiting
+    feedback; an earlier reviewer's notes still do not pass. Spec Reviews (Nia, made reviewer of Bo's review, reads Cy's feedback
+    that Max asked for and withdraws Ana's; none of Max's note).
+  - R2 (high): the review's notes became the person's at release, so a note or message filed on the review before (the record
+    panel People.xml admits for the review host, Chatter's links, a mail filed on it) would reach them then. Mantle's
+    `link#CommunicationEventRecord` files nothing on a review before it is released (`REVIEW_NOT_RELEASED`); the reviewer keeps
+    private notes of their own. Spec Reviews (Max's note on Ana's review refused before release, filed after).
+  - R3 (medium): the person read the approval's decisions with their reasons (HR's refusal "Say more about the stocktakes") and,
+    after release, the reviewer's assessment's return reason: the approval is the full readers' alone, a step's return reason its
+    assignee's and the full readers'. Spec Reviews.
+  - R4 (People follow-up 1): `Reviews.js tell` sends direct-only, and the review host is registered in `ConfidentialRecordType`
+    (PeopleReviewEntities.xml), so its mention and follower notices go to their named recipients alone. Spec Reviews (a subscriber to
+    every PeopleReviewUpdate message is told nothing of a reassignment that told Nia; the type confidential).
+  - R5 (medium, no self-approval): a reviewer changed while the approval waited (`keepWaiting`) who is one of its approvers (an HR
+    officer made the reviewer) could approve the review they now give: `decide` refuses the review's reviewer (`SELF_APPROVAL`) and
+    `canDecide` is false for them. Spec Reviews (HR made Ana's reviewer refused; fails on the code as it was).
+  - R6 (medium): the id lookup (`GeneralServices.lookup#ById`, the source of Comms' `search#LinkRecords` for Chatter, EventDetail,
+    RequestDetail, Notes, Knowledge and Chat) answered a goal's title to anyone who typed its id; it answers no goal now, as it
+    answers no confidential case. `get#RecordLinkInfo`'s goal rule keys on the `WetGoal` type, not the `WepGoal` purpose a work item
+    may be given (which hid that task from everyone). Spec Reviews (the lookup of Ana's goal, as Ana, is empty).
+  - R7 (built, the worker's unbuilt pieces): People's Today source answers the user's review steps due (their self assessment, an
+    assessment of a person they review, feedback asked of them; the step, the cycle and the due day), each opening the review; MyTeam's
+    Reviews due box (the open reviews the manager gives; a review's approval waiting opens ReviewDetail, not the person's record);
+    Employee360's Reviews under People (`find#Reviews` by `partyId`: the reviews the user reads as the person, the reviewer or
+    development, with the state and, once released, the overall rating). Specs PeopleReviews (Tomas's and Hannah's Today; Tomas's
+    reviews as himself and Hannah with the released result, none to HR) and PeopleSelfService (MyTeam's render shows Reviews due).
+    One-off renders, not kept: MyTeam in qvt and tui as Hannah, Employee360 in qvt and tui (development) with the region; no error.
+- Provisional findings (for the lead to number):
+  - Mantle's generic REST resource `/workEfforts` (mantle.rest.xml) lists, reads, updates and clones work efforts with no type
+    condition, a goal included, for a caller its artifact authorization admits (ADMIN's designed tools); a goal's own services are
+    the only reviewed path.
+  - A review's files added before release (by the reviewer or development) become the person's at release, as designed (the Files
+    box says so); unlike notes they are not refused before release.
+  - Chatter's `get#RecordInfo` and Comms' link search label a goal "Task" (its readers alone see it).
+  - A note on a goal's work effort (no screen offers one) would tell a subscriber to every ChatterMention message: a goal's type is
+    not a `ConfidentialRecordType` (the registry is by entity, and WorkEffort is every app's).
+  - `create#Task` does not check that its parent is a task, so a task could be put under a goal through Mantle's REST.
+  - `reroute`'s review pass runs in the caller's transaction (the separation's), as the approvals' pass does: one review's database
+    failure would mark the separation's transaction for rollback.
+- Tests run (release binary from the main checkout, `--nobuild`, this phase's runtime): Mantle Reviews, PeopleApprovals, Training,
+  RecordNotes, RecordLinks, RecordVisibility, PeopleCases, InboxThreads and UniversalSearch 81 of 81 (Reviews 4.2 s: 0.67, 0.73,
+  1.76, 1.05 under load from the parallel phase); BOSS PeopleReviews, PeopleAccess, PeopleSelfService, PeopleEmployees,
+  PeopleApprovals, PeopleTraining, PeopleSkills, Chatter, RecordFiles and TodayPanel 95 of 95 (PeopleReviews 1.8 s: 0.24, 0.46,
+  1.06). R5's check failed on the code as it was (the spec run with the phase's Reviews.js and CommunicationServices.xml, put back).
+  `moqui lint --screens`: no flagged site in the screens touched (137 overall; the extra one is the framework's GitRepositoryDetail).
+  Prettier clean on the changed JavaScript (People.js's earlier `openingOptions` lines as merged). Not run: `./moq test-apps`, the
+  acceptance suite.
+- For the lead:
+  - budget share: about +0.9 s in mr-mantle (Reviews' two features); about +0.1 s in mr-boss. PeopleAccess (27 features) measured
+    21.3 s under the parallel phase's load in one run (over the 15 s limit) and 11.1 s in the next; it is near the limit and is the
+    spec to split.
+  - merge hot spots for P22: mr-mantle `CommunicationServices.xml` (`link#CommunicationEventRecord`, `get#RecordLinkInfo`'s goal
+    rule), `GeneralServices.xml` (`lookup#ById`); mr-boss `People.js` (`today`, the `REVIEW` constant), `screen/People/MyTeam.xml`,
+    `screen/Shared/Employee360.xml`, `ContextServices.xml` (get#TodayItems' description), this file's §4 (three rows appended) and
+    design-people §11.
+  - the user's calls of Nov 12 are in §4: HR officers finalize by default (as built); private notes their author's alone (as
+    built); a new reviewer reads the review's feedback (built, R1).
+
 ### P21 — Grievances
 
 Design §4 Grievances, §13 RequestDetail; PE-01 (participants), PE-21. Ends stage 3.
@@ -6101,7 +6373,10 @@ the owner's design.
 | Nov 12, 2026 | A phone's CalDAV delete of an invitation the attendee's calendar only shows (`viewOnly`) takes it out of that calendar (204) and never changes the event; a kept event's delete is still 403, and the organizer's delete cancels the event | The user's call on the calendar follow-up's review question (as built: its R3, `delete#DavObject`; Dav spec) |
 | Nov 12, 2026 | The instance administrator's own data tools reading a confidential case whole (Tools' Data and SQL, System's Resource and Audit, Mantle's REST) is accepted: the admin tools are privileged by design; no framework restriction of `PeopleCase` or of `peoplecase/` is added | The user's call on P21's review finding F347 (mr-moqui docs/security/Attack-Surface.md, Tools and System, says so) |
 | Nov 12, 2026 | People's confidential notices go to their named recipients only: a subscription to every message of a topic (`NotificationTopicUser.allNotifications`, set in Tools) receives none. The framework exposes it to scripts as `directOnly()` on `ec.makeNotificationMessage()`; People sends direct-only on PeopleCaseUpdate, every approval topic (Approvals.js `notify`: positions, employment changes, leave, attendance, expenses, advances, offers, training), PeopleLeaveDecision, PeopleTrainingDecision, QualificationExpiring and PeopleTaskAssigned | The user's call on P21's review finding F348 (built in People follow-up 1); PeopleShiftChange and the shared EventInvitation and reminder topics stay open (follow-up 1's note) |
-| Nov 12, 2026 | The notes and messages on People's confidential records are told to their named users alone: `notify#RecordMention` (ChatterMention) and `notify#RecordFollowers` (RecordFollow) send direct-only for a record type registered in `mantle.party.communication.ConfidentialRecordType`, which People's hosts join with a seed row (employment, application, qualification; a case through PeopleCaseUpdate; P20's review once built); other apps' notes are unchanged | The user's call on People follow-up 1's first finding (built in its review, R2; spec RecordNotes) |
+| Nov 12, 2026 | The notes and messages on People's confidential records are told to their named users alone: `notify#RecordMention` (ChatterMention) and `notify#RecordFollowers` (RecordFollow) send direct-only for a record type registered in `mantle.party.communication.ConfidentialRecordType`, which People's hosts join with a seed row (employment, application, qualification; a case through PeopleCaseUpdate; a review, P20's review); other apps' notes are unchanged | The user's call on People follow-up 1's first finding (built in its review, R2; spec RecordNotes) |
+| Nov 12, 2026 | With no approval rule, the employer's HR officers decide a review's finalizing when its template asks for approval (`PakReview`'s own default route, `ParHr`); an employer's rules for the kind still route it; never the reviewer (the one who asked, or one who became the reviewer since) nor the person reviewed | The user's call on P20's question (as built; the current reviewer refused in P20's review, R5) |
+| Nov 12, 2026 | A reviewer's private notes (`PerformanceNote`) are their author's alone: not the person's, a later reviewer's, development's, HR's, an approver's or ADMIN's on any app path; never in the release, an export, Chatter, a notice, search or a model's input | The user's call on P20's question (as built: `get#Review` reads the caller's own notes alone; Mantle Reviews) |
+| Nov 12, 2026 | When a review's reviewer changes (development's reassign, or the line's re-route when a reviewer leaves), the new reviewer reads the feedback already given on the review and withdraws the feedback still waiting, whoever asked for it: the feedback belongs to the review. The earlier reviewer's private notes do not pass | The user's call on P20's question (built in P20's review, R1: Reviews.js `readsStep`, `cancelFeedback`; Mantle Reviews checks Nia reading Cy's feedback that Max asked for and withdrawing Ana's, and none of Max's note) |
 
 ## 5. Open questions
 

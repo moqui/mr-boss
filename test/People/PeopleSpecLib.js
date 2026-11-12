@@ -37,19 +37,35 @@ const ids = {
     // the directory, Organization and Org chart; Staffing (Positions & recruiting) the positions, job classes and pay grades; P5:
     // Approvals (every People user's own), and Settings' tabs the approval rules and lookups; P10: Time & leave (every People
     // user's) and Payroll (the payroll groups', and the administrator's through the root's ALWAYS); P15: Expenses (every People
-    // user's); P18: Skills & training (Development, every People user's)
-    staffMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development"],
-    adminMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Development", "Settings"],
+    // user's); P18: Skills & training (Development, every People user's); P20: Reviews & goals (Performance, every People user's)
+    staffMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development", "Performance"],
+    adminMenu: [
+        "Home",
+        "MyTeam",
+        "Approvals",
+        "Employees",
+        "Staffing",
+        "Time",
+        "Payroll",
+        "Expenses",
+        "Development",
+        "Performance",
+        "Settings"
+    ],
     // P8: My team, the managers' (and the administrator's, through the root's ALWAYS)
-    managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development"],
-    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development"],
-    payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Development"],
+    managerMenu: ["Home", "MyTeam", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development", "Performance"],
+    hrMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Expenses", "Development", "Performance"],
+    payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Development", "Performance"],
     // P15: Expenses' menu, every People user's (and a self-service employee's by the area's own grant)
     expensesMenu: ["ExpenseClaims", "EmployeeAdvances"],
     // P18: Skills & training's menu: the skills matrix development's, HR's and the managers', the qualifications every People user's;
     // P19: training every People user's
     developmentMenu: ["SkillsMatrix", "Qualifications", "Training"],
     readerDevelopmentMenu: ["Qualifications", "Training"],
+    // P20: Reviews & goals' menu: the reviews and goals every People user's, the review cycles and review forms the review
+    // administrator's
+    performanceMenu: ["Reviews", "Goals"],
+    developPerformanceMenu: ["Reviews", "Goals", "ReviewCycles", "ReviewForms"],
     // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
     // managers') and holidays (HR's); P11's leave balances (HR's and the managers'), leave policies and allocations (HR's); P12's
     // leave requests and team calendar (every People user's); P13's attendance (every People user's); P14's shift roster (HR's and
@@ -93,7 +109,7 @@ const ids = {
     // g l, Leave requests, to every People user; P13's g d, Attendance, to every People user; P14's g h, Shift roster, to HR and
     // managers; P15's g x, Expense claims, and P16's g n, Openings, and g v, Interviews, to every People user; P18's g k, Skills
     // matrix, to development, HR and managers, and g q, Qualifications, to every People user; P19's g i, Training, to every People
-    // user)
+    // user; P20's g f, Reviews, to every People user)
     keys: [
         "g p",
         "g e",
@@ -112,7 +128,8 @@ const ids = {
         "g v",
         "g k",
         "g q",
-        "g i"
+        "g i",
+        "g f"
     ],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
     plannedPositionId: "BOSS_PPL_P_ASSOC4",
@@ -149,7 +166,9 @@ const ids = {
     fireWardenCourseId: "BOSS_PPL_TC_FIREWARDEN",
     fireWardenTypeId: "BOSS_PPL_QT_FIREWARDEN",
     // P21: Retail's confidential case intake handler (people.case; Retail's PartySetting PeopleCaseIntake)
-    caseHandlerPartyId: "BOSS_PPL_CASE"
+    caseHandlerPartyId: "BOSS_PPL_CASE",
+    // P20: Retail's annual review template (a self assessment and the reviewer's, no approval, no form)
+    reviewTemplateId: "BOSS_PPL_RT_ANNUAL"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

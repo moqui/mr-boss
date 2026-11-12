@@ -79,6 +79,11 @@ their Implemented in is in usl-inventory's People rows.
 HumanRes has no training form, and courses, sessions, places and assessments are new records (`TrainingClass` and `PersonTraining`
 refined from Mantle's commented sketches, `TrainingSession` and `PersonTrainingResult`, design-people §10); their Implemented in is in
 usl-inventory's People rows.
+**People P20 (Nov 12, 2026):** no baseline form is mapped to ReviewCycles, Reviews, ReviewDetail, Goals or the review release:
+Marble's HumanRes has no review or goal form, and templates, cycles, reviews, their steps and notes and goals are new records
+(`PerformanceReview` and `PerformanceNote` refined from Mantle's commented sketches, `ReviewTemplate`, `ReviewCycle`,
+`PerformanceReviewStep`, `PerformanceReviewContent`, `PersonGoal` over a WetGoal WorkEffort, design-people §11); their Implemented in
+is in usl-inventory's People rows.
 
 **People P12 (Nov 11, 2026):** no baseline form is mapped to LeaveRequests, LeaveRequestDetail or TeamCalendar either: the
 legacy `EmploymentLeave` forms are not taken over (impl-people §5 Q8: read only, historical); a leave request is People's own

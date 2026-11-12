@@ -632,4 +632,13 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- impl-people P21: Retail's confidential case intake handler (People Case handler, people.case, BOSS_PEOPLE_CASE, an agent of
         Retail); Services has none, so a case filed there is refused until one is named -->
     <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="PeopleCaseIntake" settingValue="BOSS_PPL_CASE"/>
+
+    <!-- impl-people P20 (design-people §11 ReviewCycles): Retail's annual review template (the person's self assessment, the
+        reviewer's assessment and the overall rating, feedback the reviewer may ask for and keeps, released by the reviewer with no
+        approval), with no review form (a written summary each); no cycle is started in the demo (the acceptance PeopleReviewsUsable
+        starts one) -->
+    <mantle.humanres.ability.ReviewTemplate reviewTemplateId="BOSS_PPL_RT_ANNUAL" organizationPartyId="ORG_ZIZI_RETAIL"
+            templateName="Annual review" selfAssessment="Y" feedbackAllowed="Y" feedbackReleased="N" approvalRequired="N"
+            fromDate="2026-01-01 00:00:00" createdDate="2026-01-05 09:00:00" createdByUserId="BOSS_PPL_DEVELOP"
+            description="Once a year: the person's self assessment, then their manager's assessment and overall rating"/>
 </entity-facade-xml>

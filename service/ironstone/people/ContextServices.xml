@@ -250,7 +250,10 @@ along with this software (see the LICENSE.md file). If not, see
             qualification, mantle.humanres.DevelopmentServices.find#Qualifications' attention, PEOPLE_SELF_SERVICE: its type and
             expiry, never its number), each opening their qualifications; and P19 training due (kind training,
             DevelopmentServices.find#Training's due: the user's own enrolled sessions and those they train, starting within seven
-            days), each opening the session. Another user's Today gets none. Declared on both roots,
+            days), each opening the session; and P20 a review step due (kind review, mantle.humanres.ReviewServices.find#Reviews'
+            to do, where Reviews &amp; goals opens to the user: their own self assessment, the assessment of a person they review,
+            feedback asked of them, with the cycle and the due day, never a rating or an answer), each opening the review. Another
+            user's Today gets none. Declared on both roots,
             it is taken once.</description>
         <in-parameters>
             <parameter name="userId"/>
@@ -294,6 +297,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="trainingUrl"><description>P19 review: the user's own training places (the same area)</description></parameter>
             <parameter name="grievancesUrl"><description>P21: the user's confidential cases and filing one (Grievances, when it
                 opens to them)</description></parameter>
+            <parameter name="reviewsUrl"><description>P20: the user's own reviews (People's Reviews &amp; goals area, when it opens to
+                them)</description></parameter>
+            <parameter name="goalsUrl"><description>P20: the user's own goals (the same area)</description></parameter>
         </out-parameters>
         <actions>
             <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/people/People.js').execute('selfServiceContext', context)"/>
@@ -310,6 +316,8 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="qualificationsUrl" from="found.qualificationsUrl"/>
             <set field="trainingUrl" from="found.trainingUrl"/>
             <set field="grievancesUrl" from="found.grievancesUrl"/>
+            <set field="reviewsUrl" from="found.reviewsUrl"/>
+            <set field="goalsUrl" from="found.goalsUrl"/>
         </actions>
     </service>
 

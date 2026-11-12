@@ -1332,7 +1332,10 @@ Registrations are trusted component definitions, validated at load. They are not
   its employer (the row in effect ends and its copy names them; a row starting later changes in place), and a waiting request is
   listed, not transferable: it follows its route once the rule or reporting line naming the user changes, and P6's separation
   routes it again (P5's review). A rule is handed over only with the permission (or by the People administrator of its
-  employer), never by its approver alone.
+  employer), never by its approver alone. As built (impl-people P20): the open reviews the user reviews (`review:<id>`) and the
+  feedback asked of them (`reviewStep:<id>`), by the person's name, not transferable: when the user leaves, the separation's
+  re-route gives each review to the person's manager at the employer (none: it waits for development to name a reviewer) and
+  withdraws the feedback; development changes a reviewer on the review.
 - Sales, "Sales assignments": the accounts, open opportunities and quotes a departing user owns (impl-sales P6).
 - Marketing, `marketing.campaigns`: a departing user's campaign manager and contributor rows; approvals and scheduled sends are not a person's and are not moved (impl-marketing P2).
 - Maintenance, `maintenance.assignments`: a user's open work order and step assignments and equipment custody (impl-maintenance P3), with a leaver's booking approver roles later (its P15).

@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Review (design-people §11 ReviewDetail, §15 the review release; style-guide §3.3 Detail; impl-people P20): one review
+    (performanceReviewId), from mantle.humanres.ReviewServices.get#Review, for its person, its reviewer, a feedback giver, an
+    approver of its approval and development readers of its employer (another is told it is not available). The record header (the
+    person, the cycle and period, the employer, the reviewer, the state, the overall rating to whom reads it) with one primary by
+    state: Acknowledge (the person, released), Approve (an approver of the step waiting), Release (the reviewer or development,
+    finalized) or Finalize (the reviewer, their assessment submitted and nothing waiting); under More: Ask for feedback, Return the
+    self assessment, Return the reviewer's assessment, Refuse, Change reviewer and Exclude, by what change#ReviewState lets the user
+    do. Steps: the steps the user sees, with the content they read (the person their own self assessment and, once released, the
+    reviewer's assessment; a giver their own feedback; the reviewer, development and an approver every step); Your assessment or
+    Your feedback answers the user's own step once, on the step's review form (a dynamic form over its DbForm) with a summary and,
+    for the reviewer, the overall rating (store#Assessment, submit#Feedback). Private notes: the reviewer's own notes (store#ReviewNote),
+    read by their author alone, never released. The approval while it waits, the release (its stored print and PDF), the goals
+    agreed in it (Goals) and its files (the review's content host: the reviewer's, development's and, once released, the person's).
+    Every text of the assessments, the notes and the acknowledgment is opted out of AI (ai-opt-out, PE-21). Every People user's and a
+    self-service employee's by the area's grant. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Review" default-menu-include="false">
+    <parameter name="performanceReviewId" required="true"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the user's own self or reviewer's assessment: the form's answers are the request's values, checked again in Mantle -->
+    <transition name="assess">
+        <actions>
+            <service-call name="mantle.humanres.ReviewServices.store#Assessment"
+                    in-map="{performanceReviewId:performanceReviewId, performanceReviewStepId:(performanceReviewStepId || null),
+                        summary:(summary || null), ratingEnumId:(ratingEnumId || null), values:Object.assign({}, ec.web.parameters)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Assessment submitted</message></if>
+        </actions>
+        <default-response url="."><parameter name="performanceReviewId"/></default-response>
+        <error-response url="."><parameter name="performanceReviewId"/></error-response>
+    </transition>
+    <!-- the user's own feedback, asked of them by the reviewer -->
+    <transition name="giveFeedback">
+        <actions>
+            <service-call name="mantle.humanres.ReviewServices.submit#Feedback"
+                    in-map="{performanceReviewId:performanceReviewId, performanceReviewStepId:(performanceReviewStepId || null),
+                        summary:(summary || null), values:Object.assign({}, ec.web.parameters)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Feedback submitted</message></if>
+        </actions>
+        <default-response url="."><parameter name="performanceReviewId"/></default-response>
+        <error-response url="."><parameter name="performanceReviewId"/></error-response>
+    </transition>
+    <!-- a change of the review's state: Mantle checks who may, the state and the revision -->
+    <transition name="changeState">
+        <actions>
+            <service-call name="mantle.humanres.ReviewServices.change#ReviewState" out-map="changed"
+                    in-map="{performanceReviewId:performanceReviewId, action:action, performanceReviewStepId:(performanceReviewStepId || null),
+                        partyId:(partyId || null), dueDate:(dueDate || null), reason:(reason || null), comment:(comment || null),
+                        peopleApprovalId:(peopleApprovalId || null), sourceRevision:(sourceRevision || null),
+                        expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; changed">
+                <message type="success">${changed.repeated ? 'Already done' : (action == 'requestFeedback' ? 'Feedback asked for'
+                    : action == 'cancelFeedback' ? 'Feedback withdrawn' : action == 'return' ? 'Returned' : action == 'reassign' ? 'Reviewer changed'
+                    : changed.approvalAsked ? 'Waiting for approval' : changed.statusText)}</message></if>
+        </actions>
+        <default-response url="."><parameter name="performanceReviewId"/></default-response>
+        <error-response url="."><parameter name="performanceReviewId"/></error-response>
+    </transition>
+    <!-- the reviewer's private note: added, changed or removed by its author alone -->
+    <transition name="storeNote">
+        <actions>
+            <service-call name="mantle.humanres.ReviewServices.store#ReviewNote"
+                    in-map="{performanceReviewId:performanceReviewId, performanceNoteId:(performanceNoteId || null), noteText:(noteText || null),
+                        remove:(remove || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove ? 'Note removed' : 'Note saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="performanceReviewId"/></default-response>
+        <error-response url="."><parameter name="performanceReviewId"/></error-response>
+    </transition>
+    <!-- the stored PDF of the released review, as released (get#ReviewRelease checks the reader) -->
+    <transition name="releasePdf" read-only="true">
+        <actions>
+            <service-call name="mantle.humanres.ReviewServices.get#ReviewRelease" out-map="release"
+                    in-map="{performanceReviewId:performanceReviewId}"/>
+            <script>if (!ec.message.hasError() &amp;&amp; release?.pdfLocation) ec.web.sendResourceResponse(release.pdfLocation, false, release.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."><parameter name="performanceReviewId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.ReviewServices.get#Review" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{performanceReviewId:performanceReviewId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="review" from="found?.review || null"/>
+        <set field="recordFound" from="!!review"/>
+        <script><![CDATA[
+            stepRows = Array.from(found?.steps || [])
+            noteRows = Array.from(found?.notes || [])
+            approval = found?.approval || null
+            stateColors = {PrvInProgress: 'primary', PrvApproval: 'warning', PrvFinalized: 'primary', PrvReleased: 'positive',
+                PrvAcknowledged: 'positive', PrvExcluded: 'grey-8'}
+            stepColors = {RssWaiting: 'warning', RssSubmitted: 'positive', RssCancelled: 'grey-8'}
+            headerCaption = review ? [review.cycleName, review.periodText, review.organizationName, review.departmentName,
+                'Reviewer ' + review.reviewerName].filter(Boolean).join(' · ') : ''
+            // one primary by state
+            primary = found?.canAcknowledge ? 'acknowledge' : found?.canDecide ? 'approve' : found?.canRelease ? 'release'
+                : found?.canFinalize ? 'finalize' : null
+            hasMore = !!(found?.canRequestFeedback || found?.canReturnSelf || found?.canReturnManager || found?.canDecide
+                || found?.canReassign || found?.canExclude)
+            ownKind = found?.ownStepKindEnumId || null
+            ownFormName = found?.ownFormId ? 'DbForm#' + found.ownFormId : 'AssessmentNone'
+            ratingOptions = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'PerformanceReviewRating')
+                .orderBy('sequenceNum').disableAuthz().list()).map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            selfStep = stepRows.find(row => row.stepKindEnumId == 'RskSelf') || null
+            managerStep = stepRows.find(row => row.stepKindEnumId == 'RskManager') || null
+            readsFiles = !!(found?.isReviewer || found?.isDevelop || (found?.isSelf && ['PrvReleased', 'PrvAcknowledged'].includes(review?.statusEnumId)))
+            reviewsUrl = sharedLinks?.['Performance/Reviews'] || '/qapps/People/Performance/Reviews'
+            goalsUrl = sharedLinks?.['Performance/Goals'] || '/qapps/People/Performance/Goals'
+            releaseUrl = '/apps/People/Performance/ReviewRelease'
+            revisionMap = {performanceReviewId: performanceReviewId, expectedRevision: review?.revision}
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="ReviewMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This review is not available to you."/>
+                        <link url="${reviewsUrl}" url-type="plain" text="Back to reviews" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReviewRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="Review of ${review.personName}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[review.statusEnumId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(review.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: review.statusText})}]]></text>
+                                <text type="html">${review.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${reviewsUrl}" url-type="plain" text="Reviews" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <label text="Overall rating: ${review.ratingText}" type="span" style="text-caption" condition="review.ratingText"/>
+                            <label text="Released ${review.releasedText}" type="span" style="text-caption" condition="review.releasedText"/>
+                            <label text="Acknowledged ${review.acknowledgedText}" type="span" style="text-caption" condition="review.acknowledgedText"/>
+                            <label text="Excluded: ${review.excludedReason}" type="span" style="text-caption" condition="review.excludedReason"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="AcknowledgeDialog" button-text="Acknowledge" icon="sym_o_task_alt" type="primary" width="560"
+                                    title="Acknowledge your review" condition="primary == 'acknowledge'">
+                                <label type="p" text="Acknowledging says you have read the review; a comment is kept with it, and your reviewer and development read it."/>
+                                <form-single name="Acknowledge" transition="changeState" map="revisionMap">
+                                    <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="action"><default-field><hidden default-value="acknowledge"/></default-field></field>
+                                    <field name="comment" ai-opt-out="true"><default-field title="Comment"><text-area rows="3"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Acknowledge"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ApproveDialog" button-text="Approve" icon="sym_o_check" type="primary" width="480"
+                                    title="Approve the review of ${review.personName}" condition="primary == 'approve'">
+                                <label type="p" text="Approving finalizes the review; the reviewer then releases it to the person."/>
+                                <form-single name="ApproveReview" transition="changeState"
+                                        map="{performanceReviewId:performanceReviewId, peopleApprovalId:approval?.peopleApprovalId, sourceRevision:approval?.sourceRevision}">
+                                    <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                    <field name="action"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="changeState" link-type="hidden-form" text="Release" icon="sym_o_send" btn-type="primary" condition="primary == 'release'"
+                                    parameter-map="{performanceReviewId:performanceReviewId, action:'release', expectedRevision:review.revision}"
+                                    confirmation="Release the review of ${review.personName}? It is stored as it is now and the person reads it; it is not changed after."/>
+                            <link url="changeState" link-type="hidden-form" text="Finalize" icon="sym_o_done_all" btn-type="primary" condition="primary == 'finalize'"
+                                    parameter-map="{performanceReviewId:performanceReviewId, action:'finalize', expectedRevision:review.revision}"
+                                    confirmation="Finalize the review of ${review.personName}? ${review.approvalRequired ? 'It then waits for approval.' : 'You release it next.'}"/>
+                            <link url="${releaseUrl}" url-type="plain" text="Released review" icon="sym_o_print" target-window="_blank"
+                                    condition="review.hasRelease" parameter-map="{performanceReviewId:performanceReviewId, renderMode:'html-print', lastStandalone:'true'}"/>
+                            <link url="releasePdf" text="PDF" icon="sym_o_picture_as_pdf" target-window="_blank" condition="review.hasReleasePdf"
+                                    parameter-map="{performanceReviewId:performanceReviewId}"/>
+                            <button-menu text="More" icon="more_horiz" condition="hasMore">
+                                <container-dialog id="AskFeedbackDialog" button-text="Ask for feedback" icon="sym_o_forum" width="560"
+                                        title="Ask a colleague for feedback on ${review.personName}" condition="found.canRequestFeedback">
+                                    <label type="p" text="The colleague answers once; you, development and an approver read it${review.feedbackReleased ? ', and the person once the review is released, with who gave it' : ''}. Feedback is never anonymous."/>
+                                    <form-single name="AskFeedback" transition="changeState" map="revisionMap">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="requestFeedback"/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Colleague">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'reviewColleagues', choiceOrganizationPartyId:review.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="dueDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Ask for feedback"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ReturnSelfDialog" button-text="Return self assessment" icon="sym_o_undo" width="520"
+                                        title="Return ${review.personName}'s self assessment" condition="found.canReturnSelf">
+                                    <form-single name="ReturnSelf" transition="changeState"
+                                            map="{performanceReviewId:performanceReviewId, expectedRevision:review.revision, performanceReviewStepId:selfStep?.performanceReviewStepId}">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="performanceReviewStepId"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="return"/></default-field></field>
+                                        <field name="reason"><default-field title="Why" tooltip="The person reads it"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Return"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ReturnManagerDialog" button-text="Return reviewer's assessment" icon="sym_o_undo" width="520"
+                                        title="Return the reviewer's assessment of ${review.personName}" condition="found.canReturnManager">
+                                    <form-single name="ReturnManager" transition="changeState"
+                                            map="{performanceReviewId:performanceReviewId, expectedRevision:review.revision, performanceReviewStepId:managerStep?.performanceReviewStepId}">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="performanceReviewStepId"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="return"/></default-field></field>
+                                        <field name="reason"><default-field title="Why" tooltip="The reviewer reads it"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Return"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="RefuseDialog" button-text="Refuse" icon="sym_o_block" width="480"
+                                        title="Refuse the review of ${review.personName}" condition="found.canDecide">
+                                    <label type="p" text="Refusing returns the reviewer's assessment to them, with your reason."/>
+                                    <form-single name="RefuseReview" transition="changeState"
+                                            map="{performanceReviewId:performanceReviewId, peopleApprovalId:approval?.peopleApprovalId, sourceRevision:approval?.sourceRevision}">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                        <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="refuse"/></default-field></field>
+                                        <field name="reason"><default-field title="Why" tooltip="The reviewer reads it"><text-area rows="2"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ReassignDialog" button-text="Change reviewer" icon="sym_o_swap_horiz" width="560"
+                                        title="Change the reviewer of ${review.personName}" condition="found.canReassign">
+                                    <label type="p" text="The new reviewer takes the assessment if it still waits; the earlier reviewer's notes and the feedback they asked for stay theirs."/>
+                                    <form-single name="Reassign" transition="changeState" map="revisionMap">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="reassign"/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Reviewer">
+                                                <drop-down>
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'reviewColleagues', choiceOrganizationPartyId:review.organizationPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Change reviewer"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="ExcludeDialog" button-text="Exclude" icon="sym_o_block" width="520"
+                                        title="Exclude the review of ${review.personName}" condition="found.canExclude">
+                                    <label type="p" text="The review leaves the cycle unfinished; its waiting steps are cancelled."/>
+                                    <form-single name="Exclude" transition="changeState" map="revisionMap">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="action"><default-field><hidden default-value="exclude"/></default-field></field>
+                                        <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Exclude"><submit type="danger" confirmation="Exclude the review of ${review.personName}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <section name="Approval" condition="approval">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body>
+                                <label type="p" text="${approval.statusText}${approval.waitingText ? ': ' + approval.waitingText : ''}"/>
+                                <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false" condition="approval.decisions?.length">
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the user's own step: answered once on the step's review form, not shared with AI -->
+                <section name="OwnStep" condition="found.canAssess || found.canGiveFeedback" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${ownKind == 'RskSelf' ? 'Your self assessment' : ownKind == 'RskManager' ? 'Your assessment of ' + review.personName : 'Your feedback on ' + review.personName}"/>
+                            <box-body>
+                                <label type="p" style="text-caption m-muted"
+                                        text="${ownKind == 'RskSelf' ? 'Your reviewer reads it; you submit it once.' : ownKind == 'RskManager' ? review.personName + ' reads it once the review is released; you submit it once.' : 'The reviewer who asked reads it; you submit it once.'}"/>
+                                <section name="OwnAssessmentSection" condition="found.canAssess">
+                                    <widgets>
+                                        <form-single name="OwnAssessment" transition="assess" dynamic="true"
+                                                extends="${ownFormName}" map="{performanceReviewId:performanceReviewId, performanceReviewStepId:found.ownStepId}">
+                                            <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                            <field name="performanceReviewStepId"><default-field><hidden/></default-field></field>
+                                            <field name="ratingEnumId" hide="ownKind != 'RskManager'">
+                                                <default-field title="Overall rating">
+                                                    <drop-down allow-empty="true"><list-options list="ratingOptions" key="${key}" text="${text}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="summary" ai-opt-out="true">
+                                                <default-field title="${ownKind == 'RskFeedback' ? 'Feedback' : 'Assessment'}" tooltip="Strengths, what to develop and the actions agreed">
+                                                    <text-area rows="5"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Submit"><submit confirmation="Submit it? It is not changed after."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                                <section name="OwnFeedbackSection" condition="found.canGiveFeedback">
+                                    <widgets>
+                                        <form-single name="OwnFeedback" transition="giveFeedback" dynamic="true"
+                                                extends="${ownFormName}" map="{performanceReviewId:performanceReviewId, performanceReviewStepId:found.ownStepId}">
+                                            <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                            <field name="performanceReviewStepId"><default-field><hidden/></default-field></field>
+                                            <field name="summary" ai-opt-out="true">
+                                                <default-field title="${ownKind == 'RskFeedback' ? 'Feedback' : 'Assessment'}" tooltip="Strengths, what to develop and the actions agreed">
+                                                    <text-area rows="5"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Submit"><submit confirmation="Submit it? It is not changed after."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the steps the user sees, with what they read of each, not shared with AI -->
+                <section name="Steps" condition="stepRows.length" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Steps"/>
+                            <box-body-nopad>
+                                <form-list name="StepList" list="stepRows" skip-form="true" paginate="false">
+                                    <field name="kindText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="assigneeName"><default-field title="By"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stepColors[statusEnumId] || 'grey-8'}">${
+                                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="submittedText"><default-field title="Submitted"><display/></default-field></field>
+                                    <field name="ratingText"><default-field title="Rating"><display/></default-field></field>
+                                    <field name="answersText" ai-opt-out="true"><default-field title="Answers"><display/></default-field></field>
+                                    <field name="summary" ai-opt-out="true"><default-field title="Assessment"><display/></default-field></field>
+                                    <field name="returnReason"><default-field title="Returned"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="Withdraw_${performanceReviewStepId}" button-text="Withdraw" icon="sym_o_undo" width="480"
+                                                    title="Withdraw the feedback asked of ${assigneeName}"
+                                                    condition="stepKindEnumId == 'RskFeedback' &amp;&amp; statusEnumId == 'RssWaiting' &amp;&amp; (found.isReviewer || found.isDevelop) &amp;&amp; !isOwn">
+                                                <form-single name="WithdrawFeedback" transition="changeState"
+                                                        map="{performanceReviewId:performanceReviewId, performanceReviewStepId:performanceReviewStepId}">
+                                                    <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                                    <field name="performanceReviewStepId"><default-field><hidden/></default-field></field>
+                                                    <field name="action"><default-field><hidden default-value="cancelFeedback"/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Withdraw"><submit type="danger"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="kindText"/><field-ref name="assigneeName"/><field-ref name="summary"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the reviewer's own private notes: their author's alone, never released, not shared with AI -->
+                <section name="PrivateNotes" condition="found.canNote || noteRows.length" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Your private notes"/>
+                            <box-toolbar>
+                                <container-dialog id="AddNoteDialog" button-text="Add note" icon="sym_o_note_add" width="560" title="Add a private note"
+                                        condition="found.canNote">
+                                    <form-single name="AddNote" transition="storeNote" map="{performanceReviewId:performanceReviewId}">
+                                        <field name="performanceReviewId"><default-field><hidden/></default-field></field>
+                                        <field name="noteText" ai-opt-out="true"><default-field title="Note"><text-area rows="4"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save note"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label type="p" style="q-px-md q-pt-sm text-caption m-muted"
+                                        text="Only you read these notes: not the person, a later reviewer, development or HR. They are never in the released review, an export or the notes of the record."/>
+                                <form-list name="NoteList" list="noteRows" skip-form="true" paginate="false" condition="noteRows.length">
+                                    <field name="noteDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="noteText" ai-opt-out="true"><default-field title="Note"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="storeNote" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger" condition="found.canNote"
+                                                    parameter-map="{performanceReviewId:performanceReviewId, performanceNoteId:performanceNoteId, remove:'true', expectedRevision:revision}"
+                                                    confirmation="Remove this note?"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="Acknowledgement" condition="review.acknowledgementComment" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${review.personName}'s comment"/>
+                            <box-body><label type="p" text="${review.acknowledgementComment}"/></box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Goals"/>
+                    <box-body>
+                        <label type="p" text="The goals agreed in this review, and the person's goals, are on Goals."/>
+                        <link url="${goalsUrl}" url-type="plain" text="Goals of this review" link-type="anchor" icon="sym_o_flag"
+                                parameter-map="{performanceReviewId:performanceReviewId}"/>
+                    </box-body>
+                </container-box>
+
+                <!-- the review's files (its own content host, PE-01): the reviewer's, development's and, once released, the person's -->
+                <section name="ReviewFiles" condition="readsFiles">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <label text="Seen by the reviewer and development, and by ${review.personName} once released." type="p" style="text-caption m-muted"/>
+                                <record-files id="ReviewFiles" record-entity="mantle.humanres.ability.PerformanceReview" record-id="${performanceReviewId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="AssessmentNoneHolder" condition="false">
+            <widgets><form-single name="AssessmentNone"/></widgets>
+        </section>
+    </widgets>
+</screen>
