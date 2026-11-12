@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PlanDetail's Schedule tab (design-maintenance §5 PlanDetail: DueExplanation, ScheduleTerms; impl-maintenance P13): the plan's due as
+    of now (Mantle's get#MaintenanceDue in get#MaintenanceSchedule: the state, and the lines that explain it: for a calendar the due
+    date in the target's zone, the planned day after a weekend or holiday, the last completion and the due dates passed; for a meter
+    the baseline, the last accepted reading, the increment and the next threshold, or a reading too old to know), the terms in effect
+    with where each value comes from (this plan or the model default), Edit terms for a planner or supervisor (a draft's in place; an
+    active plan's from an effective time, with a reason), and the history of the terms. Reads the plan itself when rendered alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Schedule" default-menu-index="1">
+    <parameter name="maintenanceScheduleId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storePlan" location="component://mr-boss/template/MaintenancePlanParts.xml"/>
+    <actions>
+        <!-- PlanDetail's actions read the plan when it renders with the tab; alone (a reloaded tab, the terminal) it reads it here -->
+        <if condition="planDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.MaintenancePlanServices.get#MaintenanceSchedule" out-map="planDetail"
+                    transaction="force-new" ignore-error="true" in-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="planDetail?.schedule ? planDetail : null"/>
+        <set field="due" from="found?.due || {}"/>
+        <set field="term" from="found?.term || {}"/>
+        <set field="plan" from="found?.schedule || {}"/>
+        <set field="explanationRows" from="(due.explanation || []).map(line =&gt; ({line}))"/>
+        <set field="originText" from="{plan: 'This plan', 'model default': 'Model default'}"/>
+        <set field="termRows" from="[
+                {label: 'Due by', value: due.triggerText || '', origin: ''},
+                {label: 'Interval', value: due.intervalText || '', origin: originText[term.intervalOrigin] || ''},
+                term.triggerEnumId === 'MstMeter' ? {label: 'Meter', value: term.meterName || '', origin: originText[term.meterOrigin] || ''}
+                    : {label: 'Dates', value: (term.cadenceText || '') + (term.firstDueLocal ? ', first due ' + term.firstDueLocal : ''), origin: ''},
+                term.triggerEnumId === 'MstMeter' ? {label: 'Baseline', value: term.baselineValue != null ? String(term.baselineValue) + ' at ' + term.baselineDateText : '', origin: ''}
+                    : {label: 'Business days', value: term.businessDaysOnly === 'Y' ? 'Moved to the next business day' + (term.holidayCalendarName ? ', holidays of ' + term.holidayCalendarName : '') : 'Kept on the due day', origin: ''},
+                term.triggerEnumId === 'MstMeter' ? {label: 'Reading kept for', value: term.maxReadingAgeDays + ' days', origin: ''} : null,
+                {label: 'Procedure', value: plan.procedureName || '', origin: originText[term.procedureOrigin] || ''},
+                {label: 'Maintenance type', value: term.maintenanceTypeText || '', origin: originText[term.typeOrigin] || ''},
+                {label: 'Made ahead', value: term.leadDays ? term.leadDays + ' days' : 'On the day', origin: ''},
+                {label: 'Team', value: plan.teamName || '', origin: ''},
+                {label: 'Time zone', value: plan.timeZoneText || 'Not set', origin: ''}].filter(Boolean)"/>
+        <set field="editTerm" from="Object.assign({}, found?.storedTerm || {}, {maintenanceScheduleId: maintenanceScheduleId,
+                expectedRevision: plan.revision, scheduleName: plan.scheduleName,
+                businessDaysOnly: found?.storedTerm?.businessDaysOnly || 'N'})"/>
+        <set field="termHistory" from="found?.terms || []"/>
+        <set field="isDraft" from="plan.statusId === 'MschDraft'"/>
+    </actions>
+    <widgets>
+        <section name="PlanSchedule" condition="found">
+            <widgets>
+                <container-box>
+                    <box-header title="Due"/>
+                    <box-toolbar>
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${due.stateColor}">${
+                                WebUtilities.encodeHtml(due.stateText || '')}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: due.stateText || ""})}]]></text>
+                            <text type="html">${due.stateText || ''}</text>
+                        </render-mode>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="DueExplanation" list="explanationRows" skip-form="true" paginate="false">
+                            <field name="line"><default-field title="Why"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Terms"/>
+                    <box-toolbar>
+                        <container-dialog id="EditTermsDialog" button-text="Edit terms" icon="sym_o_edit" title="Edit the terms of ${plan.scheduleName}"
+                                width="760" condition="found.canEdit">
+                            <label text="Fields left empty take the model default's value." type="p" style="text-caption m-muted" condition="plan.productMaintenanceId"/>
+                            <label text="The terms in effect end at the effective time and stay in the history, with the work done under them."
+                                    type="p" style="text-caption m-muted" condition="!isDraft"/>
+                            <form-single name="EditTerms" transition="storePlan" map="editTerm">
+                                <field name="maintenanceScheduleId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="scheduleName"><default-field title="Name"><text-line size="50"/></default-field></field>
+                                <field name="templateWorkEffortId">
+                                    <default-field title="Procedure">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'procedures', choiceAssetId:plan.assetId, choiceFacilityId:plan.facilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="maintenanceTypeEnumId">
+                                    <default-field title="Maintenance type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'maintenanceTypes', selected:editTerm.maintenanceTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="triggerEnumId">
+                                    <default-field title="Due by">
+                                        <radio><option key="MstCalendar" text="The calendar"/><option key="MstMeter" text="A meter"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="intervalQuantity"><default-field title="Every"><text-line size="6"/></default-field></field>
+                                <field name="intervalUomId">
+                                    <default-field title="Unit">
+                                        <drop-down allow-empty="true">
+                                            <option key="TF_day" text="Days"/>
+                                            <option key="TF_wk" text="Weeks"/>
+                                            <option key="TF_mon" text="Months"/>
+                                            <option key="TF_yr" text="Years"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="cadenceEnumId">
+                                    <default-field title="Dates follow">
+                                        <drop-down allow-empty="true">
+                                            <option key="MscFixed" text="Fixed dates from the first due date"/>
+                                            <option key="MscCompletion" text="The last completion"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="firstDueLocal">
+                                    <default-field title="First due" tooltip="The date and time in the facility's time zone, as yyyy-MM-dd HH:mm">
+                                        <text-line size="16"/>
+                                    </default-field>
+                                </field>
+                                <field name="businessDaysOnly">
+                                    <default-field title="Business days" tooltip="A due date on a weekend or holiday is planned on the next business day; the due date stays">
+                                        <check><option key="Y" text="Plan on business days"/></check>
+                                    </default-field>
+                                </field>
+                                <field name="holidayCategoryId">
+                                    <default-field title="Holiday calendar">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'holidayCalendars', choiceOrganizationPartyId:plan.organizationPartyId,
+                                                        selected:editTerm.holidayCategoryId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="productMeterId">
+                                    <default-field title="Meter">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'planMeters', choiceAssetId:plan.assetId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="baselineValue"><default-field title="Baseline reading"><text-line size="10"/></default-field></field>
+                                <field name="baselineDate"><default-field title="Read at"><date-time/></default-field></field>
+                                <field name="maxReadingAgeDays">
+                                    <default-field title="Reading kept for (days)" tooltip="An older reading leaves the due unknown; 30 when empty"><text-line size="5"/></default-field>
+                                </field>
+                                <field name="leadDays"><default-field title="Made ahead (days)"><text-line size="5"/></default-field></field>
+                                <field name="teamPartyId">
+                                    <default-field title="Team">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'teams', choiceOrganizationPartyId:plan.organizationPartyId, selected:editTerm.teamPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveDate">
+                                    <conditional-field condition="!isDraft" title="Effective from" tooltip="Now when empty"><date-time/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <conditional-field condition="!isDraft" title="Why the terms change"><text-area rows="2"/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Save terms"><submit type="primary"/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="scheduleName"/><field-ref name="templateWorkEffortId"/></field-row>
+                                    <field-row><field-ref name="maintenanceTypeEnumId"/><field-ref name="teamPartyId"/></field-row>
+                                    <field-ref name="triggerEnumId"/>
+                                    <field-row><field-ref name="intervalQuantity"/><field-ref name="intervalUomId"/><field-ref name="cadenceEnumId"/></field-row>
+                                    <field-row><field-ref name="firstDueLocal"/><field-ref name="businessDaysOnly"/><field-ref name="holidayCategoryId"/></field-row>
+                                    <field-row><field-ref name="productMeterId"/><field-ref name="baselineValue"/><field-ref name="baselineDate"/></field-row>
+                                    <field-row><field-ref name="maxReadingAgeDays"/><field-ref name="leadDays"/></field-row>
+                                    <field-row><field-ref name="effectiveDate"/><field-ref name="changeReason"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ScheduleTerms" list="termRows" skip-form="true" paginate="false">
+                            <field name="label"><default-field title="Term"><display/></default-field></field>
+                            <field name="value"><default-field title="Value"><display/></default-field></field>
+                            <field name="origin"><default-field title="From"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/></column>
+                                <column><field-ref name="value"/><field-ref name="origin"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="TermHistory" condition="termHistory.length &gt; 1">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Earlier terms"/>
+                            <box-body-nopad>
+                                <form-list name="TermHistoryList" list="termHistory" skip-form="true" paginate="false">
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="triggerText"><default-field title="Due by"><display/></default-field></field>
+                                    <field name="intervalText"><default-field title="Interval"><display/></default-field></field>
+                                    <field name="procedureName"><default-field title="Procedure"><display/></default-field></field>
+                                    <field name="changeReason"><default-field title="Why"><display/></default-field></field>
+                                    <field name="changedByName"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromText"/><field-ref name="intervalText"/></column>
+                                        <column><field-ref name="changeReason"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
