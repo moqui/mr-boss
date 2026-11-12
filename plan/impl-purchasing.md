@@ -1,5 +1,9 @@
 # IronStone BOSS — Purchasing implementation
 
+Nov 12, 2026 — owner contract with Maintenance (impl-maintenance P10, F45): RequestDetail shows the originating work order of a
+purchase request raised from maintenance work (a read added to its context, `get#PurchaseRequestWork`), a RequestItemOrder of such a
+request links the order line to the work's equipment record (Maintenance's entity ECA), and OrderDetail has a read-only Maintenance
+branch at Maintenance/WorkOrders/OrderDetail; Purchasing's services and specs are unchanged.
 Nov 4, 2026 — built: P0–P17 done (§3), what is left is §7. Nov 1, 2026 — plan; P0 partly done (F1–F23, found while writing it); the phase order and the open questions decided
 (§4), on the shared party-role and effective-date rules (impl-drawers-commons §4); the supplier pages in a PASS app in
 mr-pass (§4); Purchasing's rules in Mantle, behind Moqui permissions (§4); consistency pass: brought in line with the

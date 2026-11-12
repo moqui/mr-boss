@@ -46,6 +46,10 @@ along with this software (see the LICENSE.md file). If not, see
     row, impl-customer-service P3; ironstone.customerservice.OrderServices.get#OrderDetail;
     template/CustomerServiceOrderDetail.xml): a sales order of a customer the user serves, read only but for New case, Link
     to case and Resend confirmation (the stored confirmation as placed); its holds read only.
+    Maintenance (appRoot Maintenance, mounted at Maintenance/WorkOrders/OrderDetail; crosscut §3.6, design-maintenance §3 the
+    OrderDetail mount row, impl-maintenance P10; mantle.work.MaintenanceServices.get#MaintenanceOrder;
+    template/MaintenancePurchaseParts.xml): read only, a purchase order with lines of work orders the user reads, each with its work
+    orders and what was accepted, prices only for a price reader; buying stays Purchasing's.
     Commerce (appRoot Commerce, mounted at Commerce/Orders/OrderDetail; crosscut §3.6, design-commerce §10, impl-commerce P8;
     mantle.order.StoreOperationsServices.get#StoreOrder; template/CommerceOrderDetail.xml): a submitted order of the user's
     stores, read only, its Payment hold shown for Accounting to release, cancellation proposals linking Customer Service, and
@@ -153,6 +157,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="serviceOrder" from="serviceOrderOut?.detail || null"/>
             <set field="recordFound" from="false"/>
+        </else-if><else-if condition="appRoot == 'Maintenance'">
+            <!-- Maintenance (impl-maintenance P10): read only, the lines of the user's work orders -->
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceOrder" in-map="{orderId:orderId}"
+                    out-map="maintenanceOrderOut" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="maintenanceOrder" from="maintenanceOrderOut?.maintenanceOrder || null"/>
+            <set field="recordFound" from="false"/>
         </else-if><else-if condition="appRoot == 'Commerce'">
             <!-- Commerce (crosscut §3.6, impl-commerce P8): a submitted order of the user's stores, read only -->
             <service-call name="mantle.order.StoreOperationsServices.get#StoreOrder" in-map="{orderId:orderId}"
@@ -197,8 +208,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="PurchasingOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
         <section-include name="CustomerServiceOrder" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
         <section-include name="CommerceOrder" location="component://mr-boss/template/CommerceOrderDetail.xml"/>
+        <section-include name="MaintenanceOrder" location="component://mr-boss/template/MaintenancePurchaseParts.xml"/>
         <section name="OrderNotFound"
-                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing', 'CustomerService', 'Commerce'].includes(appRoot)"><widgets>
+                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing', 'CustomerService', 'Commerce', 'Maintenance'].includes(appRoot)"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Order ${orderId} is not available: it does not exist, it is not linked to a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>

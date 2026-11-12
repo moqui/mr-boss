@@ -1830,7 +1830,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/PurchaseServices | check#PurchaseApprovalRequired |  | (the OrderPreApprovePurchase SECA on check#OrderPreApprove, and approve#Order; Purchasing P3) |
 | order/OrderServices | send#PurchaseOrder |  | Purchasing/Orders/OrderDetail (Send) (Purchasing P3) |
 | order/OrderServices | get#PurchaseOrderPrint |  | Purchasing/Orders/OrderDetail (Print, Print as of) (Purchasing P3) |
-| order/OrderServices | accept#ServiceItem |  | Purchasing/Orders/OrderDetail (Record acceptance of a service line) (Purchasing P3) |
+| order/OrderServices | accept#ServiceItem |  | Purchasing/Orders/OrderDetail (Record acceptance of a service line) (Purchasing P3); Maintenance/WorkOrders/WorkOrderDetail (Complete's outside-service line and the Purchasing tab's Accept outside service, through MaintenanceServices.accept#MaintenanceService with the work order and its file as evidence, impl-maintenance P10) |
 | order/PurchaseServices | store#PurchaseApprovalPolicy |  | Purchasing/Settings/ApprovalPolicies (New step, Change, End) (Purchasing P4) |
 | order/PurchaseServices | preview#PurchaseApproval |  | Purchasing/Settings/ApprovalPolicies (ApprovalPreview); Purchasing/Orders/OrderDetail (Approvals, through ironstone.purchasing.OrderServices.get#OrderDetail) (Purchasing P4) |
 | order/PurchaseServices | approve#PurchaseSource, refuse#PurchaseSource |  | Purchasing/Approvals and Commons/Notifications (the PurchaseOrderApproval and PurchaseSupplierApproval topics' approve and refuse) (Purchasing P4) |
@@ -1844,7 +1844,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/OrderServices | record#Acknowledgement |  | Purchasing/Orders/Acknowledgements (Record); Purchasing/Orders/OrderDetail (Record acknowledgement, a line's Promise) (Purchasing P9) |
 | order/OrderServices | send#PurchaseReminder |  | Purchasing/Orders/Acknowledgements (Send reminder, on the selected rows); Purchasing/Orders/OrderDetail (Send reminder) (Purchasing P9) |
 | other/BudgetServices | lower#SourceCommitments |  | (apply#PurchaseRevision's budget delta, internal; Purchasing P9) |
-| request/RequestServices | create#PurchaseRequest |  | Purchasing/Requests/PurchaseRequests (New purchase request); Purchasing/NewPurchaseRequest (quick create) (Purchasing P10) |
+| request/RequestServices | create#PurchaseRequest |  | Purchasing/Requests/PurchaseRequests (New purchase request); Purchasing/NewPurchaseRequest (quick create) (Purchasing P10); Maintenance/WorkOrders/WorkOrderDetail/Purchasing (Request a purchase, through MaintenanceServices.link#MaintenancePurchase with store#PurchaseRequestItem and submit#PurchaseRequest, linked to the work by RequestWorkEffort, impl-maintenance P10) |
 | request/RequestServices | store#PurchaseRequestItem, delete#PurchaseRequestItem |  | Purchasing/Requests/RequestDetail (Add line, Edit, Choose supplier, Remove); Purchasing/Requests/RequestSourcing (Choose supplier) (Purchasing P10) |
 | request/RequestServices | submit#PurchaseRequest, cancel#PurchaseRequest |  | Purchasing/Requests/RequestDetail (Submit for approval, Cancel request) (Purchasing P10) |
 | request/RequestServices | complete#PurchaseRequest |  | Purchasing/Requests/RequestDetail (Complete request: a short line's rest released with a reason, F127) (Purchasing P17) |
@@ -2270,3 +2270,14 @@ policy), called by built screens through the Maintenance screens after `ironston
 | work/ProcessServices | find#ProcessExecutions | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Usage (ProcessUsage) |
 | work/ProcessServices | check#ProcessApplicability | Shared/Product360 | Products' CatalogRecordServices.store#CatalogRow (a maintenance default's work template; Product360's Equipment tab) |
 
+Added in `work/MaintenanceServices.xml` (impl-maintenance P10; `MaintenancePurchases.js`), called by built screens through the
+Maintenance screens after `ironstone.maintenance.AccessServices.check#Record`, and by Purchasing's RequestDetail:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenanceServices | link#MaintenancePurchase | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (Request a purchase; Link an order line, a buyer's) |
+| work/MaintenanceServices | link#SourcedMaintenancePurchase | — | the RequestItemOrder entity ECA MaintenancePurchaseSourced (Purchasing's sourcing of a work's request line) |
+| work/MaintenanceServices | get#MaintenancePurchases | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (PurchaseLinks) |
+| work/MaintenanceServices | accept#MaintenanceService | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Purchasing (Accept outside service); transition#MaintenanceWorkOrder's complete (CompleteWork's outside-service line) |
+| work/MaintenanceServices | get#MaintenanceOrder | Maintenance/WorkOrders/OrderDetail | Maintenance/WorkOrders/OrderDetail (Shared/OrderDetail's Maintenance branch, read only) |
+| work/MaintenanceServices | get#PurchaseRequestWork | Purchasing/Requests/RequestDetail | Purchasing/Requests/RequestDetail (the originating work order under the header) |

@@ -22,7 +22,9 @@ along with this software (see the LICENSE.md file). If not, see
     Lines with Add line, Edit and Remove while the request is a draft or submitted (a change of a submitted request is a new
     revision, sent to its approvers again), and a buyer's Choose supplier on an approved line; Sourcing progress (approved,
     sourced, ordered, received and remaining, with the purchase orders); Approval (the state and the decisions); History (the
-    audit log of the lines and the status); Conversation and Files. Its transitions are below, included by Shared/RequestDetail;
+    audit log of the lines and the status); Conversation and Files. Maintenance (impl-maintenance P10, design-purchasing
+    "Maintenance purchases"): a request raised from a work order shows the work order under the header, its name, target and need
+    date, with a link to it in Maintenance for a user Maintenance admits (mantle.work.MaintenanceServices.get#PurchaseRequestWork). Its transitions are below, included by Shared/RequestDetail;
     each checks the request (AccessServices.check#Record) before the Mantle service, which checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -119,6 +121,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="pr" from="purchaseDetail?.request || null"/>
                 <script>ec.message.clearErrors()</script>
                 <set field="prHistory" from="purchaseDetail?.historyRows || []"/>
+                <!-- Maintenance (impl-maintenance P10): the work order the request was raised from -->
+                <if condition="pr">
+                    <service-call name="mantle.work.MaintenanceServices.get#PurchaseRequestWork" out-map="prWorkOut"
+                            in-map="{requestId:requestId}" transaction="force-new" ignore-error="true"/>
+                    <script>ec.message.clearErrors()</script>
+                </if>
+                <set field="prWorkList" from="prWorkOut?.workList || []"/>
                 <set field="prCan" from="purchasing.capabilities"/>
                 <set field="prPrimary" from="!pr ? null : pr.canSubmit ? 'submit' : pr.approval?.canDecide ? 'approve'
                         : pr.canSource ? 'source' : null"/>
@@ -254,6 +263,19 @@ along with this software (see the LICENSE.md file). If not, see
                                 </button-menu>
                             </container>
                         </container>
+                        <section-iterate name="PurchaseRequestWork" list="prWorkList" entry="prWork">
+                            <widgets>
+                                <container style="row items-center q-gutter-x-sm q-mb-xs">
+                                    <label text="From work order" type="span" style="m-muted"/>
+                                    <link url="/qapps/Maintenance/WorkOrders/WorkOrderDetail" url-type="plain" link-type="anchor"
+                                            text="${prWork.workEffortId} · ${prWork.workEffortName}" parameter-map="{workEffortId:prWork.workEffortId}"
+                                            condition="prWork.canOpen"/>
+                                    <label text="${prWork.workEffortId} · ${prWork.workEffortName}" type="span" condition="!prWork.canOpen"/>
+                                    <label text="${[prWork.targetName, prWork.statusText, prWork.neededByText ? 'needed by ' + prWork.neededByText : ''].filter(Boolean).join(' · ')}"
+                                            type="span" style="text-caption m-muted"/>
+                                </container>
+                            </widgets>
+                        </section-iterate>
                         <label type="p" style="m-muted" text="${pr.approval.stateText}${pr.approval.refusalText ? ' · '
                                 + pr.approval.refusalText : ''}" condition="pr.statusId == 'ReqSubmitted'"/>
                         <!-- Lines, with the sourcing progress of each -->

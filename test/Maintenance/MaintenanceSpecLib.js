@@ -60,6 +60,10 @@ const ids = {
     roomProcedureId: "BOSS_MNT_PROC_ROOM",
     draftProcedureId: "BOSS_MNT_PROC_VAN",
     retiredProcedureId: "BOSS_MNT_PROC_OLD",
+    // P10: the held motor's rewind, a purchase request of Services sourced to Delta Motor Rewinds' purchase order, its service line
+    // the work's (BossZMaintenanceDemoData.xml)
+    rewindRequestId: "BOSS_MNT_PREQ_MOTOR",
+    rewindOrderId: "BOSS_MNT_PO_REWIND",
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor) and equipment, and with Settings the Maintenance administrator's; a procedure
     // author reads procedures alone

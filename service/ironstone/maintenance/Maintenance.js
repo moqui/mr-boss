@@ -150,7 +150,9 @@ const linkPaths = [
     "Scheduling/Blackouts",
     // P6: Procedures and the procedure record (design §4)
     "Procedures/Find",
-    "Procedures/ProcedureDetail"
+    "Procedures/ProcedureDetail",
+    // P10: a purchase order of the work (the shared OrderDetail, read only)
+    "WorkOrders/OrderDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
