@@ -12,16 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- People › Settings › Pay groups (design-people §8 PayGroups; style-guide §3.9 Settings; impl-people P22): the employers' pay groups,
+<!-- People › Payroll › Pay groups (design-people §8 PayGroups; style-guide §3.9 Settings; impl-people P22): the employers' pay groups,
     from mantle.humanres.PayrollSetupServices.find#Groups (a payroll reader's): Groups (each its employer, currency, frequency,
     periods a year, pay date, proration, time basis, localization and readiness, preview only in this build with why); a group opened
     (payrollGroupId) shows GroupTerms and Periods (its prepared pay periods with their pay dates, and the next ones previewed before
-    they are prepared). A configuration holder (PAYROLL_EDIT and PEOPLE_CONFIGURE, which Mantle checks) adds a group (New pay group,
+    they are prepared). A configuration holder (PAYROLL_EDIT and PAYROLL_CONFIGURE, which Mantle checks) adds a group (New pay group,
     the one primary: nothing is assumed, neither currency nor divisor nor pay date nor proration), changes its policy with a reason
     (audited; its currency, frequency and first period stay once periods exist), ends it, and prepares its next periods (once:
-    preparing again continues after the last). No group can be live: the readiness says so. -->
+    preparing again continues after the last). No group can be live: the readiness says so. Under Payroll beside Rates, payroll's
+    area (the P22 review's call of Nov 12, 2026). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Pay groups" default-menu-index="7">
+        default-menu-title="Pay groups" default-menu-index="8">
     <parameter name="payrollGroupId"/>
     <parameter name="previewCount"/>
     <parameter name="pageIndex"/>

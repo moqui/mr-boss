@@ -1,10 +1,11 @@
-// People's payroll configuration screens (impl-people P22; design-people §8 PayComponentDetail, PayStructureDetail): the People
-// administrator's one html render of PayComponentDetail with a draft open (its terms, the constrained formula editor's action, its
-// example passing, Publish, and values tried), the one html render of PayStructureDetail with a preview run (each component's
-// amount, the totals, the demonstration localization's items and the calculation order), and the choices P22 adds (an employer's
-// pay components, pay groups and accounts, and the localizations), each with a selected value that is not on the page. Mantle's rules
-// (formulas, dependencies, overlaps, totals, groups) are Mantle's PayConfiguration; the access case is PeopleAccess's. The
-// usable-when walk is the acceptance PeoplePayConfigurationUsable.
+// People's payroll configuration screens under Payroll (impl-people P22 and its review; design-people §8 PayComponentDetail,
+// PayStructureDetail): the payroll approver's one html render of PayComponentDetail with a draft waiting for their approval (its
+// terms, its example passing, values tried, the Approval box and Approve), the payroll operator's one html render of
+// PayStructureDetail with a preview run (each component's amount, the totals, the demonstration localization's items and the
+// calculation order), and the choices P22 adds (an employer's pay components, pay groups and accounts, and the localizations), each
+// with a selected value that is not on the page. Mantle's rules (formulas, dependencies, overlaps, totals, groups, approval) are
+// Mantle's PayConfiguration; the access case is PeopleAccessLater's. The usable-when walk is the acceptance
+// PeoplePayConfigurationUsable.
 // Run: ./moq test mr-boss --spec PeoplePayConfiguration
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -12,8 +13,13 @@ const P = "mantle.humanres.PayrollSetupServices."
 const choices = "ironstone.people.ContextServices.get#Choices"
 const labels = (user, parameters) => asUser(user, () => invoke(choices, parameters)).options.map(option => option.label)
 const values = (user, parameters) => asUser(user, () => invoke(choices, parameters)).options.map(option => option.value)
-// a Mantle call as the People administrator, for the spec's own data
+// a Mantle call as the People administrator (who also configures payroll and reads both employers), for the spec's own data
 const asAdmin = (service, parameters) => asUser(users.admin, () => system(() => invoke(service, parameters)))
+// publishing approved by Retail's payroll approver (the P22 review's call: it takes effect on approval)
+const approve = parameters =>
+    asUser(users.payApprover, () =>
+        system(() => invoke(P + "decide#Publication", Object.assign({decision: "approve"}, parameters)))
+    )
 const state = {}
 
 spec({
@@ -50,6 +56,7 @@ spec({
             expectedAmount: "200.00"
         })
         asAdmin(P + "publish#Component", {payrollComponentId: base, expectedRevision: revision(base), reason: "Spec"})
+        approve({payrollComponentId: base})
         state.deduction = asAdmin(P + "store#Component", {
             organizationPartyId: ids.organizationId,
             componentCode: "PCS_DED",
@@ -58,7 +65,8 @@ spec({
             basisEnumId: "PcbFormula",
             formula: "round(PCS_BASE * pct, 2)",
             inputNames: "pct",
-            currencyUomId: "USD"
+            currencyUomId: "USD",
+            liabilityGlAccountId: state.accounts[1]
         }).payrollComponentId
         asAdmin(P + "store#ComponentExample", {
             payrollComponentId: state.deduction,
@@ -66,6 +74,12 @@ spec({
             exampleName: "A tenth",
             inputValues: "PCS_BASE = 200, pct = 0.1",
             expectedAmount: "20"
+        })
+        // asked to publish: it waits for the payroll approver
+        asAdmin(P + "publish#Component", {
+            payrollComponentId: state.deduction,
+            expectedRevision: revision(state.deduction),
+            reason: "Spec saving plan starts"
         })
         state.structure = asAdmin(P + "store#Structure", {
             organizationPartyId: ids.organizationId,
@@ -120,13 +134,13 @@ spec({
 })
 
 feature(
-    "PayComponentDetail shows the People administrator a draft: its terms, the formula editor, its example passing and values tried",
+    "PayComponentDetail shows the payroll approver a draft waiting for their approval: its terms, its example passing, values tried and Approve",
     {
         when() {
             return {
-                rendered: asUser(users.admin, () =>
+                rendered: asUser(users.payApprover, () =>
                     page(
-                        "Settings/PayComponentDetail",
+                        "Payroll/PayComponentDetail",
                         {payrollComponentId: state.deduction, sampleValues: "PCS_BASE = 150, pct = 0.1"},
                         "html"
                     )
@@ -140,10 +154,14 @@ feature(
             rendered.output.includes("Spec saving plan")
             rendered.output.includes("Draft terms")
             rendered.output.includes("round(PCS_BASE * pct, 2)")
-            rendered.output.includes("Edit calculation")
+            !rendered.output.includes("Edit calculation")
             rendered.output.includes("A tenth")
             rendered.output.includes("Passed")
-            rendered.output.includes("Publish")
+            rendered.output.includes("Waiting for approval")
+            rendered.output.includes("Spec saving plan starts")
+            rendered.output.includes("Approve")
+            rendered.output.includes("Refuse")
+            !rendered.output.includes("Ask to publish")
             rendered.output.includes("Gives 15.00")
             rendered.output.includes("Not mapped")
         }
@@ -153,9 +171,9 @@ feature(
 feature("PayStructureDetail previews gross to net with the group's demonstration localization, in calculation order", {
     when() {
         return {
-            rendered: asUser(users.admin, () =>
+            rendered: asUser(users.payroll, () =>
                 page(
-                    "Settings/PayStructureDetail",
+                    "Payroll/PayStructureDetail",
                     {
                         payrollStructureId: state.structure,
                         runPreview: "true",

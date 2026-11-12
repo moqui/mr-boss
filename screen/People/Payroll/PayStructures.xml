@@ -12,14 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- People › Settings › Pay structures (design-people §8 PayStructures; style-guide §3.2 List; impl-people P22): the reusable pay
+<!-- People › Payroll › Pay structures (design-people §8 PayStructures; style-guide §3.2 List; impl-people P22): the reusable pay
     calculations of the employers the user reads, from mantle.humanres.PayrollSetupServices.find#Structures (a payroll reader's),
-    each with its employer, currency, pay basis, the count of its components, its dates and state; ended ones when asked. Under
-    Settings, the People administrator's area; New structure (the one primary: a name, an employer, a currency, never assumed, and a
-    pay basis) needs PAYROLL_EDIT and PEOPLE_CONFIGURE, which Mantle checks, and opens the structure, where it is composed, previewed
+    each with its employer, currency, pay basis, the count of its components, its dates and state (waiting for approval while a
+    request to publish it waits); ended ones when asked. Under Payroll beside Rates, payroll's area (the P22 review's call of Nov 12,
+    2026); New structure (the one primary: a name, an employer, a currency, never assumed, and a pay basis) needs PAYROLL_EDIT and
+    PAYROLL_CONFIGURE, which Mantle checks, and opens the structure, where it is composed, previewed
     and published. Copying is on the structure. No amount is listed. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Pay structures" default-menu-index="6">
+        default-menu-title="Pay structures" default-menu-index="7">
     <parameter name="term"/>
     <parameter name="state"/>
     <parameter name="pageIndex"/>
@@ -50,7 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
             structuresPageRangeLow = found?.structuresPageRangeLow || 0
             structuresPageRangeHigh = found?.structuresPageRangeHigh || 0
             findValues = {term: term || null, state: state || null}
-            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', ended: 'grey-8'}
+            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', waiting: 'warning', ended: 'grey-8'}
             filtered = !!(term || state)
         ]]></script>
     </actions>
@@ -121,6 +122,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <option key="current" text="Published"/>
                                 <option key="future" text="From a later date"/>
                                 <option key="draft" text="Draft"/>
+                                <option key="waiting" text="Waiting for approval"/>
                                 <option key="ended" text="Ended"/>
                             </drop-down>
                         </default-field>

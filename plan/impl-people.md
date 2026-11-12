@@ -6141,16 +6141,17 @@ PayGroups; PE-08, PE-09 (the evaluator), PE-12 (the registration).
   PayrollStructure and its components, PayrollGroup; PayrollSetupServices `find#Components`, `store#Component`,
   `preview#Component`, `publish#Component`, `find#Structures`, `store#Structure`, `store#StructureComponent`,
   `preview#Structure`, `publish#Structure`, `find#Groups`, `store#Group`, `prepare#Periods`. Configuration needs
-  `PAYROLL_EDIT` and `PEOPLE_CONFIGURE`. The localization registration and `PayrollLocalizationServices`'
+  `PAYROLL_EDIT` and `PAYROLL_CONFIGURE` (the user's call of Nov 12, 2026, in place of `PEOPLE_CONFIGURE`; §4), and publishing a
+  component or structure takes effect on a `PakPayrollConfig` approval (§4). The localization registration and `PayrollLocalizationServices`'
   calculation interface, with one synthetic, non-statutory demonstration localization that can never be live.
-- **Screens:** the five screens, the constrained formula editor, examples before publish.
+- **Screens:** the five screens, under Payroll beside Rates (§4), the constrained formula editor, examples before publish.
 - **Specs:** framework `DecimalExpression` (exact decimals; an unknown name, function or anything outside the
   grammar refused); Mantle `test/humanres/PayConfiguration` (a cyclic or missing dependency blocks publish;
   overlapping published terms refused; a statistical component enters no total; no implicit currency or divisor).
 - **Usable when** (`acceptance/People/PeoplePayConfigurationUsable`; design §14.3 "Localization readiness", its
-  configuration half): `people.payroll` with `PEOPLE_CONFIGURE` builds a salary, an hourly and a deduction
-  component with examples, composes a structure, previews gross to net, publishes, and sets up a monthly group
-  whose readiness says it is preview only.
+  configuration half): `people.payroll` (with `PAYROLL_CONFIGURE`) builds a salary, an hourly and a deduction
+  component with examples, composes a structure, previews gross to net, asks to publish each, which
+  `people.payapprover` approves, and sets up a monthly group whose readiness says it is preview only.
 
 **Built Nov 12 (P22).** mr-moqui 29312a4e, mr-mantle 42c8c626, mr-boss (this commit), branch `ppl/p22`.
 - Checked first (the code over the plan): F24 (no decimal evaluator: Remaining-Work's ask), F32 (the legacy payroll services and
@@ -6270,6 +6271,113 @@ PayGroups; PE-08, PE-09 (the evaluator), PE-12 (the registration).
     mr-moqui 29312a4e does not have (every formula store and preview would fail);
   - for the user's call: a payroll configuration holder other than the People administrator (the first finding), and whether
     publishing a component or structure needs an approver (the second).
+
+**Review Nov 12 (P22).** A fresh review of `git diff master...ppl/p22` in mr-moqui, mr-mantle and mr-boss against the phase's text,
+§2, §4, design §1.1, §8, §8.1, §8.4 and PE-09, the decimal evaluator adversarially first, then the payroll configuration's scope,
+amounts, publish rules and lanes; the user's two calls of Nov 12 built and recorded in §4; fixes committed apart per repository
+("People P22 review: …"). The three branches were first rebased onto master after P20, People follow-up 2 (PeopleAccess split in
+two) and the user's pull of Maintenance's first pass: mr-moqui and mr-mantle cleanly; mr-boss with conflicts in design-people's
+header, ss-inventory and usl-inventory (both sides kept), People.js (P20's `linkPaths` and choices beside P22's) and
+PeopleAccess.spec.js (P22's access case moved to PeopleAccessLater, the menu and capability entries kept in PeopleAccess). The phase
+commits are now mr-moqui fd94faa8, mr-mantle 2a9da6ee and mr-boss 910c65d0. Built and tested with the mr-moqui worktree's Debug
+binary (`CARGO_BUILD_JOBS=4`; `./moq test … --debug --nobuild` on this phase's runtime).
+- Checked and found sound:
+  - The evaluator's sandbox holds by construction: `moqui_lib::decimal_expr` parses to a tree of numbers, names, the six
+    arithmetic and comparison operators, `and`/`or`/`not` and the seven allowlisted functions, and evaluates over a map of decimals;
+    no script engine, ExecutionContext, entity, service or I/O is reachable (the Rust services read only their parameters and take
+    no facade). Names are identifiers only (`ec.user`, `a[0]`, `'x'`, `=`, `;`, `eval(…)` refused with their codes); a name outside
+    `inputNames` is `UNKNOWN_NAME`; there is no exponent, power or loop, so evaluation is linear in the tree.
+  - Bounds: 2000 characters (counted before tokenizing); 32 levels counted on every parenthesis, call argument, unary minus and
+    `not`, so the parser's, type checker's and evaluator's recursion is bounded (probed: 31 nested `if` evaluate, 33 refused, 40
+    `not` and 40 `abs(` refused, 600-factor chains a flat loop ending in `OVERFLOW`); numbers at most 28 significant digits and 28
+    places (leading zeros not counted); rounding places 0–28; division by zero refused before dividing, overflow refused by checked
+    arithmetic; no panic from input (`peek` keeps its `End` token, `min`/`max` arity checked at parse).
+  - The grant: ALL_USERS, `inheritAuthz="N"`, the two services alone, not `allow-remote`; acceptable since a call computes and
+    reads nothing. Mantle calls them through `EntityLib.call` (authorization disabled) and never errors into its transaction now (R1).
+  - Payroll configuration: every service checks its own permission (`readerScope`, `editorScope`) and the employer
+    (`requireEmployer`, `readable`: another employer's record `RECORD_UNAVAILABLE`, as a missing one); a supplied employer is checked
+    against the People scope; amounts and formulas are answered only to PAYROLL_VIEW (the BOSS choices give codes, names, groups,
+    accounts and localizations, never an amount); a statistical component enters no total, maps no account and is no localization
+    pay fact; no currency, divisor, pay date, proration or rounding is assumed; `liveEnabled` is refused and `liveAllowed` never
+    true, the demonstration localization flagged `DEMONSTRATION_ONLY`; previews write nothing; every write names its revision;
+    published terms and lines are only ended (drafts, draft lines and examples are removed, being drafts); no legacy payroll service
+    or `PayrollAdjustment` row is read.
+- Fixed:
+  - R1 (medium, mr-moqui): a parameter of the wrong shape (an `inputNames` item that is not text, an `expression` that is not text,
+    `inputs` that are not a map) was a service error, which marks the caller's transaction, against the services' own contract;
+    it is now refused in the answer (`INPUT_INVALID`). A negated or multiplied zero gave `-0` (a payslip's `-0.00`); zero now has no
+    sign. The docs say `+ - *` are exact while the result fits the type and round to 28 places past it, as `/` does. Cargo tests for
+    nesting of every kind, flat chains, numbers kept in the type and unsigned zero; DecimalExpression's wrong-shape feature (fails
+    on the unfixed code: the error is the service's).
+  - R2 (medium): the publish rules were checked on the publishing date only, so a cycle or a missing dependency that starts later
+    passed: with AA's published term from day 5 reading BB, BB's new term from day 1 reading AA published (a cycle from day 5), and
+    a dependency whose term ends later was not missing on the date. `publish#Component` now checks the dependencies on its date and
+    on every later date the employer's published terms start or end (or a component ends) before the term ends; `publish#Structure`
+    checks each line's published term, currency and the calculation order on its date, each draft's own start and every later start
+    or end of a line or of a term of its components. Spec PayConfiguration (AA and BB's later cycle, `CYCLIC_DEPENDENCY` naming the
+    date).
+  - R3 (minor): a component, a structure, a published line or a group could be ended in the past, rewriting what was in effect;
+    each is now ended from today on (`EFFECTIVE_DATE_PAST`), as a term already was.
+  - R4 (minor): `store#Component` with a `payrollComponentTermId` that does not exist made a new draft; it is `RECORD_UNAVAILABLE`.
+  - R5 (the user's call of Nov 12, 2026): payroll configuration's own permission. Mantle seeds `PAYROLL_CONFIGURE` (granted to ADMIN)
+    and People.js's capability `payrollConfigure`; PayrollConfiguration.js changes need PAYROLL_VIEW, PAYROLL_EDIT and
+    PAYROLL_CONFIGURE in place of PEOPLE_CONFIGURE; BossSetupData grants it to BOSS_PEOPLE_PAYROLL and BOSS_PEOPLE_ADMIN and adds it
+    to their capability bundles. The five screens moved from Settings to `People/Payroll` (PayComponents, PayStructures and
+    PayGroups menu 6 to 8 after Rates; the payroll groups' area), Settings' tabs back to P16's; `sharedLinks`, the decision link,
+    PeopleSpecLib (`settingsMenu`, `payrollGroupMenu`), PeopleAccess (the payroll operator's Payroll group, the capability) and
+    PeopleAccessLater's P22 case (the payroll operator stores a component, HR is refused with the same parameters, Services' missing
+    to Retail's payroll, the screens the payroll operator's and refused to HR); design §1.1, §1.2, §8 and this phase's text; the
+    acceptance PeoplePayConfigurationUsable walks as people.payroll again.
+  - R6 (the user's call of Nov 12, 2026): publishing needs an approver. `publish#Component` and `publish#Structure` check the draft as
+    it would be published and ask a People approval of kind `PakPayrollConfig` (Approvals.js, P5's pattern: one kind with two
+    sources, a component's draft term and a structure, through `sourceOf`, so `request`, `sourceChanged`, `sourceSummary` and
+    `record#Decision` take a `sourceEntityName`; the revision is the term and its examples, or the structure and its lines). With no
+    rule the candidates are the employer's payroll approvers (PAYROLL_APPROVE) and HR editors, and whoever decides holds PAYROLL_VIEW
+    and PAYROLL_APPROVE or PEOPLE_REQUEST_APPROVE (the kind's `decidePermissions` and `requiredPermissions`, so HR without payroll
+    decides nothing); never one who drafted it (`selfPartyIds`: each user who changed the draft or its examples, the term's or
+    structure's `draftedByUserIds`, as P17's drafter) or asked. `decide#Publication` and the `PeoplePayrollConfigApproval` topic's
+    `approve#Publication` and `refuse#Publication` decide it; the last approval publishes, checked again (a term's date that has
+    passed with a term in effect then becomes the approval's); a refusal keeps the draft; a changed draft, example, structure or line
+    supersedes the request, an ended component or structure too. The notice is direct-only and names the component or structure and
+    the employer, no amount. PayComponentDetail and PayStructureDetail show the Approval box (state, who asked and why, who decides,
+    the decisions) and Approve and Refuse to the approver; the lists show "Waiting for approval"; People's Approvals list has the
+    topic, Today and find#DueWork take a payroll approver's decisions (PAYROLL_APPROVE). Spec PayConfiguration's approval feature
+    (asked, waiting, routed to the approver alone, one notice with no amount, the drafter `SELF_APPROVAL`, the requester and HR refused,
+    a changed example superseding it, a refusal needing its reason and keeping the draft, the approval publishing it by who asked, a
+    structure approved through the topic's service at the notice's revision); every other publish in the Mantle and BOSS specs now
+    approved by a payroll approver; PeoplePayConfiguration renders PayComponentDetail as the approver with the request waiting.
+- Provisional findings (for the lead to number):
+  - Every Debug data load logs `Error: stack overflow` in `ironstone.customerservice.DemoServices.load#DemoOrder` (the script stack
+    exhausted while validating `checkSet#InvoiceDueDate`'s `overrideExisting`, deep in the demo order's nested service calls); the
+    shared release binary loads the same data (this phase's runtime, master's Customer Service and Mantle code) with none. Not
+    People's: the Debug build's script stack against its larger frames, a framework item for the lead; the demo order is not made in
+    Debug runs.
+  - A declared input named like another component's code shadows it (the input's value wins, and the name is no dependency); P23 or
+    P25 may want to refuse an input that is an employer's component code.
+  - A product past 28 places, like a quotient, rounds to the decimal type (a very small product can become zero), documented now; no
+    payroll amount comes near it.
+  - The default route lets an HR editor who also holds PAYROLL_VIEW decide; no BOSS group holds both, so payroll approvers decide by
+    default. P25's run approval (`PayrollRunApproval`) can take this kind's `decidePermissions` and `requiredPermissions`.
+  - The approver's refusal reaches who asked through their requests (find#MyRequests) and the detail's Approval box; no notice
+    tells them, as with P5's other kinds.
+- Tests run (Debug, this phase's runtime, `--debug --nobuild`): cargo test -p moqui-lib 174 of 174, -p moqui-core --lib
+  rust_services 2 of 2, clippy -p moqui-lib -p moqui-core --all-targets with warnings denied; framework DecimalExpression 5 of 5
+  (0.2 s); mr-mantle PayConfiguration 6 of 6 (9.2 s feature time, Debug), and PeopleApprovals, Offers, Reviews, LeaveRequests,
+  ExpenseClaims, Training, PeopleEmployment, PeopleSchedules, HumanResServices, PayrollServices, PayrollAdjustments, PeopleScope and
+  PeoplePositions 82 of 82; mr-boss PeoplePayConfiguration, PeopleAccess and PeopleAccessLater 31 of 31 (P22's access case 1.3 s,
+  PeoplePayConfiguration 0.8 s), and PeopleApprovals, PeopleSelfService, PeoplePositions and PeopleReviews 14 of 14; the acceptance PeoplePayConfigurationUsable, changed here, 3 of 3;
+  `moqui lint --screens` (Debug): 137 flagged sites, the one more than P22's 136 in Maintenance.xml (master's), none in People's screens. The release binary's DecimalExpression run (to check the overflow) failed 5 of 5 as
+  expected: it predates ExpressionServices. Not run: test-apps, test-framework, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle PayConfiguration about 9 s Debug feature time (6.1 s before; the approvals add a decision per publish);
+    mr-boss PeopleAccessLater's P22 case about 1.3 s and PeoplePayConfiguration 0.8 s Debug; framework DecimalExpression 0.2 s;
+  - merge hot spots: mr-mantle `Approvals.js` (`kinds`, `sourceOf`, `resolve`, `request`, `sourceChanged`, `sourceSummary`,
+    `recordDecision`, `waitingFor`), `People.js` (capabilities, the decisions' gate, find#DueWork's row), `MantleSetupData.xml`,
+    `PeopleApprovalServices.xml`; mr-boss `BossSetupData.xml` (People's grants and bundles, the topic link), `People.js`
+    (`linkPaths`, `decisionUrl`, Today's gate), the screens moved to `screen/People/Payroll/`, `Payroll.xml`, `Settings.xml`,
+    `Approvals.xml`, PeopleSpecLib, PeopleAccess, PeopleAccessLater, design-people, usl-inventory;
+  - the apps still need the framework merge first (ExpressionServices), as the Built note says;
+  - the user's calls of Nov 12 are in §4 (two rows) and built here (R5, R6).
 
 ### P23 — Pay assignments and compensation
 
@@ -6569,6 +6677,8 @@ the owner's design.
 | Nov 12, 2026 | With no approval rule, the employer's HR officers decide a review's finalizing when its template asks for approval (`PakReview`'s own default route, `ParHr`); an employer's rules for the kind still route it; never the reviewer (the one who asked, or one who became the reviewer since) nor the person reviewed | The user's call on P20's question (as built; the current reviewer refused in P20's review, R5) |
 | Nov 12, 2026 | A reviewer's private notes (`PerformanceNote`) are their author's alone: not the person's, a later reviewer's, development's, HR's, an approver's or ADMIN's on any app path; never in the release, an export, Chatter, a notice, search or a model's input | The user's call on P20's question (as built: `get#Review` reads the caller's own notes alone; Mantle Reviews) |
 | Nov 12, 2026 | When a review's reviewer changes (development's reassign, or the line's re-route when a reviewer leaves), the new reviewer reads the feedback already given on the review and withdraws the feedback still waiting, whoever asked for it: the feedback belongs to the review. The earlier reviewer's private notes do not pass | The user's call on P20's question (built in P20's review, R1: Reviews.js `readsStep`, `cancelFeedback`; Mantle Reviews checks Nia reading Cy's feedback that Max asked for and withdrawing Ana's, and none of Max's note) |
+| Nov 12, 2026 | Payroll configuration (pay components, structures, groups and localizations) has its own permission, `PAYROLL_CONFIGURE`, in place of `PEOPLE_CONFIGURE`: Mantle seeds it granted to `ADMIN`; BossSetupData grants it to `BOSS_PEOPLE_PAYROLL` and `BOSS_PEOPLE_ADMIN` and adds it to their capability bundles; the five pay configuration screens are under People/Payroll beside Rates, so Settings stays the People administrator's | The user's call on P22's finding (built in P22's review, R5: design-people §1.1, §1.2, §8; P22's text; the acceptance PeoplePayConfigurationUsable walks as `people.payroll` again) |
+| Nov 12, 2026 | Publishing a pay component or a pay structure needs an approver: publish asks a People approval of kind `PakPayrollConfig` on P5's pattern (an Approvals.js kind, the `PeoplePayrollConfigApproval` topic with approve and refuse services, a direct-only notice); with no rule the employer's payroll approvers (and HR editors who read payroll) decide, never one who drafted or asked (the kind's excluded deciders, as P17's); the published version takes effect on approval; a changed draft supersedes the waiting request | The user's call on P22's finding (built in P22's review, R6: Mantle PayConfiguration's approval feature; design-people §8, §12) |
 
 ## 5. Open questions
 

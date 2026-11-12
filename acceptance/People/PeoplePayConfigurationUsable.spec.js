@@ -1,17 +1,19 @@
 // People P22's "usable when" (impl-people P22; design-people §8, §14.3 "Localization readiness", its configuration half), as an
-// acceptance walk with artifact authorization on, through the Settings screens' transitions: a payroll configuration holder
-// (PAYROLL_EDIT and PEOPLE_CONFIGURE; in BOSS's groups the People administrator, people.admin, who holds both and the payroll
-// grants) builds a salary, an hourly and a deduction component with examples through PayComponents and PayComponentDetail and
-// publishes each; composes a structure through PayStructures and PayStructureDetail, previews gross to net (the demonstration
-// localization's items among them) and publishes it; and sets up a monthly group through PayGroups, prepares its periods and reads
-// its readiness: preview only. The payroll operator (people.payroll, no PEOPLE_CONFIGURE) is refused publishing and the screens.
-// The rules themselves are Mantle's PayConfiguration and mr-boss's PeoplePayConfiguration and PeopleAccess.
+// acceptance walk with artifact authorization on, through the Payroll screens' transitions (the P22 review's calls of Nov 12, 2026):
+// the payroll operator (people.payroll: PAYROLL_EDIT and PAYROLL_CONFIGURE) builds a salary, an hourly and a deduction component
+// with examples through PayComponents and PayComponentDetail and asks to publish each, which the payroll approver
+// (people.payapprover) approves on the same screen (the operator who asked refused the decision); composes a structure through
+// PayStructures and PayStructureDetail, previews gross to net (the demonstration localization's items among them) and asks to
+// publish it, approved the same way; and sets up a monthly group through PayGroups, prepares its periods and reads its readiness:
+// preview only. The HR officer (people.hr, no payroll permission) opens none of the screens. The rules themselves are Mantle's
+// PayConfiguration and mr-boss's PeoplePayConfiguration and PeopleAccessLater.
 // Run: ./moq accept mr-boss --spec PeoplePayConfigurationUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page, screenRefusal} = lib
 const P = "mantle.humanres.PayrollSetupServices."
 const webroot = "component://webroot/screen/webroot.xml"
-const configurer = users.admin
+const configurer = users.payroll
+const approver = users.payApprover
 // a request under the web root as the user (a transition's post), with its errors
 function request(user, path, parameters, method) {
     return asUser(user, () => {
@@ -53,7 +55,7 @@ feature("the configurer builds a salary, an hourly and a deduction component wit
     when() {
         const problems = []
         const post = (path, parameters, user = configurer) => {
-            const out = request(user, "apps/People/Settings/" + path, parameters, "post")
+            const out = request(user, "apps/People/Payroll/" + path, parameters, "post")
             if (out.errors) problems.push(`${path}: ${out.errors}`)
             return out
         }
@@ -127,24 +129,29 @@ feature("the configurer builds a salary, an hourly and a deduction component wit
             }
         )
         // the detail shows each example passing before publishing
-        const detail = asUser(configurer, () => page("Settings/PayComponentDetail", {payrollComponentId: state.hourly}, "html"))
+        const detail = asUser(configurer, () => page("Payroll/PayComponentDetail", {payrollComponentId: state.hourly}, "html"))
         if (detail.errors.length || !detail.output.includes("Passed") || !detail.output.includes("228.13"))
             problems.push(`the hourly pay's detail: ${detail.errors.join(" | ")}`)
-        // the deduction reads the earnings: published after them; the payroll operator is refused publishing
-        const operator = request(
-            users.payroll,
-            "apps/People/Settings/PayComponentDetail/publishComponent",
-            {payrollComponentId: state.salary, expectedRevision: componentRevision(state.salary), reason: "Walk"},
-            "post"
-        )
-        if (!/PERMISSION_DENIED|not authorized/.test(operator.errors))
-            problems.push(`the payroll operator publishes: ${operator.errors || "published"}`)
-        for (const id of [state.salary, state.hourly, state.pension])
+        // the deduction reads the earnings: published after them, each asked by the operator and approved by the payroll approver;
+        // the operator who asked is refused the decision
+        for (const id of [state.salary, state.hourly, state.pension]) {
             post("PayComponentDetail/publishComponent", {
                 payrollComponentId: id,
                 expectedRevision: componentRevision(id),
                 reason: "Walk"
             })
+            if (id === state.salary) {
+                const own = request(
+                    configurer,
+                    "apps/People/Payroll/PayComponentDetail/decidePublication",
+                    {payrollComponentId: id, decision: "approve"},
+                    "post"
+                )
+                if (!/PERMISSION_DENIED|SELF_APPROVAL|not authorized/.test(own.errors))
+                    problems.push(`the payroll operator approves their own: ${own.errors || "approved"}`)
+            }
+            post("PayComponentDetail/decidePublication", {payrollComponentId: id, decision: "approve"}, approver)
+        }
         state.states = [state.salary, state.hourly, state.pension].map(
             id => read(configurer, P + "find#Components", {payrollComponentId: id}).component.state
         )
@@ -160,7 +167,7 @@ feature("the configurer composes a structure, previews gross to net with the dem
     when() {
         const problems = []
         const post = (path, parameters) => {
-            const out = request(configurer, "apps/People/Settings/" + path, parameters, "post")
+            const out = request(configurer, "apps/People/Payroll/" + path, parameters, "post")
             if (out.errors) problems.push(`${path}: ${out.errors}`)
             return out
         }
@@ -185,7 +192,7 @@ feature("the configurer composes a structure, previews gross to net with the dem
             })
         const preview = asUser(configurer, () =>
             page(
-                "Settings/PayStructureDetail",
+                "Payroll/PayStructureDetail",
                 {
                     payrollStructureId: state.structure,
                     runPreview: "true",
@@ -214,6 +221,13 @@ feature("the configurer composes a structure, previews gross to net with the dem
             expectedRevision: structureRevision(state.structure),
             reason: "Walk"
         })
+        const approved = request(
+            approver,
+            "apps/People/Payroll/PayStructureDetail/decidePublication",
+            {payrollStructureId: state.structure, decision: "approve"},
+            "post"
+        )
+        if (approved.errors) problems.push(`the structure's approval: ${approved.errors}`)
         state.structureState = read(configurer, P + "find#Structures", {payrollStructureId: state.structure}).structure.state
         return {problems}
     },
@@ -227,12 +241,12 @@ feature("the configurer composes a structure, previews gross to net with the dem
 })
 
 feature(
-    "the configurer sets up a monthly group whose readiness says it is preview only; the payroll operator opens none of the screens",
+    "the configurer sets up a monthly group whose readiness says it is preview only; the HR officer opens none of the screens",
     {
         when() {
             const problems = []
             const post = (path, parameters) => {
-                const out = request(configurer, "apps/People/Settings/" + path, parameters, "post")
+                const out = request(configurer, "apps/People/Payroll/" + path, parameters, "post")
                 if (out.errors) problems.push(`${path}: ${out.errors}`)
                 return out
             }
@@ -250,12 +264,12 @@ feature(
             })
             const group = read(configurer, P + "find#Groups", {term: "Walk monthly"}).groups[0]
             post("PayGroups/preparePeriods", {payrollGroupId: group.payrollGroupId, periodCount: "3"})
-            const shown = asUser(configurer, () => page("Settings/PayGroups", {payrollGroupId: group.payrollGroupId}, "html"))
+            const shown = asUser(configurer, () => page("Payroll/PayGroups", {payrollGroupId: group.payrollGroupId}, "html"))
             if (shown.errors.length) problems.push(`PayGroups: ${shown.errors.join(" | ")}`)
             for (const text of ["Preview only", "2027-01-31", "2027-03-31"])
                 if (!shown.output.includes(text)) problems.push(`PayGroups lacks ${text}`)
-            for (const path of ["Settings/PayComponents", "Settings/PayStructures", "Settings/PayGroups"])
-                if (!screenRefusal(users.payroll, path)) problems.push(`the payroll operator opens ${path}`)
+            for (const path of ["Payroll/PayComponents", "Payroll/PayStructures", "Payroll/PayGroups"])
+                if (!screenRefusal(users.hr, path)) problems.push(`the HR officer opens ${path}`)
             state.readiness = group.readiness
             return {problems}
         },

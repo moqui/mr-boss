@@ -265,12 +265,13 @@ const linkPaths = [
     "Performance/ReviewCycles",
     "Performance/ReviewForms/List",
     "Performance/ReviewForms/FormDetail",
-    // P22: payroll configuration (design §8): pay components, structures and groups, the People administrator's under Settings
-    "Settings/PayComponents",
-    "Settings/PayComponentDetail",
-    "Settings/PayStructures",
-    "Settings/PayStructureDetail",
-    "Settings/PayGroups"
+    // P22: payroll configuration (design §8): pay components, structures and groups, payroll's under Payroll beside Rates (the P22
+    // review's call of Nov 12, 2026)
+    "Payroll/PayComponents",
+    "Payroll/PayComponentDetail",
+    "Payroll/PayStructures",
+    "Payroll/PayStructureDetail",
+    "Payroll/PayGroups"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -1734,6 +1735,11 @@ function decisionUrl(row) {
     // P20: a review's finalizing, on the review's detail
     if (row.approvalKindEnumId === "PakReview")
         return reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(row.sourceId)
+    // P22 review: publishing a pay component's term or a pay structure, on the component's or the structure's detail
+    if (row.approvalKindEnumId === "PakPayrollConfig")
+        return row.sourceEntityName === "mantle.humanres.payroll.PayrollStructure"
+            ? "/qapps/People/Payroll/PayStructureDetail?payrollStructureId=" + encodeURIComponent(row.sourceId)
+            : "/qapps/People/Payroll/PayComponentDetail?payrollComponentId=" + encodeURIComponent(row.payrollComponentId || "")
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1765,8 +1771,12 @@ function today(p) {
             },
             values
         )
-    // the decisions are a decider's (PEOPLE_REQUEST_APPROVE), with a party to decide as
-    if (ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") && ec.user.userAccount?.partyId) {
+    // the decisions are a decider's (PEOPLE_REQUEST_APPROVE, or PAYROLL_APPROVE for payroll configuration: P22 review), with a
+    // party to decide as
+    if (
+        (ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") || ec.user.hasPermission("PAYROLL_APPROVE")) &&
+        ec.user.userAccount?.partyId
+    ) {
         const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
         for (const row of Array.from(found.dueWork || []))
             items.push(item({kind: "approval", title: row.title, url: decisionUrl(row)}))

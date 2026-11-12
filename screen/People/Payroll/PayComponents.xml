@@ -12,15 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- People › Settings › Pay components (design-people §8 PayComponents; style-guide §3.2 List; impl-people P22): the earning,
+<!-- People › Payroll › Pay components (design-people §8 PayComponents; style-guide §3.2 List; impl-people P22): the earning,
     deduction, employer contribution and statistical definitions of the employers the user reads, from
     mantle.humanres.PayrollSetupServices.find#Components (a payroll reader's: PAYROLL_VIEW), each with the term in effect (its basis,
-    calculation, unit and dates) and its state; ended ones when asked. Under Settings, the People administrator's area, so the
-    screen is a payroll configuration holder's; New component (the one primary) needs PAYROLL_EDIT and PEOPLE_CONFIGURE as well,
-    which Mantle checks, and opens the new component's detail, where its terms, examples and publishing are. A used component is
+    calculation, unit and dates) and its state (waiting for approval while a request to publish its draft waits); ended ones when
+    asked. Under Payroll beside Rates, payroll's area (the P22 review's call of Nov 12, 2026); New component (the one primary)
+    needs PAYROLL_EDIT and PAYROLL_CONFIGURE as well, which Mantle checks, and opens the new component's detail, where its terms,
+    examples and publishing are. A used component is
     ended, never deleted. No pay amount reaches the shell's context, a choice or the palette. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Pay components" default-menu-index="5">
+        default-menu-title="Pay components" default-menu-index="6">
     <parameter name="term"/>
     <parameter name="componentKindEnumId"/>
     <parameter name="state"/>
@@ -54,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
             componentsPageRangeLow = found?.componentsPageRangeLow || 0
             componentsPageRangeHigh = found?.componentsPageRangeHigh || 0
             findValues = {term: term || null, componentKindEnumId: componentKindEnumId || null, state: state || null}
-            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', new: 'orange-9', ended: 'grey-8'}
+            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', waiting: 'warning', new: 'orange-9', ended: 'grey-8'}
             filtered = !!(term || componentKindEnumId || state)
         ]]></script>
     </actions>
@@ -129,6 +130,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <option key="current" text="In effect"/>
                                 <option key="future" text="From a later date"/>
                                 <option key="draft" text="Draft"/>
+                                <option key="waiting" text="Waiting for approval"/>
                                 <option key="ended" text="Ended"/>
                             </drop-down>
                         </default-field>

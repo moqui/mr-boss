@@ -12,17 +12,21 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- People › Settings › Pay component (design-people §8 PayComponentDetail; style-guide §3.3 Detail; impl-people P22): one component,
+<!-- People › Payroll › Pay component (design-people §8 PayComponentDetail; style-guide §3.3 Detail; impl-people P22): one component,
     from mantle.humanres.PayrollSetupServices.find#Components (a payroll reader's): the record header (code, name, kind, employer,
     state), the term opened (the draft, else the one in effect, else payrollComponentTermId's: its basis, calculation, declared
     inputs, the components it reads, currency or unit, rounding stage, payslip visibility, account mapping, dates), its Examples
     computed by preview#Component beside their expected amounts (each passing, failing or refused with why, such as a missing
     input), Try values (the amount values typed give, with its explanation) and every term of the component. A configuration
-    holder (PAYROLL_EDIT and PEOPLE_CONFIGURE, which Mantle checks) edits the draft in the constrained formula editor (Edit
+    holder (PAYROLL_EDIT and PAYROLL_CONFIGURE, which Mantle checks) edits the draft in the constrained formula editor (Edit
     calculation: the framework's decimal expression, checked by the server, with no script), adds and changes its examples, and
     publishes it (Publish, the one primary while there is a draft: a date and a reason; refused unless every example gives its
     amount, its dependencies are published and its mapping is set). A published term is never changed: Start a draft copies it
     from a later date. A statistical component enters no total and maps no account. Each write names the revision read. -->
+<!-- P22 review (the user's calls of Nov 12, 2026): under Payroll beside Rates, payroll's; Publish asks for a People approval of kind
+    PakPayrollConfig (Mantle's publish#Component), which takes effect when approved: the Approval box shows the request (who asked, why,
+    who decides it and the decisions), and its approver (a payroll approver who did not draft it, decide#Publication) approves or
+    refuses it here or from the notice. A changed draft supersedes the request. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pay component" default-menu-include="false">
     <parameter name="payrollComponentId"/>
@@ -78,10 +82,20 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PayrollSetupServices.publish#Component"
                     in-map="{payrollComponentId:payrollComponentId, expectedRevision:(expectedRevision || null),
                         payrollComponentTermId:(payrollComponentTermId || null), fromDate:(fromDate || null), reason:(reason || null)}"/>
-            <if condition="!ec.message.hasError()"><message type="success">Terms published</message></if>
+            <if condition="!ec.message.hasError()"><message type="success">Publishing asked for: the term takes effect once it is approved</message></if>
         </actions>
         <default-response url="."><parameter name="payrollComponentId"/><parameter name="payrollComponentTermId"/></default-response>
         <error-response url="."><parameter name="payrollComponentId"/><parameter name="payrollComponentTermId"/></error-response>
+    </transition>
+    <!-- the request to publish decided by its approver: approve, or refuse with a reason; the last approval publishes -->
+    <transition name="decidePublication">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.decide#Publication"
+                    in-map="{payrollComponentId:payrollComponentId, decision:(decision || 'approve'), reason:(reason || null), peopleApprovalId:(peopleApprovalId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${decision == 'refuse' ? 'Publishing refused' : 'Approved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="payrollComponentId"/></default-response>
+        <error-response url="."><parameter name="payrollComponentId"/></error-response>
     </transition>
     <actions>
         <service-call name="mantle.humanres.PayrollSetupServices.find#Components" out-map="found" transaction="force-new" ignore-error="true"
@@ -103,7 +117,7 @@ along with this software (see the LICENSE.md file). If not, see
             canEdit = !!component?.canEdit
             statistical = !!component?.statistical
             hasDraft = !!component?.draftTermId
-            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', new: 'orange-9', ended: 'grey-8',
+            stateColors = {current: 'positive', future: 'primary', draft: 'orange-9', waiting: 'warning', new: 'orange-9', ended: 'grey-8',
                 passed: 'positive', failed: 'negative', error: 'negative'}
             // the term's facts, one row each, for the Terms box (html, qvt and tui alike)
             termRows = openTerm ? [
@@ -137,6 +151,13 @@ along with this software (see the LICENSE.md file). If not, see
             sampleText = sample ? (sample.ok ? 'Gives ' + String(sample.amount) + ': ' + sample.explanation : sample.explanation) : 
             headerCaption = component ? [component.kindText, component.organizationName, openTerm?.unitText].filter(Boolean).join(' · ') : ''
             allPassed = !!preview?.allPassed
+            // P22 review: the request to publish (Mantle's approval summary) and whether the user decides it
+            approval = component?.approval || null
+            waiting = !!component?.waitingApproval
+            canDecide = waiting && !!approval?.canDecide
+            approvalText = approval ? approval.statusText + (approval.waitingText ? ': ' + approval.waitingText : '') + ' · asked by ' +
+                approval.requestedByName + ' on ' + approval.requestedDateText + (approval.effectiveDateText ? ', from ' + approval.effectiveDateText : '') +
+                (approval.justification ? ' · ' + approval.justification : '') : ''
         ]]></script>
     </actions>
     <widgets>
@@ -146,7 +167,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Not available"/>
                     <box-body>
                         <label type="p" text="This pay component is not available to you."/>
-                        <link url="${sharedLinks['Settings/PayComponents']}" text="Back to pay components" link-type="anchor"/>
+                        <link url="${sharedLinks['Payroll/PayComponents']}" text="Back to pay components" link-type="anchor"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -177,15 +198,16 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
                         <container style="col-12 col-md row q-gutter-md">
-                            <link url="${sharedLinks['Settings/PayComponents']}" text="Pay components" link-type="anchor" icon="sym_o_arrow_back"/>
+                            <link url="${sharedLinks['Payroll/PayComponents']}" text="Pay components" link-type="anchor" icon="sym_o_arrow_back"/>
                             <label text="A statistical value: shown, entering no gross, net or employer cost, and posting nothing" type="span"
                                     style="text-caption" condition="statistical"/>
                             <label text="A draft awaits publishing" type="span" style="text-caption" condition="hasDraft &amp;&amp; !isDraft"/>
+                            <label text="Waiting for approval to publish the draft" type="span" style="text-caption" condition="waiting"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <container-dialog id="PublishDialog" button-text="Publish" icon="sym_o_publish" type="primary" width="560"
-                                    title="Publish the draft of ${component.componentCode}" condition="canEdit &amp;&amp; isDraft">
-                                <label type="p" text="${allPassed ? 'Every example gives its amount.' : 'Not every example gives its amount yet: publishing is refused until they do.'} The term applies from the date given; the term in effect then ends on it."/>
+                                    title="Publish the draft of ${component.componentCode}" condition="canEdit &amp;&amp; isDraft &amp;&amp; !waiting">
+                                <label type="p" text="${allPassed ? 'Every example gives its amount.' : 'Not every example gives its amount yet: publishing is refused until they do.'} Publishing asks for approval: a payroll approver who did not draft it decides. Once approved, the term applies from the date given and the term in effect then ends on it; a change to the draft meanwhile asks again."/>
                                 <form-single name="PublishComponent" transition="publishComponent" map="publishValues">
                                     <field name="payrollComponentId"><default-field><hidden/></default-field></field>
                                     <field name="expectedRevision"><default-field><hidden/></default-field></field>
@@ -195,9 +217,31 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
                                     <field name="submitButton">
-                                        <default-field title="Publish">
-                                            <submit confirmation="Publish the draft of ${component.componentCode}? A published term is not changed afterwards."/></default-field>
+                                        <default-field title="Ask to publish">
+                                            <submit confirmation="Ask to publish the draft of ${component.componentCode}? A published term is not changed afterwards."/></default-field>
                                     </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ApproveDialog" button-text="Approve" icon="sym_o_check" type="primary" width="480"
+                                    title="Approve publishing ${component.componentCode}" condition="canDecide">
+                                <label type="p" text="${approval.justification ? 'Asked by ' + approval.requestedByName + ': ' + approval.justification + '. ' : ''}Approving publishes it from its date, checked again."/>
+                                <form-single name="ApprovePublication" transition="decidePublication"
+                                        map="{payrollComponentId:component.payrollComponentId, peopleApprovalId:approval?.peopleApprovalId}">
+                                    <field name="payrollComponentId"><default-field><hidden/></default-field></field>
+                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RefuseDialog" button-text="Refuse" icon="sym_o_block" width="480"
+                                    title="Refuse publishing ${component.componentCode}" condition="canDecide">
+                                <form-single name="RefusePublication" transition="decidePublication"
+                                        map="{payrollComponentId:component.payrollComponentId, peopleApprovalId:approval?.peopleApprovalId}">
+                                    <field name="payrollComponentId"><default-field><hidden/></default-field></field>
+                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                    <field name="reason"><default-field title="Why" tooltip="Who asked reads it"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
                                 </form-single>
                             </container-dialog>
                             <button-menu text="More" icon="more_horiz" condition="canEdit">
@@ -252,6 +296,28 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+
+                <section name="Approval" condition="approval">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body>
+                                <label type="p" text="${approvalText}"/>
+                                <form-list name="ApprovalSteps" list="approval.steps" skip-form="true" paginate="false" condition="approval.waiting">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false" condition="approval.decisions?.length">
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <container-box>
                     <box-header title="${openTerm ? (isDraft ? 'Draft terms' : 'Terms ' + openTerm.stateText.toLowerCase()) : 'Terms'}"/>
