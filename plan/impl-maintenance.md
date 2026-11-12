@@ -380,7 +380,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P15 Resource policy and blackouts | Mantle, BOSS | Resources, ResourcePolicyDetail, Blackouts | built and reviewed Nov 12, merged |
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
-| P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | — |
+| P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
 | P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | — |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
@@ -3924,7 +3924,7 @@ Design §9 Settings and Lookups, §6 EquipmentImport, §12 (the import and outco
 - Inventories: usl-inventory (create#Equipment's import, store#MaintenancePolicy's dates, a table for the six services). ss-inventory has no
   baseline form for Maintenance's settings, lookups or import: unchanged.
 - Design edits: §9 Settings and Lookups and §6 EquipmentImport "As built (P18)".
-- Findings (provisional):
+- Findings, numbered by the lead F251 to F256 in order:
   - P3's `store#MaintenancePolicy` wrote every field from the call, so a form that did not post a later phase's field reset it (a settings
     section of P14's own would have turned self-approval off). Fixed by keeping each field not given; P7's `voiceNoteTranscription` and
     P14's `pmLeadDays` become rows of `policyFields`.
@@ -4012,7 +4012,7 @@ route tables and MaintenanceAccess.js' scope.
     plan's start still changes it in place. Work policy offers "Withdraw the policy planned from ..." while a policy is planned (No by
     default). MaintenanceSettings' dated policy feature: the change from now refused naming the plan's date, the policy in effect and
     the plan unchanged, then withdrawn with `withdrawPlanned` (failed without the fix: PLAN_PENDING not answered).
-- Findings (unnumbered):
+- Findings, numbered by the lead F257 to F261 in order:
   - A field given as null is given: it resets to its default (a radio's empty, a drop-down's none clears the default type or team, which
     is wanted). So a later section keeps the others only by its own transition naming its own fields; WorkPolicy's transition names
     them all.
@@ -4144,6 +4144,9 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P16: an approver sees a meeting's title only when it is shared with them; Commons' own Rooms and equipment are unchanged (blackouts shown later, in a Commons change) | The lead's acceptance of the worker's recommendations (P16) |
 | Nov 12, 2026 | P16: resource administrators and supervisors read BookingRequests read only; Commons' approvals inbox opens an approval topic's own link first, so a ResourceBooking card opens BookingRequests | The user's calls (P16) |
 | Nov 12, 2026 | P10: accepting outside service stays under Purchasing's own check (`accept#ServiceItem`); the demo supervisor holds `STOCK_RECEIVE` through a Warehouse capability group that opens no Warehouse screen | The lead's decision, by the phase's text |
+| Nov 12, 2026 | P18: lookup values are instance-wide and any Maintenance settings editor changes them; a start earlier than a planned policy is refused (`PLAN_PENDING`) unless the change withdraws it; no default holiday calendar per organization; an ended lookup value leaves the choices only | The user's calls (P18; the last two the lead's acceptance of the worker's) |
+| Nov 12, 2026 | P14: the generation job's every-organization scope is the job's own (no user) or a system administrator's; anyone else generates in their own scope; reminders for assigned PM work a day before the due date; the job seeded paused; job-made work waits for a supervisor under the default zero threshold | The lead's acceptance of the reviewer's and worker's recommendations, by the plan's text |
+| Nov 12, 2026 | P11: Projects' money readers see a repair's cost total per work order; no estimate before anyone is assigned. P19: the due-PM calendar is for MAINTENANCE_VIEW holders | The lead's acceptance of the workers' recommendations |
 
 ## 5. Open questions
 
@@ -4419,6 +4422,17 @@ paths under `mr-boss/`.
 | F248 | P10 review: `get#MaintenanceOrder` reads each work in a try/catch that takes any error for "not readable" | P10's Review note |
 | F249 | P10 review: The ECA's failure path is reviewed, not tested | P10's Review note |
 | F250 | P10 review: Prices follow Manufacturing's subcontract rule (ACCOUNTING_VIEW and the supplier price permissions beside PURCHASE_ORDER_EDIT and MAINTENANCE_COST_VIEW) | P10's Review note |
+| F251 | P18: P3's `store#MaintenancePolicy` wrote every field from the call, so a form that did not post a later phase's field reset it (a settings section of P14's own would have turned self-approval off). | P18's Built note |
+| F252 | P18: Lookups are the instance's, not an organization's (Enumeration has no owner), as People's are | P18's Built note |
+| F253 | P18: Design §9's time zone and calendar defaults are not built | P18's Built note |
+| F254 | P18: The readiness checks are an organization's | P18's Built note |
+| F255 | P18: An existing piece of equipment at another location is refused by the import (move it in Maintenance) | P18's Built note |
+| F256 | P18: Shared/DataImport's four transitions named People's and Admin's refusals by app | P18's Built note |
+| F257 | P18 review: A field given as null is given | P18's Review note |
+| F258 | P18 review: Readiness' checks share the provider's one transaction | P18's Review note |
+| F259 | P18 review: `adminGroups` is `../../Access/Groups` under both Admin and System, so by AdminMount.js' rule it belongs in the framework's `frameworkRoutes` (System's Health then links it too) | P18's Review note |
+| F260 | P18 review: Two files applied at the same time for one new key in one organization can register two assets (`keyFields` covers one file) | P18's Review note |
+| F261 | P18 review: Re-planning a withdrawn plan at its very start revives that row with the new values | P18's Review note |
 
 
 ## 7. Later
