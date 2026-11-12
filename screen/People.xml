@@ -51,7 +51,9 @@ along with this software (see the LICENSE.md file). If not, see
     description" (the people-job-description skill) on a job class and on Openings. P18 Skills and training (Development: the
     skills matrix with its terminal twin, and Qualifications, every People user's and a self-service employee's by the area's
     grant, BOSS_PPL_DEVELOPMENT; the matrix denied to self-service, BOSS_PPL_SKILLS), the qualification content host (a
-    qualification's files, its RecordFiles and Chatter host), the QualificationExpiring topic and the keys g k and g q. -->
+    qualification's files, its RecordFiles and Chatter host), the QualificationExpiring topic and the keys g k and g q. P19 Training
+    under Skills and training (sessions, a session's detail and a completed place's certificate, every People user's and a
+    self-service employee's by the area's grant), the PeopleTrainingApproval topic and Today's training due. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
@@ -172,6 +174,9 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="QualificationExpiring"/>
         <!-- P17: an offer of employment to approve (PeopleOfferApproval), opening OfferDetail -->
         <notification-topic topic="PeopleOfferApproval"/>
+        <!-- P19: a place in a training session to approve (PeopleTrainingApproval; DevelopmentServices approve#Enrollment and
+            refuse#Enrollment), opening the session; Today's training due is the source above -->
+        <notification-topic topic="PeopleTrainingApproval"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="people-panel" type="popup"/></widgets>

@@ -46,9 +46,10 @@ const ids = {
     payrollMenu: ["Home", "Approvals", "Employees", "Staffing", "Time", "Payroll", "Expenses", "Development"],
     // P15: Expenses' menu, every People user's (and a self-service employee's by the area's own grant)
     expensesMenu: ["ExpenseClaims", "EmployeeAdvances"],
-    // P18: Skills & training's menu: the skills matrix development's, HR's and the managers', the qualifications every People user's
-    developmentMenu: ["SkillsMatrix", "Qualifications"],
-    readerDevelopmentMenu: ["Qualifications"],
+    // P18: Skills & training's menu: the skills matrix development's, HR's and the managers', the qualifications every People user's;
+    // P19: training every People user's
+    developmentMenu: ["SkillsMatrix", "Qualifications", "Training"],
+    readerDevelopmentMenu: ["Qualifications", "Training"],
     // Time & leave's menu: P10's time screens (Projects' mounted, every People user's); P9's working schedules (HR's and the
     // managers') and holidays (HR's); P11's leave balances (HR's and the managers'), leave policies and allocations (HR's); P12's
     // leave requests and team calendar (every People user's); P13's attendance (every People user's); P14's shift roster (HR's and
@@ -122,7 +123,10 @@ const ids = {
     associatePartyId: "BOSS_PPL_RAFAEL",
     workPermitId: "BOSS_PPL_QL_RAFAEL_PERMIT",
     firstAidId: "BOSS_PPL_QL_RAFAEL_AID",
-    otherQualificationId: "BOSS_PPL_QL_KENJI_ELEC"
+    otherQualificationId: "BOSS_PPL_QL_KENJI_ELEC",
+    // P19: Retail's fire warden course (assessed, granting the fire warden certificate for 24 months)
+    fireWardenCourseId: "BOSS_PPL_TC_FIREWARDEN",
+    fireWardenTypeId: "BOSS_PPL_QT_FIREWARDEN"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

@@ -5514,4 +5514,12 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
             artifactName="component://mr-boss/screen/People/Employees/EmploymentLetter.xml" artifactTypeEnumId="AT_XML_SCREEN"
             inheritAuthz="Y"/>
+    <!-- impl-people P19 (design-people §10 Training and TrainingDetail): Training, a session's detail and a completed place's
+        certificate are under Skills & training (People/Development), so they open as the area does: every People user through the
+        root, a self-service employee by BOSS_PPL_DEVELOPMENT (the sessions of their employers, their own places, results and
+        certificates, and the sessions they train); what each reads and does is Mantle's DevelopmentServices' check. A place to
+        approve (Mantle's PeopleTrainingApproval topic) opens the session, where it is decided, as from People's Approvals or the
+        notification tray. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingApproval"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
 </entity-facade-xml>

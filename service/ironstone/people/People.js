@@ -238,7 +238,12 @@ const linkPaths = [
     // P17: an offer, its letter's print and an employment change's lifecycle letter (HR's)
     "Staffing/OfferDetail",
     "Staffing/OfferLetter",
-    "Employees/EmploymentLetter"
+    "Employees/EmploymentLetter",
+    // P19: training (design §10): the sessions, a session's detail and a completed place's certificate (every People user's and a
+    // self-service employee's by the area's own grant)
+    "Development/Training",
+    "Development/TrainingDetail",
+    "Development/TrainingCertificate"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -273,7 +278,11 @@ function sharedContext(p) {
                 "Expenses/ExpenseClaimDetail": "//People/Expenses/ExpenseClaimDetail",
                 "Expenses/EmployeeAdvances": "//People/Expenses/EmployeeAdvances",
                 // P18: their own qualifications (the Skills & training area's own grant)
-                "Development/Qualifications": "//People/Development/Qualifications"
+                "Development/Qualifications": "//People/Development/Qualifications",
+                // P19: the training sessions of their employers, their own places and certificates (the same area's grant)
+                "Development/Training": "//People/Development/Training",
+                "Development/TrainingDetail": "//People/Development/TrainingDetail",
+                "Development/TrainingCertificate": "//People/Development/TrainingCertificate"
             }
         }
     }
@@ -1009,6 +1018,39 @@ choiceSources.applicants = (userScope, term, selected, p) => {
 choiceSources.applicationSources = (userScope, term, selected) =>
     vocabularyOptions("EmploymentApplicationReferredBy", term, selected)
 
+// ===== P19: training's choices (design §10 Training) =====
+// who may train a session: the current employees and agents of the employers a development reader administers (store#Training checks
+// the course's employer)
+choiceSources.trainers = (userScope, term, selected, p) =>
+    userScope.capabilities.developView ? employeeOptions(userScope, term, selected, p, ["PrtEmployee", "PrtAgent"]) : []
+// the published training assessment forms of one employer (organizationPartyId), else of every employer the user reads
+// (mantle.party.FormDefinitionServices.find#Forms checks the reader per employer), labelled with the employer when several
+choiceSources.trainingForms = (userScope, term, selected, p) => {
+    const employers = p?.organizationPartyId
+        ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+        : employerIds(userScope)
+    const wanted = String(term || "").toLowerCase()
+    const options = []
+    for (const organizationPartyId of employers.slice(0, 20)) {
+        let found
+        try {
+            found = lib.probe("mantle.party.FormDefinitionServices.find#Forms", {
+                purposeEnumIds: ["DbfpTrainingAssessment"],
+                organizationPartyId
+            })
+        } catch (error) {
+            continue
+        }
+        for (const form of Array.from(found.forms || []))
+            if (form.published && (!wanted || form.description.toLowerCase().includes(wanted) || form.formId === selected))
+                options.push({
+                    value: form.formId,
+                    label: form.description + (employers.length > 1 ? " · " + organizationName(organizationPartyId) : "")
+                })
+    }
+    return options.slice(0, choiceLimit)
+}
+
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown People choice " + p.choice)
@@ -1479,6 +1521,9 @@ function decisionUrl(row) {
     if (row.approvalKindEnumId === "PakExpenseClaim")
         return "/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=" + encodeURIComponent(row.sourceId)
     if (row.approvalKindEnumId === "PakAdvance") return "/qapps/People/Expenses/EmployeeAdvances?show=decide"
+    // P19: a place asked for in a training session, on the session's detail
+    if (row.approvalKindEnumId === "PakTraining")
+        return trainingDetailPath + "?personTrainingId=" + encodeURIComponent(row.sourceId)
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1487,7 +1532,7 @@ function decisionUrl(row) {
 // and (P10) the user's own weeks to submit (my week not submitted: TimesheetServices.find#WeeksToSubmit, the rule of Projects'
 // Today), for one who keeps time under People (a People user, or a self-service employee by the time area's own grant) and does
 // not open Projects, whose own source answers them there, each opening the week in People's My time. Another user's Today gets
-// none. The self-service items of later phases (leave starting, a qualification expiring) join here.
+// none. The self-service items of later phases join here (P12 leave starting, P18 a qualification expiring, P19 training due).
 function today(p) {
     const label = "People"
     if (!ec.user.userId || (p.userId && p.userId !== ec.user.userId)) return {items: [], label}
@@ -1572,6 +1617,31 @@ function today(p) {
             ec.logger.error("People Today of " + ec.user.userId + ": the qualifications expiring were left out: " + error.message)
         }
     }
+    // P19: training due: the user's own enrolled sessions and those they train, starting within seven days (find#Training's due),
+    // each opening the session
+    if (ec.user.userAccount?.partyId && developmentAreaOpens()) {
+        try {
+            const found = lib.probe("mantle.humanres.DevelopmentServices.find#Training", {show: "due", pageSize: 10})
+            for (const row of Array.from(found.sessions || [])) {
+                const day = String(row.startText || "").slice(0, 10)
+                items.push(
+                    item({
+                        kind: "training",
+                        title: (row.isTrainer ? "You train " : "Training: ") + row.title + " " + row.startText,
+                        startDate: day || null,
+                        url: trainingDetailPath + "?workEffortId=" + encodeURIComponent(row.workEffortId),
+                        record: {
+                            recordEntityName: "mantle.work.effort.WorkEffort",
+                            recordId: row.workEffortId,
+                            recordName: row.title
+                        }
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the training due was left out: " + error.message)
+        }
+    }
     if (keepsTimeHere()) {
         try {
             for (const week of Array.from(lib.probe("mantle.work.TimesheetServices.find#WeeksToSubmit", {}).weekList || [])) {
@@ -1629,6 +1699,8 @@ function developmentAreaOpens(grants = rootGrants()) {
 // with its files, for whoever reads them (the person and HR of an employer of theirs), else none.
 const QUALIFICATION = "mantle.humanres.ability.PartyQualification"
 const qualificationsPath = "/qapps/People/Development/Qualifications"
+// P19: a training session's detail (Today's training due, a place to approve)
+const trainingDetailPath = "/qapps/People/Development/TrainingDetail"
 function qualificationLink(partyQualificationId) {
     if (!ec.user.userId || !partyQualificationId || !developmentAreaOpens()) return null
     const found = call("mantle.humanres.DevelopmentServices.check#QualificationAccess", {partyQualificationId})

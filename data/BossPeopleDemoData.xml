@@ -619,4 +619,13 @@ along with this software (see the LICENSE.md file). If not, see
             qualificationTypeEnumId="QualWorkPermit" title="Work permit" issuerName="Immigration office"
             referenceNumber="WP-RET-2041" fromDate="2025-04-01 00:00:00" thruDate="2028-03-31 00:00:00" verificationStatusId="QlVerVerified"
             submittedByUserId="BOSS_PPL_HR" submittedDate="2025-04-02 10:00:00" verifiedByUserId="BOSS_PPL_HR" verifiedDate="2025-04-02 11:00:00"/>
+    <!-- impl-people P19 (design-people §10 Training): Retail's fire warden course, which grants the fire warden certificate for two
+        years once passed, assessed (its sessions answer a training assessment form, built under People's Forms); no session is
+        scheduled in the demo (the acceptance PeopleTrainingUsable schedules one) -->
+    <moqui.basic.Enumeration enumId="BOSS_PPL_QT_FIREWARDEN" enumTypeId="QualificationType" parentEnumId="QualCertification"
+            description="Fire warden certificate" sequenceNum="23"/>
+    <mantle.humanres.ability.TrainingClass trainingClassId="BOSS_PPL_TC_FIREWARDEN" organizationPartyId="ORG_ZIZI_RETAIL"
+            title="Fire warden training" trainingClassTypeEnumId="TrctBasic" qualificationTypeEnumId="BOSS_PPL_QT_FIREWARDEN"
+            validityMonths="24" assessmentRequired="Y" createdDate="2026-01-05 09:00:00" createdByUserId="BOSS_PPL_DEVELOP"
+            description="Raising the alarm, evacuating the store and using an extinguisher"/>
 </entity-facade-xml>
