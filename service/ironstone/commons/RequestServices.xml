@@ -50,12 +50,17 @@ along with this software (see the LICENSE.md file). If not, see
                 if (need !== 'check') ec.message.addError(notAvailable())
                 return
             }
+            // a confidential case is People's alone (its RequestDetail under People, for its people; impl-people P21): not
+            // available in Commons, Projects or any app that reads a request through this service, for anyone, and answered as a
+            // missing request (found false), so not even its existence is told (P21 review)
+            if (row.requestTypeEnumId === 'RqtHrCase') {
+                if (need !== 'check') ec.message.addError(notAvailable())
+                return
+            }
             found = true
             // a purchase RFQ is Purchasing's alone (QuoteRequestDetail): not available in Commons or Projects (impl-purchasing
             // P11, R-PUR-13)
-            // a confidential case is People's alone (its RequestDetail under People, for its people; impl-people P21): not
-            // available in Commons, Projects or any app that reads a request through this service, for anyone
-            if (row.requestTypeEnumId === 'RqtPurchaseRfq' || row.requestTypeEnumId === 'RqtHrCase') {
+            if (row.requestTypeEnumId === 'RqtPurchaseRfq') {
                 if (need !== 'check') ec.message.addError(notAvailable())
                 return
             }

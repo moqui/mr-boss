@@ -845,6 +845,10 @@ along with this software (see the LICENSE.md file). If not, see
             const notOnRecord = () => ec.message.addError(ec.resource.expand('Message ${id} is not on this record', '', {id: communicationEventId}))
             const value = ec.entity.find('mantle.party.communication.CommunicationEvent').condition('communicationEventId', communicationEventId).one()
             if (value == null) { notOnRecord(); return }
+            // a note or message filed on a confidential case is its people's alone (impl-people P21 review): on no other record for
+            // anyone else, its author's or a recipient's party included (an attachment, a reply, taking it off)
+            if (ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').hiddenEventIds([communicationEventId]).length) {
+                notOnRecord(); return }
             const found = (entityName, keys) => ec.entity.find(entityName).condition(keys).count() > 0
             let on = false
             if (info.isParty) {

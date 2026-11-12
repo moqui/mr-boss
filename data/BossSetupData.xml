@@ -5156,7 +5156,7 @@ along with this software (see the LICENSE.md file). If not, see
         offboard, hold it. Openings and review steps join the same lookup with their phases: P16's review adds the draft and open
         openings the user is the recruiting owner of, handed to a new owner who works for the employer. -->
     <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
-            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, and the requests waiting for their decision."
+            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, the requests waiting for their decision, and the open confidential cases they handle (by name alone; each goes back to the employer's case intake handlers when they leave)."
             resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
             transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>

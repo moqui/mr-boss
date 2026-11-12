@@ -1704,6 +1704,46 @@ feature(
                         problems.push("the id lookup finds the case")
                 })
             )
+            // P21 review: Commons answers the case as a missing request (found false), to the manager as to anyone
+            const commonsAccess = asUser(users.manager, () =>
+                system(() => invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId, need: "check"}))
+            )
+            if (commonsAccess.found || commonsAccess.visible) problems.push("Commons tells the manager the case exists")
+            // P21 review: the handler's note on the case is on no other record, for the instance administrator either (a reply on
+            // the handler's party record, Chatter's party branch)
+            const noteText = "People access spec: the handler's note"
+            const noteId = asUser(users.caseHandler, () =>
+                system(() => invoke("mantle.request.RequestServices.add#RequestComment", {requestId, body: noteText}))
+            ).communicationEventId
+            const reply = asUser(users.system, () =>
+                system(() =>
+                    refusal("ironstone.shared.ChatterServices.reply#Entry", {
+                        recordEntityName: "mantle.party.Party",
+                        recordId: ids.caseHandlerPartyId,
+                        parentCommEventId: noteId,
+                        body: "People access spec: a reply from outside"
+                    })
+                )
+            )
+            if (!/is not on this record/.test(reply))
+                problems.push(`the administrator replies to the case note: ${reply || "replied"}`)
+            // P21 review: an agent's render of the case's Chatter panel as its handler (Assist's screen session) shows nothing of it
+            const agentChatter = asUser(users.caseHandler, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/People.xml")
+                    .renderMode("tui")
+                    .agent()
+                    .render(
+                        "Chatter/ChatterTui",
+                        {recordEntity: "mantle.request.Request", recordId: requestId, appRoot: "People"},
+                        null
+                    )
+                ec.message.clearErrors()
+                return String(result.output || "")
+            })
+            if (agentChatter.includes(noteText) || !agentChatter.includes("This record is not available"))
+                problems.push("an agent's render of the case's Chatter shows it")
             // RequestDetail under People: the handler's one qvt render (the case behind the opt-out), HR's html render (not available)
             const handlerPage = asUser(users.caseHandler, () => page("Employees/RequestDetail", {requestId}))
             if (handlerPage.errors.length) problems.push(`the handler's RequestDetail: ${handlerPage.errors.join(" | ")}`)
