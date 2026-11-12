@@ -95,7 +95,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{workEffortId:workEffortId, expectedRevision:expectedRevision, workEffortName:workEffortName,
                         description:description, priority:priority, estimatedWorkTime:estimatedWorkTime,
                         maintenanceTypeEnumId:maintenanceTypeEnumId, severityEnumId:severityEnumId,
-                        failureModeEnumId:failureModeEnumId}"/>
+                        failureModeEnumId:failureModeEnumId, costCenterId:costCenterId, projectWorkEffortId:projectWorkEffortId}"/>
             <if condition="!ec.message.hasError()"><message type="success">Work order ${workEffortId} saved</message></if>
         </actions>
         <default-response url=".">

@@ -255,4 +255,46 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.effort.WorkEffortApproval workEffortApprovalId="BOSS_MNT_PROC_OLD_A1" workEffortId="BOSS_MNT_PROC_OLD" statusId="WeaApproved"
             requestedByUserId="BOSS_MNT_AUTHOR" requestedDate="2026-01-04 08:00:00" decidedByUserId="BOSS_MNT_APPROVER" decidedDate="2026-01-05 08:00:00"/>
     <mantle.product.maintenance.ProductMaintenance productMaintenanceId="BOSS_MNT_COMP_SERVICE" templateWorkEffortId="BOSS_MNT_PROC_COMP"/>
+
+    <!-- P9 (design-maintenance §3 PlannedParts and PartsUsed, AC-24): maint.tech issues stock (Warehouse's BOSS_WAREHOUSE_ISSUE grants
+        STOCK_ISSUE; an assignment grants none) and maint.tech2 does not; spare parts in Services' stock warehouse; the air handler's
+        leak with three coil gaskets planned, two issued and one returned (the rows as the services write them; demo rows post nothing),
+        the compressor's oil service with its suggested filter planned; and Services' maintenance expense (Repairs and maintenance,
+        equipment) for every facility and kind -->
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <mantle.product.Product productId="BOSS_MNT_PART_GASKET" productName="AHU-2 coil gasket" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" ownerPartyId="ORG_ZIZI_SERVICES" amountUomId="OTH_ea"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_FILTER" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_FILTER" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="6"
+            availableToPromiseTotal="6" acquireCost="18.40" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_BELT" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_BELT" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="4"
+            availableToPromiseTotal="4" acquireCost="42.00" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_GASKET" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
+            productId="BOSS_MNT_PART_GASKET" facilityId="BOSS_PRD_WH" locationSeqId="PICK" hasQuantity="Y" quantityOnHandTotal="4"
+            availableToPromiseTotal="4" acquireCost="9.75" acquireCostUomId="USD" receivedDate="2026-10-01 09:00:00"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_FILTER" assetId="BOSS_MNT_STOCK_FILTER" productId="BOSS_MNT_PART_FILTER"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="6" availableToPromiseDiff="6"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_BELT" assetId="BOSS_MNT_STOCK_BELT" productId="BOSS_MNT_PART_BELT"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="4" availableToPromiseDiff="4"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-10-01 09:00:00" quantityOnHandDiff="5" availableToPromiseDiff="5"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_WO_AHU" productId="BOSS_MNT_PART_GASKET" fromDate="2026-11-11 08:30:00"
+            typeEnumId="WeptConsume" estimatedQuantity="3" quantityUomId="OTH_ea" requiredDate="2026-11-11 12:00:00" sourceFacilityId="BOSS_PRD_WH"/>
+    <mantle.product.issuance.AssetIssuance assetIssuanceId="BOSS_MNT_ISS_AHU" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            workEffortId="BOSS_MNT_WO_AHU" assetMaintenanceId="BOSS_MNT_AM_AHU" issuedByUserId="BOSS_MNT_TECH" issuedDate="2026-11-11 10:00:00"
+            quantity="2" enteredQuantity="2" appliedConversionFactor="1"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET_ISS" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-11-11 10:00:00" quantityOnHandDiff="-2" availableToPromiseDiff="-2" workEffortId="BOSS_MNT_WO_AHU"
+            assetIssuanceId="BOSS_MNT_ISS_AHU"/>
+    <mantle.product.receipt.AssetReceipt assetReceiptId="BOSS_MNT_RCT_AHU" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            workEffortId="BOSS_MNT_WO_AHU" sourceAssetIssuanceId="BOSS_MNT_ISS_AHU" receivedByUserId="BOSS_MNT_TECH" receivedDate="2026-11-11 15:00:00"
+            quantityAccepted="1" enteredQuantity="1" appliedConversionFactor="1" itemDescription="One gasket left over"/>
+    <mantle.product.asset.AssetDetail assetDetailId="BOSS_MNT_AD_GASKET_RET" assetId="BOSS_MNT_STOCK_GASKET" productId="BOSS_MNT_PART_GASKET"
+            effectiveDate="2026-11-11 15:00:00" quantityOnHandDiff="1" availableToPromiseDiff="1" workEffortId="BOSS_MNT_WO_AHU"
+            assetReceiptId="BOSS_MNT_RCT_AHU"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MNT_WO_COMP_OIL" productId="BOSS_MNT_PART_FILTER" fromDate="2026-11-10 09:00:00"
+            typeEnumId="WeptConsume" estimatedQuantity="1" requiredDate="2026-11-17 08:00:00" sourceFacilityId="BOSS_PRD_WH"/>
+    <mantle.ledger.config.MaintenanceCostPolicy maintenanceCostPolicyId="BOSS_MNT_COST_SVC" organizationPartyId="ORG_ZIZI_SERVICES"
+            glAccountId="613200000" fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>

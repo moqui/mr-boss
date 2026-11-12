@@ -609,9 +609,9 @@ the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AssetAutoPostServices | post#AssetReceipt |  |  |
+| AssetAutoPostServices | post#AssetReceipt |  | Maintenance/WorkOrders/MaterialIssueReceipt (Return unused: a return of an issuance to a maintenance work order is credited to its expense and dimensions, not WIP, AC-24, Maintenance P9) |
 | AssetAutoPostServices | repost#AssetReceipt |  | Manufacturing/WorkOrders/Disassembly (a dated delta with forwardReceiptRepostEnabled, ReceiptAdjustments.js, Manufacturing P9) |
-| AssetAutoPostServices | post#AssetIssuance |  |  |
+| AssetAutoPostServices | post#AssetIssuance |  | Maintenance/WorkOrders/MaterialIssueReceipt (Issue: to a maintenance work order or step, the MaintenanceCostPolicy expense with the facility, cost centre and project, not WIP; none mapped: the error journal, MAINTENANCE_COST_UNMAPPED; AC-24, Maintenance P9) |
 | AssetAutoPostServices | revert#AssetIssuanceOnCancel |  |  |
 | AssetAutoPostServices | repost#AssetIssuance |  |  |
 | AssetAutoPostServices | calculate#FixedAssetDepreciation | Accounting/FixedAssets/DepreciationRunDetail | Accounting/FixedAssets/DepreciationRunDetail (AssetBookServices.calculate#DepreciationRun) |
@@ -1041,13 +1041,13 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | checkReserve#ProductAssets |  |  |
 | AssetServices | issue#AssetReservation |  |  |
 | AssetServices | issue#Asset |  | Warehouse/Transfers/TransferShipmentDetail (through issue#TransferStock, P15) |
-| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16; beyond the line up to the ProductionPolicy scrap allowance, Manufacturing P4) |
+| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16; beyond the line up to the ProductionPolicy scrap allowance, Manufacturing P4); Maintenance/WorkOrders/MaterialIssueReceipt (Issue, through mantle.work.MaintenanceExecutionServices.issue#MaintenanceMaterial with issuanceFields: a new issuance with the cost centre and project, Maintenance P9) |
 | AssetServices | issue#AnyAssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | — Warehouse/Inventory/MaterialIssueReceipt (MaterialActionForm: pack#ShipmentAssembly for a kit, issue#ProductionMaterial for a run); — not used by Manufacturing: Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt issues through mantle.work.ProductionServices.issue#ProductionMaterial (issue#AssetToWorkEffort, Manufacturing P5b) |
 | AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment | Warehouse/Returns/SupplierReturnShipment (Send back), through WarehouseTaskServices.issue#SupplierReturnStock with the new assetId |
 | AssetServices | move#IssuancesToNewShipment |  |  |
 | AssetServices | cancel#AssetIssuance | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt | — Warehouse/Inventory/MaterialIssueReceipt (ReturnUnusedForm: return#UnusedMaterial, a receipt at original cost, never a cancel) |
 | AssetServices | update#AssetIssuedDate |  |  |
-| AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15); Warehouse/Inventory/MaterialIssueReceipt (Output Receive and Unused returns, through receive#ProductionOutput and return#UnusedMaterial, P16); Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Output Receive) and Manufacturing/ShopFloor/OperationExecution (Complete), through mantle.work.ProductionServices.receive#ProductionOutput (Manufacturing P5b, P10) |
+| AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15); Warehouse/Inventory/MaterialIssueReceipt (Output Receive and Unused returns, through receive#ProductionOutput and return#UnusedMaterial, P16); Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Output Receive) and Manufacturing/ShopFloor/OperationExecution (Complete), through mantle.work.ProductionServices.receive#ProductionOutput (Manufacturing P5b, P10); Maintenance/WorkOrders/MaterialIssueReceipt (Return unused, through return#MaintenanceMaterial, Maintenance P9) |
 | AssetServices | update#AssetAndReceipt |  |  |
 | AssetServices | replace#AssetPartyAssignment | Maintenance/Equipment/EquipmentDetail; People/Employees/EquipmentDetail | People/Employees/EquipmentDetail (End assignment, through PeopleServices.return#Equipment after People's scope check; the end completes the return task, PeopleChecklist.eecas.xml) (People P7); Maintenance/Equipment/EquipmentDetail/Assignments (Change custodian, through MaintenanceResourceServices.change#MaintenanceCustody, dated now or earlier) |
 | AssetServices | move#Product | Warehouse/Handheld/Move; Warehouse/Transfers/Move | — (Move chooses an asset in MoveContents and moves it with move#Stock; impl-warehouse §4 P5) |
@@ -1121,6 +1121,16 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TenantSubscriptionServices | revoke#TenantAccess |  |  |
 | TenantSubscriptionServices | restore#TenantAccess |  |  |
 | TenantSubscriptionServices | destroy#Tenant |  |  |
+
+### Added in the Maintenance build: parts and stock (P9)
+
+| Service | Verbs | Implemented in |
+| --- | --- | --- |
+| mantle.work.MaintenanceExecutionServices | get#MaintenanceMaterials, store#MaintenanceMaterial | Maintenance/WorkOrders/WorkOrderDetail/Parts (Planned parts, Add part, Add suggested parts, Edit, Remove, Parts used); Maintenance/WorkOrders/MaterialIssueReceipt (through ironstone.maintenance.MaterialServices.get#MaterialSource) |
+| mantle.work.MaintenanceExecutionServices | issue#MaintenanceMaterial, return#MaintenanceMaterial | Maintenance/WorkOrders/MaterialIssueReceipt (Issue, Return unused; ironstone.maintenance.MaterialServices.get#MaterialAction after check#Record) |
+| mantle.work.MaintenanceServices | store#MaintenanceWorkOrder (cost centre, project) | Maintenance/WorkOrders/WorkOrderDetail/Overview (Edit) |
+| mantle.ledger.SetupServices | store#PostingDefault, get#PostingDefaults (mapping kind maintenance: MaintenanceCostPolicy) | Accounting/Settings/PostingDefaults (Maintenance expense) |
+| ironstone.maintenance.MaterialServices | get#MaterialSource, get#MaterialAction | Maintenance/WorkOrders/MaterialIssueReceipt |
 
 ### Added in the Products build
 

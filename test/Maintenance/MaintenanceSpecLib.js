@@ -54,6 +54,12 @@ const ids = {
     roomProcedureId: "BOSS_MNT_PROC_ROOM",
     draftProcedureId: "BOSS_MNT_PROC_VAN",
     retiredProcedureId: "BOSS_MNT_PROC_OLD",
+    // P9: the parts (BossZMaintenanceDemoData.xml): the air handler's coil gasket in Services' stock warehouse (two issued to its
+    // leak, one returned), the issuance, and Retail's stock in the same warehouse
+    gasketId: "BOSS_MNT_PART_GASKET",
+    gasketStockId: "BOSS_MNT_STOCK_GASKET",
+    gasketIssuanceId: "BOSS_MNT_ISS_AHU",
+    otherOwnerStockId: "BOSS_PRD_FOREIGN_STOCK",
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor) and equipment, and with Settings the Maintenance administrator's; a procedure
     // author reads procedures alone

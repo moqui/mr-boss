@@ -2224,6 +2224,130 @@ project", §13.2's stock and ledger bullets; MT-08, MT-09 (Accounting's AC-24).
   the work order shows one used, and Accounting's journal shows maintenance expense with the facility and cost
   centre; with the mapping removed the issue stops with the named exception.
 
+**Built Nov 12 (P9).** mr-mantle and mr-boss on branch `mnt/p9` (hashes in the lead's reply); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F30 (WorkEffortProduct's key and fields; AssetIssuance's `facilityId`, `assetMaintenanceId`,
+  no cost centre or project), F31 (MaterialIssueReceipt's sources and its `materialAction`), F32 and F71 (AssetAutoPostServices'
+  WIP rule for an issuance and a receipt with a work effort; StockPosting.js begin, scope, stock, period, complete; Production.js
+  issuePlan and returnPlan; `issue#AssetToWorkEffort`'s `issuanceFields`; `receive#Asset` posting inside the call, before the
+  caller can name the issuance), F67 and F24 (SharedContext.js `maintenanceContext()`, Inventory.js' scoped roots and
+  InventoryAvailability's `capabilities.read` and Stock tab), F96, F118, F128, P6's `store#ProcessRequirements` and `copyRequirements`
+  (dated WorkEffortProduct rows of a node), MaintenanceWorkOrder's existing `costCenterId` and `projectWorkEffortId` (audited, never
+  written before), AccountingPolicy.js `dimensions` (a facility dimension must be the posting organization's own, a cost centre an
+  internal organization rolling up to it), AccountingSetup.js' mapping kinds, and `AcctgTrans.workEffortId` as the project
+  (ProjectCosts.js).
+- Mantle:
+  - Records (`entity/MaintenanceMaterialEntities.xml`, a file of its own): WorkEffortProduct gains `quantityUomId`, `requiredDate`,
+    `sourceFacilityId`; AssetIssuance `costCenterId` and `projectWorkEffortId`; `mantle.ledger.config.MaintenanceCostPolicy` (surrogate
+    key; organization, maintenance kind or any, facility or every facility, GL account, from and thru, all audited).
+  - `mantle.work.MaintenanceExecutionServices` over `MaintenanceMaterials.js`: `get#MaintenanceMaterials` (planned lines with step,
+    unit, required date, source facility, issued, returned, used, left; issues and returns once each; used net of returns; the model's
+    PatSparePart suggestions not yet planned; the nodes to plan on; free stock per line with `withStock`; values only with
+    MAINTENANCE_COST_VIEW; each list one query, F96), `store#MaintenanceMaterial` (plan or supervise, open work; a change ends the
+    open row and starts the next, naming the row read, RECORD_CHANGED; remove; `addSuggested`; a supplies part SUPPLIES_REFUSED; a
+    source facility of the work's organization), `issue#MaintenanceMaterial` (StockPosting.js begin with STOCK_ISSUE and the
+    operation key, the assigned technician of the root or step or a supervisor, approved or started work, the stock locked in the
+    user's facilities, inventory only, the planned product, available, the work organization's own, free, the cost policy for an
+    organization that posts (COST_POLICY_MISSING), the period; then `issue#AssetToWorkEffort` with `issuanceFields` (cost centre,
+    project, primary AssetMaintenance): a new issuance each time to the root or step) and `return#MaintenanceMaterial` (the issuance
+    locked, never more than is left of it, into the original asset or a location of the same owner at its `acquireCost`; the receipt
+    names its issuance). The work order's charge: `store#MaintenanceWorkOrder` takes `costCenterId` and `projectWorkEffortId`
+    (validated, VALUE_INVALID) and `get#` names them (`chargeFields`, `chargeOf`; two grouped lines in MaintenanceWork.js).
+  - AC-24 (owner contract with Accounting): `MaintenanceCostRouting.js`, called from `post#AssetIssuance` (an inventory issuance to a
+    managed root or step, not a template: the most specific policy row in effect for the asset owner, kind and the work's facility or
+    nearest ancestor with a row; the expense entry carries the facility, the nearest of the chain the organization owns, and the cost
+    centre; the transaction the project; no row: error journal, `MAINTENANCE_COST_UNMAPPED` with what to map) and `post#AssetReceipt`
+    (a return of such an issuance credited to the account and dimensions of the issuance's own debit). `receive#Asset` posts the
+    receipt before the return names its issuance, so a receipt with a managed work effort and no source is routed by the policy at
+    once (never WIP), and the return reposts it the issuance's way only when the two differ (`settleReturnPosting`, as repost does:
+    one transaction remains). Every other issuance and receipt posts as before. Posting defaults: the mapping kind `maintenance`
+    (Maintenance expense) in AccountingSetup.js' table, its key text, its checks (an account, a MaintenanceKind, a facility of the
+    organization), an existing row only ended, and a clone copying only the rows of every facility.
+- BOSS:
+  - Services: `ironstone.maintenance.MaterialServices` get#MaterialSource and get#MaterialAction (`Materials.js`, F31); Maintenance.js'
+    choices `costCenters`, `projects`, `stockParts`, `partFacilities` and link paths `WorkOrders/MaterialIssueReceipt` and
+    `WorkOrders/InventoryAvailability`; Products' `maintenanceContext()` gains the Stock tab and `facilityIds` (the facilities of the
+    scope's organizations that hold stock), and Inventory.js scopes to them as for Warehouse (F67); Accounting's choices gain
+    `enum:MaintenanceKind`.
+  - Screens: WorkOrderDetail's Parts tab at 40 (F128): Planned parts with Add part, Add suggested parts, Edit and Remove, each line's
+    Stock link, Issue and return for a stock issuer, Parts used (net totals and the movements, value for a cost reader);
+    `WorkOrders/MaterialIssueReceipt` and `WorkOrders/InventoryAvailability` mounted (hidden); Overview's facts and Edit gain the cost
+    centre and project (the template's storeWorkOrder passes them). Shared/MaterialIssueReceipt (owner contract with Warehouse and
+    Manufacturing): a `Maintenance` branch in `materialAction` and the actions, the `workEffortId` parameter declared, the Unused
+    returns box moved into its own section shown for a production run (as before) or a maintenance work order, the history's asset
+    plain text under Maintenance. Accounting's PostingDefaults: the kind's fields (maintenance kind, facility, from, until) and its
+    precedence note.
+  - Demo (BossZMaintenanceDemoData.xml): maint.tech in BOSS_WAREHOUSE_ISSUE (STOCK_ISSUE; maint.tech2 has none); the AHU-2 coil gasket;
+    filter, belt and gasket stock in Services' stock warehouse; the air handler's leak with three gaskets planned, two issued, one
+    returned (rows as the services write them; demo rows post nothing); the compressor's oil service with its filter planned; Services'
+    MaintenanceCostPolicy (613200000, every facility and kind). No setup rows were needed (F118: none added).
+- Specs:
+  - Mantle `test/work/MaintenanceMaterials` (3 features, 0.8 s): suggestions added, a change ending the line, a stale change, supplies
+    and a technician's plan refused; an assigned technician without STOCK_ISSUE refused, a second issue a second issuance, a retry
+    answering the first, supplies, another organization's stock and another product refused; a return above what is left refused, a
+    partial one at the original cost naming its issuance, the used total.
+  - Mantle `test/ledger/MaintenanceExpenseRouting` (5 features, 0.6 s): the issue to the site's row (the room's nearest) with the room,
+    cost centre and project, not WIP, posted once on a retry, a cost centre of another organization refused; an ordinary task of the
+    same owner still to WIP; no mapping refused by name and the backstop to the error journal unposted (`MAINTENANCE_COST_UNMAPPED`); the
+    return credited to the issuance's account and dimensions after the policy changed, one transaction; Posting defaults' kind (another
+    organization's facility refused, a rewrite refused, an end allowed, the list's key text).
+  - BOSS `test/Maintenance/MaintenanceParts` (4 features, 0.3 s): the Parts tab's one qvt render (planner), MaterialIssueReceipt's
+    Maintenance render (the technician's Issue, Return unused, History), InventoryAvailability under Maintenance (Services' warehouse,
+    not Retail's), the compressor's suggestion and the charge's choices. `MaintenanceAccess` gains the issue rule (maint.tech issues;
+    maint.tech2 and the planner refused PERMISSION_DENIED; Retail's stock in Services' warehouse OWNER_MISMATCH; 0.2 s).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenancePartsWalk` (4 features: create, charge and add suggested parts;
+    issue two and return one through MaterialIssueReceipt's transition; the journal's expense with the room and cost centre and the
+    return; the mapping ended in Posting defaults refusing the next issue by name, a new mapping letting it go).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle every ledger spec (19, Accounting's and Manufacturing's
+  ProductionCostClose among them), the twelve Production specs, WarehouseProduction, the Warehouse stock specs (shipment and product,
+  17), the Maintenance specs, MaintenanceResources and WorkProcess: 486 of 486 (58 specs, 125.9 s feature time); after the last changes
+  MaintenanceMaterials, MaintenanceExpenseRouting, AccountingSetup, AccountingControls, MaintenanceWorkOrders and MaintenanceProcesses
+  63 of 63. mr-boss MaintenanceParts, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment, MaintenanceProcedures,
+  MaintenanceRequests, MaintenanceDowntime, ProductsSharedContext, ProductsInventory, ManufacturingMaterials, ManufacturingAccess,
+  WarehouseInventory, WarehousePacking, WarehouseAccess, PurchasingReplenishment, CustomerServiceOrders, CommerceAccess, AccountingAccess,
+  AccountingValuation, AccountingProductionCostClose: 135 of 135 (20 specs, 39.5 s); a first run failed two MaintenanceParts checks
+  that depended on MaintenanceAccess' issue running first (fixed: the demo plans three gaskets). Client MaintenanceWorkOrdersWalk 1 of
+  1 (8.26 s). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as before; the changed screens appear only in the
+  information list of unnamed containers; both target symlinks intact. Prettier (`npx prettier --config` from inside each component:
+  from mr-moqui's root it skips the components, which its .gitignore lists) clean on the new JavaScript and on AccountingSetup.js and
+  Inventory.js; MaintenanceWork.js, Maintenance.js, SharedContext.js and MaintenanceAccess.spec.js were not prettier-clean before P9 and
+  are left so. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: ss-inventory's RunProducts and RunConsumed forms and a P9 line; usl-inventory's post#AssetIssuance, post#AssetReceipt,
+  issue#AssetToWorkEffort and receive#Asset rows, and an Added table for MaintenanceExecutionServices, the charge, the Posting defaults
+  kind and MaterialServices.
+- Design edits: design-maintenance's header, §3 PlannedParts, PartsUsed, "Charging a project", the InventoryAvailability and
+  MaterialIssueReceipt mount rows, MT-08, MT-09 and §13.2's stock and ledger bullets as built; design-accounting's header,
+  PostingDefaults' "Maintenance expense routing" and §18's AC-24 row; impl-accounting §7's note of other plans' builds.
+- Findings (provisional):
+  - `receive#Asset` posts the receipt inside the call (AssetReceiptGlPost), before a caller can name its issuance, so Production's
+    return posts to WIP by the work effort and a maintenance return could not be routed by its source at posting. Built: a receipt to
+    managed work is routed by the policy at once and reposted the issuance's way only when they differ.
+  - Supplies are refused rather than routed: Mantle's TODOs (AssetAutoPostServices) still post a supplies issuance as a fixed asset; a
+    supplies route is Accounting's to design.
+  - A facility dimension must be owned by the posting organization (AccountingPolicy.js `dimensions`), so an ownerless room carries
+    its nearest owned ancestor; the policy itself matches the room's ancestors.
+  - The policy's "maintenance purpose" is built as the work's MaintenanceKind (corrective, preventive), with any kind as the fallback;
+    MaintenanceType rows would be a finer key if Accounting wants one.
+  - Missing mappings are not yet listed in Posting defaults' MissingMappings nor in Maintenance's readiness (P18).
+  - The plan's planned line is per node and product (one open row); Issue on MaterialIssueReceipt is from planned lines only, an
+    unplanned part is planned first.
+  - Demo issuances and returns are rows, not postings (data load runs no SECA), so the demo journal holds no maintenance expense until a
+    part is issued in the app.
+  - maint.tech is now in BOSS_WAREHOUSE_ISSUE (a capability group with no Warehouse root) for the demo; no spec run here checks it against Admin's matrix.
+- For the lead:
+  - Budget share: mr-mantle +1.4 s (MaintenanceMaterials 0.8 s, MaintenanceExpenseRouting 0.6 s); mr-boss server +0.5 s
+    (MaintenanceParts 0.3 s, MaintenanceAccess +0.2 s); client unchanged; budgets not changed.
+  - Merge hot spots: mr-mantle `AssetAutoPostServices.xml` (two inserts each in post#AssetIssuance and post#AssetReceipt),
+    `AccountingSetup.js` (prettier-formatted), `MaintenanceWork.js` (one require line, two lines in storeWorkOrder and getWorkOrder),
+    `MaintenanceServices.xml` (store#'s parameters); mr-boss `screen/Shared/MaterialIssueReceipt.xml`, `screen/Maintenance/WorkOrders.xml`,
+    `WorkOrderDetail.xml` (comment), `WorkOrderDetail/Overview.xml`, `template/MaintenanceWorkOrderParts.xml` (storeWorkOrder),
+    `Maintenance.js` (workChoices, linkPaths, choiceSources' end), `SharedContext.js`, `Inventory.js`, `Accounting.js`, `PostingDefaults.xml`,
+    `data/BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (ids), `MaintenanceAccess.spec.js` (appended feature), the
+    inventories, design-maintenance, design-accounting and impl-accounting. No edit to `MaintenanceEntities.xml`, `screen/Maintenance.xml`
+    or `BossSetupMaintenanceData.xml`. P7's guard on `add#WorkEffortProduct` does not touch this path (store#MaintenanceMaterial writes the
+    entity after its own checks).
+  - The user's calls: none blocking. For a decision: whether the maintenance purpose key of MaintenanceCostPolicy should be the kind
+    (built) or the MaintenanceType; and whether a supplies part should get a route of its own (refused meanwhile).
+
 ### P10 — Purchasing and outside service
 
 Design §3 PurchaseLinks, CompleteWork's outside-service line and the OrderDetail mount row; MT-10.

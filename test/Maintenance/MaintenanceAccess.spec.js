@@ -9,7 +9,8 @@
 // P3's work order record (its organization's work reader and its technician, not a resource administrator, another technician or
 // Retail) and its record panels, P4's maintenance request record (its organization's planner, not a technician or Retail) and its
 // panels, Commons' Report a problem (every Maintenance group's, not another app's user's), P6's procedure record (a reader of its
-// organization's procedures; an author's change),
+// organization's procedures; an author's change), P9's part issue (the assigned technician with the stock grant; another
+// technician without it and another owner's stock refused),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -850,6 +851,37 @@ feature(
             planner.includes("PERMISSION_DENIED")
             otherAsset.includes("RECORD_UNAVAILABLE")
             techRestores.includes("PERMISSION_DENIED")
+        }
+    }
+)
+feature(
+    "issuing a part is the assigned technician's with the stock grant: one without it is refused, and another owner's stock is",
+    {
+        when() {
+            const issue = "mantle.work.MaintenanceExecutionServices.issue#MaintenanceMaterial"
+            const write = (user, parameters) =>
+                asUser(user, () => {
+                    ec.artifactExecution.disableAuthz()
+                    return refusal(issue, parameters)
+                })
+            const part = {workEffortId: ids.inProgressOrderId, productId: ids.gasketId, quantity: 1}
+            return {
+                tech: write(users.tech, Object.assign({operationKey: "access-p9-1", assetId: ids.gasketStockId}, part)),
+                tech2: write(users.tech2, Object.assign({operationKey: "access-p9-2", assetId: ids.gasketStockId}, part)),
+                planner: write(users.planner, Object.assign({operationKey: "access-p9-3", assetId: ids.gasketStockId}, part)),
+                otherOwner: write(users.tech, {
+                    operationKey: "access-p9-4",
+                    workEffortId: ids.inProgressOrderId,
+                    assetId: ids.otherOwnerStockId,
+                    quantity: 1
+                })
+            }
+        },
+        then({tech, tech2, planner, otherOwner}) {
+            tech == ""
+            tech2.includes("PERMISSION_DENIED")
+            planner.includes("PERMISSION_DENIED")
+            otherOwner.includes("OWNER_MISMATCH")
         }
     }
 )
