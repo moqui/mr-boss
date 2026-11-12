@@ -2506,6 +2506,82 @@ Design §6 (schedules), WorkingSchedules, WorkingScheduleDetail, §7 HolidayCale
   - the user's call: HolidayCalendars is built under Time & leave (HR's), not Settings as designed, following the call of Nov 11 that
     put HR's editors out of the People administrator's Settings.
 
+**Review Nov 11 (P9).** A fresh review of `git diff master...ppl/p9` in mr-mantle and mr-boss against the phase's text, §2, §4,
+design §6 (WorkingSchedules, WorkingScheduleDetail), §7 HolidayCalendars and F23, F31, with capacity, holidays and their scope, and
+the schedule as an employment change first; the lead's call on HolidayCalendars recorded in §4; fixes committed apart per repository
+("People P9 review: …"; mr-mantle a65a0d3c).
+- Checked and found sound:
+  - Capacity (F23): `get#PartyCapacity` reads `Schedules.js scheduledDays` once for its parties; a person with no schedule takes the
+    same path as before (the WetAvailable read and the policy, `source` unchanged; the day rows only gain `workingScheduleId: null`),
+    and a failure of the schedule read is logged and leaves today's capacity. Projects' and Manufacturing's specs pass unchanged.
+  - Cross-midnight and DST: an interval's hours are the instants between its local start and end in the schedule's zone (the end on
+    the next day when at or before the start) less the break, counted on the day it starts; a day is planned by the schedule and
+    assignment in effect at its noon in the schedule's zone; two employments' overlapping intervals count once.
+  - Holidays: a calendar's holiday has no owner, and every other holiday reader (BusinessTime, ProductionCalendar, Projects'
+    planner, `get#WeekDays`' policy days, `get#NextBusinessDay`, Manufacturing's work centers) asks for an owner or a category, so it
+    counts only on the days of a person whose assignment or schedule names its calendar; `checkCalendar` lets a schedule or an
+    assignment name only its employer's calendar or a shared one, so another employer's never applies. Calendars are read (`get#Holidays`,
+    the `holidayCalendars` choice) only as shared or of the reader's employers, and changed only by an HR editor of the owner (a
+    shared one with `PEOPLE_ALL_ORGANIZATIONS`); a holiday is changed through its calendar's owner alone.
+  - Schedules are an employer's: changed and assigned only by its HR editors (`canEditAt`), assigned only to its employments
+    (`SCHEDULE_OUTSIDE`), the owner never changed (`OWNER_CHANGE`); a manager reads only the schedules their live reports follow and
+    of the followers only their reports. Overlapping lines are refused on a day, across midnight and the week's end, among lines in
+    effect together; the zone is refused once anyone has followed the schedule (`ZONE_IN_USE`); every write names the revision.
+  - The access grants: Time.xml's own grant non-inheritable, Holidays HR's alone, the root group denied; PeopleAccess's feature
+    checks the holder, the reader and another employer's schedule.
+- Fixes:
+  - **R1 (high, integrity; the worker's finding 2, the lead's instruction).** A schedule assignment was an employment change applied
+    at once, so P6's rule superseded the employment's transfer or separation waiting for approval (and its request, bound to the
+    employment's revision, went stale): assigning schedules to many people would wipe their pending transfers, and a waiting
+    transfer carried the old schedule in its terms. Now `assign#Schedule` (and the withdrawal of a scheduled `EckSchedule`) leaves
+    the waiting changes as they are: `Approvals.js keepWaiting` binds each request that was current to the employment's new
+    revision and sends its step again (the earlier notice, naming the old revision, read); the waiting change carries the schedule
+    in effect on its date; and `applyChange` gives a transfer or manager change the schedule in effect on its date, never the one it
+    was asked with (the schedule is assign#Schedule's alone). A schedule from the waiting change's date or later is refused
+    (`CHANGE_WAITING`), since the change, once approved, could not apply before a later assignment. Spec: PeopleSchedules' fifth
+    feature (a transfer waiting, a schedule assigned before its date, the transfer still waiting with its approval and one fresh
+    notice, approved through it and applied with the schedule; `CHANGE_WAITING` from its date); fails on the code as built.
+  - **R2 (medium; the worker's finding 3).** A date-boundary bug: `checkDate` counts an assignment starting on the change's date
+    as a later one, so a schedule could not be assigned from the day the assignment in effect starts (a hire's first day, or the
+    date of the person's first schedule). A schedule from that day now changes that assignment's schedule and calendar in place
+    (audited with the reason; the `EckSchedule` change names it), unless it is a change set for a later date HR may still withdraw
+    (then `ASSIGNMENT_SCHEDULED` stands: withdraw it first). An empty date is the start of today, or of the employment or the
+    assignment in effect when it began later today, as the screen's "Today when empty" says (it was the current instant). Spec:
+    the fifth feature (an assignment from a past date given a calendar from the same date: one row, changed in place).
+  - **R3 (medium, history).** `store#ScheduleLine` took any date, so a line added, changed in place or ended from a past date
+    rewrote weeks people had been planned by, and `store#Holiday` added a holiday on a past day while refusing to change one
+    (design: no historical recomputation; a retrospective edit is reported and corrected). A schedule anyone has followed now changes
+    from today on (`DATE_PAST`, on the date the hours actually change in each branch), and a holiday is added for today or later
+    (`HOLIDAY_PAST`). Spec: the fifth feature; fails on the code as built.
+  - **R4 (low, scope).** `get#CapacityPreview` named every schedule planning the person's days, so an HR officer of one employer
+    previewing a person employed by two read the other employer's schedule name. The preview names only the schedules the caller
+    reads (the hours still count, as in Projects). Spec: the fifth feature.
+  - ScheduleServices' descriptions and design-people §6 and §7's As built say so.
+- Provisional findings (for the lead to number):
+  - changing a followed schedule's holiday calendar (`store#Schedule` `holidayCategoryId`) applies to its past days too (the change
+    is audited, not dated); a dated calendar is the assignment's override, from a date;
+  - a person on a leave of absence (an `EasLeave` assignment, which carries the schedule) is planned the schedule's hours, as
+    capacity planned the policy's hours before P9; leave enters capacity with P12;
+  - a schedule set in place on a hire's first day that is still to come is not withdrawn by withdraw#EmploymentChange (its change
+    has no assignment of its own: `CHANGE_IN_EFFECT`); another assignment from that day changes it again;
+  - the withdrawal of a scheduled `EckSchedule` beside a waiting transfer (R1's second path) is not in a spec;
+  - the worker's findings 1 and 4 to 7 stand as written (holidays written without Commons' event services, with no owner, as the
+    review checked above; the noon rule across zones; recurring holidays; no shared schedule; leave, shifts, Employee360 and
+    HireEmployee later).
+- Tests (release binary, `--nobuild`, this worktree's runtime): Mantle PeopleSchedules, PeopleEmployment, PeopleScheduledChanges,
+  PeopleApprovals, PeopleChecklists, PeopleOrganization, PeoplePositions, WorkResources, WorkTimesheets, BusinessTime and
+  HumanResServices 63 of 63 (47.2 s; mr-mantle 23.4 s of features; PeopleSchedules 3.3 s: 1.16, 1.12, 0.22, 0.15 and the fifth
+  feature 0.61); BOSS PeopleSchedules, PeopleAccess, PeopleLifecycle, PeopleHire, Resources and ProjectsAccess 38 of 38 (34.4 s;
+  mr-boss 13.8 s of features). The fifth feature's checks were run on the code as built: every one fails there. Prettier clean on
+  the changed JavaScript. No screen changed: `moqui lint --screens` not run. Not run: `./moq test-apps`, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle about +0.6 s over the Built note (PeopleSchedules' fifth feature); mr-boss unchanged;
+  - merge hot spots beside the Built note's (P10 rebases): mr-mantle `Employment.js` (`applyChange`, `withdrawEmploymentChange`,
+    `assignSchedule` and its helpers), `Approvals.js` (`keepWaiting` and the exports), `Schedules.js`, `ScheduleServices.xml`,
+    `PeopleSchedules.spec.js`; mr-boss design-people §6 and §7, §4 here;
+  - the lead's call is in §4: HolidayCalendars stays under Time & leave as HR's own screen, not Settings;
+  - nothing waits on the user's decision.
+
 ### P10 — Time mounts, rates and labor costing
 
 Design §13 MyTime, Timesheets, TimesheetDetail, TimeEntries and Rates, §6 (pay rates on time), MyTeam's "Remind
@@ -3081,6 +3157,7 @@ the owner's design.
 | Nov 11, 2026 | An equipment return task is assigned to the leaver's manager at that employment (from the assignment the separation ends), falling back to the HR officer who asked for the separation | The user's call on P7's question (built in P7's review, R9; design-people §4). An offboarding step of the Manager role is assigned the same way |
 | Nov 11, 2026 | A scheduled (later-dated) separation is withdrawable by HR like the other scheduled changes: no access end and no return tasks follow, and its checklist tasks are cancelled | The user's call on P7's question (built in P7's review, R10, with a spec; design-people §4, design-admin §4.1) |
 | Nov 11, 2026 | Emergency contacts are hidden through the disabled system account `_PEOPLE_PRIVATE_` as each contact party's `privateOwnerUserId` (no one signs in as it, it holds no group, so every reader that hides a personal contact shows the party to no one, and People's services show it to the person and HR of their employer), not a party-level private flag | The user's call on P8's question (built in P8; P8's review makes the account with the first contact rather than seeding it, R1) |
+| Nov 11, 2026 | HolidayCalendars stays under Time & leave as HR's own screen (`People/Time/HolidayCalendars`, `BOSS_PPL_HOLIDAYS`), not under People Settings as design §7 placed it | The lead's call, following the user's call of Nov 11 that moved HR's editors out of Settings (P7's review); as built in P9 (design-people §2, §7) |
 
 ## 5. Open questions
 
