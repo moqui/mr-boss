@@ -30,7 +30,10 @@ along with this software (see the LICENSE.md file). If not, see
     P11 adds Leave balances (HR's and the managers', BOSS_PPL_LEAVE_BALANCES: an HR reader's employers' balances, a manager's
     reports'), and HR's Leave policies with LeavePolicyDetail and Allocations (BOSS_PPL_LEAVE; under Time rather than Settings, as
     Holidays), both denied to the root user group and to self-service (whose own balances are SelfService's), whose services are
-    Mantle's LeaveServices. Attendance, the shift roster, hours for pay and leave requests join with P12 to P14. -->
+    Mantle's LeaveServices. P12 adds Leave requests (menu 4, LeaveRequestDetail out of the menu) and the Team calendar (menu 6, with
+    its terminal twin TeamCalendarTui), every People user's and a self-service employee's by this area's grant, whose services
+    (LeaveServices find#, preview#, submit#, get# and decide#Request, get#TeamAbsences) admit each user to their own requests, their
+    reports', those they decide and their employers' for HR. Attendance, the shift roster and hours for pay join with P13 and P14. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time &amp; leave" default-menu-index="7" menu-image="sym_o_schedule" menu-image-type="icon">
     <subscreens default-item="Timesheets">

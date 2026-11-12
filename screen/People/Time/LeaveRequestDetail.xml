@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Leave request (design-people §7 LeaveRequestDetail, §15 the leave decision and balance statement; style-guide §3.3 Detail;
+    impl-people P12): one request, from mantle.humanres.LeaveServices.get#Request, for the person, who asked for it, HR of the
+    employer, the person's manager there and its approvers (another is told it is not available). The record header (the person, the
+    days, the leave type, what it charges, the state); the decision notice once decided (the outcome, who, when, a refusal's reason);
+    Request and balance: the balance statement (the balance, what the other requests waiting reserve, this request, reserved or taken,
+    what is left), each day with the hours its schedule plans, its holiday and what it charges, and the blocked days on it; the
+    approval (each step with who decides it, the decisions); and the person's reason, which only the person, who asked, the approvers
+    and HR read, opted out of AI (ai-opt-out, PE-21: an agent's render shows "Not shared with AI" in its place). Actions by what the
+    user may do (decide#Request checks again): Approve (the one primary) and Refuse with a reason, for an approver of the step
+    waiting; Withdraw, while it waits, for the person or who asked; Ask to cancel approved leave, for the person (approved as a request
+    is); Cancel at once with a reason, for an HR editor. Each names the revision read. Every People user's and a self-service
+    employee's by the time area's grant. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Leave request" default-menu-include="false">
+    <parameter name="leaveRequestId"/>
+    <!-- a decision, withdrawal or cancellation: Mantle checks who decides, the revision and the balance again -->
+    <transition name="decide">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.decide#Request" out-map="decided"
+                    in-map="{leaveRequestId:leaveRequestId, decision:(decision || null), reason:(reason || null),
+                        expectedRevision:(expectedRevision || null), sourceRevision:(sourceRevision || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; decided">
+                <message type="success">${decided.repeated ? 'Already done' : decided.statusText}</message></if>
+        </actions>
+        <default-response url="."><parameter name="leaveRequestId"/></default-response>
+        <error-response url="."><parameter name="leaveRequestId"/></error-response>
+    </transition>
+    <actions>
+        <service-call name="mantle.humanres.LeaveServices.get#Request" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{leaveRequestId:(leaveRequestId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="leave" from="found?.request || null"/>
+        <set field="recordFound" from="!!leave"/>
+        <script><![CDATA[
+            dayRows = Array.from(found?.days || [])
+            blockRows = Array.from(found?.blocks || [])
+            statement = found?.statement || {}
+            approval = found?.approval || null
+            stepRows = Array.from(approval?.steps || [])
+            decisionRows = Array.from(approval?.decisions || [])
+            notice = found?.notice || null
+            unitWord = leave ? String(leave.unitText || '').toLowerCase() : ''
+            statusColors = {LrsRequested: 'warning', LrsApproved: 'positive', LrsRefused: 'negative', LrsWithdrawn: 'grey-8',
+                LrsCancelRequested: 'warning', LrsCancelled: 'grey-8'}
+            headerCaption = leave ? [leave.organizationName, leave.leaveTypeText, leave.chargedText].join(' · ') : ''
+            statementRows = leave ? [
+                {term: 'Balance now', value: statement.balance + ' ' + unitWord},
+                {term: 'Reserved by other requests waiting', value: statement.pending + ' ' + unitWord},
+                {term: statement.taken ? 'This leave (taken)' : statement.reserved ? 'This request (reserved)' : 'This request',
+                    value: leave.chargedAmount + ' ' + unitWord},
+                {term: 'Left after it', value: statement.remainder + ' ' + unitWord}
+            ] : []
+            decideValues = leave ? {leaveRequestId: leave.leaveRequestId, sourceRevision: approval?.sourceRevision || null} : {}
+            revisionValues = leave ? {leaveRequestId: leave.leaveRequestId, expectedRevision: leave.revision} : {}
+            reasonValues = leave ? {reason: leave.reason} : {}
+            requestsUrl = sharedLinks?.['Time/LeaveRequests'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="RequestMissing" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This leave request is not available to you."/>
+                        <link url="${requestsUrl}" url-type="plain" text="Back to leave requests" link-type="anchor" condition="requestsUrl"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RequestRecord" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${leave.personName}: ${leave.datesText}" type="h5"/>
+                            <label text="${headerCaption}" type="p" style="text-caption m-muted q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[leave.statusEnumId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(leave.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: leave.statusText})}]]></text>
+                                <text type="html">${leave.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md row q-gutter-md">
+                            <link url="${requestsUrl}" url-type="plain" text="Leave requests" link-type="anchor" icon="sym_o_arrow_back"
+                                    condition="requestsUrl"/>
+                            <label text="Asked ${leave.requestedDateText}" type="span" style="text-caption"/>
+                            <label text="Approver may override blocked days" type="span" style="text-caption text-warning"
+                                    condition="leave.overrideBlocked"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="ApproveDialog" button-text="Approve" icon="sym_o_check" type="primary" width="520"
+                                    title="Approve ${leave.personName}'s leave" condition="found.canDecide">
+                                <label type="p" text="${leave.statusEnumId == 'LrsCancelRequested' ? 'Approving gives back what was taken and frees the days.' : 'The days are counted again and the balance checked with the other requests waiting; the leave is then taken.'}"/>
+                                <form-single name="ApproveLeave" transition="decide" map="decideValues">
+                                    <field name="leaveRequestId"><default-field><hidden/></default-field></field>
+                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RefuseDialog" button-text="Refuse" icon="sym_o_block" width="520"
+                                    title="Refuse ${leave.personName}'s leave" condition="found.canDecide">
+                                <form-single name="RefuseLeave" transition="decide" map="decideValues">
+                                    <field name="leaveRequestId"><default-field><hidden/></default-field></field>
+                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                    <field name="reason"><default-field title="Why" tooltip="The person reads it"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Refuse"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="WithdrawDialog" button-text="Withdraw" icon="sym_o_undo" width="480"
+                                    title="Withdraw this request" condition="found.canWithdraw">
+                                <form-single name="WithdrawLeave" transition="decide" map="revisionValues">
+                                    <field name="leaveRequestId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="withdraw"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Withdraw"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="AskCancelDialog" button-text="Ask to cancel" icon="sym_o_event_available" width="480"
+                                    title="Ask to cancel this leave" condition="found.canAskCancel">
+                                <label type="p" text="Your approver decides the cancellation; the days are given back once it is approved."/>
+                                <form-single name="AskCancelLeave" transition="decide" map="revisionValues">
+                                    <field name="leaveRequestId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="cancel"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Ask to cancel"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="CancelDialog" button-text="Cancel leave" icon="sym_o_event_busy" width="520"
+                                    title="Cancel this leave" condition="found.canCancel">
+                                <label type="p" text="Cancelled at once: what was taken is given back and the days are freed. The person is told."/>
+                                <form-single name="CancelLeave" transition="decide" map="revisionValues">
+                                    <field name="leaveRequestId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="cancel"/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Cancel leave"><submit confirmation="Cancel this leave now?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- the decision notice (design §15): the outcome, who decided and when, a refusal's reason -->
+                <section name="DecisionNotice" condition="notice">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${notice.outcomeText}"/>
+                            <box-body>
+                                <label type="p" text="${notice.outcomeText} by ${notice.decidedByName} on ${notice.decidedDateText}."/>
+                                <label type="p" text="Why: ${notice.reason}" condition="notice.reason"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Request and balance"/>
+                    <box-body>
+                        <form-list name="BalanceStatement" list="statementRows" skip-form="true" paginate="false">
+                            <field name="term"><default-field title=""><display/></default-field></field>
+                            <field name="value" align="right"><default-field title=""><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="text-caption m-muted" condition="leave.policyName" text="Under ${leave.policyName}."/>
+                        <form-list name="RequestDays" list="dayRows" skip-form="true" paginate="false">
+                            <field name="day"><default-field title="Day"><display/></default-field></field>
+                            <field name="weekdayText"><default-field title=""><display/></default-field></field>
+                            <field name="partText"><default-field title="Part"><display/></default-field></field>
+                            <field name="hours" align="right"><default-field title="Hours planned"><display format="#,##0.##"/></default-field></field>
+                            <field name="note"><default-field title="Note"><display/></default-field></field>
+                            <field name="charged" align="right"><default-field title="Charged"><display format="#,##0.##"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="day"/><field-ref name="note"/></column>
+                                <column><field-ref name="charged"/><field-ref name="partText"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="BlockedDays" list="blockRows" skip-form="true" paginate="false" condition="blockRows.length">
+                            <field name="fromDay"><default-field title="Blocked from"><display/></default-field></field>
+                            <field name="thruDay"><default-field title="Through"><display/></default-field></field>
+                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+                <!-- the person's reason: theirs, their approvers' and HR's to read; opted out of AI (PE-21) -->
+                <section name="Reason" condition="leave.reason != null" ai-opt-out="true">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Reason"/>
+                            <box-body>
+                                <form-single name="RequestReason" map="reasonValues">
+                                    <field name="reason" ai-opt-out="true">
+                                        <default-field title="Reason"><display text="${leave.reason || 'No reason given'}"/></default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Approval"/>
+                    <box-body-nopad>
+                        <label type="p" style="q-px-md q-pt-sm" text="${approval.waitingText}" condition="approval?.waitingText"/>
+                        <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
+                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                        </form-list>
+                        <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
+                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!approval" text="No approval was asked for."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

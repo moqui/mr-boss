@@ -194,7 +194,12 @@ const linkPaths = [
     "Time/LeavePolicies",
     "Time/LeavePolicyDetail",
     "Time/LeaveAllocations",
-    "Time/LeaveBalances"
+    "Time/LeaveBalances",
+    // P12: leave requests, a request's detail and the team calendar (design §7, §13), every People user's and a self-service
+    // employee's by the time area's own grant
+    "Time/LeaveRequests",
+    "Time/LeaveRequestDetail",
+    "Time/TeamCalendar"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -214,7 +219,14 @@ function sharedContext(p) {
             appRoot: "People",
             linkBase: "//People",
             webBase: "/qapps/People",
-            sharedLinks: {SelfService: "//People/SelfService", "Time/MyTime": "//People/Time/MyTime"}
+            sharedLinks: {
+                SelfService: "//People/SelfService",
+                "Time/MyTime": "//People/Time/MyTime",
+                // P12: their own leave requests and the team calendar (the time area's own grant)
+                "Time/LeaveRequests": "//People/Time/LeaveRequests",
+                "Time/LeaveRequestDetail": "//People/Time/LeaveRequestDetail",
+                "Time/TeamCalendar": "//People/Time/TeamCalendar"
+            }
         }
     }
     const userScope = required()
@@ -858,8 +870,43 @@ const searchFinds = [
             }
             return Array.from(byParty.values())
         }
+    },
+    // P12: the user's own leave requests (design §1.4: the palette's own requests), by their days, leave type or state; none of
+    // another person (a manager finds a report's from the person's record or the list)
+    {
+        kind: "leaveRequest",
+        rows: (userScope, text, limit) => {
+            const wanted = text.toLowerCase()
+            let found
+            try {
+                found = lib.probe("mantle.humanres.LeaveServices.find#Requests", {mine: true, pageSize: 100})
+            } catch (error) {
+                if (codeOf(error) === "PERMISSION_DENIED") return []
+                throw error
+            }
+            return Array.from(found.requests || [])
+                .filter(row =>
+                    ["leave", row.datesText, row.leaveTypeText, row.statusText].some(part =>
+                        String(part || "")
+                            .toLowerCase()
+                            .includes(wanted)
+                    )
+                )
+                .slice(0, limit)
+                .map(row => ({
+                    title: "My leave " + row.datesText + (row.partText ? " (" + row.partText.toLowerCase() + ")" : ""),
+                    subtitle: ["Leave request", row.leaveTypeText, row.statusText].join(" · "),
+                    icon: "sym_o_beach_access",
+                    recordEntity: LEAVE_REQUEST,
+                    recordId: row.leaveRequestId,
+                    url: leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(row.leaveRequestId)
+                }))
+        }
     }
 ]
+// P12: a leave request's record (the palette, the record-lookup, a notice and Today open it)
+const LEAVE_REQUEST = "mantle.humanres.leave.LeaveRequest"
+const leaveRequestPath = "/qapps/People/Time/LeaveRequestDetail"
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}
@@ -1005,6 +1052,24 @@ function personCard(partyId) {
         workPhone: overview.workPhone
     }
 }
+// P12: a leave request the user reads (get#Request admits them), as the record-lookup shows it: the person, the days, what it
+// charges and its state; never the leave type or the reason. Null when it is not theirs to read.
+function leaveCard(leaveRequestId) {
+    let found
+    try {
+        found = lib.probe("mantle.humanres.LeaveServices.get#Request", {leaveRequestId})
+    } catch (error) {
+        return null
+    }
+    const request = found?.request
+    if (!request) return null
+    return {
+        title: "Leave of " + request.personName + ", " + request.datesText,
+        status: request.statusText,
+        url: leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(leaveRequestId),
+        lines: [request.chargedText]
+    }
+}
 function lookup(p) {
     const empty = {recordList: [], card: null, optionList: []}
     if (!ec.user.userId) return empty
@@ -1020,6 +1085,22 @@ function lookup(p) {
     if (p.operation === "info") {
         const recordList = []
         for (const wanted of Array.from(p.records || [])) {
+            // P12: a leave request the user reads, as its person and days and state (never its type or reason)
+            if (wanted.recordEntityName === LEAVE_REQUEST || wanted.recordEntityName === "LeaveRequest") {
+                const card = leaveCard(wanted.recordId)
+                if (card)
+                    recordList.push({
+                        recordEntityName: wanted.recordEntityName,
+                        recordId: wanted.recordId,
+                        entity: LEAVE_REQUEST,
+                        visible: true,
+                        title: card.title,
+                        typeLabel: "Leave request",
+                        url: card.url,
+                        icon: "sym_o_beach_access"
+                    })
+                continue
+            }
             if (wanted.recordEntityName !== PARTY && wanted.recordEntityName !== "Party") continue
             // a person People does not admit is left to the other providers (the hook keeps the first answer per record)
             const card = personCard(wanted.recordId)
@@ -1038,6 +1119,21 @@ function lookup(p) {
         return Object.assign(empty, {recordList})
     }
     if (p.operation === "card") {
+        if (p.recordEntityName === LEAVE_REQUEST && p.recordId) {
+            const card = leaveCard(p.recordId)
+            return card
+                ? Object.assign(empty, {
+                      card: {
+                          entityName: LEAVE_REQUEST,
+                          id: p.recordId,
+                          title: card.title,
+                          status: card.status,
+                          url: card.url,
+                          lines: card.lines
+                      }
+                  })
+                : empty
+        }
         if (p.recordEntityName !== PARTY || !p.recordId) return empty
         const card = personCard(p.recordId)
         if (!card) return empty
@@ -1097,6 +1193,8 @@ function decisionUrl(row) {
         return "/qapps/People/Staffing/PositionDetail?emplPositionId=" + encodeURIComponent(row.sourceId)
     if (row.approvalKindEnumId === "PakEmploymentChange" && row.partyId)
         return "/qapps/People/Employees/Employee360?partyId=" + encodeURIComponent(row.partyId)
+    // P12: a leave request (or its cancellation) on LeaveRequestDetail
+    if (row.approvalKindEnumId === "PakLeave") return leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(row.sourceId)
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1133,6 +1231,33 @@ function today(p) {
         const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
         for (const row of Array.from(found.dueWork || []))
             items.push(item({kind: "approval", title: row.title, url: decisionUrl(row)}))
+    }
+    // P12: leave starting for my team, today or tomorrow (a manager's live reports, PEOPLE_TEAM_VIEW): who is out, never why
+    if (ec.user.hasPermission("PEOPLE_TEAM_VIEW") && ec.user.userAccount?.partyId) {
+        try {
+            const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+            const [y, m, d] = today.split("-").map(Number)
+            const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().substring(0, 10)
+            const own = ec.user.userAccount.partyId
+            const found = lib.probe("mantle.humanres.LeaveServices.get#TeamAbsences", {start: today, end: tomorrow})
+            for (const event of Array.from(found.eventList || [])) {
+                const startDay = String(event.start).substring(0, 10)
+                // the manager's reports (and an HR reader's employers'), which they open; not a colleague's day the calendar shows
+                if (event.partyId === own || startDay < today || !event.openable) continue
+                items.push(
+                    item({
+                        kind: "leave",
+                        title: event.title + (startDay === today ? " today" : " tomorrow"),
+                        startDate: startDay,
+                        allDay: !!event.allDay,
+                        url: leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(event.leaveRequestId),
+                        record: {recordEntityName: LEAVE_REQUEST, recordId: event.leaveRequestId, recordName: event.title}
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the team's leave was left out: " + error.message)
+        }
     }
     if (keepsTimeHere()) {
         try {
@@ -1195,7 +1320,9 @@ function selfServiceContext(p) {
         approvalsUrl: peopleUser ? "/qapps/People/Approvals" : null,
         peopleHomeUrl: peopleUser ? "/qapps/People/Home" : null,
         // P10: the user's own week, under People's time area when it opens to them (the root or the area's own grant)
-        myTimeUrl: timeAreaOpens(grants) ? "/qapps/People/Time/MyTime" : null
+        myTimeUrl: timeAreaOpens(grants) ? "/qapps/People/Time/MyTime" : null,
+        // P12: their leave requests and the team calendar, under the same area
+        leaveRequestsUrl: timeAreaOpens(grants) ? "/qapps/People/Time/LeaveRequests" : null
     }
 }
 

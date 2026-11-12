@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Leave requests (design-people §7 LeaveRequests; style-guide §3.2 List and §3.6 Task; impl-people P12): the leave requests
+    the user reads (mantle.humanres.LeaveServices.find#Requests): their own, those they decide now (To decide), and a manager's reports'
+    and an HR reader's employers' (All); by state, leave type and days; each opening LeaveRequestDetail; never a reason. Request leave
+    is the primary action, in two steps: the leave type, the days (a run of whole days, or a morning or an afternoon of one day) and,
+    for an HR editor, the employee; then the preview (preview#Request: each day with what it charges from the employment's working
+    schedule less its holidays, the balance, what the other requests waiting reserve, what is left, blocked and mandatory days, who
+    approves, and what blocks it), where the reason is written and the request made (submit#Request). The reason field is opted out
+    of AI (ai-opt-out, PE-21): no text actions on it and nothing of it reaches an agent. Every People user's and a self-service
+    employee's (the time area's own grant, BOSS_PPL_TIME); what each reads and may ask is Mantle's check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Leave requests" default-menu-index="4" menu-image="sym_o_event_busy" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="partyId"/>
+    <parameter name="statusEnumId"/>
+    <parameter name="leaveTypeEnumId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <!-- the request's terms, carried from the first step to the preview (never the reason) -->
+    <parameter name="request"/>
+    <parameter name="rqOrganizationPartyId"/>
+    <parameter name="rqEmploymentId"/>
+    <parameter name="rqTypeEnumId"/>
+    <parameter name="rqFromDate"/>
+    <parameter name="rqThruDate"/>
+    <parameter name="rqPartEnumId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- the request made, with its reason: Mantle assesses it again under the employment's lock and refuses it with what blocks it -->
+    <transition name="requestLeave">
+        <actions>
+            <service-call name="mantle.humanres.LeaveServices.submit#Request" out-map="made"
+                    in-map="{partyRelationshipId:(rqEmploymentId || null), leaveTypeEnumId:(rqTypeEnumId || null), fromDate:(rqFromDate || null),
+                        thruDate:(rqThruDate || null), dayPartEnumId:(rqPartEnumId || null), reason:(reason || null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; made?.leaveRequestId">
+                <message type="success">Leave requested: it waits for approval</message>
+                <set field="leaveRequestId" from="made.leaveRequestId"/>
+            </if>
+        </actions>
+        <conditional-response url="../LeaveRequestDetail" condition="leaveRequestId"><parameter name="leaveRequestId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url=".">
+            <parameter name="request" value="Y"/><parameter name="rqOrganizationPartyId"/><parameter name="rqEmploymentId"/>
+            <parameter name="rqTypeEnumId"/><parameter name="rqFromDate"/><parameter name="rqThruDate"/><parameter name="rqPartEnumId"/>
+        </error-response>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="canDecide" from="ec.user.hasPermission('PEOPLE_REQUEST_APPROVE')"/>
+        <set field="seesOthers" from="!!(caps.team || caps.hrView)"/>
+        <set field="hrEditor" from="!!(caps.hrView &amp;&amp; caps.hrEdit)"/>
+        <set field="showing" from="['mine', 'decide', 'all'].includes(show) ? show : (canDecide ? 'decide' : (seesOthers ? 'all' : 'mine'))"/>
+        <service-call name="mantle.humanres.LeaveServices.find#Requests" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{mine:(showing == 'mine'), toDecide:(showing == 'decide'), partyId:(partyId || null), statusEnumId:(statusEnumId || null),
+                    leaveTypeEnumId:(leaveTypeEnumId || null), fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:(pageIndex || 0)}"/>
+        <script>ec.message.clearErrors()</script>
+        <!-- the preview of the request's terms (the second step) -->
+        <if condition="request == 'Y' &amp;&amp; rqTypeEnumId &amp;&amp; rqFromDate">
+            <service-call name="mantle.humanres.LeaveServices.preview#Request" out-map="previewed" transaction="force-new" ignore-error="true"
+                    in-map="{partyRelationshipId:(rqEmploymentId || null), leaveTypeEnumId:rqTypeEnumId, fromDate:rqFromDate,
+                        thruDate:(rqThruDate || null), dayPartEnumId:(rqPartEnumId || null)}"/>
+            <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            requestsFound = !!found?.requests
+            requests = Array.from(found?.requests || [])
+            requestsCount = found?.requestsCount || 0
+            requestsPageIndex = found?.requestsPageIndex || 0
+            requestsPageSize = found?.requestsPageSize || 20
+            requestsPageMaxIndex = found?.requestsPageMaxIndex || 0
+            requestsPageRangeLow = found?.requestsPageRangeLow || 0
+            requestsPageRangeHigh = found?.requestsPageRangeHigh || 0
+            statusColors = {LrsRequested: 'warning', LrsApproved: 'positive', LrsRefused: 'negative', LrsWithdrawn: 'grey-8',
+                LrsCancelRequested: 'warning', LrsCancelled: 'grey-8'}
+            // the leave types (People's lookups, ended ones left out), and the user's own employments when they have several
+            leaveTypeOptions = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'PeopleLeaveType')
+                .condition('thruDate', 'is-null', null).orderBy('sequenceNum').disableAuthz().list())
+                .map(row => ({key: row.enumId, text: row.description || row.enumId}))
+            ownEmployments = Array.from(people?.employments || []).filter(row => !row.thruDate || new Date(row.thruDate).getTime() > Date.now())
+            employmentOptions = ownEmployments.map(row => ({key: row.partyRelationshipId,
+                text: (ec.entity.find('mantle.party.Organization').condition('partyId', row.organizationPartyId).disableAuthz().one()?.organizationName) || row.organizationPartyId}))
+            findValues = {show: showing, partyId: partyId || null, statusEnumId: statusEnumId || null, leaveTypeEnumId: leaveTypeEnumId || null,
+                fromDate: fromDate || null, thruDate: thruDate || null}
+            termValues = {request: 'Y', rqOrganizationPartyId: rqOrganizationPartyId || null, rqEmploymentId: rqEmploymentId || null,
+                rqTypeEnumId: rqTypeEnumId || (leaveTypeOptions[0]?.key || null), rqFromDate: rqFromDate || null, rqThruDate: rqThruDate || null,
+                rqPartEnumId: rqPartEnumId || 'LdpFull'}
+            preview = previewed?.preview || null
+            previewDays = Array.from(preview?.days || [])
+            previewProblems = Array.from(preview?.problems || [])
+            previewWarnings = Array.from(preview?.warnings || [])
+            previewSteps = Array.from(preview?.approverSteps || [])
+            unitWord = preview ? String(preview.unitText || '').toLowerCase() : ''
+            confirmValues = {rqOrganizationPartyId: rqOrganizationPartyId || null, rqEmploymentId: preview?.partyRelationshipId || rqEmploymentId || null,
+                rqTypeEnumId: rqTypeEnumId || null, rqFromDate: rqFromDate || null, rqThruDate: rqThruDate || null, rqPartEnumId: rqPartEnumId || null,
+                operationKey: 'LR' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8)}
+            calendarUrl = sharedLinks?.['Time/TeamCalendar'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Leave requests" type="h5"/>
+                <label text="Ask for time off, follow your requests and decide your team's." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="." text="Request leave" icon="sym_o_add" link-type="anchor-button" btn-type="primary" parameter-map="{request:'Y'}"
+                        condition="request != 'Y'"/>
+                <link url="${calendarUrl}" url-type="plain" text="Team calendar" icon="sym_o_calendar_month" link-type="anchor-button"
+                        condition="calendarUrl"/>
+            </container>
+        </container>
+
+        <!-- RequestLeave, step one: the type and the days (and an HR editor's employee) -->
+        <section name="RequestTerms" condition="request == 'Y'">
+            <widgets>
+                <container-box>
+                    <box-header title="Request leave"/>
+                    <box-toolbar><link url="." text="Close" icon="sym_o_close" link-type="anchor"/></box-toolbar>
+                    <box-body>
+                        <form-single name="RequestTerms" transition="." map="termValues">
+                            <field name="request"><default-field><hidden/></default-field></field>
+                            <field name="rqOrganizationPartyId" hide="!hrEditor">
+                                <default-field title="Employer" tooltip="HR: the employer of the employee you ask for">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'employers', selected:rqOrganizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="rqEmploymentId">
+                                <conditional-field condition="hrEditor" title="Employee" tooltip="Empty: yourself">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                parameter-map="{choice:'employments', selected:rqEmploymentId}">
+                                            <depends-on field="rqOrganizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </conditional-field>
+                                <conditional-field condition="employmentOptions.length &gt; 1" title="Employer">
+                                    <drop-down><list-options list="employmentOptions" key="${key}" text="${text}"/></drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="rqTypeEnumId">
+                                <default-field title="Leave type">
+                                    <drop-down><list-options list="leaveTypeOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="rqFromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                            <field name="rqThruDate"><default-field title="Through" tooltip="The first day when empty"><date-time type="date"/></default-field></field>
+                            <field name="rqPartEnumId">
+                                <default-field title="Day">
+                                    <radio>
+                                        <option key="LdpFull" text="Whole days"/>
+                                        <option key="LdpMorning" text="Morning"/>
+                                        <option key="LdpAfternoon" text="Afternoon"/>
+                                    </radio>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="rqOrganizationPartyId"/><field-ref name="rqEmploymentId"/></field-row>
+                                <field-row><field-ref name="rqTypeEnumId"/><field-ref name="rqPartEnumId"/></field-row>
+                                <field-row><field-ref name="rqFromDate"/><field-ref name="rqThruDate"/></field-row>
+                                <field-ref name="request"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- RequestLeave, step two: the preview, the reason and the request -->
+        <section name="RequestPreview" condition="request == 'Y' &amp;&amp; (preview || previewError)">
+            <widgets>
+                <label type="p" style="text-negative" text="${previewError}" condition="previewError"/>
+                <section name="PreviewShown" condition="preview">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${preview.personName}: ${preview.leaveTypeText}, ${preview.datesText}"/>
+                            <box-body>
+                                <dashboard min-width="140">
+                                    <number-card title="Charged" value="${preview.chargedAmount} ${unitWord}" icon="sym_o_event_busy" size="sm"/>
+                                    <number-card title="Balance" value="${preview.balance} ${unitWord}" icon="sym_o_account_balance_wallet" size="sm"/>
+                                    <number-card title="Reserved by others" value="${preview.pending} ${unitWord}" icon="sym_o_pending" size="sm"/>
+                                    <number-card title="Left after" value="${preview.remainder} ${unitWord}" icon="sym_o_beach_access" size="sm"/>
+                                </dashboard>
+                                <label type="p" style="text-caption m-muted" condition="preview.policyName"
+                                        text="Under ${preview.policyName}${preview.needsBalance ? '' : ', which keeps no balance'}."/>
+                                <form-list name="PreviewDays" list="previewDays" skip-form="true" paginate="false">
+                                    <field name="day"><default-field title="Day"><display/></default-field></field>
+                                    <field name="weekdayText"><default-field title=""><display/></default-field></field>
+                                    <field name="partText"><default-field title="Part"><display/></default-field></field>
+                                    <field name="hours" align="right"><default-field title="Hours planned"><display format="#,##0.##"/></default-field></field>
+                                    <field name="note"><default-field title="Note"><display/></default-field></field>
+                                    <field name="charged" align="right"><default-field title="Charged"><display format="#,##0.##"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="day"/><field-ref name="note"/></column>
+                                        <column><field-ref name="charged"/><field-ref name="partText"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="PreviewApprovers" list="previewSteps" skip-form="true" paginate="false" condition="previewSteps.length">
+                                    <field name="stepText"><default-field title="Approval"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="PreviewProblems" list="previewProblems" skip-form="true" paginate="false" condition="previewProblems.length">
+                                    <field name="message"><default-field title="Not possible"><label text="${message}" style="text-negative"/></default-field></field>
+                                </form-list>
+                                <form-list name="PreviewWarnings" list="previewWarnings" skip-form="true" paginate="false" condition="previewWarnings.length">
+                                    <field name="message"><default-field title="Note"><label text="${message}" style="text-warning"/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                        <form-single name="RequestLeave" transition="requestLeave" map="confirmValues" condition="preview.canSubmit">
+                            <field name="rqOrganizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="rqEmploymentId"><default-field><hidden/></default-field></field>
+                            <field name="rqTypeEnumId"><default-field><hidden/></default-field></field>
+                            <field name="rqFromDate"><default-field><hidden/></default-field></field>
+                            <field name="rqThruDate"><default-field><hidden/></default-field></field>
+                            <field name="rqPartEnumId"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <!-- the person's reason: read on the request by them, their approvers and HR alone, and opted out of AI -->
+                            <field name="reason" ai-opt-out="true">
+                                <default-field title="Reason" tooltip="Optional: read by your approvers and HR only">
+                                    <text-area rows="2"/></default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Request leave">
+                                    <submit confirmation="Request ${preview.chargedAmount} ${unitWord} of ${preview.leaveTypeText}?"/></default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+
+        <form-single name="FindRequests" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio>
+                        <option key="mine" text="Mine"/>
+                        <option key="decide" text="To decide"/>
+                        <option key="all" text="All I see"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="statusEnumId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="LrsRequested" text="Waiting for approval"/>
+                        <option key="LrsApproved" text="Approved"/>
+                        <option key="LrsRefused" text="Refused"/>
+                        <option key="LrsCancelRequested" text="Cancellation asked"/>
+                        <option key="LrsCancelled" text="Cancelled"/>
+                        <option key="LrsWithdrawn" text="Withdrawn"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="leaveTypeEnumId">
+                <default-field title="Leave type">
+                    <drop-down allow-empty="true"><list-options list="leaveTypeOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="show"/>
+                    <field-ref name="statusEnumId"/>
+                    <field-ref name="leaveTypeEnumId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="RequestList" list="requests" skip-form="true" paginate="true" condition="requests.length">
+                    <field name="personName">
+                        <default-field title="Person">
+                            <link url="../LeaveRequestDetail" text="${personName}" link-type="anchor" parameter-map="{leaveRequestId:leaveRequestId}"/>
+                        </default-field>
+                    </field>
+                    <field name="datesText">
+                        <default-field title="Days"><display text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}"/></default-field>
+                    </field>
+                    <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                    <field name="chargedText" align="right"><default-field title="Charged"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[statusEnumId] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>${toDecide ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">' +
+                                    WebUtilities.encodeHtml(ec.l10n.localize('To decide')) + '</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText + (toDecide ? " · to decide" : "")})}]]></text>
+                                <text type="html">${statusText}${toDecide ? ' · to decide' : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="requestedDateText"><default-field title="Asked"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="personName"/><field-ref name="datesText"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="chargedText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!requests.length &amp;&amp; showing == 'decide'" text="No leave waits for your decision."/>
+                <label type="p" style="q-pa-md m-muted" condition="!requests.length &amp;&amp; showing != 'decide'"
+                        text="No leave request yet: Request leave asks for time off."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
