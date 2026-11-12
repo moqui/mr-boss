@@ -1,5 +1,8 @@
 # IronStone BOSS — People implementation
 
+Nov 12, 2026 — gate 2 built: P9–P14 (stage 2), time and leave, each phase reviewed by a fresh agent and merged on its
+focused specs, P12 and P13 with their framework parts (the per-field AI opt-out, a quick create's condition service). Next:
+stage 3 (P15 beside P16, then P17 beside P18, P19 beside P21, P20 beside P22, P23).
 Nov 11, 2026 — gate 1 built: P1–P8 (stage 1), People's first release (the employee record), each phase reviewed by a fresh
 agent and merged on its focused specs; the full suites and the acceptance suite run once at the end of the build (the
 user's call). Next: stage 2 (P9 beside P10, then P11–P14), time and leave.
@@ -320,7 +323,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 Leave policies, allocations and balances | Mantle, BOSS | LeavePolicies, LeavePolicyDetail, LeaveAllocations, LeaveBalances | built and reviewed Nov 11, merged |
 | P12 Leave requests and the team calendar | mr-moqui, Mantle, BOSS | LeaveRequests, LeaveRequestDetail, TeamCalendar | built and reviewed Nov 11, merged |
 | P13 Attendance and time import | Mantle, BOSS | Attendance, TimeImport; SelfService's Clock | built and reviewed Nov 11, merged |
-| P14 Shift roster | Mantle, BOSS | ShiftRoster | — |
+| P14 Shift roster | Mantle, BOSS | ShiftRoster | built and reviewed Nov 11, merged |
 | P15 Expense claims and advances | Mantle, BOSS | ExpenseClaims, ExpenseClaimDetail, EmployeeAdvances, InvoiceDetail; Accounting's ExpensePosting | — |
 | P16 Openings and applicants | Mantle, BOSS | Openings, ApplicantPipeline, ApplicantDetail, InterviewsCalendar, Forms (the survey builder for a second app) | — |
 | P17 Offers and hire from an offer | Mantle, BOSS | OfferDetail | — |
@@ -3720,7 +3723,7 @@ Design §6 ShiftRoster, §15 (the roster print); PE-06 (shifts), PE-20 (its rost
 - Design edits: design-people (header; §1.2; §3 SelfService; §6 ShiftRoster as built; §13 TeamCalendar; §15 the roster print);
   design-projects (header; §5 Timeline, the resource mode as a contract); design-manufacturing (ProductionSchedule as changed);
   design-crosscut CX-SYNC (My shifts).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F236 to F248 in order:
   - a manager rosters their live reports with PEOPLE_TEAM_VIEW, a view permission, as P13's correction requests do; there is no
     roster permission, so an employer cannot keep its managers from rostering (HR rosters with PEOPLE_HR_EDIT);
   - a published shift changed stays published and is told to its worker at once (no state of unpublished changes); a draft is never
@@ -3825,7 +3828,7 @@ and recorded in §4; fixes committed apart per repository ("People P14 review: �
   - **R6 (low, publishing).** `publish#Shifts` counted a draft as published (and told its worker) before its transaction had
     committed; it is now kept only after `runRequireNew` returns. No spec (a commit failure after the update is not reproducible
     in a spec).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F249 to F252 in order:
   - approved leave at another employer of the person shades the roster's lane and refuses a shift there (`LEAVE_CONFLICT`, "on
     approved leave"), so a manager or HR of one employer learns that the person is away from the other on those half days (never its
     type or reason); the overlap check across employments (R5) has the same shape, now without the other shift's times;
@@ -4327,7 +4330,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F48 were found on Nov 11, 2026, while writing this plan, F49–F54 in its review the same day,
-which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
+which also corrected F19, F26, F33, F34, F39 and F46, and F55–F71 in P0's last checks the same day. P1's F72 to F78 (Nov 11, 2026) are in its Built and Review notes. P2's F79 to F88 (Nov 11, 2026) are in its Built and Review notes. P3's F89 to F99 (Nov 11, 2026) are in its Built and Review notes. P4's F100 to F109 (Nov 11, 2026) are in its Built and Review notes. P5's F110 to F120 (Nov 11, 2026) are in its Built and Review notes. P6's F121 to F136 (Nov 11, 2026) are in its Built and Review notes. P7's F137 to F155 (Nov 11, 2026) are in its Built and Review notes. P8's F156 to F168 (Nov 11, 2026) are in its Built and Review notes. P9's F169 to F179 (Nov 11, 2026) are in its Built and Review notes. P10's F180 to F193 (Nov 11, 2026) are in its Built and Review notes. P11's F194 to F205 (Nov 11, 2026) are in its Built and Review notes. P12's F206 to F220 (Nov 11, 2026) are in its Built and Review notes. P13's F221 to F235 (Nov 11, 2026) are in its Built and Review notes. P14's F236 to F252 (Nov 11, 2026) are in its Built and Review notes. Mantle paths are
 under `runtime/component/mr-mantle/`, BOSS paths under `runtime/component/mr-boss/`.
 
 | # | Finding | Resolution |
