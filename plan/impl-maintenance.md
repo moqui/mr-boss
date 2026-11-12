@@ -2158,6 +2158,140 @@ completed checklist); MT-04.
   service on a phone, fails a pressure reading, attaches a photo and rechecks; the supervisor waives one allowed
   step with a reason and closes; the printed checklist shows the failure, the recheck and the waiver.
 
+**Built Nov 12 (P7).** mr-mantle 54eaa9e3, mr-boss 389626d0 and this note's commit (branch `mnt/p7`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P6's step policy fields and MaintenanceProcedures.js (instructions through the WeatBasedOn
+  link, `responseText`), P3's lifecycle in MaintenanceWork.js (`refusalOf`, `transitionWorkOrder`, the time entry points, `schedule`'s
+  `replacePartyId`) and P5's downtime hooks; F69 and F105 (RecordFiles' `get#ContentType` WorkEffort branch, `get#RecordFile`'s per-row
+  immutability, `check#RecordDrivePath`'s immutable paths for new and restored versions, `remove#RecordFile`; `update#WorkEffortContent`
+  rewrites a file); F43 (Measurement's work, asset, meter and AssetMaintenance fields; MeasurementType.productMeterTypeId names a counter);
+  F94 (`record#MaintenanceMeter` took any workEffortId); F113 and F160 (WorkOrders.js `openAssignments`, the replacement in `schedule`);
+  F159 (the `/mantle` REST writers; `start#Timer` calls `create#TimeEntryClockIn`, `stop#Timer` calls `store#TimeEntry` with the
+  entry's id); F26 (WorkItemDetail's Manufacturing context; Commons' `get#TaskAccess` answers a managed record not found); F38
+  (`transcribe#Audio` is internal, answers a reason rather than failing, and leaves consent to its caller); F128 (Procedure at 20);
+  F118 (no setup row is needed: the tab, its template and WorkItemDetail's mount inherit the root's grants); the Default status flow
+  (a step carries no flow; every step move is one of its rows).
+- Mantle:
+  - Records (`entity/WorkProcessEntities.xml`, appended): `WorkEffortCheck` (step, root, response kind, outcome WcoDone, WcoPass,
+    WcoFail or WcoSkipped, the Measurement and the value and unit as entered, observed and recorded time, who, notes, transcript,
+    findings, superseded check and correction reason, state WcsAccepted, WcsUnresolved, WcsSuperseded or WcsInvalidated, the
+    amendment that invalidated it, an operation key), `WorkEffortCheckEvidence` (a check's file or voice note), `WorkEffortWaiver`
+    (the step, the failed check it answers, the reason and who; ended by an amendment) and `WorkEffortExecutionAmendment` (root,
+    reason, effective time, what changed and what it invalidated, operation key); the content types WectCheckEvidence, WectVoiceNote
+    and WectCompletedChecklist.
+  - `mantle/work/ProcessChecks.js` over ProcessServices' new services: `get#ProcessExecution` (a reader of the work: the tree with
+    depth, groups, state, policy, the dependencies not done, assignees, instruction, the current check and failures, the waiver, what
+    the caller may do, a reading's units; the checks newest first, waivers, amendments, the next actionable step, the gate and the
+    stored checklist), `record#ProcessStep` (start, respond, skip; the root in progress, a leaf, the assigned technician with
+    MAINTENANCE_EXECUTE or a supervisor, the step's and its groups' dependencies; a missing file or comment, another unit, an
+    out-of-range reading and a failure saved as an unresolved check; a recheck appended; a correction superseding a check; an
+    accepted check completes the step; every reading a Measurement, a counter reading also through `record#MaintenanceMeter` with
+    its meter linked; files uploaded with the response stored on the root named for the step; the operation key answering a
+    retry), `transcribe#CheckVoiceNote`, `waive#ProcessStep` (a supervisor, the step's policy, a reason; the failure stays),
+    `amend#ProcessExecution` (a supervisor on open work; the policy fields from now and the dependencies; the preview naming the
+    acceptances it invalidates and the complete steps waiting for a reopened one), `get#ProcessChecklist`
+    (template/work/Checklist.print.html.fancy), `get#EvidencePolicy` and `check#EvidenceChange`. Groups follow their children.
+  - MaintenanceWork.js: Complete refused while a required leaf is open (`STEPS_OPEN`; `get#` lists it among the blockers); Close moves
+    complete nodes to Closed, cancels the open ones and stores the completed checklist (a PDF that cannot be made is logged); Cancel
+    cancels the open nodes; `schedule`'s replacement leaves a done step's assignee (F160); the three time entry points call the time
+    services inside `asManagedOwner`.
+  - The generic writers (F159): `add#WorkEffortProduct` and `create#TimeEntryClockIn` call `check#ManagedWork`; `store#TimeEntry` calls
+    it for a new entry and for one moved onto other work. WorkProcesses.js `asManagedOwner(workEffortIds, body)` is the owner's way
+    through: it holds the roots in the execution context's user map for the call (no parameter reaches it) and `managedReason`
+    admits their work. `update#WorkEffortContent` refuses a check's evidence (`EVIDENCE_PROTECTED`). `record#MaintenanceMeter` in work
+    refuses equipment that is not the work order's target (`WORK_TARGET_MISMATCH`, F94). MaintenanceProcedures.js exports
+    `executionInstruction` and `responseText`.
+- BOSS:
+  - Screens: WorkOrderDetail/Procedure (index 20): the next step first (its instruction, Start, the response form), the steps with
+    Start, Respond, Skip, Waive, Correct, the checks, waivers and amendments, Amend (preview, then the reason) and Print checklist;
+    `template/MaintenanceChecklistParts.xml` (the transitions and StepResponseForm: Pass or Fail, a reading in a unit of its kind,
+    notes, a photo or file, a voice note, the observed time, a correction's reason). Overview lists the work's follow-up tasks.
+    WorkItemDetail's Maintenance context (owner contract, on Manufacturing's pattern): mounted at Maintenance/WorkOrders/WorkItemDetail,
+    a follow-up task (an ordinary task with a current Caused By or Relates To link to a root the user reads) with a Work orders box
+    and the way back; a work order's root or step is not available there and links to its WorkOrderDetail, with no Complete
+    (`ironstone.maintenance.WorkItemServices` get#WorkItemContext and find#FollowUpTasks, WorkItems.js). WorkOrderDetail's comment.
+  - Services: RecordFilesServices' `get#ContentType` takes Mantle's evidence policy for a work effort (no new file on closed or
+    cancelled work; a check's evidence immutable in the list, refused by `remove#RecordFile`, new and restored versions); WorkOrders.js'
+    participant counts an open step's assignee only (F160) and `amendmentChange` (the amendment form as one change); Maintenance.js'
+    link path.
+  - Demo (BossZMaintenanceDemoData.xml): the air handler's follow-up task (maint.tech's, Caused By its work order). No execution of the
+    AC-200 service is seeded (see the findings).
+- Specs:
+  - Mantle `test/work/ProcessChecks` (5 features, about 2.4 s): a blocked step refused through `record#ProcessStep` and through
+    `set#TaskStatus` (MANAGED_WORK), a group's response refused, another technician and another organization refused, independent leaves
+    in progress together, the group complete only by its children; a missing file, another unit, an out-of-range reading, a missing
+    comment and a failure leaving the step open, a recheck appended, a retry under its key answered and changed input refused, a
+    Measurement for each reading, Complete refused (STEPS_OPEN) and the gate and next step read; a waiver refused to a technician, where
+    the policy forbids it and without a reason, the failures kept, the evidence policy protecting the photo and `update#WorkEffortContent`
+    refused, a required step's skip refused and an optional one skipped; an amendment refused to a technician, previewed, applied
+    (the check invalidated, the step and its group reopened), Complete refused again then done, Close closing the steps and storing the
+    checklist, an amendment of closed work refused, no file added to it; new time, a clock-in and a part refused on managed work while
+    `record#MaintenanceTime` passes, a reading in work of other equipment refused, a done step keeping its assignee when a leaver's work
+    moves.
+  - BOSS `test/Maintenance/MaintenanceChecklists` (4 features, about 0.5–1.2 s): the Procedure tab's one qvt render as the technician
+    (the next step, the group, the failed reading's finding, the blocked step, the progress, no supervisor action), RecordFiles keeping a
+    check's evidence and removing a file no check names, Admin's participant (an open step's assignee counted, a done one's not), and
+    the Overview's one render (the follow-up task), WorkItemDetail's Maintenance render of the follow-up task and a step's context (not
+    available, its link). A spec-local technician with maint.tech2's groups works it and the work order is cancelled at the end, so the
+    demo technicians' counts other specs read are unchanged. `MaintenanceAccess` gains the checklist rule (its technician reads, another
+    technician NOT_ASSIGNED, Retail RECORD_UNAVAILABLE; a waiver refused to the technician, the supervisor passing the permission).
+  - Acceptance, written and not run: `acceptance/client/Maintenance/MaintenanceChecklistWalk` (5 features: the planner makes the
+    service from the procedure and the supervisor approves it; the technician on a phone works the group, the oil change with a photo
+    and the filter; the pressure fails and a recheck with a photo fails again; the supervisor amends the filter step to need a photo and
+    the technician answers it again; the supervisor waives the pressure step, completes and closes; the checks and waiver stay and the
+    printed checklist is a PDF).
+- Tests run (release binary 03:39, `--nobuild`, this worktree): mr-mantle ProcessChecks, MaintenanceProcesses, WorkProcess,
+  PeopleChecklists, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceIntake, MaintenanceOutages, MaintenanceScope,
+  MaintenanceResources, WorkTimeEntries, TimeImports, WorkTimesheets, WorkProjectServices, WorkProjectBilling, WorkProjectMilestones,
+  WorkProjectReports, ProductionShopFloor, AccountingProjectCost, MethodTemplates, ProductCatalogImport, Dav: 144 of 144 (22 specs,
+  33.9 s feature time). mr-boss MaintenanceChecklists, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceProcedures,
+  MaintenanceDowntime, MaintenanceRequests, MaintenanceEquipment, RecordFiles, WorkItemDetail, Tasks, TimeEntries, AdminLifecycle,
+  PeopleLifecycle, ManufacturingDowntime, ManufacturingShopFloor, PeopleTime, Billing, ProjectsAccess, Chatter, AccountingIssuedFiles,
+  AccountingPaymentFiles: 157 of 157 (21 specs, 31.3 s feature time). Client MaintenanceWorkOrdersWalk 1 of 1 (7.9 s).
+  `./moq run --debug --nobuild lint --screens`: 136 flagged sites, the baseline (the Overview's new condition was flagged and fixed);
+  the new screens appear only in the information list of unnamed containers; the release symlink intact. Prettier (3.10.1, the repo's
+  .prettierrc.json) on the new JavaScript and on WorkProcesses.js, MaintenanceProcedures.js, WorkOrders.js and MaintenanceSpecLib.js;
+  MaintenanceWork.js, MaintenanceResources.js, Maintenance.js and MaintenanceAccess.spec.js were not prettier-clean before P7 and are
+  left so. Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's Added table for ProcessServices' P7 services, find#ProcessInstructions, check#ManagedWork's new callers,
+  store#TimeEntry, update#WorkEffortContent and record#MaintenanceMeter; ss-inventory's P7 line (no baseline form maps to the checklist).
+- Design edits: design-maintenance's header, §3 WorkOrderDetail (the Procedure tab and follow-up tasks), the WorkItemDetail mount row,
+  §4.3 and §12's completed checklist, as built.
+- Findings (provisional, for the lead to number):
+  - A step's moves (planned to in progress, complete or cancelled; complete back to in progress for an invalidation) are all rows of
+    the Default status flow, which steps follow (instantiation sets no flow); no flow row is added.
+  - `store#TimeEntry`'s guard is for a new entry and an entry moved onto managed work; an entry already on it keeps its timesheet
+    rules, so a maintenance timer still stops from the shell's timer and when another timer starts (`start#Timer` stops it through
+    `store#TimeEntry`), and Projects' TimeEntries still corrects one.
+  - The owner's way through is `asManagedOwner`, in the execution context's user map; only `check#ManagedWork` honors it (the lists'
+    `managedIds` do not). P9's planned parts on a managed step go through it if they call `add#WorkEffortProduct`, or write
+    WorkEffortProduct directly as the procedure requirements do.
+  - Evidence uploaded with a response is stored on the work order's root, named for the step, so Files shows it and RecordFiles
+    protects it there; a file on the step is accepted too. Every file a check names is protected, an unresolved check's included (a
+    waiver keeps the failure), and the stored checklist.
+  - The `.fancy` templates take JavaScript expressions: FreeMarker's `?has_content` fails to compile; the checklist template uses
+    `.length`.
+  - StepResponse's "expected update time" is not taken: the step is read for update, a done step is refused (STEP_DONE) and the
+    operation key answers a retry.
+  - The amendment changes a step's policy fields and dependencies; adding or removing an open execution's steps is not built.
+  - WorkOrderDetail's Overview tab had no render in the regression suite; MaintenanceChecklists renders it once.
+  - No execution of the AC-200 service is seeded: MaintenanceProcedures' spec reads that maint.tech has no work of it and counts
+    maint.tech2's open work orders, so a seeded one would change both; the specs and the walk make their own.
+- For the lead:
+  - Budget share: mr-mantle ProcessChecks about 2.4 s; mr-boss server MaintenanceChecklists about 1 s and MaintenanceAccess +0.2 s;
+    client unchanged (MaintenanceWorkOrdersWalk 7.9 s); budgets not changed.
+  - Merge hot spots: mr-mantle `entity/WorkProcessEntities.xml` and `ProcessServices.xml` (appended), `MaintenanceWork.js` (two requires
+    at the top, the three time entry points, `schedule`'s replacement, `refusalOf`'s complete, the close hook after the closure
+    policy, `get#`'s blockers), `WorkProcesses.js` (`managedReason`, the export), `MaintenanceProcedures.js` (an export before approval),
+    `TimeServices.xml`, `WorkEffortServices.xml` (`add#WorkEffortProduct`: P9 may meet it), `MaintenanceResources.js`; mr-boss
+    `screen/Shared/WorkItemDetail.xml`, `RecordFilesServices.xml`, `WorkOrders.js`, `Maintenance.js` (one link path after P6's),
+    `screen/Maintenance/WorkOrders.xml` (the mount), `WorkOrderDetail.xml` (its comment), `WorkOrderDetail/Overview.xml` (actions and an
+    appended box), `BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (one id after P6's), `MaintenanceAccess.spec.js`
+    (an appended feature), the inventories and design-maintenance. Not touched: MaintenanceEntities.xml, screen/Maintenance.xml,
+    BossSetupMaintenanceData.xml.
+  - The user's calls: whether a technician's voice note may be sent to the transcription model without an organization consent
+    setting (`transcribe#Audio` leaves consent to its caller; built meanwhile: transcribed when a model is bound, the audio kept either
+    way); whether an amendment should add or remove an open execution's steps (built meanwhile: policy fields and dependencies only).
+
 ### P8 — Dispatch: teams, skills and qualifications
 
 Design §3 AssignSchedule and BulkWork, §9 Teams, review Y4 and Y8; MT-01, MT-02. People's services are used as
