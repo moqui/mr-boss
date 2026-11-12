@@ -5,7 +5,7 @@
 // place to assess: the enrollment and the Record a result box over the assessment form's own field, then the result posted through
 // its transition with authorization on, completing the place and granting the fire warden certificate; TrainingCertificate's one
 // html-print render as Tomas: the stored certificate with his name and the course. The rules are Mantle's Training; access is
-// PeopleAccess's.
+// PeopleAccessLater's.
 // Run: ./moq test mr-boss --spec PeopleTraining
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

@@ -7,7 +7,7 @@
 // number shown to HR) and the choices skillTypes, skillLevels and qualificationTypes, each with a selected value off the page; the
 // manager's part of Employee360's Skills and reviews (Tomas's skills and verified qualifications, no resume; his skills hers to
 // evaluate, the user's call of Nov 12, 2026; the region's render is PeopleEmployees' qvt render of Employee360). The rules are Mantle's Qualifications; access is
-// PeopleAccess's.
+// PeopleAccessLater's.
 // Run: ./moq test mr-boss --spec PeopleSkills
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

@@ -297,9 +297,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
       the budget cuts a duplicate or moves a scenario to acceptance; no spec passes 15 seconds;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
     - the inventories' **Implemented in** columns;
-  - an access rule the phase adds checked in `PeopleAccess` (one holder and one non-holder on one verb, with the
-    same parameters, and another organization's record refused), not every service and mount; ProjectsAccess passing
-    with the new package (F26);
+  - an access rule the phase adds checked in `PeopleAccess` or `PeopleAccessLater` (P1 to P10's rules in the first, P11
+    on in the second; one holder and one non-holder on one verb, with the same parameters, and another organization's
+    record refused), not every service and mount; ProjectsAccess passing with the new package (F26);
   - a screen rendered at most once in each mode across the regression suite, with all of its checks on that render,
     and in a second mode only where it has its own template (the `.qvue` screens and their TUI twins);
   - its row and **Built** note here.
@@ -5633,6 +5633,79 @@ RecordNotes (24 of 24) and PeopleReviews and PeopleAccess (30 of 30) passed afte
     design-people §11.
   - the user's calls of Nov 12 are in §4: HR officers finalize by default (as built); private notes their author's alone (as
     built); a new reviewer reads the review's feedback (built, R1).
+
+**Follow-up Nov 12 (follow-up 2).** After P20: PeopleAccess split under the 15 s cap, and P20's review findings F384, F386, F388 and
+F389 fixed. mr-mantle f8622c58 and mr-boss (this commit), branch `ppl/fix2`.
+- Checked first (the code over the plan): PeopleAccess.spec.js (27 features; 10 to 21 s by load): its P1 to P10 features lead and P11's
+  on follow with no data of the earlier ones read (each alone passes), its spec-local accounts split the same way (PPL_SPEC_EDIT_ONLY
+  P1's; PPL_SPEC_TEAM_ONLY P14's, PPL_SPEC_HR_ONLY P15's); Mantle's REST `/workEfforts` (mantle.rest.xml: entity list, one with a
+  `default` master WorkEffort does not define, and update; under an id, services for task, project, comments, parties, products,
+  time, start and end, and clone); `check#WorkEffortOpen` (the planning guard every generic task and work-effort change calls, clone
+  only for the copy's root and parent) and the WorkEffort status SECA's `make#NextRecurringTask`, which called it for every work effort
+  completed, a goal included; `create#Task`'s callers (Projects' `create#WorkItem` and Commons' sub-task take the parent from
+  `get#TaskAccess`, a WetTask; Commons' quick tasks are `create#SimpleTask` with no parent; recurrence, import, requests and Knowledge
+  pass a task or none); `Approvals.js reroute`, called inside P6's change (after the employment ends) and per employer by the daily job,
+  with the reviews' pass after its approvals' and in their transaction.
+- PeopleAccess split: `PeopleAccess` keeps P1 to P10's 16 features (foundation, employees, organization, positions, approvals, hire,
+  lifecycle, self-service, schedules, time; the context, menu and capability features hold every phase's links, menu groups and
+  capabilities); the new `PeopleAccessLater` holds P11's on, 11 features (leave policies, attendance, roster, expenses, recruiting,
+  skills, offers and letters, training, cases, reviews), each with its header, both on PeopleSpecLib; every check moved once, none
+  dropped. The specs and acceptance tests naming PeopleAccess for a later phase's rule name PeopleAccessLater (Recruiting, Training,
+  Skills, Roster, Reviews, Expenses, Attendance, Offers; PeopleCasesUsable, PeopleLeavePoliciesUsable); §2's Done reads "in
+  `PeopleAccess` or `PeopleAccessLater`".
+- F384 (Mantle REST): `/workEfforts` lists and reads through the view `mantle.work.effort.WorkEffortOutsideGoals` (every work effort
+  but a WetGoal), and its PATCH is the new `WorkEffortServices.update#WorkEffort` (refuses a goal and a change into one,
+  `GOAL_NOT_WORK`; an unknown id `WORK_EFFORT_NOT_FOUND`); `check#WorkEffortOpen` refuses a goal among the records it checks
+  (`GOAL_NOT_WORK`), so every generic work change refuses one (update#Task, comments, parties, products, delete, the REST task patch,
+  a task under a goal); `clone#WorkEffort` refuses a goal as its source; `get#WorkEffortStartEnd` answers nothing for a goal read by id;
+  `make#NextRecurringTask` passes over a work effort that is not a task before the guard (a goal's close went through it).
+- F388: `create#Task`, `create#SimpleTask` and `update#Task` refuse a parent that is not a task (`PARENT_NOT_TASK`; a goal is refused
+  first as no work).
+- F389: `Reviews.js rerouteSteps` decides each review in the caller's transaction (which holds the separation's end of employment)
+  and changes it in a transaction of its own (`runRequireNew`), a failure logged and rolled back alone; `Approvals.js reroute` runs the
+  reviews' pass before its approvals' pass, so the caller's transaction holds no lock on a review's approval the pass changes.
+- F386: Chatter's `get#RecordInfo` labels a goal "Goal" (ChatterServices); Comms' `search#LinkRecords` too (InboxServices), though
+  `lookup#ById` answers no goal since P20's review (R6).
+- design-people §11 (ReviewDetail's re-route, Goals: no work), usl-inventory (Work: `update#WorkEffort`, 105 services, 32 added).
+- Specs (each new check failed on the code before, run with the old files and put back): Mantle Reviews gains "a goal is no work"
+  (0.29 s: the REST list of goals empty, a goal's read without its name, its PATCH, task PATCH and clone `GOAL_NOT_WORK`, a task's PATCH
+  and read as before, a task made a goal refused, its start and end empty, a task under it refused through REST and the services, a
+  task under an event `PARENT_NOT_TASK` through create#Task, create#SimpleTask and update#Task, under a task accepted; on the old code
+  the REST list answered two goals) and "one review's failed re-route is rolled back alone" (0.02 s: a spec-local Postgres trigger fails
+  every update of Bo's review; Max's separation in its own transaction ends his employment, excludes his own review and keeps its
+  later write, Bo's review unchanged; on the old code the caller's later write was refused, "Transaction marked for rollback");
+  BOSS PeopleReviews' goals feature reads Tomas's goal through Chatter's `get#RecordInfo` (typeLabel "Goal"; "Task" before).
+- Tests run (release binary from the main checkout, `--nobuild`, this runtime): PeopleAccess 16 of 16 (5.9 s of features alone, 6.3 s
+  in the run below) and PeopleAccessLater 11 of 11 (5.6 s alone and below); Mantle Reviews, every Work* spec (23), CommonsToday, Dav,
+  CalendarServices, CalendarChanges, RecordLinks, RecordNotes, RecordVisibility, InternalMessages, ContactBooks, UniversalSearch,
+  PeopleApprovals, PeopleEmployment, PeopleScheduledChanges, PeopleCases, PeopleChecklists, ManufacturingServices,
+  ProductionShopFloor and Training 420 of 420 (47 specs, 65.2 s of features); BOSS every Projects spec (17), Tasks, QuickCreate,
+  TodayPanel, Requests, Knowledge, Notes, Calendar, EventDetail, Inbox, Chat, Chatter, RecordFiles, PeopleReviews, PeopleAccess,
+  PeopleAccessLater, PeopleLifecycle, PeopleEmployees, PeopleSelfService, PeopleRecruiting and ManufacturingAccess 368 of 368 (37
+  specs, 54.6 s). Prettier clean on the changed JavaScript. No screen changed (no lint run). Not run: `./moq test-apps`, the acceptance
+  suite.
+- Findings (provisional, numbered by the lead):
+  - A review's re-route now commits on its own: when the caller's transaction rolls back after the pass (a later step of the
+    separation failing), the reviews stay excluded or reassigned while the employment is unchanged, and nothing undoes them; the
+    approvals' pass still runs in the caller's transaction (one approval's database failure there would still roll back the
+    separation).
+  - Time recorded on a goal through Mantle's REST `/workEfforts/{id}/timeEntries` (`add#TaskTime`, `store#TimeEntry`, which do not
+    call the planning guard) is still accepted for the callers the REST resource admits (ADMIN).
+  - `GET /workEfforts/{id}` named the `default` master, which WorkEffort does not define; through the view it answers the record's own
+    fields.
+  - The Comms label has no check that fails on the old code: since P20's R6 no goal reaches `search#LinkRecords`; Commons'
+    palette (`PaletteServices`) would call one "Work", also unreachable.
+- For the lead:
+  - budget share: mr-mantle +0.3 s (Reviews' two features); mr-boss about +0.1 s (PeopleReviews' Chatter check); the split itself
+    adds none (PeopleAccess 5.9 s and PeopleAccessLater 5.6 s against the one spec's 11 to 21 s);
+  - merge hot spots for P22: a PeopleAccess case P22 adds for its own rule goes in PeopleAccessLater (its menu, keys and capability
+    entries stay in PeopleAccess's context, menu and capability features), so P22's PeopleAccess edits move on merge;
+    `test/People/PeopleAccess.spec.js` (header, setup), `PeopleAccessLater.spec.js` (new); mr-mantle `Approvals.js` (`reroute`),
+    `Reviews.js` (`rerouteSteps`), `WorkEffortServices.xml`, `TaskServices.xml`, `mantle.rest.xml`, `WorkEffortViewEntities.xml`,
+    `test/humanres/Reviews.spec.js` (two features appended); mr-boss `ChatterServices.xml`, `InboxServices.xml`, design-people §11,
+    usl-inventory's Work table, this file (§2's Done line, this note);
+  - the worker brief (`.claude/worktrees/people-worker-brief.md`, outside the worktrees) still asks for "a PeopleAccess case"; P11's
+    on go to PeopleAccessLater.
 
 ### P21 — Grievances
 
