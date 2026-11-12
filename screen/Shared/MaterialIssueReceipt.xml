@@ -30,16 +30,22 @@ along with this software (see the LICENSE.md file). If not, see
     required, issued, returned and left apart with what is short or held, Stage (Warehouse's Move with the run fixed, for
     STOCK_MOVE holders) and, when the run's policy backflushes, the backflush preview with its lots and Confirm
     (backflush#ProductionMaterials); its postings run after Manufacturing's check#Record of the run with issue
-    (STOCK_ISSUE). Maintenance adds its context. Any other app sees "not available". -->
+    (STOCK_ISSUE). Maintenance (impl-maintenance P9, F31) mounts it at Maintenance/WorkOrders/MaterialIssueReceipt with the work
+    order's workEffortId: its own pair (ironstone.maintenance.MaterialServices get#MaterialSource and get#MaterialAction after its
+    check#Record of the work order), the work order's planned parts as the lines (Issue through issue#MaintenanceMaterial to the
+    root or step they are planned on), Return unused (return#MaintenanceMaterial) and History, no output, tracking or files. Any
+    other app sees "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Material issue and receipt" default-menu-include="false">
     <parameter name="sourceType"/>
     <parameter name="sourceId"/>
+    <!-- Manufacturing's run and Maintenance's work order (P9) -->
+    <parameter name="workEffortId"/>
     <!-- a line's posting: the source's entry names the record to check, the capability and the Mantle entry point -->
     <transition name="materialAction">
         <actions>
-            <if condition="appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'">
+            <if condition="appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing' &amp;&amp; appRoot != 'Maintenance'">
                 <return error="true" message="This material work is not available here"/>
             </if>
             <if condition="appRoot == 'Manufacturing'">
@@ -51,6 +57,15 @@ along with this software (see the LICENSE.md file). If not, see
                 <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:action.recordType, recordId:action.recordId,
                             capability:action.capability}"/>
+                <!-- Maintenance (P9): the work order, or the step a line is planned on -->
+                <else-if condition="appRoot == 'Maintenance'">
+                    <service-call name="ironstone.maintenance.MaterialServices.get#MaterialAction" out-map="action"
+                            in-map="{workEffortId:workEffortId || sourceId, lineKey:lineKey || null, quantity:quantity || null,
+                                operationKey:operationKey, actionKind:actionKind || null, assetId:assetId || null,
+                                toLocationSeqId:toLocationSeqId || null}"/>
+                    <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:action.recordType, recordId:action.recordId}"/>
+                </else-if>
                 <else>
                     <service-call name="ironstone.warehouse.PackingServices.get#MaterialAction" out-map="action"
                             in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId, lineKey:lineKey,
@@ -93,7 +108,19 @@ along with this software (see the LICENSE.md file). If not, see
                         transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
             </if>
         </if>
+        <!-- Maintenance (P9): the work order, checked again here for the screen opened on its own -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; workEffortId">
+            <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="materialWorkCheck"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, recordType:'workOrder', recordId:workEffortId}"/>
+            <if condition="materialWorkCheck?.recordId">
+                <service-call name="ironstone.maintenance.MaterialServices.get#MaterialSource" out-map="material"
+                        transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            </if>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <set field="manufacturingRoot" from="appRoot == 'Manufacturing'"/>
+        <set field="maintenanceRoot" from="appRoot == 'Maintenance'"/>
         <set field="backflush" from="material?.backflush || null"/>
         <set field="backflushRows" from="backflush?.lineRows || []"/>
         <set field="recordFound" from="!!material?.found"/>
@@ -116,7 +143,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <link url="${sharedLinks['Shipping/Pack']}" text="Open Pack" link-type="anchor-button" icon="sym_o_inventory_2"
                         condition="appRoot == 'Warehouse'"/>
                 <link url="${sharedLinks['WorkOrders/Find']}" text="Back to the work orders" link-type="anchor"
-                        condition="appRoot == 'Manufacturing'"/>
+                        condition="appRoot == 'Manufacturing' || appRoot == 'Maintenance'"/>
             </widgets>
         </section>
         <section name="MaterialWork" condition="recordFound">
@@ -183,7 +210,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display format="#,##0.###"/>
                                 </default-field>
                             </field>
-                            <field name="returned" align="right" hide="!manufacturingRoot">
+                            <field name="returned" align="right" hide="!manufacturingRoot &amp;&amp; !maintenanceRoot">
                                 <default-field title="Returned">
                                     <display format="#,##0.###"/>
                                 </default-field>
@@ -511,6 +538,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                             </box-body-nopad>
                         </container-box>
+                    </widgets>
+                </section>
+                <!-- a production run's and a maintenance work order's issues with something left to return (P9) -->
+                <section name="UnusedReturnsSection" condition="material.sourceType == 'productionRun' || material.sourceType == 'maintenanceWork'">
+                    <widgets>
                         <container-box>
                             <box-header title="Unused returns · ${returnRows.length}"/>
                             <box-body-nopad>
@@ -528,7 +560,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="operationName">
-                                        <default-field title="Operation">
+                                        <default-field title="${maintenanceRoot ? 'Step' : 'Operation'}">
                                             <display/>
                                         </default-field>
                                     </field>
@@ -607,6 +639,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="assetId">
+                                <!-- Maintenance has no stock asset screen of its own (P9) -->
+                                <conditional-field condition="maintenanceRoot" title="Asset">
+                                    <display/>
+                                </conditional-field>
                                 <default-field title="Asset">
                                     <link url="${sharedLinks['Inventory/AssetDetail']}" text="${assetId}" link-type="anchor"
                                             parameter-map="{assetId:assetId}"/>

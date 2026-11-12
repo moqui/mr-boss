@@ -60,6 +60,12 @@ const ids = {
     roomProcedureId: "BOSS_MNT_PROC_ROOM",
     draftProcedureId: "BOSS_MNT_PROC_VAN",
     retiredProcedureId: "BOSS_MNT_PROC_OLD",
+    // P9: the parts (BossZMaintenanceDemoData.xml): the air handler's coil gasket in Services' stock warehouse (two issued to its
+    // leak, one returned), the issuance, and Retail's stock in the same warehouse
+    gasketId: "BOSS_MNT_PART_GASKET",
+    gasketStockId: "BOSS_MNT_STOCK_GASKET",
+    gasketIssuanceId: "BOSS_MNT_ISS_AHU",
+    otherOwnerStockId: "BOSS_PRD_FOREIGN_STOCK",
     // P13: the preventive plans (BossZMaintenanceDemoData.xml), drafts: Room 201's monthly inspection, the compressor's 250-hour oil
     // service over the AC-200 model's 500-hour default (next threshold 1450 hours), and its contactor check by a start counter last
     // read in August (stale)

@@ -152,6 +152,9 @@ const linkPaths = [
     // P6: Procedures and the procedure record (design §4)
     "Procedures/Find",
     "Procedures/ProcedureDetail",
+    // P9: a work order's parts issued and returned, and a part's stock (design §3 mount rows)
+    "WorkOrders/MaterialIssueReceipt",
+    "WorkOrders/InventoryAvailability",
     // P13: preventive plans and the plan record (design §5)
     "Preventive/Plans/Find",
     "Preventive/Plans/PlanDetail"
@@ -491,7 +494,12 @@ const workChoices = [
     "workPeople",
     "workFacilities",
     "openWorkOrders",
-    "rejectReasons"
+    "rejectReasons",
+    // P9: a work order's charge and its parts
+    "costCenters",
+    "projects",
+    "stockParts",
+    "partFacilities"
 ]
 // The teams of the scope's organizations (one organization's with organizationPartyId): an OrgTeam an organization owns.
 function teamOptions(userScope, term, selected, p) {
@@ -956,13 +964,69 @@ const choiceSources = {
             )
             .slice(0, choiceLimit * 2)
             .map(row => ({value: row.workEffortId, label: row.workEffortName || row.workEffortId}))
+    },
+    // P9: the charge and the parts of a work order (organizationPartyId: the work's organization)
+    costCenters: (userScope, term, selected, p) => chargeOptions(userScope, term, selected, p, "costCenter"),
+    projects: (userScope, term, selected, p) => chargeOptions(userScope, term, selected, p, "project"),
+    // inventory and supplies (both issued to maintenance work and routed to its expense, the user's call of Nov 12)
+    stockParts: (userScope, term, selected) => productOptions(term, selected, ["AstTpInventory", "AstTpSupplies"]),
+    partFacilities: (userScope, term, selected, p) => {
+        const organizationPartyId = p?.organizationPartyId
+        if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
+        const options = Array.from(
+            find("mantle.facility.Facility", {ownerPartyId: organizationPartyId})
+                .condition("facilityTypeEnumId", "in", ["FcTpWarehouse", "FcTpWarehouseRoom", "FcTpRetailStore", "FcTpPlant"])
+                .orderBy("facilityName")
+                .limit(choiceLimit * 2)
+                .list()
+        )
+            .filter(row => !term || String(row.facilityName || row.facilityId).toLowerCase().includes(term.toLowerCase()))
+            .map(row => ({value: row.facilityId, label: row.facilityName || row.facilityId}))
+        return withSelected(
+            options,
+            selected,
+            facilityId => one("mantle.facility.Facility", {facilityId})?.ownerPartyId === organizationPartyId,
+            facilityName
+        )
     }
 }
-// Products by id or name, of an asset type when one is named (equipment models), with the selected one.
+// P9: the cost centres a work order may be charged to (its organization and the internal organizations rolling up to it) and
+// its organization's open projects, as Mantle's store#MaintenanceWorkOrder admits them.
+function chargeOptions(userScope, term, selected, p, kind) {
+    const organizationPartyId = p?.organizationPartyId
+    if (!organizationPartyId || !covers(userScope, organizationPartyId)) return []
+    let options
+    if (kind === "costCenter") {
+        const ids = [organizationPartyId].concat(
+            Array.from(
+                find("mantle.party.PartyRelationship", {toPartyId: organizationPartyId, relationshipTypeEnumId: "PrtOrgRollup"})
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .list()
+            ).map(row => row.fromPartyId)
+        )
+        options = ids.map(partyId => ({value: partyId, label: partyLabel(partyId)}))
+    } else
+        options = Array.from(
+            find("mantle.work.effort.WorkEffort", {workEffortTypeEnumId: "WetProject", ownerPartyId: organizationPartyId})
+                .condition("statusId", "not-in", ["WeClosed", "WeCancelled", "WeComplete"])
+                .orderBy("workEffortName")
+                .limit(choiceLimit * 2)
+                .list()
+        ).map(row => ({value: row.workEffortId, label: row.workEffortName || row.workEffortId}))
+    options = options.filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase())).slice(0, choiceLimit)
+    return withSelected(
+        options,
+        selected,
+        id => (kind === "costCenter" ? !!one("mantle.party.PartyRole", {partyId: id, roleTypeId: "OrgInternal"}) : !!one("mantle.work.effort.WorkEffort", {workEffortId: id})),
+        id => (kind === "costCenter" ? partyLabel(id) : one("mantle.work.effort.WorkEffort", {workEffortId: id})?.workEffortName || id)
+    )
+}
+// Products by id or name, of an asset type (or types) when one is named (equipment models, parts), with the selected one.
 function productOptions(term, selected, assetTypeEnumId) {
     const factory = ec.entity.conditionFactory
     let query = find("mantle.product.Product").orderBy("productName").limit(choiceLimit)
-    if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
+    if (Array.isArray(assetTypeEnumId)) query = query.condition("assetTypeEnumId", "in", assetTypeEnumId)
+    else if (assetTypeEnumId) query = query.condition("assetTypeEnumId", assetTypeEnumId)
     if (term)
         query = query.condition(
             factory.makeCondition(

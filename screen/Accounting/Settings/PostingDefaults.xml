@@ -426,6 +426,55 @@ along with this software (see the LICENSE.md file). If not, see
                                         <ignored/>
                                     </default-field>
                                 </field>
+                                <!-- AC-24 (impl-maintenance P9): a maintenance expense mapping's kind, facility and dates -->
+                                <field name="maintenanceKindEnumId">
+                                    <conditional-field condition="mappingFields.includes('maintenanceKindEnumId')"
+                                            title="Maintenance kind" tooltip="Empty: any maintenance work">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'enum:MaintenanceKind',
+                                                        organizationPartyId:organizationPartyId, selected:maintenanceKindEnumId}"/>
+                                        </drop-down>
+                                    </conditional-field>
+                                    <default-field>
+                                        <ignored/>
+                                    </default-field>
+                                </field>
+                                <field name="facilityId">
+                                    <conditional-field condition="mappingFields.includes('facilityId')" title="Facility"
+                                            tooltip="With the facilities under it; empty: every facility">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices"
+                                                    server-search="true"
+                                                    min-length="0"
+                                                    parameter-map="{choice:'facilities',
+                                                        organizationPartyId:organizationPartyId, selected:facilityId}"/>
+                                        </drop-down>
+                                    </conditional-field>
+                                    <default-field>
+                                        <ignored/>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <conditional-field condition="mappingFields.includes('fromDate') &amp;&amp; mappingKind == 'maintenance'"
+                                            title="From" tooltip="Empty: now">
+                                        <date-time/>
+                                    </conditional-field>
+                                    <default-field>
+                                        <ignored/>
+                                    </default-field>
+                                </field>
+                                <field name="thruDate">
+                                    <conditional-field condition="mappingFields.includes('thruDate') &amp;&amp; mappingKind == 'maintenance'"
+                                            title="Until" tooltip="Ends the mapping; to change one, end it and add a new one">
+                                        <date-time/>
+                                    </conditional-field>
+                                    <default-field>
+                                        <ignored/>
+                                    </default-field>
+                                </field>
                                 <field name="glAccountId">
                                     <conditional-field condition="mappingFields.includes('glAccountId')" title="Posting account">
                                         <drop-down allow-empty="true">
@@ -658,6 +707,8 @@ along with this software (see the LICENSE.md file). If not, see
                         text="An organization inherits its accounting parents' defaults."/>
                 <label type="p" style="text-caption m-muted"
                         text="On an invoice's product line, the category, product and asset-type accounts come first."/>
+                <label type="p" style="text-caption m-muted" condition="mappingKind == 'maintenance'"
+                        text="A part issued to maintenance work posts to the mapping of its facility (or the nearest facility above it) and kind, else every facility or any kind; with none the issue is refused."/>
                 <form-list name="PostingMappings"
                         list="mappingRows"
                         skip-form="true"
