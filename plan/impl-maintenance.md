@@ -1,5 +1,6 @@
 # IronStone BOSS — Maintenance implementation
 
+Nov 12, 2026 — gate 1 built: P1–P5 (corrective maintenance from a report to a restored resource), each phase reviewed by a fresh agent and merged on its focused specs; the full suites and the acceptance suite run once at the end of the build (the user's call). P6 and P15 are built or building; only P8 waits on People (P18).
 Nov 11, 2026 — P0 done (§6 F58–F75), at mr-moqui 5d83f22d, mr-boss 9c7e87e4 and mr-mantle 61e5ae33, with People P1–P7
 and Admin P17–P18 built. People P7 built the managed-work refusal in the generic task services already, reading the
 work order by the name P3 gives it (F59); the instantiation copies no content, requirements or skills (F58); a dated
