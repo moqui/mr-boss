@@ -97,8 +97,8 @@ const ids = {
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor), preventive plans (P13, a reader of work or a planner or supervisor) and
     // equipment, and with Settings the Maintenance administrator's; a procedure author reads procedures alone; P14: Reports for a
-    // reader of work
-    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Reports"],
+    // reader of work; P8 review: Settings for its Teams tab alone, read by a planner or supervisor
+    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Reports", "Settings"],
     homeOnlyMenu: ["Home"],
     authorMenu: ["Home", "Procedures"],
     bookingMenu: ["Home", "Scheduling"],

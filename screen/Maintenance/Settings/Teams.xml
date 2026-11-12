@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     is what Maintenance owns: the dispatch and intake defaults (the resource scope, the default assignee among the members and the
     project, dated, and the intake address's plus-tag, the team's setting the mail intake reads; store#MaintenanceTeamDefaults,
     MAINTENANCE_SETTINGS_EDIT, which Mantle checks).
-    Membership grants nothing in Maintenance. New teams are made in People. -->
+    Membership grants nothing in Maintenance. New teams are made in People. Read only for a planner or supervisor (design §2's "P
+    read", P8 review: BOSS_MNT_TEAMS opens this tab alone of Settings to their groups): the lists and the defaults as text, no form. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Teams" default-menu-index="3">
     <parameter name="organizationPartyId"/>
@@ -44,7 +45,9 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <set field="can" from="maintenance.capabilities"/>
-        <if condition="can.settingsEdit">
+        <!-- the administrator edits the defaults; a planner or supervisor reads the teams (P8 review) -->
+        <set field="canRead" from="!!(can.settingsEdit || can.plan || can.supervise)"/>
+        <if condition="canRead">
             <service-call name="mantle.work.MaintenanceSettingsServices.find#MaintenanceTeams" out-map="teamsOut" transaction="force-new"
                     ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null)}"/>
             <script>ec.message.clearErrors()</script>
@@ -65,8 +68,9 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
     <widgets>
         <label text="Teams" type="h5"/>
-        <label text="Maintenance's settings are the Maintenance administrator's." type="p" style="m-muted" condition="!can.settingsEdit"/>
-        <section name="TeamsFound" condition="can.settingsEdit">
+        <label text="Maintenance's teams are read by planners and supervisors and set by the Maintenance administrator." type="p" style="m-muted"
+                condition="!canRead"/>
+        <section name="TeamsFound" condition="canRead">
             <widgets>
                 <form-single name="TeamsFind" transition="." map="findValues">
                     <field name="organizationPartyId">
@@ -136,42 +140,47 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label text="${team.defaults?.fromDateText ? 'In effect since ' + team.defaults.fromDateText : 'No defaults have been saved.'}" type="p"
                                         style="text-caption m-muted"/>
-                                <form-single name="TeamDefaults" transition="storeTeamDefaults" map="defaultsValues">
-                                    <field name="teamPartyId"><default-field><hidden/></default-field></field>
-                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                                    <field name="facilityId">
-                                        <default-field title="Takes the work of" tooltip="A facility and those under it; empty: the whole organization">
-                                            <drop-down allow-empty="true">
-                                                <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                        parameter-map="{choice:'facilities', selected:defaultsValues.facilityId, organizationPartyId:team.organizationPartyId}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="defaultAssigneePartyId">
-                                        <default-field title="Default technician" tooltip="A current member, proposed first when the team is assigned">
-                                            <drop-down allow-empty="true">
-                                                <list-options list="currentMembers" key="${partyId}" text="${personName}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="intakeTag">
-                                        <default-field title="Intake address tag" tooltip="The plus-tag of the maintenance mailbox that files a request for this team: letters, digits and hyphens">
-                                            <text-line size="20"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="projectWorkEffortId">
-                                        <default-field title="Charged to project" tooltip="The project the team's repairs are charged to by default">
-                                            <drop-down allow-empty="true">
-                                                <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                        parameter-map="{choice:'projects', selected:defaultsValues.projectWorkEffortId, organizationPartyId:team.organizationPartyId}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="comments"><default-field title="Why it changes"><text-line size="50"/></default-field></field>
-                                    <field name="submitButton">
-                                        <default-field title="Save"><submit type="primary" confirmation="Save these defaults? The ones in effect end now."/></default-field>
-                                    </field>
-                                </form-single>
+                                <label text="${team.defaultsText}" type="p" condition="!can.settingsEdit"/>
+                                <section name="TeamDefaultsEdit" condition="can.settingsEdit">
+                                    <widgets>
+                                        <form-single name="TeamDefaults" transition="storeTeamDefaults" map="defaultsValues">
+                                            <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="facilityId">
+                                                <default-field title="Takes the work of" tooltip="A facility and those under it; empty: the whole organization">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'facilities', selected:defaultsValues.facilityId, organizationPartyId:team.organizationPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="defaultAssigneePartyId">
+                                                <default-field title="Default technician" tooltip="A current member, proposed first when the team is assigned">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="currentMembers" key="${partyId}" text="${personName}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="intakeTag">
+                                                <default-field title="Intake address tag" tooltip="The plus-tag of the maintenance mailbox that files a request for this team: letters, digits and hyphens">
+                                                    <text-line size="20"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="projectWorkEffortId">
+                                                <default-field title="Charged to project" tooltip="The project the team's repairs are charged to by default">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'projects', selected:defaultsValues.projectWorkEffortId, organizationPartyId:team.organizationPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="comments"><default-field title="Why it changes"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Save"><submit type="primary" confirmation="Save these defaults? The ones in effect end now."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>

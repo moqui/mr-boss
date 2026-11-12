@@ -24,7 +24,7 @@
 // administrator's), P14's generation and compliance (a planner generates, a reader does not, Retail's planner gets Services'
 // plan refused; the compliance a reader's, not a technician's or Retail's), P17's work status and report catalogue (a reader's,
 // not a technician's; Retail's planner refused Services' organization), P8's team defaults (the administrator's; the planner
-// refused, Retail's planner reads no Services team; Teams the administrator's tab),
+// refused, Retail's planner reads no Services team; Teams read by the planner and supervisor alone of Settings, review),
 // and Maintenance's rows in Admin's capability and
 // settings registries (each bundle carrying exactly its group's grants, the settings entry the administrator's only). One feature
 // per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (a facility's and an
@@ -1460,9 +1460,9 @@ feature(
 )
 
 // P8: a team's dispatch defaults are the settings editor's (Mantle's store#MaintenanceTeamDefaults), Retail's planner reads no Services
-// team, and Teams is the administrator's tab
+// team; P8 review: Teams is read by a planner and a supervisor (BOSS_MNT_TEAMS), the only Settings tab they open, without the form
 feature(
-    "a team's defaults are the administrator's: the planner is refused, Retail reads no Services team, Teams is not the planner's",
+    "a team's defaults are the administrator's; Teams is read by a planner and supervisor, its form and the other tabs not theirs",
     {
         when() {
             const as = (user, service, parameters) =>
@@ -1471,18 +1471,36 @@ feature(
                     return refusal("mantle.work.MaintenanceSettingsServices." + service, parameters)
                 })
             const team = {teamPartyId: ids.fieldTeamId}
+            const teams = user =>
+                asUser(user, () =>
+                    page("Settings/Teams", {organizationPartyId: ids.organizationId, teamPartyId: ids.fieldTeamId}, "html")
+                )
+            const planner = teams(users.planner)
             return {
                 holder: as(users.admin, "store#MaintenanceTeamDefaults", Object.assign({intakeTag: "compressors"}, team)),
                 planner: as(users.planner, "store#MaintenanceTeamDefaults", Object.assign({intakeTag: "compressors"}, team)),
                 retail: as(users.retailPlanner, "find#MaintenanceTeams", team),
-                plannerTab: screenRefusal(users.planner, "Settings/Teams")
+                plannerTab: planner.status + " " + planner.errors.join(" | "),
+                plannerReads: planner.output.includes("Owen Castillo"),
+                plannerForm: planner.output.includes("Default technician"),
+                supervisorTab: screenRefusal(users.supervisor, "Settings/Teams"),
+                techTab: screenRefusal(users.tech, "Settings/Teams"),
+                readerTab: screenRefusal(users.reader, "Settings/Teams"),
+                plannerPolicy: screenRefusal(users.planner, "Settings/WorkPolicy"),
+                // Settings lands a planner on Teams, its only tab for them
+                plannerTabs: shell(users.planner, true, "Settings", "Settings").names
             }
         },
         then(r) {
             r.holder == ""
             r.planner.includes("PERMISSION_DENIED")
             r.retail.includes("RECORD_UNAVAILABLE")
-            r.plannerTab != ""
+            r.plannerTab == "200 "
+            r.plannerReads == true && r.plannerForm == false
+            r.supervisorTab == ""
+            r.techTab != "" && r.readerTab != ""
+            r.plannerPolicy != ""
+            JSON.stringify(r.plannerTabs) == JSON.stringify(["Teams"])
         }
     }
 )

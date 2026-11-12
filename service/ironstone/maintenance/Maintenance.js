@@ -18,6 +18,8 @@ const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mant
 const procedures = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceProcedures.js")
 const plans = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenancePlans.js")
 const settings = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceSettings.js")
+// P8 review: People's restricted qualification kinds, left out of the qualification choice
+const development = () => ec.resource.script("component://mr-mantle/service/mantle/humanres/Development.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -68,10 +70,15 @@ function rootGrants() {
 }
 // An area's grant: the root's ALWAYS (the Maintenance administrator's, ADMIN's) passes every area below it; otherwise the area's
 // own rows decide when it has any, else the root's.
+// An area is the user's when a grant opens all of it: a non-inheritable grant on its frame opens only the screens named under it
+// (BOSS_MNT_TEAMS: Settings' Teams tab for a planner or supervisor, P8 review), not the area.
 function areaGrant(grants, area) {
     if (!grants.read) return false
     if (grants.systemAdmin || grants.rootAlways) return true
-    const found = screenGrants(areaLocation(area), grants.authzRows)
+    const found = screenGrants(
+        areaLocation(area),
+        grants.authzRows.filter(row => row.inheritAuthz !== "N")
+    )
     return found.found ? found.allowed.length > 0 : true
 }
 
@@ -812,7 +819,9 @@ const choiceSources = {
     // People's qualification state, the team), each labelled so; a planner's or supervisor's, the organization's people otherwise
     technicians: (userScope, term, selected, p) => technicianOptions(userScope, term, selected, p),
     // P8: the qualification that proves a procedure step's skill (People's QualificationType values)
-    qualificationTypes: (userScope, term, selected) => enumOptions("QualificationType", term, selected),
+    // (never a restricted kind, People's identity documents and work permits: P8 review)
+    qualificationTypes: (userScope, term, selected) =>
+        enumOptions("QualificationType", term, selected, row => !development().isRestricted(row.enumId)),
     // a facility work is for: every facility of the scope (a room inside a building), through Mantle's scoped find
     workFacilities: (userScope, term, selected) => {
         if (!userScope.capabilities.resourceRead) return []
