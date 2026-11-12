@@ -1411,6 +1411,105 @@ outage part), MT-10.
   work order completes with the compressor still down and a follow-up; the supervisor restores it from Downtime,
   and Manufacturing shows it available. **Gate 1.**
 
+**Built Nov 12 (P5).** mr-mantle 5dbdca39, mr-boss 6979a0cc (branch `mnt/p5`); mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): F14 (Manufacturing's minimal ResourceUnavailability and its internal `record#`, called only by
+  ProductionDowntime.js `outageOf`), F13 and F49 as P3 left them (Mantle's `store#ProductionEquipment` guard and WorkCenters.js,
+  Facilities.js), the other readers of the outage (ProductionShopFloor's start checks, ProductionCalendar, ProductionSchedule's move
+  conflicts, WorkCenters' `outOfService`), ProductionDowntime's correction pattern and its spec, P3's lifecycle (`MaintenanceWork.js`
+  `transitionWorkOrder`, `makeOrder`, `actionsFor`, the disposition enumeration), the booking views (`WorkEffortAndAssetBooking`,
+  `WorkEffortAndFacilityBooking`) and the demo data loader (an upsert of the given columns only).
+- Mantle:
+  - Record (`entity/ResourceBookingEntities.xml`, F14): ResourceUnavailability gains the reason (`ResourceUnavailabilityReason`, its
+    `optionIndicator` Y a planned reason) and `plannedOutage`, the work order and step, a revision, the correction chain
+    (`originalUnavailabilityId`, `correctionOfUnavailabilityId`, `supersededByUnavailabilityId`, `changeReason`, who and when) and the
+    restoration (`endedByUserId`, `endedDate`, `dispositionEnumId`, `endComments`); reason, interval, supersession and disposition
+    audit-logged. MaintenanceWorkOrder gains `offlineIntent` and `resourceUnavailabilityId` (the outage it recorded or linked). Seed
+    `data/MaintenanceWorkOutageData.xml`: the six reasons and the source `MsrcFollowUp`.
+  - `mantle.work.ResourceBookingServices` over the new `ResourceOutages.js`: `record#` (an asset or a facility; the resource locked, its
+    open outage in force linked, else a new one, or a past one ended by a supervisor or resource administrator; the caller checked by
+    data: Manufacturing's equipment-fault stop of the asset in an organization the user operates, or a Maintenance supervisor or
+    resource administrator of the resource's organization, or the technician assigned to the work order on it; the work order linked;
+    the bookings over it kept and answered by id), `find#` (the scope's outages in force, filters, production and work context,
+    restoration and its blockers, the correction chain), `correct#` (a new row in force, the corrected one superseded, the work
+    orders' links moved) and `end#` (the only restoration: a supervisor or resource administrator, available or usable with
+    restrictions, `OPEN_WORK` while a linked work order is open).
+  - The work order (`MaintenanceWork.js`, one grouped hook, `downtimeOf`): Start with offline intent (the order's or the form's) records
+    the target's outage as planned maintenance or links the open one; Complete with equipment still unavailable records its outage when
+    none is open, and `followUpName` makes a corrective follow-up (source Follow-up, `WeatCausedBy`) linked to the open outage; the
+    answer names the outage and the follow-up; `get#` gives the offline intent and the outage; Home's `downResourceCount`.
+  - Owner contracts: `store#ProductionEquipment` refuses equipment with an open outage (`EQUIPMENT_BLOCKED`, F49 completed); ProductionShopFloor,
+    ProductionCalendar and ProductionSchedule read the row in force; ProductionDowntime's rows show the restoration through the chain.
+- BOSS:
+  - Screens: Equipment's Downtime tab (DowntimeFind, DowntimeRows, RecordDowntime, RestoreResource, Correct, the correction history)
+    and WorkOrderDetail's Downtime tab (index 3; Files, Conversation and History moved to 4, 5 and 6), sharing
+    `template/MaintenanceDowntimeParts.xml`; the Lifecycle's Start asks whether the target goes out of service and Complete takes a
+    follow-up name; NewWorkOrder's offline intent; the header's out-of-service line; EquipmentDetail's and FacilityDetail's Maintenance
+    headers show "Out of service since …" linking to Downtime; Home's Unavailable resources counted, opening Downtime.
+  - Maintenance.js: the link `Equipment/Downtime`, the choices `downtimeReasons` and `restoreDispositions`. Resources.js: the state.
+  - Owner contracts: WorkCenters.js reads the outage in force; Manufacturing's Downtime shows the outage's restoration; Warehouse's
+    equipment read (Facilities.js) shows "Out of service". Written into design-manufacturing and the logs of impl-manufacturing and
+    impl-warehouse.
+  - Demo (BossZMaintenanceDemoData.xml, appended): Room 201 out of service (a safety stop linked to its work order, offline intent)
+    and the compressor's October belt failure restored by the supervisor, available.
+- Specs:
+  - Mantle `test/work/MaintenanceOutages` (5 features, 1.9 s): a stop's outage and a second fault linked, the stop's equipment only; a
+    technician only from assigned work, a planner and another organization refused; closing the stop restores nothing, end# does
+    with its disposition and Manufacturing's stop shows it; a correction keeps the original interval and the row in force is linked
+    and counted; two work orders on one outage, a follow-up holding restoration, completion still unavailable recording an outage.
+  - BOSS `test/Maintenance/MaintenanceDowntime` (2 features, about 0.8 s): Downtime's one qvt render as the supervisor and
+    WorkOrderDetail's Downtime tab's one; Home's count; Manufacturing's and Warehouse's equipment reads out of service until restored.
+    `MaintenanceAccess` gains the outage rule (supervisor links, planner refused, Retail's forklift refused, a technician's restore
+    refused; 0.15 s).
+  - Acceptance, written and not run: `acceptance/Maintenance/MaintenanceOutageWalk` (4 features).
+- Tests run (release binary, `--nobuild`, this worktree): mr-mantle MaintenanceOutages, ProductionDowntime, ProductionShopFloor,
+  ProductionOrders, ProductionReports, ProductionSchedule, MaintenanceWorkOrders, MaintenanceManagedWork, MaintenanceScope,
+  MaintenanceResources and WorkProcess 69 of 69, and after prettier MaintenanceOutages, ProductionDowntime and MaintenanceWorkOrders 19
+  of 19; mr-boss MaintenanceDowntime, MaintenanceAccess, MaintenanceWorkOrders, MaintenanceEquipment, ManufacturingDowntime,
+  ManufacturingWorkCenters, ManufacturingShopFloor, ManufacturingSchedule and WarehouseFacilities 70 of 70, then the four Maintenance
+  specs 23 of 23 after NewWorkOrder's field; client MaintenanceWorkOrdersWalk 1 of 1 (7.87 s). MaintenanceAccess's registry case
+  failed before the change below (the settings index's old service). `./moq run --debug --nobuild lint --screens`: 136 flagged sites, as
+  before P5, none in the new or changed screens. Prettier clean on the new and changed JavaScript (MaintenanceWork.js still holds one
+  P3 line prettier would rewrap). Not run: ./moq test-apps, the acceptance suite.
+- Inventories: usl-inventory's Added table for ResourceBookingServices (record#, find#, correct#, end#); ss-inventory has no baseline
+  form for downtime (no row).
+- Design edits: design-maintenance's header, §1.2, §3 (Home, WorkOrderDetail as built, the record shape) and §6 Downtime as built;
+  design-manufacturing §6 Downtime (the restoration and the guard).
+- Findings (provisional):
+  - A correction is a new row (ProductionDowntime's pattern), so a superseded row with no end would read as an open outage: every read
+    of current availability now takes the row in force (`supersededByUnavailabilityId` empty), Manufacturing's three Mantle readers and
+    WorkCenters.js among them. A later reader of ResourceUnavailability (P15's blackouts, P16's booking checks, P17's reports) must too.
+  - `record#` checked no permission; it now checks its caller by data, with no caller flag: Manufacturing's entry is the stop it names
+    (an equipment fault of the asset, in an organization the user operates), Maintenance's the permission, scope and assignment.
+  - "An overlapping order cannot restore" is built as `end#` waiting for every open work order linked to the outage (`OPEN_WORK`), and a
+    follow-up made at completion is linked, so it holds restoration until it is done or cancelled.
+  - Complete with equipment "Still unavailable" records an outage when none is open (reason equipment fault), so the disposition is the
+    availability fact and not a label only.
+  - Production downtime now needs the seed reason `RurEquipmentFault`: a seed file that sorts before `MaintenanceWorkData.xml` and adds a
+    `MaintenanceSource` value fails its load (foreign key), which is why the file is `MaintenanceWorkOutageData.xml`; while it was
+    skipped, every equipment-fault stop failed.
+  - MaintenanceAccess's "Admin's registries" case called `ironstone.admin.RegistryServices.find#Settings`, gone with Admin Screens Down,
+    and failed on master; it now calls `org.moqui.admin.ReadinessServices.find#Settings` (F116).
+  - A technician (assigned view) reads the organization's outages in Downtime (a resource read), not only those of their work.
+  - Home's count is of outages in force in the scope; a facility down and equipment inside it count as two resources.
+  - Services' demo has no equipment-fault production reason; the acceptance walk adds one in its setup.
+  - WorkOrderDetail's tabs were numbered 1 to 5 with no gaps: P5 moved Files, Conversation and History; P6, P9 and P10 will move them
+    again unless the lead respaces them.
+- For the lead:
+  - budget share: mr-mantle +1.9 s (MaintenanceOutages); mr-boss server about +1.0 s (MaintenanceDowntime 0.8 s, MaintenanceAccess
+    +0.15 s); mr-boss client unchanged; budgets not changed.
+  - merge hot spots: mr-mantle `MaintenanceWork.js` (header comment, `outages` import, `requestHash`, `makeOrder`'s row, `storeWorkOrder`'s
+    offline intent, the transition's `downtimeOf` call and return, `downtimeOf` after it, `actionsFor`'s flags, `getWorkOrder`'s two
+    fields, Home's count), `MaintenanceServices.xml` (create#, store#, transition# parameters), `MaintenanceEntities.xml` (two fields, an
+    index), ProductionDowntime.js, ProductionOrders.js, ProductionShopFloor.js, ProductionCalendar.js, ProductionSchedule.js; mr-boss
+    `Maintenance.js` (linkPaths, resourceChoices, choiceSources), `BossZMaintenanceDemoData.xml` (appended), `MaintenanceSpecLib.js` (ids),
+    `MaintenanceAccess.spec.js` (appended; the registry line), `template/MaintenanceWorkOrderParts.xml` (createWorkOrder and
+    lifecycleAction in-maps, the message, two fields), `WorkOrderDetail.xml` (comment, header line) and its tab indexes,
+    `NewWorkOrder.xml`, `Home.xml`, `Shared/FacilityDetail.xml`, `template/MaintenanceEquipment.xml`, Resources.js, WorkCenters.js,
+    Facilities.js, Manufacturing's Downtime screen, design-maintenance, and the plans' logs. No change to BossSetupData,
+    BossMaintenanceDemoData or screen/Maintenance.xml.
+  - the user's calls: whether a supervisor may restore a resource (usable with restrictions) while a follow-up work order linked to
+    its outage is still open; built meanwhile: restoration waits for it, and a supervisor cancels or completes it first.
+
 ### P6 — Procedures
 
 Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedure); MT-03.
