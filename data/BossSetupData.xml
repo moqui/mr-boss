@@ -5329,6 +5329,8 @@ along with this software (see the LICENSE.md file). If not, see
         answers the caller's own employments alone (PEOPLE_SELF_SERVICE) -->
     <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_SELF" description="People own leave balances">
         <artifacts artifactName="mantle.humanres.LeaveServices.get#MyBalances" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <!-- P12: SelfService's My leave requests card (find#Requests answers a self-service employee their own alone) -->
+        <artifacts artifactName="mantle.humanres.LeaveServices.find#Requests" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_PPL_LEAVE_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
@@ -5341,4 +5343,14 @@ along with this software (see the LICENSE.md file). If not, see
             title="My leave balances"
             description="get#MyBalances: the signed-in user's own leave balances (never anyone else's), for each of their employments and leave types: the policy, what was granted, accrued, taken, expired and adjusted, the balance, what is pending and what is available, in days or hours; narrow by leaveTypeEnumId or give asOfDate for a past or future date. No leave reason is returned."
             classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <!-- impl-people P12 (design-people §7 LeaveRequests and LeaveRequestDetail, §13 TeamCalendar, §15): Leave requests, a request's
+        detail and the team calendar are under Time & leave, so they open by its grants as they stand (every People user through the
+        root; a self-service employee by BOSS_PPL_TIME's inheritable ALLOW), with no group of their own: what each user reads, asks,
+        decides and sees on the calendar is Mantle's LeaveServices' check (the person, their manager, an approver of the step waiting,
+        HR of the employer). Leave to approve (Mantle's PeopleLeaveApproval topic) and the person's decision notice
+        (PeopleLeaveDecision) open the request, decided there, from People's Approvals or from the notification tray. -->
+    <moqui.security.user.NotificationTopic topic="PeopleLeaveApproval"
+            linkTemplate="/qapps/People/Time/LeaveRequestDetail?leaveRequestId=${leaveRequestId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleLeaveDecision"
+            linkTemplate="/qapps/People/Time/LeaveRequestDetail?leaveRequestId=${leaveRequestId}"/>
 </entity-facade-xml>

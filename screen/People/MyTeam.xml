@@ -24,7 +24,9 @@ along with this software (see the LICENSE.md file). If not, see
     for the others), submitted or not (find#Timesheets' missing list, which holds the manager's live reports who keep time),
     opening the week in People's My time, and Remind missing time on the selected people
     (send#MissingTimeReminders, which checks per person that the manager approves that week and counts the others as skipped).
-    Who is out (P12) and reviews due (P20) join with their phases. -->
+    P12: Who is out, the next two weeks of the team's approved leave (mantle.humanres.LeaveServices.get#TeamAbsences: "{person} · Out",
+    never the leave type or the reason), each opening the request, with the team calendar; a leave decision waiting opens
+    LeaveRequestDetail. Reviews due (P20) join with their phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="My team" default-menu-index="2" menu-image="sym_o_diversity_3" menu-image-type="icon">
     <!-- P10: Remind missing time, the selected people (selectedIds, a comma list of their parties), for last week -->
@@ -44,6 +46,11 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PeopleServices.find#DueWork" out-map="decisionsFound" transaction="force-new"
                     ignore-error="true" in-map="{kinds:'decision', pageSize:50}"/>
         </if>
+        <!-- P12: who is out, today and the next two weeks -->
+        <set field="outFrom" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="outThru" from="new Date(Date.parse(outFrom + 'T12:00:00Z') + 13 * 86400000).toISOString().substring(0, 10)"/>
+        <service-call name="mantle.humanres.LeaveServices.get#TeamAbsences" out-map="outFound" transaction="force-new" ignore-error="true"
+                in-map="{start:outFrom, end:outThru}"/>
         <!-- P10: last week's missing weeks of the people the manager may remind (their live reports among them) -->
         <service-call name="mantle.work.TimesheetServices.find#Timesheets" out-map="missingFound" transaction="force-new" ignore-error="true"
                 in-map="{list:'missing', withCounts:false}"/>
@@ -63,10 +70,18 @@ along with this software (see the LICENSE.md file). If not, see
             decisionRows = Array.from(decisionsFound?.dueWork || []).map(row => Object.assign({}, row,
                 row.approvalKindEnumId == 'PakPosition'
                     ? {openPath: sharedLinks['Staffing/PositionDetail'], openParameters: {emplPositionId: row.sourceId}}
+                    : row.approvalKindEnumId == 'PakLeave'
+                    ? {openPath: sharedLinks['Time/LeaveRequestDetail'], openParameters: {leaveRequestId: row.sourceId}}
                     : row.partyId ? {openPath: sharedLinks['Employees/Employee360'], openParameters: {partyId: row.partyId}}
                     : {openPath: sharedLinks['Approvals'], openParameters: {}}))
             decisionsMoreText = decisionsFound && decisionsFound.dueWorkCount > decisionRows.length
                 ? 'The first ' + decisionRows.length + ' of ' + decisionsFound.dueWorkCount + '.' : ''
+            // P12: the team's absences (not the manager's own), each with its days
+            const lastOf = event => event.allDay ? new Date(Date.parse(String(event.end).substring(0, 10) + 'T12:00:00Z') - 86400000).toISOString().substring(0, 10)
+                : String(event.start).substring(0, 10)
+            outRows = Array.from(outFound?.eventList || []).filter(event => event.partyId !== people.partyId).map(event => ({
+                title: event.title, leaveRequestId: event.openable ? event.leaveRequestId : null,
+                whenText: String(event.start).substring(0, 10) + (lastOf(event) > String(event.start).substring(0, 10) ? ' to ' + lastOf(event) : '')}))
         ]]></script>
     </actions>
     <widgets>
@@ -125,6 +140,30 @@ along with this software (see the LICENSE.md file). If not, see
                             </columns>
                         </form-list>
                         <label text="No one reports to you now." type="p" style="m-muted q-pa-md" condition="!teamRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- P12: who is out, the next two weeks -->
+        <section name="WhoIsOut" condition="teamAvailable">
+            <widgets>
+                <container-box>
+                    <box-header title="Who is out"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Time/TeamCalendar']}" text="Team calendar" icon="sym_o_calendar_month" link-type="anchor"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="OutRows" list="outRows" skip-form="true" paginate="false" condition="outRows.length">
+                            <field name="title">
+                                <conditional-field condition="leaveRequestId" title="Who">
+                                    <link url="${sharedLinks['Time/LeaveRequestDetail']}" text="${title}" link-type="anchor"
+                                            parameter-map="{leaveRequestId:leaveRequestId}"/>
+                                </conditional-field>
+                                <default-field title="Who"><display/></default-field>
+                            </field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                        </form-list>
+                        <label text="No one on your team is out in the next two weeks." type="p" style="m-muted q-pa-md" condition="!outRows.length"/>
                     </box-body-nopad>
                 </container-box>
             </widgets>
