@@ -5652,6 +5652,12 @@ backup follow-ups pulled in, on a release binary built from that mr-moqui.
   37 of 37 client, the one failure still People's (F353, now PeopleAccess.spec.js:507 after Recruiting); the acceptance suite 71
   of 71 and 18 of 18. A read-only review of the incoming changes against Maintenance found nothing broken and the gaps F356–F360.
 
+- After the follow-ups (F356–F360, merged) and the pull of People P22, follow-up 2 and People's review of the Maintenance merge
+  (no conflicts; its fix of F353 included), on a release binary rebuilt for P22's decimal evaluator: `./moq test-apps` 3961 of 3961
+  regression features and 37 of 37 client; the Maintenance acceptance suite 71 of 71 and 18 of 18. The totals still read over budget
+  (mr-mantle 591.3 s of 441 s, mr-boss 397.8 s of 291 s, client 82.3 s of 66 s, mr-pass 29.9 s of 20 s and mr-marble's client
+  10.1 s of 9 s, neither changed by this build): People's phases since its last raise and a loaded machine, for People's lead.
+
 **Follow-ups Nov 12 (F356–F360).** On branch mnt/fu (mr-mantle ae0d18b1, mr-boss this commit), the user's go-ahead for F356.
 Checked first: since the Commons calendar follow-up `check#EventAccess` answers canEdit false for a kept event
 (`get#ManagedEvents`), and the three booking services asked edit; People's Training.js (`store#Training`, `cancelSession`),
@@ -6218,7 +6224,7 @@ paths under `mr-boss/`.
 | F350 | Final suites: MaintenanceDispatch's spec-local employer had employees and no department, so People's setup readiness (PeopleAccess's Settings check) failed after it on the shared test database | The spec gives it a department |
 | F351 | Final suites: InsightsAlerts' shipped business templates lacked Maintenance's two business alerts (the generation-failure alert reads the server log and is not listed) | The spec's list updated |
 | F352 | Acceptance: three code bugs: the reports swallowed a refusal's reason; the root's panel check called a service in a script (server-static); the technician search filtered after the 30-row cut | Fixed (Final suites note) |
-| F353 | Final suites: People's Recruiting spec leaves an employer with no department, failing PeopleAccess's setup readiness after it | impl-people's lead |
+| F353 | Final suites: People's Recruiting spec leaves an employer with no department, failing PeopleAccess's setup readiness after it | Fixed by People (its review of the Maintenance merge) |
 | F354 | Acceptance: in a spec's `then` block, `Array.from(...)` on a passed list and `JSON.parse(...)` answered `[]` and `{}` (a testkit rewrite, likely) | The walks compute them in `when`; a framework finding for later |
 | F355 | Acceptance: changing Planned start or Due in Assign and schedule drops the technicians already chosen (the list re-ranks for the window); a refused booking (bookSlot) answers HTTP 500 | Later |
 | F356 | Merge review: since the Commons calendar follow-up an event an application keeps (an interview, a training session, leave, a production run) answers `canEdit` false to everyone, so `book#Resource`, `cancel#ResourceBooking` and `check#ResourceBookings` (each asking edit) refuse its bookings; and People's Training.js and Recruiting.js take a free-text location and move and cancel their events with `update#WorkEffort`, so Maintenance's room calendar, conflict checks and blackouts never see an interview's or session's room, and a booking made before the merge is kept unchecked through a move and not withdrawn on cancel | Fixed (Follow-ups Nov 12): the organizer of a kept event books, cancels and rechecks its resources (`canBook`); People's moves and cancels call `keptEventMoved` and `keptEventCancelled` |
