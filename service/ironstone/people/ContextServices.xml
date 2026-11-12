@@ -239,8 +239,8 @@ along with this software (see the LICENSE.md file). If not, see
             mantle.work.TimesheetServices.find#WeeksToSubmit, kind timesheet), for one who keeps time under People (a People user or
             a self-service employee by the time area's grant) and does not open Projects, whose own source answers them there,
             each opening the week in People's My time; and P12 the leave starting today or tomorrow of a manager's live reports
-            (kind leave, PEOPLE_TEAM_VIEW: who is out, never why), each opening the request when the manager reads it, else the
-            team calendar. Another user's Today gets none. Declared on both roots, it is taken once.</description>
+            (kind leave, PEOPLE_TEAM_VIEW: who is out, never why; not a colleague's day the team calendar shows), each opening the
+            request. Another user's Today gets none. Declared on both roots, it is taken once.</description>
         <in-parameters>
             <parameter name="userId"/>
             <parameter name="partyId"/>

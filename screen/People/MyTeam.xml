@@ -76,10 +76,11 @@ along with this software (see the LICENSE.md file). If not, see
                     : {openPath: sharedLinks['Approvals'], openParameters: {}}))
             decisionsMoreText = decisionsFound && decisionsFound.dueWorkCount > decisionRows.length
                 ? 'The first ' + decisionRows.length + ' of ' + decisionsFound.dueWorkCount + '.' : ''
-            // P12: the team's absences (not the manager's own), each with its days
+            // P12: the team's absences (not the manager's own, nor a colleague's the calendar shows them as an employee: the ones
+            // they open), each with its days
             const lastOf = event => event.allDay ? new Date(Date.parse(String(event.end).substring(0, 10) + 'T12:00:00Z') - 86400000).toISOString().substring(0, 10)
                 : String(event.start).substring(0, 10)
-            outRows = Array.from(outFound?.eventList || []).filter(event => event.partyId !== people.partyId).map(event => ({
+            outRows = Array.from(outFound?.eventList || []).filter(event => event.partyId !== people.partyId && event.openable).map(event => ({
                 title: event.title, leaveRequestId: event.openable ? event.leaveRequestId : null,
                 whenText: String(event.start).substring(0, 10) + (lastOf(event) > String(event.start).substring(0, 10) ? ' to ' + lastOf(event) : '')}))
         ]]></script>

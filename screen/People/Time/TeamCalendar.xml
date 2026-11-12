@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- People › Team calendar (design-people §13 TeamCalendar, Context passed; design-drawers-commons §7 Calendar; impl-people P12): the
     Commons Calendar component (screen/Commons/Calendar.qvue) in its resource mode, read only, with the transitions it calls answered
-    by mantle.humanres.LeaveServices.get#TeamAbsences: who is out among the people the user sees in People (their own leave, a
-    manager's reports', an HR reader's employers'), each approved absence as "{person} · Out" (a morning or an afternoon said so),
+    by mantle.humanres.LeaveServices.get#TeamAbsences: who is out among the people the user sees in People (their own leave and their
+    colleagues', the people sharing a department, team or manager with them, a manager's reports', an HR reader's employers'), each approved absence as "{person} · Out" (a morning or an afternoon said so),
     never its leave type, its reason or a refused request; one the user reads opens LeaveRequestDetail. Nothing moves or is edited
     here: changes are the request's. The same absences are the Team absence CalDAV collection (read only, CX-SYNC). Shifts join with
     P14. The terminal: an agenda of the next two weeks (TeamCalendarTui). Every People user's and a self-service employee's (the time

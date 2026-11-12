@@ -1242,19 +1242,16 @@ function today(p) {
             const found = lib.probe("mantle.humanres.LeaveServices.get#TeamAbsences", {start: today, end: tomorrow})
             for (const event of Array.from(found.eventList || [])) {
                 const startDay = String(event.start).substring(0, 10)
-                if (event.partyId === own || startDay < today) continue
+                // the manager's reports (and an HR reader's employers'), which they open; not a colleague's day the calendar shows
+                if (event.partyId === own || startDay < today || !event.openable) continue
                 items.push(
                     item({
                         kind: "leave",
                         title: event.title + (startDay === today ? " today" : " tomorrow"),
                         startDate: startDay,
                         allDay: !!event.allDay,
-                        url: event.openable
-                            ? leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(event.leaveRequestId)
-                            : "/qapps/People/Time/TeamCalendar",
-                        record: event.openable
-                            ? {recordEntityName: LEAVE_REQUEST, recordId: event.leaveRequestId, recordName: event.title}
-                            : null
+                        url: leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(event.leaveRequestId),
+                        record: {recordEntityName: LEAVE_REQUEST, recordId: event.leaveRequestId, recordName: event.title}
                     })
                 )
             }
