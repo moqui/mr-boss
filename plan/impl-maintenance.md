@@ -367,7 +367,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Work orders | Mantle, BOSS | WorkOrders, WorkOrderDetail (Overview, Time, Files, Conversation, History), Home, Settings' work policy | built and reviewed Nov 12, merged |
 | P4 Requests and intake | Mantle, BOSS | Requests, RequestDetail, Report a problem | built and reviewed Nov 12, merged |
 | P5 Downtime and restoration | Mantle, BOSS | Downtime, WorkOrderDetail's Downtime | built and reviewed Nov 12, merged |
-| P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | — |
+| P6 Procedures | Mantle, BOSS | Procedures, ProcedureDetail | built and reviewed Nov 12, merged |
 | P7 Execution checklists and evidence | Mantle, BOSS | WorkOrderDetail's Procedure, WorkItemDetail | — |
 | P8 Dispatch: teams, skills and qualifications | Mantle, BOSS | WorkOrders' AssignSchedule and BulkWork, Teams | — |
 | P9 Parts and stock | Mantle, BOSS | WorkOrderDetail's Parts, MaterialIssueReceipt, InventoryAvailability; Accounting's PostingMappings row | — |
@@ -2000,7 +2000,7 @@ Design §4.1, §4.2, Procedures and ProcedureDetail, §12 (the published procedu
   ProcessServices' P6 services; ss-inventory's CreateProductMaintenance and a P6 line (no baseline form maps to Procedures).
 - Design edits: design-maintenance's header, §1.2, §4.1, §4.2, Procedures, ProcedureDetail and §9 as built; design-drawers-commons'
   WorkProcessApproval row.
-- Findings (provisional):
+- Findings, numbered by the lead F150 to F157 in order:
   - The threshold double-counted: Mantle's WorkEffortUpdateProject EECA rolls every task's estimate up onto its root
     (`update#ProjectTimeFromTask`), so a procedure's root already holds its steps' sum. `treeHours` reads the steps' sum when a step has
     an estimate, else the root's own; a root's own estimate entered on a procedure's work is overwritten by the rollup at the next step
@@ -2098,7 +2098,7 @@ WorkProcesses.js and Checklists.js callers, Manufacturing's `guardInstruction` a
     failed the approval instead. `approve#WorkProcess` now refuses DATE_INVALID when a node's instruction starts after the requested
     effective time; a later date ends the earlier one at its start. MaintenanceProcesses gains the case (it fails without the fix:
     the early approval succeeded).
-- Findings:
+- Findings, numbered by the lead F158 to F161 in order:
   - `instantiate#WorkProcess` called directly for a procedure (outside `create#MaintenanceWorkOrder`) makes a guarded execution tree with
     no work order, and with no target its applicability is not checked. No screen or grant reaches it (allow-remote false, no BOSS grant);
     a later phase that calls it should go through the work order, or the checked path could refuse a call without one.
@@ -2762,6 +2762,18 @@ paths under `mr-boss/`.
 | F147 | P4 review: the untriaged filter drops linked rows after paging | Harmless while triage links few |
 | F148 | P4 review: P4's artifact groups moved to BossSetupMaintenanceData.xml at the merge (F118) | Done |
 | F149 | P4 review: MaintenanceFoundationWalk's refusals hold by artifact groups | None |
+| F150 | P6: Mantle's rollup writes the steps' estimates onto the root, so adding them counted twice | The threshold reads the rolled-up sum |
+| F151 | P6: P3's `requestHash` hashed text fields as NaN | Fixed in P6 |
+| F152 | P6: the procedure flow's Amend move is held otherwise only by Manufacturing's flow | It needs `WORK_PROCESS_EDIT` |
+| F153 | P6: an approved procedure's change goes back to Draft | §4 (the user's call) |
+| F154 | P6: `approve#NotificationMessage` runs under the calling screen's grant | P6 review R1 tests it through Commons' screen |
+| F155 | P6: the project-model task writers stay unguarded | No BOSS screen reaches them on managed work; REST is ADMIN's (F159) |
+| F156 | P6: demo instructions not seeded (a `WectInstruction` needs a stored file) | Later |
+| F157 | P6: a step's role and due offset, the change reason and a later retirement are not on the forms | Later |
+| F158 | P6 review: `instantiate#WorkProcess` called directly makes an execution with no work order or applicability check | Not reachable today (no remote call, no grant) |
+| F159 | P6 review: the `/mantle` REST task writers (`add#WorkEffortProduct`, `store#TimeEntry`, `create#TimeEntryClockIn`, `add#TaskComment`, `set#TaskMilestone`, `store#WorkEffortPartyTime`) do not refuse managed work; REST is ADMIN's | P7 guards `add#WorkEffortProduct`, `store#TimeEntry` and `create#TimeEntryClockIn` with `check#ManagedWork` (the managed-work rule of §4) |
+| F160 | P6 review: a completed step's assignee still counts in Admin's participant | P7 |
+| F161 | P6 review: Prettier not installed in the review's environment | Lead runs it before the end |
 
 
 ## 7. Later
