@@ -381,7 +381,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P16 Booking requests and the resource calendar | Mantle, BOSS | BookingRequests, ResourceCalendar; Commons' approvals | built and reviewed Nov 12, merged |
 | P17 Reports and Insights | Mantle, BOSS | Reports, WorkStatusReport | — |
 | P18 Settings, lookups, readiness and import | Mantle, BOSS | Settings, Lookups, EquipmentImport | built and reviewed Nov 12, merged |
-| P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12 |
+| P19 Assist, Comms, sync and outputs | Mantle, BOSS | the prints and exports; no new screen | built and reviewed Nov 12, merged |
 | P20 Finish | all | the sweeps and the review walk (acceptance) | — |
 
 ### P0 — Checks
@@ -4616,7 +4616,7 @@ Design §1.4 (Assist, Comms hooks, Sync, Meetings), §12 (the outputs not built 
   no row of these contributions (no baseline form maps to them).
 - Design edits: design-maintenance's header, §1.4 and §12 as built; design-drawers-commons' and design-admin's headers (owner
   contracts); impl-drawers-commons' and impl-admin's logs.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F291 to F298 in order:
   - `create-from` is built as a Comms screen action, not the `create-from` hook: the hook makes a record from the message, and the
     user's call is a prefilled form. The message's attachments are not copied onto the request (they stay on the filed chat message
     or mail); a voicemail's audio stays in Comms.
@@ -4716,7 +4716,7 @@ Commons' `add#Attendees` and `search#Attendees`, Comms' `send#Compose`, `Provide
     service; maint.tech2: the oil service; a contact of Services: both, no cost; the technician of that call: their own only),
     with spec-local work numbers; it fails without the fix. MaintenanceAccess's stack providers case calls the requester's
     spec-local number in place of Kenji's.
-- Findings (provisional, unnumbered):
+- Findings, numbered by the lead F299 to F302 in order:
   - Comms' `send#Compose` filed an internal message on a Services work order for Retail's planner and for an unassigned technician (R2's cases without the check),
     called under Maintenance's root. Its "a record the user may not see is refused" did not hold there: worth a Comms look at
     Compose's record check under another app's inheritable root (not changed here: Comms' owner contract).
@@ -4823,6 +4823,7 @@ design-maintenance.md or the owner's design.
 | Nov 12, 2026 | P18: lookup values are instance-wide and any Maintenance settings editor changes them; a start earlier than a planned policy is refused (`PLAN_PENDING`) unless the change withdraws it; no default holiday calendar per organization; an ended lookup value leaves the choices only | The user's calls (P18; the last two the lead's acceptance of the worker's) |
 | Nov 12, 2026 | P14: the generation job's every-organization scope is the job's own (no user) or a system administrator's; anyone else generates in their own scope; reminders for assigned PM work a day before the due date; the job seeded paused; job-made work waits for a supervisor under the default zero threshold | The lead's acceptance of the reviewer's and worker's recommendations, by the plan's text |
 | Nov 12, 2026 | P11: Projects' money readers see a repair's cost total per work order; no estimate before anyone is assigned. P19: the due-PM calendar is for MAINTENANCE_VIEW holders | The lead's acceptance of the workers' recommendations |
+| Nov 12, 2026 | P19: an internal caller brings up only the work they reported or are assigned; a customer or vendor caller their organization's open work | The user's call (P19) |
 
 ## 5. Open questions
 
@@ -5138,6 +5139,18 @@ paths under `mr-boss/`.
 | F288 | P11 review: The report reads each order line's bills and acceptances, and `projectCosts` each issuance's node, a query apiece (the worker's finding) | P11's Review note |
 | F289 | P11 review: The pending outside service is dated by the order's entry date, so a period filter can drop an open line ordered before it. | P11's Review note |
 | F290 | P11 review: Settings' cost threshold currency is a text line (Mantle checks it is a currency) | P11's Review note |
+| F291 | P19: `create-from` is built as a Comms screen action, not the `create-from` hook | P19's Built note |
+| F292 | P19: Due PM for my teams admits a holder of MAINTENANCE_VIEW only, as P13's Plans | P19's Built note |
+| F293 | P19: The call context takes the caller's organizations from PrtEmployee, PrtAgent and PrtContact | P19's Built note |
+| F294 | P19: Maintenance's record-lookup has sequence -10 so it answers before Comms' generic `boss.records` (0) | P19's Built note |
+| F295 | P19: The video call's join link (its token) is the event's `infoUrl` and description, so every attendee and every reader of the event can join (the lobby admits them) | P19's Built note |
+| F296 | P19: Send as message is an internal message (Comms' Compose, internal mode) to a person or a mailbox, not a chat message or an email | P19's Built note |
+| F297 | P19: No demo work order has a procedure instance, so the print's steps branch is rendered by no regression spec (the walk prints none either) | P19's Built note |
+| F298 | P19: The prefill reads a chat message itself (as `findOrCreate#ChatCommunicationEvent` does, without writing an event on a GET) | P19's Built note |
+| F299 | P19 review: Comms' `send#Compose` filed an internal message on a Services work order for Retail's planner and for an unassigned technician (R2's cases without the check), called under Maintenance's root. | P19's Review note |
+| F300 | P19 review: The call context's equipment branch takes the first 10 assets the organization owns, with or without work, then their work | P19's Review note |
+| F301 | P19 review: The due projection pages `find#MaintenanceDue` (200) before it keeps the user's teams | P19's Review note |
+| F302 | P19 review: The video call's join link lives as long as the call plus a day (at least 24 hours, at most 90 days) | P19's Review note |
 
 
 ## 7. Later
