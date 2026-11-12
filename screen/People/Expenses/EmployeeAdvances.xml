@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Advances (design-people §9 EmployeeAdvances; style-guide §3.2 List; impl-people P15): the employee advances the user
+    reads (mantle.humanres.ExpenseServices.find#Advances): their own, those they decide now (To decide) and a manager's reports' and
+    the employers' of a holder of PEOPLE_EXPENSE_MANAGE (All); each with what was asked, delivered (what delivered payments paid of its bill), applied to claims and
+    outstanding (delivered less applied, never a balance kept), its stage (waiting, approved: with finance, approved for payment, paid: outstanding, settled,
+    refused, withdrawn) and the claims it was applied to. Request advance is the primary action (RequestAdvance: the employer when the
+    employee has several, the employer and employee of a holder of PEOPLE_EXPENSE_MANAGE, the purpose, amount, currency, when it is needed and when it should
+    be settled; request#Advance); an approver of the step waiting approves or refuses it in its row (AdvanceDecision, decide#Advance),
+    the person or who asked withdraws it. Approval to advance is not payment: it makes a bill to the employee that finance approves
+    for payment and a payment run pays, and finance applies it to a claim in Accounting's Expense posting. Every People user's and a self-service employee's (BOSS_PPL_EXPENSES); Mantle checks every read and decision. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Advances" default-menu-index="2" menu-image="sym_o_payments" menu-image-type="icon">
+    <parameter name="show"/>
+    <parameter name="statusEnumId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="request"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <transition name="requestAdvance">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.request#Advance" out-map="asked"
+                    in-map="{partyRelationshipId:(raHrEmploymentId || raEmploymentId || null), purpose:(purpose || null), amount:(amount || null),
+                        currencyUomId:(currencyUomId || null), requiredDate:(requiredDate || null),
+                        expectedSettlementDate:(expectedSettlementDate || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; asked">
+                <message type="success">Advance ${asked.employeeAdvanceId} asked: it waits for approval</message></if>
+        </actions>
+        <default-response url="."><parameter name="show" value="mine"/></default-response>
+        <error-response url="."><parameter name="request" value="Y"/></error-response>
+    </transition>
+    <transition name="decide">
+        <actions>
+            <service-call name="mantle.humanres.ExpenseServices.decide#Advance" out-map="decided"
+                    in-map="{employeeAdvanceId:employeeAdvanceId, decision:(decision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; decided">
+                <message type="success">${decided.repeated ? 'Already done' : 'Advance ' + decided.employeeAdvanceId + ': ' + decided.statusText}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="caps" from="people?.capabilities || {}"/>
+        <set field="canDecide" from="ec.user.hasPermission('PEOPLE_REQUEST_APPROVE')"/>
+        <set field="seesOthers" from="!!(caps.team || caps.expenseManage)"/>
+        <!-- who claims or asks for an employee: PEOPLE_EXPENSE_MANAGE (the user's call, impl-people §4, Nov 12, 2026) -->
+        <set field="hrEditor" from="!!caps.expenseManage"/>
+        <set field="showing" from="['mine', 'decide', 'all'].includes(show) ? show : (canDecide ? 'decide' : (seesOthers ? 'all' : 'mine'))"/>
+        <service-call name="mantle.humanres.ExpenseServices.find#Advances" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{mine:(showing == 'mine'), toDecide:(showing == 'decide'), statusEnumId:(statusEnumId || null), pageIndex:(pageIndex || 0)}"/>
+        <script>ec.message.clearErrors()</script>
+        <service-call name="mantle.humanres.ExpenseServices.get#ClaimOptions" out-map="options" transaction="force-new" ignore-error="true"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            advances = Array.from(found?.advances || [])
+            advancesCount = found?.advancesCount || 0
+            advancesPageIndex = found?.advancesPageIndex || 0
+            advancesPageSize = found?.advancesPageSize || 20
+            advancesPageMaxIndex = found?.advancesPageMaxIndex || 0
+            advancesPageRangeLow = found?.advancesPageRangeLow || 0
+            advancesPageRangeHigh = found?.advancesPageRangeHigh || 0
+            stageColors = {EasRequested: 'warning', toPay: 'primary', outstanding: 'primary', settled: 'positive', EasRefused: 'negative',
+                EasWithdrawn: 'grey-8'}
+            const own = Array.from(options?.employments || [])
+            employmentOptions = own.map(row => ({key: row.partyRelationshipId, text: row.organizationName}))
+            canRequest = employmentOptions.length > 0 || hrEditor
+            requestValues = {raEmploymentId: employmentOptions[0]?.key || null, currencyUomId: own[0]?.currencyUomId || null,
+                operationKey: 'EA' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8)}
+            findValues = {show: showing, statusEnumId: statusEnumId || null}
+            claimsUrl = sharedLinks?.['Expenses/ExpenseClaims'] || null
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Advances" type="h5"/>
+                <label text="Ask for cash ahead of your expenses and see what is still to settle against your claims." type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="." text="Request advance" icon="sym_o_add" link-type="anchor-button" btn-type="primary" parameter-map="{request:'Y'}"
+                        condition="request != 'Y' &amp;&amp; canRequest"/>
+                <link url="${claimsUrl}" url-type="plain" text="Expense claims" icon="sym_o_receipt_long" link-type="anchor-button"
+                        condition="claimsUrl"/>
+            </container>
+        </container>
+
+        <section name="RequestAdvance" condition="request == 'Y' &amp;&amp; canRequest">
+            <widgets>
+                <container-box>
+                    <box-header title="Request an advance"/>
+                    <box-toolbar><link url="." text="Close" icon="sym_o_close" link-type="anchor"/></box-toolbar>
+                    <box-body>
+                        <form-single name="RequestAdvance" transition="requestAdvance" map="requestValues">
+                            <field name="raOrganizationPartyId" hide="!hrEditor">
+                                <default-field title="Employer" tooltip="HR: the employer of the employee you ask for">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'employers', selected:raOrganizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="raHrEmploymentId" hide="!hrEditor">
+                                <default-field title="Employee" tooltip="Empty: yourself">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                parameter-map="{choice:'employments', selected:raHrEmploymentId}">
+                                            <depends-on field="raOrganizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="raEmploymentId">
+                                <conditional-field condition="employmentOptions.length &gt; 1" title="Employer">
+                                    <drop-down><list-options list="employmentOptions" key="${key}" text="${text}"/></drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="purpose"><default-field title="Purpose"><text-line size="50"/></default-field></field>
+                            <field name="amount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
+                            <field name="currencyUomId">
+                                <default-field title="Currency">
+                                    <drop-down><entity-options key="${uomId}" text="${uomId} ${description}">
+                                        <entity-find entity-name="moqui.basic.Uom">
+                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                            <order-by field-name="uomId"/></entity-find></entity-options></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="requiredDate"><default-field title="Needed by"><date-time type="date"/></default-field></field>
+                            <field name="expectedSettlementDate">
+                                <default-field title="Settled by" tooltip="When you expect to claim the expenses it covers"><date-time type="date"/></default-field>
+                            </field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="Request advance"><submit confirmation="Ask for this advance? Your approver decides it."/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="raOrganizationPartyId"/><field-ref name="raHrEmploymentId"/></field-row>
+                                <field-row><field-ref name="raEmploymentId"/><field-ref name="purpose"/></field-row>
+                                <field-row><field-ref name="amount"/><field-ref name="currencyUomId"/></field-row>
+                                <field-row><field-ref name="requiredDate"/><field-ref name="expectedSettlementDate"/></field-row>
+                                <field-ref name="operationKey"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <form-single name="FindAdvances" transition="." map="findValues">
+            <field name="show">
+                <default-field title="Show">
+                    <radio>
+                        <option key="mine" text="Mine"/>
+                        <option key="decide" text="To decide"/>
+                        <option key="all" text="All I see"/>
+                    </radio>
+                </default-field>
+            </field>
+            <field name="statusEnumId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="EasRequested" text="Waiting for approval"/>
+                        <option key="EasApproved" text="Approved"/>
+                        <option key="EasRefused" text="Refused"/>
+                        <option key="EasWithdrawn" text="Withdrawn"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="show"/><field-ref name="statusEnumId"/><field-ref name="submitButton"/></field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="AdvanceList" list="advances" skip-form="true" paginate="true" condition="advances.length">
+                    <field name="employeeAdvanceId">
+                        <default-field title="Advance"><display text="${employeeAdvanceId}${purpose ? ' · ' + purpose : ''}"/></default-field>
+                    </field>
+                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                    <field name="amountText" align="right"><default-field title="Asked"><display/></default-field></field>
+                    <field name="deliveredText" align="right"><default-field title="Delivered"><display/></default-field></field>
+                    <field name="appliedText" align="right"><default-field title="Applied"><display/></default-field></field>
+                    <field name="outstandingText" align="right"><default-field title="Outstanding"><display/></default-field></field>
+                    <field name="stageText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColors[stage] || 'grey-8'}">${
+                                    WebUtilities.encodeHtml(stageText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (toDecide ? " · to decide" : "")})}]]></text>
+                                <text type="html">${stageText}${toDecide ? ' · to decide' : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="ApproveAdvance_${employeeAdvanceId}" button-text="Approve" icon="sym_o_check" width="480"
+                                    title="Approve ${personName}'s advance" condition="toDecide">
+                                <label type="p" text="${amountText} for ${purpose}. Finance then pays it."/>
+                                <form-single name="ApproveAdvance_${employeeAdvanceId}" transition="decide">
+                                    <field name="employeeAdvanceId" from="employeeAdvanceId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="RefuseAdvance_${employeeAdvanceId}" button-text="Refuse" icon="sym_o_block" width="480"
+                                    title="Refuse ${personName}'s advance" condition="toDecide">
+                                <form-single name="RefuseAdvance_${employeeAdvanceId}" transition="decide">
+                                    <field name="employeeAdvanceId" from="employeeAdvanceId"><default-field><hidden/></default-field></field>
+                                    <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="canWithdraw"
+                                    parameter-map="{employeeAdvanceId:employeeAdvanceId, decision:'withdraw'}"
+                                    confirmation="Withdraw advance ${employeeAdvanceId}?"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="employeeAdvanceId"/><field-ref name="personName"/></column>
+                        <column><field-ref name="outstandingText"/><field-ref name="stageText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!advances.length &amp;&amp; showing == 'decide'" text="No advance waits for your decision."/>
+                <label type="p" style="q-pa-md m-muted" condition="!advances.length &amp;&amp; showing != 'decide'"
+                        text="No advance yet: Request advance asks for cash ahead of your expenses."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

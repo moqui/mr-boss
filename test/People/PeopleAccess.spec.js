@@ -37,6 +37,26 @@
 // P13: the employee's clock on SelfService under Commons by its own grant (BOSS_PPL_CLOCK_SELF; the reader refused the punch with
 // the same parameters), Time import HR's (the reader, the manager and the employee refused the screen; the reader refused the import
 // with the parameters HR is answered, Services' employer refused to Retail's HR).
+// P14: the Shift roster HR's and the managers' (the reader and the employee refused the screen), a shift of Tomas rostered by his
+// manager (the reader refused with the same parameters, Services' employee refused to Retail's HR), and the employee's own shifts
+// through get#MyShifts by its own grant (BOSS_PPL_SHIFTS_SELF); PEOPLE_ROSTER_EDIT (the user's call of Nov 12, 2026): the manager
+// without it (a spec-local account of Hannah's) reads the roster but saves and publishes nothing, with the parameters she is
+// accepted with.
+// P15: Expense claims opened to the self-service employee by the expenses area's own grant (another app's user refused); a claim read
+// by its claimant and manager and refused to the reader with the same parameters; HR claims for Retail's employee and is refused
+// Services'; Payroll's InvoiceDetail (an expense claim's invoice) refused to HR. PEOPLE_EXPENSE_MANAGE (the user's call of Nov 12,
+// 2026): HR reads the claim and claims for the employee with it; a spec-local HR account without it, and the payroll operator, are
+// refused the same claim with the same parameters.
+// P16: an opening's applications a recruiter's of its employer (the HR officer refused with the same parameters, Services' opening
+// refused to Retail's recruiter), an application read by an interviewer of its panel alone (the HR officer refused it), and People's
+// Forms the People administrator's (the HR officer refused the screen). P16 review (the user's call of Nov 12, 2026): the
+// self-service employee on an interview's panel reads it through get#MyInterview and the reader is refused it with the same
+// parameters; the panel member reads no application record host (its notes and files are the recruiters').
+// P18: Skills & training's matrix development's, HR's and the managers' (the reader and the employee refused the screen), its
+// Qualifications the employee's by the area's own grant; a verified qualification revoked by the development administrator of its
+// employer (the reader refused with the same parameters, Services' qualification refused to Retail's development administrator), and
+// the Development group (the reader's without the matrix). P18 review (the user's call of Nov 12, 2026): the manager evaluates her
+// report's skill without PEOPLE_DEVELOP_EDIT, the reader is refused the same evaluation and the manager Services' employee.
 // Run: ./moq test mr-boss --spec PeopleAccess
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell} = lib
@@ -49,6 +69,11 @@ const refused = message => /PEOPLE_UNAVAILABLE|is not authorized/.test(message)
 const unauthorized = message => /^40[13] |is not authorized/.test(message)
 // a spec-local People user whose only capability group holds PEOPLE_HR_EDIT, an agent of Retail
 const editOnly = "PPL_SPEC_EDIT_ONLY"
+// P14: a spec-local account whose group holds the manager's view permissions without PEOPLE_ROSTER_EDIT; it is Hannah's (the demo
+// manager's) only while the roster feature runs, so no other feature meets a second account of hers
+const teamOnly = "PPL_SPEC_TEAM_ONLY"
+// P15: a spec-local HR officer of Retail (PEOPLE_HR_VIEW and PEOPLE_HR_EDIT) without PEOPLE_EXPENSE_MANAGE
+const hrOnly = "PPL_SPEC_HR_ONLY"
 
 spec({
     setupSpec() {
@@ -78,6 +103,42 @@ spec({
             })
             for (const userGroupId of ["BOSS_USERS", "BOSS_PEOPLE", editOnly])
                 call("create#moqui.security.UserGroupMember", {userId: editOnly, userGroupId, fromDate: 0})
+            call("create#moqui.security.UserGroup", {
+                userGroupId: teamOnly,
+                description: "People spec: a manager who does not roster"
+            })
+            for (const userPermissionId of ["PEOPLE_TEAM_VIEW", "PEOPLE_SELF_SERVICE"])
+                call("create#moqui.security.UserGroupPermission", {userGroupId: teamOnly, userPermissionId, fromDate: 0})
+            call("create#moqui.security.UserAccount", {
+                userId: teamOnly,
+                username: "people.spec.teamonly",
+                currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                passwordHashType: "SHA",
+                timeZone: "America/Chicago"
+            })
+            for (const userGroupId of ["BOSS_USERS", "BOSS_PEOPLE", teamOnly])
+                call("create#moqui.security.UserGroupMember", {userId: teamOnly, userGroupId, fromDate: 0})
+            call("create#moqui.security.UserGroup", {userGroupId: hrOnly, description: "People spec: HR without expenses"})
+            for (const userPermissionId of ["PEOPLE_HR_VIEW", "PEOPLE_HR_EDIT"])
+                call("create#moqui.security.UserGroupPermission", {userGroupId: hrOnly, userPermissionId, fromDate: 0})
+            call("create#mantle.party.Party", {partyId: hrOnly, partyTypeEnumId: "PtyPerson"})
+            call("create#mantle.party.Person", {partyId: hrOnly, firstName: "People spec", lastName: "HR only"})
+            call("create#mantle.party.PartyRelationship", {
+                relationshipTypeEnumId: "PrtAgent",
+                fromPartyId: hrOnly,
+                toPartyId: ids.organizationId,
+                toRoleTypeId: "OrgInternal",
+                fromDate: 0
+            })
+            call("create#moqui.security.UserAccount", {
+                userId: hrOnly,
+                username: "people.spec.hronly",
+                partyId: hrOnly,
+                currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+                passwordHashType: "SHA"
+            })
+            for (const userGroupId of ["BOSS_USERS", "BOSS_PEOPLE", hrOnly])
+                call("create#moqui.security.UserGroupMember", {userId: hrOnly, userGroupId, fromDate: 0})
         })
     },
     cleanupSpec() {
@@ -87,7 +148,7 @@ spec({
         system(() =>
             ec.entity
                 .find("moqui.security.UserGroupMember")
-                .condition("userId", editOnly)
+                .condition("userId", "in", [editOnly, teamOnly, hrOnly])
                 .updateAll({thruDate: ec.user.nowTimestamp})
         )
         ec.artifactExecution.enableAuthz()
@@ -120,13 +181,15 @@ feature(
             const otherRoot = asUser(users.hr, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("PEOPLE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             // P8: the self-service employee's context is their own: self-service and its link, no People capability or employer (P10,
-            // P12, P13: and their own time, leave, attendance and clock links)
+            // P12, P13: and their own time, leave, attendance and clock links; P15: their expense claims and advances; P18: their
+            // qualifications)
             const employee = asUser(users.employee, () => invoke(context, {}))
             if (
                 employee.capabilities?.read !== false ||
                 employee.capabilities?.self !== true ||
                 Object.keys(employee.sharedLinks || {}).join() !==
-                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock" ||
+                    "SelfService,Time/MyTime,Time/LeaveRequests,Time/LeaveRequestDetail,Time/TeamCalendar,Time/Attendance,Time/Clock," +
+                        "Expenses/ExpenseClaims,Expenses/ExpenseClaimDetail,Expenses/EmployeeAdvances,Development/Qualifications" ||
                 employee.organizationPartyIds?.length ||
                 employee.employments?.[0]?.organizationPartyId !== ids.organizationId
             )
@@ -196,6 +259,15 @@ feature("the People menu and keys follow the groups; the launcher shows People t
             if (JSON.stringify(time.names) !== JSON.stringify(menu))
                 problems.push(`${label} Time group: ${time.status} ${time.names}`)
         }
+        // P18: Skills & training's matrix and qualifications; the reader's qualifications alone
+        for (const [user, menu, label] of [
+            [users.hr, ids.developmentMenu, "the HR officer's"],
+            [users.reader, ids.readerDevelopmentMenu, "the reader's"]
+        ]) {
+            const development = shell(user, true, "Development/Qualifications", "Development")
+            if (JSON.stringify(development.names) !== JSON.stringify(menu))
+                problems.push(`${label} Development group: ${development.status} ${development.names}`)
+        }
         // P5: Settings' tabs, the readiness, the approval rules and the lookups
         const settings = shell(users.admin, true, "Settings/SettingsHome", "Settings")
         if (JSON.stringify(settings.names) !== JSON.stringify(ids.settingsMenu))
@@ -216,6 +288,10 @@ const capabilityNames = [
     "requestApprove",
     "hrView",
     "hrEdit",
+    // P14: saving and publishing shifts (PEOPLE_ROSTER_EDIT), the managers' and HR's
+    "rosterEdit",
+    // P15: every expense claim and advance of the employers (PEOPLE_EXPENSE_MANAGE), HR's
+    "expenseManage",
     "recruitView",
     "recruitEdit",
     "developView",
@@ -243,9 +319,22 @@ const capabilityNames = [
 const capabilityUsers = [
     {user: users.reader, granted: ["directory", "staff"]},
     // the manager is an employee too: BOSS_PEOPLE_SELF beside BOSS_PEOPLE_MANAGER (groups are not nested; P8's review)
-    {user: users.manager, granted: ["self", "team", "requestApprove", "schedules"]},
+    {user: users.manager, granted: ["self", "team", "requestApprove", "rosterEdit", "schedules"]},
     // HR decides the approval steps routed to it with PEOPLE_REQUEST_APPROVE, as everyone does (impl-people §4, P5's review)
-    {user: users.hr, granted: ["requestApprove", "hrView", "hrEdit", "import", "staff", "employment", "schedules"]},
+    {
+        user: users.hr,
+        granted: [
+            "requestApprove",
+            "hrView",
+            "hrEdit",
+            "rosterEdit",
+            "expenseManage",
+            "import",
+            "staff",
+            "employment",
+            "schedules"
+        ]
+    },
     {user: users.recruiter, granted: ["recruitView", "recruitEdit", "staff"]},
     {user: users.payroll, granted: ["payrollView", "payrollEdit", "staff", "payroll"]},
     {user: users.payApprover, granted: ["payrollView", "payrollApprove", "staff", "payroll"]},
@@ -1010,6 +1099,333 @@ feature(
                     hrImport: "accepted",
                     readerImport: "PERMISSION_DENIED",
                     hrOther: "ORGANIZATION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "the shift roster: HR's and the managers' screen; Tomas's shift rostered by his manager, the reader refused with the same parameters, Services' employee refused to Retail's HR; the employee's own shifts by their own grant; the manager without PEOPLE_ROSTER_EDIT reads the roster and saves and publishes nothing",
+    {
+        when() {
+            const S = "mantle.humanres.ScheduleServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            const day = ec.l10n.format(new Date(Date.now() + 30 * 86400000), "yyyy-MM-dd", null, "America/Chicago")
+            const shift = {
+                partyRelationshipId: ids.employmentId,
+                startText: day + " 09:00",
+                endText: day + " 17:00",
+                timeZone: "America/Chicago"
+            }
+            const codes = {
+                manager: code(asUser(users.manager, () => system(() => refusal(S + "store#Shift", shift)))),
+                reader: code(asUser(users.reader, () => system(() => refusal(S + "store#Shift", shift)))),
+                hrOther: code(
+                    asUser(users.hr, () =>
+                        system(() =>
+                            refusal(S + "store#Shift", Object.assign({}, shift, {partyRelationshipId: ids.otherEmploymentId}))
+                        )
+                    )
+                ),
+                employeeShifts: code(asUser(users.employee, () => refusal(S + "get#MyShifts", {})))
+            }
+            // PEOPLE_ROSTER_EDIT: Hannah reads her roster and rosters Tomas, and publishes the week; her account without it reads the
+            // same roster, every lane read only, and is refused the same shift and the same publish
+            const week = {fromDay: day, days: 7}
+            const rosterOf = roster => (roster?.lanes || []).filter(lane => lane.partyRelationshipId == ids.employmentId)
+            const holder = asUser(users.manager, () =>
+                system(() => ({
+                    lanes: rosterOf(invoke(S + "get#Roster", week).roster),
+                    publish: code(refusal(S + "publish#Shifts", week))
+                }))
+            )
+            let nonHolder = null
+            try {
+                system(() => call("update#moqui.security.UserAccount", {userId: teamOnly, partyId: ids.managerPartyId}))
+                nonHolder = asUser("people.spec.teamonly", () =>
+                    system(() => {
+                        const roster = invoke(S + "get#Roster", week).roster
+                        return {
+                            lanes: rosterOf(roster),
+                            canRoster: !!roster?.canRoster,
+                            save: code(refusal(S + "store#Shift", shift)),
+                            publish: code(refusal(S + "publish#Shifts", week))
+                        }
+                    })
+                )
+            } finally {
+                system(() =>
+                    ec.entity.find("moqui.security.UserAccount").condition("userId", teamOnly).updateAll({partyId: null})
+                )
+            }
+            codes.holder = holder.lanes.length + " " + holder.lanes.every(lane => lane.canRoster) + " " + holder.publish
+            codes.nonHolder = [
+                nonHolder.lanes.length,
+                nonHolder.lanes.some(lane => lane.canRoster),
+                nonHolder.canRoster,
+                nonHolder.save,
+                nonHolder.publish
+            ].join(" ")
+            for (const user of [users.manager, users.hr]) {
+                const opened = screenRefusal(user, "Time/ShiftRoster")
+                if (opened) problems.push(`${user}'s ShiftRoster: ${opened}`)
+            }
+            for (const user of [users.reader, users.employee]) {
+                const refused = screenRefusal(user, "Time/ShiftRoster")
+                if (!unauthorized(refused)) problems.push(`${user} opens ShiftRoster: ${refused || "opened"}`)
+            }
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    manager: "accepted",
+                    reader: "PERMISSION_DENIED",
+                    hrOther: "RECORD_UNAVAILABLE",
+                    employeeShifts: "accepted",
+                    holder: "1 true accepted",
+                    nonHolder: "1 false false PERMISSION_DENIED PERMISSION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "expenses: the employee opens Expense claims by the area's own grant, another app's user does not; a claim read by its claimant and manager and refused to the reader with the same parameters; HR claims for Retail's employee, not Services'; Payroll's InvoiceDetail refused to HR",
+    {
+        when() {
+            const E = "mantle.humanres.ExpenseServices."
+            const NEW_CLAIM = "mantle.account.InvoiceServices.create#ProjectExpenseInvoice"
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            const claim = asUser(users.employee, () =>
+                system(() => invoke(NEW_CLAIM, {expenseClaim: true, fromPartyId: ids.employeePartyId, purpose: "Access spec"}))
+            ).invoiceId
+            const read = user => code(asUser(user, () => system(() => refusal(E + "get#Claim", {invoiceId: claim}))))
+            const forEmployee = partyId =>
+                code(asUser(users.hr, () => system(() => refusal(NEW_CLAIM, {expenseClaim: true, fromPartyId: partyId}))))
+            // PEOPLE_EXPENSE_MANAGE: HR reads the claim and claims for Tomas; HR without it and the payroll operator do not
+            const claimFor = user =>
+                code(asUser(user, () => system(() => refusal(NEW_CLAIM, {expenseClaim: true, fromPartyId: ids.employeePartyId}))))
+            const codes = {
+                employeeRead: read(users.employee),
+                managerRead: read(users.manager),
+                readerRead: read(users.reader),
+                hrRead: read(users.hr),
+                hrOnlyRead: read("people.spec.hronly"),
+                payrollRead: read(users.payroll),
+                hrRetail: forEmployee(ids.employeePartyId),
+                hrOnlyRetail: claimFor("people.spec.hronly"),
+                hrServices: forEmployee(ids.otherEmployeePartyId)
+            }
+            const opened = screenRefusal(users.employee, "Expenses/ExpenseClaims", {show: "mine"})
+            if (opened) problems.push(`the employee's Expense claims: ${opened}`)
+            const otherApp = screenRefusal(users.otherApp, "Expenses/ExpenseClaims")
+            if (!unauthorized(otherApp)) problems.push(`another app's user opens Expense claims: ${otherApp || "opened"}`)
+            const invoice = screenRefusal(users.hr, "Payroll/InvoiceDetail", {invoiceId: claim})
+            if (!unauthorized(invoice)) problems.push(`the HR officer opens Payroll's InvoiceDetail: ${invoice || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    employeeRead: "accepted",
+                    managerRead: "accepted",
+                    readerRead: "RECORD_UNAVAILABLE",
+                    hrRead: "accepted",
+                    hrOnlyRead: "RECORD_UNAVAILABLE",
+                    payrollRead: "RECORD_UNAVAILABLE",
+                    hrRetail: "accepted",
+                    hrOnlyRetail: "PERMISSION_DENIED",
+                    hrServices: "PERMISSION_DENIED"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "P16: an opening's applications are its recruiter's; an application is read by its interviewers; Forms the administrator's",
+    {
+        when() {
+            const R = "mantle.humanres.RecruitingServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            // Retail's opening (the recruiter's) and Services' (the system administrator's), each with an application
+            const retail = asUser(users.recruiter, () =>
+                system(() => {
+                    const opening = invoke(R + "store#Opening", {
+                        organizationPartyId: ids.organizationId,
+                        title: "Access spec opening",
+                        emplPositionIds: ids.openingSeatId,
+                        action: "open"
+                    })
+                    const made = invoke(R + "create#Application", {
+                        jobOpeningId: opening.jobOpeningId,
+                        firstName: "Access",
+                        lastName: "Applicant"
+                    })
+                    return {jobOpeningId: opening.jobOpeningId, employmentApplicationId: made.employmentApplicationId}
+                })
+            )
+            const services = system(() => {
+                const opening = invoke(R + "store#Opening", {
+                    organizationPartyId: ids.otherOrganizationId,
+                    title: "Access spec technician",
+                    emplPositionIds: ids.otherOpeningSeatId,
+                    action: "open"
+                })
+                return {jobOpeningId: opening.jobOpeningId}
+            })
+            const find = {jobOpeningId: retail.jobOpeningId}
+            // P16 review: an interview of Retail's application with the self-service employee on its panel
+            const day = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+            const publishedScorecards = system(() =>
+                ec.entity
+                    .find("moqui.screen.form.DbForm")
+                    .condition({purposeEnumId: "DbfpInterviewScorecard", ownerPartyId: ids.organizationId})
+                    .list()
+            ).map(row => row.formId)
+            const scorecardId = asUser(users.admin, () =>
+                system(() => {
+                    // the employer's scorecard: a spec form published for it when it has none
+                    let formId = publishedScorecards[0]
+                    if (!formId) {
+                        const D = "mantle.party.FormDefinitionServices."
+                        formId = invoke(D + "create#Form", {
+                            purposeEnumId: "DbfpInterviewScorecard",
+                            organizationPartyId: ids.organizationId,
+                            description: "Access spec scorecard"
+                        }).formId
+                        invoke(D + "save#FormField", {formId, title: "Overall", fieldTypeEnumId: "DBFFT_text-line"})
+                        invoke(D + "publish#Form", {formId})
+                    }
+                    return formId
+                })
+            )
+            const scheduled = asUser(users.recruiter, () =>
+                system(() =>
+                    invoke(R + "schedule#Interview", {
+                        employmentApplicationId: retail.employmentApplicationId,
+                        startDate: ec.l10n.parseTimestamp(day + " 11:00:00.000", "yyyy-MM-dd HH:mm:ss.SSS"),
+                        panelPartyIds: ids.employeePartyId,
+                        formId: scorecardId,
+                        location: "Access room"
+                    })
+                )
+            )
+            // Mantle's own checks, as the user (the services are reached through People's screens)
+            const as = (user, service, parameters) => asUser(user, () => system(() => code(refusal(service, parameters))))
+            const myInterview = {workEffortId: scheduled.workEffortId}
+            const record = user =>
+                asUser(user, () =>
+                    system(() => invoke(R + "check#ApplicationAccess", {employmentApplicationId: retail.employmentApplicationId}))
+                ).recordVisible
+            const codes = {
+                recruiter: as(users.recruiter, R + "find#Applications", find),
+                hr: as(users.hr, R + "find#Applications", find),
+                otherEmployer: as(users.recruiter, R + "find#Applications", {jobOpeningId: services.jobOpeningId}),
+                hrApplication: as(users.hr, R + "get#Application", {employmentApplicationId: retail.employmentApplicationId}),
+                panelInterview: as(users.employee, R + "get#MyInterview", myInterview),
+                readerInterview: as(users.reader, R + "get#MyInterview", myInterview),
+                panelRecord: String(record(users.employee)) + " " + String(record(users.recruiter))
+            }
+            const forms = screenRefusal(users.admin, "Settings/Forms")
+            if (forms) problems.push(`the administrator's Forms: ${forms}`)
+            const hrForms = screenRefusal(users.hr, "Settings/Forms")
+            if (!unauthorized(hrForms)) problems.push(`the HR officer opens Forms: ${hrForms || "opened"}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    recruiter: "accepted",
+                    hr: "PERMISSION_DENIED",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    hrApplication: "RECORD_UNAVAILABLE",
+                    panelInterview: "accepted",
+                    readerInterview: "RECORD_UNAVAILABLE",
+                    panelRecord: "false true"
+                }
+            problems.join("\n") == ""
+        }
+    }
+)
+
+feature(
+    "skills and qualifications: the matrix development's, HR's and the managers' screen; a verified qualification revoked by the development administrator of its employer, the reader refused with the same parameters, Services' refused to Retail's; the manager evaluates her report's skill, the reader refused; the employee's qualifications by the area's own grant",
+    {
+        when() {
+            const D = "mantle.humanres.DevelopmentServices."
+            const code = message => /[A-Z][A-Z0-9_]{3,}(?=:)/.exec(message)?.[0] || message || "accepted"
+            const problems = []
+            // a spec-local first aid certificate of Ines (Retail), verified, so the reader reads it (its validity) and may not revoke it
+            const partyQualificationId = system(
+                () =>
+                    call("create#mantle.humanres.ability.PartyQualification", {
+                        partyId: ids.reportPartyId,
+                        qualificationTypeEnumId: ids.firstAidTypeId,
+                        title: "People access spec first aid",
+                        thruDate: new Date(Date.now() + 400 * 86400000),
+                        verificationStatusId: "QlVerVerified"
+                    }).partyQualificationId
+            )
+            const revision = system(() =>
+                String(
+                    ec.user.timestampMillis(
+                        ec.entity
+                            .find("mantle.humanres.ability.PartyQualification")
+                            .condition("partyQualificationId", partyQualificationId)
+                            .one().lastUpdatedStamp
+                    )
+                )
+            )
+            const revoke = {partyQualificationId, decision: "revoke", reason: "Spec", expectedRevision: revision}
+            // the user's call of Nov 12, 2026: the manager evaluates her report Tomas's customer service (at the level he holds)
+            // without PEOPLE_DEVELOP_EDIT; the reader is refused the same evaluation, and the manager Services' Kenji
+            const evaluate = partyId => ({partyId, skillTypeEnumId: ids.serviceSkillId, skillLevel: "3", evidence: "Access spec"})
+            const codes = {
+                reader: code(asUser(users.reader, () => system(() => refusal(D + "verify#Qualification", revoke)))),
+                develop: code(asUser(users.develop, () => system(() => refusal(D + "verify#Qualification", revoke)))),
+                otherEmployer: code(
+                    asUser(users.develop, () =>
+                        system(() => refusal(D + "find#Qualifications", {partyQualificationId: ids.otherQualificationId}))
+                    )
+                ),
+                managerEvaluates: code(
+                    asUser(users.manager, () => system(() => refusal(D + "store#Skill", evaluate(ids.employeePartyId))))
+                ),
+                readerEvaluates: code(
+                    asUser(users.reader, () => system(() => refusal(D + "store#Skill", evaluate(ids.employeePartyId))))
+                ),
+                managerOther: code(
+                    asUser(users.manager, () => system(() => refusal(D + "store#Skill", evaluate(ids.otherEmployeePartyId))))
+                )
+            }
+            for (const user of [users.develop, users.hr, users.manager]) {
+                const opened = screenRefusal(user, "Development/SkillsMatrix")
+                if (opened) problems.push(`${user}'s SkillsMatrix: ${opened}`)
+            }
+            for (const user of [users.reader, users.employee]) {
+                const refused = screenRefusal(user, "Development/SkillsMatrix")
+                if (!unauthorized(refused)) problems.push(`${user} opens SkillsMatrix: ${refused || "opened"}`)
+            }
+            const own = screenRefusal(users.employee, "Development/Qualifications")
+            if (own) problems.push(`the employee's Qualifications: ${own}`)
+            return {codes, problems}
+        },
+        then({codes, problems}) {
+            codes ==
+                {
+                    reader: "PERMISSION_DENIED",
+                    develop: "accepted",
+                    otherEmployer: "RECORD_UNAVAILABLE",
+                    managerEvaluates: "accepted",
+                    readerEvaluates: "PERMISSION_DENIED",
+                    managerOther: "RECORD_UNAVAILABLE"
                 }
             problems.join("\n") == ""
         }

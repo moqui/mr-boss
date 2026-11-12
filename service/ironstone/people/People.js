@@ -31,7 +31,8 @@ const areas = {
     // P8: My team, the managers' (BOSS_PPL_TEAM; the capability team is PEOPLE_TEAM_VIEW's)
     myTeam: "MyTeam",
     // P9: Time & leave's working schedules, HR's and the managers' (BOSS_PPL_SCHEDULES; Holidays HR's alone, BOSS_PPL_HOLIDAYS;
-    // the area itself every People user's since P10, BOSS_PPL_TIME)
+    // the area itself every People user's since P10, BOSS_PPL_TIME); P14's Shift roster is in the same group, so this capability
+    // is its too
     schedules: "Time/WorkingSchedules",
     // P10: Payroll, the payroll groups' (BOSS_PPL_PAYROLL; Rates under it)
     payroll: "Payroll"
@@ -42,6 +43,10 @@ const selfServiceLocation = "component://mr-boss/screen/Shared/PeopleSelfService
 // P10: Time & leave (Projects' time screens mounted under People/Time), which a self-service employee opens by its own grant
 // (BOSS_PPL_TIME); and Projects' root, whose own Today source answers a Projects user's weeks to submit
 const timeLocation = "component://mr-boss/screen/People/Time.xml"
+// P15: Expenses (claims and advances), which a self-service employee opens by its own grant (BOSS_PPL_EXPENSES)
+const expensesLocation = "component://mr-boss/screen/People/Expenses.xml"
+// P18: Skills & training, whose Qualifications a self-service employee opens by the area's own grant (BOSS_PPL_DEVELOPMENT)
+const developmentLocation = "component://mr-boss/screen/People/Development.xml"
 const projectsLocation = "component://mr-boss/screen/Projects.xml"
 
 // ===== scope =====
@@ -204,7 +209,32 @@ const linkPaths = [
     // Clock in) and HR's time import
     "Time/Attendance",
     "Time/Clock",
-    "Time/TimeImport"
+    "Time/TimeImport",
+    // P14: the shift roster (HR's and the managers', with the working schedules), its terminal twin and its print
+    "Time/ShiftRoster",
+    "Time/ShiftRosterTui",
+    "Time/ShiftRosterPrint",
+    // P15: expense claims, a claim's detail and advances (every People user's and a self-service employee's by the expenses area's
+    // own grant), and Payroll's InvoiceDetail (an expense claim's invoice for a holder of PEOPLE_EXPENSE_MANAGE)
+    "Expenses",
+    "Expenses/ExpenseClaims",
+    "Expenses/ExpenseClaimDetail",
+    "Expenses/EmployeeAdvances",
+    "Payroll/InvoiceDetail",
+    // P16: openings, applicants, an application, the interviews calendar (recruiters' and interviewers') and the People
+    // administrator's forms (the survey builder with People's registration)
+    "Staffing/Openings",
+    "Staffing/ApplicantPipeline",
+    "Staffing/ApplicantDetail",
+    "Staffing/InterviewsCalendar",
+    "Settings/Forms",
+    "Settings/FormDetail",
+    // P18: skills and qualifications (design §10): the matrix and its terminal twin (development, HR and the managers), and the
+    // qualifications (every People user's and a self-service employee's by the area's own grant)
+    "Development",
+    "Development/SkillsMatrix",
+    "Development/SkillsMatrixTui",
+    "Development/Qualifications"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -233,7 +263,13 @@ function sharedContext(p) {
                 "Time/TeamCalendar": "//People/Time/TeamCalendar",
                 // P13: their own attendance and clock (the time area's own grant)
                 "Time/Attendance": "//People/Time/Attendance",
-                "Time/Clock": "//People/Time/Clock"
+                "Time/Clock": "//People/Time/Clock",
+                // P15: their own expense claims and advances (the expenses area's own grant)
+                "Expenses/ExpenseClaims": "//People/Expenses/ExpenseClaims",
+                "Expenses/ExpenseClaimDetail": "//People/Expenses/ExpenseClaimDetail",
+                "Expenses/EmployeeAdvances": "//People/Expenses/EmployeeAdvances",
+                // P18: their own qualifications (the Skills & training area's own grant)
+                "Development/Qualifications": "//People/Development/Qualifications"
             }
         }
     }
@@ -730,6 +766,20 @@ const choiceSources = {
     },
     // P11: People's leave types (an HR vocabulary; ended values left out)
     leaveTypes: (userScope, term, selected) => vocabularyOptions("PeopleLeaveType", term, selected),
+    // P18: the skill types and qualification types (People's lookups, ended values left out), and the skill levels by their number
+    // (each value's enumCode), a requirement's least level and an evaluation's
+    skillTypes: (userScope, term, selected) => vocabularyOptions("SkillType", term, selected),
+    qualificationTypes: (userScope, term, selected) => vocabularyOptions("QualificationType", term, selected),
+    skillLevels: (userScope, term, selected) => {
+        const wanted = String(term || "").toLowerCase()
+        const options = vocabularyOptions("SkillLevel", "", null)
+            .map(option => {
+                const code = one("moqui.basic.Enumeration", {enumId: option.value})?.enumCode
+                return /^\d+$/.test(String(code || "")) ? {value: String(code), label: code + " " + option.label} : null
+            })
+            .filter(Boolean)
+        return options.filter(option => !wanted || option.label.toLowerCase().includes(wanted) || option.value === selected)
+    },
     // P11: the leave policies not closed of the employers an HR reader reads (or of organizationPartyId), by name
     leavePolicies: (userScope, term, selected, p) => {
         if (!userScope.capabilities.hrView) return []
@@ -838,6 +888,123 @@ function employeeOptions(userScope, term, selected, p, relationshipTypes = ["Prt
         personName
     )
 }
+// ===== P16: recruiting's choices (design §5) =====
+// one employer's approved active seats (EmpsActive, in effect), the seats an opening fills
+choiceSources.approvedSeats = (userScope, term, selected, p) => {
+    if (!p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId)) return []
+    const factory = ec.entity.conditionFactory
+    const base = () =>
+        find("mantle.humanres.position.EmplPosition")
+            .condition("organizationPartyId", p.organizationPartyId)
+            .condition("statusId", "EmpsActive")
+            .condition(
+                factory.makeCondition(
+                    factory.makeCondition("thruDate", "is-null", null),
+                    "or",
+                    factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                )
+            )
+    let query = base().orderBy("^description").limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["emplPositionId", "description"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const options = Array.from(query.list()).map(row => ({
+        value: row.emplPositionId,
+        label: row.description || row.emplPositionId
+    }))
+    return withSelected(
+        options,
+        selected,
+        id => base().condition("emplPositionId", id).count() > 0,
+        id => one("mantle.humanres.position.EmplPosition", {emplPositionId: id})?.description || id
+    )
+}
+// one employer's published interview scorecards (mantle.party.FormDefinitionServices.find#Forms checks the reader)
+choiceSources.scorecardForms = (userScope, term, selected, p) => {
+    if (!p?.organizationPartyId) return []
+    let found
+    try {
+        found = lib.probe("mantle.party.FormDefinitionServices.find#Forms", {
+            purposeEnumIds: ["DbfpInterviewScorecard"],
+            organizationPartyId: p.organizationPartyId
+        })
+    } catch (error) {
+        return []
+    }
+    const wanted = String(term || "").toLowerCase()
+    return Array.from(found.forms || [])
+        .filter(form => form.published && (!wanted || form.description.toLowerCase().includes(wanted)))
+        .map(form => ({value: form.formId, label: form.description}))
+}
+// the openings a recruiter reads (find#Openings), the open ones first, a closed one said so
+choiceSources.openings = (userScope, term, selected) => {
+    let found
+    try {
+        found = lib.probe("mantle.humanres.RecruitingServices.find#Openings", {
+            term: term || null,
+            includeClosed: true,
+            pageSize: 100
+        })
+    } catch (error) {
+        return []
+    }
+    const rows = Array.from(found.openings || []).sort((a, b) => Number(!a.takesApplications) - Number(!b.takesApplications))
+    const options = rows
+        .slice(0, choiceLimit)
+        .map(row => ({
+            value: row.jobOpeningId,
+            label: row.title + (row.takesApplications ? "" : " (" + row.stateText.toLowerCase() + ")")
+        }))
+    if (selected && !options.some(option => option.value === selected)) {
+        const chosen = rows.find(row => row.jobOpeningId === selected)
+        if (chosen) options.push({value: chosen.jobOpeningId, label: chosen.title})
+    }
+    return options
+}
+// the people an application may be recorded for by id: the current employees and agents of the employers a recruiter reads
+// and their earlier applicants (create#Application checks again), by name
+choiceSources.applicants = (userScope, term, selected, p) => {
+    const employers = employerIds(userScope)
+    if (!userScope.capabilities.recruitView || !employers.length) return []
+    const options = employeeOptions(userScope, term, selected, p, ["PrtEmployee", "PrtAgent"])
+    const applicantIds = Array.from(
+        find("mantle.humanres.employment.EmploymentApplication")
+            .condition("organizationPartyId", "in", employers)
+            .selectField("applyingPartyId")
+            .distinct(true)
+            .limit(500)
+            .list()
+    ).map(row => row.applyingPartyId)
+    if (applicantIds.length) {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.Person")
+            .condition("partyId", "in", applicantIds)
+            .orderBy(["^firstName", "^lastName"])
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["firstName", "lastName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        for (const row of Array.from(query.list()))
+            if (!options.some(option => option.value === row.partyId))
+                options.push({
+                    value: row.partyId,
+                    label: [row.firstName, row.lastName].filter(Boolean).join(" ") + " (applicant)"
+                })
+    }
+    return options.slice(0, choiceLimit)
+}
+// the sources of an application (EmploymentApplicationReferredBy)
+choiceSources.applicationSources = (userScope, term, selected) =>
+    vocabularyOptions("EmploymentApplicationReferredBy", term, selected)
+
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown People choice " + p.choice)
@@ -912,6 +1079,51 @@ const searchFinds = [
         }
     }
 ]
+// P16: a recruiter's openings (by title) and applications (by the applicant's name), each opening its People screen
+searchFinds.push(
+    {
+        kind: "opening",
+        rows: (userScope, text, limit) => {
+            let found
+            try {
+                found = lib.probe("mantle.humanres.RecruitingServices.find#Openings", {term: text, pageSize: limit})
+            } catch (error) {
+                if (codeOf(error) === "PERMISSION_DENIED") return []
+                throw error
+            }
+            return Array.from(found.openings || []).map(row => ({
+                title: row.title,
+                subtitle: ["Opening", row.organizationName, row.stateText].join(" · "),
+                icon: "sym_o_campaign",
+                recordEntity: "mantle.humanres.recruitment.JobOpening",
+                recordId: row.jobOpeningId,
+                url: "/qapps/People/Staffing/ApplicantPipeline?jobOpeningId=" + encodeURIComponent(row.jobOpeningId)
+            }))
+        }
+    },
+    {
+        kind: "application",
+        rows: (userScope, text, limit) => {
+            let found
+            try {
+                found = lib.probe("mantle.humanres.RecruitingServices.find#Applications", {term: text, pageSize: limit})
+            } catch (error) {
+                if (codeOf(error) === "PERMISSION_DENIED") return []
+                throw error
+            }
+            return Array.from(found.applications || []).map(row => ({
+                title: row.applicantName,
+                subtitle: ["Applicant", row.openingTitle, row.stageText].join(" · "),
+                icon: "sym_o_person_search",
+                recordEntity: APPLICATION,
+                recordId: row.employmentApplicationId,
+                url: applicationPath + "?employmentApplicationId=" + encodeURIComponent(row.employmentApplicationId)
+            }))
+        }
+    }
+)
+const APPLICATION = "mantle.humanres.employment.EmploymentApplication"
+const applicationPath = "/qapps/People/Staffing/ApplicantDetail"
 // P12: a leave request's record (the palette, the record-lookup, a notice and Today open it)
 const LEAVE_REQUEST = "mantle.humanres.leave.LeaveRequest"
 const leaveRequestPath = "/qapps/People/Time/LeaveRequestDetail"
@@ -962,6 +1174,9 @@ const employee360Apps = {
     // (ironstone.maintenance.EquipmentServices.get#AssignedEquipment), not People's, and qualification validity waits for People P18
     Maintenance: {regions: ["overview"], ownOnly: [], edits: false, returnLabel: "Equipment", returnPath: "//Maintenance/Equipment"}
 }
+// P18: the apps whose Employee360 shows Skills and reviews (DevelopmentServices.get#PersonDevelopment decides what each reader sees
+// in it): People's alone (design §4 Employee360: development by its own permissions)
+const developmentApps = ["People"]
 const employee360Path = app => "/qapps/" + (app === "Commons" ? "Commons/People/Employee360" : "People/Employees/Employee360")
 // get#Employee360: the person's record under appRoot, the regions of Mantle's answer that the app's context shows, the fields the
 // user may change there and the employment the record opened on. A person outside the scope answers recordFound false (the screen
@@ -1009,6 +1224,8 @@ function employee360(p) {
         showsChanges: !!userScope,
         // P7: the equipment the person holds (AssignedEquipment), People's: Mantle answers the person and HR of their employer
         showsEquipment: !!userScope,
+        // P18: Skills and reviews (skills, qualifications, resume), People's: Mantle answers each reader their part
+        showsDevelopment: !!userScope && developmentApps.includes(p.appRoot),
         returnLabel: app.returnLabel,
         returnPath: app.returnPath
     }
@@ -1082,6 +1299,24 @@ function leaveCard(leaveRequestId) {
         lines: [request.chargedText]
     }
 }
+// P16: an application the user reads (get#Application admits a recruiter of its employer and its interviewers), as the
+// record-lookup shows it: the applicant, the opening and the stage; never a scorecard. Null when it is not theirs to read.
+function applicationCard(employmentApplicationId) {
+    let found
+    try {
+        found = lib.probe("mantle.humanres.RecruitingServices.get#Application", {employmentApplicationId})
+    } catch (error) {
+        return null
+    }
+    const application = found?.application
+    if (!application) return null
+    return {
+        title: "Application of " + application.applicantName,
+        status: application.stageText,
+        url: applicationPath + "?employmentApplicationId=" + encodeURIComponent(employmentApplicationId),
+        lines: [application.openingTitle].filter(Boolean)
+    }
+}
 function lookup(p) {
     const empty = {recordList: [], card: null, optionList: []}
     if (!ec.user.userId) return empty
@@ -1113,6 +1348,22 @@ function lookup(p) {
                     })
                 continue
             }
+            // P16: an application the user reads
+            if (wanted.recordEntityName === APPLICATION || wanted.recordEntityName === "EmploymentApplication") {
+                const card = applicationCard(wanted.recordId)
+                if (card)
+                    recordList.push({
+                        recordEntityName: wanted.recordEntityName,
+                        recordId: wanted.recordId,
+                        entity: APPLICATION,
+                        visible: true,
+                        title: card.title,
+                        typeLabel: "Application",
+                        url: card.url,
+                        icon: "sym_o_person_search"
+                    })
+                continue
+            }
             if (wanted.recordEntityName !== PARTY && wanted.recordEntityName !== "Party") continue
             // a person People does not admit is left to the other providers (the hook keeps the first answer per record)
             const card = personCard(wanted.recordId)
@@ -1137,6 +1388,21 @@ function lookup(p) {
                 ? Object.assign(empty, {
                       card: {
                           entityName: LEAVE_REQUEST,
+                          id: p.recordId,
+                          title: card.title,
+                          status: card.status,
+                          url: card.url,
+                          lines: card.lines
+                      }
+                  })
+                : empty
+        }
+        if (p.recordEntityName === APPLICATION && p.recordId) {
+            const card = applicationCard(p.recordId)
+            return card
+                ? Object.assign(empty, {
+                      card: {
+                          entityName: APPLICATION,
                           id: p.recordId,
                           title: card.title,
                           status: card.status,
@@ -1209,6 +1475,10 @@ function decisionUrl(row) {
     if (row.approvalKindEnumId === "PakLeave") return leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(row.sourceId)
     // P13: an attendance correction, among the days to decide on Attendance
     if (row.approvalKindEnumId === "PakAttendance") return "/qapps/People/Time/Attendance?show=decide"
+    // P15: an expense claim on ExpenseClaimDetail, an advance among the advances to decide
+    if (row.approvalKindEnumId === "PakExpenseClaim")
+        return "/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=" + encodeURIComponent(row.sourceId)
+    if (row.approvalKindEnumId === "PakAdvance") return "/qapps/People/Expenses/EmployeeAdvances?show=decide"
     return "/qapps/People/Approvals"
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
@@ -1273,6 +1543,35 @@ function today(p) {
             ec.logger.error("People Today of " + ec.user.userId + ": the team's leave was left out: " + error.message)
         }
     }
+    // P18: my qualification expiring (the user's own verified ones expiring within thirty days, or expired and not renewed): its
+    // type and expiry, never its number, opening their qualifications
+    if (ec.user.hasPermission("PEOPLE_SELF_SERVICE") && ec.user.userAccount?.partyId && developmentAreaOpens()) {
+        try {
+            const found = lib.probe("mantle.humanres.DevelopmentServices.find#Qualifications", {
+                mine: true,
+                show: "attention",
+                pageSize: 10
+            })
+            for (const row of Array.from(found.qualifications || [])) {
+                const expired = row.validity === "expired"
+                const day = String(row.thruDateText || "").slice(0, 10)
+                items.push(
+                    item({
+                        kind: "qualification",
+                        title:
+                            (expired
+                                ? "Your " + row.typeText.toLowerCase() + " expired "
+                                : "Your " + row.typeText.toLowerCase() + " expires ") + day,
+                        dueDate: day || null,
+                        url: qualificationsPath + "?state=attention",
+                        record: {recordEntityName: QUALIFICATION, recordId: row.partyQualificationId, recordName: row.typeText}
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the qualifications expiring were left out: " + error.message)
+        }
+    }
     if (keepsTimeHere()) {
         try {
             for (const week of Array.from(lib.probe("mantle.work.TimesheetServices.find#WeeksToSubmit", {}).weekList || [])) {
@@ -1311,6 +1610,38 @@ function timeAreaOpens(grants = rootGrants()) {
     const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
     return groupIds.length > 0 && screenGrants(timeLocation, screenAuthz(groupIds)).allowed.length > 0
 }
+// P15: whether People's expenses area opens to the user: through the root, or by the area's own grant for a self-service employee.
+function expensesAreaOpens(grants = rootGrants()) {
+    if (grants.systemAdmin) return true
+    if (grants.read) return areaGrant(grants, "Expenses")
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(expensesLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P18: whether People's Skills & training area opens to the user: through the root, or by the area's own grant for a self-service
+// employee.
+function developmentAreaOpens(grants = rootGrants()) {
+    if (grants.systemAdmin) return true
+    if (grants.read) return areaGrant(grants, "Development")
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(developmentLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P18: a qualification's record (Today, a notice and the files panel open it) and its People link: the user's qualifications
+// with its files, for whoever reads them (the person and HR of an employer of theirs), else none.
+const QUALIFICATION = "mantle.humanres.ability.PartyQualification"
+const qualificationsPath = "/qapps/People/Development/Qualifications"
+function qualificationLink(partyQualificationId) {
+    if (!ec.user.userId || !partyQualificationId || !developmentAreaOpens()) return null
+    const found = call("mantle.humanres.DevelopmentServices.check#QualificationAccess", {partyQualificationId})
+    if (!found.recordVisible) return null
+    const own = found.partyId === ec.user.userAccount?.partyId
+    return (
+        qualificationsPath +
+        "?show=" +
+        (own ? "mine" : "all") +
+        "&partyQualificationId=" +
+        encodeURIComponent(partyQualificationId)
+    )
+}
 // P10: whether the user keeps their time under People and not in Projects: People's time area opens to them and Projects' root
 // does not (its own Today source answers a Projects user's weeks to submit).
 function keepsTimeHere() {
@@ -1338,8 +1669,52 @@ function selfServiceContext(p) {
         // P12: their leave requests and the team calendar, under the same area
         leaveRequestsUrl: timeAreaOpens(grants) ? "/qapps/People/Time/LeaveRequests" : null,
         // P13: their own attendance days, under the same area
-        attendanceUrl: timeAreaOpens(grants) ? "/qapps/People/Time/Attendance?show=mine" : null
+        attendanceUrl: timeAreaOpens(grants) ? "/qapps/People/Time/Attendance?show=mine" : null,
+        // P14: their published shifts on the team calendar, under the same area
+        teamCalendarUrl: timeAreaOpens(grants) ? "/qapps/People/Time/TeamCalendar" : null,
+        // P15: their own expense claims and advances, under People's expenses area
+        expenseClaimsUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/ExpenseClaims?show=mine" : null,
+        advancesUrl: expensesAreaOpens(grants) ? "/qapps/People/Expenses/EmployeeAdvances?show=mine" : null,
+        // P18: their own qualifications, under Skills & training when it opens to them
+        qualificationsUrl: developmentAreaOpens(grants) ? qualificationsPath + "?show=mine" : null
     }
+}
+
+// ===== find#AvailablePeople (P18; design §10 SkillsMatrix FindAvailable) =====
+// Who has a skill and is free over the days: Projects' find#StaffingCandidates bounded to the people the user's skills matrix keeps
+// (the same filters), each as text; the cost rate only for a holder of PAYROLL_VIEW (and the staffing search's own rule).
+function availablePeople(p) {
+    const userScope = required()
+    const scoped = call("mantle.humanres.DevelopmentServices.get#SkillsMatrix", {
+        organizationPartyId: p.organizationPartyId || null,
+        unitPartyId: p.unitPartyId || null,
+        emplPositionClassId: p.emplPositionClassId || null,
+        term: p.term || null,
+        pageSize: 1
+    })
+    const partyIdList = Array.from(scoped.scopePartyIds || [])
+    if (!partyIdList.length) return {candidates: []}
+    const found = call("mantle.work.ResourceServices.find#StaffingCandidates", {
+        skillTypeEnumId: p.skillTypeEnumId || null,
+        fromDate: p.fromDate || null,
+        thruDate: p.thruDate || null,
+        hoursPerWeek: p.hoursPerWeek || null,
+        partyIdList,
+        withRates: !!userScope.capabilities.payrollView,
+        limit: 20
+    })
+    const hours = value => ec.l10n.format(value || 0, "#,##0.#")
+    const candidates = Array.from(found.candidateList || []).map(row => ({
+        partyId: row.partyId,
+        name: row.name,
+        fits: !!row.fits,
+        shortWeeks: row.shortWeeks || 0,
+        freeText: hours(row.freeHours) + " h free of " + hours(row.needHours) + " h",
+        skillText: row.hasSkill ? "Level " + (row.skillRating ?? "") + (row.skillSelfDeclared ? " (self-declared)" : "") : "",
+        rateText: row.costRate != null ? ec.l10n.format(row.costRate, "#,##0.00") + " " + (row.costCurrencyUomId || "") : "",
+        projectsText: Array.from(row.currentProjects || []).join(", ")
+    }))
+    return {candidates}
 }
 
 const operations = {
@@ -1351,10 +1726,11 @@ const operations = {
     employee360Link,
     lookup,
     today,
-    selfServiceContext
+    selfServiceContext,
+    availablePeople
 }
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown People operation " + op)
     return operations[op](p || {})
 }
-;({execute: run, employmentLink, changeParameters, decisionUrl})
+;({execute: run, employmentLink, changeParameters, decisionUrl, qualificationLink})

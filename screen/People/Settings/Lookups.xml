@@ -13,8 +13,8 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- People › Settings › Lookups (design-people §12 Lookups; style-guide §3.9 Settings; impl-people P5): People's HR vocabularies,
-    a whitelist of families (termination reasons and types, skill types and levels; later phases add theirs) over
-    mantle.humanres.PeopleServices find#Lookups and store#Lookup. The family chosen lists its values in order with how many
+    a whitelist of families (termination reasons and types, skill types and levels, leave types, qualification types; later
+    phases add theirs) over mantle.humanres.PeopleServices find#Lookups and store#Lookup. The family chosen lists its values in order with how many
     records hold each; Add value (the one primary), each value's Edit (name, code, order) and End (a danger dialog naming the
     value: it stays for the records that hold it and is offered for no new one). Nothing is deleted. The People
     administrator's (PEOPLE_CONFIGURE, which Mantle checks on every change). -->

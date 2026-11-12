@@ -36,8 +36,10 @@ along with this software (see the LICENSE.md file). If not, see
     reports', those they decide and their employers' for HR. P13 adds Attendance (menu 8, every People user's and a self-service
     employee's by this area's grant: AttendanceServices find#Attendance, get#Day, request# and decide#Correction admit each user to their
     own days, their reports', those they decide and their employers' for HR; HR's Who clocks), the Clock in screen out of the menu (the
-    quick create, the user's own clock) and HR's Time import out of the menu (BOSS_PPL_TIME_IMPORT). The shift roster and hours for pay
-    join with P14 and P24. -->
+    quick create, the user's own clock) and HR's Time import out of the menu (BOSS_PPL_TIME_IMPORT). P14 adds the Shift roster (menu
+    12, with its terminal twin ShiftRosterTui and its print ShiftRosterPrint out of the menu), HR's and the managers' with the working
+    schedules (BOSS_PPL_SCHEDULES), whose services (ScheduleServices get#Roster, store#Shift and publish#Shifts) let a manager roster
+    their reports and an HR editor their employers' employees. Hours for pay joins with P24. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Time &amp; leave" default-menu-index="7" menu-image="sym_o_schedule" menu-image-type="icon">
     <subscreens default-item="Timesheets">

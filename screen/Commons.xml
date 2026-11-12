@@ -80,6 +80,11 @@ along with this software (see the LICENSE.md file). If not, see
             Mantle's get#ClockOffer: the employment's clocking, else its employer's default) -->
         <quick-create kind="peopleClockIn" label="Clock in" icon="sym_o_timer" screen="People/Time/Clock" sequence="97"
                 condition-service="mantle.humanres.AttendanceServices.get#ClockOffer"/>
+        <!-- People's New claim (owner contract, impl-people P15, as Clock in): declared here, since a self-service employee opens no
+            People root; it opens People's Expense claims with the new claim's form (the expenses area's grant: every People user and a
+            self-service employee) and is offered only to someone with a current employment of their own (Mantle's get#ClaimOffer) -->
+        <quick-create kind="peopleNewClaim" label="New claim" icon="sym_o_receipt_long" screen="People/Expenses/ExpenseClaims" sequence="98"
+                condition-service="mantle.humanres.ExpenseServices.get#ClaimOffer"><parameter name="newClaim" value="Y"/></quick-create>
 
         <palette-type doc-type="MantleParty"/>
         <palette-type doc-type="MantleTask"/>

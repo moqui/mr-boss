@@ -5070,15 +5070,18 @@ along with this software (see the LICENSE.md file). If not, see
         PAYROLL_APPROVE; the learning and review administrator PEOPLE_DEVELOP_VIEW and _EDIT; the case handler PEOPLE_CASE_HANDLE;
         the People administrator PEOPLE_CONFIGURE beside its payroll grants, and PEOPLE_ALL_ORGANIZATIONS, with which Mantle's
         People scope is every internal organization (or the active one), as BOSS_COMMERCE_ADMIN's COMMERCE_ALL_ORGANIZATIONS (the
-        user's call, impl-people §4, Nov 11, 2026). -->
+        user's call, impl-people §4, Nov 11, 2026). P14: PEOPLE_ROSTER_EDIT, saving and publishing shifts, to the manager and the HR
+        officer, each in their own scope (the user's call, impl-people §4, Nov 12, 2026). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_READ" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_SELF" userPermissionId="PEOPLE_SELF_SERVICE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_REQUEST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_ROSTER_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_IMPORT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_REQUEST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_ROSTER_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_PAYROLL" userPermissionId="PAYROLL_VIEW" fromDate="0"/>
@@ -5092,7 +5095,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_ALL_ORGANIZATIONS" fromDate="0"/>
     <!-- People's capability bundles in Admin's registry (owner contract, impl-people F27; design-crosscut §1.4's rows, as the
         built apps' above): each group with the permissions it carries (view, edit or sensitive: private person data, pay and
-        cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle. -->
+        cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle; PEOPLE_ROSTER_EDIT in
+        the manager's and HR's (P14). -->
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_ADMIN" appName="People" description="People administrator" scopeDependency="organization, employment" sequenceNum="1100"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
@@ -5107,11 +5111,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_MANAGER" appName="People" description="People manager" scopeDependency="live reporting lines, assigned approval steps" sequenceNum="1140"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_TEAM_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_REQUEST_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_MANAGER" userPermissionId="PEOPLE_ROSTER_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_HR" appName="People" description="HR officer" scopeDependency="organization, employment" sequenceNum="1150"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_HR_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_IMPORT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_REQUEST_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_ROSTER_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_RECRUIT" appName="People" description="Recruiter" scopeDependency="organization, assigned openings" sequenceNum="1160"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_RECRUIT" userPermissionId="PEOPLE_RECRUIT_EDIT" capabilityKindEnumId="CpkEdit"/>
@@ -5153,9 +5159,10 @@ along with this software (see the LICENSE.md file). If not, see
         decisions and the approval rules that name the user, through Mantle's own services (the owned-resource contract). A
         rule is handed to a new approver who works for its employer; a waiting request follows its route and is not transferred.
         The services check PEOPLE_APPROVAL_OWNER_CHANGE for another user's; the identity operator and the administrator, who
-        offboard, hold it. Openings and review steps join the same lookup with their phases. -->
+        offboard, hold it. Openings and review steps join the same lookup with their phases: P16's review adds the draft and open
+        openings the user is the recruiting owner of, handed to a new owner who works for the employer. -->
     <ironstone.admin.LifecycleParticipant participantKey="people.approvals" version="1" ownerApp="People" title="People approvals"
-            description="The People approval rules that name the user to decide, handed to a new approver, and the requests waiting for their decision."
+            description="The People approval rules that name the user to decide, handed to a new approver, the openings they own, handed to a new recruiting owner, and the requests waiting for their decision."
             resourceKind="approval" lookupService="mantle.humanres.PeopleApprovalServices.find#OwnedApprovals"
             transferService="mantle.humanres.PeopleApprovalServices.transfer#ApprovalOwner" resourceParameter="approvalResourceId"
             requiredPermission="PEOPLE_APPROVAL_OWNER_CHANGE" sequenceNum="70"/>
@@ -5228,6 +5235,26 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- impl-people P16 review (the user's call of Nov 12, 2026; F28): an interview panel member with self-service only answers their
+        scorecard from SelfService: a non-inheritable ALLOW on the shared MyInterview screen (one location for both mounts,
+        People/MyInterview and Commons/People/MyInterview), its two transitions, and the Mantle services it and SelfService's My
+        interviews call, each of which admits the caller's own panel alone (find#MyInterviews and get#MyInterview take no party;
+        submit#Scorecard the caller's own assignment; get#ApplicationFile a file a recruiter shared with the panel). Nothing else of
+        recruiting opens to them. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_INTERVIEW_SELF" description="People own interviews for panel members without the launcher">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyInterview.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyInterview.xml/submitScorecard"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyInterview.xml/sharedFile"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.RecruitingServices\.(find#MyInterviews|get#MyInterview|submit#Scorecard|get#ApplicationFile)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_INTERVIEW_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- impl-people P8 (design-people §3 MyTeam, §1.2: a section with no capability is omitted): My team is the managers': denied
         to the root user group, opened to BOSS_PEOPLE_MANAGER (ALWAYS, as the HR officers' wizards) and to the People administrator
         and ADMIN through their ALWAYS on the root. Mantle's get#Team checks PEOPLE_TEAM_VIEW and the caller's own lines again. -->
@@ -5267,7 +5294,8 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_PPL_SCHEDULES" description="People working schedules">
-        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail)\.xml"
+        <!-- P14: the shift roster, its terminal twin and its print, HR's and the managers' as the working schedules -->
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail|ShiftRoster|ShiftRosterTui|ShiftRosterPrint)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_PPL_SCHEDULES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
                 authzActionEnumId="AUTHZA_ALL"/>
@@ -5392,4 +5420,90 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <moqui.security.user.NotificationTopic topic="PeopleAttendanceApproval"
             linkTemplate="/qapps/People/Time/Attendance?attendanceDayId=${attendanceDayId}"/>
+    <!-- impl-people P14 (design-people §6 ShiftRoster, §3 SelfService, §13 TeamCalendar): the Shift roster is HR's and the managers'
+        (BOSS_PPL_SCHEDULES above: its screens are in that group's pattern), denied to the root user group and to self-service; what
+        each rosters is Mantle's ScheduleServices' check (a manager their live reports at the line's employers, an HR editor the
+        employer's employees). A worker's published shifts are on the team calendar (the time area's grant opens it and its
+        transitions to every People user and a self-service employee) and on SelfService, whose own grant is non-inheritable, so its
+        call of get#MyShifts (no party: the caller's own alone) needs its own row here. The worker's notice (Mantle's
+        PeopleShiftChange) opens the team calendar on the first day it names. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_SHIFTS_SELF" description="People own shifts">
+        <artifacts artifactName="mantle.humanres.ScheduleServices.get#MyShifts" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_SHIFTS_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleShiftChange" linkTemplate="/qapps/People/Time/TeamCalendar?date=${firstDay}"/>
+    <!-- impl-people P15 (design-people §9 ExpenseClaims, ExpenseClaimDetail and EmployeeAdvances, §13 InvoiceDetail, §1.4 Quick
+        create; design-accounting §5 ExpensePosting): Expenses (People/Expenses: Expense claims, a claim's detail and print, Advances)
+        is every People user's through the root, and a self-service employee's without the launcher by this inheritable ALLOW on the
+        area (as the time area's, BOSS_PPL_TIME), to claim their own expenses and ask their own advances; what each user reads,
+        changes and decides is Mantle's ExpenseServices' check (the claimant, their manager, an approver of the step waiting, a holder
+        of PEOPLE_EXPENSE_MANAGE at the employer), so the grant opens nothing else of People. Payroll's InvoiceDetail (an expense
+        claim's invoice for a reader of the claim who opens Payroll) is under Payroll's grant as it stands (BOSS_PPL_PAYROLL). An expense claim to approve (Mantle's
+        PeopleExpenseApproval topic) opens the claim, an advance to approve (PeopleAdvanceApproval) the advances to decide; each is
+        decided there, from People's Approvals or from the notification tray. Accounting's Expense posting lists a claim once its
+        business approval is done, and an approved advance as a bill to approve, which a payment run pays; it applies advances under
+        its own grants (PAYMENT_EDIT, which Mantle checks). -->
+    <artifactGroups artifactGroupId="BOSS_PPL_EXPENSES" description="People expense claims and advances, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Expenses.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_EXPENSES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- PEOPLE_EXPENSE_MANAGE (the user's call, impl-people §4, Nov 12, 2026): every expense claim and advance of the user's
+        employers, and acting for an employee (a claim made, changed, submitted or cancelled, an advance asked for them), to HR and to
+        Accounting's payables group (BOSS_ACCOUNTING_AP, which holds Expense posting), each in its capability bundle -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_EXPENSE_MANAGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PEOPLE_EXPENSE_MANAGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_EXPENSE_MANAGE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PEOPLE_EXPENSE_MANAGE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.user.NotificationTopic topic="PeopleExpenseApproval"
+            linkTemplate="/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=${invoiceId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleAdvanceApproval"
+            linkTemplate="/qapps/People/Expenses/EmployeeAdvances?show=decide"/>
+    <!-- impl-people P18 (design-people §10 SkillsMatrix and Qualifications, §1.2; PE-14): Skills & training (People/Development) is every
+        People user's through the root, and a self-service employee without the launcher opens it by this inheritable ALLOW on the area
+        (as Time & leave, BOSS_PPL_TIME), for their own qualifications: Mantle's DevelopmentServices answer them their own alone
+        (BOSS_PPL_DEVELOPMENT). The skills matrix and its terminal twin are development's, HR's and the managers' (the readers
+        get#SkillsMatrix answers): denied to the root user group and to self-service, opened to BOSS_PEOPLE_DEVELOP, BOSS_PEOPLE_HR and
+        BOSS_PEOPLE_MANAGER (ALWAYS, as the working schedules) and to the People administrator and ADMIN through the root's ALWAYS
+        (BOSS_PPL_SKILLS). A qualification's files are on its own content host (PartyQualification, the person's and HR's), whose panel
+        is People's RecordFiles; the person's expiry notice (Mantle's QualificationExpiring) opens their qualifications. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_DEVELOPMENT" description="People skills and training, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Development.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_DEVELOPMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_SKILLS" description="People skills matrix">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/SkillsMatrix(Tui)?\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P18: the record files panel for a self-service employee without the launcher, so they attach a certificate to their own
+        qualification under People (People/RecordFiles; the People root's check serves People's hosts alone, and get#RecordLinkInfo
+        shows a qualification's files to the person and HR only). The panel's location is the one Commons mounts, which every BOSS
+        user opens there already: what it shows is decided per record, so the grant reaches no record Commons' panel does not. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_FILES_SELF" description="People record files for self-service employees">
+        <artifacts artifactName="component://mr-boss/screen/Shared/RecordFiles.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_FILES_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="QualificationExpiring"
+            linkTemplate="/qapps/People/Development/Qualifications?show=mine&amp;partyQualificationId=${partyQualificationId}"/>
 </entity-facade-xml>

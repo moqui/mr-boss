@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The terminal twin of the shift roster (ShiftRoster.xml's tui text is a dynamic container of this screen; design-people §6
+    ShiftRoster's TUI person/date table, PE-20): the person and day table of the same roster (mantle.humanres.ScheduleServices
+    get#Roster; template/PeopleRoster.xml), the shifts of those days with their state and conflicts, and the same commands: Shift
+    (a new shift, or a change of one: the person, start, end, break, work location and reason) previews it through store#Shift, whose
+    box then saves it; Remove shift; Publish (publish#Shifts, each worker told). Readers have the tables only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Shift roster" default-menu-include="false">
+
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDay"/>
+    <parameter name="days"/>
+    <parameter name="shiftAssignmentId"/>
+    <parameter name="shiftPartyRelationshipId"/>
+    <parameter name="shiftStart"/>
+    <parameter name="shiftEnd"/>
+    <parameter name="shiftBreak"/>
+    <parameter name="shiftFacilityId"/>
+    <parameter name="shiftReason"/>
+
+    <!-- Shift: the preview is this screen's (the box below), so the transition only carries the form's values back -->
+    <transition name="previewShift">
+        <actions><script>ec.message.clearErrors()</script></actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveShift">
+        <actions>
+            <service-call name="mantle.humanres.ScheduleServices.store#Shift" out-map="saved"
+                    in-map="{action:'apply', shiftAssignmentId:(shiftAssignmentId || null), partyRelationshipId:(shiftPartyRelationshipId || null),
+                        startText:(shiftStart || null), endText:(shiftEnd || null), breakMinutes:(shiftBreak || null), facilityId:(shiftFacilityId || ''),
+                        reason:(shiftReason || null), expectedRevision:(expectedRevision || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Shift saved</message>
+                <set field="shiftAssignmentId" from="null"/>
+                <set field="shiftPartyRelationshipId" from="null"/>
+                <set field="shiftStart" from="null"/>
+                <set field="shiftEnd" from="null"/>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeShift">
+        <actions>
+            <service-call name="mantle.humanres.ScheduleServices.store#Shift"
+                    in-map="{action:'remove', shiftAssignmentId:(removeShiftId || null), reason:(removeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Shift removed</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishShifts">
+        <actions>
+            <service-call name="mantle.humanres.ScheduleServices.publish#Shifts" out-map="published"
+                    in-map="{fromDay:(fromDay || null), days:(Number(days) || 7), organizationPartyId:(organizationPartyId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${published.publishedCount} ${published.publishedCount == 1 ? 'shift' : 'shifts'} published</message>
+                <iterate list="published.skipped || []" entry="skippedRow">
+                    <message type="warning">${skippedRow.personName} ${skippedRow.whenText}: ${skippedRow.message}</message>
+                </iterate>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.humanres.ScheduleServices.get#Roster" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), fromDay:(fromDay || null), days:(Number(days) || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="roster" from="found?.roster || null"/>
+        <set field="canRoster" from="!!roster?.canRoster"/>
+        <set field="laneOptions" from="(roster?.lanes || []).filter((lane) =&gt; lane.canRoster).map((lane) =&gt; ({key: lane.partyRelationshipId,
+                text: lane.personName + ((roster.organizationOptions || []).length &gt; 1 ? ' · ' + lane.organizationName : '')}))"/>
+        <set field="shiftRows" from="(roster?.shifts || []).map((row) =&gt; Object.assign({}, row, {conflictText: (row.conflicts || []).map((item) =&gt; item.message).join('; ')}))"/>
+        <set field="shiftOptions" from="shiftRows.filter((row) =&gt; row.canChange).map((row) =&gt; ({key: row.shiftAssignmentId,
+                text: row.personName + ' · ' + row.whenText + ' · ' + row.statusText}))"/>
+        <set field="facilityOptions" from="(roster?.facilityOptions || []).map((option) =&gt; ({key: option.value, text: option.label}))"/>
+        <!-- the preview of the Shift form's values: the shift chosen, changed by the values given -->
+        <set field="previewed" from="null"/>
+        <if condition="canRoster &amp;&amp; (shiftStart || shiftAssignmentId)">
+            <service-call name="mantle.humanres.ScheduleServices.store#Shift" out-map="previewed" transaction="force-new" ignore-error="true"
+                    in-map="{action:'preview', shiftAssignmentId:(shiftAssignmentId || null), partyRelationshipId:(shiftPartyRelationshipId || null),
+                        startText:(shiftStart || null), endText:(shiftEnd || null), breakMinutes:(shiftBreak || null), facilityId:(shiftFacilityId || '')}"/>
+            <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="shiftPreview" from="previewed?.preview || null"/>
+        <set field="shiftFindings" from="shiftPreview ? shiftPreview.refusals.map((row) =&gt; ({kind: 'Refused', message: row.message, color: 'negative'}))
+                .concat(shiftPreview.warnings.map((row) =&gt; ({kind: 'Warning', message: row.message, color: 'warning'}))) : []"/>
+        <set field="saveValues" from="shiftPreview ? {shiftAssignmentId: shiftAssignmentId || null, shiftPartyRelationshipId: shiftPreview.partyRelationshipId,
+                shiftStart: shiftPreview.startText, shiftEnd: shiftPreview.endText, shiftBreak: String(shiftPreview.breakMinutes ?? ''),
+                shiftFacilityId: shiftPreview.facilityId || '', shiftReason: shiftReason || '', expectedRevision: shiftPreview.revision || '',
+                operationKey: 'shift-' + ec.user.userId + '-' + ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS')} : {}"/>
+        <set field="shiftDefaults" from="{shiftAssignmentId: shiftAssignmentId, shiftPartyRelationshipId: shiftPartyRelationshipId, shiftStart: shiftStart,
+                shiftEnd: shiftEnd, shiftBreak: shiftBreak || '0', shiftFacilityId: shiftFacilityId, shiftReason: shiftReason}"/>
+        <set field="publishText" from="'Publish (' + (roster?.draftCount || 0) + ')'"/>
+        <set field="weekBefore" from="roster ? new Date(Date.parse(roster.fromDay + 'T12:00:00Z') - 7 * 86400000).toISOString().substring(0, 10) : null"/>
+        <set field="weekAfter" from="roster ? new Date(Date.parse(roster.fromDay + 'T12:00:00Z') + 7 * 86400000).toISOString().substring(0, 10) : null"/>
+    </actions>
+    <widgets>
+        <section name="RosterTuiFound" condition="roster">
+            <widgets>
+                <label text="Shift roster" type="h5"/>
+                <label text="${roster.fromDay} to ${roster.thruDay} · ${roster.draftCount} not published" type="p" style="m-muted"/>
+                <container style="row q-gutter-sm">
+                    <link url="." text="Week before" link-type="anchor" icon="sym_o_chevron_left"
+                            parameter-map="{organizationPartyId:organizationPartyId, fromDay:weekBefore, days:days}"/>
+                    <link url="." text="Week after" link-type="anchor" icon="sym_o_chevron_right"
+                            parameter-map="{organizationPartyId:organizationPartyId, fromDay:weekAfter, days:days}"/>
+                    <container-dialog id="RosterTuiShiftDialog" button-text="Shift" icon="sym_o_edit_calendar" width="640" title="Add or change a shift"
+                            condition="canRoster &amp;&amp; laneOptions.length">
+                        <form-single name="RosterTuiShift" transition="previewShift" map="shiftDefaults">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="fromDay"><default-field><hidden default-value="${roster.fromDay}"/></default-field></field>
+                            <field name="days"><default-field><hidden default-value="${roster.days}"/></default-field></field>
+                            <field name="shiftAssignmentId">
+                                <default-field title="Shift" tooltip="Empty: a new shift">
+                                    <drop-down allow-empty="true"><list-options list="shiftOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="shiftPartyRelationshipId">
+                                <default-field title="Person">
+                                    <drop-down allow-empty="true"><list-options list="laneOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="shiftStart"><default-field title="Start"><date-time type="timestamp" format="yyyy-MM-dd HH:mm"/></default-field></field>
+                            <field name="shiftEnd"><default-field title="End"><date-time type="timestamp" format="yyyy-MM-dd HH:mm"/></default-field></field>
+                            <field name="shiftBreak"><default-field title="Break (minutes)"><text-line size="5" input-type="number"/></default-field></field>
+                            <field name="shiftFacilityId">
+                                <default-field title="Work location">
+                                    <drop-down allow-empty="true"><list-options list="facilityOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="shiftReason"><default-field title="Reason"><text-line/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Preview"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="RosterTuiRemoveDialog" button-text="Remove shift" icon="sym_o_event_busy" width="560" title="Remove a shift"
+                            condition="canRoster &amp;&amp; shiftOptions.length">
+                        <label type="p" text="A published shift's worker is told it was removed."/>
+                        <form-single name="RosterTuiRemove" transition="removeShift">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="fromDay"><default-field><hidden default-value="${roster.fromDay}"/></default-field></field>
+                            <field name="days"><default-field><hidden default-value="${roster.days}"/></default-field></field>
+                            <field name="removeShiftId">
+                                <default-field title="Shift">
+                                    <drop-down><list-options list="shiftOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="removeReason"><default-field title="Reason"><text-line/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Remove shift" type="danger" confirmation="Remove this shift?"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <section name="RosterTuiPublish" condition="canRoster &amp;&amp; roster.draftCount">
+                        <widgets>
+                            <form-single name="RosterTuiPublishForm" transition="publishShifts">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="fromDay"><default-field><hidden default-value="${roster.fromDay}"/></default-field></field>
+                                <field name="days"><default-field><hidden default-value="${roster.days}"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="${publishText}"
+                                        confirmation="Publish the draft shifts of these days? Each worker is told of theirs."/></default-field></field>
+                            </form-single>
+                        </widgets>
+                    </section>
+                </container>
+                <section name="RosterTuiPreview" condition="shiftPreview || previewError">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Shift preview"/>
+                            <box-body>
+                                <label text="${previewError}" type="p" style="text-negative" condition="previewError"/>
+                                <section name="RosterTuiPreviewShown" condition="shiftPreview">
+                                    <widgets>
+                                        <label text="${shiftPreview.personName}: ${shiftPreview.whenText}, ${shiftPreview.hours} h${shiftPreview.localText ? ' (' + shiftPreview.localText + ')' : ''}"
+                                                type="p" style="text-weight-medium"/>
+                                        <form-list name="RosterTuiFindings" list="shiftFindings" skip-form="true" paginate="false" condition="shiftFindings.length">
+                                            <field name="kind">
+                                                <default-field title="">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${color}">${kind}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kind})}]]></text>
+                                                        <text type="html">${kind}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="message"><default-field title="Finding"><display/></default-field></field>
+                                        </form-list>
+                                        <label text="No conflict." type="p" style="text-positive" condition="!shiftFindings.length"/>
+                                        <form-single name="RosterTuiSave" transition="saveShift" map="saveValues" condition="shiftPreview.canApply">
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="fromDay"><default-field><hidden default-value="${roster.fromDay}"/></default-field></field>
+                                            <field name="days"><default-field><hidden default-value="${roster.days}"/></default-field></field>
+                                            <field name="shiftAssignmentId"><default-field><hidden/></default-field></field>
+                                            <field name="shiftPartyRelationshipId"><default-field><hidden/></default-field></field>
+                                            <field name="shiftStart"><default-field><hidden/></default-field></field>
+                                            <field name="shiftEnd"><default-field><hidden/></default-field></field>
+                                            <field name="shiftBreak"><default-field><hidden/></default-field></field>
+                                            <field name="shiftFacilityId"><default-field><hidden/></default-field></field>
+                                            <field name="shiftReason"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="submit"><default-field title=""><submit text="Save shift"/></default-field></field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section-include name="RosterWeeks" location="component://mr-boss/template/PeopleRoster.xml"/>
+                <container-box>
+                    <box-header title="Shifts of these days"/>
+                    <box-body-nopad>
+                        <form-list name="RosterTuiShifts" list="shiftRows" skip-form="true" paginate="false" condition="shiftRows.length">
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="hoursText" align="right"><default-field title="Hours"><display/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
+                            <field name="conflictText"><default-field title="Conflicts"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="whenText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="hoursText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No shift in these days." type="p" style="m-muted q-pa-sm q-mb-none" condition="!shiftRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <label text="Dragging shifts is in the browser's roster; Shift here previews and saves the same change." type="p" style="m-muted"/>
+            </widgets>
+            <fail-widgets>
+                <label text="This roster is not available: a manager rosters their reports, HR the employees of their employers." type="p" style="m-muted"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

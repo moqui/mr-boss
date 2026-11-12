@@ -4,7 +4,9 @@ Nov 12, 2026 — impl-maintenance P11 (owner contract): ProjectMoney gains a Mai
 Oct 21, 2026 — draft; the inventories' **Designed in** columns filled from it (§13); the review's answers to the
 open questions folded in (§16, §17); as built through P11 (Oct 22); Nov 1, 2026 — review rows folded in;
 consistency pass; Nov 11, 2026 — impl-people P9 (owner contract): capacity reads a person's People working schedule first (§15
-PersonDetail)
+PersonDetail); Nov 12, 2026 — impl-people P14 (owner contract): the Timeline's resource mode is a contract any mount answers (§5
+Timeline), and a published People shift takes its day's capacity (§15); Nov 12, 2026 — impl-people P18 (owner contract): the
+staffing search takes a list of people to bound it to and says when a candidate's skill is self-declared (§15 StaffAllocation)
 
 **IronStone Projects** is the app for project managers and services staff (initial-design's app table). This file
 adds three audiences to that row: the software teams who deliver the work (developers, testers, release
@@ -1179,6 +1181,16 @@ wrote rows directly and is fixed in Mantle in this pass.
   Services: `ironstone.projects.PlanningServices` `get#Timeline`, `move#TimelineItem`, `save#` and `remove#TimelineDependency`; Mantle
   `TaskServices` `add#`, `remove#TaskDependency` and `set#TaskDates`, `ProjectServices.get#TimelineData` (§15). WorkItemDetail's
   Links make dependencies through `add#TaskDependency` too.
+- **Resource mode as a contract (impl-people P14, owner contract with Manufacturing and People; crosscut M11, F68):** any screen
+  other than this Timeline and ProjectDetail's Plan tab that serves `Timeline.qvue` is its mount in resource mode (Manufacturing's
+  ProductionSchedule built it first under a path segment of that name, F68). The mount's `schedule` transition answers the
+  lanes (`laneId`, `laneName`, caption, shades of a kind: closed, planned, holiday, offline, leave), the bars (`barId`, `laneId`,
+  label, times as the user's wall times, color, dashed, conflicts, predecessors, the parameters a move posts) and the notices to
+  decide, beside a `resource` block with its wording, legend, filter, print link, dialog fields, header actions and the names of
+  its move and decide transitions; the component names no record of either app. A drag only previews; the dialog commits through
+  the mount's move transition (preview, apply, request, remove). The full contract is the component's header comment.
+  ProductionSchedule answers its work centers and operations in it beside its own fields (its specs unchanged); People's
+  ShiftRoster its people and shifts (design-people §6).
 - **Needs:** Timeline data; Dependency lag; `view-timeline` (later); `.qvue` TUI texts.
 
 ### WorkItemImport
@@ -1960,6 +1972,11 @@ unless they ask for approval.
 | `AllocationDecision` | list, bulk | Approve or reject | reason for a rejection | | `mantle.work.ResourceServices.approve#Allocation`, `reject#Allocation` (new) | OpenProject allocation states |
 
 - **Needs:** Allocations; Capacity.
+- **Owner contract (impl-people P18, Nov 12, 2026):** `find#StaffingCandidates` also takes `partyIdList`, the people to bound
+  the search to (People's skills matrix FindAvailable passes the people of the user's People scope), and each candidate carries
+  `skillSelfDeclared` (the skill's level is the person's own claim, People's `SksSelfDeclared`), which People labels and no People
+  requirement takes. Projects' callers pass neither, and StaffAllocation is unchanged; adopting
+  `mantle.humanres.DevelopmentServices.check#Qualifications` for a placeholder's skill is later Projects work (impl-people §7).
 
 ### PersonDetail (Context passed)
 

@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Openings (design-people §5 Openings; style-guide §3.2 List; impl-people P16): a recruiter's openings, from
+    mantle.humanres.RecruitingServices.find#Openings (PEOPLE_RECRUIT_VIEW of the employer): FindOpenings by title, employer and
+    state (closed ones when asked), OpeningList as a list or a board by state, each with its employer, seats, owner, dates, state
+    and open applications, opening its applicants (ApplicantPipeline). A recruiter who changes them (PEOPLE_RECRUIT_EDIT) has New
+    opening (the one primary: store#Opening, a draft, or open at once) over the employer's approved active seats (a planned seat
+    is approved first, PositionDetail), and on each row Edit, Open or Close (a closed opening takes no application and keeps its
+    applications). Mail intake: an opening's plus tag on the recruiting mailbox (the createApplication mail rule action). The
+    assist-prompt "Draft a job description" (the people-job-description skill) is offered here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Openings" default-menu-index="4" menu-image="sym_o_campaign" menu-image-type="icon">
+    <parameter name="term"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="includeClosed"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>
+    <!-- a new opening or a change of one: Mantle checks the recruiter, the employer, the seats, the owner, the tag and the
+        revision read -->
+    <transition name="storeOpening">
+        <actions>
+            <service-call name="mantle.humanres.RecruitingServices.store#Opening" out-map="stored"
+                    in-map="{jobOpeningId:(jobOpeningId || null), organizationPartyId:(organizationPartyId || null), title:(title ?? null),
+                        description:(description ?? null), ownerPartyId:(ownerPartyId || null),
+                        emplPositionIds:(emplPositionIds ? (Array.isArray(emplPositionIds) ? emplPositionIds.join(',') : String(emplPositionIds)) : null),
+                        internalOnly:(internalOnly == 'Y' ? 'Y' : 'N'), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        intakePlusTag:(intakePlusTag ?? null), scorecardFormId:(scorecardFormId ?? null), action:(action || null),
+                        revision:(revision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'open' ? 'Opening open' : action == 'close' ? 'Opening closed' : 'Opening saved'}</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="people.capabilities"/>
+        <set field="canEdit" from="!!(can.recruitView &amp;&amp; can.recruitEdit)"/>
+        <service-call name="mantle.humanres.RecruitingServices.find#Openings" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), organizationPartyId:(organizationPartyId || null), statusId:(statusId || null),
+                    includeClosed:(includeClosed == 'Y'), pageIndex:(pageIndex || 0), pageSize:(pageSize || null), pageNoLimit:(pageNoLimit || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="openingsFound" from="!!found?.openings"/>
+        <set field="openings" from="found?.openings || []"/>
+        <set field="openingsCount" from="found?.openingsCount || 0"/>
+        <set field="openingsPageIndex" from="found?.openingsPageIndex || 0"/>
+        <set field="openingsPageSize" from="found?.openingsPageSize || 20"/>
+        <set field="openingsPageMaxIndex" from="found?.openingsPageMaxIndex || 0"/>
+        <set field="openingsPageRangeLow" from="found?.openingsPageRangeLow || 0"/>
+        <set field="openingsPageRangeHigh" from="found?.openingsPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(term || organizationPartyId || statusId || includeClosed == 'Y')"/>
+        <set field="findValues" from="{term: term || null, organizationPartyId: organizationPartyId || null, statusId: statusId || null,
+                includeClosed: includeClosed || null}"/>
+        <set field="newOpening" from="{organizationPartyId: organizationPartyId || (people.organizationPartyIds.length == 1 ? people.organizationPartyIds[0] : null),
+                ownerPartyId: people.partyId || null, action: 'open'}"/>
+        <set field="pipelineLink" from="sharedLinks['Staffing/ApplicantPipeline']"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Openings" type="h5"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="NewOpeningDialog" button-text="New opening" icon="sym_o_add" type="primary" width="760"
+                        title="Open a position for applicants" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                    <label type="p" text="An opening recruits for approved, active seats of one employer: a planned seat is approved first. Applicants are never public before a careers page exists."/>
+                    <form-single name="NewOpening" transition="storeOpening" map="newOpening">
+                        <field name="organizationPartyId">
+                            <default-field title="Employer">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'employers', selected:newOpening.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="emplPositionIds">
+                            <default-field title="Seats" tooltip="Approved, active seats of the employer">
+                                <drop-down allow-multiple="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'approvedSeats'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="title"><default-field title="Title"><text-line size="50"/></default-field></field>
+                        <field name="ownerPartyId">
+                            <default-field title="Recruiting owner">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'staff', selected:newOpening.ownerPartyId}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate"><default-field title="Open from" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                        <field name="thruDate"><default-field title="Closing" tooltip="Optional"><date-time type="date"/></default-field></field>
+                        <field name="intakePlusTag">
+                            <default-field title="Mail tag" tooltip="Mail to the recruiting mailbox with +tag in its address becomes an application (jobs+tag@...)">
+                                <text-line size="20"/></default-field>
+                        </field>
+                        <field name="scorecardFormId">
+                            <default-field title="Interview scorecard" tooltip="A published scorecard of the employer (People settings, Forms)">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                            parameter-map="{choice:'scorecardForms'}">
+                                        <depends-on field="organizationPartyId" parameter="choiceOrganizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="internalOnly"><default-field title=" "><check><option key="Y" text="Internal applicants only"/></check></default-field></field>
+                        <field name="description">
+                            <default-field title="Description" tooltip="The text applicants read: the role, what it asks and offers">
+                                <text-area rows="6" cols="60"/></default-field>
+                        </field>
+                        <field name="action">
+                            <default-field title="">
+                                <radio><option key="open" text="Open it now"/><option key="" text="Keep it a draft"/></radio>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Save opening"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="organizationPartyId"/><field-ref name="emplPositionIds"/></field-row>
+                            <field-row><field-ref name="title"/><field-ref name="ownerPartyId"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-row><field-ref name="intakePlusTag"/><field-ref name="scorecardFormId"/></field-row>
+                            <field-ref name="internalOnly"/>
+                            <field-ref name="description"/>
+                            <field-ref name="action"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section name="NotOpen" condition="!openingsFound">
+            <widgets>
+                <label text="Openings are open to the recruiters of an employer. None is open to you." type="p" style="m-muted"
+                        condition="!organizationPartyId"/>
+                <label text="This employer is not available to you." type="p" style="text-negative" condition="organizationPartyId"/>
+            </widgets>
+        </section>
+        <section name="OpeningRows" condition="openingsFound">
+            <widgets>
+                <form-single name="FindOpenings" transition="." map="findValues">
+                    <field name="term"><default-field title="Title"><text-find size="18" hide-options="true"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Employer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'employers', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="JoDraft" text="Draft"/><option key="JoOpen" text="Open"/><option key="JoClosed" text="Closed"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="includeClosed"><default-field title="Closed openings"><check><option key="Y" text="Include"/></check></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="term"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="statusId"/>
+                            <field-ref name="includeClosed"/>
+                            <field-ref name="submitButton"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="OpeningList" list="openings" skip-form="true" paginate="true" select-columns="true" views="list,board"
+                                show-csv-button="true">
+                            <field name="jobOpeningId"><default-field><hidden/></default-field></field>
+                            <field name="statusId"><default-field><hidden/></default-field></field>
+                            <field name="title">
+                                <default-field title="Opening">
+                                    <link url="${pipelineLink}" text="${title}" link-type="anchor" parameter-map="{jobOpeningId:jobOpeningId}"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="positionsText"><default-field title="Seats"><display/></default-field></field>
+                            <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Open from"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Closing"><display/></default-field></field>
+                            <field name="applicationCount"><default-field title="Applicants"><display align="right"/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <conditional-field title="" condition="canEdit">
+                                    <container-dialog id="EditOpening_${jobOpeningId}" button-text="Edit" icon="sym_o_edit" width="760"
+                                            title="Edit the opening ${title}">
+                                        <form-single name="EditOpening" transition="storeOpening"
+                                                map="{jobOpeningId:jobOpeningId, revision:revision, title:title, description:description,
+                                                    ownerPartyId:ownerPartyId, emplPositionIds:emplPositionIds, fromDate:fromDate, thruDate:thruDate,
+                                                    intakePlusTag:intakePlusTag, scorecardFormId:scorecardFormId, internalOnly:(internalOnly ? 'Y' : 'N'),
+                                                    organizationPartyId:organizationPartyId}">
+                                            <field name="jobOpeningId"><default-field><hidden/></default-field></field>
+                                            <field name="revision"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="title"><default-field title="Title"><text-line size="50"/></default-field></field>
+                                            <field name="emplPositionIds">
+                                                <default-field title="Seats">
+                                                    <drop-down allow-multiple="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'approvedSeats', choiceOrganizationPartyId:organizationPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="ownerPartyId">
+                                                <default-field title="Recruiting owner">
+                                                    <drop-down>
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'staff', choiceOrganizationPartyId:organizationPartyId, selected:ownerPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDate"><default-field title="Open from"><date-time type="date"/></default-field></field>
+                                            <field name="thruDate"><default-field title="Closing"><date-time type="date"/></default-field></field>
+                                            <field name="intakePlusTag"><default-field title="Mail tag"><text-line size="20"/></default-field></field>
+                                            <field name="scorecardFormId">
+                                                <default-field title="Interview scorecard">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'scorecardForms', choiceOrganizationPartyId:organizationPartyId, selected:scorecardFormId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="internalOnly"><default-field title=" "><check><option key="Y" text="Internal applicants only"/></check></default-field></field>
+                                            <field name="description"><default-field title="Description"><text-area rows="6" cols="60"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save opening"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeOpening" text="Open" icon="sym_o_lock_open" condition="statusId != 'JoOpen'"
+                                            confirmation="Open ${title} to applicants?"
+                                            parameter-map="{jobOpeningId:jobOpeningId, revision:revision, action:(statusId == 'JoClosed' ? 'reopen' : 'open')}"/>
+                                    <link url="storeOpening" text="Close" icon="sym_o_lock" btn-type="danger" condition="statusId == 'JoOpen'"
+                                            confirmation="Close ${title}? It takes no new application; its applicants stay."
+                                            parameter-map="{jobOpeningId:jobOpeningId, revision:revision, action:'close'}"/>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="positionsText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="applicationCount"/><field-ref name="actions"/></column>
+                            </columns>
+                            <view-board group-field="statusId" status-type-id="JobOpening" card-title-field="title"
+                                    card-fields="organizationName,positionsText,applicationCount" key-fields="jobOpeningId"
+                                    column-order="JoDraft,JoOpen,JoClosed"/>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!openings.length &amp;&amp; filtered" text="No opening matches."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!openings.length &amp;&amp; !filtered"
+                                text="No opening yet.${canEdit ? ' Open one with New opening over an approved seat.' : ''}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

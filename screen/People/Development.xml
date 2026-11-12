@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Skills & training (design-people §10, §1.2; impl-people P18): the skills matrix (Development/SkillsMatrix, the default,
+    a .qvue matrix with its terminal twin SkillsMatrixTui out of the menu) and Qualifications; Training joins with P19. Every People
+    user opens the area through the root, and what each sees is what Mantle's DevelopmentServices admit: the matrix to development
+    and HR readers of the employer and to a manager for their reports; qualifications to the person, development, HR, a manager
+    and the other staff readers, each at their level (an identity document's or work permit's number the person's and HR's alone;
+    a manager and other staff readers verified ones' validity only). A self-service employee without the launcher opens the area
+    by its own grant (BOSS_PPL_DEVELOPMENT), for their own qualifications; the matrix is denied to them (BOSS_PPL_SKILLS). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Skills &amp; training" default-menu-index="12" menu-image="sym_o_school" menu-image-type="icon">
+    <subscreens default-item="SkillsMatrix">
+        <!-- SkillsMatrix (menu index 1) and Qualifications (2) are files under Development/, with SkillsMatrixTui out of the menu -->
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>
