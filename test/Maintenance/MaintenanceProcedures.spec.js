@@ -82,6 +82,8 @@ feature("ProcedureDetail shows a technician the procedure of their work read onl
         steps.output.includes("Add step")
         resources.errors.length == 0
         resources.output.includes("AC-200 intake filter")
+        // P8: the oil change's skill at its least level, proved by the certificate
+        resources.output.includes("Level 3, proved by Electrical safety certificate")
         instructions.errors.length == 0
         instructions.output.includes("The whole procedure") && instructions.output.includes("No instruction")
         approval.errors.length == 0

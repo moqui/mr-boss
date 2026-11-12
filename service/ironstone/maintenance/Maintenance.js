@@ -18,6 +18,8 @@ const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mant
 const procedures = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceProcedures.js")
 const plans = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenancePlans.js")
 const settings = () => ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceSettings.js")
+// P8 review: People's restricted qualification kinds, left out of the qualification choice
+const development = () => ec.resource.script("component://mr-mantle/service/mantle/humanres/Development.js")
 const {find, one, denied} = lib
 const access = lib.access
 
@@ -68,10 +70,15 @@ function rootGrants() {
 }
 // An area's grant: the root's ALWAYS (the Maintenance administrator's, ADMIN's) passes every area below it; otherwise the area's
 // own rows decide when it has any, else the root's.
+// An area is the user's when a grant opens all of it: a non-inheritable grant on its frame opens only the screens named under it
+// (BOSS_MNT_TEAMS: Settings' Teams tab for a planner or supervisor, P8 review), not the area.
 function areaGrant(grants, area) {
     if (!grants.read) return false
     if (grants.systemAdmin || grants.rootAlways) return true
-    const found = screenGrants(areaLocation(area), grants.authzRows)
+    const found = screenGrants(
+        areaLocation(area),
+        grants.authzRows.filter(row => row.inheritAuthz !== "N")
+    )
     return found.found ? found.allowed.length > 0 : true
 }
 
@@ -176,7 +183,10 @@ const linkPaths = [
     // P11: the cost report (the cost reader's, BOSS_MNT_COSTS)
     "Reports/MaintenanceCostReport",
     // P12: a customer repair's intervention report
-    "WorkOrders/InterventionReport"
+    "WorkOrders/InterventionReport",
+    // P17: the Reports landing and the work status report (design §8)
+    "Reports/Overview",
+    "Reports/WorkStatusReport"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
@@ -503,6 +513,7 @@ const resourceChoices = [
 // P6: the choices of procedures, answered to a reader of procedures or a planner or supervisor choosing one for work
 const procedureChoices = [
     "procedures",
+    "qualificationTypes",
     "procedureTypes",
     "procedureModels",
     "procedureClasses",
@@ -529,6 +540,7 @@ const workChoices = [
     "closurePolicies",
     "teams",
     "workPeople",
+    "technicians",
     "workFacilities",
     "openWorkOrders",
     "rejectReasons",
@@ -610,6 +622,27 @@ function workPeopleOptions(userScope, term, selected, p) {
             .conditionDate("fromDate", "thruDate", null)
             .count() > 0
     return withSelected(Array.from(byParty.values()).slice(0, choiceLimit), selected, member, partyLabel)
+}
+function technicianOptions(userScope, term, selected, p) {
+    const caps = userScope.capabilities
+    if (!p?.workEffortId || !(caps.plan || caps.supervise)) return workPeopleOptions(userScope, term, selected, p)
+    let found
+    try {
+        found = lib.probe("mantle.work.MaintenanceServices.find#MaintenanceCandidates", {
+            workEffortId: p.workEffortId,
+            teamPartyId: p.teamPartyId ?? null,
+            // a date-time field's empty mask ("____-__-__ __:__") or a partial entry is no window
+            windowFrom: /^\d{4}-\d{2}-\d{2}/.test(String(p.windowFrom || "")) ? p.windowFrom : null,
+            windowThru: /^\d{4}-\d{2}-\d{2}/.test(String(p.windowThru || "")) ? p.windowThru : null
+        })
+    } catch (error) {
+        return []
+    }
+    const lower = String(term || "").toLowerCase()
+    const options = Array.from(found.candidateList || [])
+        .filter(row => !lower || String(row.name).toLowerCase().includes(lower))
+        .map(row => ({value: row.partyId, label: row.label}))
+    return withSelected(options, selected, () => false, partyLabel)
 }
 const choiceSources = {
     // the organizations of the user's maintenance scope
@@ -784,6 +817,13 @@ const choiceSources = {
     // the teams and people work may be given to
     teams: (userScope, term, selected, p) => teamOptions(userScope, term, selected, p),
     workPeople: (userScope, term, selected, p) => workPeopleOptions(userScope, term, selected, p),
+    // P8: a work order's technicians ranked for its window and team (Mantle's find#MaintenanceCandidates: free hours, skill,
+    // People's qualification state, the team), each labelled so; a planner's or supervisor's, the organization's people otherwise
+    technicians: (userScope, term, selected, p) => technicianOptions(userScope, term, selected, p),
+    // P8: the qualification that proves a procedure step's skill (People's QualificationType values)
+    // (never a restricted kind, People's identity documents and work permits: P8 review)
+    qualificationTypes: (userScope, term, selected) =>
+        enumOptions("QualificationType", term, selected, row => !development().isRestricted(row.enumId)),
     // a facility work is for: every facility of the scope (a room inside a building), through Mantle's scoped find
     workFacilities: (userScope, term, selected) => {
         if (!userScope.capabilities.resourceRead) return []

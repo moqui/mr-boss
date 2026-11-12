@@ -646,7 +646,7 @@ the screens that call it.
 | DevelopmentServices | find#Qualifications | People/Development/Qualifications | People/Development/Qualifications (FindQualifications, QualificationList, the Files box's record); Today's my qualification expiring (ironstone.people.ContextServices.get#TodayItems) (People P18) |
 | DevelopmentServices | store#Qualification | People/Development/Qualifications (Qualification) | People/Development/Qualifications (AddQualification, a row's Change and Renew) (People P18) |
 | DevelopmentServices | verify#Qualification | People/Development/Qualifications (Qualification's verifier decision) | People/Development/Qualifications (a row's Verify, Reject and Revoke) (People P18) |
-| DevelopmentServices | check#Qualifications | Maintenance/WorkOrders (technician assignment); Projects' StaffAllocation | — (the staffing answer: no People screen calls it; Maintenance's technician assignment and Projects' StaffAllocation adopt it, impl-people §7) (People P18) |
+| DevelopmentServices | check#Qualifications | Maintenance/WorkOrders (technician assignment); Projects' StaffAllocation | — (the staffing answer: no People screen calls it; Projects' StaffAllocation adopts it, impl-people §7) (People P18); Maintenance P8 reads the same answer through Development.js `staffingAnswer` after its own check (a dispatcher holds no People reach), in Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule's technicians), schedule# and transition#MaintenanceWorkOrder (the warning or block); a work effort's requirement now carries the skill standard's qualification type |
 | DevelopmentServices | get#PersonDevelopment | Shared/Employee360 (SkillsAndReviews) | Shared/Employee360 under People (Skills and reviews) (People P18) |
 | DevelopmentServices | store#ResumeLine | Shared/Employee360 (SkillsAndReviews) | Shared/Employee360 under People (Add resume line, Remove) (People P18) |
 | DevelopmentServices | check#QualificationAccess, create#QualificationContent | People/RecordFiles (the qualification host, PE-01) | People/Development/Qualifications (Files: RecordFiles of PartyQualification, through get#RecordLinkInfo and RecordFiles' get#ContentType) (People P18) |
@@ -1586,7 +1586,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ResourceServices | cancel#Allocation |  | Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
 | ResourceServices | create#Allocation |  | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/TeamPlanner |
 | ResourceServices | find#Allocations |  | Projects/Home; Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/PersonDetail/Allocations; Projects/Resources/TeamPlanner |
-| ResourceServices | find#StaffingCandidates | People/Development/SkillsMatrix; Maintenance/WorkOrders | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner; People/Development/SkillsMatrix and SkillsMatrixTui (Find available, through ironstone.people.ContextServices.find#AvailablePeople, bounded by partyIdList) (People P18) |
+| ResourceServices | find#StaffingCandidates | People/Development/SkillsMatrix; Maintenance/WorkOrders | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner; People/Development/SkillsMatrix and SkillsMatrixTui (Find available, through ironstone.people.ContextServices.find#AvailablePeople, bounded by partyIdList) (People P18); Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule's technicians, through mantle.work.MaintenanceServices.find#MaintenanceCandidates: skillList with least levels and a window in hours, Maintenance P8) |
 | ResourceServices | get#AllocationAccess |  | Projects/Projects/NewProject/Team; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
 | ResourceServices | get#TeamPlan |  | Projects/Resources/PersonDetail/Capacity; Projects/Resources/PersonDetail/Overview; Projects/Resources/TeamPlanner |
 | ResourceServices | reject#Allocation |  | Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations; Projects/Resources/Allocations/Staff; Projects/Resources/TeamPlanner |
@@ -2266,14 +2266,17 @@ Added in `work/MaintenanceServices.xml`, `work/MaintenanceSettingsServices.xml` 
 | work/MaintenanceServices | get#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (header, Lifecycle; Overview, Time, History) |
 | work/MaintenanceServices | create#MaintenanceWorkOrder | Maintenance/WorkOrders | Maintenance/WorkOrders/NewWorkOrder (NewWork; the quick create's; P6: from a procedure, Use procedure) |
 | work/MaintenanceServices | store#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (WorkHeaderEdit) |
-| work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer; P6: replacePartyId on the root and its steps, F113); P14 review: a plan's work reminds each person assigned to it a day before its due date (WorkEffortReminder), and one taken off it keeps none |
+| work/MaintenanceServices | schedule#MaintenanceWorkOrder | Maintenance/WorkOrders; Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule); Admin's offboarding (maintenance.assignments transfer; P6: replacePartyId on the root and its steps, F113); P14 review: a plan's work reminds each person assigned to it a day before its due date (WorkEffortReminder), and one taken off it keeps none; P8: the people added checked on the work's qualifications, a warning or refused under the work policy |
 | work/MaintenanceServices | transition#MaintenanceWorkOrder | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail (primary action, Lifecycle, CompleteWork; a meter plan's reading, P14); Maintenance/WorkOrders/Find (board moves) |
-| work/MaintenanceServices | act#MaintenanceWorkOrders | Maintenance/WorkOrders | Maintenance/WorkOrders/Find (Approve, Cancel on the selection) |
+| work/MaintenanceServices | act#MaintenanceWorkOrders | Maintenance/WorkOrders | Maintenance/WorkOrders/Find (Approve, Cancel on the selection; P8: Assign and Schedule, BulkWork) |
+| work/MaintenanceServices | find#MaintenanceCandidates | Maintenance/WorkOrders | Maintenance/WorkOrders/WorkOrderDetail/Overview (Assign and schedule's ranked technicians, the choice technicians; P8) |
 | work/MaintenanceServices | adopt#MaintenanceRecord | Maintenance/Equipment/EquipmentDetail | Maintenance/Equipment/EquipmentDetail/Maintenance (Adopt) |
 | work/MaintenanceServices | start#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Start timer; then TimesheetServices.start#Timer) |
 | work/MaintenanceServices | stop#MaintenanceTimer | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Stop timer; then TimesheetServices.stop#Timer) |
 | work/MaintenanceServices | record#MaintenanceTime | Maintenance/WorkOrders/WorkOrderDetail | Maintenance/WorkOrders/WorkOrderDetail/Time (Record time; then TimeServices.store#TimeEntry) |
 | work/MaintenanceSettingsServices | get#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings) |
+| work/MaintenanceSettingsServices | find#MaintenanceTeams | Maintenance/Settings | Maintenance/Settings/Teams (TeamList, TeamMembers; P8) |
+| work/MaintenanceSettingsServices | store#MaintenanceTeamDefaults | Maintenance/Settings | Maintenance/Settings/Teams (TeamDefaults; P8) |
 | work/MaintenanceSettingsServices | store#MaintenancePolicy | Maintenance/Settings | Maintenance/Settings/WorkPolicy (MaintenanceSettings, Save from the date chosen; P18: each field not given kept, PolicyDates; the preventive lead days, P14) |
 | work/MaintenanceReportServices | get#MaintenanceHome | Maintenance/Home | Maintenance/Home (Counters, My work, Team work; the overdue PM and unknown meter counters, P14) |
 
@@ -2338,7 +2341,7 @@ policy), called by built screens through the Maintenance screens after `ironston
 | work/ProcessServices | store#WorkProcess | Maintenance/Procedures | Maintenance/Procedures/Find (NewProcedure); Maintenance/Procedures/ProcedureDetail (Copy as a new draft; Overview's Edit) |
 | work/ProcessServices | move#ProcessStep | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Steps (Up, Down) |
 | work/ProcessServices | store#ProcessDependency | Maintenance/Procedures/ProcedureDetail | none yet: Steps' Waits for writes through store#ProcessStep's dependsOnIds |
-| work/ProcessServices | store#ProcessRequirements | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Resources (Add requirement, Remove) |
+| work/ProcessServices | store#ProcessRequirements | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Resources (Add requirement, Remove); P8: a skill's least level and the qualification type that proves it (At least, Proved by) |
 | work/ProcessServices | store#ProcessInstruction | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail/Instructions (Edit, Remove) |
 | work/ProcessServices | find#ProcessInstructions | Maintenance/WorkOrders/WorkOrderDetail | none directly: the checklist reads an execution step's instruction through MaintenanceProcedures.js executionInstruction (Maintenance P7) |
 | work/ProcessServices | request#WorkProcessApproval | Maintenance/Procedures/ProcedureDetail | Maintenance/Procedures/ProcedureDetail (Request approval; Approval) |
@@ -2397,7 +2400,14 @@ job (`data/MaintenancePlanSetupData.xml`, paused; its registration, recovery and
 | work/MaintenancePlanServices | reconcile#MaintenanceSchedule | Maintenance/Preventive/DueMaintenance; Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/DueMaintenance (ResolveDue: coalesce, skip); PlanDetail/DueHistory (missed due dates: coalesce, skip; Correct a completion); template/MaintenancePlanParts.xml resolveDue |
 | work/MaintenancePlanServices | find#MaintenanceOccurrences | Maintenance/Preventive/Plans/PlanDetail | Maintenance/Preventive/Plans/PlanDetail/DueHistory (OccurrenceHistory) and GeneratedWork |
 | work/MaintenancePlanServices | get#MaintenanceDueJob | Maintenance/Settings | Maintenance/Settings/WorkPolicy (the preventive generation job's state) |
-| work/MaintenanceReportServices | get#MaintenanceCompliance | Maintenance/Reports/PreventiveComplianceReport | Maintenance/Reports/PreventiveComplianceReport (ComplianceOptions, ComplianceSummary, ComplianceRows) |
+| work/MaintenanceReportServices | get#MaintenanceCompliance | Maintenance/Reports/PreventiveComplianceReport | Maintenance/Reports/PreventiveComplianceReport (ComplianceOptions, ComplianceSummary, ComplianceRows; P17: its CSV, every row with pageNoLimit); Maintenance/Reports/Overview (the on-time card, P17) |
+
+Added in `work/MaintenanceReportServices.xml` (impl-maintenance P17; `MaintenanceReports.js`, design-maintenance §8 WorkStatusReport), over
+execution roots and their status audit; Insights' metric `Maintenance.Backlog` names it:
+
+| File | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/MaintenanceReportServices | get#MaintenanceStatusReport | Maintenance/Reports/WorkStatusReport | Maintenance/Reports/WorkStatusReport (StatusOptions, StatusMeasures and StatusTotals, StatusRows with its CSV and Print) |
 
 Added in `work/MaintenanceSettingsServices.xml` and `product/MaintenanceImportServices.xml` (impl-maintenance P18; `MaintenanceSettings.js`,
 `MaintenanceImport.js`, design-maintenance §9 and §6 EquipmentImport), called by built screens, by Admin's Health (the readiness

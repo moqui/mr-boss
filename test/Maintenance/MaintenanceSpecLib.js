@@ -76,6 +76,12 @@ const ids = {
     roomPlanId: "BOSS_MNT_PLAN_ROOM201",
     compressorPlanId: "BOSS_MNT_PLAN_COMP",
     stalePlanId: "BOSS_MNT_PLAN_STARTS",
+    // P8: Services' compressor team of employed technicians (BossZMaintenanceDemoData.xml): Kenji its lead (qualified), Sofia (her
+    // electrical safety certificate expired) and Owen (on leave the week of the compressor's oil service)
+    fieldTeamId: "BOSS_MNT_TEAM_FIELD",
+    qualifiedTechId: "BOSS_PPL_KENJI",
+    expiredTechId: "BOSS_PPL_SOFIA",
+    awayTechId: "BOSS_PPL_OWEN",
     // P14: the air handler's monthly filter change, active, its August done on time, September late, October skipped and November's
     // due now (BossZMaintenanceDemoData.xml)
     filterPlanId: "BOSS_MNT_PLAN_FILTER",
@@ -91,8 +97,8 @@ const ids = {
     // the menu of design §1.2 built so far: a planner's, who reads work, requests (P4, a planner's or supervisor's), procedures (P6,
     // a reader of procedures or a planner or supervisor), preventive plans (P13, a reader of work or a planner or supervisor) and
     // equipment, and with Settings the Maintenance administrator's; a procedure author reads procedures alone; P14: Reports for a
-    // reader of work
-    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Reports"],
+    // reader of work; P8 review: Settings for its Teams tab alone, read by a planner or supervisor
+    staffMenu: ["Home", "WorkOrders", "Requests", "Procedures", "Preventive", "Equipment", "Facilities", "Reports", "Settings"],
     homeOnlyMenu: ["Home"],
     authorMenu: ["Home", "Procedures"],
     bookingMenu: ["Home", "Scheduling"],
@@ -108,7 +114,7 @@ const ids = {
         "Reports",
         "Settings"
     ],
-    settingsMenu: ["SettingsHome", "WorkPolicy", "Lookups", "Readiness"],
+    settingsMenu: ["SettingsHome", "WorkPolicy", "Teams", "Lookups", "Readiness"],
     keys: ["g m", "g w", "g r", "g p", "g l", "g e", "g f"]
 }
 // The demo users of each group (each but the requester and the administrator also in BOSS_MAINTENANCE), agents of Ziziwork

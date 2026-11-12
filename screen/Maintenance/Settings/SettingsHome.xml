@@ -32,8 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
         <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
         <set field="settingRows" from="[
-                {setting: 'Work policy', configures: 'Default work type and team, the planned-work approval threshold, the closure policy and procedure self-approval, from a date', state: 'Work policy tab'},
-                {setting: 'Teams', configures: 'Dispatch defaults and the intake address of each maintenance team', state: 'Not yet available'},
+                {setting: 'Work policy', configures: 'Default work type and team, the planned-work approval threshold, the closure policy, procedure self-approval and the qualification check, from a date', state: 'Work policy tab'},
+                {setting: 'Teams', configures: 'Dispatch defaults and the intake address of each maintenance team (members are People\'s)', state: 'Teams tab'},
                 {setting: 'Lookups', configures: 'Work types, severities, reasons, outcomes and failure modes with where they apply', state: 'Lookups tab'},
                 {setting: 'Setup readiness', configures: 'What Maintenance still needs before work is planned', state: 'Readiness tab'},
                 {setting: 'Maintenance expense', configures: 'The expense account parts issued to maintenance work post to', state: 'Accounting: Posting defaults'},

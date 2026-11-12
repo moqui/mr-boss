@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     outcome. The summary: the obligations due (the denominator: on time, late, outstanding and skipped), each count opening its
     rows, the on-time percentage, and what is left out of the denominator (unknown, not yet due). The rows: each obligation's plan,
     target, due date or threshold, outcome, when it was satisfied, its work order and a note (coalesced into a catch-up, a skip's
-    reason, the reading at a meter completion). No cost. -->
+    reason, the reading at a meter completion); its CSV is the form-list's own (P17: the columns chosen, every row, each outcome
+    named; the summary left out, review R2). No cost. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="PM compliance" default-menu-index="2">
     <parameter name="fromDate"/>
@@ -30,11 +31,13 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="outcome"/>
     <parameter name="pageIndex"/>
     <parameter name="pageSize"/>
+    <parameter name="pageNoLimit"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <actions>
         <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" out-map="report" transaction="force-new"
                 ignore-error="true" in-map="{fromDate:fromDate, thruDate:thruDate, organizationPartyId:organizationPartyId, assetId:assetId,
-                    facilityId:facilityId, outcome:outcome, pageIndex:pageIndex, pageSize:pageSize}"/>
+                    facilityId:facilityId, outcome:outcome, pageIndex:pageIndex, pageSize:pageSize,
+                    pageNoLimit:pageNoLimit == 'true' || pageNoLimit === true}"/>
         <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="summary" from="report?.summary || {}"/>
@@ -55,6 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
                 {label: 'Skipped', key: 'skipped', count: summary.skippedCount},
                 {label: 'Unknown', key: 'unknown', count: summary.unknownCount}]"/>
         <set field="rowsTitle" from="outcome ? 'Obligations: ' + (summaryRows.find(row =&gt; row.key == outcome)?.label || outcome) : 'Obligations'"/>
+        <!-- an export (CSV, XLSX) is ComplianceRows alone, not the summary's list before it (P17 review R2) -->
+        <set field="exporting" from="['csv', 'xlsx'].includes(sri.getRenderMode())"/>
         <set field="percentText" from="summary.onTimePercent == null ? 'No obligation was due in the period' : summary.onTimePercent + '% on time'"/>
     </actions>
     <widgets>
@@ -95,30 +100,35 @@ along with this software (see the LICENSE.md file). If not, see
         <label text="${reportError}" type="p" style="text-negative" condition="reportError"/>
         <section name="ComplianceFound" condition="report">
             <widgets>
-                <container-box>
-                    <box-header title="Obligations due ${summary.fromText} to ${summary.thruText}: ${percentText}"/>
-                    <box-body>
-                        <label text="On time is satisfied by its due date, over every obligation due; a skipped or coalesced one is not compliant. ${summary.excludedText}."
-                                type="p" style="text-caption m-muted"/>
-                        <form-list name="ComplianceSummary" list="summaryRows" skip-form="true" paginate="false">
-                            <field name="label">
-                                <default-field title="Obligations">
-                                    <link url="." text="${label}" link-type="anchor" condition="key &amp;&amp; count"
-                                            parameter-map="Object.assign({outcome: key}, options)"/>
-                                    <label text="${label}" type="span" condition="!(key &amp;&amp; count)"/>
-                                </default-field>
-                            </field>
-                            <field name="count" align="right"><default-field title="Count"><display/></default-field></field>
-                        </form-list>
-                    </box-body>
-                </container-box>
+                <section name="ComplianceSummaryBox" condition="!exporting">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Obligations due ${summary.fromText} to ${summary.thruText}: ${percentText}"/>
+                            <box-body>
+                                <label text="On time is satisfied by its due date, over every obligation due; a skipped or coalesced one is not compliant. ${summary.excludedText}."
+                                        type="p" style="text-caption m-muted"/>
+                                <form-list name="ComplianceSummary" list="summaryRows" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="Obligations">
+                                            <link url="." text="${label}" link-type="anchor" condition="key &amp;&amp; count"
+                                                    parameter-map="Object.assign({outcome: key}, options)"/>
+                                            <label text="${label}" type="span" condition="!(key &amp;&amp; count)"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="count" align="right"><default-field title="Count"><display/></default-field></field>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container-box>
                     <box-header title="${rowsTitle}"/>
                     <box-toolbar>
                         <link url="." text="All outcomes" link-type="anchor" parameter-map="options" condition="outcome"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="ComplianceRows" list="complianceList" skip-form="true" paginate="true">
+                        <form-list name="ComplianceRows" list="complianceList" skip-form="true" paginate="true" select-columns="true"
+                                show-csv-button="true">
                             <field name="maintenanceScheduleId">
                                 <default-field title="Plan">
                                     <link url="${sharedLinks['Preventive/Plans/PlanDetail']}" text="${scheduleName}" link-type="anchor"
@@ -128,6 +138,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="targetName"><default-field title="For"><display/></default-field></field>
                             <field name="dueText"><default-field title="Due"><display/></default-field></field>
                             <field name="outcomeText">
+                                <!-- an export writes the outcome as text (a render-mode cell writes nothing in a CSV; review R2) -->
+                                <conditional-field condition="exporting" title="Outcome"><display/></conditional-field>
                                 <default-field title="Outcome">
                                     <render-mode>
                                         <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
