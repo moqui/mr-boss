@@ -432,4 +432,62 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.humanres.employment.EmploymentAssignment employmentAssignmentId="BOSS_PPL_OWEN_EA" partyRelationshipId="BOSS_PPL_OWEN_EMP"
             partyId="BOSS_PPL_OWEN" organizationPartyId="ORG_ZIZI_SERVICES" fromDate="2021-07-19 09:00:00" isPrimary="Y" stateEnumId="EasActive"
             departmentPartyId="BOSS_PPL_D_DELIVERY" managerPartyId="BOSS_PPL_AMARA"/>
+    <!-- People P7 (impl-people P7; design-people §4, §12 ChecklistTemplates): Retail's lifecycle checklists, People's process
+        templates (mantle.work.ProcessServices, MT-03's first part): New starter (onboarding: the handbook the employee signs, the
+        account and laptop the HR officer requests, linked to the IT access request, the team the manager introduces) and Leaver
+        (offboarding, its tasks protected: the keys the employee hands back, the exit interview and the account closed by the HR
+        officer). A hire into Retail and a separation from it start them after they commit. Ines Varga holds a Retail laptop, so her
+        separation raises its return task. -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_START" workEffortTypeEnumId="WetTask" purposeEnumId="WepPrOrgMgmt" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" workEffortName="New starter"/>
+    <mantle.work.effort.WorkEffortProcessPolicy workEffortId="BOSS_PPL_CHK_START" fromDate="2026-01-01 00:00:00" processPolicyEnumId="WppPeopleChecklist"
+            guardsExecution="N"/>
+    <mantle.humanres.checklist.ChecklistTemplate workEffortId="BOSS_PPL_CHK_START" organizationPartyId="ORG_ZIZI_RETAIL" lifecycleKindEnumId="ClkOnboarding"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_START_1" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" parentWorkEffortId="BOSS_PPL_CHK_START" rootWorkEffortId="BOSS_PPL_CHK_START"
+            sequenceNum="1" workEffortName="Sign the staff handbook"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_PPL_CHK_START_1" fromDate="2026-01-01 00:00:00" isRequired="Y" roleTypeId="Employee"
+            dueOffsetDays="1"/>
+    <mantle.humanres.checklist.ChecklistStep workEffortId="BOSS_PPL_CHK_START_1" visibilityEnumId="ChvEmployee" isProtected="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_START_2" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" parentWorkEffortId="BOSS_PPL_CHK_START" rootWorkEffortId="BOSS_PPL_CHK_START"
+            sequenceNum="2" workEffortName="Request the account and laptop"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_PPL_CHK_START_2" fromDate="2026-01-01 00:00:00" isRequired="Y" roleTypeId="HumanResourcesManager"
+            dueOffsetDays="0"/>
+    <mantle.humanres.checklist.ChecklistStep workEffortId="BOSS_PPL_CHK_START_2" sourceLinkEnumId="ClsItAccess" visibilityEnumId="ChvStaff" isProtected="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_START_3" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" parentWorkEffortId="BOSS_PPL_CHK_START" rootWorkEffortId="BOSS_PPL_CHK_START"
+            sequenceNum="3" workEffortName="Introduce the team"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_PPL_CHK_START_3" fromDate="2026-01-01 00:00:00" isRequired="Y" roleTypeId="Manager"
+            dueOffsetDays="3"/>
+    <mantle.humanres.checklist.ChecklistStep workEffortId="BOSS_PPL_CHK_START_3" visibilityEnumId="ChvStaff" isProtected="N"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_LEAVE" workEffortTypeEnumId="WetTask" purposeEnumId="WepPrOrgMgmt" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" workEffortName="Leaver"/>
+    <mantle.work.effort.WorkEffortProcessPolicy workEffortId="BOSS_PPL_CHK_LEAVE" fromDate="2026-01-01 00:00:00" processPolicyEnumId="WppPeopleChecklist"
+            guardsExecution="N"/>
+    <mantle.humanres.checklist.ChecklistTemplate workEffortId="BOSS_PPL_CHK_LEAVE" organizationPartyId="ORG_ZIZI_RETAIL" lifecycleKindEnumId="ClkOffboarding"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_LEAVE_1" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" parentWorkEffortId="BOSS_PPL_CHK_LEAVE" rootWorkEffortId="BOSS_PPL_CHK_LEAVE"
+            sequenceNum="1" workEffortName="Hand back keys and badge"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_PPL_CHK_LEAVE_1" fromDate="2026-01-01 00:00:00" isRequired="Y" roleTypeId="Employee"
+            dueOffsetDays="0"/>
+    <mantle.humanres.checklist.ChecklistStep workEffortId="BOSS_PPL_CHK_LEAVE_1" visibilityEnumId="ChvEmployee" isProtected="Y"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_LEAVE_2" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" parentWorkEffortId="BOSS_PPL_CHK_LEAVE" rootWorkEffortId="BOSS_PPL_CHK_LEAVE"
+            sequenceNum="2" workEffortName="Hold the exit interview"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_PPL_CHK_LEAVE_2" fromDate="2026-01-01 00:00:00" isRequired="Y" roleTypeId="HumanResourcesManager"
+            dueOffsetDays="-2"/>
+    <mantle.humanres.checklist.ChecklistStep workEffortId="BOSS_PPL_CHK_LEAVE_2" sourceLinkEnumId="ClsExitInterview" visibilityEnumId="ChvStaff" isProtected="Y"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_PPL_CHK_LEAVE_3" workEffortTypeEnumId="WetTask" purposeEnumId="WepTask" isTemplate="Y"
+            statusId="WeInPlanning" ownerPartyId="ORG_ZIZI_RETAIL" parentWorkEffortId="BOSS_PPL_CHK_LEAVE" rootWorkEffortId="BOSS_PPL_CHK_LEAVE"
+            sequenceNum="3" workEffortName="Close the account"/>
+    <mantle.work.effort.WorkEffortStepPolicy workEffortId="BOSS_PPL_CHK_LEAVE_3" fromDate="2026-01-01 00:00:00" isRequired="Y" roleTypeId="HumanResourcesManager"
+            dueOffsetDays="0"/>
+    <mantle.humanres.checklist.ChecklistStep workEffortId="BOSS_PPL_CHK_LEAVE_3" sourceLinkEnumId="ClsItAccess" visibilityEnumId="ChvStaff" isProtected="Y"/>
+    <mantle.product.asset.Asset assetId="BOSS_PPL_LAPTOP_INES" assetTypeEnumId="AstTpEquipment" assetName="Laptop LT-204" serialNumber="LT-204"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.product.asset.AssetPartyAssignment assetId="BOSS_PPL_LAPTOP_INES" partyId="BOSS_PPL_INES" roleTypeId="Custodian"
+            fromDate="2022-09-05 09:00:00"/>
 </entity-facade-xml>

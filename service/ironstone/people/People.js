@@ -138,7 +138,13 @@ const linkPaths = [
     "Settings/Lookups",
     // P6: the hire and employment change wizards (design §4)
     "Employees/HireEmployee",
-    "Employees/EmploymentChange"
+    "Employees/EmploymentChange",
+    // P7: the checklist templates, the employees import (HR's, under Employees: the user's call, Nov 11), a checklist task and a
+    // piece of equipment
+    "Employees/ChecklistTemplates",
+    "Employees/EmployeeImport",
+    "Tasks/WorkItemDetail",
+    "Employees/EquipmentDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -706,6 +712,8 @@ function employee360(p) {
         // changes it (Mantle checks again), and People shows the changes waiting to HR and to their approvers
         canChangeEmployment: !!userScope && !!caps.changeEmployment && !!userScope.capabilities.employment,
         showsChanges: !!userScope,
+        // P7: the equipment the person holds (AssignedEquipment), People's: Mantle answers the person and HR of their employer
+        showsEquipment: !!userScope,
         returnLabel: app.returnLabel,
         returnPath: app.returnPath
     }

@@ -40,10 +40,16 @@ const ids = {
     adminMenu: ["Home", "Approvals", "Employees", "Staffing", "Settings"],
     settingsMenu: ["SettingsHome", "ApprovalPolicies", "Lookups"],
     employeesMenu: ["List", "OrgStructure", "OrgChart"],
+    // P7 (the user's call, Nov 11): HR's Checklists and Employee import are in Employees, HR's area, not in Settings
+    hrEmployeesMenu: ["List", "OrgStructure", "OrgChart", "ChecklistTemplates", "EmployeeImport"],
     staffingMenu: ["Positions", "JobClasses", "PayGrades"],
     keys: ["g p", "g e", "g o", "g c", "g s", "g a"],
     // P5: Retail's planned seasonal seat in Store Operations (led by Hannah, people.manager), which the acceptance asks to activate
-    plannedPositionId: "BOSS_PPL_P_ASSOC4"
+    plannedPositionId: "BOSS_PPL_P_ASSOC4",
+    // P7: Retail's onboarding and offboarding checklists, and the laptop Ines holds
+    onboardingId: "BOSS_PPL_CHK_START",
+    offboardingId: "BOSS_PPL_CHK_LEAVE",
+    laptopAssetId: "BOSS_PPL_LAPTOP_INES"
 }
 // The demo users of each group (each but the administrator and the employee also in BOSS_PEOPLE), agents of Ziziwork Retail but
 // the manager and the employee (Retail's employees) and the administrator (Retail and Services), none in ADMIN; a Projects client

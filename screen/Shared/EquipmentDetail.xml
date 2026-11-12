@@ -22,7 +22,12 @@ along with this software (see the LICENSE.md file). If not, see
     maintenance summary and, for a user with financial read, the book, in template/WarehouseEquipment.xml. Manufacturing mounts
     it at Manufacturing/WorkCenters/EquipmentDetail (crosscut §3.10's Manufacturing row; impl-manufacturing P3): production
     assignments, qualifications, maintenance history and safe-use instructions, for an operator too, with no book or cost,
-    in template/ManufacturingEquipment.xml. Other apps add their contexts when they are built. -->
+    in template/ManufacturingEquipment.xml. People mounts it at People/Employees/EquipmentDetail (design-people §13 EquipmentDetail;
+    impl-people P7, F52): identity and the custody history (mantle.humanres.PeopleServices.get#EquipmentCustody, an asset a person
+    the user reads as HR holds or held, never its cost), each open return task, and End assignment for an HR editor: the holding
+    ended by the return to a receiving custodian employed by the employer (return#Equipment over replace#AssetPartyAssignment),
+    which completes the return task; no files, notes or other custody action, which stay Warehouse's and Maintenance's, in
+    template/PeopleEquipment.xml. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Equipment"
@@ -34,6 +39,25 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="downtimeChoices" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <transition-include name="reportStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <transition-include name="requestMaintenance" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <!-- People (impl-people P7): a holding ended by its return to the receiving custodian; Mantle checks the HR editor, the holder's
+        employer and the custodian -->
+    <transition name="returnEquipment">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.return#Equipment" out-map="returned"
+                    in-map="{assetId:assetId, partyId:holderPartyId, roleTypeId:roleTypeId, newPartyId:newPartyId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Returned${returned.completed ? '; its return task is complete' : ''}</message></if>
+        </actions>
+        <default-response url="."><parameter name="assetId"/></default-response>
+        <error-response url="."><parameter name="assetId"/></error-response>
+    </transition>
+    <transition name="custodianChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.people.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:'employees', term:(term || null), selected:(selected || null)}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <transition name="capitalizeAsset">
         <actions>
             <service-call name="mantle.ledger.AssetBookServices.capitalize#Asset" in-map="context"/>
@@ -105,7 +129,13 @@ along with this software (see the LICENSE.md file). If not, see
                         priority:suggestedStop ? '2' : '5', createRequest:'Y'}"/>
             </if>
         </if>
-        <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset"/>
+        <set field="peopleEquipment" from="null"/>
+        <if condition="appRoot == 'People'">
+            <service-call name="mantle.humanres.PeopleServices.get#EquipmentCustody" in-map="{assetId:assetId}"
+                    out-map="peopleEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset || !!peopleEquipment?.asset"/>
         <set field="asset" from="book?.asset || {}"/>
         <set field="bookKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
                 .operationKey('asset')"/>
@@ -151,6 +181,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 link-type="anchor"
                                 icon="arrow_back"
                                 condition="appRoot == 'Manufacturing'"/>
+                        <link url="${sharedLinks['Employees']}"
+                                text="Employees"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'People'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -159,6 +194,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseEquipment" location="component://mr-boss/template/WarehouseEquipment.xml"/>
         <!-- the Manufacturing context, shown when it found the equipment -->
         <section-include name="ManufacturingEquipment" location="component://mr-boss/template/ManufacturingEquipment.xml"/>
+        <!-- the People context (impl-people P7), shown when it found the equipment -->
+        <section-include name="PeopleEquipment" location="component://mr-boss/template/PeopleEquipment.xml"/>
         <section name="EquipmentFound" condition="recordFound &amp;&amp; appRoot == 'Accounting'">
             <widgets>
                 <link url="${sharedLinks['FixedAssets/FixedAssets']}"
@@ -835,7 +872,7 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
         <!-- the asset's files (AssetContent, WH-RECORD-HOSTS) and notes, in every context that found the equipment, outside
             any one context's section; the panels check the asset is one the user sees (get#RecordLinkInfo) -->
-        <section name="EquipmentFilesAndNotes" condition="recordFound">
+        <section name="EquipmentFilesAndNotes" condition="recordFound &amp;&amp; appRoot != 'People'">
             <widgets>
                 <container-box>
                     <box-header title="Files"/>

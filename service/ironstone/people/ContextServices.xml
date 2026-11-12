@@ -166,6 +166,8 @@ along with this software (see the LICENSE.md file). If not, see
                 employment's employer who opens the employment change wizard</description></parameter>
             <parameter name="showsChanges" type="Boolean"><description>P6: People's mount, which lists the employment changes the
                 user may see (mantle.humanres.PeopleServices.find#EmploymentChanges)</description></parameter>
+            <parameter name="showsEquipment" type="Boolean"><description>P7: People's mount, which lists the equipment the person
+                holds (mantle.humanres.PeopleServices.get#AssignedEquipment: the person and HR of their employer)</description></parameter>
             <parameter name="returnLabel"/>
             <parameter name="returnPath"/>
         </out-parameters>
@@ -174,6 +176,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="found" from="ec.resource.script(module).execute('employee360', context)"/>
             <set field="canChangeEmployment" from="!!found.canChangeEmployment"/>
             <set field="showsChanges" from="!!found.showsChanges"/>
+            <set field="showsEquipment" from="!!found.showsEquipment"/>
             <set field="recordFound" from="found.recordFound"/>
             <set field="regions" from="found.regions"/>
             <set field="record" from="found.record"/>

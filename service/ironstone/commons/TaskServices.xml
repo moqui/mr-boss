@@ -288,6 +288,13 @@ along with this software (see the LICENSE.md file). If not, see
                 done: () => true
             }
             const statusPart = (key) => key === 'done' ? doneOf : openOf
+            // a protected People task (offboarding, an equipment return) only for an assignee who is not the person it is about
+            // (Mantle's Checklists.js hiddenTaskIds; impl-people P7 review, F22): the holder of a return task's equipment does not list it
+            const sliceIds = Array.from(entries.keys())
+            if (sliceIds.length && ec.entity.find('mantle.humanres.checklist.ChecklistStep').condition('workEffortId', 'in', sliceIds)
+                    .condition('isProtected', 'Y').disableAuthz().count() > 0)
+                for (const id of ec.resource.script('component://mr-mantle/service/mantle/humanres/Checklists.js').hiddenTaskIds(sliceIds, partyId))
+                    entries.delete(id)
             const all = Array.from(entries.entries()).filter(([id, entry]) => entry.row != null).map(([id, entry]) => ({id: id, entry: entry, row: entry.row}))
             for (const key of lists) counts[key] = all.filter((item) => statusPart(key)(item.row) && rest[key](item.row, item.entry)).length
 

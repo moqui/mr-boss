@@ -54,6 +54,13 @@ along with this software (see the LICENSE.md file). If not, see
     requests, their stops and equipment. A production run or operation is no follow-up task: it is not available there and
     links to its work order (F38); neither is a task of no such request.
 
+    People (impl-people P7, design-people §13 WorkItemDetail; template/PeopleWorkItem.xml PeopleWorkItemContext): a lifecycle checklist
+    or equipment return task, at People/Tasks/WorkItemDetail, on the Commons task rule for its assignee (Overview, Files and Chatter: no
+    sub-task, time or money pane, no clone, request or delete), with a People box from mantle.humanres.PeopleServices.get#ChecklistTask:
+    the person, employer and checklist, what it links to (the equipment's EquipmentDetail, the Admin outcome of the IT access
+    request) and the checklist's other tasks; an HR reader of the employment who is not one of its people sees that box alone, read
+    only. A task of no checklist, or one People does not admit, is not available there.
+
     An item the user may not see is "not available" (IronStone R5, R28; in Projects the project's visibility, impl-projects.md
     F1). The keys of design §1.4 (a, s, t, b, m) wait for a screen-level key binding of the framework. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -449,6 +456,19 @@ along with this software (see the LICENSE.md file). If not, see
                     csCaseId = null
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
             }
+            // People (impl-people P7): a checklist or equipment return task People admits, on the Commons rule, with its People context
+            pplTask = appRoot === 'People'
+            pplContext = null
+            if (pplTask) {
+                detailPath = '/qapps/People/Tasks/WorkItemDetail'
+                ec.message.pushErrors()
+                try {
+                    pplContext = ec.service.sync().name('mantle.humanres.PeopleServices.get#ChecklistTask').parameters({workEffortId: workEffortId}).call() || null
+                    if (ec.message.hasError()) pplContext = null
+                } catch (error) {
+                    pplContext = null
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
             // the Development tab: when the item's project has the Code module on or a repository linked (design §5)
             devShown = false
             if (projects) {
@@ -462,6 +482,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (clientView) devShown = false
             const tabKeys = clientView ? ['overview', 'subitems', 'chatter']
                     : projects ? ['overview', 'subitems', 'links'].concat(devShown ? ['development'] : []).concat(['time', 'files', 'chatter'])
+                    : pplTask ? ['overview', 'files', 'chatter']
                     : ['overview', 'subtasks', 'time', 'files', 'chatter']
             tab = tabKeys.includes(tab) ? tab : 'overview'
             let extra = {}
@@ -471,7 +492,9 @@ along with this software (see the LICENSE.md file). If not, see
             } else {
                 detail = ec.service.sync().name('ironstone.commons.TaskServices.get#TaskDetail').parameters({workEffortId: workEffortId}).call() || {}
             }
-            recordFound = !!detail.visible && (!csTask || !!csCaseId)
+            recordFound = !!detail.visible && (!csTask || !!csCaseId) && (!pplTask || !!pplContext?.workEffortId)
+            // People: an HR reader of the employment who is none of the task's people reads its People context alone
+            pplReadOnly = pplTask && !recordFound && !!pplContext?.workEffortId
             if (mfgTask && recordFound) {
                 ec.message.pushErrors()
                 try {
@@ -541,6 +564,7 @@ along with this software (see the LICENSE.md file). If not, see
             const tabs = clientView ? [['overview', 'Overview'], ['subitems', 'Sub-items'], ['chatter', 'Messages']] : projects ? [['overview', 'Overview'], ['subitems', 'Sub-items' + ((extra.rollup?.childCount) ? ' (' + extra.rollup.childCount + ')' : '')],
                     ['links', 'Links' + ((extra.relationList || []).length ? ' (' + extra.relationList.length + ')' : '')]].concat(devShown ? [['development', 'Development']] : [])
                     .concat([['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']])
+                : pplTask ? [['overview', 'Overview'], ['files', 'Files'], ['chatter', 'Chatter']]
                 : [['overview', 'Overview'], ['subtasks', 'Sub-tasks' + (subTaskList.length ? ' (' + subTaskList.length + ')' : '')], ['time', 'Time'], ['files', 'Files'], ['chatter', 'Chatter']]
             const base = detailPath + '?workEffortId=' + encodeURIComponent(workEffortId)
                     + (taskListFind ? '&taskListFind=' + encodeURIComponent(taskListFind) : '')
@@ -643,7 +667,16 @@ along with this software (see the LICENSE.md file). If not, see
                 <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
             </box-body></container-box>
         </widgets></section>
-        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !csTask"><widgets>
+        <section name="PeopleTaskNotFound" condition="!recordFound &amp;&amp; pplTask &amp;&amp; !pplReadOnly"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Task ${workEffortId} is not available in People: it is not a checklist task you do or may read."/>
+                <link url="${sharedLinks['Home']}" text="Back to People" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="PeopleTaskReadOnly" condition="pplReadOnly"><widgets>
+            <section-include name="PeopleWorkItemContext" location="component://mr-boss/template/PeopleWorkItem.xml"/>
+        </widgets></section>
+        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Task ${workEffortId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="tasks" text="${projects ? 'Back to Work items' : 'Back to Tasks'}" link-type="anchor"/>
@@ -660,7 +693,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="q-mb-xs"><link url="${sharedLinks['Cases/CaseDetail']}" link-type="anchor" text="Case ${csCaseId}" icon="arrow_back"
                         parameter-map="{requestId:csCaseId, tab:'work'}"/></container>
             </widgets></section>
-            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !csTask"><widgets>
+            <section name="PeopleBack" condition="pplTask"><widgets>
+                <container style="q-mb-xs"><link url="${pplContext.canReadEmployee ? sharedLinks['Employees/Employee360'] : sharedLinks['Home']}" link-type="anchor"
+                        text="${pplContext.canReadEmployee ? pplContext.personName : 'People'}" icon="arrow_back"
+                        parameter-map="pplContext.canReadEmployee ? {partyId:pplContext.partyId} : {}"/></container>
+            </widgets></section>
+            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
                 <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"/></container>
             </widgets></section>
             <section name="ManufacturingBack" condition="mfgTask"><widgets>
@@ -734,7 +772,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </container-dialog>
                             <link url="addToToday" link-type="hidden-form" text="Add to Today" icon="sym_o_today" style="q-ml-xs" condition="task.canAddToToday"
                                     parameter-map="{workEffortId:workEffortId, tab:tab}"/>
-                            <button-menu text="More" icon="more_horiz" style="q-ml-xs">
+                            <button-menu text="More" icon="more_horiz" style="q-ml-xs" condition="!pplTask">
                                 <link url="cloneTask" link-type="hidden-form-link" text="Clone" icon="sym_o_content_copy" parameter-map="{workEffortId:workEffortId}"/>
                                 <link url="convertToRequest" link-type="hidden-form-link" text="Convert to request" icon="sym_o_support"
                                         confirmation="Draft a request from ${task.workEffortName}?" parameter-map="{workEffortId:workEffortId}"/>
@@ -893,6 +931,8 @@ along with this software (see the LICENSE.md file). If not, see
             <render-mode><text type="qvt"><![CDATA[${tabsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(tabsTui)}]]></text></render-mode>
             <!-- Manufacturing (impl-manufacturing P11): the task's maintenance requests, their stops and equipment -->
             <section-include name="ManufacturingWorkItemContext" location="component://mr-boss/template/ManufacturingRequestParts.xml"/>
+            <!-- People (impl-people P7): the checklist the task is on, what it links to and the next steps -->
+            <section-include name="PeopleWorkItemContext" location="component://mr-boss/template/PeopleWorkItem.xml"/>
 
             <!-- ===== Overview ===== -->
             <section name="OverviewTab" condition="tab == 'overview'"><widgets>

@@ -497,7 +497,7 @@ Added in Accounting P17 (returns and order changes):
 | RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
 | RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
 
-**Added** (People P1 to P6, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P7, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -548,7 +548,19 @@ the screens that call it.
 | PeopleServices | refuse#EmploymentChange | People/Approvals | People/Approvals and Commons' Notifications and tray (the topic's refuse service) (People P6) |
 | PeopleServices | find#EmploymentChanges | People/Employees/Employee360 | People/Employees/Employee360 (Employment changes) (People P6) |
 | PeopleServices | get#EmploymentDraft, store#EmploymentDraft, delete#EmploymentDraft | People/Employees/HireEmployee, People/Employees/EmploymentChange | People/Employees/HireEmployee and EmploymentChange (the wizards' draft records, resumed and discarded) (People P6 review) |
-| PeopleServices | apply#DueAssignments | (the daily job apply_EmploymentDueAssignments) | none: a ServiceJob setting Employment.emplPositionId to the seat in effect (People P6 review) |
+| PeopleServices | apply#DueAssignments | (the daily job apply_EmploymentDueAssignments) | none: a ServiceJob setting Employment.emplPositionId to the seat in effect (People P6 review); P7: also routing the waiting decisions of an employer on the date a later separation or manager change comes (F134) |
+| PeopleServices | withdraw#EmploymentChange | People/Employees/Employee360 | People/Employees/Employee360 (Employment changes: Withdraw, Withdraw the return) (People P7) |
+| PeopleServices | find#Checklists, store#Checklist, store#ChecklistStep | People/Employees/ChecklistTemplates | People/Employees/ChecklistTemplates (Templates, NewChecklist, RenameChecklist, EndChecklist; ChecklistTasks, AddStep, EditStep, EndStep) (People P7) |
+| PeopleServices | start#Checklists, start#Checklist, start#EquipmentReturn | (Mantle's tx-commit rules on hire#Employee and an applied change) | none: the checklists and a separation's equipment return started after the change commits (People P7) |
+| PeopleServices | get#ChecklistTask | People/Tasks/WorkItemDetail | People/Tasks/WorkItemDetail (the People box; read only for an HR reader) (People P7) |
+| PeopleServices | get#AssignedEquipment | People/Employees/Employee360 | People/Employees/Employee360 (Assigned equipment) (People P7) |
+| PeopleServices | get#EquipmentCustody, return#Equipment | People/Employees/EquipmentDetail | People/Employees/EquipmentDetail (Custody, End assignment) (People P7) |
+| PeopleServices | complete#ReturnTasks | (Mantle's rule on an AssetPartyAssignment's end) | none: an EECA, whoever ends the holding (People P7) |
+| PeopleServices | note#AccessRequestFailure | People/Employees/Employee360 | none directly: ironstone.admin.LifecycleServices request#Provisioning and request#AccessEnd note a failure on the change, Employee360 shows it with Request access again (People P7) |
+| PeopleServices | validate#EmployeeImportRow, apply#EmployeeImportRow, find#EmployeeImportScopes | People/Employees/EmployeeImport | People/Employees/EmployeeImport (Shared/DataImport for the employees target); Admin/Data/Imports (People P7) |
+| ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7) |
+| ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7) |
+| IdentityServices | request#Provisioning, request#AccessEnd | People/Employees/HireEmployee; People/Employees/Employee360 | People's tx-commit rules (mr-boss service/PeopleLifecycle.secas.xml) and Employee360's Request access again, through ironstone.admin.LifecycleServices; Admin/Users/LifecycleDetail retries their waiting steps (People P7) |
 
 ## Ledger (81 services)
 
@@ -994,7 +1006,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | update#AssetIssuedDate |  |  |
 | AssetServices | receive#Asset | Warehouse/Handheld/Receive; Warehouse/Inventory/MaterialIssueReceipt; Warehouse/Receiving/Receive; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Receiving/Receive (AdHocReceipt), through the guard: WarehouseTaskServices.receive#AdHocStock; Warehouse/Transfers/TransferShipmentDetail (through receive#TransferStock, with the issuance's cost and owner, P15); Warehouse/Inventory/MaterialIssueReceipt (Output Receive and Unused returns, through receive#ProductionOutput and return#UnusedMaterial, P16); Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Output Receive) and Manufacturing/ShopFloor/OperationExecution (Complete), through mantle.work.ProductionServices.receive#ProductionOutput (Manufacturing P5b, P10) |
 | AssetServices | update#AssetAndReceipt |  |  |
-| AssetServices | replace#AssetPartyAssignment | Maintenance/Equipment/EquipmentDetail; People/Employees/EquipmentDetail |  |
+| AssetServices | replace#AssetPartyAssignment | Maintenance/Equipment/EquipmentDetail; People/Employees/EquipmentDetail | People/Employees/EquipmentDetail (End assignment, through PeopleServices.return#Equipment after People's scope check; the end completes the return task, PeopleChecklist.eecas.xml) (People P7) |
 | AssetServices | move#Product | Warehouse/Handheld/Move; Warehouse/Transfers/Move | — (Move chooses an asset in MoveContents and moves it with move#Stock; impl-warehouse §4 P5) |
 | AssetServices | moveVerify#Product |  |  |
 | AssetServices | check#ScanLocation | Warehouse/Handheld/Move; Warehouse/Handheld/Putaway; Warehouse/Picking/PickLocationMoves; Warehouse/Receiving/Putaway; Warehouse/Transfers/Move | Warehouse/Transfers/Move, Warehouse/Handheld/Move, Warehouse/Receiving/Putaway and Warehouse/Handheld/Putaway (inside move#Asset; the scan resolves through AccessServices.resolve#Scan) |
@@ -1482,7 +1494,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | set#TaskRank |  | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskRecurrence |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskSprint |  | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
-| TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
+| TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail; People/Tasks/WorkItemDetail (a checklist task, on the Commons rule; refuses managed work, MANAGED_WORK) (People P7) |
 | TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source |
 | TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the work order's supervisor; with it sync#ProductionLaborCost writes the labor cost events, Manufacturing P10) |

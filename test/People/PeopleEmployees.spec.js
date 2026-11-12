@@ -52,6 +52,9 @@ feature(
             rendered.output.includes("Sales associate 1")
             rendered.output.includes("Change employment")
             rendered.output.includes("mantle.humanres.employment.Employment")
+            // P7: the equipment the person holds (Tomas holds none)
+            rendered.output.includes("Assigned equipment")
+            rendered.output.includes("No equipment is held.")
         }
     }
 )

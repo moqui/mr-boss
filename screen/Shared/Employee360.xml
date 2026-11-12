@@ -27,8 +27,11 @@ along with this software (see the LICENSE.md file). If not, see
     assignments in the history, Change employment for an HR editor of the opened employment's employer (a transfer, manager change,
     leave of absence, return or separation, opening Employees/EmploymentChange), and the employment changes the user may see
     (mantle.humanres.PeopleServices.find#EmploymentChanges: HR's, and a waiting one whose step the user decides, with Approve and
-    Refuse, decide#EmploymentChange). Compensation (P23), TimeAndLeave (P12), SkillsAndReviews (P18, P20) and AssignedEquipment
-    (P7) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
+    Refuse, decide#EmploymentChange). P7, under People: AssignedEquipment (mantle.humanres.PeopleServices.get#AssignedEquipment, the
+    person's and HR's: each piece held, its EquipmentDetail and its open return task), and in Employment changes Withdraw for a
+    change set for a later date (withdraw#EmploymentChange, HR's) and Request access again when a hire's or separation's access
+    request failed (ironstone.admin.LifecycleServices, keyed by the change). Compensation (P23), TimeAndLeave (P12) and
+    SkillsAndReviews (P18, P20) join with their phases. Under Insights the Records mount serves no transition of this screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Employee" default-menu-include="false">
     <parameter name="partyId"/>
@@ -58,6 +61,33 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
     </transition>
 
+    <!-- P7: a change set for a later date withdrawn by HR (Mantle checks the caller, the change and the employment's revision) -->
+    <transition name="withdrawChange">
+        <actions>
+            <service-call name="mantle.humanres.PeopleServices.withdraw#EmploymentChange" out-map="withdrawn"
+                    in-map="{employmentChangeId:employmentChangeId, reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${withdrawn.whole ? 'Withdrawn' : 'The return was withdrawn'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <!-- P7: a failed access request made again by its key (Admin's lifecycle; the hire or separation stands either way) -->
+    <transition name="requestAccess">
+        <actions>
+            <if condition="changeKindEnumId == 'EckHire'"><then>
+                <service-call name="ironstone.admin.LifecycleServices.request#Provisioning" out-map="requested"
+                        in-map="{employmentChangeId:employmentChangeId}"/>
+            </then><else>
+                <service-call name="ironstone.admin.LifecycleServices.request#AccessEnd" out-map="requested"
+                        in-map="{employmentChangeId:employmentChangeId}"/>
+            </else></if>
+            <if condition="requested?.applied === false"><then><message type="warning">${requested.reason}</message></then>
+                <else><message type="success">Access requested from Admin</message></else></if>
+        </actions>
+        <default-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyId"/><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+
     <actions>
         <service-call name="ironstone.people.ContextServices.get#Employee360Context" out-map="employee" transaction="force-new"
                 ignore-error="true" in-map="{appRoot:appRoot, partyId:(partyId || ''), partyRelationshipId:(partyRelationshipId || null)}"/>
@@ -70,6 +100,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="editable" from="employee?.editableFields || []"/>
         <if condition="regions.includes('employmentHistory')">
             <service-call name="mantle.humanres.PeopleServices.get#EmploymentHistory" out-map="historyFound" transaction="force-new"
+                    ignore-error="true" in-map="{partyId:partyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <if condition="recordFound &amp;&amp; employee?.showsEquipment">
+            <service-call name="mantle.humanres.PeopleServices.get#AssignedEquipment" out-map="equipmentFound" transaction="force-new"
                     ignore-error="true" in-map="{partyId:partyId}"/>
             <script>ec.message.clearErrors()</script>
         </if>
@@ -97,10 +132,12 @@ along with this software (see the LICENSE.md file). If not, see
                     : row.changeKindEnumId == 'EckLeave' ? (row.returnDateText ? 'Returns ' + row.returnDateText : '')
                     : [row.departmentName, row.positionName, row.managerName ? 'manager ' + row.managerName : '', row.facilityName]
                         .filter(Boolean).join(' · '),
-                waitingText: row.approval?.waitingText || '',
+                waitingText: row.approval?.waitingText || (row.accessFailure ? 'Access request failed: ' + row.accessFailure : ''),
                 peopleApprovalId: row.approval?.peopleApprovalId || null
             }))
-            changeColors = {EchRequested: 'warning', EchApplied: 'positive', EchRefused: 'negative', EchSuperseded: 'grey-8'}
+            changeColors = {EchRequested: 'warning', EchApplied: 'positive', EchRefused: 'negative', EchSuperseded: 'grey-8', EchWithdrawn: 'grey-8'}
+            // P7: the equipment the person holds (People's mount, the person and HR)
+            equipmentRows = Array.from(equipmentFound?.equipmentList || [])
             canChangeEmployment = !!employee?.canChangeEmployment && !!record.partyRelationshipId && opened?.state != 'ended'
             changeEmploymentId = record.partyRelationshipId || null
             identificationRows = Array.from(personal.identifications || [])
@@ -298,6 +335,41 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-body>
                 </container-box>
 
+                <!-- P7: the equipment the person holds (design §4 Employee360 AssignedEquipment): no cost; its return is on
+                    EquipmentDetail, the open return task beside it -->
+                <section name="AssignedEquipment" condition="equipmentFound?.equipmentList != null">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Assigned equipment"/>
+                            <box-body-nopad>
+                                <form-list name="EquipmentRows" list="equipmentRows" skip-form="true" paginate="false" condition="equipmentRows.length">
+                                    <field name="assetName">
+                                        <default-field title="Equipment">
+                                            <link url="${sharedLinks['Employees/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                                    parameter-map="{assetId:assetId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="serialNumber"><default-field title="Serial number"><display/></default-field></field>
+                                    <field name="roleText"><default-field title="Held as"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="returnTaskId">
+                                        <default-field title="Return">
+                                            <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="Return task" link-type="anchor"
+                                                    parameter-map="{workEffortId:returnTaskId}" condition="returnTaskId"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="assetName"/><field-ref name="serialNumber"/></column>
+                                        <column><field-ref name="roleText"/><field-ref name="returnTaskId"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No equipment is held." type="p" style="m-muted q-pa-md" condition="!equipmentRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
                 <!-- P6: the employment changes the user may see: waiting ones with who decides, and for their approver Approve and
                     Refuse -->
                 <section name="EmploymentChanges" condition="changeRows.length">
@@ -356,6 +428,37 @@ along with this software (see the LICENSE.md file). If not, see
                                                             <submit type="danger" confirmation="Refuse the ${changeText.toLowerCase()} of ${overview.personName}?"/>
                                                         </default-field>
                                                     </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <!-- P7: a change set for a later date, withdrawn by HR; a failed access request made again -->
+                                            <container-dialog id="WithdrawChange_${employmentChangeId}" button-text="${withdrawText}" icon="sym_o_undo"
+                                                    type="danger" width="520" title="${withdrawText}: the ${changeText.toLowerCase()} of ${overview.personName}"
+                                                    condition="canWithdraw">
+                                                <label type="p" text="${changeText} from ${effectiveDateText} never takes effect; the employment stays as it is now."/>
+                                                <form-single name="WithdrawChange" transition="withdrawChange"
+                                                        map="{partyId:partyId, partyRelationshipId:record.partyRelationshipId, employmentChangeId:employmentChangeId}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="employmentChangeId"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="${withdrawText}">
+                                                            <submit type="danger" confirmation="${withdrawText}: the ${changeText.toLowerCase()} of ${overview.personName} from ${effectiveDateText}?"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="RequestAccess_${employmentChangeId}" button-text="Request access again" icon="sym_o_key"
+                                                    width="520" title="Request access again for ${overview.personName}" condition="canRequestAccess">
+                                                <label type="p" text="The request goes to Admin's lifecycle again with the same key, so no second account or invitation is made."/>
+                                                <form-single name="RequestAccess" transition="requestAccess"
+                                                        map="{partyId:partyId, partyRelationshipId:record.partyRelationshipId, employmentChangeId:employmentChangeId,
+                                                            changeKindEnumId:changeKindEnumId}">
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="employmentChangeId"><default-field><hidden/></default-field></field>
+                                                    <field name="changeKindEnumId"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Request access"><submit/></default-field></field>
                                                 </form-single>
                                             </container-dialog>
                                         </default-field>
