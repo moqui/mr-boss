@@ -2,6 +2,10 @@
 
 Oct 18, 2026 — plan; Step 0 done (the review corrections are in design-drawers-commons.md); Oct 19 — M0–M11 built,
 save point (what is left in §8); Nov 8 — remaining items addendum (§9)
+Nov 12, 2026 — owner contract built by impl-maintenance P19 (the user's call of Nov 12): Comms' Chat, Voicemail and MessageDetail offer
+Maintenance's Report a problem (Commons' ReportProblem mounted under each by screen-extend/basic-comms, prefilled from the message by
+Mantle's get#MaintenanceProblemSource, the message filed on the request); Maintenance's record-lookup (sequence -10) and call-context
+join the providers; design-drawers-commons' header.
 
 How [design-drawers-commons.md](design-drawers-commons.md) gets built: the review of that design against mr-moqui and
 Mantle as they stand (findings R1–R27, each with the resolution now written into the design), the rules every step

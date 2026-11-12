@@ -105,7 +105,7 @@ feature("the work order and technician instructions print the work order with it
         rendered.output.includes("Compressor C-1")
         rendered.output.includes("<svg")
         rendered.output.includes("Steps")
-        // the demo's oil service has no procedure: the print says so (a work order with steps lists them, MaintenanceStackWalk)
+        // the demo's oil service has no procedure (no demo work order has steps): the print says so
         rendered.output.includes("No procedure: the work is as described above.")
         rendered.output.includes("Team Facilities maintenance")
         rendered.output.includes("Completed by")
