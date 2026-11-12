@@ -520,11 +520,16 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a support case's work done goes to its CaseDetail (the message's isCase, impl-customer-service P2) -->
     <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/${isCase ? 'CustomerService/Cases/CaseDetail' : 'Projects/Requests/RequestDetail'}?requestId=${requestId}"/>
     <!-- and of the timesheet topics (mantle.work.TimesheetServices, impl-projects.md P6a): the approval opens the week's TimesheetDetail, the
-        person's notices their week in My time -->
-    <moqui.security.user.NotificationTopic topic="TimesheetApproval" linkTemplate="/qapps/Projects/Time/TimesheetDetail?timesheetId=${timesheetId}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetReturned" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetApproved" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
-    <moqui.security.user.NotificationTopic topic="TimesheetMissing" linkTemplate="/qapps/Projects/Time/MyTime?weekDate=${weekStart}"/>
+        person's notices their week in My time; each through Commons' record-link resolver (openRecord, impl-people P10, the user's
+        call of Nov 11, 2026), so it opens Projects' screen for a Projects user and People's for one who keeps time under People
+        (a TimesheetMissing week with no timesheet too). The link is the resolver's /apps path: a browser's GET of it runs the
+        transition and redirects to the screen under /qapps (a GET of a /qapps path loads the shell); the tray resolves it itself
+        (CommonsServices.decorate#Notifications). -->
+    <moqui.security.user.NotificationTopic topic="TimesheetApproval"
+            linkTemplate="/apps/Commons/openRecord?recordEntityName=mantle.work.time.Timesheet&amp;id=${timesheetId}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetReturned" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetApproved" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
+    <moqui.security.user.NotificationTopic topic="TimesheetMissing" linkTemplate="/apps/Commons/openRecord?docType=MantleTimesheetWeek&amp;id=${weekStart}"/>
     <!-- and of the allocation topics (mantle.work.ResourceServices, impl-projects.md P7): the request opens Allocations' Requested list,
         the decision the team planner on the allocation's project -->
     <moqui.security.user.NotificationTopic topic="AllocationRequest" linkTemplate="/qapps/Projects/Resources/Allocations?list=requested"/>
@@ -5241,4 +5246,108 @@ along with this software (see the LICENSE.md file). If not, see
         assignees alone; a People user reaches its People box from there -->
     <moqui.security.user.NotificationTopic topic="PeopleTaskAssigned"
             linkTemplate="/qapps/Commons/Tasks/TaskDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-people P9 and P10 (design-people §1.2: a section with no capability is omitted; §6 WorkingSchedules and
+        WorkingScheduleDetail, §7 HolidayCalendars; §13 MyTime, Timesheets, TimesheetDetail, TimeEntries and Rates; F17, F57). Time &
+        leave (People/Time) holds P10's time screens (Projects' mounted: Timesheets, My time, Time entries and what they open), P9's
+        working schedules and P9's Holidays, each part open to its own users:
+        - the area and its time screens: every People user's through the root, and a self-service employee without the launcher
+          opens them by this inheritable ALLOW on the area (as their own self-service); its screens and services show and change only
+          the user's own weeks and those they approve (mantle.work.TimesheetServices: the week's person, its approvers by the
+          organization's policy, ADMIN), so the grant opens nothing else; the rest of People stays refused to them (BOSS_PPL_TIME);
+        - the working schedules: HR's and the managers' (a manager's read of the schedules their reports follow): denied to the root
+          user group and to self-service, opened to BOSS_PEOPLE_HR and BOSS_PEOPLE_MANAGER (ALWAYS, as My team) and to the People
+          administrator and ADMIN through their ALWAYS on the root (BOSS_PPL_SCHEDULES);
+        - Holidays, HR's own editor (the user's call of Nov 11 put HR's editors out of Settings): denied to the root user group and to
+          self-service, opened to the HR officers (BOSS_PPL_HOLIDAYS).
+        Mantle's ScheduleServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and the employer again. Payroll is the payroll
+        groups' (denied to the root user group, ALWAYS for the payroll operator and approver, and the People administrator and ADMIN
+        through the root's ALWAYS); Rates' services check PAYROLL_VIEW and PAYROLL_EDIT for an employee's pay rate again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TIME" description="People time and leave, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Time.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_SCHEDULES" description="People working schedules">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(WorkingSchedules|WorkingScheduleDetail)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SCHEDULES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_HOLIDAYS" description="People holiday calendars">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/HolidayCalendars.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOLIDAYS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_PAYROLL" description="People payroll">
+        <artifacts artifactName="component://mr-boss/screen/People/Payroll.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_OPERATOR" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_APPROVER" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYROLL_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-people P11 (design-people §7 LeavePolicies, LeavePolicyDetail, LeaveAllocations and LeaveBalances, §1.2, §1.4): HR's
+        leave editors (policies, a policy's detail and allocations) under Time & leave rather than Settings, as Holidays (the user's
+        call of Nov 11 put HR's own editors out of Settings): denied to the root user group, opened to the HR officers (ALWAYS) and to
+        the People administrator and ADMIN through their ALWAYS on the root. Leave balances are HR's and the managers' (an HR
+        reader's employers' employees, a manager's live reports, balances alone), denied to the root user group and to self-service.
+        Mantle's LeaveServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and PEOPLE_SELF_SERVICE and the employer or line
+        again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE" description="People leave policies and allocations">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(LeavePolicies|LeavePolicyDetail|LeaveAllocations)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- a self-service employee is not in the root user group; denied here too, so a grant of the Time area to them (their own
+            time and leave) never opens HR's editors -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_BALANCES" description="People leave balances">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/LeaveBalances.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- P11's review: the Time area is a self-service employee's by its inheritable ALLOW (BOSS_PPL_TIME, P10), so Leave
+            balances is denied to them here too; their own balances are SelfService's (get#MyBalances) -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P11: an employee's own leave balances, on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is
+        non-inheritable, so the service it calls needs its own) and as the Assistant's tool: get#MyBalances, which takes no party and
+        answers the caller's own employments alone (PEOPLE_SELF_SERVICE) -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_SELF" description="People own leave balances">
+        <artifacts artifactName="mantle.humanres.LeaveServices.get#MyBalances" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P11 (design-people §1.4 Assist: a self-scope read no screen of the Assistant's covers; exposeMcp N, as no HR service is
+        offered to MCP): the user's own leave balances. The tool is get#MyBalances, the self-scope form of get#Balances, since a tool's
+        parameters are the model's to fill and get#Balances answers an HR officer's or a manager's question about other people. -->
+    <moqui.agent.AgentToolExposure toolName="people_my_leave_balances" serviceName="mantle.humanres.LeaveServices.get#MyBalances"
+            title="My leave balances"
+            description="get#MyBalances: the signed-in user's own leave balances (never anyone else's), for each of their employments and leave types: the policy, what was granted, accrued, taken, expired and adjusted, the balance, what is pending and what is available, in days or hours; narrow by leaveTypeEnumId or give asOfDate for a past or future date. No leave reason is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
 </entity-facade-xml>

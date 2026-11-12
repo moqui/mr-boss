@@ -29,11 +29,20 @@ const areas = {
     settings: "Settings",
     employment: "Employees/HireEmployee",
     // P8: My team, the managers' (BOSS_PPL_TEAM; the capability team is PEOPLE_TEAM_VIEW's)
-    myTeam: "MyTeam"
+    myTeam: "MyTeam",
+    // P9: Time & leave's working schedules, HR's and the managers' (BOSS_PPL_SCHEDULES; Holidays HR's alone, BOSS_PPL_HOLIDAYS;
+    // the area itself every People user's since P10, BOSS_PPL_TIME)
+    schedules: "Time/WorkingSchedules",
+    // P10: Payroll, the payroll groups' (BOSS_PPL_PAYROLL; Rates under it)
+    payroll: "Payroll"
 }
 // P8: the self-service screen (Shared/PeopleSelfService.xml, mounted at People/SelfService and Commons/People/SelfService), whose
 // own grant opens it to a self-service employee without People (BOSS_PPL_SELF)
 const selfServiceLocation = "component://mr-boss/screen/Shared/PeopleSelfService.xml"
+// P10: Time & leave (Projects' time screens mounted under People/Time), which a self-service employee opens by its own grant
+// (BOSS_PPL_TIME); and Projects' root, whose own Today source answers a Projects user's weeks to submit
+const timeLocation = "component://mr-boss/screen/People/Time.xml"
+const projectsLocation = "component://mr-boss/screen/Projects.xml"
 
 // ===== scope =====
 // The user's screen authorizations, read directly (as Insights.js and Commerce.js): screenAuthz reads the groups' rows once, and
@@ -166,7 +175,26 @@ const linkPaths = [
     "Employees/EquipmentDetail",
     // P8: the manager's team and the user's own self-service (design §3)
     "MyTeam",
-    "SelfService"
+    "SelfService",
+    // P9: working schedules and holiday calendars (design §6, §7; the calendars HR's under Time, as the user's call of Nov 11 put
+    // HR's own editors out of Settings)
+    "Time",
+    "Time/WorkingSchedules",
+    "Time/WorkingScheduleDetail",
+    "Time/HolidayCalendars",
+    // P10: Projects' time screens and Rates, mounted under People (design §13)
+    "Time/MyTime",
+    "Time/Timesheets",
+    "Time/TimesheetDetail",
+    "Time/TimeEntries",
+    "Payroll",
+    "Payroll/Rates",
+    // P11: leave policies, their detail, allocations (HR's under Time, as the user's call of Nov 11 put HR's own editors out of
+    // Settings) and balances (design §7)
+    "Time/LeavePolicies",
+    "Time/LeavePolicyDetail",
+    "Time/LeaveAllocations",
+    "Time/LeaveBalances"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
@@ -186,7 +214,7 @@ function sharedContext(p) {
             appRoot: "People",
             linkBase: "//People",
             webBase: "/qapps/People",
-            sharedLinks: {SelfService: "//People/SelfService"}
+            sharedLinks: {SelfService: "//People/SelfService", "Time/MyTime": "//People/Time/MyTime"}
         }
     }
     const userScope = required()
@@ -262,7 +290,10 @@ function checkRecord(p) {
 // classes and pay grades (names only: a grade's amounts are payroll's, PayrollSetupServices.find#PayGrades). P5: staff (one
 // employer's current employees and agents, who an approval rule names to decide). P6: positions (one employer's seats in effect
 // that are not inactive, the vacant ones first, by name; a department narrows them), workLocations (one employer's facilities)
-// and the termination reasons and types (People's lookups, ended values left out).
+// and the termination reasons and types (People's lookups, ended values left out). P9: workingSchedules (one employer's schedules
+// not ended), holidayCalendars (one employer's and the shared ones), timeZones (the zone names) and employments (one employer's
+// current employments, each by its person: the employment a schedule is assigned to). P11: leaveTypes (People's leave types, ended
+// values left out) and leavePolicies (the policies of the employers an HR reader reads, or of one, not closed; by name).
 function withSelected(options, selected, admits, label) {
     if (selected && !options.some(option => option.value === selected) && admits(selected))
         options.push({value: selected, label: label(selected)})
@@ -556,6 +587,170 @@ const choiceSources = {
         }))
         const gradeName = id => one("mantle.humanres.rate.PayGrade", {payGradeId: id})?.description || id
         return withSelected(options, selected, id => readable().condition("payGradeId", id).count() > 0, gradeName)
+    },
+    // P9: one employer's working schedules not ended (organizationPartyId; none without one), by name
+    workingSchedules: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.staff || !p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId))
+            return []
+        const factory = ec.entity.conditionFactory
+        const open = () =>
+            find("mantle.humanres.schedule.WorkingSchedule")
+                .condition("organizationPartyId", p.organizationPartyId)
+                .condition(
+                    factory.makeCondition(
+                        factory.makeCondition("thruDate", "is-null", null),
+                        "or",
+                        factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                    )
+                )
+        let query = open()
+            .selectField(["workingScheduleId", "scheduleName", "timeZone"])
+            .orderBy("^scheduleName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["workingScheduleId", "scheduleName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row => (row.scheduleName || row.workingScheduleId) + (row.timeZone ? " (" + row.timeZone + ")" : "")
+        const options = Array.from(query.list()).map(row => ({value: row.workingScheduleId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => open().condition("workingScheduleId", id).count() > 0,
+            id => label(one("mantle.humanres.schedule.WorkingSchedule", {workingScheduleId: id}) || {workingScheduleId: id})
+        )
+    },
+    // P9: the holiday calendars of one employer (organizationPartyId) and the shared ones, or of every employer a staff reader sees
+    holidayCalendars: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.staff) return []
+        const owners = p?.organizationPartyId
+            ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+            : employerIds(userScope)
+        const factory = ec.entity.conditionFactory
+        const readable = () =>
+            find("mantle.work.effort.WorkEffortCategory")
+                .condition("categoryTypeEnumId", "WcatHoliday")
+                .condition(
+                    factory.makeCondition(
+                        [factory.makeCondition("ownerPartyId", "is-null", null)].concat(
+                            owners.length ? [factory.makeCondition("ownerPartyId", "in", owners)] : []
+                        ),
+                        "or"
+                    )
+                )
+        let query = readable().selectField(["workEffortCategoryId", "description"]).orderBy("^description").limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["workEffortCategoryId", "description"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({
+            value: row.workEffortCategoryId,
+            label: row.description || row.workEffortCategoryId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => readable().condition("workEffortCategoryId", id).count() > 0,
+            id => one("mantle.work.effort.WorkEffortCategory", {workEffortCategoryId: id})?.description || id
+        )
+    },
+    // P9: the time zone names, searched by name (a closed list the server holds)
+    timeZones: (userScope, term, selected) => {
+        const all = Array.from(ec.l10n.getAvailableTimeZones() || [])
+            .map(String)
+            .sort()
+        const label = zone => zone.replace(/_/g, " ")
+        const wanted = term.toLowerCase()
+        const options = all
+            .filter(zone => !wanted || label(zone).toLowerCase().includes(wanted))
+            .slice(0, choiceLimit)
+            .map(zone => ({value: zone, label: label(zone)}))
+        return withSelected(options, selected, zone => all.includes(zone), label)
+    },
+    // P9: one employer's current employments (organizationPartyId, an HR reader's; none without one), each by its person
+    employments: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.hrView || !p?.organizationPartyId || !employerIds(userScope).includes(p.organizationPartyId))
+            return []
+        const factory = ec.entity.conditionFactory
+        const base = () =>
+            find("mantle.party.PartyFromAndRelationship")
+                .condition("relationshipTypeEnumId", "PrtEmployee")
+                .condition("toPartyId", p.organizationPartyId)
+                .conditionDate("fromDate", "thruDate", null)
+                .selectField(["partyRelationshipId", "fromPartyId", "firstName", "lastName"])
+                .orderBy(["^firstName", "^lastName"])
+        let query = base().limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["fromPartyId", "firstName", "lastName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row => [row.firstName, row.lastName].filter(Boolean).join(" ") || row.fromPartyId
+        const options = Array.from(query.list()).map(row => ({value: row.partyRelationshipId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => base().condition("partyRelationshipId", id).count() > 0,
+            id => label(Array.from(base().condition("partyRelationshipId", id).list())[0] || {fromPartyId: id})
+        )
+    },
+    // P11: People's leave types (an HR vocabulary; ended values left out)
+    leaveTypes: (userScope, term, selected) => vocabularyOptions("PeopleLeaveType", term, selected),
+    // P11: the leave policies not closed of the employers an HR reader reads (or of organizationPartyId), by name
+    leavePolicies: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.hrView) return []
+        const owners = p?.organizationPartyId
+            ? employerIds(userScope).filter(partyId => partyId === p.organizationPartyId)
+            : employerIds(userScope)
+        if (!owners.length) return []
+        const factory = ec.entity.conditionFactory
+        const open = () =>
+            find("mantle.humanres.leave.LeavePolicy")
+                .condition("organizationPartyId", "in", owners)
+                .condition(
+                    factory.makeCondition(
+                        factory.makeCondition("thruDate", "is-null", null),
+                        "or",
+                        factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                    )
+                )
+        let query = open()
+            .selectField(["leavePolicyId", "policyName", "organizationPartyId"])
+            .orderBy("^policyName")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["leavePolicyId", "policyName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row =>
+            (row.policyName || row.leavePolicyId) +
+            (owners.length > 1 ? " (" + organizationName(row.organizationPartyId) + ")" : "")
+        const options = Array.from(query.list()).map(row => ({value: row.leavePolicyId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => open().condition("leavePolicyId", id).count() > 0,
+            id => label(one("mantle.humanres.leave.LeavePolicy", {leavePolicyId: id}) || {leavePolicyId: id})
+        )
     }
 }
 // The current values of one of People's HR vocabularies (an Enumeration family whose ended values, thruDate, are left out), in
@@ -906,35 +1101,84 @@ function decisionUrl(row) {
 }
 // get#TodayItems: People's Today source, declared on the People root and on Commons' root (a self-service employee opens no
 // People root, and the shell gathers sources from the roots a user may open, F64; Home and the panel take each service once):
-// the People decisions waiting on the user (find#DueWork's decision, PEOPLE_REQUEST_APPROVE), each opening where it is decided.
-// A user without PEOPLE_REQUEST_APPROVE, and another user's Today, get none of them; the self-service items of later phases
-// (leave starting, a qualification expiring), each answering nothing without PEOPLE_SELF_SERVICE, join here.
+// the People decisions waiting on the user (find#DueWork's decision, PEOPLE_REQUEST_APPROVE), each opening where it is decided;
+// and (P10) the user's own weeks to submit (my week not submitted: TimesheetServices.find#WeeksToSubmit, the rule of Projects'
+// Today), for one who keeps time under People (a People user, or a self-service employee by the time area's own grant) and does
+// not open Projects, whose own source answers them there, each opening the week in People's My time. Another user's Today gets
+// none. The self-service items of later phases (leave starting, a qualification expiring) join here.
 function today(p) {
     const label = "People"
     if (!ec.user.userId || (p.userId && p.userId !== ec.user.userId)) return {items: [], label}
+    const items = []
+    const item = values =>
+        Object.assign(
+            {
+                workEffortId: null,
+                requestId: null,
+                dueDate: null,
+                startDate: null,
+                endDate: null,
+                allDay: false,
+                priority: null,
+                statusId: null,
+                assignees: [],
+                canUpdate: false,
+                hasCallLink: false,
+                record: null
+            },
+            values
+        )
     // the decisions are a decider's (PEOPLE_REQUEST_APPROVE), with a party to decide as
-    if (!ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") || !ec.user.userAccount?.partyId) return {items: [], label}
-    const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
-    return {
-        label,
-        items: Array.from(found.dueWork || []).map(row => ({
-            kind: "approval",
-            workEffortId: null,
-            requestId: null,
-            title: row.title,
-            dueDate: null,
-            startDate: null,
-            endDate: null,
-            allDay: false,
-            priority: null,
-            statusId: null,
-            assignees: [],
-            canUpdate: false,
-            hasCallLink: false,
-            url: decisionUrl(row),
-            record: null
-        }))
+    if (ec.user.hasPermission("PEOPLE_REQUEST_APPROVE") && ec.user.userAccount?.partyId) {
+        const found = call("mantle.humanres.PeopleServices.find#DueWork", {kinds: "decision", pageSize: 20})
+        for (const row of Array.from(found.dueWork || []))
+            items.push(item({kind: "approval", title: row.title, url: decisionUrl(row)}))
     }
+    if (keepsTimeHere()) {
+        try {
+            for (const week of Array.from(lib.probe("mantle.work.TimesheetServices.find#WeeksToSubmit", {}).weekList || [])) {
+                const hours = ec.l10n.format(week.hours, "#,##0.##")
+                const text = week.returned
+                    ? "Returned: fix and submit your week of ${week} (${hours} h)"
+                    : "Submit your week of ${week} (${hours} h)"
+                items.push(
+                    item({
+                        kind: "timesheet",
+                        timesheetId: week.timesheetId,
+                        weekStart: week.weekStart,
+                        hours: week.hours,
+                        returned: week.returned,
+                        overdue: week.overdue,
+                        title: ec.resource.expand(ec.l10n.localize(text), "", {week: week.weekText, hours}),
+                        url: "/qapps/People/Time/MyTime?weekDate=" + encodeURIComponent(week.weekStart),
+                        record: {
+                            recordEntityName: "mantle.work.time.Timesheet",
+                            recordId: week.timesheetId,
+                            recordName: ec.resource.expand(ec.l10n.localize("Week of ${week}"), "", {week: week.weekText})
+                        }
+                    })
+                )
+            }
+        } catch (error) {
+            ec.logger.error("People Today of " + ec.user.userId + ": the weeks to submit were left out: " + error.message)
+        }
+    }
+    return {label, items}
+}
+// P10: whether People's time area opens to the user: through the root, or by the area's own grant for a self-service employee.
+function timeAreaOpens(grants = rootGrants()) {
+    if (grants.systemAdmin) return true
+    if (grants.read) return areaGrant(grants, "Time")
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(timeLocation, screenAuthz(groupIds)).allowed.length > 0
+}
+// P10: whether the user keeps their time under People and not in Projects: People's time area opens to them and Projects' root
+// does not (its own Today source answers a Projects user's weeks to submit).
+function keepsTimeHere() {
+    const grants = rootGrants()
+    if (grants.systemAdmin || !timeAreaOpens(grants)) return false
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    return groupIds.length > 0 && screenGrants(projectsLocation, screenAuthz(groupIds)).allowed.length === 0
 }
 // get#SelfServiceContext: the links of Shared/PeopleSelfService under the app that mounts it (People or Commons): the user's own
 // employee record (People's mount for a People user, else Commons'), and under People the approvals and Home. Another root is
@@ -943,12 +1187,15 @@ function selfServiceContext(p) {
     if (!["People", "Commons"].includes(p.appRoot)) denied("PEOPLE_CONTEXT", "Self-service is not available here")
     const partyId = ec.user.userAccount?.partyId || null
     const record = partyId ? employee360Link({partyId}) : {url: null}
-    const peopleUser = rootGrants().read
+    const grants = rootGrants()
+    const peopleUser = grants.read
     return {
         appRoot: p.appRoot,
         employee360Url: record.url || null,
         approvalsUrl: peopleUser ? "/qapps/People/Approvals" : null,
-        peopleHomeUrl: peopleUser ? "/qapps/People/Home" : null
+        peopleHomeUrl: peopleUser ? "/qapps/People/Home" : null,
+        // P10: the user's own week, under People's time area when it opens to them (the root or the area's own grant)
+        myTimeUrl: timeAreaOpens(grants) ? "/qapps/People/Time/MyTime" : null
     }
 }
 

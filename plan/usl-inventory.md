@@ -494,10 +494,10 @@ Added in Accounting P17 (returns and order changes):
 | PayrollServices | delete#PayrollAdjustmentAndDetail |  |  |
 | PayrollServices | create#PayrollInvoice |  |  |
 | PositionServices | get#PartyEmployersAndPositionClasses |  |  |
-| RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money |
-| RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates |
+| RateServices | create#RateAmount | Projects/Projects/NewProject; Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; Projects/Projects/NewProject/Money; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
+| RateServices | update#RateAmount | Projects/Projects/ProjectDetail/Money; Projects/Billing/Rates; People/Payroll/Rates | Projects/Billing/Rates; People/Payroll/Rates (People P10, Projects' screen mounted under People) |
 
-**Added** (People P1 to P7, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
+**Added** (People P1 to P11, Nov 11, 2026; [impl-people](impl-people.md)): the People services Mantle gained, each with
 the screens that call it.
 
 | Service XML | Service | Designed in | Implemented in |
@@ -567,6 +567,29 @@ the screens that call it.
 | ProcessServices | store#ProcessStep, instantiate#WorkProcess | People/Employees/ChecklistTemplates (MT-03's first part); Maintenance/Procedures (its P6) | none directly: People's store#ChecklistStep and start#Checklist call WorkProcesses.js after their own checks (People P7) |
 | ProcessServices | check#ManagedWork | (the generic task and work-effort services) | none: TaskServices update#Task, set#TaskDates, set#TaskStatus, move#Task, set#TaskRecurrence and WorkEffortServices delete#WorkEffort, add#, remove# and replace#WorkEffortParty refuse managed work with it (People P7) |
 | IdentityServices | request#Provisioning, request#AccessEnd | People/Employees/HireEmployee; People/Employees/Employee360 | People's tx-commit rules (mr-boss service/PeopleLifecycle.secas.xml) and Employee360's Request access again, through ironstone.admin.LifecycleServices; Admin/Users/LifecycleDetail retries their waiting steps (People P7) |
+| ScheduleServices | find#Schedules | People/Time/WorkingSchedules | People/Time/WorkingSchedules (Schedules) (People P9) |
+| ScheduleServices | get#Schedule | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (the header, Week, Assignments) (People P9) |
+| ScheduleServices | store#Schedule | People/Time/WorkingSchedules; People/Time/WorkingScheduleDetail | People/Time/WorkingSchedules (NewSchedule, Copy); People/Time/WorkingScheduleDetail (Edit schedule, End schedule) (People P9) |
+| ScheduleServices | store#ScheduleLine | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Week: Add working hours, Change, End) (People P9) |
+| ScheduleServices | assign#Schedule | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Assign, End for employee; Employment.js, an EmploymentChange of kind EckSchedule) (People P9) |
+| ScheduleServices | get#Holidays | People/Time/HolidayCalendars (designed under People/Settings) | People/Time/HolidayCalendars (Calendars, Holidays) (People P9) |
+| ScheduleServices | store#HolidayCalendar, store#Holiday | People/Time/HolidayCalendars (designed under People/Settings) | People/Time/HolidayCalendars (New calendar, Rename; Add holiday, Change, Remove) (People P9) |
+| ScheduleServices | get#CapacityPreview | People/Time/WorkingScheduleDetail | People/Time/WorkingScheduleDetail (Capacity preview) (People P9) |
+| RateServices | get#CostingRate | Rates (read only); Maintenance's labor cost (its P11); Projects' cost reports (their owner's later work) | mantle/work/ProductionShopFloor.js (a production labor event's rate, in place of its own RaprProductionCost lookup; the person's employer's row before a shared one, P10's review) (People P10) |
+| RateServices | find#CostingRates, store#CostingRate, end#CostingRate | Accounting/Settings/CostingPolicies (LaborCostingRates) | Accounting/Settings/CostingPolicies (Labor costing rates, by organization since P10's review); find#CostingRates also in ironstone.projects.BillingServices.find#RateRows (Rates' Labor costing rows the user reads) (People P10) |
+| RateServices | migrate#ProductionCostRates | (a data update) | data/ProductionShopFloorData.xml: Manufacturing's RaprProductionCost rows moved to RaprCost on a load (People P10) |
+| TimesheetServices | find#WeeksToSubmit | Today's "my week not submitted"; SelfService's missing-week card | mantle.work.ProjectServices.get#ProjectTodayItems (Projects' Today); ironstone.people.ContextServices.get#TodayItems (People's Today, People and Commons roots); PeopleServices.get#SelfService's weeksToSubmit (Shared/PeopleSelfService) (People P10) |
+| TimesheetServices | get#LineReports | People/Time/Timesheets (Missing); People/Time/MyTime and TimeEntries (the person pickers) | find#Timesheets' missing list (People/MyTeam's last week, People/Home's Weeks not submitted, Timesheets' Missing: the reports who keep time, keeperIdList, P10's review); People/MyTeam (keeperIdList: last week only for those who keep time); ironstone.projects.TimeServices.get#TimePeople (People P10) |
+| LeaveServices | find#Policies | People/Time/LeavePolicies (designed under People/Settings) | People/Time/LeavePolicies (Policies) (People P11) |
+| LeaveServices | get#Policy | People/Time/LeavePolicyDetail (designed under People/Settings) | People/Time/LeavePolicyDetail (the header, Policy terms, Accrual and carry-over, Assignments, Blocked days); People/Time/LeaveAllocations (the policy chosen) (People P11) |
+| LeaveServices | store#Policy | People/Time/LeavePolicies; People/Time/LeavePolicyDetail | People/Time/LeavePolicies (NewPolicy); People/Time/LeavePolicyDetail (Edit terms, Close policy) (People P11) |
+| LeaveServices | store#AccrualRule | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Accrual and carry-over: Add step, Change, End) (People P11) |
+| LeaveServices | assign#Policy | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Assign: an employee, a department's or the employer's; End for an employee) (People P11) |
+| LeaveServices | store#BlockedInterval | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Blocked days: Add blocked days, Cancel) (People P11) |
+| LeaveServices | preview#Allocation, allocate#Leave | People/Time/LeaveAllocations (designed under People/Settings) | People/Time/LeaveAllocations (AllocationPreview, the results, Allocate) (People P11) |
+| LeaveServices | get#Balances, find#Ledger | People/Time/LeaveBalances | People/Time/LeaveBalances (BalancesAndLedger: the balances, an employee's movements with the CSV export and their historical leave) (People P11) |
+| LeaveServices | get#MyBalances | People/SelfService | Shared/PeopleSelfService (My leave balances); the Assistant's people_my_leave_balances tool (People P11) |
+| LeaveServices | run#Accrual, run#AccrualJob, accrue#Assignment | People/Time/LeavePolicyDetail | People/Time/LeavePolicyDetail (Run accrual); the run_LeaveAccrual ServiceJob (People P11) |
 
 ## Ledger (81 services)
 
@@ -1348,9 +1371,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | add#TaskTime | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | update#TaskFromTime |  | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | update#ProjectTimeFromTask |  |  |
-| TimeServices | store#TimeEntry | Projects/Home; Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries; Maintenance/WorkOrders/WorkOrderDetail | Commons/Tasks/TaskDetail; Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
+| TimeServices | store#TimeEntry | Projects/Home; Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries; Maintenance/WorkOrders/WorkOrderDetail | Commons/Tasks/TaskDetail; Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; People/Time/MyTime; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
 | TimeServices | create#TimeEntryClockIn | Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries | Commons/Tasks/TaskDetail |
-| TimeServices | delete#TimeEntry | Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; Projects/WorkItems/WorkItemDetail |
+| TimeServices | delete#TimeEntry | Projects/WorkItems/WorkItemDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; People/Time/MyTime; People/Time/TimeEntries | Commons/Tasks/TaskDetail; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; Projects/WorkItems/WorkItemDetail; People/Time/MyTime; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
 | TimeServices | delete#TimeEntries |  |  |
 | TimeServices | store#TimeEntryWorkEffort | Projects/Time/TimeEntries |  |
 | TimeServices | store#WorkEffortPartyTime | Projects/Time/TimeEntries |  |
@@ -1501,28 +1524,28 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | set#TaskRecurrence |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskSprint |  | Projects/QuickCreate; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail; People/Tasks/WorkItemDetail (a checklist task, on the Commons rule; refuses managed work, MANAGED_WORK) (People P7) |
-| TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source |
-| TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the work order's supervisor; with it sync#ProductionLaborCost writes the labor cost events, Manufacturing P10) |
-| TimesheetServices | find#Timesheets | People/Time/Timesheets | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets |
-| TimesheetServices | get#PartyTimesheet | People/Time/MyTime | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#PartyWeek | People/Time/MyTime | Projects/Time/MyTime |
+| TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
+| TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source; People/Time/TimeEntries (People P10, Projects' screen mounted under People) |
+| TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the work order's supervisor; with it sync#ProductionLaborCost writes the labor cost events, Manufacturing P10); People/Time/MyTime; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
+| TimesheetServices | find#Timesheets | People/Time/Timesheets | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets; People/Time/Timesheets (People P10, Projects' screen mounted under People) |
+| TimesheetServices | get#PartyTimesheet | People/Time/MyTime | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry; People/Time/MyTime (People P10, Projects' screen mounted under People) |
+| TimesheetServices | get#PartyWeek | People/Time/MyTime | Projects/Time/MyTime; People/Time/MyTime (People P10, Projects' screen mounted under People) |
 | TimesheetServices | get#TimeKeepers |  | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/TeamPlanner; Projects/Time/Import/Source; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#Timer | Manufacturing/ShopFloor; Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Manufacturing/ShopFloor/Station, OperationExecution and ProductionTime (through get#ShopFloorQueue, get#ProductionOperation and get#ProductionTime, Manufacturing P10) |
+| TimesheetServices | get#Timer | Manufacturing/ShopFloor; Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Manufacturing/ShopFloor/Station, OperationExecution and ProductionTime (through get#ShopFloorQueue, get#ProductionOperation and get#ProductionTime, Manufacturing P10); People/Time/MyTime (People P10, Projects' screen mounted under People) |
 | TimesheetServices | get#TimesheetAccess |  | Projects/QuickCreate; Projects/Resources/PersonDetail/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#TimesheetPolicy |  | Projects/Resources/PersonDetail/Time; Projects/Settings/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#TimesheetSummary | People/Employees/Employee360; People/Time/TimesheetDetail | Projects/Time/TimesheetDetail; Projects/Time/TimesheetPrint |
+| TimesheetServices | get#TimesheetSummary | People/Employees/Employee360; People/Time/TimesheetDetail | Projects/Time/TimesheetDetail; Projects/Time/TimesheetPrint; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
 | TimesheetServices | get#WeekRange |  | Projects/Resources/PersonDetail/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#WorkTypes |  | Projects/Billing/Rates; Projects/QuickCreate; Projects/Settings/Time; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | reopen#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (with it sync#ProductionLaborCost reverses the labor cost events, Manufacturing P10) |
-| TimesheetServices | return#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
-| TimesheetServices | send#MissingTimeReminders | People/MyTeam; People/Time/Timesheets | Projects/Time/Timesheets |
-| TimesheetServices | start#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail; Manufacturing/ShopFloor/Station and OperationExecution (through start#ProductionOperation: the switch from a timer elsewhere after the confirmation, Manufacturing P10) |
-| TimesheetServices | stop#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail; Manufacturing/ShopFloor/OperationExecution and ProductionTime (Stop timer; through pause# and complete#ProductionOperation, Manufacturing P10) |
+| TimesheetServices | reopen#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (with it sync#ProductionLaborCost reverses the labor cost events, Manufacturing P10); People/Time/MyTime; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
+| TimesheetServices | return#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; People/Time/MyTime; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
+| TimesheetServices | send#MissingTimeReminders | People/MyTeam; People/Time/Timesheets | Projects/Time/Timesheets; People/MyTeam; People/Time/Timesheets (People P10, Projects' screen mounted under People) |
+| TimesheetServices | start#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail; Manufacturing/ShopFloor/Station and OperationExecution (through start#ProductionOperation: the switch from a timer elsewhere after the confirmation, Manufacturing P10); People/Time/MyTime (People P10, Projects' screen mounted under People) |
+| TimesheetServices | stop#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail; Manufacturing/ShopFloor/OperationExecution and ProductionTime (Stop timer; through pause# and complete#ProductionOperation, Manufacturing P10); People/Time/MyTime (People P10, Projects' screen mounted under People) |
 | TimesheetServices | store#TimesheetPolicy |  | Projects/Settings/Time |
 | TimesheetServices | store#WorkTypes |  | Projects/Settings/Time |
-| TimesheetServices | submit#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the week of a work order's time, Manufacturing P10) |
-| TimesheetServices | update#Timer | Manufacturing/ShopFloor/OperationExecution; People/Time/MyTime | Projects/Time/MyTime; — not used by Manufacturing: OperationExecution starts and stops the person timer through start#ProductionOperation and stop#Timer (Manufacturing P10) |
+| TimesheetServices | submit#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the week of a work order's time, Manufacturing P10); People/Time/MyTime; People/Time/TimesheetDetail (People P10, Projects' screen mounted under People) |
+| TimesheetServices | update#Timer | Manufacturing/ShopFloor/OperationExecution; People/Time/MyTime | Projects/Time/MyTime; — not used by Manufacturing: OperationExecution starts and stops the person timer through start#ProductionOperation and stop#Timer (Manufacturing P10); People/Time/MyTime (People P10, Projects' screen mounted under People) |
 | WorkItemImportServices | import#WorkItems |  | Projects/WorkItems/Import/Result |
 | WorkItemImportServices | parse#WorkItemFile |  | Projects/WorkItems/Import/Mapping; Projects/WorkItems/Import/Source |
 | WorkItemImportServices | preview#WorkItems |  | Projects/WorkItems/Import/Preview |
@@ -1531,7 +1554,7 @@ Existing capacity service mapped by the People design (Oct 31, 2026); source ver
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders |  |
+| ResourceServices | get#PartyCapacity | People/Time/WorkingScheduleDetail; Maintenance/WorkOrders | People/Time/WorkingScheduleDetail (Capacity preview, through ScheduleServices.get#CapacityPreview); Projects/Resources/PersonDetail and TeamPlanner and the timesheets' expected hours (get#TeamPlan, TimesheetServices.get#WeekDays), a People working schedule read first (People P9, F23) |
 
 ## General (2 services)
 

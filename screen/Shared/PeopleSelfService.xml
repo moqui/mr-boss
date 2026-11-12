@@ -22,7 +22,10 @@ along with this software (see the LICENSE.md file). If not, see
     added, changed and ended here (template/PeopleEmergencyContacts.xml). Open my employee record is the primary action (their
     Employee360 under People for a People user, else under Commons). A self-service employee without People opens it under either
     root by its own grant (BOSS_PPL_SELF, non-inheritable, data/BossSetupData.xml); every other People screen stays refused to them.
-    The clock (P13), leave balances and requests (P11, P12), payslips (P26) and claims (P15) join with their phases. -->
+    P10: My time (the user's own week, People's time area) and the missing-week card, the user's own weeks to submit
+    (get#SelfService's weeksToSubmit, the rule of Projects' Today), opening the oldest in My time. P11: My leave balances, the user's own
+    (mantle.humanres.LeaveServices.get#MyBalances, which takes no party), each leave type's balance and what is available, by the
+    policy in effect. The clock (P13), leave requests (P12), payslips (P26) and claims (P15) join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
@@ -52,6 +55,10 @@ along with this software (see the LICENSE.md file). If not, see
             taskRows = Array.from(tasksFound?.dueWork || [])
             openRequestText = String(self?.openRequestCount || 0)
             openTaskText = String(self?.openTaskCount || 0)
+            // P10: the user's own weeks to submit, the oldest opened in My time
+            weekRows = Array.from(self?.weeksToSubmit || [])
+            weeksText = String(weekRows.length)
+            weekLink = links?.myTimeUrl ? links.myTimeUrl + (weekRows.length ? '?weekDate=' + encodeURIComponent(weekRows[0].weekStart) : '') : null
             // the emergency contacts: the user's own, which they change here (Mantle checks again)
             contactOwnerPartyId = self?.partyId || null
             contactOwnerName = self?.personName || ''
@@ -60,6 +67,13 @@ along with this software (see the LICENSE.md file). If not, see
             canEditContacts = available
             titleText = self?.preferredName ? self.personName + ' (' + self.preferredName + ')' : (self?.personName || '')
         ]]></script>
+        <!-- P11: the user's own leave balances (self scope: get#MyBalances takes no party) -->
+        <if condition="available">
+            <service-call name="mantle.humanres.LeaveServices.get#MyBalances" out-map="leaveFound" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="leaveRows" from="Array.from(leaveFound?.balances || [])"/>
+        <set field="leaveEmployers" from="new Set(leaveRows.map(row => row.organizationPartyId)).size"/>
     </actions>
 
     <widgets>
@@ -87,6 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     btn-type="primary" icon="sym_o_badge" condition="links?.employee360Url"/>
                             <link url="${links.approvalsUrl}" url-type="plain" text="Approvals" link-type="anchor-button"
                                     icon="sym_o_approval" condition="links?.approvalsUrl"/>
+                            <link url="${links.myTimeUrl}" url-type="plain" text="My time" link-type="anchor-button"
+                                    icon="sym_o_schedule" condition="links?.myTimeUrl"/>
                         </container>
                     </container>
                 </container>
@@ -95,6 +111,10 @@ along with this software (see the LICENSE.md file). If not, see
                 <dashboard min-width="160">
                     <number-card title="Open requests" value="${openRequestText}" icon="sym_o_pending_actions" size="sm"/>
                     <number-card title="My People tasks" value="${openTaskText}" icon="sym_o_task_alt" size="sm"/>
+                    <!-- P10: the missing-week card -->
+                    <number-card title="Weeks to submit" value="${weeksText}" icon="sym_o_schedule_send" size="sm" link="${weekLink}"
+                            condition="weekLink"/>
+                    <number-card title="Weeks to submit" value="${weeksText}" icon="sym_o_schedule_send" size="sm" condition="!weekLink &amp;&amp; weekRows.length"/>
                 </dashboard>
                 <container-box>
                     <box-header title="My employment"/>
@@ -178,6 +198,31 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${requestMoreText}" type="p" style="text-caption m-muted q-px-md" condition="requestMoreText"/>
                         <label text="Requests you make in People show here with their state." type="p" style="m-muted q-pa-md"
                                 condition="!requestRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <!-- P11: My leave balances: each leave type's balance and what is available now, by the policy in effect -->
+                <container-box>
+                    <box-header title="My leave balances"/>
+                    <box-body-nopad>
+                        <form-list name="MyLeaveBalances" list="leaveRows" skip-form="true" paginate="false" condition="leaveRows.length">
+                            <field name="leaveTypeText"><default-field title="Leave"><display/></default-field></field>
+                            <field name="organizationName" hide="leaveEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                            <field name="available" align="right">
+                                <default-field title="Available"><display text="${available} ${unitText.toLowerCase()}"/></default-field>
+                            </field>
+                            <field name="balance" align="right">
+                                <default-field title="Balance" tooltip="Granted, accrued and adjusted, less what was taken and what expired">
+                                    <display text="${balance} ${unitText.toLowerCase()}"/></default-field>
+                            </field>
+                            <field name="policyName"><default-field title="Policy"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="leaveTypeText"/><field-ref name="policyName"/></column>
+                                <column><field-ref name="available"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No leave policy applies to you yet: HR assigns one with your entitlement." type="p" style="m-muted q-pa-md"
+                                condition="!leaveRows.length"/>
                     </box-body-nopad>
                 </container-box>
 

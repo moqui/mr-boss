@@ -2,7 +2,8 @@
 
 Oct 21, 2026 — draft; the inventories' **Designed in** columns filled from it (§13); the review's answers to the
 open questions folded in (§16, §17); as built through P11 (Oct 22); Nov 1, 2026 — review rows folded in;
-consistency pass
+consistency pass; Nov 11, 2026 — impl-people P9 (owner contract): capacity reads a person's People working schedule first (§15
+PersonDetail)
 
 **IronStone Projects** is the app for project managers and services staff (initial-design's app table). This file
 adds three audiences to that row: the software teams who deliver the work (developers, testers, release
@@ -1740,6 +1741,28 @@ mounts TimeEntries as ProductionTime at `Manufacturing/WorkOrders/WorkOrderDetai
 | People | MyTime, Timesheets, TimesheetDetail and TimeEntries with the pay context (hours for pay, leave and attendance beside the week); Rates: employee pay rates read with `PAYROLL_VIEW`, set with `PAYROLL_EDIT`; costing rates (proposed `RaprCost`) read-only | the employer's workers the HR or payroll user may see | submit, approve, return, reopen; no rate columns without `PAYROLL_VIEW`, and rates set only with `PAYROLL_EDIT` | hours for pay |
 | Manufacturing (ProductionTime) | TimeEntries of a run's operations | the run and its operations | enter and correct labor under the Projects services; approval at the timesheet | labor on production runs |
 
+**As built for People (Nov 11, 2026; impl-people P10, F57, owner contract).** The screens are mounted as they are at
+`People/Time/{Timesheets, MyTime, TimeEntries, TimesheetDetail, TimesheetPrint, TeamTimesheet, MyTimeTui, Import}` and
+`People/Payroll/Rates`, and read their context from the mount: `ironstone.projects.TimeServices` takes `appRoot` for links
+only (`get#TimeLinks`: the time screens of the mount; a work item's or a project's link in Projects only for a user who
+opens Projects), and the screens' own paths (MyTime's terminal container, TimeEntries' import, EditEntry's returns to
+MyTime, the prints) follow `appRoot`. The group-name checks are permissions: `TIME_ENTRY_RATE` for money,
+`TIMESHEET_APPROVE` for the projects a manager sees and the approver's default list. The person pickers and
+Timesheets' Missing list add the user's live reports (`mantle.work.TimesheetServices.get#LineReports`) to the time
+keepers of the projects they manage; a line manager approves a report's week under the organization's `line` policy
+(People's demo sets it on Retail; Services, the organization of Projects' demo, keeps `project`). Rates admits a holder
+of `PAYROLL_VIEW` without `TIME_ENTRY_RATE` (`ironstone.projects.BillingServices.check#RateAccess`): the employees' pay
+rates of their People employers alone, set with `PAYROLL_EDIT` on no project, no client billing; and a third list,
+Labor costing (`RaprCost`), read only to both, which Accounting's CostingPolicies maintains. A timesheet's record link
+opens People's TimesheetDetail for a user without Projects. Projects' own behavior is unchanged. As reviewed (the user's
+calls of Nov 11, 2026): the four timesheet topics link through Commons' record-link resolver (`/apps/Commons/openRecord`,
+over `ironstone.commons.PaletteServices.get#RecordLink`: the timesheet, or the person's week, docType
+`MantleTimesheetWeek`), which opens Projects' screen for a Projects user, as before, and People's for one who keeps time
+under People; a line manager's missing list and My team take only the reports who keep time (`get#LineReports`'
+`keeperIdList`: time kept this week or in the eight before, or the policy's new key `rq`, every employee keeps a weekly
+timesheet, which TimeSettings offers as a check box); the labor costing rows of Rates are those of the user's
+organizations and the shared ones.
+
 ### MyTime
 
 - **Layout:** list as `.qvue`, the week of one person (me; a manager may open someone else's). A header: the week
@@ -1939,6 +1962,10 @@ now owns the full HR record, registered in [crosscut §3.4](design-crosscut.md#3
 PersonDetail uses its authorized public work/qualification projection and links to Employee360 where allowed;
 resource/manager access never grants private compensation, review notes or grievance data. People schedules and
 approved leave extend the existing capacity API (PE-06), retaining the current fallback for other resources. As built
+(impl-people P9, an owner contract): `get#PartyCapacity` reads a person's People working schedule first for the days it plans
+(source `schedule`; the overview says "Their working schedule (People)"), by the interval's actual instants on the day it starts in
+the schedule's zone, with the schedule's holiday calendar beside the organization's holidays; a person with no schedule keeps the
+WetAvailable and policy capacity. As built
 (impl-people P2, an owner contract): the header's "Employee record" link from
 `ironstone.people.ContextServices.get#Employee360Link`, People's mount for a viewer whose People scope admits the person as
 staff or team, Commons' for the person themselves, else none; Projects mounts no Employee360 and has no row of its context.

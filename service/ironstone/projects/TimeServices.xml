@@ -22,21 +22,55 @@ along with this software (see the LICENSE.md file). If not, see
 
     P6b adds TimeEntries and ProjectTime (find#TimeEntryRows over mantle.work.TimeServices.find#TimeEntries, the entry dialog, the
     bulk changes within the lock, the project's totals and Update rates), WorkItemDetail's All time, and TimeSettings (the policy
-    and the work types offered). Those who manage money are the Projects managers and ADMIN (TIME_ENTRY_RATE): only they get rates
-    and amounts, and only they change the money of a submitted week's entries. The time import is TimeImportServices.xml. -->
+    and the work types offered). Those who manage money hold TIME_ENTRY_RATE (the Projects managers and ADMIN): only they get rates
+    and amounts, and only they change the money of a submitted week's entries. The time import is TimeImportServices.xml.
+
+    People P10 (impl-people P10, F57; design-projects §8 "Context passed", owner contract): the time screens are mounted under People
+    as they are (People/Time), so these services take the mount from appRoot for their links only (get#TimeLinks: the time screens
+    of the mount; a work item's and a project's link in Projects, for a user who opens Projects), never authority; the checks
+    are permissions, not group names (TIME_ENTRY_RATE for money, TIMESHEET_APPROVE for everyone's time: the projects a Projects
+    manager sees); and the people the user may open are their own, the time keepers of the projects they manage and their live
+    reports (mantle.work.TimesheetServices.get#LineReports), whose weeks they approve under the organization's line policy. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+
+    <!-- ========== The mount's links (People P10) ========== -->
+
+    <service verb="get" noun="TimeLinks" allow-remote="false">
+        <description>The links of the time screens under the mount (appRoot People or Projects, else Projects; links only, never
+            authority): timeBase, the mount's time screens (/qapps/People/Time or /qapps/Projects/Time); recordBase, Projects'
+            root for a work item's or a project's link, null for a user who does not open Projects (their own grants on its root,
+            read directly as the Commons record links read them, so a grant inherited from the calling screen does not count).</description>
+        <in-parameters><parameter name="appRoot"/></in-parameters>
+        <out-parameters><parameter name="timeBase"/><parameter name="recordBase"/></out-parameters>
+        <actions><script><![CDATA[
+            timeBase = '/qapps/' + (appRoot === 'People' ? 'People' : 'Projects') + '/Time'
+            recordBase = null
+            if (!ec.user.userId) return
+            const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+            if (!groupIds.length) return
+            const root = 'component://mr-boss/screen/Projects.xml'
+            const rows = Array.from(ec.entity.find('moqui.security.ArtifactAuthzCheckView').condition('userGroupId', 'in', groupIds)
+                    .condition('artifactTypeEnumId', 'AT_XML_SCREEN').condition('authzActionEnumId', 'in', ['AUTHZA_ALL', 'AUTHZA_VIEW'])
+                    .disableAuthz().list()).filter((row) => row.nameIsPattern === 'Y' ? new RegExp(`^(?:${row.artifactName})$`).test(root) : row.artifactName === root)
+            const opens = rows.some((row) => row.authzTypeEnumId === 'AUTHZT_ALWAYS')
+                    || (rows.some((row) => row.authzTypeEnumId === 'AUTHZT_ALLOW') && !rows.some((row) => row.authzTypeEnumId === 'AUTHZT_DENY'))
+            if (opens) recordBase = '/qapps/Projects'
+        ]]></script></actions>
+    </service>
 
     <!-- ========== MyTime ========== -->
 
     <service verb="get" noun="MyWeek">
         <description>MyTime's week (mantle.work.TimesheetServices.get#PartyWeek) of the user, or of a person the user approves, with
             the rows added to it, each row's link; the running timer (own week); the work types the person's organization offers
-            (mantle.work.TimesheetServices.get#WorkTypes, Settings' Time); the people the user may open (their own and, for an approver, the time keepers of the projects
-            they manage; ADMIN every time keeper); and lastWeekItemCount (the items with time in the week before, for Copy last
-            week's rows). serverNow: the server's clock, for the ticking timer.</description>
+            (mantle.work.TimesheetServices.get#WorkTypes, Settings' Time); the people the user may open (get#TimePeople: their own, the
+            time keepers of the projects they manage and their live reports; ADMIN every time keeper); and lastWeekItemCount (the
+            items with time in the week before, for Copy last week's rows). serverNow: the server's clock, for the ticking timer.
+            The links follow the mount (appRoot, get#TimeLinks).</description>
         <in-parameters>
             <parameter name="partyId"/>
             <parameter name="weekDate"/>
+            <parameter name="appRoot"/>
         </in-parameters>
         <out-parameters><parameter name="myWeek" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -57,8 +91,9 @@ along with this software (see the LICENSE.md file). If not, see
             const week = ec.service.sync().name('mantle.work.TimesheetServices.get#PartyWeek').parameters({partyId: person, date: range.weekStartDay,
                 extraWorkEffortIds: extra}).call()?.week
             if (ec.message.hasError() || !week) return
-            const itemUrl = (id) => '/qapps/Projects/WorkItems/WorkItemDetail?workEffortId=' + encodeURIComponent(id)
-            const projectUrl = (id) => '/qapps/Projects/Projects/ProjectDetail?workEffortId=' + encodeURIComponent(id)
+            const links = ec.service.sync().name('ironstone.projects.TimeServices.get#TimeLinks').parameters({appRoot: appRoot || null}).call() || {}
+            const itemUrl = (id) => links.recordBase ? links.recordBase + '/WorkItems/WorkItemDetail?workEffortId=' + encodeURIComponent(id) : null
+            const projectUrl = (id) => links.recordBase ? links.recordBase + '/Projects/ProjectDetail?workEffortId=' + encodeURIComponent(id) : null
             for (const row of week.rowList) {
                 row.url = row.workEffortId ? (row.workEffortId === row.rootWorkEffortId ? projectUrl(row.workEffortId) : itemUrl(row.workEffortId)) : null
                 row.canRemove = !!row.added && !row.total
@@ -69,19 +104,9 @@ along with this software (see the LICENSE.md file). If not, see
                 // the work types the person's organization offers (Settings, Time: mantle.work.TimesheetServices.get#WorkTypes)
                 workTypeOptions = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').parameters({partyId: person}).call()?.offeredList || [])
                         .map((type) => ({value: type.enumId, label: type.label}))
-                // the people: mine, and for an approver the time keepers of the projects they manage
-                const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
-                const isAdmin = ec.user.isInGroup('ADMIN')
-                const managed = Array.from(vis.managedProjectIds || [])
-                let keepers = []
-                if (isAdmin || managed.length) keepers = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#TimeKeepers')
-                        .parameters(isAdmin ? {} : {projectIds: managed}).call()?.partyIdList || [])
-                const ids = Array.from(new Set([me].concat(keepers).concat([person]).filter((id) => id)))
-                const names = {}
-                if (ids.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', ids).list())
-                    names[party.partyId] = party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId
-                personOptions = ids.map((id) => ({value: id, label: (names[id] || id) + (id === me ? ' (' + L('me') + ')' : '')}))
-                        .sort((a, b) => (a.value === me ? -1 : b.value === me ? 1 : String(a.label).localeCompare(String(b.label))))
+                // the people: mine, the time keepers of the projects I manage and my live reports (get#TimePeople)
+                personOptions = Array.from(ec.service.sync().name('ironstone.projects.TimeServices.get#TimePeople').parameters({partyId: person}).call()?.personOptions || [])
+                        .map((option) => ({value: option.key, label: option.text}))
                 const lastFrom = new Date(week.fromDate - 7 * 86400000)
                 lastWeekItemCount = new Set(Array.from(ec.entity.find('mantle.work.time.TimeEntry').condition('partyId', person)
                         .condition('fromDate', 'greater-equals', lastFrom).condition('fromDate', 'less-than', new Date(week.fromDate))
@@ -92,7 +117,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (timer) timer.startedText = ec.l10n.format(String(timer.fromDate), 'HH:mm')
             myWeek = Object.assign(week, {timer: timer, workTypeOptions: workTypeOptions, personOptions: personOptions.length > 1 ? personOptions : [],
                 lastWeekItemCount: lastWeekItemCount, serverNow: Number(String(ec.user.nowTimestamp)),
-                timesheetUrl: week.timesheet.timesheetId ? '/qapps/Projects/Time/TimesheetDetail?timesheetId=' + encodeURIComponent(week.timesheet.timesheetId) : null,
+                timesheetUrl: week.timesheet.timesheetId ? links.timeBase + '/TimesheetDetail?timesheetId=' + encodeURIComponent(week.timesheet.timesheetId) : null,
                 approvedText: week.timesheet.approvedDate ? ec.l10n.format(String(week.timesheet.approvedDate), 'MMM d, h:mm a') : null,
                 submittedText: week.timesheet.submittedDate ? ec.l10n.format(String(week.timesheet.submittedDate), 'MMM d, h:mm a') : null})
         ]]></script></actions>
@@ -100,8 +125,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="check" noun="TimeItem" allow-remote="false">
         <description>Whether the user may log their own time on a work item: a task they may update in Projects
-            (ironstone.commons.TaskServices.get#TaskAccess app projects), or a project they are on (or see, as a Projects manager or ADMIN).
-            An error otherwise.</description>
+            (ironstone.commons.TaskServices.get#TaskAccess app projects), or a project they are on (or see, with TIMESHEET_APPROVE as
+            a Projects manager or ADMIN holds it). An error otherwise.</description>
         <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="workEffort" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -111,7 +136,7 @@ along with this software (see the LICENSE.md file). If not, see
             workEffort = item.getMap()
             if (item.workEffortTypeEnumId === 'WetProject') {
                 const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
-                const manager = ec.user.isInGroup('BOSS_PROJECT_MANAGER')
+                const manager = ec.user.hasPermission('TIMESHEET_APPROVE')
                 const ok = vis.allProjects || Array.from(vis.memberProjectIds || []).includes(workEffortId)
                         || (manager && Array.from(vis.visibleProjectIds || []).includes(workEffortId))
                 if (!ok) ec.message.addError(ec.resource.expand('You are not on project ${workEffortId}', '', {workEffortId}))
@@ -363,7 +388,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="search" noun="TimeItems">
         <description>The work items the user logs time on, as drop-down options (value, label): with no term the open items assigned
             to the user, then those with the user's time in the last four weeks; with a term the open items and projects of the
-            user's projects (or every visible one for a Projects manager) by key or name. Thirty at most.</description>
+            user's projects (or every visible one with TIMESHEET_APPROVE, a Projects manager's) by key or name. Thirty at most.</description>
         <in-parameters><parameter name="term"/></in-parameters>
         <out-parameters><parameter name="optionList" type="List"/></out-parameters>
         <actions><script><![CDATA[
@@ -372,7 +397,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (!me) return
             const cf = ec.entity.conditionFactory
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
-            const projects = vis.allProjects ? null : Array.from(ec.user.isInGroup('BOSS_PROJECT_MANAGER') ? (vis.visibleProjectIds || []) : (vis.memberProjectIds || []))
+            const projects = vis.allProjects ? null : Array.from(ec.user.hasPermission('TIMESHEET_APPROVE') ? (vis.visibleProjectIds || []) : (vis.memberProjectIds || []))
             if (projects != null && !projects.length) return
             const closed = ['WeComplete', 'WeClosed', 'WeCancelled']
             const label = (row, projectName) => row.workEffortId + ' ' + (row.workEffortName || '') + (projectName ? ' · ' + projectName : '')
@@ -469,12 +494,14 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- ========== Timesheets ========== -->
 
     <service verb="find" noun="TimesheetRows">
-        <description>Timesheets' rows (mantle.work.TimesheetServices.find#Timesheets) with their texts and links, the counts of the
-            chips, and the people of the find (those of the rows).</description>
+        <description>Timesheets' rows (mantle.work.TimesheetServices.find#Timesheets) with their texts and links (the mount's,
+            appRoot: get#TimeLinks), the counts of the chips, and the people of the find (those of the rows). With no list, an
+            approver (a week waiting, or TIMESHEET_APPROVE) opens on To approve, anyone else on Mine.</description>
         <in-parameters>
             <parameter name="list"/>
             <parameter name="partyId"/>
             <parameter name="weekDate"/>
+            <parameter name="appRoot"/>
         </in-parameters>
         <out-parameters>
             <parameter name="rowList" type="List"/>
@@ -488,7 +515,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (!list) {
                 // approvers open on what waits for them, others on their own
                 const waiting = ec.service.sync().name('mantle.work.TimesheetServices.find#Timesheets').parameters({list: 'toApprove', withCounts: false}).call()?.rowList || []
-                list = Array.from(waiting).length || ec.user.isInGroup('BOSS_PROJECT_MANAGER') ? 'toApprove' : 'mine'
+                list = Array.from(waiting).length || ec.user.hasPermission('TIMESHEET_APPROVE') ? 'toApprove' : 'mine'
             }
             const out = ec.service.sync().name('mantle.work.TimesheetServices.find#Timesheets').parameters({list: list, partyId: partyId || null,
                 weekDate: weekDate || null}).call() || {}
@@ -497,13 +524,14 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             const n = (value) => value == null ? '' : ec.l10n.format(value, '#,##0.##')
             const colors = {TmshInProcess: 'grey-8', TmshCompleted: 'info', TmshApproved: 'positive'}
+            const timeBase = ec.service.sync().name('ironstone.projects.TimeServices.get#TimeLinks').parameters({appRoot: appRoot || null}).call()?.timeBase
             rowList = Array.from(out.rowList || []).map((row) => Object.assign({}, row, {
                 statusColor: row.missing ? 'warning' : row.returned ? 'warning' : (colors[row.statusId] || 'grey-8'),
                 hoursText: n(row.hours), billableText: row.billable == null ? '' : n(row.billable), expectedText: n(row.expected),
                 differenceText: row.difference == null ? '' : (row.difference > 0 ? '+' : '') + n(row.difference),
                 submittedText: row.submittedDate ? ec.l10n.format(String(row.submittedDate), 'MMM d, h:mm a') : '',
-                detailUrl: row.timesheetId ? '/qapps/Projects/Time/TimesheetDetail?timesheetId=' + encodeURIComponent(row.timesheetId) : null,
-                weekUrl: '/qapps/Projects/Time/MyTime?partyId=' + encodeURIComponent(row.partyId) + '&weekDate=' + encodeURIComponent(row.weekStart),
+                detailUrl: row.timesheetId ? timeBase + '/TimesheetDetail?timesheetId=' + encodeURIComponent(row.timesheetId) : null,
+                weekUrl: timeBase + '/MyTime?partyId=' + encodeURIComponent(row.partyId) + '&weekDate=' + encodeURIComponent(row.weekStart),
                 rowKey: row.timesheetId || ('P:' + row.partyId), isMe: row.partyId === me}))
         ]]></script></actions>
     </service>
@@ -569,8 +597,11 @@ along with this software (see the LICENSE.md file). If not, see
         <description>TimesheetDetail's timesheet, for one who may view it (else "not available"): mantle.work.TimesheetServices
             get#TimesheetSummary with its week, the entries by day (a day's header row then its entries, each with its texts), the
             totals by project and item, the flags, the status history (the status audit with who and when) and the actions the
-            user may take.</description>
-        <in-parameters><parameter name="timesheetId" required="true"/></in-parameters>
+            user may take. The links follow the mount (appRoot, get#TimeLinks).</description>
+        <in-parameters>
+            <parameter name="timesheetId" required="true"/>
+            <parameter name="appRoot"/>
+        </in-parameters>
         <out-parameters><parameter name="detail" type="Map"/></out-parameters>
         <actions><script><![CDATA[
             detail = null
@@ -578,6 +609,7 @@ along with this software (see the LICENSE.md file). If not, see
             const summary = ec.service.sync().name('mantle.work.TimesheetServices.get#TimesheetSummary').parameters({timesheetId: timesheetId}).call()?.summary
             if (ec.message.hasError() || !summary) return
             const week = summary.week
+            const links = ec.service.sync().name('ironstone.projects.TimeServices.get#TimeLinks').parameters({appRoot: appRoot || null}).call() || {}
             const n = (value) => value == null ? '' : ec.l10n.format(value, '#,##0.##')
             const fmt = (millis, pattern) => millis == null ? '' : ec.l10n.format(String(millis), pattern)
             const rowOf = {}
@@ -594,8 +626,8 @@ along with this software (see the LICENSE.md file). If not, see
                         workEffortId: entry.workEffortId, workEffortName: row.workEffortName || L('No work item'), projectName: row.projectName || '',
                         hoursText: n(entry.hours), workTypeLabel: entry.workTypeLabel || '', billableText: entry.billable ? L('Billable') : L('Not billable'),
                         billable: entry.billable, comments: entry.comments || '', invoiced: entry.invoiced,
-                        url: entry.workEffortId ? (entry.workEffortId === row.rootWorkEffortId ? '/qapps/Projects/Projects/ProjectDetail?workEffortId='
-                            : '/qapps/Projects/WorkItems/WorkItemDetail?workEffortId=') + encodeURIComponent(entry.workEffortId) : null})
+                        url: entry.workEffortId && links.recordBase ? links.recordBase + (entry.workEffortId === row.rootWorkEffortId ? '/Projects/ProjectDetail?workEffortId='
+                            : '/WorkItems/WorkItemDetail?workEffortId=') + encodeURIComponent(entry.workEffortId) : null})
                 }
             }
             const history = []
@@ -621,7 +653,7 @@ along with this software (see the LICENSE.md file). If not, see
                 flagList: summary.flagList.map((flag) => Object.assign({}, flag, {dayText: flag.day ? fmt(Number(String(ec.l10n.parseTimestamp(flag.day + ' 12:00:00.000',
                     'yyyy-MM-dd HH:mm:ss.SSS'))), 'EEE, MMM d') : '', icon: {noComment: 'sym_o_comments_disabled', noItem: 'sym_o_link_off', offDay: 'sym_o_weekend',
                     closedItem: 'sym_o_task_alt', longDay: 'sym_o_hourglass_full'}[flag.kind] || 'sym_o_flag'})),
-                history: history, weekUrl: '/qapps/Projects/Time/MyTime?partyId=' + encodeURIComponent(week.partyId) + '&weekDate=' + encodeURIComponent(week.weekStart)}
+                history: history, weekUrl: links.timeBase + '/MyTime?partyId=' + encodeURIComponent(week.partyId) + '&weekDate=' + encodeURIComponent(week.weekStart)}
         ]]></script></actions>
     </service>
 
@@ -652,7 +684,9 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="TimePeople" allow-remote="false">
         <description>The people the user may log or find time for, as options (key, text): the user first, then for an approver the
-            time keepers of the projects they manage (ADMIN every time keeper), and the person given.</description>
+            time keepers of the projects they manage (ADMIN every time keeper) and the user's live reports (People P10:
+            mantle.work.TimesheetServices.get#LineReports, whose weeks a line manager approves under the line policy), and the
+            person given. Each person's week is checked again where it is read or changed (get#TimesheetAccess).</description>
         <in-parameters><parameter name="partyId"/></in-parameters>
         <out-parameters><parameter name="personOptions" type="List"/></out-parameters>
         <actions><script><![CDATA[
@@ -666,7 +700,8 @@ along with this software (see the LICENSE.md file). If not, see
                 let keepers = []
                 if (isAdmin || managed.length) keepers = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#TimeKeepers')
                         .parameters(isAdmin ? {} : {projectIds: managed}).call()?.partyIdList || [])
-                const ids = Array.from(new Set([me].concat(keepers).concat(partyId ? [partyId] : []).filter((id) => id)))
+                const reports = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#LineReports').call()?.partyIdList || [])
+                const ids = Array.from(new Set([me].concat(keepers).concat(reports).concat(partyId ? [partyId] : []).filter((id) => id)))
                 const names = {}
                 if (ids.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', ids).list())
                     names[party.partyId] = party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId
@@ -683,9 +718,10 @@ along with this software (see the LICENSE.md file). If not, see
             billable and not on a client invoice, any time; noItem: on no work item; all) and the find, each row with its texts and
             links, its week's status (Open, Returned, Submitted, Approved, or Invoiced, Running), and whether the user may change it
             (canEdit: not invoiced, not running, its week not locked, and the user its person or an approver of its week). Rates
-            and amounts for those who manage money (the Projects managers and ADMIN, by TIME_ENTRY_RATE): ratesShown; the worker
+            and amounts for those who manage money (TIME_ENTRY_RATE: the Projects managers and ADMIN): ratesShown; the worker
             rate and amount of an employee's time only with PAYROLL_VIEW (Mantle's find#TimeEntries leaves them out, vendorRateShown
-            false). With withTotals the totals of every match (ProjectTime's box).
+            false). With withTotals the totals of every match (ProjectTime's box). A work item's and a project's link for a user who
+            opens Projects (get#TimeLinks, appRoot).
         </description>
         <in-parameters>
             <parameter name="list"/>
@@ -706,6 +742,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="pageNoLimit" type="Boolean" default="false"/>
             <parameter name="withTotals" type="Boolean" default="false"/>
             <parameter name="timeEntryIds" type="List"/>
+            <parameter name="appRoot"/>
         </in-parameters>
         <out-parameters>
             <parameter name="list"/>
@@ -725,7 +762,7 @@ along with this software (see the LICENSE.md file). If not, see
             const lists = ['thisWeek', 'lastWeek', 'thisMonth', 'unbilled', 'noItem', 'all']
             if (!lists.includes(list)) list = 'thisWeek'
             const me = ec.user.userAccount?.partyId || null
-            const money = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
+            const money = ec.user.hasPermission('TIME_ENTRY_RATE')
             // the list's period, unless the find gives one
             let from = dateFrom, thru = dateThru
             if (from == null && thru == null) {
@@ -763,14 +800,15 @@ along with this software (see the LICENSE.md file). If not, see
             const statusOf = (row) => row.running ? [L('Running'), 'primary'] : row.invoiced ? [L('Invoiced'), 'grey-8']
                     : row.sheetStatusId === 'TmshApproved' ? [L('Approved'), 'positive'] : row.sheetStatusId === 'TmshCompleted' ? [L('Submitted'), 'info']
                     : row.returned ? [L('Returned'), 'warning'] : [L('Open'), 'grey-7']
-            const itemUrl = (row) => !row.workEffortId ? null : (row.workEffortTypeEnumId === 'WetProject' ? '/qapps/Projects/Projects/ProjectDetail?workEffortId='
-                    : '/qapps/Projects/WorkItems/WorkItemDetail?workEffortId=') + encodeURIComponent(row.workEffortId)
+            const recordBase = ec.service.sync().name('ironstone.projects.TimeServices.get#TimeLinks').parameters({appRoot: appRoot || null}).call()?.recordBase || null
+            const itemUrl = (row) => !row.workEffortId || !recordBase ? null : recordBase + (row.workEffortTypeEnumId === 'WetProject' ? '/Projects/ProjectDetail?workEffortId='
+                    : '/WorkItems/WorkItemDetail?workEffortId=') + encodeURIComponent(row.workEffortId)
             rowList = Array.from(out.rowList || []).map((row) => {
                 const [statusLabel, statusColor] = statusOf(row)
                 return Object.assign({}, row, {dateText: fmt(row.fromDate, 'EEE, MMM d'), dayText: fmt(row.fromDate, 'yyyy-MM-dd'),
                     spanText: row.fromDate == null ? '' : fmt(row.fromDate, 'HH:mm') + '–' + (row.running ? '' : fmt(row.thruDate, 'HH:mm')),
                     hoursText: row.running ? L('running') : n(row.hours), breakText: row.breakHours ? n(row.breakHours) : '', itemText: row.workEffortId ? row.workEffortId + ' ' + row.workEffortName : L('No work item'),
-                    itemUrl: itemUrl(row), projectUrl: row.rootWorkEffortId ? '/qapps/Projects/Projects/ProjectDetail?workEffortId=' + encodeURIComponent(row.rootWorkEffortId) : null,
+                    itemUrl: itemUrl(row), projectUrl: row.rootWorkEffortId && recordBase ? recordBase + '/Projects/ProjectDetail?workEffortId=' + encodeURIComponent(row.rootWorkEffortId) : null,
                     billableText: row.billable ? L('Billable') : L('Not billable'), statusLabel: statusLabel, statusColor: statusColor,
                     clientRateText: ratesShown ? money2(row.clientHourRate) : '', clientAmountText: ratesShown ? money2(row.clientAmount) : '',
                     vendorRateText: ratesShown ? money2(row.vendorHourRate) : '', vendorAmountText: ratesShown ? money2(row.vendorAmount) : '',
@@ -819,7 +857,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const item = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', itemId).disableAuthz().one()
                 if (item) itemOptions.unshift({value: item.workEffortId, label: item.workEffortId + ' ' + (item.workEffortName || '')})
             }
-            const money = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
+            const money = ec.user.hasPermission('TIME_ENTRY_RATE')
             const n = (value) => value == null ? '' : String(value)
             // the worker rate of an employee's time (employed on its date or now) is pay: seen with PAYROLL_VIEW, set with PAYROLL_EDIT
             const pay = row && money ? (ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess').parameters({entryList: [{key: row.timeEntryId,
@@ -853,7 +891,7 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            if (!ec.user.isInGroup('BOSS_PROJECT_MANAGER') && !ec.user.isInGroup('ADMIN')) { ec.message.addError(L('Only those who manage money change rates')); return }
+            if (!ec.user.hasPermission('TIME_ENTRY_RATE')) { ec.message.addError(L('Only those who manage money change rates')); return }
             const row = (ec.service.sync().name('ironstone.projects.TimeServices.find#TimeEntryRows').parameters({list: 'all', timeEntryIds: [timeEntryId], pageSize: 1}).call()?.rowList || [])[0]
             if (!row) { ec.message.addError(ec.resource.expand('Time entry ${timeEntryId} is not available', '', {timeEntryId})); return }
             if (row.invoiced) { ec.message.addError(L('This entry is invoiced')); return }
@@ -900,7 +938,7 @@ along with this software (see the LICENSE.md file). If not, see
             const ids = Array.from(new Set(String(selectedIds || '').split(',').map((id) => id.trim()).filter((id) => id)))
             if (!ids.length) { ec.message.addError(L('Select the entries first')); return }
             if (!['move', 'workType', 'billable', 'rates', 'delete'].includes(action)) { ec.message.addError(L('Unknown action')); return }
-            const money = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
+            const money = ec.user.hasPermission('TIME_ENTRY_RATE')
             if (action === 'rates' && !money) { ec.message.addError(L('Only those who manage money update rates')); return }
             if (action === 'move' && !value) { ec.message.addError(L('Choose the work item')); return }
             if (action === 'billable' && !['Y', 'N'].includes(value)) { ec.message.addError(L('Billable or not')); return }
@@ -984,7 +1022,7 @@ along with this software (see the LICENSE.md file). If not, see
                         : '/qapps/Projects/WorkItems/WorkItemDetail?workEffortId=' + encodeURIComponent(row.workEffortId)) : null,
                     label: row.workEffortId === workEffortId ? L('The project itself') : (row.workEffortId ? row.workEffortId + ' ' + row.name : row.name)})),
                 itemsCut: Array.from(totals.byItem || []).length > 15,
-                canUpdateRates: !!access.canManage && (ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN'))}
+                canUpdateRates: !!access.canManage && ec.user.hasPermission('TIME_ENTRY_RATE')}
         ]]></script></actions>
     </service>
 
@@ -997,7 +1035,7 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'none'}).call() || {}
             if (!access.canView) { ec.message.addError(ec.resource.expand('Project ${workEffortId} is not available', '', {workEffortId})); return }
-            if (!access.canManage || !(ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN'))) { ec.message.addError(L('Only a manager of the project who manages money updates its rates')); return }
+            if (!access.canManage || !ec.user.hasPermission('TIME_ENTRY_RATE')) { ec.message.addError(L('Only a manager of the project who manages money updates its rates')); return }
             ec.service.sync().name('mantle.work.TimeServices.resetAndGet#ProjectTimeEntryRates').parameters({rootWorkEffortId: workEffortId}).call()
             if (!ec.message.hasError()) message = L('The rates of the time not invoiced are found again')
         ]]></script></actions>
@@ -1018,7 +1056,7 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             const access = ec.service.sync().name('ironstone.commons.TaskServices.get#TaskAccess').parameters({workEffortId: workEffortId, need: 'check', app: 'projects'}).call() || {}
             if (!access.visible) return
-            const money = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')
+            const money = ec.user.hasPermission('TIME_ENTRY_RATE')
             const n = (value) => value == null ? '' : ec.l10n.format(value, '#,##0.##')
             const money2 = (value) => value == null ? '' : ec.l10n.format(value, '#,##0.00')
             const fmt = (millis, pattern) => millis == null ? '' : ec.l10n.format(String(millis), pattern)
@@ -1167,7 +1205,8 @@ along with this software (see the LICENSE.md file). If not, see
             const yn = (value) => value ? 'Y' : 'N'
             policy = {weekStart: String(stored.weekStart || 1), approvers: stored.approvers || 'project', lock: yn(stored.lock !== false), needItem: yn(!!stored.needItem),
                 needComment: yn(!!stored.needComment), minHours: String(stored.minHours ?? 0.25), future: yn(stored.future !== false), dayHours: String(stored.dayHours ?? 8),
-                workDays: Array.from(stored.workDays || [1, 2, 3, 4, 5]).map(String), remindDay: String(stored.remindDay || 1), remindHour: String(stored.remindHour ?? 10)}
+                workDays: Array.from(stored.workDays || [1, 2, 3, 4, 5]).map(String), remindDay: String(stored.remindDay || 1), remindHour: String(stored.remindHour ?? 10),
+                required: yn(stored.required === true)}
             const types = ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').parameters(organizationPartyId ? {organizationPartyId} : {}).call() || {}
             const offeredCount = Array.from(types.offeredList || []).length
             typeList = Array.from(types.typeList || []).map((row) => Object.assign({}, row, {isFirst: row.sequence === 1, isLast: row.sequence === offeredCount}))
@@ -1188,6 +1227,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="workDays" type="Object"/>
             <parameter name="remindDay" type="Integer"/>
             <parameter name="remindHour" type="Integer"/>
+            <parameter name="required"><description>Y: every employee keeps a weekly timesheet (People P10: a line manager's missing
+                lists count each report); not given keeps the stored value</description></parameter>
         </in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
@@ -1200,7 +1241,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (!String(days).replace(/[^1-7]/g, '')) { ec.message.addError(L('Choose the working days')); return }
             ec.service.sync().name('mantle.work.TimesheetServices.store#TimesheetPolicy').parameters({organizationPartyId: org, weekStart: weekStart, approvers: approvers,
                 lock: lock === 'Y', needItem: needItem === 'Y', needComment: needComment === 'Y', minHours: minHours, future: future === 'Y', dayHours: dayHours,
-                workDays: days, remindDay: remindDay, remindHour: remindHour}).call()
+                workDays: days, remindDay: remindDay, remindHour: remindHour, required: required == null || required === '' ? null : required === 'Y'}).call()
             if (!ec.message.hasError()) message = L('Timesheet policy saved')
         ]]></script></actions>
     </service>

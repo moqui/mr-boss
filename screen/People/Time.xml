@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- People › Time & leave (design-people §1.2, §6, §7, §13 MyTime, Timesheets, TimesheetDetail and TimeEntries; impl-people P9, P10,
+    F17, F57): the menu group of time and leave.
+    P10 mounts Projects' time screens as they are (owner contract, design-projects §8 "Context passed"), each reading its context
+    from the mount (appRoot People: its links, prints and terminal twin under People/Time) and checking what the user may do itself
+    (mantle.work.TimesheetServices: a week's person, its approvers by the organization's policy, ADMIN; rates and amounts only with
+    TIME_ENTRY_RATE, an employee's pay rate only with PAYROLL_VIEW). My time (the user's own week, or one they approve), Timesheets
+    (the default: To approve for an approver, Mine otherwise; Missing with Remind) and Time entries are in the menu; TimesheetDetail,
+    its print, the team timesheet, the terminal twin and the time import are opened from them. Every People user opens them through
+    the root; a self-service employee without the launcher opens them by the area's own grant (BOSS_PPL_TIME), to keep and submit
+    their own week.
+    P9 builds Working schedules (Time/WorkingSchedules) with WorkingScheduleDetail opened from a row, and Holidays
+    (Time/HolidayCalendars, HR's own editor here rather than in Settings, as the user's call of Nov 11 put HR's editors out of the
+    People administrator's Settings): the working schedules HR's and the managers' (BOSS_PPL_SCHEDULES), Holidays HR's alone
+    (BOSS_PPL_HOLIDAYS), both denied to the root user group and to self-service, and what each sees is what Mantle's
+    ScheduleServices admit: the schedules of the employers an HR officer reads, those a manager's reports follow.
+    P11 adds Leave balances (HR's and the managers', BOSS_PPL_LEAVE_BALANCES: an HR reader's employers' balances, a manager's
+    reports'), and HR's Leave policies with LeavePolicyDetail and Allocations (BOSS_PPL_LEAVE; under Time rather than Settings, as
+    Holidays), both denied to the root user group and to self-service (whose own balances are SelfService's), whose services are
+    Mantle's LeaveServices. Attendance, the shift roster, hours for pay and leave requests join with P12 to P14. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Time &amp; leave" default-menu-index="7" menu-image="sym_o_schedule" menu-image-type="icon">
+    <subscreens default-item="Timesheets">
+        <!-- P10's time screens, Projects' mounted; WorkingSchedules (menu index 5) and HolidayCalendars (9) are P9's files under Time/,
+            with WorkingScheduleDetail out of the menu; P11: LeaveBalances (7), LeavePolicies (10) and LeaveAllocations (11), with
+            LeavePolicyDetail out of the menu -->
+        <subscreens-item name="Timesheets" location="component://mr-boss/screen/Projects/Time/Timesheets.xml" menu-title="Timesheets"
+                menu-index="1"/>
+        <subscreens-item name="MyTime" location="component://mr-boss/screen/Projects/Time/MyTime.xml" menu-title="My time" menu-index="2"/>
+        <subscreens-item name="TimeEntries" location="component://mr-boss/screen/Projects/Time/TimeEntries.xml" menu-title="Time entries"
+                menu-index="3"/>
+        <subscreens-item name="TimesheetDetail" location="component://mr-boss/screen/Projects/Time/TimesheetDetail.xml" menu-include="false"/>
+        <subscreens-item name="TimesheetPrint" location="component://mr-boss/screen/Projects/Time/TimesheetPrint.xml" menu-include="false"/>
+        <subscreens-item name="TeamTimesheet" location="component://mr-boss/screen/Projects/Time/TeamTimesheet.xml" menu-include="false"/>
+        <subscreens-item name="MyTimeTui" location="component://mr-boss/screen/Projects/Time/MyTimeTui.xml" menu-include="false"/>
+        <subscreens-item name="Import" location="component://mr-boss/screen/Projects/Time/Import.xml" menu-include="false"/>
+        <subscreens-item name="ImportProgress" location="component://mr-boss/screen/Projects/Time/ImportProgress.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-active/>
+    </widgets>
+</screen>

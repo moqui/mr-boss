@@ -41,7 +41,9 @@ along with this software (see the LICENSE.md file). If not, see
                 workEffortTypeEnumId</description></parameter>
             <parameter name="recordEntityName"><description>Instead of docType: mantle.party.Party, mantle.request.Request,
                 mantle.work.effort.WorkEffort, moqui.resource.wiki.WikiPage, mantle.party.communication.CommunicationEvent,
-                moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time),
+                moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time,
+                else People's for a People user or a self-service employee; with docType MantleTimesheetWeek and a day as id the
+                user's own week in My time, the same way),
                 mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
                 opens under Manufacturing for its users), mantle.order.OrderHeader or mantle.party.agreement.Agreement (a purchase
                 order, supplier quote or purchase agreement opens under Purchasing for its users; a sales order under Customer Service for its users),
@@ -278,12 +280,12 @@ along with this software (see the LICENSE.md file). If not, see
                 icon = 'sym_o_rate_review'
                 return
             }
-            // whether the user may open IronStone Projects: an authorization of the user's groups on its root, with no deny
-            const mayOpenProjects = () => {
+            // whether the user may open IronStone Projects: an authorization of the user's groups on its root, with no deny (People
+            // P10: or on another screen, People's time area)
+            const mayOpenProjects = (root = 'component://mr-boss/screen/Projects.xml') => {
                 if (!ec.user.userId) return false
                 try {
                     const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
-                    const root = 'component://mr-boss/screen/Projects.xml'
                     const rows = Array.from(ec.entity.find('moqui.security.ArtifactAuthzCheckView').condition('userGroupId', 'in', groupIds)
                             .condition('artifactTypeEnumId', 'AT_XML_SCREEN').condition('authzActionEnumId', 'in', ['AUTHZA_ALL', 'AUTHZA_VIEW'])
                             .disableAuthz().list()).filter((row) => row.nameIsPattern === 'Y' ? new RegExp(`^(?:${row.artifactName})$`).test(root)
@@ -295,9 +297,22 @@ along with this software (see the LICENSE.md file). If not, see
                     return false
                 }
             }
-            // a timesheet (the timesheet topics, Chatter on it) opens its TimesheetDetail in Projects (impl-projects.md P6a)
+            // a timesheet (the timesheet topics, Chatter on it) opens its TimesheetDetail in Projects (impl-projects.md P6a), else under
+            // People's time area for a People user or a self-service employee (impl-people P10: the same screen mounted there)
             if (!type && recordEntityName === 'mantle.work.time.Timesheet') {
-                url = mayOpenProjects() ? '/qapps/Projects/Time/TimesheetDetail?timesheetId=' + q : null
+                url = mayOpenProjects() ? '/qapps/Projects/Time/TimesheetDetail?timesheetId=' + q
+                        : mayOpenProjects('component://mr-boss/screen/People.xml') || mayOpenProjects('component://mr-boss/screen/People/Time.xml')
+                        ? '/qapps/People/Time/TimesheetDetail?timesheetId=' + q : null
+                icon = 'sym_o_schedule'
+                return
+            }
+            // the user's own week (docType MantleTimesheetWeek, id a day of the week; the timesheet topics of the person, impl-people P10:
+            // a week with no timesheet yet too) opens in My time, Projects' for a Projects user, else People's
+            if (type === 'MantleTimesheetWeek') {
+                const week = '/Time/MyTime?weekDate=' + q
+                url = mayOpenProjects() ? '/qapps/Projects' + week
+                        : mayOpenProjects('component://mr-boss/screen/People.xml') || mayOpenProjects('component://mr-boss/screen/People/Time.xml')
+                        ? '/qapps/People' + week : null
                 icon = 'sym_o_schedule'
                 return
             }
