@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Product360's Spare parts tab (design-maintenance §6 "Shared master records", crosscut §3.5; impl-maintenance P2, F20): the parts
+    an equipment model uses in its maintenance, ProductAssoc rows of type PatSparePart with their quantity and dates, which a
+    planned part reuses (P9). Add spare part and End for a user with catalog edit (store#CatalogRow, which checks it again); read
+    only for anyone else. Shown where the context's tabs include it (Maintenance's) for an equipment model. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Spare parts" default-menu-index="14">
+    <transition name="storeSparePart">
+        <actions>
+            <service-call name="ironstone.products.CatalogServices.store#CatalogRow"
+                    in-map="{appRoot:appRoot, kind:'association', productId:productId, toProductId:toProductId,
+                        productAssocTypeEnumId:'PatSparePart', quantity:quantity, fromDate:(fromDate || ec.user.nowTimestamp),
+                        thruDate:(thruDate || null)}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="productId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <condition><expression>Array.isArray(product360Tabs) ? product360Tabs.includes('SpareParts') : Array.from(product360Tabs || []).includes('SpareParts')</expression></condition>
+    <actions>
+        <set field="sparePartRows" from="Array.from(detail?.sparePartRows || [])"/>
+        <set field="sparePartValues" from="{productId: productId}"/>
+    </actions>
+    <widgets>
+        <section name="SparePartsAvailable" condition="productFound &amp;&amp; product.assetTypeEnumId === 'AstTpEquipment'">
+            <widgets>
+                <container-box>
+                    <box-header title="Spare parts"/>
+                    <box-toolbar>
+                        <container-dialog id="AddSparePartDialog" button-text="Add spare part" title="Add a spare part" icon="sym_o_add"
+                                width="600" type="primary" condition="canEdit">
+                            <form-single name="AddSparePart" transition="storeSparePart" map="sparePartValues">
+                                <field name="productId"><default-field><hidden/></default-field></field>
+                                <field name="toProductId">
+                                    <default-field title="Part">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="../choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'products'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="quantity"><default-field title="Quantity"><text-line size="6"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Add spare part"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SparePartRows" list="sparePartRows" skip-form="true" paginate="false">
+                            <field name="toProductName"><default-field title="Part"><display/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="end">
+                                <default-field title="">
+                                    <link url="storeSparePart" text="End" btn-type="danger" condition="canEdit &amp;&amp; current"
+                                            parameter-map="{productId:productId, toProductId:toProductId, fromDate:fromDate,
+                                                thruDate:ec.user.nowTimestamp, quantity:quantity}"
+                                            confirmation="Stop listing ${toProductName} as a spare part?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="toProductName"/><field-ref name="fromDateText"/></column>
+                                <column><field-ref name="quantity"/><field-ref name="end"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No spare part is listed for this model." type="p" style="q-pa-md m-muted" condition="!sparePartRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

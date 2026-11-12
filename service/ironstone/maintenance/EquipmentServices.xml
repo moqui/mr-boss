@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Maintenance context of the shared EquipmentDetail and of Employee360's AssignedEquipment (impl-maintenance P2; design-maintenance
+    §6; Resources.js). Each checks the record through check#Record (the Maintenance root and Mantle's scope) before it reads; the
+    writes are Mantle's MaintenanceResourceServices, called by the screens after that check. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Equipment" allow-remote="false" read-only="true">
+        <description>EquipmentDetail's Maintenance context: the equipment's identity with its supplier warranty and inherited time
+            zone, its parent and parts (those the user reads), its holders now and before, its model's meters with the latest
+            reading and the recent readings, its registrations, the files of its old maintenance records (listed where they are
+            kept), its maintenance records with their work orders (P3; an open one with no work may be adopted), and its Book only for a user Accounting's get#AssetBook admits (amounts and dates; the Book actions stay
+            Accounting's). canEdit for MAINTENANCE_RESOURCE_EDIT, canMove with STOCK_MOVE too. Refuses equipment outside the
+            user's maintenance scope as a missing one (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="assetId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="asset" type="Map"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canMove" type="Boolean"/>
+            <parameter name="children" type="List"/>
+            <parameter name="assignments" type="List"/>
+            <parameter name="meters" type="List"/>
+            <parameter name="readings" type="List"/>
+            <parameter name="registrations" type="List"/>
+            <parameter name="maintenanceFiles" type="List"/>
+            <parameter name="maintenanceRecords" type="List"/>
+            <parameter name="book" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Resources.js')
+                    .execute('equipment', context)"/>
+            <set field="asset" from="found.asset"/>
+            <set field="canEdit" from="found.canEdit"/>
+            <set field="canMove" from="found.canMove"/>
+            <set field="children" from="found.children"/>
+            <set field="assignments" from="found.assignments"/>
+            <set field="meters" from="found.meters"/>
+            <set field="readings" from="found.readings"/>
+            <set field="registrations" from="found.registrations"/>
+            <set field="maintenanceFiles" from="found.maintenanceFiles"/>
+            <set field="maintenanceRecords" from="found.maintenanceRecords"/>
+            <set field="book" from="found.book"/>
+        </actions>
+    </service>
+    <service verb="get" noun="AssignedEquipment" allow-remote="false" read-only="true">
+        <description>Employee360's AssignedEquipment under Maintenance (impl-maintenance F62): the equipment a person holds now that
+            the user's maintenance scope reads (their resource read), each with its product, serial, role and start. Nothing for
+            a user who reads no equipment; never cost.</description>
+        <in-parameters>
+            <parameter name="partyId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="equipmentList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="equipmentList" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Resources.js')
+                    .execute('assignedEquipment', context).equipmentList"/>
+        </actions>
+    </service>
+</services>

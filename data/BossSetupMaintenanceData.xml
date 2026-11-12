@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a 
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- Maintenance's setup (impl-maintenance P1 onward), kept apart from BossSetupData.xml so that its appends and People's
+        do not meet at the end of one file; named to load after BossSetupData (its groups' ADMIN rows, the BOSS_USERS group and
+        the settings group and scope enumerations are there) and after mr-mantle's MaintenanceSetupData (the permissions). The
+        client deny pattern rows that name `maintenance` stay in BossSetupData beside the other apps'. -->
+    <!-- Maintenance P1 (impl-maintenance P1, F1, F35, F50; design-maintenance §1.1, design-crosscut §1.4): the root user group and
+        the capability groups; the administrator group BOSS_MAINTENANCE_ADMIN is above, with its ALWAYS on the root (F1). Groups are
+        not nested: a Maintenance user is in BOSS_USERS, BOSS_MAINTENANCE and a capability group, the administrator in BOSS_USERS
+        and BOSS_MAINTENANCE_ADMIN. BOSS_MAINTENANCE_REQUEST gets no grant on the root: a requester reports a problem from Commons'
+        intake (P4) and has no Maintenance launcher. -->
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE" description="Maintenance app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_READ" description="Maintenance reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_REQUEST" description="Maintenance requester"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_PLAN" description="Maintenance planner"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_EXECUTE" description="Maintenance technician"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_SUPERVISE" description="Maintenance supervisor"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_PROCEDURE" description="Procedure author"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" description="Procedure approver"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" description="Resource approver"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" description="Resource administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_MAINTENANCE_COST" description="Maintenance cost reader"/>
+    <!-- the root user group's authorization on the Maintenance root and the app's services (ironstone.maintenance: its access,
+        context, choices and palette), beside the administrators' rows of the BOSS_MAINTENANCE artifact group above. The root grant
+        opens navigation only; each Mantle maintenance service checks the maintenance permissions and scope itself
+        (mantle/work/MaintenanceAccess.js), and no raw update#WorkEffort, update#AssetMaintenance or /mantle work or asset REST path
+        is granted (impl-maintenance §2). -->
+    <artifactGroups artifactGroupId="BOSS_MAINTENANCE" description="IronStone Maintenance App (via root screen)">
+        <artifacts artifactName="ironstone\.maintenance\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MAINTENANCE_ROOT" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the Settings area (design §9), the Maintenance administrator's: denied to the root user group, as People's; BOSS_MAINTENANCE_ADMIN
+        and ADMIN open it through their ALWAYS on the root. A later phase that puts another group's editor under Settings allows
+        that group here. The user's call of Nov 12 on F346: the screens are gated by permission too (each tab's menu-include and an
+        always-action, MAINTENANCE_SETTINGS_EDIT, Teams also MAINTENANCE_PLAN or _SUPERVISE), since a custom group given Maintenance
+        in Admin is no member of BOSS_MAINTENANCE and this deny does not reach it; the deny rows here and on BOSS_MNT_REQUESTS and
+        BOSS_MNT_COSTS are kept beside the gates. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_SETTINGS" description="Maintenance settings">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_SETTINGS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-maintenance P8 review (design §2's Teams "administrator; P read"): Teams read only for the planner and the supervisor. Their
+        groups get a non-inheritable ALWAYS on the Settings frame (past the root user group's deny), on Teams and on its choices
+        transition by name (as Insights' dataset screens), so no other Settings tab and no transition not named (storeTeamDefaults) opens
+        for them, and each service under them is checked by its own grant; Mantle's find#MaintenanceTeams answers a planner or
+        supervisor and store#MaintenanceTeamDefaults stays MAINTENANCE_SETTINGS_EDIT's. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_TEAMS" description="Maintenance teams, read by planners and supervisors">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/(Settings|Settings/Teams)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Settings/Teams.xml/choices" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle.work.MaintenanceSettingsServices.find#MaintenanceTeams" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_MNT_TEAMS_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_TEAMS_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- design §1.1's table (Mantle seeds the permissions, each granted to ADMIN, data/MaintenanceSetupData.xml): the reader
+        MAINTENANCE_VIEW and WORK_PROCESS_VIEW; the requester MAINTENANCE_REQUEST and _REQUEST_VIEW_OWN; the planner MAINTENANCE_PLAN
+        with the views; the technician MAINTENANCE_ASSIGNED_VIEW and _EXECUTE; the supervisor MAINTENANCE_SUPERVISE with the views;
+        the procedure author WORK_PROCESS_EDIT, the approver WORK_PROCESS_APPROVE, each with WORK_PROCESS_VIEW; the resource approver
+        RESOURCE_BOOKING_VIEW_ASSIGNED and _APPROVE (with a current BookingApprover assignment, P16); the resource administrator
+        FACILITY_EDIT for facility writes, MAINTENANCE_RESOURCE_VIEW and _EDIT, MAINTENANCE_IMPORT for the equipment import (§4) and
+        RESOURCE_POLICY_VIEW and _EDIT; the cost reader MAINTENANCE_VIEW and MAINTENANCE_COST_VIEW; the Maintenance administrator
+        every MAINTENANCE_*, WORK_PROCESS_* and RESOURCE_* permission, MAINTENANCE_ALL_ORGANIZATIONS (every organization) among
+        them, and no stock, facility, payroll or finance authority (the user's calls, impl-maintenance P1 review). The planner, supervisor and resource administrator also hold People's
+        PEOPLE_DIRECTORY_VIEW, so Employee360's public work card of a custodian opens for them under Maintenance (impl-maintenance
+        F62, P2). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_EXECUTE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_SUPERVISE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_VIEW_ASSIGNED" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="FACILITY_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" fromDate="0"/>
+    <!-- every Maintenance group reports a problem (the user's call, Nov 12, impl-maintenance P4 review): MAINTENANCE_REQUEST, and
+        Commons' Report a problem below (BOSS_MNT_REPORT_PROBLEM), and MAINTENANCE_REQUEST_VIEW_OWN, so a reporter follows their own
+        report in Commons' Maintenance box -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_EXECUTE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_SUPERVISE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_SETTINGS_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_IMPORT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ALL_ORGANIZATIONS" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_VIEW_ASSIGNED" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_POLICY_EDIT" fromDate="0"/>
+    <!-- Maintenance's capability bundles in Admin's registry (owner contract, impl-maintenance F35; design-crosscut §1.4's rows, which
+        Admin P3 left out as unbuilt): each group with the permissions it carries (view, edit, or sensitive: costs) and the root
+        user group's launcher with the root's filter sets; MAINTENANCE_IMPORT in the resource administrator's and the administrator's
+        bundles, MAINTENANCE_ALL_ORGANIZATIONS in the administrator's alone. -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_ADMIN" appName="Maintenance" description="Maintenance administrator" scopeDependency="organization" sequenceNum="1300"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_EXECUTE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_SUPERVISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_SETTINGS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_IMPORT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="WORK_PROCESS_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_VIEW_ASSIGNED" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE" appName="Maintenance" description="Maintenance app users (the launcher)" scopeDependency="organization" sequenceNum="1310"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE" artifactGroupId="BOSS_MAINTENANCE" description="Maintenance launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_READ" appName="Maintenance" description="Maintenance reader" scopeDependency="organization" sequenceNum="1320"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_REQUEST" appName="Maintenance" description="Maintenance requester" scopeDependency="own requests" sequenceNum="1330"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_REQUEST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_PLAN" appName="Maintenance" description="Maintenance planner" scopeDependency="organization" sequenceNum="1340"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_EXECUTE" appName="Maintenance" description="Maintenance technician" scopeDependency="assigned work and steps" sequenceNum="1350"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_EXECUTE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_SUPERVISE" appName="Maintenance" description="Maintenance supervisor" scopeDependency="organization" sequenceNum="1360"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_SUPERVISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_PROCEDURE" appName="Maintenance" description="Procedure author" scopeDependency="organization, maintenance templates" sequenceNum="1370"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" appName="Maintenance" description="Procedure approver" scopeDependency="organization, maintenance templates" sequenceNum="1380"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="WORK_PROCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" appName="Maintenance" description="Resource approver" scopeDependency="resources the user approves" sequenceNum="1390"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_VIEW_ASSIGNED" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="RESOURCE_BOOKING_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" appName="Maintenance" description="Resource administrator" scopeDependency="organization, facility" sequenceNum="1400"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="FACILITY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_RESOURCE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_IMPORT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="PEOPLE_DIRECTORY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_COST" appName="Maintenance" description="Maintenance cost reader" scopeDependency="organization" sequenceNum="1410"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <!-- every group's bundle carries MAINTENANCE_REQUEST and _VIEW_OWN (the user's call, Nov 12, P4 review); Report a problem's screen is in each
+        bundle at the end, after its artifact group -->
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_READ" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PLAN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_EXECUTE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_SUPERVISE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_COST" userPermissionId="MAINTENANCE_REQUEST_VIEW_OWN" capabilityKindEnumId="CpkView"/>
+    <!-- impl-maintenance P15 (design §7.1): the override of a managed resource's soft conflict (where its policy allows, with a reason),
+        the resource administrator's and the Maintenance administrator's, in their bundles -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="RESOURCE_BOOKING_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
+    <!-- Maintenance's row in Admin's settings index (owner contract, impl-admin §7, impl-maintenance P1): the Maintenance
+        administrator's settings of each organization, with its readiness provider (P18, F117): the framework's
+        moqui.server.ReadinessProvider over Mantle's check#MaintenanceReadiness, called as the viewer organization by organization,
+        which checks MAINTENANCE_SETTINGS_EDIT and the organization itself and answers each check's place as a route key
+        (Admin.js mountRoutes). Its service is every user's to call (Mantle's MaintenanceSettingsData.xml), so Admin's Health, the
+        System app's and Maintenance's own Readiness reach it alike. -->
+    <moqui.server.ReadinessProvider providerKey="maintenance.readiness" version="1" ownerApp="Maintenance" title="Maintenance setup"
+            healthGroupEnumId="AdmHgBusiness" scopeEnumId="AdmScOrganization"
+            serviceName="mantle.work.MaintenanceSettingsServices.check#MaintenanceReadiness" scopeParameters="organizationPartyId"
+            requiredPermission="MAINTENANCE_SETTINGS_EDIT" fixRoute="maintenanceSettings" sequenceNum="160"/>
+    <moqui.server.SettingsEntry settingsKey="maintenance.settings" version="1" ownerApp="Maintenance" title="Maintenance settings"
+            description="Work policy, lookups and setup readiness" settingsGroupEnumId="AdmSgApplications"
+            scopeEnumId="AdmScOrganization" destinationRoute="maintenanceSettings"
+            screenLocation="component://mr-boss/screen/Maintenance/Settings.xml" viewPermission="MAINTENANCE_SETTINGS_EDIT"
+            configuredBy="Maintenance administrator" providerKey="maintenance.readiness" sequenceNum="75"/>
+    <!-- impl-maintenance P3: the MaintenanceWork topic opens the work order (Mantle seeds the topic and its registration) -->
+    <moqui.security.user.NotificationTopic topic="MaintenanceWork" linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P3 (owner contract, design-admin §14; F56): Maintenance's lifecycle participant, a leaver's open work order
+        assignments and the equipment they hold, read as Projects' are (ADMIN_IDENTITY_VIEW, counts only) and moved through Mantle's
+        schedule#MaintenanceWorkOrder and change#MaintenanceCustody, which check the caller's maintenance permissions and the new
+        person themselves; Projects' participant leaves managed work out (Lifecycle.js). -->
+    <ironstone.admin.LifecycleParticipant participantKey="maintenance.assignments" version="1" ownerApp="Maintenance" title="Maintenance work and equipment"
+            description="The open maintenance work orders assigned to the user and the equipment they hold, moved through Maintenance's own services."
+            resourceKind="assignment" lookupService="ironstone.maintenance.LifecycleServices.find#Assignments"
+            transferService="ironstone.maintenance.LifecycleServices.transfer#Assignments" resourceParameter="assignmentKind"
+            requiredPermission="ADMIN_IDENTITY_VIEW" sequenceNum="60"/>
+    <!-- Maintenance P4 (impl-maintenance P4, F78; design-maintenance §3 Requests): Report a problem, Commons' quick create of a
+        maintenance problem (Commons/ReportProblem), for every Maintenance group (the requesters, the administrator and, by the user's
+        call of Nov 12, every capability group): denied to BOSS_USERS, so the + menu offers it to no one else (as Manufacturing's ReportDowntime); Mantle's report#MaintenanceProblem checks
+        MAINTENANCE_REQUEST again. The requester follows their reports in Commons' RequestDetail (its Maintenance summary). The
+        maintenance planners' triage notice opens Maintenance's RequestDetail (the RequestTriage topic's link above). -->
+    <artifactGroups artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Maintenance: report a problem (Commons)">
+        <artifacts artifactName="component://mr-boss/screen/Commons/ReportProblem.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_DENY" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_REQUEST" userGroupId="BOSS_MAINTENANCE_REQUEST"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_ADMIN" userGroupId="BOSS_MAINTENANCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_READ" userGroupId="BOSS_MAINTENANCE_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_EXECUTE" userGroupId="BOSS_MAINTENANCE_EXECUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_PROCEDURE" userGroupId="BOSS_MAINTENANCE_PROCEDURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_PROCEDURE_APPROVE" userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_BOOKING_APPROVE" userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_RESOURCE_ADMIN" userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_ReportProblem_COST" userGroupId="BOSS_MAINTENANCE_COST"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the Requests area (design §3 Requests; impl-maintenance P4 review), the planners' and supervisors', who triage: denied to the
+        root user group, as Manufacturing's areas are, and always for the planner and supervisor groups; BOSS_MAINTENANCE_ADMIN and
+        ADMIN open it through their ALWAYS on the root. Mantle's find#MaintenanceRequests and triage#MaintenanceRequest check
+        MAINTENANCE_PLAN or MAINTENANCE_SUPERVISE again; a requester follows their own reports in Commons. The screen is gated by
+        those permissions too (F346, the Settings area's note). -->
+    <artifactGroups artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Requests.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_PLAN" userGroupId="BOSS_MAINTENANCE_PLAN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MNT_REQUESTS_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P11 review (R2): the planner's and the supervisor's bundles carry the Requests area, so a group given either in Admin opens it -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests (triage)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_REQUESTS" description="Maintenance requests (triage)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <!-- Report a problem in every Maintenance bundle (the user's call, Nov 12, P4 review), so a group given a bundle in Admin has it -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_READ" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_REQUEST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_EXECUTE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PROCEDURE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_ADMIN" artifactGroupId="BOSS_MNT_REPORT_PROBLEM" description="Report a problem (Commons)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_ACTIVE_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <!-- impl-maintenance P6: a procedure waiting for approval (Mantle's WorkProcessApproval topic and its registration) opens
+        ProcedureDetail under Maintenance; it is approved or refused from Commons' approvals inbox (approve#WorkProcess and
+        refuse#WorkProcess, as the user deciding) or from ProcedureDetail -->
+    <moqui.security.user.NotificationTopic topic="WorkProcessApproval"
+            linkTemplate="/qapps/Maintenance/Procedures/ProcedureDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P14: preventive work made from a plan (Mantle's MaintenanceDue topic and its registration, told to the
+        organization's planners) opens its work order under Maintenance -->
+    <moqui.security.user.NotificationTopic topic="MaintenanceDue"
+            linkTemplate="/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P16: a booking waiting for approval (Mantle's ResourceBooking topic and its registration) opens BookingRequests
+        for its resource; it is approved or denied from Commons' approvals inbox (approve#ResourceBooking and refuse#ResourceBooking, as
+        the user deciding) or from BookingRequests. What became of a booking (ResourceBookingNotice) opens its event in Commons. -->
+    <moqui.security.user.NotificationTopic topic="ResourceBooking"
+            linkTemplate="/qapps/Maintenance/Scheduling/BookingRequests?${facilityId ? 'facilityId=' + facilityId : 'assetId=' + assetId}"/>
+    <moqui.security.user.NotificationTopic topic="ResourceBookingNotice"
+            linkTemplate="/qapps/Commons/Calendar/EventDetail?workEffortId=${workEffortId}"/>
+    <!-- impl-maintenance P11: the cost screens (WorkOrderDetail's Costs tab and MaintenanceCostReport), the cost reader's: denied to the
+        root user group, as Requests are, and always for the cost reader group, so the tab and the report are in no other user's menu;
+        BOSS_MAINTENANCE_ADMIN and ADMIN open them through their ALWAYS on the root. Mantle's get#MaintenanceCosts checks
+        MAINTENANCE_COST_VIEW again. The cost reader's bundle carries the grant, so a group given it in Admin opens them. The screens
+        are gated by MAINTENANCE_COST_VIEW too (F346, the Settings area's note). -->
+    <artifactGroups artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs">
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/WorkOrders/WorkOrderDetail/Costs.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MNT_COSTS_DENY" userGroupId="BOSS_MAINTENANCE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_COSTS_COST" userGroupId="BOSS_MAINTENANCE_COST" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_COST" artifactGroupId="BOSS_MNT_COSTS" description="Maintenance costs (the Costs tab and the cost report)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <!-- impl-maintenance P8 review: the planner's and the supervisor's bundles carry Teams' read (BOSS_MNT_TEAMS above) -->
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_PLAN" artifactGroupId="BOSS_MNT_TEAMS" description="Maintenance teams (read only)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MAINTENANCE_SUPERVISE" artifactGroupId="BOSS_MNT_TEAMS" description="Maintenance teams (read only)" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <!-- impl-maintenance P17 (design §1.4, §8; impl-insights §7; F37, F117): Maintenance's shipped datasets (BossMaintenanceReportData.xml
+        and report/boss-maintenance-*.json, no cost, rate or amount) read by the Insights groups, as Customer Service's are (the
+        steward updates and refreshes them), and by Maintenance's supervisors and administrators, each viewer their own
+        organizations' rows (Mantle's organization row filter); admitted by setup as BOSS's own datasets are, operations data. -->
+    <artifactGroups artifactGroupId="BOSS_MNT_DATASETS" description="Maintenance: the shipped datasets">
+        <artifacts artifactName="org.moqui.report.dataset.boss-maintenance-work-status" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-maintenance-pm-compliance" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-maintenance-outages" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_READ" userGroupId="BOSS_INSIGHTS_READ" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_INSIGHTS_DATA" userGroupId="BOSS_INSIGHTS_DATA" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_MAINTENANCE_SUPERVISE" userGroupId="BOSS_MAINTENANCE_SUPERVISE" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MNT_DATASETS_MAINTENANCE_ADMIN" userGroupId="BOSS_MAINTENANCE_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_MAINTENANCE_SUPERVISE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceWorkOrder" userGroupId="BOSS_MAINTENANCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_MAINTENANCE_SUPERVISE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOccurrence" userGroupId="BOSS_MAINTENANCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_MAINTENANCE_SUPERVISE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMaintenanceOutage" userGroupId="BOSS_MAINTENANCE_ADMIN"/>
+    <moqui.report.BusinessDataset datasetId="boss-maintenance-work-status" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-maintenance-pm-compliance" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-maintenance-outages" admittedDate="2026-11-12 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="boss-maintenance-work-status" version="1" domainOwner="Maintenance" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-maintenance-pm-compliance" version="1" domainOwner="Maintenance" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-maintenance-outages" version="1" domainOwner="Maintenance" classEnumId="InsDcOperations"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-maintenance-work-status" version="1" ownerApp="Insights"
+            title="Maintenance work orders index" description="The work orders dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-maintenance-work-status" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-maintenance-pm-compliance" version="1" ownerApp="Insights"
+            title="Preventive obligations index" description="The preventive obligations dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-maintenance-pm-compliance" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-maintenance-outages" version="1" ownerApp="Insights"
+            title="Equipment and facility outages index" description="The outages dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-maintenance-outages" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-maintenance-work-status.index" version="1" ownerApp="Insights"
+            title="Rebuild the work orders index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-work-status" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-maintenance-work-status"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-maintenance-pm-compliance.index" version="1" ownerApp="Insights"
+            title="Rebuild the preventive obligations index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-pm-compliance" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-maintenance-pm-compliance"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-maintenance-outages.index" version="1" ownerApp="Insights"
+            title="Rebuild the outages index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-maintenance-outages" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-maintenance-outages"/>
+    <!-- Maintenance's reports in Insights' catalog (owner contract, impl-insights §7; design-insights §6.1), read through Maintenance's
+        get#ReportCatalogue (a maintenance reader's: work status and PM compliance; the cost report, impl-maintenance P11's, the cost
+        reader's alone, MAINTENANCE_COST_VIEW, as its screen's BOSS_MNT_COSTS is) -->
+    <ironstone.insights.ReportCatalogEntry entryId="Maintenance.WorkStatus" version="1" ownerApp="Maintenance" title="Work status"
+            description="Maintenance work orders opened, completed and cancelled in a period, and the backlog, overdue and unassigned at its end, by state, team, resource or source."
+            purpose="Maintenance" basis="Opened, completed (once, while still complete) and cancelled in the period; backlog as of a time"
+            routePath="Maintenance/Reports/WorkStatusReport" parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" metricIds="Maintenance.Backlog"
+            catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue" catalogueKey="Maintenance.WorkStatus"
+            exportFormats="CSV" sequenceNum="610"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Maintenance.PreventiveCompliance" version="1" ownerApp="Maintenance"
+            title="PM compliance"
+            description="Preventive obligations due in a period, each on time, late, outstanding, skipped or unknown, over the obligations due, not the work orders made."
+            purpose="Maintenance" basis="Due date in the period, as of a time" routePath="Maintenance/Reports/PreventiveComplianceReport"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance"
+            metricIds="Maintenance.OverduePm,Maintenance.OnTimePm"
+            catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue"
+            catalogueKey="Maintenance.PreventiveCompliance" exportFormats="CSV" sequenceNum="620"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Maintenance.Cost" version="1" ownerApp="Maintenance" title="Maintenance costs"
+            description="Parts, labor at the costing rate and outside service of maintenance work, each source once, by currency; unapproved and unpriced hours apart."
+            purpose="Maintenance" basis="Source date in the period" routePath="Maintenance/Reports/MaintenanceCostReport"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.MaintenanceReportServices.get#MaintenanceCosts"
+            catalogueService="ironstone.maintenance.ReportServices.get#ReportCatalogue" catalogueKey="Maintenance.Cost"
+            exportFormats="CSV" sequenceNum="630"/>
+    <!-- Maintenance's measures (owner contract, design-insights §6.2): the backlog, overdue PM and on-time PM -->
+    <ironstone.insights.MetricRegistration metricId="Maintenance.Backlog" version="1" ownerApp="Maintenance" title="Maintenance backlog"
+            description="Maintenance work orders open at a moment (in planning, approved, in progress or on hold)."
+            serviceName="mantle.work.MaintenanceReportServices.get#MaintenanceStatusReport" datasetIds="boss-maintenance-work-status"
+            catalogEntryId="Maintenance.WorkStatus" grain="Work order (an execution root)" recordKey="workEffortId"
+            dateBasis="As of a time, from the status history" statusBasis="Open: not complete, closed or cancelled"
+            aggregation="snapshot" unitPolicy="count" additiveDimensions="team, resource, source, kind, organization"
+            nonAdditiveDimensions="date" allowedDimensions="state, team, resource, source, kind, organization"
+            supportedFilters="organizationPartyId, facilityId, assetId, teamPartyId, sourceEnumId, maintenanceKindEnumId, thruDate"
+            exclusions="Procedures and process steps; a work order not yet created at the as-of time"
+            scopePolicy="The viewer's organizations; a maintenance reader" freshness="Live" sequenceNum="90"/>
+    <ironstone.insights.MetricRegistration metricId="Maintenance.OverduePm" version="1" ownerApp="Maintenance" title="Overdue preventive maintenance"
+            description="Preventive obligations past their due date and not done, in a period."
+            serviceName="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" datasetIds="boss-maintenance-pm-compliance"
+            catalogEntryId="Maintenance.PreventiveCompliance" grain="Preventive obligation" recordKey="maintenanceScheduleId, obligationKey"
+            dateBasis="Due date in the period, as of a time" statusBasis="Outstanding: passed and not done (a coalesced one until its catch-up is done)"
+            aggregation="count" unitPolicy="count" additiveDimensions="plan, equipment, facility, organization"
+            nonAdditiveDimensions="date" allowedDimensions="plan, equipment, facility, organization"
+            supportedFilters="organizationPartyId, maintenanceScheduleId, assetId, facilityId, fromDate, thruDate"
+            exclusions="Unknown obligations (no time zone, no meter reading, a stale meter) and those not yet due"
+            scopePolicy="The viewer's organizations; a maintenance reader" freshness="Live" sequenceNum="100"/>
+    <ironstone.insights.MetricRegistration metricId="Maintenance.OnTimePm" version="1" ownerApp="Maintenance" title="On-time preventive maintenance"
+            description="Preventive obligations satisfied by their due date over the obligations due, in a period."
+            serviceName="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" datasetIds="boss-maintenance-pm-compliance"
+            catalogEntryId="Maintenance.PreventiveCompliance" grain="Preventive obligation" recordKey="maintenanceScheduleId, obligationKey"
+            dateBasis="Due date in the period, as of a time" statusBasis="On time, late, outstanding, skipped"
+            aggregation="ratio" numerator="Obligations satisfied by their due date"
+            denominator="Obligations due: on time, late, outstanding and skipped" unitPolicy="percent"
+            additiveDimensions="none (recompute from the parts)" nonAdditiveDimensions="every dimension"
+            allowedDimensions="plan, equipment, facility, organization"
+            supportedFilters="organizationPartyId, maintenanceScheduleId, assetId, facilityId, fromDate, thruDate"
+            exclusions="Unknown obligations and those not yet due are named, never in the denominator; a skipped or coalesced one is not compliant"
+            scopePolicy="The viewer's organizations; a maintenance reader" freshness="Live" sequenceNum="110"/>
+    <!-- Maintenance's worklists on Insights' attention board (owner contract, design-insights §7): Home's counts, null for a user a
+        count is not for (then left out) -->
+    <ironstone.insights.AttentionProvider providerKey="Maintenance.Unassigned" version="1" ownerApp="Maintenance" title="Unassigned work orders"
+            description="Open maintenance work orders with no technician."
+            countService="mantle.work.MaintenanceReportServices.get#MaintenanceHome" countField="counters.unassignedCount"
+            organizationParameter="organizationPartyId"
+            routePath="Maintenance/WorkOrders/Find" routeParameters="savedFind=unassigned"
+            organizationScope="Your organizations" sequenceNum="920"/>
+    <ironstone.insights.AttentionProvider providerKey="Maintenance.OverduePm" version="1" ownerApp="Maintenance" title="Overdue preventive maintenance"
+            description="Active preventive plans past their due date."
+            countService="mantle.work.MaintenanceReportServices.get#MaintenanceHome" countField="counters.overduePmCount"
+            organizationParameter="organizationPartyId"
+            routePath="Maintenance/Preventive/DueMaintenance" routeParameters="state=overdue" requiredPermission="MAINTENANCE_VIEW"
+            organizationScope="Your organizations" sequenceNum="930"/>
+    <ironstone.insights.AttentionProvider providerKey="Maintenance.ResourcesDown" version="1" ownerApp="Maintenance" title="Resources down"
+            description="Equipment and facilities out of service now."
+            countService="mantle.work.MaintenanceReportServices.get#MaintenanceHome" countField="counters.downResourceCount"
+            organizationParameter="organizationPartyId"
+            routePath="Maintenance/Equipment/Downtime" routeParameters="open=true"
+            organizationScope="Your organizations" sequenceNum="940"/>
+    <!-- Maintenance's worklist for the flow maps (owner contract, impl-insights P9): the internal flow's Maintenance step opens it -->
+    <ironstone.insights.FlowTarget targetId="Maintenance.WorkOrders" version="1" ownerApp="Maintenance" title="Maintenance work orders"
+            description="Maintenance work orders, open, unassigned or overdue."
+            routePath="Maintenance/WorkOrders/Find"
+            parameterContract='{"savedFind":{"type":"choice","values":["unassigned","overdue"]},"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="350"/>
+    <!-- Reports' exports in Admin's Exports (owner contract, impl-admin P16; F53, F72): one wizard target for the Reports area, whose
+        reports export their own form-list's CSV (the screen's projection, the columns chosen), nothing dispatched -->
+    <moqui.server.TransferTarget targetId="maintenanceReports" direction="export" targetMode="wizard" title="Maintenance reports"
+            description="A Maintenance report's rows as CSV, from Reports in Maintenance (work status, PM compliance)"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceReports" sequenceNum="68"/>
+    <!-- impl-maintenance P19 (F53, F117): the list exports Maintenance makes in its own lists (CSV with the current filters and the
+        columns shown, no hidden column), listed in Admin's Exports as wizard export targets with their owner route (a mountRoutes key
+        in service/ironstone/admin/Admin.js), nothing dispatched, as Projects' work item list is. -->
+    <moqui.server.TransferTarget targetId="maintenanceWorkOrderList" direction="export" targetMode="wizard" title="Maintenance work orders"
+            description="The work orders of a list as CSV, from Work orders in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceWorkOrders" sequenceNum="65"/>
+    <moqui.server.TransferTarget targetId="maintenanceBookingList" direction="export" targetMode="wizard" title="Booking requests"
+            description="The booking requests of a list as CSV, from Booking requests in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceBookingRequests" sequenceNum="66"/>
+    <moqui.server.TransferTarget targetId="maintenanceDueList" direction="export" targetMode="wizard" title="Due maintenance"
+            description="The preventive maintenance due of a list as CSV, from Due maintenance in Maintenance"
+            ownerApp="Maintenance" targetVersion="1" ownerRoute="maintenanceDue" sequenceNum="67"/>
+</entity-facade-xml>

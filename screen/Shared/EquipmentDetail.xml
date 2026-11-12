@@ -27,7 +27,13 @@ along with this software (see the LICENSE.md file). If not, see
     the user reads as HR holds or held, never its cost), each open return task, and End assignment for an HR editor: the holding
     ended by the return to a receiving custodian employed by the employer (return#Equipment over replace#AssetPartyAssignment),
     which completes the return task; no files, notes or other custody action, which stay Warehouse's and Maintenance's, in
-    template/PeopleEquipment.xml. Other apps add their contexts when they are built. -->
+    template/PeopleEquipment.xml. Maintenance mounts it at Maintenance/Equipment/EquipmentDetail (design-maintenance §6, crosscut
+    §3.10's Maintenance row; impl-maintenance P2, F21): the record header (template/MaintenanceEquipment.xml) and its tabs, each a
+    file in EquipmentDetail/ that reads ironstone.maintenance.EquipmentServices.get#Equipment when rendered alone: Identity (with
+    the supplier warranty; Edit, Move and Print tag), Hierarchy, Assignments (the dated custody change), Meters, Registrations,
+    Book (only for a user Accounting's get#AssetBook admits, read only; the Book actions stay Accounting's), Files (with the old
+    maintenance records' files listed) and Conversation; the other apps' contexts render no tab. Other apps add their contexts
+    when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Equipment"
@@ -97,6 +103,22 @@ along with this software (see the LICENSE.md file). If not, see
         P6): read only, in place of the owners' contexts. The condition fails for Insights, so none of the actions and widgets
         below runs, and the fail-widgets show template/InsightsRecord.xml: the record as the admitted datasets the viewer reads
         show it, the owners' screens of it that open to them, and the return to the report; no action. -->
+    <!-- Maintenance's tabs (impl-maintenance P2, F21): each renders only under Maintenance, so the other apps' contexts, which
+        render no subscreens, are unchanged -->
+    <subscreens default-item="Identity">
+        <subscreens-item name="Identity" location="component://mr-boss/screen/Shared/EquipmentDetail/Identity.xml" menu-index="1"/>
+        <subscreens-item name="Hierarchy" location="component://mr-boss/screen/Shared/EquipmentDetail/Hierarchy.xml" menu-index="2"/>
+        <subscreens-item name="Assignments" location="component://mr-boss/screen/Shared/EquipmentDetail/Assignments.xml" menu-index="3"/>
+        <subscreens-item name="Meters" location="component://mr-boss/screen/Shared/EquipmentDetail/Meters.xml" menu-index="4"/>
+        <subscreens-item name="Registrations" location="component://mr-boss/screen/Shared/EquipmentDetail/Registrations.xml" menu-index="5"/>
+        <!-- P3: its work orders and maintenance records -->
+        <subscreens-item name="Maintenance" location="component://mr-boss/screen/Shared/EquipmentDetail/Maintenance.xml" menu-index="6"/>
+        <subscreens-item name="Book" location="component://mr-boss/screen/Shared/EquipmentDetail/Book.xml" menu-index="7"/>
+        <subscreens-item name="Files" location="component://mr-boss/screen/Shared/EquipmentDetail/Files.xml" menu-index="8"/>
+        <subscreens-item name="Conversation" location="component://mr-boss/screen/Shared/EquipmentDetail/Conversation.xml" menu-index="9"/>
+        <!-- P15: its booking policy and availability (the Schedule pane) -->
+        <subscreens-item name="Schedule" location="component://mr-boss/screen/Shared/EquipmentDetail/Schedule.xml" menu-index="10"/>
+    </subscreens>
     <condition><expression>appRoot != 'Insights'</expression></condition>
     <actions>
         <set field="book" from="null"/>
@@ -135,7 +157,19 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="peopleEquipment" transaction="force-new" ignore-error="true"/>
             <script>ec.message.clearErrors()</script>
         </if>
-        <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset || !!peopleEquipment?.asset"/>
+        <set field="maintenanceEquipment" from="null"/>
+        <if condition="appRoot == 'Maintenance'">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <!-- its tabs, in menu order (a menu lists every subscreen, so the tab bar draws these): the Book only when Accounting's
+                get#AssetBook admitted the user -->
+            <set field="equipmentTabs" from="['Identity', 'Hierarchy', 'Assignments', 'Meters', 'Registrations', 'Maintenance', 'Book', 'Files',
+                    'Conversation', 'Schedule'].filter(tab =&gt; tab !== 'Book' || maintenanceEquipment?.book)"/>
+            <set field="equipmentTabItems" from="Array.from(sri.getMenuItems() || []).filter(item =&gt; equipmentTabs.includes(item.name))"/>
+        </if>
+        <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset || !!peopleEquipment?.asset
+                || !!maintenanceEquipment?.asset"/>
         <set field="asset" from="book?.asset || {}"/>
         <set field="bookKey" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js')
                 .operationKey('asset')"/>
@@ -186,6 +220,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 link-type="anchor"
                                 icon="arrow_back"
                                 condition="appRoot == 'People'"/>
+                        <link url="${sharedLinks['Equipment/Find']}"
+                                text="Equipment"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'Maintenance'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -196,6 +235,13 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="ManufacturingEquipment" location="component://mr-boss/template/ManufacturingEquipment.xml"/>
         <!-- the People context (impl-people P7), shown when it found the equipment -->
         <section-include name="PeopleEquipment" location="component://mr-boss/template/PeopleEquipment.xml"/>
+        <!-- the Maintenance context (impl-maintenance P2): its header and tab bar, then the tab -->
+        <section-include name="MaintenanceEquipment" location="component://mr-boss/template/MaintenanceEquipment.xml"/>
+        <section name="MaintenanceEquipmentTab" condition="recordFound &amp;&amp; appRoot == 'Maintenance'">
+            <widgets>
+                <subscreens-active/>
+            </widgets>
+        </section>
         <section name="EquipmentFound" condition="recordFound &amp;&amp; appRoot == 'Accounting'">
             <widgets>
                 <link url="${sharedLinks['FixedAssets/FixedAssets']}"
@@ -870,9 +916,10 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <!-- the asset's files (AssetContent, WH-RECORD-HOSTS) and notes, in every context that found the equipment, outside
-            any one context's section; the panels check the asset is one the user sees (get#RecordLinkInfo) -->
-        <section name="EquipmentFilesAndNotes" condition="recordFound &amp;&amp; appRoot != 'People'">
+        <!-- the asset's files (AssetContent, WH-RECORD-HOSTS) and notes, in every context that found the equipment but People's and
+            Maintenance's (its Files and Conversation tabs), outside any one context's section; the panels check the asset is one
+            the user sees (get#RecordLinkInfo) -->
+        <section name="EquipmentFilesAndNotes" condition="recordFound &amp;&amp; appRoot != 'People' &amp;&amp; appRoot != 'Maintenance'">
             <widgets>
                 <container-box>
                     <box-header title="Files"/>

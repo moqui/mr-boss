@@ -23,20 +23,36 @@ along with this software (see the LICENSE.md file). If not, see
     (impl-manufacturing P3) with its context (ironstone.manufacturing.WorkCenterServices.get#FacilityDetail): the same header
     without Edit facility, Overview, its own Work center tab (the WorkCenter extension, capacities, alternates, the rate
     with cost read only, and the load), Files and Conversation; the Warehouse tabs are Warehouse's only. The tab bar draws
-    facilityTabs, the app's tabs, since a menu lists every subscreen. Other apps add their contexts when they are built. -->
+    facilityTabs, the app's tabs, since a menu lists every subscreen. Maintenance mounts it at Maintenance/Facilities/FacilityDetail
+    (design-maintenance §6, crosscut §3.10's Maintenance row; impl-maintenance P2, F22) with its context
+    (ironstone.maintenance.FacilityServices.get#FacilityDetail): the header with Edit facility for a holder of FACILITY_EDIT
+    (the time zone, capacity and booking too), Overview, Children, Rooms (with their dated features), Equipment, Certifications,
+    Files and Conversation; Work orders join with P3 and Schedules with P15, and the Warehouse tabs are Warehouse's only. Edit
+    facility checks the mounting app's own record check (Warehouse's or Maintenance's), then Mantle's store#Facility checks
+    FACILITY_EDIT. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Facility"
         default-menu-include="false">
     <parameter name="facilityId" required="true"/>
+    <!-- Maintenance (impl-maintenance P2): the parent a move under another facility would give it, whose effect is shown first -->
+    <parameter name="moveToParentId"/>
     <!-- Insights (impl-insights P6): the record its InsightsRecord subscreen shows -->
     <always-actions><if condition="appRoot == 'Insights'"><set field="insightsRecordType" value="FacilityDetail"/><set field="insightsRecordId" from="facilityId"/></if></always-actions>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <!-- Maintenance's drop-downs (the parent, owner, type and time zone of Edit facility under Maintenance) -->
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
     <!-- the facility's identity and contact (Mantle's store#Facility checks FACILITY_EDIT, the owner and the parent cycle) -->
     <transition name="updateFacility">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            <!-- the mounting app's own record check (impl-maintenance F22): Maintenance's under Maintenance, Warehouse's otherwise -->
+            <if condition="appRoot == 'Maintenance'"><then>
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            </then><else>
+                <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                        in-map="{recordType:'facility', recordId:facilityId, capability:'facilityEdit'}"/>
+            </else></if>
             <!-- the parent is removed only when the user emptied it; one left as it was (even one the user may not see) stays -->
             <set field="clearParent" from="!parentFacilityId &amp;&amp; !!originalParentFacilityId"/>
             <service-call name="mantle.facility.FacilityServices.store#Facility" in-map="context"/>
@@ -68,11 +84,36 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <if condition="appRoot == 'Maintenance'">
+            <service-call name="ironstone.maintenance.FacilityServices.get#FacilityDetail"
+                    in-map="{facilityId:facilityId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <!-- the tabs of the app's context, in menu order: a Moqui Java menu lists every subscreen, so the tab bar draws this
             list; each tab screen's condition admits the same tabs by appRoot -->
         <set field="facilityTabs" from="appRoot == 'Manufacturing' ? ['Overview', 'WorkCenter', 'Files', 'Conversation']
+                : appRoot == 'Maintenance' ? ['Overview', 'Children', 'Rooms', 'Equipment', 'Certifications', 'WorkOrders', 'Schedules', 'Files', 'Conversation']
                 : ['Overview', 'Children', 'Locations', 'Products', 'BoxTypes', 'Printers', 'Policies', 'Schedules', 'Files', 'Conversation']"/>
         <set field="recordFound" from="!!detail?.facility"/>
+        <!-- Maintenance: what moving it under another facility changes, before Edit facility's store#Facility makes the move -->
+        <set field="moveEffect" from="null"/>
+        <if condition="appRoot == 'Maintenance' &amp;&amp; recordFound &amp;&amp; detail.canEdit &amp;&amp; moveToParentId">
+            <service-call name="mantle.product.MaintenanceResourceServices.preview#MaintenanceFacilityChange" out-map="movePreview"
+                    in-map="{facilityId:facilityId, parentFacilityId:moveToParentId}" transaction="force-new" ignore-error="true"/>
+            <set field="moveRefusal" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="moveEffect" from="movePreview?.effect || null"/>
+        </if>
+        <set field="moveRows" from="moveEffect ? [['Organization', moveEffect.organizationChanges ? moveEffect.organizationBefore + ' to ' +
+                moveEffect.organizationAfter : moveEffect.organizationAfter], ['Time zone', moveEffect.timeZoneBefore == moveEffect.timeZoneAfter ?
+                (moveEffect.timeZoneAfter || 'none') : (moveEffect.timeZoneBefore || 'none') + ' to ' + (moveEffect.timeZoneAfter || 'none')],
+                ['Facilities inside that move with it', String(moveEffect.insideCount)], ['Equipment there', String(moveEffect.equipmentCount)],
+                ['Bookings to come', String(moveEffect.bookingCount)]].map((r) =&gt; ({label: r[0], value: r[1]})) : []"/>
+        <set field="moveValues" from="{facilityId: facilityId, parentFacilityId: moveToParentId || null,
+                originalParentFacilityId: detail?.facility?.storedParentFacilityId || null}"/>
         <set field="facility" from="detail?.facility || {}"/>
         <set field="contact" from="detail?.contact || {}"/>
         <set field="editDefaults" from="Object.assign({}, contact, {facilityName: facility.facilityName,
@@ -80,7 +121,8 @@ along with this software (see the LICENSE.md file). If not, see
                 ownerPartyId: facility.ownerPartyId, description: facility.description,
                 openedDate: facility.openedDate ? ec.l10n.format(facility.openedDate, 'yyyy-MM-dd') : null,
                 closedDate: facility.closedDate ? ec.l10n.format(facility.closedDate, 'yyyy-MM-dd') : null,
-                defaultDaysToShip: facility.defaultDaysToShip})"/>
+                defaultDaysToShip: facility.defaultDaysToShip, timeZone: facility.storedTimeZone || null,
+                capacity: facility.capacity, bookable: facility.bookableFlag || null})"/>
     </actions>
     <widgets>
         <section name="FacilityNotAvailable" condition="!recordFound">
@@ -98,6 +140,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 link-type="anchor"
                                 icon="arrow_back"
                                 condition="appRoot == 'Manufacturing'"/>
+                        <link url="${sharedLinks['Facilities/Find']}"
+                                text="Facilities"
+                                link-type="anchor"
+                                icon="arrow_back"
+                                condition="appRoot == 'Maintenance'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -109,6 +156,8 @@ along with this software (see the LICENSE.md file). If not, see
                         condition="appRoot == 'Warehouse'"/>
                 <link url="${sharedLinks['WorkCenters/Centers']}" text="Work centers" link-type="anchor" icon="arrow_back"
                         condition="appRoot == 'Manufacturing'"/>
+                <link url="${sharedLinks['Facilities/Find']}" text="Facilities" link-type="anchor" icon="arrow_back"
+                        condition="appRoot == 'Maintenance'"/>
                 <container style="m-record-header">
                     <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                         <container style="col-12 col-md m-record-title">
@@ -139,11 +188,45 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
                         <container style="col-12 col-md">
                             <label text="${[contact.addressText, facility.locationCount == null ? '' : facility.locationCount +
-                                ' open locations', facility.isWorkCenter ? 'Work center' : ''].filter(Boolean).join(' · ')}"
+                                ' open locations', facility.isWorkCenter ? 'Work center' : '', facility.timeZoneText,
+                                facility.capacity != null &amp;&amp; appRoot == 'Maintenance' ? 'holds ' + String(facility.capacity) : '',
+                                facility.bookableText].filter(Boolean).join(' · ')}"
                                     type="p"
                                     style="q-mb-none"/>
+                            <!-- Maintenance (impl-maintenance P5): its current state, from its one open outage -->
+                            <link url="${sharedLinks['Equipment/Downtime']}" text="${facility.outage?.text}" link-type="anchor"
+                                    style="text-negative" condition="appRoot == 'Maintenance' &amp;&amp; facility.outage"
+                                    parameter-map="{resourceUnavailabilityId:facility.outage?.resourceUnavailabilityId}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <!-- Maintenance (impl-maintenance P2): Move under another facility, its effect shown before it is made -->
+                            <container-dialog id="MoveFacilityDialog" button-text="Move" title="${ec.l10n.localize('Move')} ${facility.facilityName}"
+                                    icon="sym_o_drive_file_move" width="600" condition="appRoot == 'Maintenance' &amp;&amp; detail.canEdit">
+                                <label text="Choose the facility it goes inside; what the move changes is shown before it is made." type="p"/>
+                                <form-single name="MoveFacilityPreview" transition=".">
+                                    <field name="facilityId" from="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="moveToParentId">
+                                        <default-field title="Inside">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'parentFacilities', choiceFacilityId:facilityId,
+                                                            selected:moveToParentId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="">
+                                            <submit text="Show what changes"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
                             <container-dialog id="EditFacilityDialog"
                                     button-text="Edit facility"
                                     title="${ec.l10n.localize('Edit')} ${facility.facilityName}"
@@ -168,6 +251,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="facilityTypeEnumId">
+                                        <conditional-field condition="appRoot == 'Maintenance'" title="Type">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'facilityTypes', selected:facilityTypeEnumId}"/>
+                                            </drop-down>
+                                        </conditional-field>
                                         <default-field title="Type">
                                             <drop-down allow-empty="true">
                                                 <dynamic-options transition="facilityChoices"
@@ -178,6 +269,16 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="parentFacilityId">
+                                        <conditional-field condition="appRoot == 'Maintenance'" title="Inside"
+                                                tooltip="Never itself or a facility inside it; Facilities shows what a move changes">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'parentFacilities', choiceFacilityId:facilityId,
+                                                            selected:parentFacilityId}"/>
+                                            </drop-down>
+                                        </conditional-field>
                                         <default-field title="Inside" tooltip="Never itself or a facility inside it">
                                             <drop-down allow-empty="true">
                                                 <dynamic-options transition="facilityChoices"
@@ -189,6 +290,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="ownerPartyId">
+                                        <conditional-field condition="appRoot == 'Maintenance'" title="Owner">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'organizations', selected:ownerPartyId}"/>
+                                            </drop-down>
+                                        </conditional-field>
                                         <default-field title="Owner">
                                             <drop-down allow-empty="false">
                                                 <dynamic-options transition="facilityChoices"
@@ -196,6 +305,40 @@ along with this software (see the LICENSE.md file). If not, see
                                                         min-length="0"
                                                         parameter-map="{choice:'owners', selected:ownerPartyId}"/>
                                             </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <!-- Maintenance (impl-maintenance P2, F16): the time zone, people capacity and booking -->
+                                    <field name="timeZone">
+                                        <conditional-field condition="appRoot == 'Maintenance'" title="Time zone"
+                                                tooltip="Empty takes the facility it is inside's">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices"
+                                                        server-search="true"
+                                                        min-length="1"
+                                                        parameter-map="{choice:'timeZones', selected:timeZone}"/>
+                                            </drop-down>
+                                        </conditional-field>
+                                        <default-field>
+                                            <ignored/>
+                                        </default-field>
+                                    </field>
+                                    <field name="capacity">
+                                        <conditional-field condition="appRoot == 'Maintenance'" title="Holds" tooltip="How many people it holds">
+                                            <text-line size="5"/>
+                                        </conditional-field>
+                                        <default-field>
+                                            <ignored/>
+                                        </default-field>
+                                    </field>
+                                    <field name="bookable">
+                                        <conditional-field condition="appRoot == 'Maintenance'" title="Bookable">
+                                            <drop-down allow-empty="true">
+                                                <option key="Y" text="Can be booked"/>
+                                                <option key="N" text="Not bookable"/>
+                                            </drop-down>
+                                        </conditional-field>
+                                        <default-field>
+                                            <ignored/>
                                         </default-field>
                                     </field>
                                     <field name="openedDate">
@@ -276,6 +419,11 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field-ref name="description"/>
                                         </field-row>
                                         <field-row>
+                                            <field-ref name="timeZone"/>
+                                            <field-ref name="capacity"/>
+                                            <field-ref name="bookable"/>
+                                        </field-row>
+                                        <field-row>
                                             <field-ref name="address1"/>
                                             <field-ref name="address2"/>
                                         </field-row>
@@ -295,6 +443,52 @@ along with this software (see the LICENSE.md file). If not, see
                         </container>
                     </container>
                 </container>
+                <!-- Maintenance: the effect of the move asked for, and its confirmation (Edit facility's transition, store#Facility) -->
+                <section name="MoveFacilityEffect" condition="appRoot == 'Maintenance' &amp;&amp; moveToParentId">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Move ${facility.facilityName}"/>
+                            <box-body>
+                                <label text="${moveRefusal}" type="p" style="text-negative" condition="moveRefusal"/>
+                                <form-list name="MoveFacilityRows" list="moveRows" skip-form="true" skip-header="true" paginate="false"
+                                        condition="moveRows.length">
+                                    <field name="label">
+                                        <default-field>
+                                            <display style="m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field>
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <form-single name="MoveFacility" transition="updateFacility" map="moveValues" condition="moveEffect">
+                                    <field name="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="parentFacilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="originalParentFacilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="">
+                                            <submit text="Move it" confirmation="Move ${facility.facilityName}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <!-- As in Moqui Java a menu lists every subscreen; the tabs here are facilityTabs, the app's. -->
                 <section name="FacilityTabBar">
                     <actions>

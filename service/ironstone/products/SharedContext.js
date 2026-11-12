@@ -376,8 +376,70 @@ function commerceContext() {
         storeIds
     }
 }
+// Maintenance's mount (impl-maintenance P2, F67; design-maintenance §6 "Shared master records", crosscut §3.5):
+// Maintenance/Equipment/Product360, an equipment model's Summary, Identifiers, Equipment (its meters and maintenance defaults),
+// Spare parts (PatSparePart associations) and Documents. Read by Maintenance's read scope (a user who reads equipment, its
+// organizations the products' owners); catalog writes only as the user's own catalog capabilities give them (store#CatalogRow
+// checks them again), and no price, cost or method read. P9 (F67): the Stock tab and Maintenance/WorkOrders/InventoryAvailability,
+// the stock in the facilities of the scope's organizations that hold stock (facilityIds), for a planner's and technician's spare
+// parts.
+const maintenanceTabs = ["Summary", "Identifiers", "Equipment", "SpareParts", "Stock", "Documents"]
+// The facilities of the organizations whose stock (inventory or supplies) they hold, a facility's organization its owner or its
+// nearest owning ancestor's (as Maintenance reads facilities).
+function maintenanceFacilities(organizationPartyIds) {
+    if (!organizationPartyIds.length) return []
+    const facilityScope = ec.resource.script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
+    const facilityIds = Array.from(
+        ec.entity
+            .find("mantle.product.asset.Asset")
+            .condition("ownerPartyId", "in", organizationPartyIds)
+            .condition("assetTypeEnumId", "in", ["AstTpInventory", "AstTpSupplies"])
+            .condition("facilityId", "is-not-null", null)
+            .selectField("facilityId")
+            .distinct(true)
+            .disableAuthz()
+            .list()
+    ).map(row => row.facilityId)
+    return facilityIds.filter(facilityId => organizationPartyIds.includes(facilityScope.facilityOrganization(facilityId)))
+}
+function maintenanceContext() {
+    const found = call("ironstone.maintenance.ContextServices.get#SharedContext", {appRoot: "Maintenance"})
+    const maintenance = found.capabilities || {}
+    if (!maintenance.read) throw new Error("Shared catalog context is not available")
+    const read = !!maintenance.resourceRead
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        source = a.capabilities || {}
+    const capabilities = {systemAdmin: !!source.systemAdmin, read}
+    for (const name of ["catalogEdit", "catalogAdmin"]) capabilities[name] = read && !!source[name]
+    for (const name of ["priceRead", "priceEdit", "supplierPriceRead", "supplierPriceEdit", "costRead", "costEstimate", "costApprove"])
+        capabilities[name] = false
+    for (const name of ["methodRead", "methodEdit", "methodApprove", "methodAdmin", "stockPlan", "stockManage", "glPost", "marginRead"])
+        capabilities[name] = false
+    const organizationPartyIds = read ? Array.from(found.organizationPartyIds || []) : []
+    return {
+        capabilities,
+        appRoot: "Maintenance",
+        linkBase: "//Maintenance",
+        webBase: "/qapps/Maintenance",
+        printBase: "/apps/Maintenance",
+        sharedLinks: {
+            "": "//Maintenance/Equipment",
+            "Products/Product360": "//Maintenance/Equipment/Product360",
+            "Equipment/Find": "//Maintenance/Equipment/Find",
+            // P9: a part's stock from a work order's Parts tab
+            "WorkOrders/InventoryAvailability": "//Maintenance/WorkOrders/InventoryAvailability"
+        },
+        productTabs: read ? maintenanceTabs : [],
+        connectionTypes: [],
+        ownerPartyIds: organizationPartyIds,
+        organizationPartyIds,
+        activeOrganizationPartyId: read ? found.activeOrganizationPartyId || null : null,
+        facilityIds: read ? maintenanceFacilities(organizationPartyIds) : []
+    }
+}
 function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
+    if (appRoot === "Maintenance") return maintenanceContext()
     if (appRoot === "Commerce") return commerceContext()
     if (appRoot === "CustomerService") return customerServiceContext()
     if (appRoot === "Warehouse") return warehouseContext()

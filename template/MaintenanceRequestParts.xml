@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Maintenance request screens (impl-maintenance P4; design-maintenance §3 Requests, the RequestDetail mount row). A
+    screen includes each transition it uses by name (transition-include), so a form here posts to the screen it is on.
+    - triageRequest: a planner's or supervisor's decision on a request (check#Record, then Mantle's triage#MaintenanceRequest, which
+      checks again): create a work order (or adopt Manufacturing's maintenance record), add the request to an open work order, reject
+      it with a reason, or assign it; the request reloads with the result.
+    - MaintenanceRequestContext: RequestDetail's Maintenance box under Maintenance (maintenanceRequest from
+      ironstone.maintenance.RequestServices.get#RequestContext): the reported fault's target, reporter and work order, and the triage
+      dialogs Create work order (primary while untriaged), Add to a work order, Reject and Assign.
+    - MaintenanceReportSummary: the reporter's safe summary of their maintenance request in Commons' RequestDetail (maintenanceSummary,
+      Mantle's find#MaintenanceRequests row: the state, the target and the work order's name and status; nothing else of the work). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="triageRequest">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId}"/>
+            <service-call name="mantle.work.MaintenanceServices.triage#MaintenanceRequest" out-map="triaged"
+                    in-map="{requestId:requestId, decision:decision, workEffortId:(decision == 'link' ? workEffortId : null),
+                        assetId:(decision == 'create' ? (assetId || null) : null), facilityId:(decision == 'create' ? (facilityId || null) : null),
+                        workEffortName:(workEffortName || null), priority:(priority || null), teamPartyId:(teamPartyId || null),
+                        severityEnumId:(severityEnumId || null), requestResolutionEnumId:(decision == 'reject' ? requestResolutionEnumId : null),
+                        comments:(comments || null), assigneePartyId:(decision == 'assign' ? assigneePartyId : null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="resultText" from="triaged.decision == 'reject' ? 'Request ' + requestId + ' rejected'
+                        : triaged.decision == 'assign' ? 'Request ' + requestId + ' assigned'
+                        : triaged.repeated ? 'Request ' + requestId + ' is on work order ' + triaged.workEffortId + ' already'
+                        : triaged.decision == 'link' ? 'Request ' + requestId + ' added to work order ' + triaged.workEffortId
+                        : 'Work order ' + triaged.workEffortId + ' made from request ' + requestId"/>
+                <message type="success">${resultText}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="MaintenanceRequestContext" condition="mntRequest &amp;&amp; tab == 'overview'">
+            <actions>
+                <set field="fault" from="maintenanceRequest.request || {}"/>
+                <set field="triageValues" from="maintenanceRequest.triageValues || {}"/>
+                <set field="requestOrganizationPartyId" from="maintenanceRequest.organizationPartyId"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Maintenance"/>
+                    <box-toolbar>
+                        <container-dialog id="CreateWorkDialog" button-text="Create work order" icon="sym_o_handyman" type="primary"
+                                title="Create a work order for ${fault.requestName}" condition="maintenanceRequest.canTriage">
+                            <form-single name="CreateWorkFromRequest" transition="triageRequest" map="triageValues">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="decision" from="'create'"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="workEffortName"><default-field title="Work order"><text-line size="40"/></default-field></field>
+                                <field name="assetId">
+                                    <conditional-field condition="!fault.targetId" title="Equipment" tooltip="The problem names none: choose the equipment or the facility">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'equipment'}"/>
+                                        </drop-down>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="facilityId">
+                                    <conditional-field condition="!fault.targetId" title="Or the facility">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'workFacilities'}"/>
+                                        </drop-down>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="priority">
+                                    <default-field title="Priority">
+                                        <drop-down><option key="1" text="1 (most urgent)"/><option key="2"/><option key="3"/><option key="4"/>
+                                            <option key="5" text="5 (normal)"/><option key="6"/><option key="7"/><option key="8"/><option key="9" text="9 (least)"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="severityEnumId">
+                                    <default-field title="Severity">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'severities'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="teamPartyId">
+                                    <default-field title="Team">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'teams', choiceOrganizationPartyId:requestOrganizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Create work order"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="LinkWorkDialog" button-text="Add to a work order" icon="sym_o_add_link"
+                                title="Add ${fault.requestName} to a work order" condition="maintenanceRequest.canTriage">
+                            <form-single name="LinkWorkFromRequest" transition="triageRequest" map="triageValues">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="decision" from="'link'"><default-field><hidden/></default-field></field>
+                                <field name="workEffortId">
+                                    <default-field title="Work order" tooltip="An open work order of the request's organization">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'openWorkOrders', choiceOrganizationPartyId:requestOrganizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add to the work order"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="AssignRequestDialog" button-text="Assign" icon="sym_o_person_add" title="Assign ${fault.requestName}"
+                                condition="maintenanceRequest.canAssign">
+                            <form-single name="AssignMaintenanceRequest" transition="triageRequest">
+                                <field name="requestId" from="fault.requestId"><default-field><hidden/></default-field></field>
+                                <field name="decision" from="'assign'"><default-field><hidden/></default-field></field>
+                                <field name="assigneePartyId">
+                                    <default-field title="Who handles it">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'workPeople', choiceOrganizationPartyId:requestOrganizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Assign"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="RejectRequestDialog" button-text="Reject" icon="sym_o_block" title="Reject ${fault.requestName}"
+                                condition="maintenanceRequest.canTriage">
+                            <form-single name="RejectMaintenanceRequest" transition="triageRequest">
+                                <field name="requestId" from="fault.requestId"><default-field><hidden/></default-field></field>
+                                <field name="decision" from="'reject'"><default-field><hidden/></default-field></field>
+                                <field name="requestResolutionEnumId">
+                                    <default-field title="Why">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'rejectReasons'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="comments"><default-field title="Note to the reporter"><text-area rows="3" cols="50"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Reject request">
+                                        <submit type="danger" confirmation="Reject request ${fault.requestId}? It is kept with the reason."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <form-single name="MaintenanceRequestFacts" map="fault">
+                            <field name="targetName">
+                                <default-field title="Equipment or facility">
+                                    <link url="${fault.targetUrl}" url-type="plain" text="${fault.targetName}" link-type="anchor" condition="fault.targetId"/>
+                                    <label text="None named yet: choose it when you create the work order" type="span" style="text-warning" condition="!fault.targetId"/>
+                                </default-field>
+                            </field>
+                            <field name="reporterName"><default-field title="Reported by"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Request"><display/></default-field></field>
+                            <field name="workText">
+                                <default-field title="Work order">
+                                    <link url="${fault.workOrderUrl}" url-type="plain" text="${fault.workText}" link-type="anchor" condition="fault.workEffortId"/>
+                                    <label text="Not triaged yet" type="span" style="m-muted" condition="!fault.workEffortId"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="targetName"/><field-ref name="reporterName"/></field-row>
+                                <field-row><field-ref name="stateText"/><field-ref name="workText"/></field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MaintenanceReportSummary" condition="maintenanceSummary &amp;&amp; tab == 'overview'">
+            <widgets>
+                <container-box>
+                    <box-header title="Maintenance"/>
+                    <box-body>
+                        <form-single name="MaintenanceReportFacts" map="maintenanceSummary">
+                            <field name="targetName"><default-field title="Equipment or facility"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Your report"><display/></default-field></field>
+                            <field name="workText">
+                                <default-field title="Work order">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="targetName"/><field-ref name="stateText"/></field-row>
+                                <field-ref name="workText"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

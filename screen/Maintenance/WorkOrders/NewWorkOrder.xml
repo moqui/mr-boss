@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Work orders › New work order (design-maintenance §3 WorkOrders NewWork; impl-maintenance P3), the quick create's and
+    Find's: one target, equipment or a facility of the user's scope, the name and description, the kind (corrective by default),
+    type, severity and priority, the estimated hours, the planned window and the team (the organization's default when empty), and
+    (P6) a procedure: an approved one in effect for the target (Use procedure on a procedure opens this with it chosen), whose steps
+    become the work's in the same transaction; work from a procedure waits for the threshold, as planned work does,
+    through create#MaintenanceWorkOrder (MAINTENANCE_PLAN or _SUPERVISE), with an operation key so a second submit answers the first.
+    Corrective work, and planned work within the approval threshold, is approved on create; other planned work waits for a
+    supervisor. A user who may not create work is told so. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New work order" default-menu-include="false">
+    <parameter name="assetId"/>
+    <parameter name="facilityId"/>
+    <parameter name="templateWorkEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="createWorkOrder" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="canCreate" from="!!(can.plan || can.supervise)"/>
+        <set field="newWork" from="{targetKind: facilityId &amp;&amp; !assetId ? 'facility' : 'equipment', assetId: assetId || null,
+                facilityId: facilityId || null, templateWorkEffortId: templateWorkEffortId || null,
+                maintenanceKindEnumId: templateWorkEffortId ? 'MkPreventive' : 'MkCorrective', priority: '5',
+                operationKey: 'new-work-' + ec.user.randomString(20)}"/>
+    </actions>
+    <widgets>
+        <label text="New work order" type="h5"/>
+        <label text="Work orders are created by maintenance planners and supervisors. Report a problem to them instead." type="p"
+                style="m-muted" condition="!canCreate"/>
+        <section name="NewWorkForm" condition="canCreate">
+            <widgets>
+                <container-box>
+                    <box-body>
+                        <form-single name="NewWork" transition="createWorkOrder" map="newWork">
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="targetKind">
+                                <default-field title="The work is for">
+                                    <radio><option key="equipment" text="Equipment"/><option key="facility" text="A facility or room"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="assetId">
+                                <default-field title="Equipment">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'equipment', selected:newWork.assetId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field title="Facility or room" tooltip="For work on a facility with no equipment">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'workFacilities', selected:newWork.facilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="templateWorkEffortId">
+                                <default-field title="Procedure" tooltip="An approved procedure for the equipment or facility; its steps become the work's">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'procedures', selected:newWork.templateWorkEffortId}">
+                                            <depends-on field="assetId" parameter="choiceAssetId"/>
+                                            <depends-on field="facilityId" parameter="choiceFacilityId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="workEffortName">
+                                <default-field title="What needs doing" tooltip="The procedure's name when empty"><text-line size="60"/></default-field>
+                            </field>
+                            <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                            <field name="maintenanceKindEnumId">
+                                <default-field title="Kind">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'maintenanceKinds', selected:newWork.maintenanceKindEnumId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="maintenanceTypeEnumId">
+                                <default-field title="Type" tooltip="The organization's default when empty">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'maintenanceTypes'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="severityEnumId">
+                                <default-field title="Severity">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'severities'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="priority">
+                                <default-field title="Priority" tooltip="1 is the most urgent">
+                                    <drop-down>
+                                        <option key="1" text="1 (urgent)"/><option key="2" text="2"/><option key="3" text="3 (high)"/>
+                                        <option key="4" text="4"/><option key="5" text="5 (normal)"/><option key="6" text="6"/>
+                                        <option key="7" text="7"/><option key="8" text="8"/><option key="9" text="9 (low)"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="estimatedWorkTime">
+                                <default-field title="Estimated hours"><text-line size="6" input-type="number"/></default-field>
+                            </field>
+                            <field name="estimatedStartDate"><default-field title="Planned start"><date-time/></default-field></field>
+                            <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>
+                            <field name="teamPartyId">
+                                <default-field title="Team" tooltip="The organization's default team when empty">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'teams'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <!-- P5: whether starting the work takes its target out of service -->
+                            <field name="offlineIntent">
+                                <default-field title="When the work starts">
+                                    <drop-down allow-empty="true"><option key="Y" text="Take it out of service"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Create work order"><submit type="primary"/></default-field></field>
+                            <field-layout>
+                                <field-ref name="targetKind"/>
+                                <field-row><field-ref name="assetId"/><field-ref name="facilityId"/></field-row>
+                                <field-ref name="templateWorkEffortId"/>
+                                <field-ref name="workEffortName"/>
+                                <field-ref name="description"/>
+                                <field-row><field-ref name="maintenanceKindEnumId"/><field-ref name="maintenanceTypeEnumId"/></field-row>
+                                <field-row><field-ref name="severityEnumId"/><field-ref name="priority"/></field-row>
+                                <field-row><field-ref name="estimatedStartDate"/><field-ref name="estimatedCompletionDate"/></field-row>
+                                <field-row><field-ref name="estimatedWorkTime"/><field-ref name="teamPartyId"/></field-row>
+                                <field-ref name="offlineIntent"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

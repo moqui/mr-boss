@@ -42,11 +42,14 @@ along with this software (see the LICENSE.md file). If not, see
             the costly reads (connections, stock, prices) are each tab's own -->
         <if condition="productFound">
             <service-call name="ironstone.products.CatalogServices.get#ProductDetail" in-map="{productId:productId,appRoot:appRoot}" out-map="context"/>
-            <service-call name="ironstone.products.CatalogServices.get#CatalogOptions" out-map="context"/>
+            <!-- Maintenance's options are its own context's (impl-maintenance P2: its users read by Maintenance's scope, not the
+                catalog's); the other mounts' are Products' as before -->
+            <service-call name="ironstone.products.CatalogServices.get#CatalogOptions" out-map="context"
+                    in-map="{appRoot: appRoot == 'Maintenance' ? appRoot : null}"/>
             <set field="product" from="detail.product"/>
             <set field="canEdit" from="detail.canEdit"/>
             <!-- the tabs that apply to this product's type: the tab bar and each tab screen's condition read this one list -->
-            <set field="product360Tabs" from="product360Tabs.filter(tab =&gt; tab === 'Equipment' ? product?.assetTypeEnumId === 'AstTpEquipment'
+            <set field="product360Tabs" from="product360Tabs.filter(tab =&gt; tab === 'Equipment' || tab === 'SpareParts' ? product?.assetTypeEnumId === 'AstTpEquipment'
                     : tab === 'KitComponents' ? product?.productTypeEnumId === 'PtPickAssembly'
                     : tab === 'PaidAccess' ? appRoot == 'Commerce' || product?.productTypeEnumId == 'PtDigital' : true)"/>
         </if>
@@ -107,6 +110,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="BOM" menu-title="BOM" menu-index="12" menu-include="true" location="component://mr-boss/screen/Shared/BillOfMaterialsDetail.xml"/>
         <subscreens-item name="KitComponents" menu-title="Kit components" menu-index="13" menu-include="true" location="component://mr-boss/screen/Shared/Product360/KitComponents.xml"/>
         <subscreens-item name="Equipment" menu-title="Equipment" menu-index="14" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Equipment.xml"/>
+        <!-- Maintenance (impl-maintenance P2): an equipment model's spare parts, in Maintenance's tabs only -->
+        <subscreens-item name="SpareParts" menu-title="Spare parts" menu-index="14" menu-include="true" location="component://mr-boss/screen/Shared/Product360/SpareParts.xml"/>
         <subscreens-item name="Associations" menu-index="15" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Associations.xml"/>
         <subscreens-item name="Parties" menu-index="16" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Parties.xml"/>
         <subscreens-item name="Connections" menu-index="17" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Connections.xml"/>

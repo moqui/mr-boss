@@ -12,9 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Maintenance: root of the app for facilities and equipment managers (initial-design.md app table); its
-    sections follow design-maintenance.md when that file is written. Not yet implemented: its BOSS_MAINTENANCE
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Maintenance (design-maintenance §1): the root of the app for facilities and equipment managers, planners,
+    technicians, supervisors, procedure authors and approvers, resource approvers and administrators, and cost readers. The root
+    user group BOSS_MAINTENANCE and the administrator group BOSS_MAINTENANCE_ADMIN open it (data/BossSetupData.xml), as ADMIN
+    does (impl-maintenance F1: the grant was live for ADMIN and BOSS_MAINTENANCE_ADMIN before P1, whatever this comment said);
+    BOSS_MAINTENANCE_REQUEST has no root grant (a requester reports a problem from Commons' intake, P4). The root grant opens
+    navigation only: ironstone.maintenance.ContextServices.get#SharedContext checks the user and resolves their capabilities,
+    organizations and links for every subscreen, and each Mantle maintenance service checks the permissions and scope again
+    (mantle/work/MaintenanceAccess.js). The menu of design §1.2 grows by phase: P1 builds Home (every Maintenance user's) and
+    Settings (the Maintenance administrator's, BOSS_MNT_SETTINGS); P2 Equipment and Facilities, shown to a user who reads
+    equipment and facilities (a view, assigned view or resource view permission, MaintenanceAccess.js reads.resourceRead; the
+    screens and Mantle check again); each later phase adds its area, and the design's later entries stay absent. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Maintenance" menu-image="sym_o_build" menu-image-type="icon">
 
@@ -22,14 +30,135 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Maintenance"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <!-- a shared device's request (a later TechnicianKiosk's route group; impl-maintenance F74) runs as a display account, which
+            is no Maintenance user: it calls no context service, gets no capability or link, and is served no Chatter or
+            RecordFiles panel, as Insights' root does for its wall displays -->
+        <if condition="UserSecurityChecks.currentDevice()"><then>
+            <set field="maintenance" from="{capabilities: {}, organizationPartyIds: [], sharedLinks: {}}"/>
+            <script><![CDATA[
+                const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+                const panelName = pathNames[pathNames.indexOf('Maintenance') + 1]
+                if (panelName === 'Chatter' || panelName === 'RecordFiles')
+                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files are not available on a shared device')
+            ]]></script>
+        </then><else>
+            <service-call name="ironstone.maintenance.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="maintenance"/>
+            <!-- the record panels serve Maintenance's own record hosts only (the People P2 and Insights P12 mount lesson): this root's
+                inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to a user given
+                Maintenance without Commons. P2: equipment (Asset) and facilities, each checked as Maintenance's check#Record checks
+                the record (the user's maintenance scope); P3: a work order and its steps (a WorkEffort; a step is checked as its
+                work order, and a work effort that is no work order is refused); P4: a maintenance request (a Request), a planner's or
+                supervisor's of its organization. A panel request with no record (a person search, an
+                avatar) names none. -->
+            <!-- the check is a service-call of the read-only check#Record rather than a script's ec.service call, so the root's
+                always-actions stay what a server-static tab under it (FacilityDetail's Files and Conversation) may repeat -->
+            <script><![CDATA[
+                const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
+                const panelName = pathNames[pathNames.indexOf('Maintenance') + 1]
+                const wanted = ec.context.recordEntity
+                panelRecordType = null
+                if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
+                    let entityName = String(wanted)
+                    try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
+                    const panelHosts = {'mantle.product.asset.Asset': 'asset', 'mantle.facility.Facility': 'facility',
+                        'mantle.work.effort.WorkEffort': 'workOrder', 'mantle.request.Request': 'request'}
+                    if (!Object.hasOwn(panelHosts, entityName))
+                        throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
+                    panelRecordType = panelHosts[entityName]
+                }
+            ]]></script>
+            <if condition="panelRecordType">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="panelRecord" ignore-error="true"
+                        in-map="{appRoot:'Maintenance', recordType:panelRecordType, recordId:ec.context.recordId || ''}"/>
+                <script>if (!ec.context.panelRecord?.recordId) throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are not available')</script>
+            </if>
+        </else></if>
+        <set field="sharedLinks" from="maintenance.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
         <!-- the record panels the chatter and record-files elements load under this app root, hidden from the menu
-            (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
+            (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5); Maintenance's record
+            hosts (a work order, a step, a template, equipment, a facility) join with their phases (P3) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- P3: Work orders (design §3), for a user who reads maintenance work (a view or assigned view permission) -->
+        <subscreens-item name="WorkOrders" location="component://mr-boss/screen/Maintenance/WorkOrders.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW')"/>
+        <!-- P4: Requests (design §3), for a planner or supervisor, who triage them; a requester reports and follows their own in
+            Commons (Commons/ReportProblem, Commons/Requests/RequestDetail) -->
+        <subscreens-item name="Requests" location="component://mr-boss/screen/Maintenance/Requests.xml" menu-index="3"
+                menu-include="ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')"/>
+        <!-- P6: Procedures (design §4), for a reader of procedures (WORK_PROCESS_VIEW) or a planner or supervisor, who uses one for
+            new work; ProcedureDetail opens read only for a technician assigned to work made of the procedure (Mantle's read) -->
+        <subscreens-item name="Procedures" location="component://mr-boss/screen/Maintenance/Procedures.xml" menu-index="4"
+                menu-include="ec.user.hasPermission('WORK_PROCESS_VIEW') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')"/>
+        <!-- P13: Preventive (design §5): the plans, for a reader of maintenance work (MAINTENANCE_VIEW) or a planner or supervisor;
+            Mantle's MaintenancePlanServices check again (a write needs MAINTENANCE_PLAN or _SUPERVISE) -->
+        <subscreens-item name="Preventive" location="component://mr-boss/screen/Maintenance/Preventive.xml" menu-index="5"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')"/>
+        <!-- P2: Equipment and Facilities (design §6), for a user who reads them -->
+        <subscreens-item name="Equipment" location="component://mr-boss/screen/Maintenance/Equipment.xml" menu-index="6"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
+        <subscreens-item name="Facilities" location="component://mr-boss/screen/Maintenance/Facilities.xml" menu-index="7"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW') || ec.user.hasPermission('MAINTENANCE_ASSIGNED_VIEW') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
+        <!-- P15: Scheduling (design §7), for a resource administrator, a resource approver, a supervisor and a resource reader -->
+        <subscreens-item name="Scheduling" location="component://mr-boss/screen/Maintenance/Scheduling.xml" menu-index="8"
+                menu-include="ec.user.hasPermission('RESOURCE_POLICY_VIEW') || ec.user.hasPermission('RESOURCE_BOOKING_VIEW_ASSIGNED') || ec.user.hasPermission('MAINTENANCE_SUPERVISE') || ec.user.hasPermission('MAINTENANCE_RESOURCE_VIEW')"/>
+        <!-- P14: Reports (design §8), for a reader of maintenance work (MAINTENANCE_VIEW): PM compliance first; P17 adds the landing,
+            work status and costs -->
+        <subscreens-item name="Reports" location="component://mr-boss/screen/Maintenance/Reports.xml" menu-index="9"
+                menu-include="ec.user.hasPermission('MAINTENANCE_VIEW')"/>
     </subscreens>
+
+    <!-- P1: the maintenance keymap and the palette source (design §1.2; its records join with their screens: equipment and
+        facilities P2, work orders P3, procedures P6). P2: g e and g f open Equipment and Facilities; P3: g w Work orders; P6: g p
+        Procedures; P13: g l Preventive plans. Quick create
+        (New work order P3, Report a problem P4), Today (P3) and the notification topics (MaintenanceWork P3, MaintenanceDue,
+        WorkProcessApproval, ResourceBooking) arrive with their records. -->
+    <shell-providers>
+        <palette-source group="Maintenance" label="Maintenance records" icon="sym_o_build"
+                service="ironstone.maintenance.ContextServices.search#Records" sequence="48"/>
+        <!-- P3: New work order (NewWorkOrder tells a user who may not create work so; Mantle refuses them), the MaintenanceWork topic
+            and the user's due work orders in Today -->
+        <quick-create kind="maintenanceWorkOrder" label="Maintenance work order" icon="sym_o_handyman"
+                screen="Maintenance/WorkOrders/NewWorkOrder" sequence="86"/>
+        <notification-topic topic="MaintenanceWork"/>
+        <!-- P6: a procedure waiting for the user's approval (Mantle's topic, approved or refused from Commons' approvals inbox through
+            ProcessServices approve#WorkProcess and refuse#WorkProcess; its link opens ProcedureDetail) -->
+        <notification-topic topic="WorkProcessApproval"/>
+        <!-- P14: preventive work made from a plan, told to the organization's planners (Mantle's topic; its link opens the work order) -->
+        <notification-topic topic="MaintenanceDue"/>
+        <!-- P16: a booking waiting for the user's approval (Mantle's topic, approved or denied from Commons' approvals inbox through
+            ResourceBookingServices approve#ResourceBooking and refuse#ResourceBooking; its link opens BookingRequests), and what became
+            of a booking, told its organizer -->
+        <notification-topic topic="ResourceBooking"/>
+        <notification-topic topic="ResourceBookingNotice"/>
+        <today-source service="ironstone.maintenance.HomeServices.get#TodayItems" label="Maintenance"/>
+        <!-- P19 (design §1.4): Comms' record cards of work orders, equipment and facilities, ahead of the suite's generic lookup
+            (sequence below Comms' 0) so a work order opens in Maintenance; a caller's open work and equipment under repair; Assist's
+            chips (each also needs its screen's grant) and its answer actions, filed through Maintenance's own record check -->
+        <record-lookup name="maintenance.records" service="ironstone.maintenance.StackServices.lookup#Records" sequence="-10"/>
+        <call-context name="maintenance.work" service="ironstone.maintenance.StackServices.get#CallContext"/>
+        <assist-prompt label="Summarize history" text="Summarize this equipment's maintenance history"
+                screen="Maintenance/Equipment/EquipmentDetail" entity="mantle.product.asset.Asset" sequence="50"/>
+        <assist-prompt label="What blocks completion?" text="What blocks completion of this work order?"
+                screen="Maintenance/WorkOrders/WorkOrderDetail" entity="mantle.work.effort.WorkEffort" sequence="51"/>
+        <assist-prompt label="Report a problem" text="Report a problem: " screen="Maintenance/Home" sequence="52"/>
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Maintenance/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="60"/>
+        <response-action label="Send as message" icon="sym_o_send" screen="Maintenance/SendMessage" text-parameter="messageText"
+                sequence="61"/>
+        <keymap scope="maintenance">
+            <key keys="g m" label="Maintenance home" screen="Maintenance/Home"/>
+            <key keys="g w" label="Work orders" screen="Maintenance/WorkOrders"/>
+            <key keys="g r" label="Maintenance requests" screen="Maintenance/Requests"/>
+            <key keys="g p" label="Procedures" screen="Maintenance/Procedures"/>
+            <key keys="g l" label="Preventive plans" screen="Maintenance/Preventive"/>
+            <key keys="g e" label="Equipment" screen="Maintenance/Equipment"/>
+            <key keys="g f" label="Facilities" screen="Maintenance/Facilities"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="maintenance-panel" type="popup"/></widgets>
 </screen>

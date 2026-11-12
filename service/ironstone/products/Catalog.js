@@ -164,6 +164,10 @@ function run(op, parameters) {
                 )
                 .map(withDates)
         }
+        // an equipment model's spare parts (PatSparePart, impl-maintenance P2), Product360's Spare parts tab
+        result.sparePartRows = list(P + "ProductAssoc", {productId: p.productId, productAssocTypeEnumId: "PatSparePart"})
+            .filter(row => visible(row.toProductId))
+            .map(row => Object.assign(withDates(row), {toProductName: record(row.toProductId).productName || row.toProductId, current: current(row)}))
         result.incomingRows = list(P + "ProductAssoc", {toProductId: p.productId})
             .filter(row => ["PatEquivalent", "PatReplacement"].includes(row.productAssocTypeEnumId) && visible(row.productId))
             .map(withDates)

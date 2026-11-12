@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's stack providers (design-maintenance §1.4 Comms hooks; impl-maintenance P19), declared on the Maintenance root and
+    answered as the user under its authorization, in Stack.js. No cost in either answer. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="lookup" noun="Records" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>
+        <description>Maintenance's record-lookup provider (Maintenance.xml shell-providers, maintenance.records; design §1.4): work
+            orders, equipment and facilities in Comms' record cards. info and card: a record Maintenance admits the user to
+            (Maintenance.js recordOf: Mantle's scope, a technician their assigned work), its name, organization and a work order's
+            status, opening its Maintenance screen (one it does not admit is left to the other providers); search: the palette's
+            scoped finds for text, as optionList of {value: entity|id, label}; links: the Maintenance links a message's body
+            names, up to five. No cost.</description>
+        <out-parameters>
+            <parameter name="recordList" type="List"/>
+            <parameter name="card" type="Map"/>
+            <parameter name="optionList" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Stack.js').execute('lookup', context)"/>
+            <set field="recordList" from="found.recordList"/>
+            <set field="card" from="found.card"/>
+            <set field="optionList" from="found.optionList"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CallContext" allow-remote="false" read-only="true">
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
+        <description>Maintenance's call-context provider (Maintenance.xml shell-providers, maintenance.work; design §1.4): for the
+            number ringing, a colleague's own open work (an employee or agent of an internal organization: the work orders they
+            reported or are assigned, the user's call of Nov 12), else the caller organization's open work orders (its own, when it
+            is one of the internal organizations, and those on equipment it owns, for a customer or vendor), and the equipment under
+            repair among them (the asset of an open work order in progress), as far as the user's Maintenance scope reads them
+            (Mantle's find#MaintenanceWorkOrders and get#MaintenanceWorkOrder as the user), each with its Maintenance link; at most
+            20. Comms' own provider answers the contacts. No cost and no rate.</description>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Stack.js').execute('callContext', context)"/>
+            <set field="contactList" from="found.contactList"/>
+            <set field="recordList" from="found.recordList"/>
+        </actions>
+    </service>
+</services>

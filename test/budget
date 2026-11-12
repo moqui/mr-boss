@@ -5,7 +5,11 @@
 # Nov 5, 2026: raised by Customer Service's measured share (the user's agreement, impl-customer-service): its regression
 # specs' feature time in the final ./moq test-apps, 18.2 s server (the CustomerService* specs) and 4.8 s client
 # (CustomerServiceCasesWalk), rounded up.
-server = 264
+# Nov 12, 2026: raised by Maintenance's measured share (the user's agreement, impl-maintenance §4 and its final suites): its
+# fifteen test/Maintenance specs' feature time in the final ./moq test-apps, 26.3 s server, rounded up.
+server = 291
 # Nov 6, 2026: client raised by Commerce's golden-path walk, CommerceThemesWalk, 7.6 s in the gate C1/S1 ./moq test-apps
 # (the user's agreement, impl-commerce §4: raised at each wave end by the measured share), rounded up.
-client = 57
+# Nov 12, 2026: client raised by Maintenance's golden-path walk, MaintenanceWorkOrdersWalk, 8.1 s in the final ./moq test-apps
+# (the user's agreement, impl-maintenance §4: up to 9 s), rounded up.
+client = 66

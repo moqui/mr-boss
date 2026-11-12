@@ -260,6 +260,15 @@ function openAssignments(partyId) {
             .condition(factory.makeCondition("statusId", "not-in", ["WeptDeclined", "WeptUnassigned"], true))
             .list()
     ).map(row => row.workEffortId)
+    // managed work (a maintenance work order and its steps) is Maintenance's participant's: the generic services this one
+    // reassigns through refuse it (impl-maintenance P3, F56)
+    const managed = new Set(
+        assigned.length
+            ? ec.resource
+                  .script("component://mr-mantle/service/mantle/work/WorkProcesses.js")
+                  .managedIds(Array.from(new Set(assigned)))
+            : []
+    )
     if (assigned.length)
         for (const task of Array.from(
             find("mantle.work.effort.WorkEffort")
@@ -267,7 +276,8 @@ function openAssignments(partyId) {
                 .condition("workEffortTypeEnumId", "WetTask")
                 .list()
         ))
-            if (openTask(task)) (task.rootWorkEffortId ? found.workItems : found.tasks).push(task.workEffortId)
+            if (openTask(task) && !managed.has(task.workEffortId))
+                (task.rootWorkEffortId ? found.workItems : found.tasks).push(task.workEffortId)
     const requestIds = Array.from(
         find("mantle.request.RequestParty")
             .condition({partyId, roleTypeId: "Assignee"})

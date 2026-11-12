@@ -469,13 +469,15 @@ feature(
             deleted,
             left
         }) {
-            // the shipped business rules: Mantle's daily sales floor, Customer Service's breaches and Commerce's three; not
+            // the shipped business rules: Mantle's daily sales floor, Customer Service's breaches, Commerce's three and Maintenance's overdue PM and resource down (impl-maintenance P17; its generation failure reads the server log); not
             // Tools' telemetry rules, nor Admin's over the job runs' spans
             templates.map(template => template.definitionId).sort() ==
                 [
                     "boss-commerce-checkout-failures",
                     "boss-commerce-feed-build-failures",
                     "boss-commerce-payment-unresolved",
+                    "boss-maintenance-overdue-pm",
+                    "boss-maintenance-resource-down",
                     "boss-service-sla-breach",
                     "mantle-sales-daily-floor"
                 ]

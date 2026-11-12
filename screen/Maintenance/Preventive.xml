@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Preventive area of IronStone Maintenance (design-maintenance §5, §1.2; impl-maintenance P13): Plans, the preventive plans of
+    equipment and facilities, with the plan record PlanDetail. Shown to a reader of maintenance work or a planner or supervisor (the
+    root's menu condition); every read and write is Mantle's mantle.work.MaintenancePlanServices after the root's check. P14: Due
+    maintenance, the due list and calendar with generation and the decisions on missed work, its second tab. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Preventive" default-menu-index="5" menu-image="sym_o_event_repeat" menu-image-type="icon">
+    <subscreens default-item="Plans" always-use-full-path="true">
+        <subscreens-item name="Plans" location="component://mr-boss/screen/Maintenance/Preventive/Plans.xml" menu-index="1"/>
+        <subscreens-item name="DueMaintenance" location="component://mr-boss/screen/Maintenance/Preventive/DueMaintenance.xml" menu-index="2"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenancePreventivePanel" type="tab"/>
+    </widgets>
+</screen>

@@ -119,6 +119,16 @@ along with this software (see the LICENSE.md file). If not, see
                 const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId',info.recordId).one()
                 if (row && ['WepRouting','WepRoutingTask'].includes(row.purposeEnumId)) contentType.catalogCanChange = !!ec.service.sync()
                     .name('mantle.work.RoutingServices.get#RoutingAccess').parameters({workEffortId:info.recordId,need:'edit'}).disableAuthz().call()?.recordVisible
+                // managed maintenance work (impl-maintenance P7, F69): Mantle's evidence policy says whether its files change (not
+                // on closed or cancelled work) and which a check names as evidence, which are never removed or replaced
+                if (row) {
+                    const evidence = ec.service.sync().name('mantle.work.ProcessServices.get#EvidencePolicy')
+                        .parameters({workEffortId: info.recordId}).disableAuthz().call()
+                    if (evidence?.managed) {
+                        if (!evidence.canChange) contentType.catalogCanChange = false
+                        contentType.protectedContentIds = Array.from(evidence.protectedContentIds || [])
+                    }
+                }
             }
             // an employment's files: an HR editor of its employer changes them (Mantle's check#EmploymentAccess, People's scope)
             if (info.recordEntityName === 'mantle.humanres.employment.Employment') {
@@ -283,7 +293,8 @@ along with this software (see the LICENSE.md file). If not, see
                     const row = value.getMap()
                     // a production instruction is published once and only ended (Mantle store#OperationInstruction)
                     const immutable = row.isImmutable === 'Y' || (isPayment && !!content.paymentContentLocked) ||
-                            (entityName === 'mantle.work.effort.WorkEffort' && row.contentTypeEnumId === 'WectInstruction')
+                            (entityName === 'mantle.work.effort.WorkEffort' && row.contentTypeEnumId === 'WectInstruction') ||
+                            (content.protectedContentIds || []).includes(String(row.workEffortContentId))
                     const location = row.contentLocation ? String(row.contentLocation) : ''
                     const fileName = location ? baseName(location) : null
                     const key = {}
@@ -415,6 +426,9 @@ along with this software (see the LICENSE.md file). If not, see
                     if (contentType.paymentContentLocked) contentType = Object.assign({}, contentType, {catalogCanChange: false})
                 }
                 if (contentRow.isImmutable === 'Y') contentType = Object.assign({}, contentType, {catalogCanChange: false})
+                // a check's evidence (impl-maintenance P7): never removed
+                if ((contentType.protectedContentIds || []).includes(String(contentRow.workEffortContentId)))
+                    contentType = Object.assign({}, contentType, {catalogCanChange: false})
                 contentLocation = row.contentLocation ? String(row.contentLocation) : null
                 const last = contentLocation ? contentLocation.substring(contentLocation.lastIndexOf('/') + 1) : null
                 try { fileName = last ? decodeURIComponent(last) : null } catch (err) { fileName = last }
@@ -608,7 +622,8 @@ along with this software (see the LICENSE.md file). If not, see
                 const row = rows.find((item) => String(item.contentLocation || '') === `${folder.rootLocation}/${path}`)
                 contentRow = row ? row.getMap() : null
                 const location = `${folder.rootLocation}/${path}`
-                const immutablePath = rows.some((item) => item.getMap().isImmutable === 'Y' &&
+                const protectedIds = content?.protectedContentIds || []
+                const immutablePath = rows.some((item) => (item.getMap().isImmutable === 'Y' || protectedIds.includes(String(item.workEffortContentId))) &&
                     (item.contentLocation === location || String(item.contentLocation || '').startsWith(location + '/')))
                 canChange = !immutablePath && content?.catalogCanChange !== false && ((!!contentRow && !!contentRow.userId && contentRow.userId === ec.user.userId) || ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update'))
                 if (requireChange && !canChange) ec.message.addError(ec.resource.expand('You may not change the files of ${recordName}', '', {recordName: recordName}))

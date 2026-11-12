@@ -71,7 +71,10 @@ groups take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`; the first's Facility
 the user belongs to with its direct children. A user in no organization has an empty `filterOrgIds`, and the filter's
 `IN ()` matches nothing, so they work in no facility; `AccessServices` reads that empty list the same way, never as
 "every facility" (impl-warehouse F35). Vendor-custody facilities are organization-owned, so they are in
-scope; facilities owned by a third party that hold the organization's stock are later. The admin group
+scope; facilities owned by a third party that hold the organization's stock are later. A facility that names no owner of its
+own (a room loaded without one) is its nearest owning ancestor's in the facility, location and room-feature saves
+(FacilityScope.js `ownsFacility`; Nov 11, 2026, impl-maintenance P2's review, an owner contract), as Maintenance reads it; an
+owned facility is its owner's, and the stock guards read the facility's own owner. The admin group
 `BOSS_WAREHOUSE_ADMIN` has all authz on the root with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`; that set
 has no Facility filter, so an admin works in every facility of every organization. `_NA_` products stay
 readable, since `MANTLE_USER_ORG`'s product filters admit them. Nothing filters Asset, AssetDetail or

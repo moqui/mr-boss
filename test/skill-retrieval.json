@@ -27,6 +27,15 @@
         {"query": "which data source is stale", "expect": ["insights-analyst"]},
         {"query": "how many days of annual leave do I have left", "expect": ["people-leave-balance"]},
         {"query": "explain my balance", "page": "/qapps/People/Time/LeaveRequestDetail", "expect": ["people-leave-balance"]},
-        {"query": "why does this request reserve two days of my vacation", "expect": ["people-leave-balance"]}
+        {"query": "why does this request reserve two days of my vacation", "expect": ["people-leave-balance"]},
+        {"query": "the air compressor in the plant is leaking oil", "expect": ["maintenance-report-problem"]},
+        {"query": "report a problem with this machine", "page": "/qapps/Maintenance/Equipment/EquipmentDetail", "expect": ["maintenance-report-problem"]},
+        {"query": "the light in meeting room 101 is broken, can someone fix it", "expect": ["maintenance-report-problem"]},
+        {"query": "what blocks completion of this work order", "page": "/qapps/Maintenance/WorkOrders/WorkOrderDetail", "expect": ["maintenance-close-work-order"]},
+        {"query": "why can't I close the maintenance job", "expect": ["maintenance-close-work-order"]},
+        {"query": "what is left to do before I complete the repair order", "expect": ["maintenance-close-work-order"]},
+        {"query": "summarize this equipment's history", "page": "/qapps/Maintenance/Equipment/EquipmentDetail", "expect": ["maintenance-equipment-history"]},
+        {"query": "when was the compressor last serviced and how often does it break down", "expect": ["maintenance-equipment-history"]},
+        {"query": "show me the repair history of the forklift", "expect": ["maintenance-equipment-history"]}
     ]
 }

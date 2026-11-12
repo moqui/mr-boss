@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Meters tab under Maintenance (design-maintenance §5.1, §6; impl-maintenance P2, F19, F70): its model's meters
+    with the latest reading of each, and the recent readings; Record a reading (record#MaintenanceMeter, the one meter writer) for
+    a holder of MAINTENANCE_RESOURCE_EDIT: a counting meter refuses a lower reading unless it is a reset with its reason, and one
+    time holds one reading. A technician's reading in work joins with P7. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Meters" default-menu-index="4">
+    <parameter name="assetId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="recordMeter" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+        <set field="readingValues" from="{assetId: assetId, readingReasonEnumId: 'AmrReading'}"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentMeters" condition="found?.asset">
+            <widgets>
+                <container-box>
+                    <box-header title="Meters"/>
+                    <box-toolbar>
+                        <container-dialog id="RecordReadingDialog" button-text="Record a reading" title="Record a reading of ${found.asset.assetName}"
+                                icon="sym_o_speed" width="640" type="primary" condition="found.canEdit">
+                            <form-single name="RecordReading" transition="recordMeter" map="readingValues">
+                                <field name="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="meterChoice">
+                                    <default-field title="Meter">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'meters', selected:meterChoice, choiceAssetId:assetId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="meterValue">
+                                    <default-field title="Reading">
+                                        <text-line size="10" required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="readingDate">
+                                    <default-field title="Read at" tooltip="Now when left empty">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="readingReasonEnumId">
+                                    <default-field title="Why">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'readingReasons', selected:readingReasonEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason" tooltip="Needed for a reset">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Record reading"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="EquipmentMeters" list="found.meters" skip-form="true" paginate="false">
+                            <field name="meterName"><default-field title="Meter"><display/></default-field></field>
+                            <field name="latestValue" align="right"><default-field title="Latest reading"><display/></default-field></field>
+                            <field name="unitText"><default-field title="Unit"><display/></default-field></field>
+                            <field name="latestDateText"><default-field title="Read"><display/></default-field></field>
+                            <field name="cumulativeText"><default-field title="Kind"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="meterName"/><field-ref name="latestDateText"/></column>
+                                <column><field-ref name="latestValue"/><field-ref name="unitText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="Its model defines no meter; a reading names a meter type." type="p" style="m-muted q-pa-md"
+                                condition="!found.meters?.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Recent readings"/>
+                    <box-body-nopad>
+                        <form-list name="EquipmentReadings" list="found.readings" skip-form="true" paginate="false">
+                            <field name="readingDateText"><default-field title="Read"><display/></default-field></field>
+                            <field name="meterText"><default-field title="Meter"><display/></default-field></field>
+                            <field name="meterValue" align="right"><default-field title="Reading"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Why"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="readingDateText"/><field-ref name="meterText"/></column>
+                                <column><field-ref name="meterValue"/><field-ref name="reasonText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No reading is recorded." type="p" style="m-muted q-pa-md" condition="!found.readings?.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

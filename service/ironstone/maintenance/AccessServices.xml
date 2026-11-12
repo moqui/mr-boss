@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Maintenance app's access (impl-maintenance §2, P1; design-maintenance §1.1; Maintenance.js): the user's capabilities and
+    the record check every Maintenance screen, mount and shared mount calls before the Mantle maintenance service. A user may open
+    Maintenance through an authorization of their groups on its root (BOSS_MAINTENANCE, the root user group, or
+    BOSS_MAINTENANCE_ADMIN); the capabilities and organizations are Mantle's (mantle/work/MaintenanceAccess.js, from the maintenance
+    permissions), and the menu areas' authorizations add theirs. Disabled artifact authorization widens nothing here; each Mantle
+    service checks again. No entity filter covers WorkEffort, Asset or AssetMaintenance (impl-maintenance F2), so each record is
+    checked by its organization here and by the Mantle service again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Capabilities" allow-remote="false" read-only="true">
+        <description>The user's Maintenance capabilities: read (the root grant), each maintenance, work process, resource booking
+            and resource policy permission and FACILITY_EDIT (MaintenanceAccess.js permissions), the derived reads (workRead,
+            resourceRead, anyRead: an edit permission alone reads nothing) and the areas (settings). A user without Maintenance
+            gets every capability false and is not refused, so a shared screen or Commons may ask.</description>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="found" from="ec.resource.script(module).execute('capabilities', context)"/>
+            <set field="capabilities" from="found.capabilities"/>
+        </actions>
+    </service>
+    <service verb="check" noun="Record" allow-remote="false" read-only="true">
+        <description>A record a Maintenance screen or mount was given: an organization, a facility or an asset (Maintenance.js
+            recordKinds; later phases add theirs). Answers its kind's name, its organization in the user's scope, a label and a
+            short detail. Refuses a record that does not exist and one outside the scope alike (RECORD_UNAVAILABLE): an
+            organization outside the user's, a facility whose nearest owner is not theirs, an asset whose internal owner (or, for
+            one in custody, whose facility's owner) is not theirs, and any of them for a user who reads no such record. With a
+            capability named (plan, supervise, ...), refuses a user without it (PERMISSION_DENIED). Refuses a user without
+            Maintenance (MAINTENANCE_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="recordType" required="true"><description>organization, facility or asset</description></parameter>
+            <parameter name="recordId" required="true"/>
+            <parameter name="capability"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="kindName"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="label"/>
+            <parameter name="detail"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="record" from="ec.resource.script(module).execute('checkRecord', context)"/>
+            <set field="recordType" from="record.recordType"/>
+            <set field="recordId" from="record.recordId"/>
+            <set field="kindName" from="record.kindName"/>
+            <set field="organizationPartyId" from="record.organizationPartyId"/>
+            <set field="label" from="record.label"/>
+            <set field="detail" from="record.detail"/>
+        </actions>
+    </service>
+    <service verb="resolve" noun="EquipmentScan" allow-remote="false" read-only="true">
+        <description>The resolver of Maintenance's asset tag scan-input (impl-maintenance P2; design §6 AssetTags): the equipment a
+            scanned tag (the EquipmentDetail link it holds) or a typed id, serial or soft identifier names, in the user's
+            maintenance scope (Mantle's find#MaintenanceEquipment, so the scope is checked on each scan; its parameters are client
+            input): exact matches first. Nothing for a user without Maintenance or without an equipment read.</description>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="allowedTypes" type="List"/>
+            <parameter name="scanId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/maintenance/Maintenance.js"/>
+            <set field="matches" from="ec.resource.script(module).execute('resolveScan', context).matches"/>
+        </actions>
+    </service>
+</services>

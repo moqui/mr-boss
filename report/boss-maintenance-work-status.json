@@ -1,0 +1,72 @@
+{
+  "id": "boss-maintenance-work-status",
+  "type": "dataset",
+  "title": "Maintenance work orders",
+  "body": {
+    "folder": "Maintenance",
+    "description": "Maintenance work orders (execution roots only: no procedure or process step) with their status, organization, target, kind, source, priority and dates, by their last change. Each viewer reads their own organizations' work orders. No cost, rate or amount.",
+    "documentType": "BossMaintenanceWorkOrder",
+    "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "statusId": {
+        "lookup": {
+          "entityName": "moqui.basic.StatusItem",
+          "keyField": "statusId",
+          "displayField": "description"
+        }
+      },
+      "maintenanceKindEnumId": {
+        "enumTypeId": "MaintenanceKind"
+      },
+      "maintenanceTypeEnumId": {
+        "enumTypeId": "MaintenanceType"
+      },
+      "sourceEnumId": {
+        "enumTypeId": "MaintenanceSource"
+      },
+      "severityEnumId": {
+        "enumTypeId": "MaintenanceSeverity"
+      },
+      "failureModeEnumId": {
+        "enumTypeId": "MaintenanceFailureMode"
+      },
+      "holdReasonEnumId": {
+        "enumTypeId": "MaintenanceHoldReason"
+      },
+      "cancelReasonEnumId": {
+        "enumTypeId": "MaintenanceCancelReason"
+      },
+      "outcomeEnumId": {
+        "enumTypeId": "MaintenanceOutcome"
+      },
+      "dispositionEnumId": {
+        "enumTypeId": "MaintenanceDisposition"
+      },
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "facilityId": {
+        "lookup": {
+          "entityName": "mantle.facility.Facility",
+          "keyField": "facilityId",
+          "displayField": "facilityName"
+        }
+      },
+      "assetId": {
+        "lookup": {
+          "entityName": "mantle.product.asset.Asset",
+          "keyField": "assetId",
+          "displayField": "assetName"
+        }
+      }
+    }
+  }
+}

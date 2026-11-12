@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Work orders (design-maintenance §3 WorkOrders: FindWork, WorkRows, NewWork; style-guide §3.2 List; impl-maintenance
+    P3): the work orders of the user's maintenance scope (ironstone.maintenance.WorkOrderServices.find#WorkOrderRows over Mantle's
+    find#MaintenanceWorkOrders, scoped in the query before paging), open ones by default, never a template or a step; a technician
+    with the assigned view finds their own and no one else's. The saved finds My work, My team, Unassigned, Overdue, Blocked and
+    Preventive. Its views: the list, a board by status whose move posts the work order's own lifecycle (Approve, Start, Resume;
+    an action that needs input, Hold, Complete, Cancel, is taken on the work order, and a refused move goes back with its reason),
+    and a calendar of the planned windows. The selection approves or cancels the chosen work orders (act#MaintenanceWorkOrders),
+    naming each refused one; P8 (BulkWork): it assigns a team and technicians, or a planned window, to each of them on its own
+    (act#MaintenanceWorkOrders assign and schedule over schedule#MaintenanceWorkOrder), the result counting the work orders done of
+    those chosen and naming each refused one and each qualification warning. New work order for a planner or supervisor. No cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work orders" default-menu-index="1">
+    <parameter name="savedFind"/>
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="assetId"/>
+    <parameter name="statusId"/>
+    <parameter name="assigneePartyId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <!-- a card moved to another status column: the lifecycle action of that move, at the card's revision -->
+    <transition name="moveCard">
+        <actions>
+            <script><![CDATA[
+                const actionOf = {WeApproved: 'approve', WeInProgress: 'start'}
+                const row = ec.service.sync().name('mantle.work.MaintenanceServices.get#MaintenanceWorkOrder')
+                        .parameters({workEffortId: workEffortId}).call()?.workOrder
+                let action = row ? actionOf[statusId] : null
+                if (row && statusId === 'WeInProgress' && row.statusId === 'WeOnHold') action = 'resume'
+                if (row && statusId === 'WeApproved' && row.statusId === 'WeOnHold') action = 'resume'
+                if (!ec.message.hasError() && !action)
+                    ec.message.addError('Open work order ' + workEffortId + ' to ' + ({WeOnHold: 'hold it with a reason',
+                        WeComplete: 'complete it with its outcome'}[statusId] || 'change it'))
+                let moved = null
+                if (!ec.message.hasError()) moved = ec.service.sync().name('mantle.work.MaintenanceServices.transition#MaintenanceWorkOrder')
+                        .parameters({workEffortId: workEffortId, action: action, expectedRevision: revision}).call()
+                ec.web.sendJsonResponse(ec.message.hasError() || !moved ? {} : {messageInfos: [{type: 'success',
+                    message: 'Work order ' + workEffortId + ' ' + String(moved.resultCode || '').toLowerCase()}]})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the selected work orders (selectedIds) and the action, a result per work order -->
+    <transition name="bulkAction">
+        <actions>
+            <set field="workEffortIds" from="Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(',').filter(Boolean)"/>
+            <!-- P8: assign's team and technicians, schedule's window (the fields the form posts; a field not posted is left as it is) -->
+            <set field="assigneeIds" from="bulk == 'assign' &amp;&amp; assigneePartyIds ? (Array.isArray(assigneePartyIds) ? assigneePartyIds
+                    : String(assigneePartyIds).split(',')).map(id =&gt; String(id).trim()).filter(Boolean) : null"/>
+            <service-call name="mantle.work.MaintenanceServices.act#MaintenanceWorkOrders" out-map="bulkOut"
+                    in-map="{workEffortIds:workEffortIds, action:bulk, cancelReasonEnumId:cancelReasonEnumId,
+                        teamPartyId:(bulk == 'assign' ? teamPartyId || null : null), assigneePartyIds:assigneeIds,
+                        estimatedStartDate:(bulk == 'schedule' ? estimatedStartDate || null : null),
+                        estimatedCompletionDate:(bulk == 'schedule' ? estimatedCompletionDate || null : null)}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const verb = {approve: 'Approved', cancel: 'Cancelled', assign: 'Assigned', schedule: 'Scheduled'}[bulk] || 'Done'
+                    // P8: the count of those done of those chosen, then each one's warning or refusal
+                    if (bulkOut.successCount) ec.message.addMessage(verb + ' ' + bulkOut.successCount + ' of ' + bulkOut.results.length + ': '
+                            + bulkOut.results.filter((row) => row.ok).map((row) => row.workEffortId).join(', '), 'success')
+                    for (const row of bulkOut.results.filter((row) => row.ok && row.message))
+                        ec.message.addMessage(row.workEffortId + ': ' + row.message, 'warning')
+                    for (const row of bulkOut.results.filter((row) => !row.ok))
+                        ec.message.addMessage('Not done ' + row.workEffortId + ': ' + String(row.message || '').replace(/^([A-Z_]+: )/, ''), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.maintenance.WorkOrderServices.find#WorkOrderRows" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{savedFind:savedFind, text:text, organizationPartyId:organizationPartyId, facilityId:facilityId, assetId:assetId,
+                    statusId:statusId, assigneePartyId:assigneePartyId, teamPartyId:teamPartyId, pageIndex:pageIndex,
+                    pageSize:pageSize, pageNoLimit:pageNoLimit}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="workOrderList" from="found?.workOrderList || []"/>
+        <set field="workOrderListCount" from="found?.workOrderListCount"/>
+        <set field="workOrderListPageIndex" from="found?.workOrderListPageIndex"/>
+        <set field="workOrderListPageSize" from="found?.workOrderListPageSize"/>
+        <set field="workOrderListPageMaxIndex" from="found?.workOrderListPageMaxIndex"/>
+        <set field="workOrderListPageRangeLow" from="found?.workOrderListPageRangeLow"/>
+        <set field="workOrderListPageRangeHigh" from="found?.workOrderListPageRangeHigh"/>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="canPlan" from="!!(can.plan || can.supervise)"/>
+        <set field="canMove" from="!!(can.plan || can.supervise || can.execute)"/>
+        <set field="filtered" from="!!(savedFind || text || organizationPartyId || facilityId || assetId || statusId || assigneePartyId || teamPartyId)"/>
+        <set field="emptyText" from="filtered ? 'No work order matches these filters.'
+                : (canPlan ? 'No work order is open. Plan one with New work order.' : (can.view ? 'No work order is open.' : 'No open work order is assigned to you.'))"/>
+        <set field="savedFinds" from="[{key:'mine', text:'My work', icon:'sym_o_person'}, {key:'team', text:'My team', icon:'sym_o_groups'},
+                {key:'unassigned', text:'Unassigned', icon:'sym_o_person_off'}, {key:'overdue', text:'Overdue', icon:'sym_o_schedule'},
+                {key:'blocked', text:'Blocked', icon:'sym_o_block'}, {key:'preventive', text:'Preventive', icon:'sym_o_event_repeat'}]
+                .filter(row =&gt; can.view || row.key === 'mine')"/>
+    </actions>
+    <widgets>
+        <context title="Work orders" selection-form="WorkOrderList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Work orders" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="${sharedLinks['WorkOrders/NewWorkOrder']}" text="New work order" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_add" condition="canPlan"/>
+                <section-iterate name="SavedFinds" list="savedFinds" entry="saved">
+                    <widgets>
+                        <link url="." text="${saved.text}" link-type="anchor-button" icon="${saved.icon}" parameter-map="{savedFind:saved.key}"/>
+                    </widgets>
+                </section-iterate>
+            </container>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="WorkOrderList" list="workOrderList" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true" views="list,board,calendar" show-csv-button="true">
+                    <row-selection id-field="workEffortId" parameter="selectedIds" list-mode="true" condition="canPlan">
+                        <action>
+                            <form-single name="BulkApprove" transition="bulkAction">
+                                <field name="bulk" from="'approve'"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Approve">
+                                        <submit icon="sym_o_check_circle" confirmation="Approve the selected work orders? Planned work over the threshold needs a supervisor."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <!-- P8 (BulkWork): the same team and technicians, or the same window, for each selected work order -->
+                        <action>
+                            <dialog button-text="Assign" button-icon="sym_o_person_add" title="Assign the selected work orders"/>
+                            <form-single name="BulkAssign" transition="bulkAction">
+                                <field name="bulk" from="'assign'"><default-field><hidden/></default-field></field>
+                                <field name="teamPartyId">
+                                    <default-field title="Team" tooltip="Empty: each keeps its team">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'teams'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="assigneePartyIds">
+                                    <default-field title="Technicians" tooltip="They replace each work order's technicians; empty: each keeps its own">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'workPeople'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Assign">
+                                        <submit type="primary" confirmation="Assign each selected work order? Each is assigned on its own; a missing or expired qualification is named, or refused under the work policy."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Schedule" button-icon="sym_o_event" title="Schedule the selected work orders"/>
+                            <form-single name="BulkSchedule" transition="bulkAction">
+                                <field name="bulk" from="'schedule'"><default-field><hidden/></default-field></field>
+                                <field name="estimatedStartDate"><default-field title="Planned start"><date-time/></default-field></field>
+                                <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Schedule">
+                                        <submit type="primary" confirmation="Give each selected work order this window?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Cancel" button-icon="sym_o_cancel" title="Cancel the selected work orders"/>
+                            <form-single name="BulkCancel" transition="bulkAction">
+                                <field name="bulk" from="'cancel'"><default-field><hidden/></default-field></field>
+                                <field name="cancelReasonEnumId">
+                                    <default-field title="Why they are cancelled">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'cancelReasons'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Cancel work orders">
+                                        <submit type="danger" confirmation="Cancel the selected work orders? Their time and files are kept."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="text">
+                        <header-field title="Work order"><text-line/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Facility" tooltip="With the facilities inside it">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="WeInPlanning" text="In planning"/>
+                                <option key="WeApproved" text="Approved"/>
+                                <option key="WeInProgress" text="In progress"/>
+                                <option key="WeOnHold" text="On hold"/>
+                                <option key="done" text="Done or cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <header-field title="Technician">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workPeople', selected:assigneePartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="teamPartyId">
+                        <header-field title="Team">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'teams', selected:teamPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <header-field title="Work order"/>
+                        <default-field>
+                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortName"><header-field title="Name"/><default-field><display/></default-field></field>
+                    <field name="targetName"><header-field title="Equipment or facility"/><default-field><display/></default-field></field>
+                    <field name="priorityText" align="right"><header-field title="Priority"/><default-field><display style="${highPriority ? 'text-negative' : ''}"/></default-field></field>
+                    <field name="assignedText"><header-field title="Assigned to"/><default-field><display style="${unassigned ? 'text-warning' : ''}"/></default-field></field>
+                    <field name="windowText"><header-field title="Planned"/><default-field><display/></default-field></field>
+                    <field name="dueText">
+                        <header-field title="Due"/>
+                        <default-field><display style="${overdue ? 'text-negative' : ''}"/></default-field>
+                    </field>
+                    <field name="blockingText"><header-field title="Held for"/><default-field><display style="text-warning"/></default-field></field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="workEffortId"/><field-ref name="workEffortName"/><field-ref name="targetName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="workEffortId" card-fields="workEffortName,targetName,assignedText,dueText"
+                            badge-field="blockingText" key-fields="workEffortId,revision" transition="moveCard" move-condition="canMove"
+                            column-order="WeInPlanning,WeApproved,WeInProgress,WeOnHold,WeComplete"/>
+                    <view-calendar start-field="estimatedStartDate" end-field="estimatedCompletionDate" title-field="calendarTitle"
+                            color-field="statusId" key-fields="workEffortId" card-fields="targetName,assignedText"/>
+                </form-list>
+                <section name="NoWorkOrders" condition="!workOrderList.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

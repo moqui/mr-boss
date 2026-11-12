@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Scheduling › BookingRequests (design-maintenance §7 BookingRequests, §7.1 approval; style-guide §3.2 List;
+    impl-maintenance P16): the bookings waiting for a decision (mantle.work.ResourceBookingServices.find#ResourceBookingRequests): a
+    booking approver's of the rooms and equipment they approve, a resource policy reader's or supervisor's of the scope's, read only.
+    BookingFind (the list's header filters: the resource's name, the state, from and to); BookingRows (resource, the meeting's span
+    now, organizer, purpose when the user may open the event, the requester's notes, the policy in words, the bookings it clashes
+    with, how long it waited); BookingDecision (Approve, the row's primary action, and Deny with its reason, decide#ResourceBooking on
+    the span and state the row shows: a meeting moved since is refused and shown again); BulkBookingDecision (the selected rows
+    approved or denied alike, decide#ResourceBookings, each named when it fails). The same decision is Commons' approvals inbox card
+    (the ResourceBooking topic). A phone shows the resource, the time and the consequence. Mantle checks every decision again: a
+    current approver of the resource holding RESOURCE_BOOKING_APPROVE. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Booking requests" default-menu-index="2">
+    <parameter name="facilityId"/>
+    <parameter name="assetId"/>
+    <parameter name="text"/>
+    <parameter name="status"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+
+    <transition name="decideBooking">
+        <actions>
+            <if condition="!maintenance?.capabilities?.bookingApprove">
+                <return error="true" message="Deciding a booking needs the booking approval permission"/>
+            </if>
+            <service-call name="mantle.work.ResourceBookingServices.decide#ResourceBooking" out-map="decided"
+                    in-map="{workEffortId:workEffortId, facilityId:(bookingAssetId ? null : (bookingFacilityId || null)),
+                        assetId:(bookingAssetId || null), decision:decision, reason:reason, expectedStatusId:expectedStatusId,
+                        expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${decided.resourceName}: ${decision == 'approve' ? 'booking approved' : 'booking denied'}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideBookings">
+        <actions>
+            <if condition="!maintenance?.capabilities?.bookingApprove">
+                <return error="true" message="Deciding a booking needs the booking approval permission"/>
+            </if>
+            <service-call name="mantle.work.ResourceBookingServices.decide#ResourceBookings" out-map="decided"
+                    in-map="{bookingList:(bookingKeys == null ? [] : (typeof bookingKeys == 'string' ? bookingKeys.split(',') : Array.from(bookingKeys))), decision:decision, reason:reason}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="${decided.failedCount ? 'warning' : 'success'}">${decided.decidedCount} decided${decided.failedCount ? '; ' + decided.failedCount + ' not: ' + decided.resultList.filter(row => !row.ok).map(row => row.message).join('; ') : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="requestList" from="null"/>
+        <service-call name="mantle.work.ResourceBookingServices.find#ResourceBookingRequests" out-map="context"
+                transaction="force-new" ignore-error="true"
+                in-map="{facilityId:(assetId ? null : (facilityId || null)), assetId:assetId || null, text:text || null,
+                    status:status || null, fromDate:fromDate || null, thruDate:thruDate || null, pageIndex:pageIndex || 0}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="requestsAvailable" from="requestList != null"/>
+        <set field="requestList" from="requestList || []"/>
+        <set field="waiting" from="!status || status == 'requested'"/>
+        <set field="decidable" from="waiting &amp;&amp; requestList.some(row => row.canDecide)"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-x-md q-mb-sm">
+            <container style="col-12 col-md">
+                <label text="Booking requests" type="h5"/>
+                <label text="Bookings of managed rooms and equipment waiting for a decision. An approval checks the time again: a meeting that moved is shown again, and one that clashes with a booked meeting is refused. The same requests are in the Commons approvals inbox."
+                        type="p" style="text-caption m-muted"/>
+            </container>
+            <container style="col-12 col-md-auto">
+                <link url="${sharedLinks['Scheduling/ResourceCalendar']}" text="Resource calendar" link-type="anchor-button" icon="sym_o_calendar_month"/>
+            </container>
+        </container>
+        <label text="Booking requests are not available to you." type="p" condition="!requestsAvailable"/>
+        <section name="RequestSection" condition="requestsAvailable">
+            <widgets>
+                <form-single name="BookingFind" transition="." map="{text:text, status:status, fromDate:fromDate, thruDate:thruDate}">
+                    <field name="text"><default-field title="Room or equipment"><text-find hide-options="true"/></default-field></field>
+                    <field name="status">
+                        <default-field title="State">
+                            <drop-down allow-empty="true" no-current-selected-key="requested">
+                                <option key="requested" text="Waiting"/><option key="assigned" text="Booked"/><option key="denied" text="Denied"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="To"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="text"/><field-ref name="status"/></field-row>
+                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <form-list name="BookingRows" list="requestList" transition="decideBookings" multi="true" paginate="true"
+                        show-csv-button="true">
+                    <row-selection id-field="key" parameter="bookingKeys" list-mode="true" condition="decidable">
+                        <action>
+                            <form-single name="BulkBookingDecision" transition="decideBookings">
+                                <field name="decision">
+                                    <default-field title="Decision">
+                                        <drop-down><option key="approve" text="Approve"/><option key="deny" text="Deny"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason" tooltip="Needed to deny"><text-line size="30"/></default-field></field>
+                                <field name="submitButton"><default-field title="Decide selected"><submit/></default-field></field>
+                                <field-layout><field-row-big><field-ref name="decision"/><field-ref name="reason"/><field-ref name="submitButton"/></field-row-big></field-layout>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="resourceName">
+                        <default-field title="Resource">
+                            <label text="${resourceName}" type="div" style="text-weight-medium"/>
+                            <label text="${policyText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="whenText">
+                        <default-field title="When">
+                            <label text="${whenText}${recurring ? ' (repeats)' : ''}" type="div"/>
+                            <label text="Waiting ${waitedText}" type="div" style="text-caption m-muted" condition="waitedText &amp;&amp; statusId?.endsWith('Requested')"/>
+                        </default-field>
+                    </field>
+                    <field name="purpose">
+                        <default-field title="Requested by">
+                            <label text="${requesterName}" type="div"/>
+                            <label text="${purpose}" type="div" style="${eventVisible ? 'text-caption' : 'text-caption m-muted'}"/>
+                            <label text="${notes}" type="div" style="text-caption" condition="notes"/>
+                        </default-field>
+                    </field>
+                    <field name="conflictText">
+                        <default-field title="Clashes with">
+                            <label text="${conflictText}" type="div" style="text-negative" condition="conflictCount"/>
+                            <label text="${statusText}" type="div" style="text-caption m-muted" condition="!statusId?.endsWith('Requested')"/>
+                        </default-field>
+                    </field>
+                    <field name="decide" align="right">
+                        <default-field title="">
+                            <container style="row no-wrap justify-end items-center q-gutter-xs" condition="canDecide">
+                                <link url="decideBooking" link-type="hidden-form-link" btn-type="primary" icon="sym_o_check" text="Approve"
+                                        parameter-map="{workEffortId:workEffortId, bookingFacilityId:facilityId, bookingAssetId:assetId, decision:'approve',
+                                            expectedStatusId:expectedStatusId, expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}"/>
+                                <container-dialog id="DenyBooking_${workEffortId}_${facilityId || assetId}" button-text="Deny" icon="sym_o_block"
+                                        type="danger" width="440" title="Deny the booking of ${resourceName}">
+                                    <label text="${whenText} · ${requesterName}" type="p" style="text-body2"/>
+                                    <form-single name="BookingDecision" transition="decideBooking"
+                                            map="{workEffortId:workEffortId, bookingFacilityId:facilityId, bookingAssetId:assetId, decision:'deny',
+                                                expectedStatusId:expectedStatusId, expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="bookingFacilityId"><default-field><hidden/></default-field></field>
+                                        <field name="bookingAssetId"><default-field><hidden/></default-field></field>
+                                        <field name="decision"><default-field><hidden/></default-field></field>
+                                        <field name="expectedStatusId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedFromDate"><default-field><hidden/></default-field></field>
+                                        <field name="expectedThruDate"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason the organizer is told"><text-area rows="3" cols="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Deny"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </container>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="resourceName"/><field-ref name="whenText"/></column>
+                        <column><field-ref name="conflictText"/><field-ref name="decide"/></column>
+                    </columns>
+                </form-list>
+                <label text="${waiting ? 'Nothing is waiting for your decision.' : 'No booking matches.'}" type="p" style="m-muted"
+                        condition="!requestList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

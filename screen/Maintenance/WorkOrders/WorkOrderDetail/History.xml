@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's History tab (design-maintenance §3; impl-maintenance P3): the audit log of the work order's status, priority,
+    estimate, organization and target and of its row's key fields, newest first, with who changed each (get#MaintenanceWorkOrder's
+    historyList). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="History" default-menu-index="90">
+    <parameter name="workEffortId"/>
+    <actions>
+        <!-- WorkOrderDetail's actions read the work order when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here -->
+        <if condition="workOrderDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workOrder" from="workOrderDetail?.workOrder || null"/>
+        <set field="historyList" from="workOrderDetail?.historyList || []"/>
+    </actions>
+    <widgets>
+        <section name="HistoryFound" condition="workOrder">
+            <widgets>
+                <label text="No change is recorded yet." type="p" style="m-muted" condition="!historyList.length"/>
+                <form-list name="HistoryRows" list="historyList" skip-form="true" paginate="false">
+                    <field name="changedDateText"><default-field title="When"><display/></default-field></field>
+                    <field name="fieldText"><default-field title="What"><display/></default-field></field>
+                    <field name="oldText"><default-field title="From"><display/></default-field></field>
+                    <field name="newText"><default-field title="To"><display/></default-field></field>
+                    <field name="changedByName"><default-field title="By"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="fieldText"/><field-ref name="changedDateText"/></column>
+                        <column><field-ref name="newText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

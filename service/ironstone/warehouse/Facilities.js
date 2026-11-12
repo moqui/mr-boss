@@ -436,6 +436,20 @@ function equipment(p) {
         .condition("assetId", asset.assetId)
         .condition("statusId", "not-in", ["AsMntCompleted", "AsMntCancelled"])
         .count()
+    // in maintenance: an AssetMaintenance in process, not a planned one (impl-maintenance §4, F13; an owner contract with Maintenance);
+    // the open jobs are still counted for the summary
+    const inMaintenance = find("mantle.product.maintenance.AssetMaintenance")
+        .condition("assetId", asset.assetId)
+        .condition("statusId", "AsMntInProcess")
+        .count()
+    // out of service: the one open outage in force (impl-maintenance §4, P5; an owner contract with Maintenance)
+    const outOfService =
+        find("mantle.work.effort.ResourceUnavailability")
+            .condition("assetId", asset.assetId)
+            .condition("unavailabilityKindEnumId", "RukActual")
+            .condition("thruDate", "is-null", null)
+            .condition("supersededByUnavailabilityId", "is-null", null)
+            .count() > 0
     const reading = Array.from(
         find("mantle.product.maintenance.AssetMeter").condition("assetId", asset.assetId).orderBy("-readingDate").limit(1).list()
     )[0]
@@ -470,11 +484,13 @@ function equipment(p) {
         .map(row => ({label: row[0], value: String(row[1])}))
     const availability = left
         ? {availabilityText: "Left the facility", availabilityColor: "grey-8"}
-        : current
-          ? {availabilityText: "Assigned to work " + current.workEffortId, availabilityColor: "warning"}
-          : openMaintenance
-            ? {availabilityText: "In maintenance", availabilityColor: "warning"}
-            : {availabilityText: statusText(asset.statusId) || "Available", availabilityColor: "positive"}
+        : outOfService
+          ? {availabilityText: "Out of service", availabilityColor: "negative"}
+          : current
+            ? {availabilityText: "Assigned to work " + current.workEffortId, availabilityColor: "warning"}
+            : inMaintenance
+              ? {availabilityText: "In maintenance", availabilityColor: "warning"}
+              : {availabilityText: statusText(asset.statusId) || "Available", availabilityColor: "positive"}
     const bookingList = bookings({assetId: asset.assetId})
     return Object.assign(availability, {
         asset: {

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's requests (impl-maintenance P4; design-maintenance §3 Requests; Requests.js): Requests' list over Mantle's
+    find#MaintenanceRequests and RequestDetail's Maintenance context. Every decision is Mantle's triage#MaintenanceRequest, which the
+    screens call after check#Record; a requester reports and follows their own requests in Commons, with no grant here
+    (impl-maintenance F78). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="RequestRows" allow-remote="false" read-only="true">
+        <description>Requests' rows: Mantle's find#MaintenanceRequests (a planner's or supervisor's organizations; open by default,
+            untriaged, all or one status), each row with its state color and the links of the request, its target and its work
+            order under Maintenance. No cost.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="statusId"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="requestList" type="List"/>
+            <parameter name="requestListCount" type="Integer"/>
+            <parameter name="requestListPageIndex" type="Integer"/>
+            <parameter name="requestListPageSize" type="Integer"/>
+            <parameter name="requestListPageMaxIndex" type="Integer"/>
+            <parameter name="requestListPageRangeLow" type="Integer"/>
+            <parameter name="requestListPageRangeHigh" type="Integer"/>
+            <parameter name="canTriage" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Requests.js').execute('rows', context)"/>
+            <set field="requestList" from="answer.requestList"/>
+            <set field="requestListCount" from="answer.requestListCount"/>
+            <set field="requestListPageIndex" from="answer.requestListPageIndex"/>
+            <set field="requestListPageSize" from="answer.requestListPageSize"/>
+            <set field="requestListPageMaxIndex" from="answer.requestListPageMaxIndex"/>
+            <set field="requestListPageRangeLow" from="answer.requestListPageRangeLow"/>
+            <set field="requestListPageRangeHigh" from="answer.requestListPageRangeHigh"/>
+            <set field="canTriage" from="!!answer.canTriage"/>
+        </actions>
+    </service>
+    <service verb="get" noun="RequestContext" allow-remote="false" read-only="true">
+        <description>RequestDetail's Maintenance context (crosscut §3.11 Maintenance row): a maintenance request of the user's
+            organizations, for a planner or supervisor (check#Record, RECORD_UNAVAILABLE otherwise): the reported fault's row
+            (target, reporter, state, the linked work order) with its links, and whether the user may triage it (an open request
+            with no work order) or assign it, with the triage form's values.</description>
+        <in-parameters><parameter name="requestId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="request" type="Map"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="canTriage" type="Boolean"/>
+            <parameter name="canAssign" type="Boolean"/>
+            <parameter name="triageValues" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/Requests.js').execute('context', context)"/>
+            <set field="available" from="!!answer.available"/>
+            <set field="request" from="answer.request"/>
+            <set field="organizationPartyId" from="answer.organizationPartyId"/>
+            <set field="canTriage" from="!!answer.canTriage"/>
+            <set field="canAssign" from="!!answer.canAssign"/>
+            <set field="triageValues" from="answer.triageValues"/>
+        </actions>
+    </service>
+</services>

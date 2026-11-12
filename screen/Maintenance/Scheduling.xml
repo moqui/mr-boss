@@ -12,11 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Scheduling admin section of IronStone Maintenance (initial-design.md app table);
-    design-maintenance.md decides its screens. -->
+<!-- The Scheduling area of IronStone Maintenance (design-maintenance §7, §1.2; impl-maintenance P15): Resources, the bookable
+    equipment and facilities with their booking policy (ResourceFind, ResourceRows, Bookability), and Blackouts, the planned blocks
+    (BlockFind, BlockRows with the calendar view, StoreBlock); ResourcePolicyDetail, one resource's policy, approvers, impact and
+    availability, hidden from the menu. Shown to a resource administrator, a resource approver, a supervisor and a resource reader
+    (the root's menu condition); every read and write is Mantle's mantle.work.ResourceBookingServices, which checks the permission
+    and scope. P16: BookingRequests, the bookings waiting for a decision (BookingFind, BookingRows, BookingDecision,
+    BulkBookingDecision), and ResourceCalendar, Commons' Schedules component over the scope's resources with their blocks
+    (ResourceCalendarTui its terminal twin, hidden from the menu). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Scheduling admin" default-menu-index="5" menu-image="sym_o_calendar_view_month" menu-image-type="icon">
+        default-menu-title="Scheduling" default-menu-index="8" menu-image="sym_o_event_available" menu-image-type="icon">
+    <subscreens default-item="Resources" always-use-full-path="true">
+        <subscreens-item name="ResourcePolicyDetail" location="component://mr-boss/screen/Maintenance/Scheduling/ResourcePolicyDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Facility and equipment scheduling admin." type="p"/>
+        <subscreens-panel id="MaintenanceSchedulingPanel" type="tab"/>
     </widgets>
 </screen>

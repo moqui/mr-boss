@@ -61,6 +61,11 @@ along with this software (see the LICENSE.md file). If not, see
     request) and the checklist's other tasks; an HR reader of the employment who is not one of its people sees that box alone, read
     only. A task of no checklist, or one People does not admit, is not available there.
 
+    Maintenance (impl-maintenance P7, crosscut §3.12 Maintenance row; ironstone.maintenance.WorkItemServices get#WorkItemContext): a
+    follow-up task of a work order the user reads (a Caused By or Relates To link to its root), at Maintenance/WorkOrders/WorkItemDetail:
+    the Commons task with a Work orders box and the way back to its work order. A work order's root or a step of its procedure is no
+    follow-up task: it is not available there, links to its WorkOrderDetail and offers no Complete.
+
     An item the user may not see is "not available" (IronStone R5, R28; in Projects the project's visibility, impl-projects.md
     F1). The keys of design §1.4 (a, s, t, b, m) wait for a screen-level key binding of the framework. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -440,6 +445,10 @@ along with this software (see the LICENSE.md file). If not, see
             mfgTask = appRoot === 'Manufacturing'
             productionTask = {}
             if (mfgTask) detailPath = '/qapps/Manufacturing/WorkCenters/WorkItemDetail'
+            // Maintenance (impl-maintenance P7): a follow-up task of a work order the user reads; a work order or a process step is no task
+            mntTask = appRoot === 'Maintenance'
+            maintenanceTask = {}
+            if (mntTask) detailPath = '/qapps/Maintenance/WorkOrders/WorkItemDetail'
             // Customer Service (impl-customer-service P2, crosscut §3.12, F49): a work item of a case the user sees, on the
             // Commons rule (its transitions' 'commons' key), with the way back to its case
             csTask = appRoot === 'CustomerService'
@@ -497,6 +506,14 @@ along with this software (see the LICENSE.md file). If not, see
             recordFound = !!detail.visible && (!csTask || !!csCaseId) && (!pplTask || !!pplContext?.workEffortId)
             // People: an HR reader of the employment who is none of the task's people reads its People context alone
             pplReadOnly = pplTask && !recordFound && !!pplContext?.workEffortId
+            if (mntTask) {
+                ec.message.pushErrors()
+                try {
+                    maintenanceTask = ec.service.sync().name('ironstone.maintenance.WorkItemServices.get#WorkItemContext')
+                            .parameters({workEffortId: workEffortId}).call() || {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = recordFound && !!maintenanceTask.available
+            }
             if (mfgTask && recordFound) {
                 ec.message.pushErrors()
                 try {
@@ -678,7 +695,14 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="PeopleTaskReadOnly" condition="pplReadOnly"><widgets>
             <section-include name="PeopleWorkItemContext" location="component://mr-boss/template/PeopleWorkItem.xml"/>
         </widgets></section>
-        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
+        <section name="MaintenanceTaskNotFound" condition="!recordFound &amp;&amp; mntTask"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="${maintenanceTask.processWork ? 'This is a work order or a step of its procedure, not a follow-up task: it is worked and completed from its work order.' : 'Task ' + workEffortId + ' is not available in Maintenance: it is not a follow-up task of a work order you read.'}"/>
+                <link url="${maintenanceTask.url}" url-type="plain" text="Open the work order" link-type="anchor" condition="maintenanceTask.url"/>
+                <link url="${sharedLinks['WorkOrders/Find']}" text="Back to Work orders" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !mntTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Task ${workEffortId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="tasks" text="${projects ? 'Back to Work items' : 'Back to Tasks'}" link-type="anchor"/>
@@ -700,7 +724,11 @@ along with this software (see the LICENSE.md file). If not, see
                         text="${pplContext.canReadEmployee ? pplContext.personName : 'People'}" icon="arrow_back"
                         parameter-map="pplContext.canReadEmployee ? {partyId:pplContext.partyId} : {}"/></container>
             </widgets></section>
-            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
+            <section name="MaintenanceBack" condition="mntTask"><widgets>
+                <container style="q-mb-xs"><link url="${maintenanceTask.orderRows[0].url}" url-type="plain" link-type="anchor"
+                        text="Work order ${maintenanceTask.orderRows[0].workEffortId}" icon="arrow_back"/></container>
+            </widgets></section>
+            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !mntTask &amp;&amp; !csTask &amp;&amp; !pplTask"><widgets>
                 <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"/></container>
             </widgets></section>
             <section name="ManufacturingBack" condition="mfgTask"><widgets>
@@ -933,6 +961,18 @@ along with this software (see the LICENSE.md file). If not, see
             <render-mode><text type="qvt"><![CDATA[${tabsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(tabsTui)}]]></text></render-mode>
             <!-- Manufacturing (impl-manufacturing P11): the task's maintenance requests, their stops and equipment -->
             <section-include name="ManufacturingWorkItemContext" location="component://mr-boss/template/ManufacturingRequestParts.xml"/>
+            <!-- Maintenance (impl-maintenance P7): the work orders the task follows up -->
+            <section name="MaintenanceWorkItemContext" condition="mntTask"><widgets>
+                <container-box><box-header title="Work orders"/><box-body>
+                    <section-iterate name="MaintenanceOrders" list="maintenanceTask.orderRows" entry="orderRow"><widgets>
+                        <container style="row items-center q-gutter-x-sm">
+                            <link url="${orderRow.url}" url-type="plain" link-type="anchor" text="${orderRow.workEffortId} · ${orderRow.workEffortName}"/>
+                            <label text="${orderRow.statusText}" type="span" style="text-caption m-muted"/>
+                        </container>
+                    </widgets></section-iterate>
+                    <label text="This task follows up the work; the work order's steps are worked and completed there." type="div" style="text-caption m-muted"/>
+                </box-body></container-box>
+            </widgets></section>
             <!-- People (impl-people P7): the checklist the task is on, what it links to and the next steps -->
             <section-include name="PeopleWorkItemContext" location="component://mr-boss/template/PeopleWorkItem.xml"/>
 

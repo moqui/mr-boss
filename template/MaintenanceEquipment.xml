@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Maintenance header (impl-maintenance P2; design-maintenance §6; style-guide §3.3 Detail): the record header
+    (key chip, name, type, class and model, the state, the organization, site and supplier warranty, Print tag) and the tab bar of
+    Maintenance's tabs (equipmentTabItems, EquipmentDetail's: the Book tab only when Accounting's get#AssetBook admitted the user), shown when the
+    Maintenance context found the equipment (maintenanceEquipment from ironstone.maintenance.EquipmentServices.get#Equipment). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="MaintenanceEquipment" condition="recordFound &amp;&amp; appRoot == 'Maintenance'">
+            <actions>
+                <set field="maintenanceAsset" from="maintenanceEquipment.asset"/>
+                <set field="tagParameters" from="{assetIds: assetId}"/>
+            </actions>
+            <widgets>
+                <context record-entity="mantle.product.asset.Asset" record-id="${assetId}" title="${maintenanceAsset.assetName}"/>
+                <link url="${sharedLinks['Equipment/Find']}" text="Equipment" link-type="anchor" icon="arrow_back"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center no-wrap">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${
+                                        WebUtilities.encodeHtml(maintenanceAsset.assetId)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "AssetKey", style: "strong",
+                                        text: maintenanceAsset.assetId})}]]></text>
+                                </render-mode>
+                                <label text="${maintenanceAsset.assetName}" type="h5"/>
+                            </container>
+                            <label text="${[maintenanceAsset.typeText, maintenanceAsset.classText, maintenanceAsset.productName].filter(Boolean).join(' · ')}"
+                                    type="p" style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    maintenanceAsset.stateColor}">${WebUtilities.encodeHtml(maintenanceAsset.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "AssetState", style: "strong",
+                                    text: maintenanceAsset.stateText})}]]></text>
+                                <text type="html">${maintenanceAsset.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[maintenanceAsset.ownerName, maintenanceAsset.facilityName, maintenanceAsset.warrantyText ?
+                                'supplier warranty ' + maintenanceAsset.warrantyText.toLowerCase() : ''].filter(Boolean).join(' · ')}"
+                                    type="p" style="q-mb-none"/>
+                            <!-- P5: its current state, from its one open outage -->
+                            <link url="${sharedLinks['Equipment/Downtime']}" text="${maintenanceAsset.outage.text}" link-type="anchor"
+                                    style="text-negative" condition="maintenanceAsset.outage"
+                                    parameter-map="{resourceUnavailabilityId:maintenanceAsset.outage.resourceUnavailabilityId}"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <link url="${sharedLinks['Equipment/AssetTags']}" text="Print tag" icon="sym_o_qr_code_2"
+                                    link-type="anchor-button" parameter-map="tagParameters"/>
+                        </container>
+                    </container>
+                </container>
+                <section name="EquipmentTabBar">
+                    <widgets>
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<div id="EquipmentTabs"><q-tabs dense no-caps align="left" narrow-indicator inline-label class="text-grey-7" active-color="primary" indicator-color="primary" :model-value="$root.currentPathList[$root.currentPathList.lastIndexOf('EquipmentDetail') + 1]">${equipmentTabItems.map(item => '<q-tab name="' + WebUtilities.encodeHtml(item.name) + '" label="' + WebUtilities.encodeHtml(item.title || item.name) + '" @click.prevent="$root.setUrl($root.getLinkPath(' + WebUtilities.encodeHtml(JSON.stringify(item.url)) + '))"></q-tab>').join('')}</q-tabs><q-separator class="q-mb-md"></q-separator></div>]]></text>
+                        </render-mode>
+                        <section name="EquipmentTabLinks" condition="sri.getRenderMode() !== 'qvt'">
+                            <widgets>
+                                <container id="EquipmentTabs" style="row q-gutter-xs q-mb-sm">
+                                    <section-iterate name="EquipmentTab" list="equipmentTabItems" entry="tab">
+                                        <widgets>
+                                            <section name="EquipmentTabActive" condition="tab.inPath">
+                                                <widgets><link url="${tab.url}" url-type="plain" link-type="anchor-button" btn-type="primary" text="${tab.title || tab.name}"/></widgets>
+                                                <fail-widgets><link url="${tab.url}" url-type="plain" link-type="anchor-button" text="${tab.title || tab.name}"/></fail-widgets>
+                                            </section>
+                                        </widgets>
+                                    </section-iterate>
+                                </container>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

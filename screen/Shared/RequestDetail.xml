@@ -55,6 +55,13 @@ along with this software (see the LICENSE.md file). If not, see
     pane. In the other contexts a case's Complete and Cancel are hidden from a user without SUPPORT_CASE_EDIT, who is sent to
     CaseDetail; the services route a holder's through transition#Case.
 
+    Maintenance (impl-maintenance P4, crosscut §3.11 Maintenance row; ironstone.maintenance.RequestServices get#RequestContext,
+    template/MaintenanceRequestParts.xml): a maintenance request of a planner's or supervisor's organizations at
+    Maintenance/Requests/RequestDetail: the Commons request with a Maintenance box of the reported fault (its target, reporter and
+    work order) and the triage dialogs (Create work order, Add to a work order, Reject, Assign); Comment is the header's. Its work
+    order among the tasks opens WorkOrderDetail. In Commons, the reporter of a maintenance request sees its safe summary (state,
+    target, the work order's name and status; Mantle's find#MaintenanceRequests), and a work order is listed among the tasks only
+    for one Maintenance admits to it (MaintenanceAccess workHidden, F69): a requester holds no Maintenance root (F78).
     People (impl-people P21, crosscut §3.11's People row, design-people §13 RequestDetail; mantle.request.RequestServices
     get#PeopleCase, template/PeopleCaseDetail.xml): a confidential case at People/Employees/RequestDetail, for its people alone (the
     employee who filed it and its handlers), opted out of AI; any other request is not available there, and a case is not
@@ -111,6 +118,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="applyCaseReply" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
     <!-- Customer Service P8: a closed case's follow-up on CaseDetail (template/CustomerServiceLineage.xml) -->
     <transition-include name="followUpCase" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
+    <!-- Maintenance (impl-maintenance P4): the triage of a maintenance request and its drop-downs (template/MaintenanceRequestParts.xml,
+        template/MaintenanceParts.xml) -->
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="triageRequest" location="component://mr-boss/template/MaintenanceRequestParts.xml"/>
     <!-- Commerce (impl-commerce P8): an internal note on a store case (template/CommerceRequestDetail.xml) -->
     <transition-include name="commerceRequestNote" location="component://mr-boss/template/CommerceRequestDetail.xml"/>
     <!-- People (impl-people P21): a confidential case's moves, handlers and the work asked on it (template/PeopleCaseDetail.xml) -->
@@ -318,6 +329,11 @@ along with this software (see the LICENSE.md file). If not, see
             mfgRequest = appRoot === 'Manufacturing'
             productionRequest = {}
             if (mfgRequest) detailPath = '/qapps/Manufacturing/WorkCenters/RequestDetail'
+            // Maintenance (impl-maintenance P4): a maintenance request of the planner's organizations, on the Commons request
+            mntRequest = appRoot === 'Maintenance'
+            maintenanceRequest = {}
+            maintenanceSummary = null
+            if (mntRequest) detailPath = '/qapps/Maintenance/Requests/RequestDetail'
             // Warehouse (impl-warehouse P15): a stock request in its own section (template/WarehouseRequestDetail.xml)
             if (appRoot === 'Warehouse') {
                 let wh = {}
@@ -395,6 +411,31 @@ along with this software (see the LICENSE.md file). If not, see
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
                 recordFound = !!productionRequest.available
             }
+            if (mntRequest && recordFound) {
+                ec.message.pushErrors()
+                try {
+                    maintenanceRequest = ec.service.sync().name('ironstone.maintenance.RequestServices.get#RequestContext')
+                            .parameters({requestId: requestId}).call() || {}
+                } catch (error) {
+                    maintenanceRequest = {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = !!maintenanceRequest.available
+            }
+            // Commons (impl-maintenance P4, F78): the reporter's safe summary of a maintenance request (state, target, the work
+            // order's name and status), from Mantle's find#MaintenanceRequests, which admits the reporter or a planner
+            if (recordFound && !projects && !mntRequest && !mfgRequest && detail.request?.requestTypeEnumId === 'RqtMaintenance') {
+                ec.message.pushErrors()
+                try {
+                    const own = ec.service.sync().name('mantle.work.MaintenanceServices.find#MaintenanceRequests')
+                            .parameters({requestId: requestId, statusId: 'all'}).requireNewTransaction(true).call() || {}
+                    const row = Array.from(own.requestList || [])[0]
+                    maintenanceSummary = row ? {targetName: row.targetName || ec.l10n.localize('Not named yet'),
+                        stateText: row.statusText + (row.resolutionText ? ' · ' + row.resolutionText : ''),
+                        workText: row.workEffortId ? row.workEffortName + ' · ' + row.workStatusText : ec.l10n.localize('Not planned yet')} : null
+                } catch (error) {
+                    maintenanceSummary = null
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
             // a purchase request's Items tab in every context (impl-purchasing P10, crosscut §3.11): its lines with what is
             // left to source, and "Create purchase order" (Purchasing's RequestSourcing) for a buyer only
             // impl-customer-service P10 (F49): an order change's lines too, read only, with a link to its OrderChangeDetail
@@ -450,6 +491,10 @@ along with this software (see the LICENSE.md file). If not, see
                 taskList = taskList.map((task) => Object.assign({}, task, {url: productionIds.includes(task.workEffortId) ? workUrls[task.workEffortId]
                         : '/qapps/Manufacturing/WorkCenters/WorkItemDetail?workEffortId=' + encodeURIComponent(task.workEffortId)}))
             }
+            // in Maintenance the request's work order opens WorkOrderDetail
+            const maintenanceWorkId = maintenanceRequest.request?.workEffortId
+            if (mntRequest && maintenanceWorkId) taskList = taskList.map((task) => task.workEffortId === maintenanceWorkId
+                    ? Object.assign({}, task, {url: maintenanceRequest.request.workOrderUrl}) : task)
             captionText = [L('Request') + ' ' + requestId, request.typeLabel, request.filedByName ? L('raised by') + ' ' + request.filedByName : null,
                 request.requestDateText].filter((part) => part).join(' · ')
             const fact = (label, value, cls) => '<div class="col-auto"><div class="text-caption m-muted">' + enc(L(label)) + '</div><div class="text-body2' + (cls ? ' ' + cls : '') + '">' + value + '</div></div>'
@@ -541,7 +586,7 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="PeopleCaseConfidential" condition="appRoot == 'People'" ai-opt-out="true"><widgets>
             <section-include name="PeopleCase" location="component://mr-boss/template/PeopleCaseDetail.xml"/>
         </widgets></section>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'People' &amp;&amp; !mfgRequest"><widgets>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; appRoot != 'People' &amp;&amp; !mfgRequest &amp;&amp; !mntRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>
@@ -551,6 +596,13 @@ along with this software (see the LICENSE.md file). If not, see
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available in Manufacturing: it is not a maintenance request of your plants."/>
                 <link url="${sharedLinks['WorkCenters/Downtime']}" text="Back to Downtime" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+
+        <section name="MaintenanceRequestNotFound" condition="!recordFound &amp;&amp; mntRequest"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Request ${requestId} is not available in Maintenance: it is not a maintenance request of your organizations."/>
+                <link url="${sharedLinks['Requests/Find']}" text="Back to Requests" link-type="anchor"/>
             </box-body></container-box>
         </widgets></section>
 
@@ -564,7 +616,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <link url="${caseUrl}" url-type="plain" text="Open the case" link-type="anchor"/>
                 </box-body></container-box>
             </widgets></section>
-            <container style="q-mb-xs"><link url="requests" link-type="anchor" text="Requests" icon="arrow_back" condition="!mfgRequest"/>
+            <container style="q-mb-xs"><link url="requests" link-type="anchor" text="Requests" icon="arrow_back" condition="!mfgRequest &amp;&amp; !mntRequest"/>
+                <link url="${sharedLinks['Requests/Find']}" link-type="anchor" text="Requests" icon="arrow_back" condition="mntRequest"/>
                 <link url="${sharedLinks['WorkCenters/Downtime']}" link-type="anchor" text="Downtime" icon="arrow_back" condition="mfgRequest"/></container>
 
             <section name="CommonsHeader" condition="!projects"><widgets>
@@ -800,6 +853,9 @@ along with this software (see the LICENSE.md file). If not, see
             <render-mode><text type="qvt"><![CDATA[${tabsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(tabsTui)}]]></text></render-mode>
             <!-- Manufacturing (impl-manufacturing P11): the request's stops, equipment, maintenance and work, on the overview -->
             <section-include name="ManufacturingRequestContext" location="component://mr-boss/template/ManufacturingRequestParts.xml"/>
+            <!-- Maintenance (impl-maintenance P4): the reported fault and its triage, under Maintenance; the reporter's summary in Commons -->
+            <section-include name="MaintenanceRequestContext" location="component://mr-boss/template/MaintenanceRequestParts.xml"/>
+            <section-include name="MaintenanceReportSummary" location="component://mr-boss/template/MaintenanceRequestParts.xml"/>
 
             <section name="CommonsOverview" condition="!projects"><widgets>
                 <!-- ===== Overview ===== -->

@@ -1,0 +1,45 @@
+{
+  "id": "boss-maintenance-outages",
+  "type": "dataset",
+  "title": "Equipment and facility outages",
+  "body": {
+    "folder": "Maintenance",
+    "description": "Outages of equipment and facilities (Maintenance's downtime and Manufacturing's equipment-fault stops), with their reason, planned or not, start, restoration and work order, by start. A correction is a new row: the row in force has no supersededByUnavailabilityId. No cost, rate or amount.",
+    "documentType": "BossMaintenanceOutage",
+    "timeField": "fromDate",
+    "signal": "business",
+    "rowFilterService": "mantle.party.PartyServices.get#OrganizationRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "unavailabilityReasonEnumId": {
+        "enumTypeId": "ResourceUnavailabilityReason"
+      },
+      "dispositionEnumId": {
+        "enumTypeId": "MaintenanceDisposition"
+      },
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "facilityId": {
+        "lookup": {
+          "entityName": "mantle.facility.Facility",
+          "keyField": "facilityId",
+          "displayField": "facilityName"
+        }
+      },
+      "assetId": {
+        "lookup": {
+          "entityName": "mantle.product.asset.Asset",
+          "keyField": "assetId",
+          "displayField": "assetName"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Reports area of IronStone Maintenance (design-maintenance §8, §1.2; impl-maintenance P14, P17), shown to a reader of
+    maintenance work (the root's menu condition, MAINTENANCE_VIEW); Mantle's MaintenanceReportServices check again: Overview (P17,
+    ReportOptions and ReportLinks: the reports the user reads as linked cards, and Downtime, which opens the Equipment area's list),
+    Work status (P17), PM compliance (P14), the cost report (P11, the cost reader's alone: BOSS_MNT_COSTS). Listed in Admin's Exports by one wizard
+    export target (maintenanceReports, F72); each report's CSV is its own form-list's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_analytics" menu-image-type="icon">
+    <subscreens default-item="Overview" always-use-full-path="true">
+        <subscreens-item name="Overview" location="component://mr-boss/screen/Maintenance/Reports/Overview.xml" menu-index="1"/>
+        <subscreens-item name="WorkStatusReport" location="component://mr-boss/screen/Maintenance/Reports/WorkStatusReport.xml"
+                menu-index="2"/>
+        <subscreens-item name="PreventiveComplianceReport" location="component://mr-boss/screen/Maintenance/Reports/PreventiveComplianceReport.xml"
+                menu-index="3"/>
+        <!-- P11: the cost reader's (MAINTENANCE_COST_VIEW, the user's call of Nov 12 on F346; BOSS_MNT_COSTS denies the root user group
+            too) -->
+        <subscreens-item name="MaintenanceCostReport" location="component://mr-boss/screen/Maintenance/Reports/MaintenanceCostReport.xml"
+                menu-index="4" menu-include="ec.user.hasPermission('MAINTENANCE_COST_VIEW')"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenanceReportsPanel" type="tab"/>
+    </widgets>
+</screen>

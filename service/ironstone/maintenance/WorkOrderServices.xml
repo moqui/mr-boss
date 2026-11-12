@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance's work order list (impl-maintenance P3; design-maintenance §3 WorkOrders; WorkOrders.js): the list's shape over
+    Mantle's find#MaintenanceWorkOrders, which checks the user's maintenance scope; the work order's own reads and writes are Mantle's
+    mantle.work.MaintenanceServices, which the screens call after check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="WorkOrderRows" allow-remote="false" read-only="true">
+        <description>WorkOrders' rows: Mantle's find#MaintenanceWorkOrders with a saved find applied (savedFind: mine, team (the
+            user's first team), unassigned, overdue, blocked, preventive) and each row's state color, calendar title, assignee text
+            and priority text for the list, board and calendar. The user's maintenance scope decides what is found; a technician with
+            the assigned view finds their own.</description>
+        <in-parameters>
+            <parameter name="savedFind"/>
+            <parameter name="text"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="facilityId"/>
+            <parameter name="assetId"/>
+            <parameter name="statusId"/>
+            <parameter name="maintenanceKindEnumId"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="teamPartyId"/>
+            <parameter name="highPriority"/>
+            <parameter name="overdue"/>
+            <parameter name="blocked"/>
+            <parameter name="mine"/>
+            <parameter name="unassigned"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="workOrderList" type="List"/>
+            <parameter name="workOrderListCount" type="Integer"/>
+            <parameter name="workOrderListPageIndex" type="Integer"/>
+            <parameter name="workOrderListPageSize" type="Integer"/>
+            <parameter name="workOrderListPageMaxIndex" type="Integer"/>
+            <parameter name="workOrderListPageRangeLow" type="Integer"/>
+            <parameter name="workOrderListPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/maintenance/WorkOrders.js').execute('rows', context)"/>
+            <set field="workOrderList" from="answer.workOrderList"/>
+            <set field="workOrderListCount" from="answer.workOrderListCount"/>
+            <set field="workOrderListPageIndex" from="answer.workOrderListPageIndex"/>
+            <set field="workOrderListPageSize" from="answer.workOrderListPageSize"/>
+            <set field="workOrderListPageMaxIndex" from="answer.workOrderListPageMaxIndex"/>
+            <set field="workOrderListPageRangeLow" from="answer.workOrderListPageRangeLow"/>
+            <set field="workOrderListPageRangeHigh" from="answer.workOrderListPageRangeHigh"/>
+        </actions>
+    </service>
+</services>

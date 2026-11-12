@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Time tab (design-maintenance §3 WorkTime, MT-08; impl-maintenance P3, F66): the user's running timer on the work
+    order with Start timer and Stop timer, and Record time, for the technician assigned to it while it is in progress (Mantle's
+    start#, stop#MaintenanceTimer and record#MaintenanceTime, which check the assignment, the work in progress and no template, then
+    call the time services unchanged); the time entries of the work order's tree, a technician's own only, and the totals: their own
+    hours, and the team's for a broad reader. Hours only: no rate or cost. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Time" default-menu-index="30">
+    <parameter name="workEffortId"/>
+    <transition-include name="startTimer" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <transition-include name="stopTimer" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <transition-include name="recordTime" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <actions>
+        <!-- WorkOrderDetail's actions read the work order when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here -->
+        <if condition="workOrderDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workOrder" from="workOrderDetail?.workOrder || null"/>
+        <set field="timeEntryList" from="workOrderDetail?.timeEntryList || []"/>
+        <set field="timer" from="workOrderDetail?.timer || null"/>
+        <set field="canLogTime" from="!!workOrderDetail?.canLogTime"/>
+        <set field="totalsText" from="workOrderDetail ? 'Your time: ' + (workOrderDetail.ownHours ?? 0) + ' h' + (workOrderDetail.totalHours != null
+                ? ' · everyone: ' + workOrderDetail.totalHours + ' h' : '') : ''"/>
+        <set field="timeValues" from="{workEffortId: workEffortId}"/>
+    </actions>
+    <widgets>
+        <section name="TimeFound" condition="workOrder">
+            <widgets>
+                <container-box>
+                    <box-header title="Time"/>
+                    <box-toolbar>
+                        <link url="startTimer" text="Start timer" icon="sym_o_timer" link-type="hidden-form-link" btn-type="primary"
+                                parameter-map="{workEffortId:workEffortId}" condition="canLogTime &amp;&amp; !timer"/>
+                        <link url="stopTimer" text="Stop timer" icon="sym_o_timer_off" link-type="hidden-form-link"
+                                parameter-map="{workEffortId:workEffortId}" condition="timer"/>
+                        <container-dialog id="RecordTime" button-text="Record time" icon="sym_o_more_time" title="Record your time on ${workEffortId}"
+                                width="560" condition="canLogTime">
+                            <form-single name="RecordTimeForm" transition="recordTime" map="timeValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="fromDate"><default-field title="Started"><date-time/></default-field></field>
+                                <field name="thruDate"><default-field title="Ended" tooltip="Or the hours"><date-time/></default-field></field>
+                                <field name="hours"><default-field title="Hours"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="comments"><default-field title="What was done"><text-line size="60"/></default-field></field>
+                                <field name="submitButton"><default-field title="Record"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Your timer is running since ${timer.fromDateText}." type="p" style="text-positive" condition="timer"/>
+                        <label text="${totalsText}" type="p" style="text-caption m-muted"/>
+                        <label text="Time is recorded by the technicians assigned to the work while it is in progress." type="p"
+                                style="text-caption m-muted" condition="!canLogTime &amp;&amp; !timer"/>
+                        <label text="No time is recorded yet." type="p" style="m-muted" condition="!timeEntryList.length"/>
+                        <form-list name="TimeEntryRows" list="timeEntryList" skip-form="true" paginate="false">
+                            <field name="partyName"><default-field title="Who"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="To"><display/></default-field></field>
+                            <field name="hours" align="right"><default-field title="Hours"><display format="#,##0.##"/></default-field></field>
+                            <field name="comments"><default-field title="What was done"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyName"/><field-ref name="fromDateText"/></column>
+                                <column><field-ref name="hours"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

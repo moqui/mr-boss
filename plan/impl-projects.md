@@ -1,5 +1,7 @@
 # IronStone BOSS — Projects implementation
 
+Nov 12, 2026 — impl-maintenance P11 (owner contract, design-projects ProjectMoney): `get#ProjectMoneySummary` and `get#ProjectMoney` add the
+maintenance work charged to the project and its cost by currency, shown in a Maintenance box of the Money tab; Projects' specs pass unchanged.
 Oct 22, 2026 — built: P0 through P11 done; what remains is §7 Later and the open findings of §6. Oct 28, 2026
 addendum (§9): the client portal as a PASS app in mr-pass, planned. Nov 1, 2026 — employees' pay rates need payroll
 grants, built (§4)

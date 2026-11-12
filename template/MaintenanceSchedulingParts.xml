@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Maintenance scheduling screens (impl-maintenance P15; design-maintenance §7.1, Resources, ResourcePolicyDetail,
+    Blackouts): Scheduling's Resources, ResourcePolicyDetail and Blackouts, EquipmentDetail's Schedule tab and FacilityDetail's
+    Schedules tab under Maintenance. A screen includes each transition it uses by name (transition-include), so a form here posts to
+    the screen it is on. Each write checks the resource through check#Record first (the root's Maintenance check, with its
+    capability), then calls Mantle's mantle.work.ResourceBookingServices, which checks the permission and scope again:
+    - storePolicy: Bookability and BookingPolicy (store#ResourceBookingPolicy); the bookings it no longer allows are kept and counted;
+    - storeApprover: BookingApprovers' add and end (store#ResourceApprover), an end with requests waiting naming another approver
+      or why they are left;
+    - recordBlock, correctBlock, endBlock: StoreBlock (record#ResourceUnavailability RukPlanned), a block's correction (correct#) and
+      its end or withdrawal (end#); the bookings a block covers are kept and counted, never cancelled;
+    - ResourceSchedule: a resource's policy in words and its availability (scheduleRows, get#ResourceAvailability's intervals),
+      bookings, blocks and outages kept apart, with links to its policy and Blackouts (scheduleResource {assetId, facilityId});
+    - StoreBlockForm: the Plan a blackout dialog's form (blockValues; blockFixed hides the resource);
+    - BlockRows: the planned blocks (blockList) as a list and a calendar, each row's Correct and End; no block is moved by
+      dragging. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:(assetId ? 'asset' : 'facility'), recordId:(assetId || facilityId), capability:'policyEdit'}"/>
+            <service-call name="mantle.work.ResourceBookingServices.store#ResourceBookingPolicy" out-map="stored"
+                    in-map="{assetId:(assetId || null), facilityId:(assetId ? null : (facilityId || null)), fromDate:fromDate,
+                        bookable:bookable, approvalModeEnumId:approvalModeEnumId, bookingHorizonDays:bookingHorizonDays,
+                        maximumDurationMinutes:maximumDurationMinutes, timeZone:timeZone, softConflictOverride:softConflictOverride,
+                        changeReason:changeReason, endPolicy:endPolicy, expectedRevision:expectedRevision}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${endPolicy == 'Y' ? 'No longer managed' : 'Policy saved'}${stored.impactCount ? '; ' + stored.impactCount + ' booking(s) it no longer allows are kept, for review' : ''}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </error-response>
+    </transition>
+    <transition name="storeApprover">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:(assetId ? 'asset' : 'facility'), recordId:(assetId || facilityId), capability:'policyEdit'}"/>
+            <service-call name="mantle.work.ResourceBookingServices.store#ResourceApprover" out-map="stored"
+                    in-map="{assetId:(assetId || null), facilityId:(assetId ? null : (facilityId || null)), partyId:approverPartyId,
+                        fromDate:fromDate, thruDate:thruDate, end:end, replacementPartyId:(replacementPartyId || null),
+                        unresolvedReason:unresolvedReason}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${stored.ended ? 'Approver ended' : stored.added ? 'Approver added' : 'Already an approver'}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </error-response>
+    </transition>
+    <transition name="recordBlock">
+        <actions>
+            <if condition="blockAssetId || blockFacilityId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:(blockAssetId ? 'asset' : 'facility'), recordId:(blockAssetId || blockFacilityId)}"/>
+            </if>
+            <service-call name="mantle.work.ResourceBookingServices.record#ResourceUnavailability" out-map="recorded"
+                    in-map="{unavailabilityKindEnumId:'RukPlanned', assetId:(blockAssetId || null),
+                        facilityId:(blockAssetId ? null : (blockFacilityId || null)), unavailabilityReasonEnumId:unavailabilityReasonEnumId,
+                        fromDate:fromDate, thruDate:thruDate, description:description}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Blackout ${recorded.resourceUnavailabilityId} planned${recorded.affectedBookingCount ? '; ' + recorded.affectedBookingCount + ' booking(s) over it are kept and flagged for review' : ''}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </error-response>
+    </transition>
+    <transition name="correctBlock">
+        <actions>
+            <service-call name="mantle.work.ResourceBookingServices.correct#ResourceUnavailability" out-map="corrected"
+                    in-map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:expectedRevision, fromDate:fromDate,
+                        thruDate:thruDate, unavailabilityReasonEnumId:unavailabilityReasonEnumId, description:description,
+                        changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Blackout corrected: ${corrected.resourceUnavailabilityId} is in force, ${corrected.correctedUnavailabilityId} kept</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </error-response>
+    </transition>
+    <transition name="endBlock">
+        <actions>
+            <service-call name="mantle.work.ResourceBookingServices.end#ResourceUnavailability" out-map="ended"
+                    in-map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:expectedRevision, endComments:endComments}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${ended.resultCode == 'WITHDRAWN' ? 'Blackout withdrawn' : 'Blackout ended now'}</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="assetId"/>
+            <parameter name="facilityId"/>
+        </error-response>
+    </transition>
+    <widgets>
+        <section name="ResourceSchedule">
+            <widgets>
+                <container-box>
+                    <box-header title="Availability in the next two weeks"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Scheduling/ResourcePolicyDetail']}" text="Booking policy" link-type="anchor" icon="sym_o_rule"
+                                parameter-map="scheduleResource" condition="sharedLinks['Scheduling/ResourcePolicyDetail'] &amp;&amp; scheduleReadsPolicy"/>
+                        <link url="${sharedLinks['Scheduling/Blackouts']}" text="Blackouts" link-type="anchor" icon="sym_o_event_busy"
+                                parameter-map="scheduleResource" condition="sharedLinks['Scheduling/Blackouts']"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${schedulePolicyText}" type="p" style="text-caption m-muted" condition="schedulePolicyText"/>
+                        <label text="Nothing books or blocks it in the next two weeks." type="p" style="m-muted" condition="!scheduleRows.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="ScheduleRows" list="scheduleRows" skip-form="true" paginate="false">
+                            <field name="kindText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${kind == 'actual' ? 'negative' : kind == 'planned' ? 'warning' : kind == 'requested' ? 'info' : 'primary'}">${
+                                            WebUtilities.encodeHtml(kindText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: kindText})}]]></text>
+                                        <text type="html">${kindText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="label"><default-field title="What"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/><field-ref name="fromText"/></column>
+                                <column><field-ref name="kindText"/><field-ref name="thruText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="StoreBlockForm">
+            <widgets>
+                <label text="A blackout makes the resource unavailable from its start to its end: new bookings over it are refused, and the bookings already made are kept and flagged for their owners. A building's blackout covers its rooms. An outage is recorded in Downtime."
+                        type="p" style="text-caption m-muted"/>
+                <form-single name="StoreBlock" transition="recordBlock" map="blockValues">
+                    <field name="blockAssetId">
+                        <conditional-field condition="blockFixed" title=""><hidden/></conditional-field>
+                        <default-field title="Equipment">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'equipment'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="blockFacilityId">
+                        <conditional-field condition="blockFixed" title=""><hidden/></conditional-field>
+                        <default-field title="Or a facility" tooltip="A room, or a building with the rooms in it">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'facilities'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="unavailabilityReasonEnumId">
+                        <default-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'blockReasons'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From" tooltip="Now when empty"><date-time/></default-field></field>
+                    <field name="thruDate"><default-field title="Until"><date-time/></default-field></field>
+                    <field name="description"><default-field title="Why, for the people it affects"><text-area rows="2"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Plan blackout" type="primary"/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="BlockRows">
+            <widgets>
+                <form-list name="BlockList" list="blockList" skip-form="true" paginate="true">
+                    <field name="resourceName">
+                        <default-field title="Resource">
+                            <link url="${sharedLinks['Equipment/EquipmentDetail']}" text="${resourceName}" link-type="anchor"
+                                    condition="assetId" parameter-map="{assetId:assetId}"/>
+                            <link url="${sharedLinks['Facilities/FacilityDetail']}" text="${resourceName}" link-type="anchor"
+                                    condition="!assetId" parameter-map="{facilityId:facilityId}"/>
+                            <label text="${locationName}" type="div" style="text-caption m-muted" condition="locationName"/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From"><display text="${fromText}"/></default-field></field>
+                    <field name="thruDate"><default-field title="Until"><display text="${thruText}"/></default-field></field>
+                    <field name="reasonText">
+                        <default-field title="Reason">
+                            <label text="${reasonText}" type="div"/>
+                            <label text="${blockSourceText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="Why">
+                            <label text="${description}" type="div"/>
+                            <label text="Planned by ${createdByName} ${createdText}" type="div" style="text-caption m-muted" condition="createdByName"/>
+                            <label text="Corrected by ${correctedByName}: ${changeReason}" type="div" style="text-caption m-muted" condition="changeReason"/>
+                            <label text="${affectedBookingCount} booking(s) over it, kept for review" type="div" style="text-caption text-warning"
+                                    condition="affectedBookingCount"/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="CorrectBlock_${resourceUnavailabilityId}" condition="canCorrect" button-text="Correct"
+                                    icon="sym_o_edit_note" title="Correct blackout ${resourceUnavailabilityId}" width="600">
+                                <label text="The blackout as planned is kept; the correction is the one in force. Bookings are kept either way."
+                                        type="p" style="text-caption"/>
+                                <form-single name="CorrectBlock" transition="correctBlock"
+                                        map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:revision, fromDate:fromDate,
+                                            thruDate:thruDate, unavailabilityReasonEnumId:unavailabilityReasonEnumId, description:description}">
+                                    <field name="resourceUnavailabilityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="unavailabilityReasonEnumId">
+                                        <default-field title="Reason">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'blockReasons', selected:unavailabilityReasonEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="From"><date-time/></default-field></field>
+                                    <field name="thruDate"><default-field title="Until"><date-time/></default-field></field>
+                                    <field name="description"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                    <field name="changeReason"><default-field title="Why it is corrected"><text-line/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="Save correction"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="EndBlock_${resourceUnavailabilityId}" condition="canEnd" button-text="End"
+                                    icon="sym_o_event_available" title="End blackout ${resourceUnavailabilityId}" width="520">
+                                <label text="A blackout not begun is withdrawn; one in effect ends now. The ${affectedBookingCount} booking(s) over it stay as they are."
+                                        type="p" style="text-caption"/>
+                                <form-single name="EndBlock" transition="endBlock"
+                                        map="{resourceUnavailabilityId:resourceUnavailabilityId, expectedRevision:revision}">
+                                    <field name="resourceUnavailabilityId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="endComments"><default-field title="Why"><text-line/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="End blackout" type="primary"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="resourceName"/><field-ref name="reasonText"/><field-ref name="fromDate"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="thruDate"/><field-ref name="actions"/></column>
+                    </columns>
+                    <view-calendar start-field="fromDate" end-field="thruDate" title-field="resourceName" key-fields="resourceUnavailabilityId"
+                            card-fields="reasonText,stateText,description" modes="month,week,list"/>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

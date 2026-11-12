@@ -255,6 +255,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="${sharedLinks['WorkCenters/RequestDetail']}" text="${requestText}" link-type="anchor"
                                     condition="requestId" parameter-map="{requestId:requestId}"/>
                             <label text="${maintenanceText}" type="span" condition="!requestId"/>
+                            <!-- the equipment's outage: out of service until Maintenance restores it (impl-maintenance P5) -->
+                            <label text="${outageText}" type="div" style="text-caption" condition="outageText"/>
                         </default-field>
                     </field>
                     <field name="actions">

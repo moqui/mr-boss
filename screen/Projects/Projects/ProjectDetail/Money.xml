@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     value and cost, Edit for those who manage the project: ironstone.projects.ProjectServices.save#ProjectMoney), Unbilled (the time ready and
     waiting, the expenses, the milestone shares due; Create invoice: Unbilled's dialog for the project, mounted here), Milestone billing
     (each share of the order lines its milestones release, billed, due or waiting), Invoices (the client invoices), Expenses (the
-    expense invoices on the project, read only: capture is People's), Commercial (the order lines it fulfils, linked to OrderDetail; Link
+    expense invoices on the project, read only: capture is People's), Maintenance (impl-maintenance P11: the repairs charged to the project, their cost by currency), Commercial (the order lines it fulfils, linked to OrderDetail; Link
     an order line, Unlink), Rates (the project's own, ironstone.projects.ProjectServices.get#ProjectRates). Print estimate (Projects/EstimatePrint)
     and Send estimate for approval (ironstone.projects.BillingServices.send#Estimate: a file of the Estimate milestone, its gate asked of the
     client). The project of a transition is the tab's (projectTabId), else workEffortId (impl-projects.md F43). Material estimates and
@@ -260,6 +260,22 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                         <label type="p" text="No expenses on the project." style="m-muted q-pa-sm q-mb-none" condition="!expenseRows.length"/>
                     </box-body-nopad></container-box>
+                    <!-- impl-maintenance P11 (owner contract): the maintenance work charged to the project, a project cost: each work order's
+                        parts, labor and outside service by currency, from the issuances and the time that carry the project -->
+                    <section name="MaintenanceCharged" condition="money.maintenanceRows?.length"><widgets>
+                        <container-box><box-header title="Maintenance · ${money.maintenanceRows.length} · ${money.maintenanceTotalText}"/><box-body-nopad>
+                            <form-list name="ProjectMaintenance" list="money.maintenanceRows" skip-form="true" paginate="false">
+                                <field name="workEffortId"><default-field title="Work order"><display text="${workEffortId} · ${workEffortName}"/></default-field></field>
+                                <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                <field name="costText" align="right"><default-field title="Cost"><label text="${costText}" type="span" style="text-no-wrap"/></default-field></field>
+                                <field name="unpricedText"><default-field title="Not priced"><display/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="workEffortId"/><field-ref name="statusText"/></column>
+                                    <column><field-ref name="costText"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad></container-box>
+                    </widgets></section>
                     <container-box><box-header title="Rates on this project"/>
                         <box-toolbar><link url="${ratesUrl}" url-type="plain" text="All rates" icon="sym_o_sell" link-type="anchor-button"/></box-toolbar>
                         <box-body-nopad>

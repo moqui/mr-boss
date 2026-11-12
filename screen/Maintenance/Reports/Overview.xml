@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Reports, the landing (design-maintenance §8 Reports: ReportOptions, ReportLinks; impl-maintenance P17): the reports
+    the user may read (ironstone.maintenance.ReportServices.get#ReportCatalogue, the same answer Insights' catalog reads) as linked
+    number cards over one period and scope: Work status with the backlog now (Mantle's get#MaintenanceHome), PM compliance with its
+    on-time percentage (get#MaintenanceCompliance), Downtime with the resources down, opening the Equipment area's Downtime list;
+    each card opens its report with the options chosen. No custom report builder and no amount. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, fromDate:fromDate || null,
+                thruDate:thruDate || null}"/>
+        <service-call name="ironstone.maintenance.ReportServices.get#ReportCatalogue" out-map="catalogue" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:'Maintenance'}"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="readable" from="(catalogue?.reports || []).map(row =&gt; row.entryId)"/>
+        <if condition="readable.length">
+            <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceHome" out-map="home" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:options.organizationPartyId, facilityId:options.facilityId}"/>
+            <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" out-map="compliance" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:options.organizationPartyId, facilityId:options.facilityId,
+                        fromDate:options.fromDate, thruDate:options.thruDate, pageSize:1}"/>
+            <set field="figureError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="counters" from="home?.counters || {}"/>
+        <script><![CDATA[
+            // a report's link with the options chosen
+            const query = (path, extra) => path + '?' + Object.entries(Object.assign({}, options, extra || {}))
+                .filter(([, value]) => value != null && value !== '').map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
+            workStatusLink = query('/qapps/Maintenance/Reports/WorkStatusReport')
+            complianceLink = query('/qapps/Maintenance/Reports/PreventiveComplianceReport')
+            downtimeLink = '/qapps/Maintenance/Equipment/Downtime?' + Object.entries({open: 'true', organizationPartyId: options.organizationPartyId,
+                facilityId: options.facilityId}).filter(([, value]) => value).map(([key, value]) => key + '=' + encodeURIComponent(value)).join('&')
+            reportRows = (catalogue?.reports || []).map(row => Object.assign({}, row, {link: query(row.url)}))
+        ]]></script>
+        <set field="cardRows" from="[
+                readable.includes('Maintenance.WorkStatus') ? {title: 'Work status · backlog now', value: counters.openCount == null ? '—' : String(counters.openCount),
+                    icon: 'sym_o_handyman', link: workStatusLink} : null,
+                readable.includes('Maintenance.PreventiveCompliance') ? {title: 'PM compliance · on time',
+                    value: compliance?.summary?.onTimePercent == null ? '—' : compliance.summary.onTimePercent + '%',
+                    icon: 'sym_o_event_available', link: complianceLink} : null,
+                readable.length ? {title: 'Downtime · resources down', value: counters.downResourceCount == null ? '—' : String(counters.downResourceCount),
+                    icon: 'sym_o_build_circle', link: downtimeLink} : null
+            ].filter(Boolean)"/>
+    </actions>
+    <widgets>
+        <label text="Maintenance reports" type="h5"/>
+        <label text="${reportError || 'No Maintenance report is open to you.'}" type="p" style="m-muted" condition="!readable.length"/>
+        <section name="ReportsOpen" condition="readable.length">
+            <widgets>
+                <form-single name="ReportOptions" transition="." map="options">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:options.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="With the facilities inside it">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workFacilities', selected:options.facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From" tooltip="Each report's own default when empty"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="As of" tooltip="Now when empty"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="facilityId"/></field-row>
+                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="submitButton"/></field-row>
+                    </field-layout>
+                </form-single>
+                <label text="${figureError}" type="p" style="text-negative" condition="figureError"/>
+                <dashboard min-width="180" style="q-mb-sm">
+                    <section-iterate name="ReportCards" list="cardRows" entry="card">
+                        <widgets>
+                            <number-card title="${card.title}" value="${card.value}" icon="${card.icon}" size="sm" link="${card.link}"/>
+                        </widgets>
+                    </section-iterate>
+                </dashboard>
+                <container-box>
+                    <box-header title="Reports"/>
+                    <box-body-nopad>
+                        <form-list name="ReportLinks" list="reportRows" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Report">
+                                    <link url="${link}" url-type="plain" text="${title}" link-type="anchor"/>
+                                </default-field>
+                            </field>
+                            <field name="description"><default-field title="What it answers"><display/></default-field></field>
+                            <field name="exportText"><default-field title="Exports"><display/></default-field></field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

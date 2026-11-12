@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Procedures (design-maintenance §4 Procedures: FindProcedures, ProcedureRows, NewProcedure; style-guide §3.2 List;
+    impl-maintenance P6): the maintenance procedures of the user's scope (Mantle's find#WorkProcesses: WORK_PROCESS_VIEW, the
+    organizations of the user's maintenance scope, never an execution), by text, organization, state and maintenance type, retired
+    ones kept for provenance. New procedure for an author (WORK_PROCESS_EDIT): a draft, optionally cloned from another procedure
+    (new ids, no approval copied). Use procedure for a planner or supervisor on an approved procedure in effect opens New work order
+    with it chosen. A planner without the procedure read sees the procedures new work may use. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Procedures" default-menu-index="1">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="maintenanceTypeEnumId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeProcedure" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <set field="canAuthor" from="!!can.processEdit"/>
+        <set field="canUse" from="!!(can.plan || can.supervise)"/>
+        <service-call name="mantle.work.ProcessServices.find#WorkProcesses" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{text:text, organizationPartyId:organizationPartyId, statusId:statusId, maintenanceTypeEnumId:maintenanceTypeEnumId,
+                    usable:!can.processView, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="procedureList" from="(found?.procedureList || []).map(row =&gt; Object.assign({}, row, {
+                statusColor: {WeInPlanning: 'grey-8', WeApproved: 'positive', WeClosed: 'grey-6'}[row.statusId] || 'grey-8',
+                usable: canUse &amp;&amp; row.statusId === 'WeApproved' &amp;&amp; !!row.effectiveText}))"/>
+        <set field="procedureListCount" from="found?.procedureListCount"/>
+        <set field="procedureListPageIndex" from="found?.procedureListPageIndex"/>
+        <set field="procedureListPageSize" from="found?.procedureListPageSize"/>
+        <set field="procedureListPageMaxIndex" from="found?.procedureListPageMaxIndex"/>
+        <set field="procedureListPageRangeLow" from="found?.procedureListPageRangeLow"/>
+        <set field="procedureListPageRangeHigh" from="found?.procedureListPageRangeHigh"/>
+        <set field="filtered" from="!!(text || organizationPartyId || statusId || maintenanceTypeEnumId)"/>
+        <set field="emptyText" from="filtered ? 'No procedure matches these filters.'
+                : (canAuthor ? 'No procedure yet. Write one with New procedure.' : 'No procedure is available.')"/>
+        <set field="newProcedure" from="{organizationPartyId: maintenance.activeOrganizationPartyId || (maintenance.organizationPartyIds?.length == 1 ? maintenance.organizationPartyIds[0] : null)}"/>
+    </actions>
+    <widgets>
+        <context title="Procedures"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Procedures" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewProcedureDialog" button-text="New procedure" type="primary" icon="sym_o_add" title="New procedure"
+                        width="640" condition="canAuthor">
+                    <form-single name="NewProcedure" transition="storeProcedure" map="newProcedure">
+                        <field name="workEffortName"><default-field title="Name"><text-line size="60"/></default-field></field>
+                        <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Organization">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:newProcedure.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="maintenanceTypeEnumId">
+                            <default-field title="Maintenance type">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'procedureTypes'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="applicableProductId">
+                            <default-field title="For equipment model" tooltip="Empty: any equipment or facility">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'procedureModels'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="applicableFacilityTypeEnumId">
+                            <default-field title="For facility type">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'procedureFacilityTypes'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="sourceWorkEffortId">
+                            <default-field title="Copy the steps of" tooltip="A new draft with new ids; no approval is copied">
+                                <drop-down allow-empty="true">
+                                    <list-options list="procedureList" key="${workEffortId}" text="${workEffortName}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create draft"><submit type="primary"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ProcedureList" list="procedureList" skip-form="true" paginate="true" header-dialog="true" select-columns="true">
+                    <field name="text">
+                        <header-field title="Procedure"><text-line/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="draft" text="Draft"/>
+                                <option key="approved" text="Approved"/>
+                                <option key="retired" text="Retired"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="maintenanceTypeEnumId">
+                        <header-field title="Maintenance type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'procedureTypes'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <header-field title="Procedure"/>
+                        <default-field>
+                            <link url="${sharedLinks['Procedures/ProcedureDetail']}" text="${workEffortName}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="applicabilityText"><header-field title="Applies to"/><default-field><display/></default-field></field>
+                    <field name="organizationName"><header-field title="Organization"/><default-field><display/></default-field></field>
+                    <field name="stepCount" align="right"><header-field title="Steps"/><default-field><display/></default-field></field>
+                    <field name="requiredCount" align="right"><header-field title="Required"/><default-field><display/></default-field></field>
+                    <field name="effectiveText"><header-field title="Effective"/><default-field><display/></default-field></field>
+                    <field name="approvalText"><header-field title="Approval"/><default-field><display/></default-field></field>
+                    <field name="statusText">
+                        <header-field title="State"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="useProcedure">
+                        <header-field title=""/>
+                        <default-field>
+                            <link url="${sharedLinks['WorkOrders/NewWorkOrder']}" text="Use procedure" link-type="anchor-button" icon="sym_o_handyman"
+                                    parameter-map="{templateWorkEffortId:workEffortId}" condition="usable"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="workEffortId"/><field-ref name="applicabilityText"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="stepCount"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoProcedures" condition="!procedureList.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

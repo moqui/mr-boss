@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FacilityDetail's Work orders tab, Maintenance's (design-maintenance §6 Facilities "Work orders"; impl-maintenance P3): the work
+    orders of the facility and the facilities inside it (Mantle's find#MaintenanceWorkOrders, open ones and, with All, every status),
+    each opening WorkOrderDetail; Create work opens New work order for the facility, for a planner or supervisor. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work orders"
+        default-menu-index="6">
+    <parameter name="facilityId"/>
+    <parameter name="statusId"/>
+    <condition><expression>appRoot == 'Maintenance'</expression></condition>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <if condition="can.workRead">
+            <service-call name="ironstone.maintenance.WorkOrderServices.find#WorkOrderRows" out-map="workOrdersFound"
+                    transaction="force-new" ignore-error="true" in-map="{facilityId:facilityId, statusId:statusId, pageSize:50}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="facilityWorkOrders" from="workOrdersFound?.workOrderList || []"/>
+        <set field="canPlan" from="!!(can.plan || can.supervise)"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Work orders"/>
+            <box-toolbar>
+                <link url="${sharedLinks['WorkOrders/NewWorkOrder']}" text="Create work" icon="sym_o_add" link-type="anchor-button"
+                        btn-type="primary" parameter-map="{facilityId:facilityId}" condition="canPlan"/>
+                <link url="." text="${statusId == 'all' ? 'Open only' : 'All'}" link-type="anchor-button"
+                        parameter-map="{facilityId:facilityId, statusId:(statusId == 'all' ? null : 'all')}"/>
+            </box-toolbar>
+            <box-body-nopad>
+                <label text="${can.workRead ? 'No work order is open here.' : 'Work orders are not yours to read.'}" type="p"
+                        style="m-muted q-pa-sm" condition="!facilityWorkOrders.length"/>
+                <form-list name="FacilityWorkOrders" list="facilityWorkOrders" skip-form="true" paginate="false">
+                    <field name="workEffortId">
+                        <default-field title="Work order">
+                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortName"><default-field title="Name"><display/></default-field></field>
+                    <field name="targetName"><default-field title="Equipment or room"><display/></default-field></field>
+                    <field name="assignedText"><default-field title="Assigned to"><display/></default-field></field>
+                    <field name="dueText"><default-field title="Due"><display style="${overdue ? 'text-negative' : ''}"/></default-field></field>
+                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="workEffortId"/><field-ref name="workEffortName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

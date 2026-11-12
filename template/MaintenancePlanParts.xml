@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of Maintenance's preventive plan screens (impl-maintenance P13; design-maintenance §5 Plans and PlanDetail). A screen includes
+    each transition it uses by name (transition-include), so a form here posts to the screen it is on. Each runs Maintenance's record
+    check of the plan when it names one (check#Record plan: a maintenance reader of its organization) and then Mantle's
+    mantle.work.MaintenancePlanServices.store#MaintenanceSchedule, which checks the permission (MAINTENANCE_PLAN or _SUPERVISE) and
+    scope again.
+    - storePlan: a new plan (a draft, for the equipment or the facility targetKind names; it opens its PlanDetail) or a change of
+      its name and terms (a draft's in place, an active plan's from the effective time with a reason);
+    - planAction: activate a draft (the findings first) or end a plan (with a reason);
+    - generateDue (P14): the work of the plans named (maintenanceScheduleIds, a list or comma text), each on its own with its outcome
+      (generate#MaintenanceWorkOrders, which checks the planner's permission and each plan's scope);
+    - resolveDue (P14): a decision on a plan's obligations, after the record check (decision coalesce, skip or correct:
+      reconcile#MaintenanceSchedule, with its reason), or a meter's reading (decision reading: MaintenanceResourceServices
+      record#MaintenanceMeter, the resource administrator's). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storePlan">
+        <actions>
+            <if condition="maintenanceScheduleId">
+                <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            </if>
+            <set field="forFacility" from="!maintenanceScheduleId &amp;&amp; targetKind == 'facility'"/>
+            <service-call name="mantle.work.MaintenancePlanServices.store#MaintenanceSchedule" out-map="saved"
+                    in-map="{maintenanceScheduleId:(maintenanceScheduleId || null), expectedRevision:expectedRevision, operationKey:operationKey,
+                        scheduleName:scheduleName, assetId:(forFacility ? null : assetId), facilityId:(forFacility ? facilityId : null),
+                        productMaintenanceId:(forFacility ? null : productMaintenanceId), triggerEnumId:triggerEnumId,
+                        cadenceEnumId:cadenceEnumId, intervalQuantity:intervalQuantity, intervalUomId:intervalUomId,
+                        firstDueLocal:firstDueLocal, productMeterId:productMeterId, baselineValue:baselineValue, baselineDate:baselineDate,
+                        maxReadingAgeDays:maxReadingAgeDays, businessDaysOnly:businessDaysOnly, holidayCategoryId:holidayCategoryId,
+                        leadDays:leadDays, templateWorkEffortId:templateWorkEffortId, maintenanceTypeEnumId:maintenanceTypeEnumId,
+                        teamPartyId:teamPartyId, estimatedWorkTime:estimatedWorkTime, effectiveDate:effectiveDate, changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="isNew" from="!maintenanceScheduleId"/>
+                <set field="maintenanceScheduleId" from="saved.maintenanceScheduleId"/>
+                <message type="success">${isNew ? 'Plan ' + saved.maintenanceScheduleId + ' created as a draft' : 'Plan saved'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
+            <parameter name="maintenanceScheduleId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="planAction">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <service-call name="mantle.work.MaintenancePlanServices.store#MaintenanceSchedule" out-map="saved"
+                    in-map="{maintenanceScheduleId:maintenanceScheduleId, expectedRevision:expectedRevision, action:planAction,
+                        changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${planAction == 'activate' ? 'Plan activated' : 'Plan ended'}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
+            <parameter name="maintenanceScheduleId"/>
+        </default-response>
+        <error-response url="${sharedLinks['Preventive/Plans/PlanDetail']}">
+            <parameter name="maintenanceScheduleId"/>
+        </error-response>
+    </transition>
+    <transition name="generateDue">
+        <actions>
+            <set field="scheduleIds" from="(Array.isArray(maintenanceScheduleIds) ? maintenanceScheduleIds
+                    : String(maintenanceScheduleIds || '').split(',')).map(id =&gt; String(id).trim()).filter(Boolean)"/>
+            <if condition="!scheduleIds.length"><then>
+                <message type="warning">Choose the plans to generate</message>
+            </then><else>
+                <service-call name="mantle.work.MaintenancePlanServices.generate#MaintenanceWorkOrders" out-map="generated"
+                        in-map="{maintenanceScheduleIds:scheduleIds, operationKey:operationKey}"/>
+                <script><![CDATA[
+                    if (!ec.message.hasError()) {
+                        const made = generated.results.filter(row => row.outcome === 'generated')
+                        if (made.length) ec.message.addMessage('Work orders made: ' + made.map(row => row.workEffortId + ' (' + row.scheduleName + ')').join(', '), 'success')
+                        for (const row of generated.results.filter(row => row.outcome !== 'generated'))
+                            ec.message.addMessage((row.scheduleName || row.maintenanceScheduleId) + ': ' + row.message, row.outcome === 'failed' ? 'danger' : 'warning')
+                    }
+                ]]></script>
+            </else></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="resolveDue">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <if condition="decision == 'reading'"><then>
+                <service-call name="mantle.product.MaintenanceResourceServices.record#MaintenanceMeter"
+                        in-map="{assetId:assetId, productMeterId:productMeterId, meterValue:meterValue}"/>
+                <if condition="!ec.message.hasError()"><message type="success">Reading recorded</message></if>
+            </then><else>
+                <service-call name="mantle.work.MaintenancePlanServices.reconcile#MaintenanceSchedule" out-map="decided"
+                        in-map="{maintenanceScheduleId:maintenanceScheduleId, action:decision, changeReason:changeReason,
+                            maintenanceOccurrenceId:maintenanceOccurrenceId}"/>
+                <script><![CDATA[
+                    if (!ec.message.hasError()) {
+                        const done = {coalesce: 'Missed due dates coalesced into one catch-up' + (decided.workEffortId ? ', work order ' + decided.workEffortId : ''),
+                            skip: 'Due date skipped', correct: 'Completion corrected: the due date is open again'}
+                        ec.message.addMessage(done[decision] || 'Decided', 'success')
+                        if ((decided.reviewWorkEffortIds || []).length)
+                            ec.message.addMessage('Review work order ' + decided.reviewWorkEffortIds.join(', ') + ': it was made from the earlier projection', 'warning')
+                    }
+                ]]></script>
+            </else></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- P19: a plan's next calendar due as a calendar file (PlanDetail's More, DueMaintenance's rows): its record check, then Mantle's
+        get#MaintenanceCalendarFile (a meter plan NO_DUE_DATE) -->
+    <transition name="dueCalendarFile" read-only="true">
+        <actions>
+            <service-call name="ironstone.maintenance.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'plan', recordId:maintenanceScheduleId}"/>
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceCalendarFile" out-map="calendar"
+                    in-map="{maintenanceScheduleId:maintenanceScheduleId}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <script>ec.web.sendTextResponse(calendar.text, 'text/calendar', calendar.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+</screen>

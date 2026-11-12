@@ -1,5 +1,6 @@
 # IronStone BOSS — Projects design
 
+Nov 12, 2026 — impl-maintenance P11 (owner contract): ProjectMoney gains a Maintenance box, the repairs charged to the project as a cost.
 Oct 21, 2026 — draft; the inventories' **Designed in** columns filled from it (§13); the review's answers to the
 open questions folded in (§16, §17); as built through P11 (Oct 22); Nov 1, 2026 — review rows folded in;
 consistency pass; Nov 11, 2026 — impl-people P9 (owner contract): capacity reads a person's People working schedule first (§15
@@ -743,6 +744,11 @@ always there (F24).
   `mantle.work.ProjectServices.send#EstimateForApproval` as designed; the estimate is not emailed (the gate's notice goes to the
   approver's users, and a client contact has none until P10), and its approval also moves the project from In Planning to Approved and
   its open or proposed sales orders to Approved (sending makes an open order a quote, OrderProposed).
+- **As built (impl-maintenance P11, an owner contract):** a box **Maintenance** lists the maintenance work orders charged to the
+  project (`MaintenanceWorkOrder.projectWorkEffortId`, or with an issuance carrying the project) with each one's total by currency (its
+  parts, labor and outside service, never shown apart; currencies listed, never added) and the hours not priced yet, as a project cost (`get#ProjectMoneySummary`'s `maintenanceList` and
+  `maintenanceTotalList`, from Mantle's `MaintenanceCosts.js`; a failure there leaves the box out, logged); shown only when there is one,
+  for the same money readers. No source, rate or person is shown, and the other boxes and the rolled-up `actualCost` are unchanged.
 - **Source:** research §10 (OpenProject budgets, Odoo analytic and invoicing policies, ERPNext costing), §11;
   baseline `EditProject` budget fields and `ProjectTimeEntries`.
 - **Needs:** Milestone billing share; Billing services; Milestone approval (the estimate).
@@ -1966,6 +1972,11 @@ unless they ask for approval.
 | `AllocationDecision` | list, bulk | Approve or reject | reason for a rejection | | `mantle.work.ResourceServices.approve#Allocation`, `reject#Allocation` (new) | OpenProject allocation states |
 
 - **Needs:** Allocations; Capacity.
+- **Owner contract (impl-maintenance P8, Nov 12, 2026):** `find#StaffingCandidates` also takes `skillList` (several skills, each with
+  a least level: each candidate's `skills`, `skillsMet`, and `hasSkill` when every one is met by a level not self-declared) and a
+  window (`windowFrom`, `windowThru`, `windowHours`: the free hours of the days it covers, each day's capacity less its share of the
+  week's allocations; with a window every person of `partyIdList` is a candidate), Maintenance's technician assignment. Projects'
+  and People's callers pass none of them, and their answers are unchanged.
 - **Owner contract (impl-people P18, Nov 12, 2026):** `find#StaffingCandidates` also takes `partyIdList`, the people to bound
   the search to (People's skills matrix FindAvailable passes the people of the user's People scope), and each candidate carries
   `skillSelfDeclared` (the skill's level is the person's own claim, People's `SksSelfDeclared`), which People labels and no People

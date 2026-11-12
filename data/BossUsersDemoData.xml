@@ -1325,4 +1325,140 @@ along with this software (see the LICENSE.md file). If not, see
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PPL_ADMIN" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PEOPLE_ADMIN" userId="BOSS_PPL_ADMIN" fromDate="0"/>
+    <!-- Maintenance (impl-maintenance P1): a user per group of design-maintenance §1.1, each in BOSS_USERS, none in ADMIN, each an
+        agent of Ziziwork Services (the organization whose facilities and equipment the Maintenance demo keeps) but maint.retail, a
+        planner of Ziziwork Retail only, for the isolation checks, and maint.admin, of Services and Retail. The ordinary users are in
+        the root user group BOSS_MAINTENANCE and their capability group; maint.requester is in BOSS_MAINTENANCE_REQUEST alone, which
+        opens no Maintenance root (a requester reports from Commons, P4); maint.admin is in BOSS_MAINTENANCE_ADMIN alone. The
+        technicians are agents, not demo employees: People's skills, capacity and qualifications join them in P8. -->
+    <mantle.party.Party partyId="BOSS_MNT_READER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_READER" firstName="Maintenance" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_READER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_READER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_READER" username="maint.reader"
+            userFullName="Maintenance Reader" partyId="BOSS_MNT_READER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_READ" userId="BOSS_MNT_READER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_REQUESTER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_REQUESTER" firstName="Maintenance" lastName="Requester"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_REQUESTER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_REQUESTER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_REQUESTER" username="maint.requester"
+            userFullName="Maintenance Requester" partyId="BOSS_MNT_REQUESTER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_REQUESTER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_REQUEST" userId="BOSS_MNT_REQUESTER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_PLANNER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_PLANNER" firstName="Maintenance" lastName="Planner"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_PLANNER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_PLANNER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_PLANNER" username="maint.planner"
+            userFullName="Maintenance Planner" partyId="BOSS_MNT_PLANNER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_PLANNER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_PLANNER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_PLAN" userId="BOSS_MNT_PLANNER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_TECH" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_TECH" firstName="Maintenance" lastName="Technician"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_TECH" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_TECH" username="maint.tech"
+            userFullName="Maintenance Technician" partyId="BOSS_MNT_TECH"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_EXECUTE" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_TECH2" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_TECH2" firstName="Maintenance" lastName="Second technician"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH2_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_TECH2" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_TECH2" username="maint.tech2"
+            userFullName="Maintenance Second technician" partyId="BOSS_MNT_TECH2"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_TECH2" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_TECH2" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_EXECUTE" userId="BOSS_MNT_TECH2" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_SUPERVISOR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_SUPERVISOR" firstName="Maintenance" lastName="Supervisor"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_SUPERVISOR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_SUPERVISOR" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_SUPERVISOR" username="maint.supervisor"
+            userFullName="Maintenance Supervisor" partyId="BOSS_MNT_SUPERVISOR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_SUPERVISE" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_AUTHOR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_AUTHOR" firstName="Maintenance" lastName="Procedure author"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_AUTHOR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_AUTHOR" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_AUTHOR" username="maint.author"
+            userFullName="Maintenance Procedure author" partyId="BOSS_MNT_AUTHOR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_AUTHOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_AUTHOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_PROCEDURE" userId="BOSS_MNT_AUTHOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_APPROVER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_APPROVER" firstName="Maintenance" lastName="Procedure approver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_APPROVER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_APPROVER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_APPROVER" username="maint.approver"
+            userFullName="Maintenance Procedure approver" partyId="BOSS_MNT_APPROVER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_APPROVER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_APPROVER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_PROCEDURE_APPROVE" userId="BOSS_MNT_APPROVER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_BOOKING" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_BOOKING" firstName="Maintenance" lastName="Resource approver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_BOOKING_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_BOOKING" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_BOOKING" username="maint.booking"
+            userFullName="Maintenance Resource approver" partyId="BOSS_MNT_BOOKING"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_BOOKING" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_BOOKING" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_BOOKING_APPROVE" userId="BOSS_MNT_BOOKING" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_RESOURCES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_RESOURCES" firstName="Maintenance" lastName="Resource administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_RESOURCES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_RESOURCES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_RESOURCES" username="maint.resources"
+            userFullName="Maintenance Resource administrator" partyId="BOSS_MNT_RESOURCES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_RESOURCES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_RESOURCES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_RESOURCE_ADMIN" userId="BOSS_MNT_RESOURCES" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_COST" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_COST" firstName="Maintenance" lastName="Cost reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_COST_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_COST" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_COST" username="maint.cost"
+            userFullName="Maintenance Cost reader" partyId="BOSS_MNT_COST"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_COST" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_COST" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_COST" userId="BOSS_MNT_COST" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_RETAIL" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_RETAIL" firstName="Maintenance" lastName="Retail planner"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_RETAIL_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_RETAIL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_RETAIL" username="maint.retail"
+            userFullName="Maintenance Retail planner" partyId="BOSS_MNT_RETAIL"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_RETAIL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE" userId="BOSS_MNT_RETAIL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_PLAN" userId="BOSS_MNT_RETAIL" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_MNT_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MNT_ADMIN" firstName="Maintenance" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_ADMIN_ORG2" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MNT_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MNT_ADMIN" username="maint.admin"
+            userFullName="Maintenance Administrator" partyId="BOSS_MNT_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_MNT_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MAINTENANCE_ADMIN" userId="BOSS_MNT_ADMIN" fromDate="0"/>
 </entity-facade-xml>

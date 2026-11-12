@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Procedures area of IronStone Maintenance (design-maintenance §4 Procedures and ProcedureDetail, §1.2; impl-maintenance P6):
+    Find, the maintenance procedures of the user's scope (drafts, approved and retired), with New procedure for an author; and
+    ProcedureDetail, a procedure's record (its definition, steps, requirements, instructions, approval and the work made of it),
+    hidden from the menu. Shown to a reader of procedures or a planner or supervisor (the root's menu condition); every read and
+    write is Mantle's mantle.work.ProcessServices after the root's check. Execution is on WorkOrderDetail, not a second queue. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Procedures" default-menu-index="4" menu-image="sym_o_checklist" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true">
+        <subscreens-item name="ProcedureDetail" location="component://mr-boss/screen/Maintenance/Procedures/ProcedureDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MaintenanceProceduresPanel" type="tab"/>
+    </widgets>
+</screen>

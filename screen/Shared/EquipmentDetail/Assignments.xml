@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- EquipmentDetail's Assignments tab under Maintenance (design-maintenance §6; impl-maintenance P2, F18, F61): who holds the
+    equipment now and who held it, each opening their Employee360 under Maintenance; Change custodian (change#MaintenanceCustody)
+    for a holder of MAINTENANCE_RESOURCE_EDIT: the role's holders end and the new one starts at the date given, now or earlier,
+    and People's rule then completes a separation's return task. Renders nothing outside Maintenance. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Assignments" default-menu-index="3">
+    <parameter name="assetId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="changeCustody" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <actions>
+        <!-- EquipmentDetail's actions read the equipment when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here, under Maintenance only -->
+        <if condition="appRoot == 'Maintenance' &amp;&amp; maintenanceEquipment == null">
+            <service-call name="ironstone.maintenance.EquipmentServices.get#Equipment" in-map="{assetId:assetId}"
+                    out-map="maintenanceEquipment" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="appRoot == 'Maintenance' ? maintenanceEquipment : null"/>
+        <set field="custodyValues" from="{assetId: assetId, roleTypeId: 'Custodian'}"/>
+    </actions>
+    <widgets>
+        <section name="EquipmentAssignments" condition="found?.asset">
+            <widgets>
+                <container-box>
+                    <box-header title="Who holds it"/>
+                    <box-toolbar>
+                        <container-dialog id="ChangeCustodyDialog" button-text="Change custodian" title="Change who holds ${found.asset.assetName}"
+                                icon="sym_o_swap_horiz" width="640" type="primary" condition="found.canEdit">
+                            <label text="The holding ends and the new one starts at the date given: now or earlier, never later." type="p"/>
+                            <form-single name="ChangeCustody" transition="changeCustody" map="custodyValues">
+                                <field name="assetId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="roleTypeId">
+                                    <default-field title="As">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'custodyRoles', selected:roleTypeId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="newPartyId">
+                                    <default-field title="New holder">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'custodians', selected:newPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveDate">
+                                    <default-field title="From" tooltip="Now when left empty; never later than now">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="">
+                                        <submit text="Change custodian"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="EquipmentHolders" list="found.assignments" skip-form="true" paginate="false">
+                            <field name="partyName">
+                                <default-field title="Held by">
+                                    <link url="${sharedLinks['Equipment/Employee360']}" text="${partyName}" link-type="anchor"
+                                            parameter-map="{partyId:partyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="roleText"><default-field title="As"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${stateText}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyName"/><field-ref name="roleText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="fromDateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No one holds it or has held it." type="p" style="m-muted q-pa-md" condition="!found.assignments?.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

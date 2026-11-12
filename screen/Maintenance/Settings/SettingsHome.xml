@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Settings › Settings (design-maintenance §9 Settings; style-guide §3.9 Settings; impl-maintenance P1): the landing
+    of the Maintenance administrator's settings, by organization (those of their maintenance scope), naming what is configured here
+    as each part is built: the work policy (P3), teams and their dispatch defaults (P8), lookups and the setup readiness (P18), each
+    a form or tab its phase adds. A user without MAINTENANCE_SETTINGS_EDIT who opens it (ADMIN's areas pass every grant) is told the
+    settings are the administrator's. P18: Lookups and Readiness are tabs; the settings other apps keep for Maintenance (the expense
+    mapping and labor costing rates in Accounting, booking rules and approvers in Scheduling) are listed with where they are kept. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1"
+        default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a
+        custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
+        permissions give -->
+    <always-actions>
+        <script>if(!(maintenance.capabilities.settingsEdit))throw new Error('PERMISSION_DENIED: Maintenance settings are the Maintenance administrator\'s')</script>
+    </always-actions>
+    <actions>
+        <set field="can" from="maintenance.capabilities"/>
+        <if condition="can.settingsEdit &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.maintenance.AccessServices.check#Record" out-map="organizationRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="organizationRefused" from="!!organizationPartyId &amp;&amp; !organizationRecord?.recordId"/>
+        <set field="findValues" from="{organizationPartyId: organizationPartyId || null}"/>
+        <set field="settingRows" from="[
+                {setting: 'Work policy', configures: 'Default work type and team, the planned-work approval threshold, the closure policy, procedure self-approval and the qualification check, from a date', state: 'Work policy tab'},
+                {setting: 'Teams', configures: 'Dispatch defaults and the intake address of each maintenance team (members are People\'s)', state: 'Teams tab'},
+                {setting: 'Lookups', configures: 'Work types, severities, reasons, outcomes and failure modes with where they apply', state: 'Lookups tab'},
+                {setting: 'Setup readiness', configures: 'What Maintenance still needs before work is planned', state: 'Readiness tab'},
+                {setting: 'Maintenance expense', configures: 'The expense account parts issued to maintenance work post to', state: 'Accounting: Posting defaults'},
+                {setting: 'Labor costing rates', configures: 'The cost of a technician hour', state: 'Accounting: Costing policies'},
+                {setting: 'Booking rules and approvers', configures: 'Which rooms and equipment are booked with approval, and by whom', state: 'Scheduling: Resources'}
+            ]"/>
+    </actions>
+    <widgets>
+        <label text="Maintenance settings" type="h5"/>
+        <label text="Maintenance's settings are the Maintenance administrator's." type="p" style="m-muted" condition="!can.settingsEdit"/>
+        <section name="SettingsLanding" condition="can.settingsEdit">
+            <widgets>
+                <form-single name="SettingsFind" transition="." map="findValues">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:findValues.organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row></field-layout>
+                </form-single>
+                <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationRefused"/>
+                <container-box>
+                    <box-header title="Configured here"/>
+                    <box-body>
+                        <form-list name="SettingRows" list="settingRows" skip-form="true" paginate="false">
+                            <field name="setting"><default-field title="Setting"><display/></default-field></field>
+                            <field name="configures"><default-field title="What it sets"><display/></default-field></field>
+                            <field name="state"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="setting"/><field-ref name="configures"/></column>
+                                <column><field-ref name="state"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

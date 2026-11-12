@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Overview tab (design-maintenance §3 WorkHeader and Assignments; impl-maintenance P3): the work order's facts (its
+    target, organization, kind, type, source, severity, priority, estimated hours, planned window, actual start and finish, hold or
+    cancel reason, outcome and the equipment's state after it; P9: the cost centre and project it is charged to) with Edit for a planner or supervisor (store#MaintenanceWorkOrder at
+    the revision read: name, description, priority, type, severity, failure mode, P9's cost centre and project; the estimate after
+    approval a supervisor's), and
+    its team and technicians with Assign and schedule (schedule#MaintenanceWorkOrder: the team, the technicians, the planned
+    window), the one writer of its assignments; and its follow-up tasks (P7), each opening WorkItemDetail's Maintenance context. P12: a
+    customer repair's box: its claim (opening WarrantyAssessment for a user Customer Service admits to the case), customer, decision,
+    coverage end and whether the customer agreed to a charge (never its amount), whether the claim allows the repair now, and its
+    custody (the customer's equipment, which stays theirs), with the intervention report stored or not.
+    P8 (design §3 AssignSchedule, review Y8): the technicians are offered ranked for the window and team chosen (the choice
+    technicians over Mantle's find#MaintenanceCandidates: free hours with People's schedules and leave, skill, qualification state,
+    team), and saving names each one whose required qualification is missing or expired (refused under the work policy's block). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview" default-menu-index="10">
+    <parameter name="workEffortId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>
+    <transition-include name="storeWorkOrder" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <transition-include name="scheduleWorkOrder" location="component://mr-boss/template/MaintenanceWorkOrderParts.xml"/>
+    <actions>
+        <!-- WorkOrderDetail's actions read the work order when it renders with the tab; alone (a reloaded tab, the terminal) it
+            reads it here -->
+        <if condition="workOrderDetail == null &amp;&amp; recordFound">
+            <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workOrder" from="workOrderDetail?.workOrder || null"/>
+        <set field="factRows" from="workOrder ? [
+                ['Equipment', workOrder.assetName], ['Facility', workOrder.facilityName], ['Organization', workOrder.organizationName],
+                ['Kind', workOrder.kindText], ['Type', workOrder.typeText], ['Source', workOrder.sourceText],
+                ['Severity', workOrder.severityText], ['Priority', workOrder.priority != null ? String(workOrder.priority) : ''],
+                ['Procedure', workOrder.procedureName ? workOrder.procedureName + ' (as of ' + workOrder.procedureDateText + ')' : ''],
+                ['Estimated hours', workOrder.totalEstimatedHours != null ? String(workOrder.totalEstimatedHours) : 'Not estimated'],
+                ['Planned start', workOrder.estimatedStartText], ['Due', workOrder.estimatedCompletionText],
+                ['Started', workOrder.actualStartText], ['Finished', workOrder.actualCompletionText],
+                ['Held for', workOrder.holdReasonText], ['Cancelled because', workOrder.cancelReasonText],
+                ['Outcome', workOrder.outcomeText], ['Equipment after the work', workOrder.dispositionText],
+                ['Failure mode', workOrder.failureModeText], ['Maintenance record', workOrder.assetMaintenanceStatusText],
+                ['Cost centre', workOrder.costCenterName], ['Project', workOrder.projectName]
+            ].filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])})) : []"/>
+        <set field="assignmentList" from="workOrderDetail?.assignmentList || []"/>
+        <!-- P12: the customer repair, and its claim's link for a user Customer Service admits to the case -->
+        <set field="repair" from="workOrder?.repair || null"/>
+        <set field="claimLink" from="null"/>
+        <if condition="repair">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="caseChecked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:'CustomerService', recordType:'case', recordId:repair.requestId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="claimLink" from="caseChecked?.recordId ? '/qapps/CustomerService/Returns/WarrantyAssessment?requestId='
+                    + encodeURIComponent(repair.requestId) : null"/>
+            <set field="repairRows" from="[['Customer', repair.customerName], ['Claim', repair.requestId + ' · ' + repair.requestName + ' (' + repair.claimStatusText + ')'],
+                    ['Decision', repair.decisionText + (repair.coverageEndText ? ', covered until ' + repair.coverageEndText : '')],
+                    ['Charge', repair.consentText], ['Equipment', [repair.productText, repair.assetText].filter(Boolean).join(' · ')],
+                    ['Owner', repair.assetOwnerName ? repair.assetOwnerName + ' (the customer keeps it)' : ''],
+                    ['Intervention report', repair.reportStored ? repair.reportText : 'Not stored yet'],
+                    ['Acknowledgment', repair.acknowledgmentText]
+                ].filter(row =&gt; row[1]).map(row =&gt; ({label: row[0], value: String(row[1])}))"/>
+        </if>
+        <!-- P7: the follow-up tasks -->
+        <set field="followUpTaskList" from="null"/>
+        <if condition="workOrder">
+            <service-call name="ironstone.maintenance.WorkItemServices.find#FollowUpTasks" out-map="followUps" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="followUpTaskList" from="followUps?.taskList?.length ? followUps.taskList : null"/>
+        </if>
+        <set field="headerValues" from="workOrder ? {workEffortId: workEffortId, expectedRevision: workOrder.revision,
+                workEffortName: workOrder.workEffortName, description: workOrder.description, priority: workOrder.priority != null ? String(workOrder.priority) : '5',
+                estimatedWorkTime: workOrder.estimatedHours, maintenanceTypeEnumId: workOrder.maintenanceTypeEnumId,
+                severityEnumId: workOrder.severityEnumId, failureModeEnumId: workOrder.failureModeEnumId,
+                costCenterId: workOrder.costCenterId, projectWorkEffortId: workOrder.projectWorkEffortId} : {}"/>
+        <set field="scheduleValues" from="workOrder ? {workEffortId: workEffortId, expectedRevision: workOrder.revision,
+                teamPartyId: workOrder.teamPartyId, estimatedStartDate: workOrder.estimatedStartDate,
+                estimatedCompletionDate: workOrder.estimatedCompletionDate,
+                assigneePartyIds: assignmentList.filter(row =&gt; row.roleText === 'Technician').map(row =&gt; row.partyId)} : {}"/>
+    </actions>
+    <widgets>
+        <section name="OverviewFound" condition="workOrder">
+            <widgets>
+                <container-box>
+                    <box-header title="Work"/>
+                    <box-toolbar>
+                        <container-dialog id="EditWorkOrder" button-text="Edit" icon="sym_o_edit" title="Edit work order ${workEffortId}"
+                                width="640" condition="workOrderDetail.canEdit">
+                            <form-single name="WorkHeaderEdit" transition="storeWorkOrder" map="headerValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="workEffortName"><default-field title="What needs doing"><text-line size="60"/></default-field></field>
+                                <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                                <field name="priority">
+                                    <default-field title="Priority" tooltip="1 is the most urgent">
+                                        <drop-down>
+                                            <option key="1" text="1 (urgent)"/><option key="2" text="2"/><option key="3" text="3 (high)"/>
+                                            <option key="4" text="4"/><option key="5" text="5 (normal)"/><option key="6" text="6"/>
+                                            <option key="7" text="7"/><option key="8" text="8"/><option key="9" text="9 (low)"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="estimatedWorkTime">
+                                    <default-field title="Estimated hours" tooltip="After approval, a supervisor's to change">
+                                        <text-line size="6" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="maintenanceTypeEnumId">
+                                    <default-field title="Type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'maintenanceTypes', selected:headerValues.maintenanceTypeEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="severityEnumId">
+                                    <default-field title="Severity">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'severities', selected:headerValues.severityEnumId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="failureModeEnumId">
+                                    <default-field title="Failure mode">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'failureModes', selected:headerValues.failureModeEnumId, choiceAssetId:workOrder.assetId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <!-- P9: what the work is charged to; its parts' issues carry them into Accounting -->
+                                <field name="costCenterId">
+                                    <default-field title="Cost centre">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'costCenters', selected:headerValues.costCenterId,
+                                                        organizationPartyId:workOrder.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="projectWorkEffortId">
+                                    <default-field title="Project" tooltip="Charges the repair's parts and labor to a project">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'projects', selected:headerValues.projectWorkEffortId,
+                                                        organizationPartyId:workOrder.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${workOrder.description}" type="p" condition="workOrder.description"/>
+                        <form-list name="WorkFacts" list="factRows" skip-form="true" paginate="false">
+                            <field name="label"><default-field title="Fact"><display/></default-field></field>
+                            <field name="value"><default-field title="Value"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/></column>
+                                <column><field-ref name="value"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <!-- P12: the customer repair (Customer Service's claim, read only here) -->
+                <section name="CustomerRepair" condition="repair">
+                    <widgets>
+                        <container-box type="${repair.allowed ? 'default' : 'warning'}">
+                            <box-header title="Customer repair"/>
+                            <box-toolbar>
+                                <link url="${claimLink}" url-type="plain" text="Open the claim" icon="sym_o_support_agent" link-type="anchor"
+                                        condition="claimLink"/>
+                                <link url="${sharedLinks['WorkOrders/InterventionReport']}" text="Intervention report" icon="sym_o_description"
+                                        link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${repair.blockerText}: Start and parts wait until Customer Service records it." type="p"
+                                        style="text-negative" condition="!repair.allowed"/>
+                                <form-list name="RepairFacts" list="repairRows" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Fact"><display/></default-field></field>
+                                    <field name="value"><default-field title="Value"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="value"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Team and technicians"/>
+                    <box-toolbar>
+                        <container-dialog id="AssignSchedule" button-text="Assign and schedule" icon="sym_o_person_add"
+                                title="Assign and schedule work order ${workEffortId}" width="640" condition="workOrderDetail.canSchedule">
+                            <form-single name="AssignScheduleForm" transition="scheduleWorkOrder" map="scheduleValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="teamPartyId">
+                                    <default-field title="Team">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'teams', selected:scheduleValues.teamPartyId, organizationPartyId:workOrder.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="assigneePartyIds">
+                                    <default-field title="Technicians"
+                                            tooltip="Ranked for the window and team: free hours (schedules, holidays, leave), the work's skills and qualifications, the team">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                                    parameter-map="{choice:'technicians', choiceWorkEffortId:workEffortId,
+                                                        organizationPartyId:workOrder.organizationPartyId}">
+                                                <depends-on field="teamPartyId" parameter="choiceTeamPartyId"/>
+                                                <depends-on field="estimatedStartDate" parameter="choiceWindowFrom"/>
+                                                <depends-on field="estimatedCompletionDate" parameter="choiceWindowThru"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="estimatedStartDate"><default-field title="Planned start"><date-time/></default-field></field>
+                                <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit type="primary"/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="teamPartyId"/><field-ref name="assigneePartyIds"/></field-row>
+                                    <field-row><field-ref name="estimatedStartDate"/><field-ref name="estimatedCompletionDate"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No team or technician is assigned yet." type="p" style="m-muted" condition="!assignmentList.length"/>
+                        <form-list name="AssignmentRows" list="assignmentList" skip-form="true" paginate="false">
+                            <field name="partyName"><default-field title="Assigned"><display/></default-field></field>
+                            <field name="roleText"><default-field title="As"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyName"/></column>
+                                <column><field-ref name="roleText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <!-- P7: the work order's follow-up tasks (ordinary tasks linked to it), each opening WorkItemDetail's Maintenance context -->
+                <section name="FollowUpTasks" condition="followUpTaskList?.length &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Follow-up tasks"/>
+                            <box-body>
+                                <section-iterate name="FollowUpRows" list="followUpTaskList" entry="followUp">
+                                    <widgets>
+                                        <container style="row items-center q-gutter-x-sm">
+                                            <link url="${sharedLinks['WorkOrders/WorkItemDetail']}" link-type="anchor" text="${followUp.workEffortName}"
+                                                    parameter-map="{workEffortId:followUp.workEffortId}"/>
+                                            <label text="${followUp.statusText}" type="span" style="text-caption m-muted"/>
+                                        </container>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -15,7 +15,8 @@ suite(
         "CommerceThemesWalk",
         "InsightsDashboardsWalk",
         "AdminUsersWalk",
-        "PeopleHireWalk"
+        "PeopleHireWalk",
+        "MaintenanceWorkOrdersWalk"
     ],
     {
         server: {
